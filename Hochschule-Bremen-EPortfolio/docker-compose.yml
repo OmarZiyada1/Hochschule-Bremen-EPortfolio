@@ -1,0 +1,24 @@
+name: eportfolio
+
+services:
+  db:
+    image: postgres:16
+    container_name: eportfolio-db
+    environment:
+      POSTGRES_DB: eportfolio
+      POSTGRES_USER: eportfolio
+      POSTGRES_PASSWORD: eportfolio
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # backend:          # kommt später – eigenes Dockerfile in ./backend
+  #   build: ./backend
+  #   depends_on: [db]
+
+  # frontend:         # kommt später – React/Vite in ./frontend
+  #   build: ./frontend
+
+volumes:
+  pgdata:
