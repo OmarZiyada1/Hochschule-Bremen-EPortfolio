@@ -1,8 +1,16 @@
 spring:
+  # Laedt die .env aus dem Projekt-Root. Zwei Pfade, damit es sowohl beim Start
+  # aus backend/ (mvnw) als auch aus dem Projekt-Root funktioniert.
+  # "optional:" -> kein Fehler, wenn die Werte stattdessen als echte
+  # Umgebungsvariablen gesetzt sind (CI, Prod).
+  config:
+    import:
+      - optional:file:../.env[.properties]
+      - optional:file:./.env[.properties]
   datasource:
-    url: jdbc:postgresql://localhost:5432/eportfolio
-    username: eportfolio
-    password: eportfolio
+    url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: validate

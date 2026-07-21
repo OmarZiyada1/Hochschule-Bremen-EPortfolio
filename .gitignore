@@ -1,0 +1,12 @@
+# Lokale Umgebungsvariablen - enthalten Zugangsdaten, nie einchecken.
+# Die Vorlage .env.example ist bewusst ausgenommen.
+.env
+.env.*
+!.env.example
+
+# Build-Artefakte
+target/
+
+# IDE
+.idea/
+*.iml
