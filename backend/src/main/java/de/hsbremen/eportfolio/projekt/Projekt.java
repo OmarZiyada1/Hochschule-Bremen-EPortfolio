@@ -22,9 +22,12 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -95,6 +98,11 @@ public class Projekt extends AuditableEntity {
 
 	@OneToMany(mappedBy = "projekt", cascade = CascadeType.ALL, orphanRemoval = true)
 	private Set<Projektmitglied> mitglieder = new HashSet<>();
+
+	/** Geordneter Inhalt; die Reihenfolge liegt in Block.reihenfolge. */
+	@OneToMany(mappedBy = "projekt", cascade = CascadeType.ALL, orphanRemoval = true)
+	@OrderBy("reihenfolge ASC")
+	private List<Block> blocks = new ArrayList<>();
 
 	protected Projekt() {
 		// Von JPA benoetigt.
@@ -226,5 +234,13 @@ public class Projekt extends AuditableEntity {
 
 	public void setMitglieder(Set<Projektmitglied> mitglieder) {
 		this.mitglieder = mitglieder;
+	}
+
+	public List<Block> getBlocks() {
+		return blocks;
+	}
+
+	public void setBlocks(List<Block> blocks) {
+		this.blocks = blocks;
 	}
 }
