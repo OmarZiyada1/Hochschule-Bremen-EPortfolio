@@ -1,0 +1,8 @@
+{
+  // Damit DevTools neu startet, muss beim Speichern eine neue .class-Datei
+  // im target/classes landen - genau das erledigt der Auto-Build.
+  "java.autobuild.enabled": true,
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 1000
+}
