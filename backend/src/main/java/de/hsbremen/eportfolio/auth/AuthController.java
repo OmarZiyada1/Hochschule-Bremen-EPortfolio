@@ -7,6 +7,10 @@ import de.hsbremen.eportfolio.benutzer.User;
 import de.hsbremen.eportfolio.benutzer.UserRepository;
 import de.hsbremen.eportfolio.common.error.ApiFehler;
 import de.hsbremen.eportfolio.common.error.Fehlercodes;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.time.Instant;
@@ -26,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "Auth", description = "Anmeldung, Abmeldung und aktueller Benutzer (§6.1).")
 public class AuthController {
 
 	private final AuthService authService;
@@ -41,6 +46,20 @@ public class AuthController {
 	 * Anmeldung mit privater E-Mail + Passwort. Liefert Token und
 	 * Benutzerdaten (ohne {@code passwortHash}, ohne {@code hsbEmail}).
 	 */
+	// Kein Bearer-Token: dieser Endpoint liefert das Token ja erst. Hebt die
+	// global registrierte Anforderung aus OpenApiConfig gezielt fuer diesen
+	// einen Pfad auf, damit die UI hier kein Schloss anzeigt.
+	@SecurityRequirements
+	@Operation(summary = "Anmelden und JWT erhalten",
+			description = "Das Feld \"token\" der Antwort gehoert oben rechts unter "
+					+ "\"Authorize\" eingetragen; danach schickt die UI es bei jedem "
+					+ "weiteren Aufruf mit.")
+	@ApiResponse(responseCode = "200", description = "Token und Benutzerdaten.")
+	@ApiResponse(responseCode = "400", description = "E-Mail oder Passwort fehlt bzw. keine gueltige E-Mail.")
+	// Bewusst dieselbe Meldung fuer unbekannte Adresse und falsches Passwort -
+	// sonst waere der Endpoint ein Verzeichnis existierender Konten.
+	@ApiResponse(responseCode = "401", description = "Anmeldedaten falsch oder Konto nicht aktiv.")
+	@ApiResponse(responseCode = "429", description = "Zu viele Fehlversuche, Konto bzw. IP ist voruebergehend gesperrt.")
 	@PostMapping("/login")
 	public LoginAntwort login(@Valid @RequestBody LoginAnfrage anfrage, HttpServletRequest request) {
 		return authService.anmelden(anfrage, clientIp(request));
@@ -80,6 +99,11 @@ public class AuthController {
 	 * {@code User.status = AKTIV} nachprueft: ein deaktiviertes Konto ist sofort
 	 * draussen, unabhaengig von der Token-Laufzeit.
 	 */
+	@Operation(summary = "Abmelden",
+			description = "Antwortet mit 204 und leert den SecurityContext dieses Requests. "
+					+ "Das bereits ausgegebene Token bleibt bis zum Ablauf gueltig - die API "
+					+ "ist stateless und fuehrt keine Sitzung, die sie beenden koennte. Die "
+					+ "eigentliche Abmeldung ist, dass der Client sein Token verwirft.")
 	@PostMapping("/logout")
 	public ResponseEntity<Void> logout() {
 		SecurityContextHolder.clearContext();
@@ -93,6 +117,12 @@ public class AuthController {
 	 * zusammengesetzt, damit z. B. eine zwischenzeitliche Rollenaenderung durch
 	 * den Admin sichtbar wird.
 	 */
+	@Operation(summary = "Aktuellen Benutzer lesen",
+			description = "Benoetigt ein Token. Liefert die Daten frisch aus der Datenbank, "
+					+ "nicht aus den Token-Claims - eine zwischenzeitliche Rollenaenderung "
+					+ "durch den Admin ist damit sofort sichtbar.")
+	@ApiResponse(responseCode = "200", description = "Benutzerdaten des Token-Inhabers.")
+	@ApiResponse(responseCode = "401", description = "Kein, abgelaufenes oder ungueltiges Token.")
 	@GetMapping("/me")
 	public BenutzerAntwort me(@AuthenticationPrincipal AngemeldeterBenutzer benutzer) {
 		User user = userRepository.findById(benutzer.getId())

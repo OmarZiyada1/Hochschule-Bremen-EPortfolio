@@ -10,6 +10,23 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+springdoc:
+  # Aus in der Basiskonfiguration, an nur im Profil dev
+  # (siehe application-dev.yml).
+  #
+  # Diese Richtung, weil sie fail-closed ist: ein Profil, das jemand spaeter
+  # anlegt (prod, staging, test), erbt automatisch "aus" und muss die
+  # Oberflaeche bewusst einschalten. Stuende der Schalter andersherum, wuerde
+  # ein vergessenes Ueberschreiben die Doku in Produktion veroeffentlichen.
+  #
+  # Beide Schalter sind noetig: swagger-ui.enabled entfernt nur die Oberflaeche,
+  # das rohe Dokument unter /v3/api-docs waere weiterhin abrufbar und listet
+  # saemtliche Pfade und Feldnamen der API auf.
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
+
 app:
   security:
     jwt:
