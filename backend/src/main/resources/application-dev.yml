@@ -18,3 +18,16 @@ spring:
       quiet-period: 1s
     livereload:
       enabled: true
+
+springdoc:
+  # Nur hier eingeschaltet - in der Basiskonfiguration steht beides auf false.
+  # Die Swagger-UI ist ein Entwicklungswerkzeug zum Ausprobieren der Endpoints
+  # und hat in Produktion nichts zu suchen.
+  swagger-ui:
+    enabled: true
+    # Endpoints alphabetisch statt in Controller-Reihenfolge: mit wachsender
+    # Zahl an Controllern findet man einen Pfad sonst nur noch durch Scrollen.
+    operations-sorter: alpha
+    tags-sorter: alpha
+  api-docs:
+    enabled: true

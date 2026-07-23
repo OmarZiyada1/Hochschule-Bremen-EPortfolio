@@ -83,6 +83,18 @@ public class SecurityConfig {
 					.requestMatchers("/api/auth/login").permitAll()
 					.requestMatchers("/actuator/health").permitAll()
 
+					// Swagger-UI und das OpenAPI-Dokument (KAN-11).
+					// Ohne diese Freigabe greift .anyRequest().authenticated()
+					// und der Aufruf der Doku endet mit 401 — die Seite ist ja
+					// gerade der Ort, an dem man sich sein Token erst besorgt.
+					// Bewusst nur diese drei Muster; ein pauschales permitAll
+					// auf statische Pfade wuerde mehr oeffnen als noetig.
+					// Dass diese Pfade offen sind, ist unkritisch, weil sie im
+					// Profil prod ueberhaupt nicht bedient werden (springdoc ist
+					// dort abgeschaltet, siehe application.yml) und weil hinter
+					// ihnen nur die Beschreibung der API liegt, keine Daten.
+					.requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+
 					// PUBLIC-Lesezugriff aus §5 auf veroeffentlichte Inhalte.
 					// Die Endpoints gibt es noch nicht; die Regeln stehen hier,
 					// damit die spaeteren Controller nicht versehentlich hinter
