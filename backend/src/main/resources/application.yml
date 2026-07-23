@@ -10,6 +10,39 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+app:
+  security:
+    jwt:
+      # Kein Default-Wert: fehlt JWT_SECRET, startet die Anwendung nicht.
+      # Ein eingebauter Fallback wuerde sonst still mit einem oeffentlich
+      # bekannten Secret signieren.
+      secret: ${JWT_SECRET}
+      # 8 Stunden: eine realistische Arbeitssitzung im Editor. Kuerzere
+      # Laufzeiten lassen den Autosave (PUT /projekte/{id}/blocks) mitten in
+      # der Bearbeitung mit 401 auflaufen. Das Restrisiko eines entwendeten
+      # Tokens wird dadurch begrenzt, dass der Filter bei jedem Request
+      # User.status = AKTIV nachprueft (siehe JwtAuthentifizierungsFilter).
+      laufzeit: PT8H
+      issuer: eportfolio
+    cors:
+      # Vite-Dev-Server. Ueber CORS_ERLAUBTE_ORIGINS ueberschreibbar,
+      # damit die Adresse nicht im Code steht.
+      erlaubte-origins: ${CORS_ERLAUBTE_ORIGINS:http://localhost:5173}
+
+    anmeldeversuche:
+      # Brute-Force-Bremse am Login. Gezaehlt wird getrennt je E-Mail und je
+      # Client-IP; schon einer der beiden Zaehler loest die Sperre aus.
+      # Der Zaehler liegt nur im Arbeitsspeicher (siehe AnmeldeversuchService).
+      max-fehlversuche: 5
+      sperrdauer: PT15M
+
+  berechtigung:
+    # Beide Schalter bilden die dokumentierten Default-Annahmen aus
+    # API-Contract §7 (offene Fragen 1 und 2) ab. Sie sind noch mit den
+    # Pruefern zu klaeren und deshalb bewusst konfigurierbar.
+    vier-augen-prinzip: true
+    admin-darf-fremde-inhalte-bearbeiten: false
+
 management:
   endpoints:
     web:
