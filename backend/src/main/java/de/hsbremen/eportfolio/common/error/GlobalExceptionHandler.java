@@ -9,6 +9,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
  * Bildet Ausnahmen auf das einheitliche Fehler-Envelope ab (API-Contract §6.2).
@@ -34,7 +35,26 @@ public class GlobalExceptionHandler {
 				.map(fehler -> fehler.getField() + ": " + fehler.getDefaultMessage())
 				.reduce((a, b) -> a + "; " + b)
 				.orElse("Die Anfrage ist ungueltig.");
-		return baue(HttpStatus.BAD_REQUEST, "VALIDIERUNG_FEHLGESCHLAGEN", meldung, request);
+		return baue(HttpStatus.BAD_REQUEST, Fehlercodes.VALIDIERUNG_FEHLGESCHLAGEN, meldung, request);
+	}
+
+	/**
+	 * Ein Query- oder Pfadparameter laesst sich nicht in den erwarteten Typ
+	 * umwandeln, etwa {@code GET /api/studiengaenge?fakultaet=abc}.
+	 *
+	 * <p>Ohne diesen Handler beantwortet Spring den Fall mit seinem eigenen
+	 * Standardkoerper — die API haette damit ein zweites Fehlerformat neben §6.2.
+	 * Die Meldung nennt nur Parametername und erwarteten Typ und gibt bewusst
+	 * nicht den Wert zurueck, den der Aufrufer geschickt hat: was ungeprueft
+	 * hereinkommt, geht nicht ungeprueft wieder hinaus.
+	 */
+	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
+	public ResponseEntity<ApiFehler> behandleTypfehler(MethodArgumentTypeMismatchException ex,
+			HttpServletRequest request) {
+		Class<?> erwartet = ex.getRequiredType();
+		String meldung = "Der Parameter \"" + ex.getName() + "\" hat nicht das erwartete Format"
+				+ (erwartet == null ? "." : " (" + erwartet.getSimpleName() + ").");
+		return baue(HttpStatus.BAD_REQUEST, Fehlercodes.VALIDIERUNG_FEHLGESCHLAGEN, meldung, request);
 	}
 
 	/**
