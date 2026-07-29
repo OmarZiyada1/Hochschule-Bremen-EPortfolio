@@ -1,7 +1,8 @@
 # Setup — von `git clone` bis zur laufenden Anwendung
 
 Diese Anleitung ist für jemanden geschrieben, der das Repository frisch klont
-und nichts vorinstalliert hat. Sie beschreibt den Stand von Branch `main`.
+und nichts vorinstalliert hat. Sie beschreibt den Stand von Branch `main`
+einschließlich KAN-14 (Stammdaten-Endpoints), dessen Merge noch aussteht.
 
 Alle Befehle werden **aus dem Repository-Wurzelverzeichnis** ausgeführt, sofern
 nicht anders angegeben.
@@ -162,7 +163,12 @@ curl http://localhost:8080/actuator/health
 Erwartete Antwort: `{"status":"UP", ...}` — der Pfad ist ohne Token freigegeben.
 Im Log sollten außerdem die Zeilen von Flyway (`Successfully validated 7
 migrations` bzw. `Migrating schema "public"`) und beim ersten Lauf drei Zeilen
-`Dev-Testnutzer angelegt: …` auftauchen.
+`Dev-Testnutzer angelegt: …` sowie `Dev-Stammdaten ergaenzt: 46 neue
+Datensaetze.` auftauchen (8 Kategorien, 5 Fakultäten, 11 Studiengänge,
+22 Module).
+
+Ab dem zweiten Start bleiben beide Seeder still: sie legen nur nach, was fehlt,
+und sind damit beliebig oft ausführbar.
 
 DevTools sind aktiv: gespeicherte Änderungen an Java-Klassen lösen einen
 Neustart aus, sofern die IDE neu kompiliert (in `.vscode/settings.json` ist der
@@ -222,8 +228,36 @@ So meldet man sich in der UI an:
    Präfix `Bearer ` ergänzt die Oberfläche selbst.
 
 Danach schickt die UI bei jedem Aufruf `Authorization: Bearer <token>` mit.
-Weil bisher nur die drei Auth-Endpoints existieren, ist außer ihnen nichts zu
-sehen.
+Zu sehen sind bisher zwei Gruppen: **Auth** (drei Endpoints) und **Stammdaten**
+(vier Endpoints). Bei den Stammdaten zeigt die UI bewusst kein Schloss — sie
+sind PUBLIC und brauchen kein Token.
+
+### Stammdaten abrufen (ohne Token)
+
+Diese vier Endpoints liefern die Referenzlisten für Filter und Auswahlfelder.
+Sie sind sortiert nach `name` und nicht paginiert:
+
+```bash
+curl http://localhost:8080/api/kategorien
+curl http://localhost:8080/api/fakultaeten
+curl http://localhost:8080/api/studiengaenge
+curl http://localhost:8080/api/module
+```
+
+Die letzten beiden lassen sich filtern — die ID stammt jeweils aus der
+übergeordneten Liste:
+
+```bash
+curl "http://localhost:8080/api/studiengaenge?fakultaet=<id-aus-/api/fakultaeten>"
+curl "http://localhost:8080/api/module?studiengang=<id-aus-/api/studiengaenge>"
+```
+
+Eine unbekannte ID ergibt `200` mit leerer Liste (der Parameter filtert, er
+adressiert keine Ressource); ein Wert, der keine UUID ist, ergibt `400` im
+Fehler-Envelope.
+
+Die Daten kommen vom `DevStammdatenSeeder` und existieren nur im Profil `dev`.
+Anders als beim Testnutzer-Seeder braucht er keine Variable in der `.env`.
 
 ---
 
@@ -260,27 +294,40 @@ cd backend
 ./mvnw test
 ```
 
-Stand `main`: **81 Tests, alle grün** (`Tests run: 81, Failures: 0, Errors: 0,
-Skipped: 0`). Sie verteilen sich auf sechs Testklassen:
+Stand `main` plus KAN-14: **108 Tests, alle grün** (`Tests run: 108,
+Failures: 0, Errors: 0, Skipped: 0`). Sie verteilen sich auf neun Testklassen:
 
-- `EportfolioApplicationTests` — 1 (Kontext lädt)
-- `auth/AnmeldeversuchServiceTest` — 7
-- `auth/AuthControllerTest` — 14
-- `auth/JwtServiceTest` — 6
-- `auth/AuthServiceTest` — Rest, größtenteils in `@Nested`-Klassen
-- `projekt/ProjektBerechtigungServiceTest` — Rest, in 10 `@Nested`-Klassen entlang der Rechtematrix
+| Testklasse | Tests | Art |
+|------------|------:|-----|
+| `EportfolioApplicationTests` | 1 | Kontext lädt (`@SpringBootTest`) |
+| `auth/AnmeldeversuchServiceTest` | 7 | Unit |
+| `auth/AuthControllerTest` | 14 | `@WebMvcTest` |
+| `auth/AuthServiceTest` | 13 | Unit, teils `@Nested` |
+| `auth/JwtServiceTest` | 6 | Unit |
+| `projekt/ProjektBerechtigungServiceTest` | 40 | Unit, `@Nested` entlang der Rechtematrix |
+| `stammdaten/StammdatenServiceTest` | 9 | Unit |
+| `stammdaten/StammdatenControllerTest` | 9 | `@WebMvcTest` |
+| `stammdaten/StammdatenIntegrationTest` | 9 | `@SpringBootTest` gegen die echte DB |
 
-Die genaue Aufteilung der letzten beiden ist aus dem Surefire-Report nicht
-eindeutig ablesbar, weil verschachtelte Klassen dort unter ihrem
-`@DisplayName` statt unter dem Klassennamen erscheinen.
+Im Surefire-Textreport stehen bei `AuthServiceTest` und
+`ProjektBerechtigungServiceTest` `0` Tests, weil verschachtelte Klassen dort
+unter ihrem `@DisplayName` erscheinen. Die Zahlen oben stammen aus den
+XML-Reports (`target/surefire-reports/TEST-*.xml`).
 
-`TestUser` und `TestProjekt` sind Hilfsklassen ohne eigene Tests.
+`TestUser`, `TestProjekt` und `TestStammdaten` sind Hilfsklassen ohne eigene
+Tests.
 
 **Wichtig:** Die Tests brauchen eine laufende Datenbank und eine gültige
-`.env`. `EportfolioApplicationTests` ist ein `@SpringBootTest`, startet also den
-kompletten Kontext inklusive Datasource und Flyway. Ohne Container schlägt der
-Testlauf fehl. Eine Testkonfiguration mit In-Memory-DB oder Testcontainers gibt
-es nicht.
+`.env`. `EportfolioApplicationTests` und `StammdatenIntegrationTest` sind
+`@SpringBootTest`s, starten also den kompletten Kontext inklusive Datasource und
+Flyway. Ohne Container schlägt der Testlauf fehl. Eine Testkonfiguration mit
+In-Memory-DB oder Testcontainers gibt es nicht.
+
+Der Testlauf läuft im Profil `dev` und damit gegen dieselbe Datenbank wie die
+Anwendung. Was er schreibt, rollt er wieder zurück (`@Transactional` am
+Integrationstest); die Seeder laufen beim Hochfahren des Testkontexts aber
+regulär durch, ein Testlauf befüllt eine leere Datenbank also mit den
+Dev-Daten.
 
 ---
 
@@ -344,6 +391,23 @@ kill <pid>
 
 Alternativ mit anderem Port starten:
 `./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=8081`.
+
+### Port 5432 ist belegt — `Bind for 0.0.0.0:5432 failed`
+
+Vollständige Meldung von Compose: `driver failed programming external
+connectivity … Bind for 0.0.0.0:5432 failed: port is already allocated`. Meist
+läuft eine andere Postgres-Instanz (lokale Installation oder der Container eines
+anderen Projekts).
+
+Statt die fremde Instanz zu stoppen, reicht ein anderer Host-Port in der `.env`:
+
+```
+POSTGRES_PORT=5433
+```
+
+Die Variable steuert beides — das Port-Mapping in `docker-compose.yml` und die
+JDBC-URL in `application-dev.yml`. Ein Wert genügt also, danach
+`docker compose up -d db`. Im Container bleibt der Port unverändert 5432.
 
 ### `FATAL: password authentication failed for user "eportfolio"`
 

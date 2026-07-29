@@ -1,6 +1,7 @@
 # Architektur
 
-Beschreibt den Stand von Branch `main`. Basis-Paket ist
+Beschreibt den Stand von Branch `main` einschließlich KAN-14
+(Stammdaten-Endpoints), dessen Merge noch aussteht. Basis-Paket ist
 `de.hsbremen.eportfolio`, Gruppen-ID `de.hsbremen`, Artefakt `eportfolio`.
 
 ---
@@ -28,6 +29,7 @@ de.hsbremen.eportfolio
 │   └── dto/                       DTOs des Projekt-Features (bisher nur package-info.java)
 ├── reaktion/                      Reaktionen/Bewertungen auf Projekte
 ├── stammdaten/                    Referenzdaten: Fakultät, Studiengang, Modul, Kategorie
+│   └── dto/                       DTOs der vier Stammdaten-Endpoints
 └── top10/                         Rangliste hervorgehobener Projekte
 ```
 
@@ -45,7 +47,7 @@ Was in welchem Paket steckt:
 | `portfolio`  | `Portfolio`, `PortfolioRepository` |
 | `projekt`    | `Projekt`, `Block`, `Projektmitglied`, `ProjektStatusHistorie` + je ein Repository, `BlockValidationService`, `ProjektBerechtigungService`, `BerechtigungEigenschaften` |
 | `reaktion`   | `Reaktion`, `ReaktionRepository` |
-| `stammdaten` | `Fakultaet`, `Kategorie`, `Modul`, `Studiengang` + je ein Repository |
+| `stammdaten` | `Fakultaet`, `Kategorie`, `Modul`, `Studiengang` + je ein Repository, `StammdatenController`, `StammdatenService`, `DevStammdatenSeeder`, `dto/{KategorieAntwort, FakultaetAntwort, StudiengangAntwort, ModulAntwort}` |
 | `top10`      | `Top10Eintrag`, `Top10Nominierung` + je ein Repository |
 
 ---
@@ -77,10 +79,10 @@ liest.
 | Entity / Feature        | Entity | Migration | Repository | Service | Endpoint |
 |-------------------------|:------:|:---------:|:----------:|:-------:|:--------:|
 | `User`                  | ✓      | ✓ (1)     | ✓          | teilweise (`BenutzerDetailsService`, `AuthService` — nur Anmeldung) | nur `GET /api/auth/me` |
-| `Fakultaet`             | ✓      | ✓ (1)     | ✓          | —       | — |
-| `Kategorie`             | ✓      | ✓ (1)     | ✓          | —       | — |
-| `Studiengang`           | ✓      | ✓ (2)     | ✓          | —       | — |
-| `Modul`                 | ✓      | ✓ (2)     | ✓          | —       | — |
+| `Fakultaet`             | ✓      | ✓ (1)     | ✓          | `StammdatenService` (nur lesend) | ✓ `GET /api/fakultaeten` |
+| `Kategorie`             | ✓      | ✓ (1)     | ✓          | `StammdatenService` (nur lesend) | ✓ `GET /api/kategorien` |
+| `Studiengang`           | ✓      | ✓ (2)     | ✓          | `StammdatenService` (nur lesend) | ✓ `GET /api/studiengaenge?fakultaet={id}` |
+| `Modul`                 | ✓      | ✓ (2)     | ✓          | `StammdatenService` (nur lesend) | ✓ `GET /api/module?studiengang={id}` |
 | `Portfolio`             | ✓      | ✓ (2)     | ✓          | —       | — |
 | `Projekt`               | ✓      | ✓ (3)     | ✓          | nur `ProjektBerechtigungService` (Rechteprüfung, kein CRUD) | — |
 | `Projektmitglied`       | ✓      | ✓ (3)     | ✓          | —       | — |
@@ -94,10 +96,18 @@ liest.
 | `Block`                 | ✓      | ✓ (6, 7)  | ✓          | `BlockValidationService` (Validierung, kein CRUD) | — |
 | Auth                    | keine Entity | —   | —          | `AuthService`, `JwtService`, `AnmeldeversuchService` | ✓ `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` |
 
-Es gibt genau **einen** Controller: `auth.AuthController`. Datei-Upload,
-Registrierung, Admin-Bereich, Projekt-CRUD und Top-10-Verwaltung sind noch
-nicht implementiert. Die Security-Regeln für einen Teil dieser Pfade stehen
-bereits in `SecurityConfig` (siehe Abschnitt 5).
+Es gibt zwei Controller: `auth.AuthController` und
+`stammdaten.StammdatenController`. Datei-Upload, Registrierung, Admin-Bereich,
+Projekt-CRUD und Top-10-Verwaltung sind noch nicht implementiert. Die
+Security-Regeln für einen Teil dieser Pfade stehen bereits in `SecurityConfig`
+(siehe Abschnitt 5).
+
+Die Stammdaten haben zusätzlich einen `DevStammdatenSeeder` (Profil `dev`,
+idempotent): FK1–FK5 mit Beispiel-Studiengängen und -Modulen sowie ein Satz
+Kategorien. Ohne diese Daten wären die vier Endpoints leere Listen. Die
+Fakultäten entsprechen dem öffentlichen Stand der Hochschule, Studiengänge und
+Module sind erfunden — deshalb ein Seeder und keine Migration, die die
+Beispieldaten in jede Umgebung tragen würde.
 
 ---
 
@@ -166,7 +176,9 @@ Aktueller Schemastand laut Flyway: `202607221800`, 7 Migrationen.
   `RestZugriffVerweigertHandler` sorgen dafür, dass auch die von Spring Security
   selbst erzeugten 401/403 im Envelope aus `ApiFehler` (`zeitpunkt`, `status`,
   `fehlercode`, `meldung`, `pfad`) ankommen und die API nicht zwei Fehlerformate
-  hat.
+  hat. Denselben Zweck erfüllt im `GlobalExceptionHandler` die Behandlung von
+  `MethodArgumentTypeMismatchException`: ein Query-Parameter, der keine UUID
+  ist (`?fakultaet=abc`), landete sonst in Springs eigenem Fehlerkörper.
 
 ### Offene Pfade und warum
 
@@ -175,7 +187,8 @@ Aktueller Schemastand laut Flyway: `202607221800`, 7 Migrationen.
 | `OPTIONS /**` | CORS-Preflight muss ohne Token durchgehen. |
 | `POST /api/auth/login` | Hier holt man sich das Token erst. |
 | `GET /actuator/health` | Health-Check ohne Anmeldung; es ist der einzige freigeschaltete Actuator-Endpoint (`management.endpoints.web.exposure.include: health`). |
-| `GET` auf `/api/projekte`, `/api/projekte/*`, `/api/projekte/*/blocks`, `/api/portfolios/*`, `/api/kategorien`, `/api/fakultaeten`, `/api/studiengaenge`, `/api/module`, `/api/top10` | PUBLIC-Lesezugriff auf veröffentlichte Inhalte. **Diese Endpoints existieren noch nicht.** Die Regeln stehen vorab da, damit die späteren Controller nicht versehentlich hinter `authenticated()` verschwinden; was ein nicht angemeldeter Aufrufer tatsächlich sieht, entscheidet dann der Berechtigungsservice. |
+| `GET` auf `/api/kategorien`, `/api/fakultaeten`, `/api/studiengaenge`, `/api/module` | PUBLIC-Lesezugriff auf die Stammdaten (§5). Umgesetzt im `StammdatenController`. Hier entscheidet **kein** Berechtigungsservice mit: die Listen hängen an keiner Ressource mit Eigentümer und enthalten nichts Schützenswertes. |
+| `GET` auf `/api/projekte`, `/api/projekte/*`, `/api/projekte/*/blocks`, `/api/portfolios/*`, `/api/top10` | PUBLIC-Lesezugriff auf veröffentlichte Inhalte. **Diese Endpoints existieren noch nicht.** Die Regeln stehen vorab da, damit die späteren Controller nicht versehentlich hinter `authenticated()` verschwinden; was ein nicht angemeldeter Aufrufer tatsächlich sieht, entscheidet dann der Berechtigungsservice. |
 | `/api/admin/**` | Nicht offen, sondern `hasRole("ADMIN")`. |
 | `/swagger-ui/**`, `/swagger-ui.html`, `/v3/api-docs/**` | Die Doku ist gerade der Ort, an dem man sich das Token erst besorgt — hinter `authenticated()` wäre sie nutzlos. Im Gegenzug ist springdoc außerhalb des Profils `dev` komplett abgeschaltet, und hinter den Pfaden liegt nur die Beschreibung der API, keine Daten. |
 
@@ -202,10 +215,10 @@ sich. Als Client-IP wird bewusst `request.getRemoteAddr()` genommen, ohne
 | Neues Repository | neben die Entity, z. B. `…/projekt/FooRepository.java`, Interface über `JpaRepository` |
 | Neuer Service | neben die Entity, z. B. `…/projekt/FooService.java`, `@Service` |
 | Neuer Endpoint | `…/<feature>/FooController.java`, `@RestController` mit `@RequestMapping("/api/…")`; Zugriffsregel in `config/SecurityConfig` prüfen |
-| Neues DTO | `…/<feature>/dto/`, z. B. `…/projekt/dto/FooAntwort.java` (das Paket existiert bereits, bisher nur mit `package-info.java`); Records mit Bean-Validation-Annotationen wie in `auth/dto/LoginAnfrage` |
+| Neues DTO | `…/<feature>/dto/`, z. B. `…/projekt/dto/FooAntwort.java` (dieses Paket existiert bereits, bisher nur mit `package-info.java`); Records mit Bean-Validation-Annotationen wie in `auth/dto/LoginAnfrage`, Abbildung aus der Entity über eine statische `aus(…)`-Methode wie in `stammdaten/dto/StudiengangAntwort` |
 | Neuer Fehlercode | Konstante in `common/error/Fehlercodes.java` |
 | Neue Konfigurationswerte | `@ConfigurationProperties`-Record neben das Feature (Vorbild `auth/JwtEigenschaften`), Werte in `application.yml`; Registrierung passiert automatisch über `@ConfigurationPropertiesScan` |
-| Neuer Test | `backend/src/test/java/de/hsbremen/eportfolio/<feature>/FooTest.java`, gleiche Paketstruktur wie der Produktivcode; Testdaten-Helfer wie `TestUser`/`TestProjekt` daneben |
+| Neuer Test | `backend/src/test/java/de/hsbremen/eportfolio/<feature>/FooTest.java`, gleiche Paketstruktur wie der Produktivcode; Testdaten-Helfer wie `TestUser`/`TestProjekt`/`TestStammdaten` daneben |
 
 ---
 

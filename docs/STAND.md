@@ -1,7 +1,7 @@
 # Stand
 
 Verbindlicher Stand ist das [Jira-Board](https://hsb-portfolio.atlassian.net/browse/KAN);
-diese Datei ist eine Momentaufnahme vom **23.07.2026** und veraltet schnell.
+diese Datei ist eine Momentaufnahme vom **29.07.2026** und veraltet schnell.
 
 Grundlage sind die Branches und Commits im Repository, nicht die Ticketstände in
 Jira.
@@ -56,13 +56,44 @@ Beide Schalter stehen in `application.yml` auf `false` und werden nur in
 `application-dev.yml` eingeschaltet — die Doku ist damit außerhalb von `dev`
 weder als Oberfläche noch als rohes Dokument erreichbar.
 Nicht enthalten: Endpoint-Beschreibungen jenseits der Auth-Endpoints, weil es
-keine weiteren Controller gibt.
+zu diesem Zeitpunkt keine weiteren Controller gab (nachgeholt mit KAN-14).
 
-Testabdeckung insgesamt: 81 Tests, alle grün.
+### KAN-12 — Projektdokumentation
+
+`README.md` mit Überblick, Tech-Stack, Repo-Aufbau und Schnelleinstieg sowie die
+drei Dateien in `docs/`: `ARCHITEKTUR.md` (Paketbaum, Basisklassen,
+Migrationsliste, Security-Ablauf, „Wo kommt was hin"), `SETUP.md` (von
+`git clone` bis zur laufenden Anwendung inkl. Fehlersuche) und diese Datei.
+
+### KAN-13 — Coding-Richtlinie und Claude-Setup
+
+`CLAUDE.md` als verbindliche Projektregel (Quellenreihenfolge, Stack,
+Backend-Regeln, Arbeitsablauf je Ticket) sowie vier Skills
+(`backend-modul`, `flyway-migration`, `api-contract-sync`, `jira-ticket`) und
+drei Agents (`backend-modul-builder`, `contract-pruefer`, `code-reviewer`) unter
+`.claude/`. Kein Produktivcode.
+
+Testabdeckung `main`: 81 Tests, alle grün (108 mit KAN-14, siehe unten).
 
 ---
 
 ## Erledigt, aber nicht in `main`
+
+### KAN-14 — Stammdaten-Endpoints
+
+Branch `KAN-14-stammdaten-endpoints`, Merge steht aus. Die vier öffentlichen
+Lese-Endpoints aus Contract §6.1: `GET /api/kategorien`, `/api/fakultaeten`,
+`/api/studiengaenge?fakultaet={id}`, `/api/module?studiengang={id}` — ohne
+Token, sortiert nach `name`, ohne Paginierung. Dazu `StammdatenController`,
+`StammdatenService`, vier Antwort-Records in `stammdaten/dto` und der
+`DevStammdatenSeeder` (Profil `dev`, idempotent): FK1–FK5 mit
+Beispiel-Studiengängen und -Modulen sowie acht Kategorien. Ein ungültiger
+UUID-Parameter lief bisher an §6.2 vorbei und liefert jetzt 400 im Envelope;
+`VALIDIERUNG_FEHLGESCHLAGEN` ist damit Konstante in `Fehlercodes` statt Literal
+im Handler. Keine Migration angefasst, `ddl-auto: validate` grün.
+Testabdeckung mit diesem Branch: 108 Tests, alle grün.
+Nicht enthalten: Schreiben von Stammdaten (Administrationsseite) und der
+Abgleich der §§ 3.6–3.9 mit der Contract-Seite.
 
 ### KAN-6 — Frontend-Setup
 
@@ -76,9 +107,11 @@ Kein Routing, kein API-Client, keine Backend-Anbindung.
 
 ## Bekannte Lücken und Einschränkungen
 
-- **Fast keine Endpoints.** Es existiert genau ein Controller (`AuthController`).
-  Projekte, Portfolios, Blöcke, Kommentare, Reaktionen, Stammdaten und Top-10
-  sind persistiert, aber über die API weder les- noch schreibbar.
+- **Fast keine Endpoints.** Es gibt zwei Controller: `AuthController` und —
+  erst auf dem Branch zu KAN-14 — `StammdatenController`. Projekte, Portfolios,
+  Blöcke, Kommentare, Reaktionen und Top-10 sind persistiert, aber über die API
+  weder les- noch schreibbar. Die Stammdaten sind lesbar, aber nicht
+  schreibbar; angelegt werden sie bisher nur vom Dev-Seeder.
 - **Logout entwertet das Token nicht.** Die API ist stateless; ein signiertes
   JWT bleibt bis zum Ablauf gültig. Der Endpoint leert nur den SecurityContext
   des einen Requests. Kompensiert wird das dadurch, dass der Filter bei jedem
@@ -115,3 +148,8 @@ Kein Routing, kein API-Client, keine Backend-Anbindung.
   Code noch mit den Prüfern zu klären.
 - **Die Auth-Fehlercodes stehen noch nicht im Contract.** `Fehlercodes` vergibt
   sie vorab; laut Kommentar sind sie mit v11 der Confluence-Seite nachzutragen.
+  Mit KAN-14 kommt `VALIDIERUNG_FEHLGESCHLAGEN` dazu — der Code wurde vorher
+  schon als Literal im `GlobalExceptionHandler` verwendet und steht ebenfalls
+  noch nicht in §6.2.
+- **`OpenApiConfig` nennt weiterhin „v10".** Der Contract steht inzwischen auf
+  v11; Titel und Beschreibung der API sind nicht nachgezogen.

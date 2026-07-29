@@ -34,6 +34,17 @@ public final class Fehlercodes {
 	/** 403 — angemeldet, aber die Rechtematrix (§5) erlaubt die Aktion nicht. */
 	public static final String KEINE_BERECHTIGUNG = "KEINE_BERECHTIGUNG";
 
+	/**
+	 * 400 — die Anfrage ist formal unbrauchbar: Bean-Validation an einem
+	 * Request-Body schlaegt fehl oder ein Parameter hat nicht den erwarteten Typ
+	 * (z. B. {@code ?fakultaet=abc}, wo eine UUID stehen muss).
+	 *
+	 * <p>Der Code wurde im {@code GlobalExceptionHandler} bereits als Literal
+	 * benutzt und steht jetzt hier, damit er nicht an zwei Stellen auseinander
+	 * laufen kann. Wie die uebrigen Codes ist er in §6.2 nachzutragen.
+	 */
+	public static final String VALIDIERUNG_FEHLGESCHLAGEN = "VALIDIERUNG_FEHLGESCHLAGEN";
+
 	private Fehlercodes() {
 		// Nur Konstanten.
 	}
