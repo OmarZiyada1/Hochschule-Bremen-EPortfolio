@@ -39,6 +39,17 @@ public final class TestProjekt {
 		return projekt;
 	}
 
+	/**
+	 * Ein {@code ENTWURF} ohne vorbelegte ID — fuer Tests, die das Projekt
+	 * tatsaechlich speichern (Begruendung wie bei
+	 * {@code TestUser.aktivOhneId}).
+	 */
+	public static Projekt entwurfOhneId(User autor) {
+		Projekt projekt = mitAutor(autor, ProjektStatus.ENTWURF);
+		ReflectionTestUtils.setField(projekt, "id", null);
+		return projekt;
+	}
+
 	private TestProjekt() {
 	}
 }

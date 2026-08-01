@@ -38,6 +38,20 @@ public final class TestUser {
 				rolle, UserStatus.AKTIV, passwortHash);
 	}
 
+	/**
+	 * Wie {@link #aktiv}, nur ohne vorbelegte ID — fuer Tests, die den User
+	 * tatsaechlich speichern.
+	 *
+	 * <p>Notwendig, weil {@code JpaRepository.save} eine Instanz mit gesetzter
+	 * ID fuer bereits bekannt haelt und ueber {@code merge} statt {@code persist}
+	 * geht. Im Produktivcode vergibt die ID ohnehin JPA.
+	 */
+	public static User aktivOhneId(Rolle rolle, String passwortHash) {
+		User user = aktiv(rolle, passwortHash);
+		ReflectionTestUtils.setField(user, "id", null);
+		return user;
+	}
+
 	private TestUser() {
 	}
 }

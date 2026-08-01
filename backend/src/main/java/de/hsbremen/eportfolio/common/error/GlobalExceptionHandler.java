@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -55,6 +56,28 @@ public class GlobalExceptionHandler {
 		String meldung = "Der Parameter \"" + ex.getName() + "\" hat nicht das erwartete Format"
 				+ (erwartet == null ? "." : " (" + erwartet.getSimpleName() + ").");
 		return baue(HttpStatus.BAD_REQUEST, Fehlercodes.VALIDIERUNG_FEHLGESCHLAGEN, meldung, request);
+	}
+
+	/**
+	 * Optimistic-Locking-Konflikt am Projekt (§6.4): zwischen Laden und
+	 * Speichern hat jemand anderes dieselbe Zeile geaendert, die
+	 * {@code version} im Request passt also nicht mehr zum Stand in der
+	 * Datenbank. Hibernate bricht den Schreibvorgang ab, Spring uebersetzt das
+	 * in {@link ObjectOptimisticLockingFailureException}, und hier wird daraus
+	 * 409 {@code PROJEKT_VERSION_KONFLIKT}.
+	 *
+	 * <p>Die Meldung ist bewusst fest verdrahtet und uebernimmt nicht
+	 * {@code ex.getMessage()}: die Ausnahme nennt Entity-Klasse und
+	 * Primaerschluessel, also Interna, die in keiner Antwort an den Client
+	 * verloren haben. Was der Client braucht, ist ohnehin nur die
+	 * Handlungsanweisung — neu laden und die Aenderung wiederholen.
+	 */
+	@ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+	public ResponseEntity<ApiFehler> behandleVersionskonflikt(ObjectOptimisticLockingFailureException ex,
+			HttpServletRequest request) {
+		return baue(HttpStatus.CONFLICT, Fehlercodes.PROJEKT_VERSION_KONFLIKT,
+				"Das Projekt wurde zwischenzeitlich von jemand anderem geaendert. "
+						+ "Bitte neu laden und die Aenderung wiederholen.", request);
 	}
 
 	/**
