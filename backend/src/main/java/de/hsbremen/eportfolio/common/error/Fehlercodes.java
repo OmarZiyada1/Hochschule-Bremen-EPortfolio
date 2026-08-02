@@ -3,14 +3,19 @@ package de.hsbremen.eportfolio.common.error;
 /**
  * Fehlercodes fuer das Envelope aus API-Contract §6.2.
  *
- * <p>Stand Contract v15 steht jede Konstante dieser Klasse auch in §6.2. Zuletzt
- * nachgetragen wurde {@link #VALIDIERUNG_FEHLGESCHLAGEN}, der bis v14 nur hier
- * gefuehrt war (Tabelle „Fehlercodes Anfrageformat", Historieneintrag in §10).
+ * <p>Stand Contract v16 steht jede Konstante dieser Klasse auch in §6.2.
+ * {@link #VALIDIERUNG_FEHLGESCHLAGEN} war bis v14 nur hier gefuehrt und wurde
+ * mit v15 nachgetragen (Tabelle „Fehlercodes Anfrageformat", Historieneintrag
+ * in §10). {@link #PROJEKT_NICHT_GEFUNDEN} lag umgekehrt: er stand seit jeher
+ * in §6.2 und kam mit KAN-16 hier dazu.
  *
- * <p>Umgekehrt fuehrt §6.2 Codes, die hier noch fehlen (etwa
- * {@code PROJEKT_NICHT_GEFUNDEN} oder die Block- und Datei-Codes). Sie kommen
- * mit dem jeweiligen Modul dazu; das ist keine Abweichung, sondern der noch
- * offene Umsetzungsstand aus §8.
+ * <p>Umgekehrt fuehrt §6.2 Codes, die hier noch fehlen: die Block- und
+ * Datei-Codes, {@code PROJEKT_UNVOLLSTAENDIG}, {@code RESSOURCE_NICHT_GEFUNDEN},
+ * die beiden {@code PROJEKT_STATUS_*}-Konflikte,
+ * {@code RESSOURCE_IN_VERWENDUNG} und
+ * {@code PASSWORTAENDERUNG_ERFORDERLICH}. Sie kommen mit dem jeweiligen Modul
+ * dazu; das ist keine Abweichung, sondern der noch offene Umsetzungsstand aus
+ * §8.
  */
 public final class Fehlercodes {
 
