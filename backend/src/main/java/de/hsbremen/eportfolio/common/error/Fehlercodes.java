@@ -3,9 +3,14 @@ package de.hsbremen.eportfolio.common.error;
 /**
  * Fehlercodes fuer das Envelope aus API-Contract §6.2.
  *
- * <p>Die Codes rund um Authentifizierung und Autorisierung sind im Contract
- * noch nicht aufgefuehrt — §6.2 listet bisher nur die Block- und Datei-Codes.
- * Sie werden hier vergeben und sind mit v11 der Seite nachzutragen.
+ * <p>Stand Contract v15 steht jede Konstante dieser Klasse auch in §6.2. Zuletzt
+ * nachgetragen wurde {@link #VALIDIERUNG_FEHLGESCHLAGEN}, der bis v14 nur hier
+ * gefuehrt war (Tabelle „Fehlercodes Anfrageformat", Historieneintrag in §10).
+ *
+ * <p>Umgekehrt fuehrt §6.2 Codes, die hier noch fehlen (etwa
+ * {@code PROJEKT_NICHT_GEFUNDEN} oder die Block- und Datei-Codes). Sie kommen
+ * mit dem jeweiligen Modul dazu; das ist keine Abweichung, sondern der noch
+ * offene Umsetzungsstand aus §8.
  */
 public final class Fehlercodes {
 
@@ -44,6 +49,13 @@ public final class Fehlercodes {
 	 * laufen kann. Wie die uebrigen Codes ist er in §6.2 nachzutragen.
 	 */
 	public static final String VALIDIERUNG_FEHLGESCHLAGEN = "VALIDIERUNG_FEHLGESCHLAGEN";
+
+	/**
+	 * 409: das Projekt wurde zwischen Laden und Speichern von jemand anderem
+	 * geaendert (Optimistic Locking, §6.4). Der Client laedt neu und meldet den
+	 * Konflikt, statt fremde Arbeit zu ueberschreiben.
+	 */
+	public static final String PROJEKT_VERSION_KONFLIKT = "PROJEKT_VERSION_KONFLIKT";
 
 	private Fehlercodes() {
 		// Nur Konstanten.

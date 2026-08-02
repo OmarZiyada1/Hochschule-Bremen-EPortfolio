@@ -24,6 +24,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -84,6 +85,27 @@ public class Projekt extends AuditableEntity {
 	private String semester;
 
 	private Instant veroeffentlichtAm;
+
+	/**
+	 * Zaehler fuer Optimistic Locking (API-Contract §3.3 und §6.4). Hibernate
+	 * erhoeht ihn bei jedem Update und vergleicht ihn dabei mit dem Stand in der
+	 * Datenbank; passt er nicht, endet der Schreibvorgang mit einer
+	 * {@code ObjectOptimisticLockingFailureException} und der
+	 * {@code GlobalExceptionHandler} macht daraus 409
+	 * {@code PROJEKT_VERSION_KONFLIKT}.
+	 *
+	 * <p>Notwendig, weil §3.13 mehrere Projektmitglieder am selben Projekt
+	 * vorsieht. Ohne die Pruefung gilt Last-Write-Wins: beim Autosave-Takt des
+	 * Editors ueberschreibt der spaetere Speichervorgang fremde Arbeit, ohne
+	 * dass es jemand bemerkt.
+	 *
+	 * <p>Bewusst ohne Setter, denn der Wert gehoert Hibernate. Anwendungscode setzt
+	 * ihn nie, sondern vergleicht die Version aus dem Request-Body mit
+	 * {@link #getVersion()}.
+	 */
+	@Version
+	@Column(nullable = false)
+	private Long version;
 
 	@ElementCollection
 	@CollectionTable(name = "projekt_tag", joinColumns = @JoinColumn(name = "projekt_id"))
@@ -210,6 +232,11 @@ public class Projekt extends AuditableEntity {
 
 	public void setVeroeffentlichtAm(Instant veroeffentlichtAm) {
 		this.veroeffentlichtAm = veroeffentlichtAm;
+	}
+
+	/** Siehe {@link #version}, absichtlich ohne passenden Setter. */
+	public Long getVersion() {
+		return version;
 	}
 
 	public Set<String> getTags() {

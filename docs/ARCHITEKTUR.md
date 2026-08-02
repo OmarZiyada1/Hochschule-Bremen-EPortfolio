@@ -126,8 +126,9 @@ Liegen unter `backend/src/main/resources/db/migration`, Namensschema
 | 5 | `V202607221500__top10.sql` | `top10_eintrag` und `top10_nominierung`; bewusst **kein** Unique auf `position`, damit Zwischenzustände beim Umsortieren möglich sind. |
 | 6 | `V202607221645__block.sql` | `block`: ein Datensatz je Top-Level-Knoten des ProseMirror-Dokuments, `inhalt` als `jsonb`, `typ` als Check-Constraint über die 14 Blocktypen, Unique auf `(projekt_id, reihenfolge)` als `deferrable initially deferred`. |
 | 7 | `V202607221800__block_audit_und_schema_version.sql` | Nachtrag zu `block`: Spalte `schema_version` (Default 1) sowie `erstellt_am`/`aktualisiert_am` für die Umstellung auf `AuditableEntity`; die DB-Defaults werden anschließend wieder entfernt, damit JPA sie schreibt. |
+| 8 | `V202608011519__projekt_version.sql` | Spalte `projekt.version` (`bigint not null default 0`) für Optimistic Locking nach §3.3/§6.4. Der Default bleibt dauerhaft stehen, damit Inserts aus reinem SQL nicht an der not-null-Bedingung scheitern. |
 
-Aktueller Schemastand laut Flyway: `202607221800`, 7 Migrationen.
+Aktueller Schemastand laut Flyway: `202608011519`, 8 Migrationen.
 
 ---
 
@@ -216,7 +217,7 @@ sich. Als Client-IP wird bewusst `request.getRemoteAddr()` genommen, ohne
 | Neuer Service | neben die Entity, z. B. `…/projekt/FooService.java`, `@Service` |
 | Neuer Endpoint | `…/<feature>/FooController.java`, `@RestController` mit `@RequestMapping("/api/…")`; Zugriffsregel in `config/SecurityConfig` prüfen |
 | Neues DTO | `…/<feature>/dto/`, z. B. `…/projekt/dto/FooAntwort.java` (dieses Paket existiert bereits, bisher nur mit `package-info.java`); Records mit Bean-Validation-Annotationen wie in `auth/dto/LoginAnfrage`, Abbildung aus der Entity über eine statische `aus(…)`-Methode wie in `stammdaten/dto/StudiengangAntwort` |
-| Neuer Fehlercode | Konstante in `common/error/Fehlercodes.java` |
+| Neuer Fehlercode | Konstante in `common/error/Fehlercodes.java` **und** Zeile in Contract §6.2 (Contract-Version erhöhen, Skill `api-contract-sync`); ein Code an nur einem der beiden Orte ist ein Befund. Siehe Abschnitt 8 |
 | Neue Konfigurationswerte | `@ConfigurationProperties`-Record neben das Feature (Vorbild `auth/JwtEigenschaften`), Werte in `application.yml`; Registrierung passiert automatisch über `@ConfigurationPropertiesScan` |
 | Neuer Test | `backend/src/test/java/de/hsbremen/eportfolio/<feature>/FooTest.java`, gleiche Paketstruktur wie der Produktivcode; Testdaten-Helfer wie `TestUser`/`TestProjekt`/`TestStammdaten` daneben |
 
@@ -243,3 +244,45 @@ Schriften), die Farbwerte sind aber die neutralen shadcn-Defaults mit Chroma 0.
 Übernommen ist bisher nur die Schrift (Geist Variable) und die abgestufte
 Radius-Skala. Ob darüber hinaus Tokens aus Figma gesetzt werden sollten und
 welche, ist aus dem Repo nicht ersichtlich — **unklar**.
+
+---
+
+## 8. Fehlerbehandlung
+
+Jede Fehlerantwort verlässt den Server im Envelope aus Contract §6.2
+(`common/error/ApiFehler`: `zeitpunkt`, `status`, `fehlercode`, `meldung`,
+`pfad`). Es gibt genau zwei Wege dorthin:
+
+- **`common/error/GlobalExceptionHandler`** (`@RestControllerAdvice`) für alles,
+  was aus Controllern und Services kommt.
+- **`auth/RestAuthentifizierungsEinstieg`** (401) und
+  **`auth/RestZugriffVerweigertHandler`** (403) für Fehler, die schon in der
+  Security-Filterkette auftreten und den Handler deshalb nie erreichen. Beide
+  schreiben über denselben `ApiFehlerSchreiber`, damit das Frontend nicht zwei
+  Formate unterscheiden muss.
+
+Fehlercodes stehen als Konstante in `common/error/Fehlercodes.java` **und** als
+Zeile in Contract §6.2: beides oder keins.
+
+### Bekannte Einschränkung: Versionskonflikt-Handler
+
+`behandleVersionskonflikt` fängt **jede**
+`ObjectOptimisticLockingFailureException` ab und beantwortet sie mit 409
+`PROJEKT_VERSION_KONFLIKT`. Das ist heute korrekt, weil `Projekt` die einzige
+Entity mit `@Version` ist und §6.2 nur diesen einen Konfliktcode dieser Art
+kennt.
+
+**Sobald eine zweite Entity versioniert wird** (etwa `Block`, wenn Blöcke
+einzeln gesperrt werden sollen), meldet der Handler für sie den falschen Code.
+Dann ist zu tun:
+
+1. In `Fehlercodes` einen eigenen Code für die neue Entity anlegen und ihn nach
+   §6.2 nachtragen (Contract-Version erhöhen).
+2. Im Handler nach der betroffenen Entity unterscheiden:
+   `ObjectOptimisticLockingFailureException.getPersistentClassName()` liefert
+   sie. Für einen unbekannten Typ bleibt es beim heutigen Verhalten, damit kein
+   Konflikt unbemerkt als 500 durchrutscht.
+3. Den Fall in `ProjektVersionskonfliktTest` (oder einem Gegenstück für die neue
+   Entity) mit abdecken.
+
+Festgehalten in KAN-15, wo der Handler entstanden ist.
