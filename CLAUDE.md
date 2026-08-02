@@ -1,22 +1,34 @@
-# E-Portfolio Hochschule Bremen — Projektregeln
+# E-Portfolio Hochschule Bremen: Projektregeln
 
 Bachelorthesis (Omar Ziyada, Mohamed Alaskari, HSB FK4). Institutionelles
 E-Portfolio-Portal mit blockbasiertem Editor und redaktionellem Workflow.
-Der Projektname ist **„E-Portfolio Hochschule Bremen"** — niemals „Build Your
+Der Projektname ist **„E-Portfolio Hochschule Bremen"**, niemals „Build Your
 Blocks" oder „BYB". Der Admin-Bereich heißt **„Administrationsseite"**, nicht
 „Cockpit".
+
+## Schreibstil: kein Gedankenstrich „—"
+
+Der lange Gedankenstrich (Em-Dash `—`) kommt in **keinem** Text vor, den
+Claude schreibt: Jira-Tickets und -Kommentare, Confluence-Seiten,
+Markdown-Dateien, Javadoc und Code-Kommentare, Commit- und PR-Texte,
+Antworten im Chat. Auch kein Ersatz durch `–` oder ` - ` als Stilmittel.
+
+Stattdessen umformulieren: Doppelpunkt für Erläuterungen, Komma oder
+Semikolon für Einschübe, Klammern für Nebenbemerkungen, oder schlicht zwei
+Sätze. Bindestriche in Wörtern (`E-Portfolio`, `read-only`) und Listenstriche
+am Zeilenanfang sind davon nicht betroffen.
 
 ## Verbindliche Quellen (in dieser Reihenfolge)
 
 1. **API-Contract**: Confluence-Seite „Datenmodell & API-Contract"
-   (Space BEH, Seiten-ID `36732929`) — die einzige Wahrheit für Entities,
+   (Space BEH, Seiten-ID `36732929`): die einzige Wahrheit für Entities,
    Enums, Rechtematrix (§5), Zustandsautomat (§4) und Endpoints (§6.1).
    Vor jedem Modul die betroffenen §§ lesen.
-2. **Jira**: Projekt `KAN` — verbindlicher Arbeitsstand. `docs/STAND.md` ist
+2. **Jira**: Projekt `KAN`, verbindlicher Arbeitsstand. `docs/STAND.md` ist
    nur eine Momentaufnahme.
-3. **docs/ARCHITEKTUR.md** — Paketbaum, Basisklassen, Migrationsliste,
+3. **docs/ARCHITEKTUR.md**: Paketbaum, Basisklassen, Migrationsliste,
    Security-Ablauf und die Tabelle „Wo kommt was hin" (§6 dort).
-4. **docs/SETUP.md** — Umgebung, `.env`, Testlauf.
+4. **docs/SETUP.md**: Umgebung, `.env`, Testlauf.
 
 Widerspricht der Code dem Contract: **niemals still abweichen.** Entweder den
 Code an den Contract anpassen oder die Abweichung nach dem Skill
@@ -33,7 +45,7 @@ Code an den Contract anpassen oder die Abweichung nach dem Skill
 ## Nicht verhandelbare Regeln (Backend)
 
 1. **Bestehende Flyway-Migrationen werden nie geändert.** Neue Migration:
-   `V<JJJJMMTTHHMM>__<beschreibung>.sql`. `ddl-auto` bleibt `validate` —
+   `V<JJJJMMTTHHMM>__<beschreibung>.sql`. `ddl-auto` bleibt `validate`;
    Details im Skill `flyway-migration`.
 2. **Kein Lombok.** Entities mit explizitem Getter/Setter-Minimum; DTOs als
    **Java-Records** mit Bean-Validation und sparsamen `@Schema`-Annotationen
@@ -56,7 +68,7 @@ Code an den Contract anpassen oder die Abweichung nach dem Skill
    `UEBERARBEITUNG` (sonst 409 `PROJEKT_STATUS_NICHT_BEARBEITBAR`);
    Zustandsautomat strikt nach Contract §4.1.
 7. **Sensible Felder.** `passwortHash` und `hsbEmail` verlassen den Server in
-   keiner Response (Contract §3.1). Keine Secrets im Code — `JWT_SECRET` u. a.
+   keiner Response (Contract §3.1). Keine Secrets im Code: `JWT_SECRET` u. a.
    kommen aus `.env`; es gibt bewusst keine Fallbacks.
 8. **Tests sind Teil jedes Tickets.** `./mvnw test` läuft gegen die echte
    Postgres aus `docker-compose.yml` (kein H2, keine Testcontainers).
@@ -80,24 +92,38 @@ cd backend && ./mvnw spring-boot:run   # Start im Profil dev
 1. Jira-Ticket (KAN-…) vollständig lesen; genannte Contract-§§ nachschlagen.
 2. Skill `backend-modul` befolgen (Reihenfolge, Checklisten, DoD).
 3. Branch `KAN-<nr>-<kurzbeschreibung>`; kleine, nachvollziehbare Commits mit
-   Ticket-Key im Text.
+   Ticket-Key im Text. **Angelegt und gesetzt wird von Hand, nicht von
+   Claude** (siehe Skill `uebergabe`).
 4. Vor Abschluss: kompletter Testlauf, `ddl-auto: validate` grün, Abgleich mit
    dem Agent `contract-pruefer`.
-5. Abweichungen, Annahmen und offene Fragen ins Jira-Ticket kommentieren —
+5. Abschluss heißt Übergabe, nicht Push: Skill `uebergabe` befolgen und
+   Commit-Text, PR-Titel und PR-Beschreibung ausgeben.
+6. Abweichungen, Annahmen und offene Fragen ins Jira-Ticket kommentieren,
    nichts stillschweigend entscheiden. `docs/STAND.md` nicht pflegen
    (veraltet bewusst; Jira ist verbindlich).
 
+## Git: Claude schreibt nicht in die Historie
+
+Keine schreibenden Git-/GitHub-Befehle: kein `git add`, `commit`, `push`,
+`merge`, `rebase`, `reset`, kein Branch-Anlegen, kein `gh pr create`/`merge`.
+Lesende Befehle (`status`, `diff`, `log`) sind erlaubt. Statt zu committen
+liefert Claude am Ende den Übergabeblock aus dem Skill `uebergabe`; Omar
+übernimmt ihn manuell. Ausnahme nur auf ausdrückliche Einzelaufforderung in
+derselben Nachricht, und dann exakt dieser eine Befehl.
+
 ## Skills und Agents
 
-- `.claude/skills/backend-modul` — Rezept für jedes neue Backend-Modul
+- `.claude/skills/backend-modul`: Rezept für jedes neue Backend-Modul
   (Controller bis Service), inkl. DoD-Checkliste.
-- `.claude/skills/flyway-migration` — Regeln für Schemaänderungen.
-- `.claude/skills/api-contract-sync` — Abgleich Code ↔ Contract, Versionierung
+- `.claude/skills/flyway-migration`: Regeln für Schemaänderungen.
+- `.claude/skills/api-contract-sync`: Abgleich Code ↔ Contract, Versionierung
   der Confluence-Seite.
-- `.claude/skills/jira-ticket` — Hausstil für neue Tickets.
-- `.claude/agents/backend-modul-builder` — setzt ein Modul-Ticket komplett um.
-- `.claude/agents/contract-pruefer` — read-only Abgleich gegen den Contract.
-- `.claude/agents/code-reviewer` — Konventions-Review vor dem Merge.
+- `.claude/skills/jira-ticket`: Hausstil für neue Tickets.
+- `.claude/skills/uebergabe`: Abschluss ohne Push, also Commit-Text, PR-Titel
+  und PR-Beschreibung zum manuellen Übernehmen.
+- `.claude/agents/backend-modul-builder`: setzt ein Modul-Ticket komplett um.
+- `.claude/agents/contract-pruefer`: read-only Abgleich gegen den Contract.
+- `.claude/agents/code-reviewer`: Konventions-Review vor dem Merge.
 
 Frontend-Konventionen folgen als eigener Skill, sobald KAN-6/KAN-7 auf `main`
-liegen — bis dahin gilt für `frontend/` das jeweilige Ticket.
+liegen; bis dahin gilt für `frontend/` das jeweilige Ticket.
