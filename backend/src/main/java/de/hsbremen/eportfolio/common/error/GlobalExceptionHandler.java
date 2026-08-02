@@ -71,6 +71,12 @@ public class GlobalExceptionHandler {
 	 * Primaerschluessel, also Interna, die in keiner Antwort an den Client
 	 * verloren haben. Was der Client braucht, ist ohnehin nur die
 	 * Handlungsanweisung — neu laden und die Aenderung wiederholen.
+	 *
+	 * <p><strong>Einschraenkung:</strong> die Methode fangt jede
+	 * {@code ObjectOptimisticLockingFailureException} ab, nicht nur die von
+	 * {@code Projekt}. Das stimmt, solange {@code Projekt} die einzige Entity
+	 * mit {@code @Version} ist. Was bei einer zweiten zu tun ist, steht in
+	 * {@code docs/ARCHITEKTUR.md} §8.
 	 */
 	@ExceptionHandler(ObjectOptimisticLockingFailureException.class)
 	public ResponseEntity<ApiFehler> behandleVersionskonflikt(ObjectOptimisticLockingFailureException ex,
