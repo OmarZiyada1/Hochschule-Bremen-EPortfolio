@@ -99,7 +99,7 @@ public class Projekt extends AuditableEntity {
 	 * Editors ueberschreibt der spaetere Speichervorgang fremde Arbeit, ohne
 	 * dass es jemand bemerkt.
 	 *
-	 * <p>Bewusst ohne Setter — der Wert gehoert Hibernate. Anwendungscode setzt
+	 * <p>Bewusst ohne Setter, denn der Wert gehoert Hibernate. Anwendungscode setzt
 	 * ihn nie, sondern vergleicht die Version aus dem Request-Body mit
 	 * {@link #getVersion()}.
 	 */
@@ -234,7 +234,7 @@ public class Projekt extends AuditableEntity {
 		this.veroeffentlichtAm = veroeffentlichtAm;
 	}
 
-	/** Siehe {@link #version} — absichtlich ohne passenden Setter. */
+	/** Siehe {@link #version}, absichtlich ohne passenden Setter. */
 	public Long getVersion() {
 		return version;
 	}

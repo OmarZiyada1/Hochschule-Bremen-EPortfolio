@@ -70,7 +70,7 @@ public class GlobalExceptionHandler {
 	 * {@code ex.getMessage()}: die Ausnahme nennt Entity-Klasse und
 	 * Primaerschluessel, also Interna, die in keiner Antwort an den Client
 	 * verloren haben. Was der Client braucht, ist ohnehin nur die
-	 * Handlungsanweisung — neu laden und die Aenderung wiederholen.
+	 * Handlungsanweisung: neu laden und die Aenderung wiederholen.
 	 *
 	 * <p><strong>Einschraenkung:</strong> die Methode fangt jede
 	 * {@code ObjectOptimisticLockingFailureException} ab, nicht nur die von

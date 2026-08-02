@@ -262,7 +262,7 @@ Jede Fehlerantwort verlässt den Server im Envelope aus Contract §6.2
   Formate unterscheiden muss.
 
 Fehlercodes stehen als Konstante in `common/error/Fehlercodes.java` **und** als
-Zeile in Contract §6.2 — beides oder keins.
+Zeile in Contract §6.2: beides oder keins.
 
 ### Bekannte Einschränkung: Versionskonflikt-Handler
 
@@ -278,9 +278,9 @@ Dann ist zu tun:
 
 1. In `Fehlercodes` einen eigenen Code für die neue Entity anlegen und ihn nach
    §6.2 nachtragen (Contract-Version erhöhen).
-2. Im Handler nach der betroffenen Entity unterscheiden —
+2. Im Handler nach der betroffenen Entity unterscheiden:
    `ObjectOptimisticLockingFailureException.getPersistentClassName()` liefert
-   sie; für einen unbekannten Typ bleibt es beim heutigen Verhalten, damit kein
+   sie. Für einen unbekannten Typ bleibt es beim heutigen Verhalten, damit kein
    Konflikt unbemerkt als 500 durchrutscht.
 3. Den Fall in `ProjektVersionskonfliktTest` (oder einem Gegenstück für die neue
    Entity) mit abdecken.

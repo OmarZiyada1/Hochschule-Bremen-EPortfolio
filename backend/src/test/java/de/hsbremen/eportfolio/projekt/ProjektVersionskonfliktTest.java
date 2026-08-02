@@ -33,14 +33,14 @@ import org.springframework.web.bind.annotation.RestController;
  * ueberschreiben.
  *
  * <p>Laeuft gegen die echte Datenbank, weil der Versionszaehler dort gepflegt
- * wird — Hibernate haengt beim Update ein {@code where version = ?} an und
+ * wird: Hibernate haengt beim Update ein {@code where version = ?} an und
  * erkennt den Konflikt an der Zahl der betroffenen Zeilen. {@code @Transactional}
  * rollt am Ende alles zurueck, die Entwicklungsdatenbank bleibt unveraendert.
  *
  * <p>Die zweite Sitzung wird nicht ueber einen zweiten Thread nachgestellt,
  * sondern ueber eine abgeloeste (detached) Kopie mit dem alten Versionsstand.
  * Das ist derselbe Zustand, den ein Client zwischen zwei Requests haelt, und es
- * ist reproduzierbar — echte Nebenlaeufigkeit waere hier nur schwer
+ * ist reproduzierbar; echte Nebenlaeufigkeit waere hier nur schwer
  * verlaesslich zu takten.
  */
 @SpringBootTest
@@ -134,7 +134,7 @@ class ProjektVersionskonfliktTest {
 	/**
 	 * Steht anstelle des schreibenden Projekt-Endpoints, den erst KAN-17
 	 * liefert. Sie speichert die uebergebene veraltete Kopie und laeuft dabei
-	 * in denselben Konflikt — so wird die ganze Kette vom Datenbankfehler bis
+	 * in denselben Konflikt, so wird die ganze Kette vom Datenbankfehler bis
 	 * zur HTTP-Antwort geprueft und nicht nur der Handler mit einer von Hand
 	 * geworfenen Ausnahme.
 	 */

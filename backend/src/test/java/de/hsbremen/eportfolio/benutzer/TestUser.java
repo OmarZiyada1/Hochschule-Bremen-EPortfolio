@@ -39,7 +39,7 @@ public final class TestUser {
 	}
 
 	/**
-	 * Wie {@link #aktiv}, nur ohne vorbelegte ID — fuer Tests, die den User
+	 * Wie {@link #aktiv}, nur ohne vorbelegte ID: fuer Tests, die den User
 	 * tatsaechlich speichern.
 	 *
 	 * <p>Notwendig, weil {@code JpaRepository.save} eine Instanz mit gesetzter

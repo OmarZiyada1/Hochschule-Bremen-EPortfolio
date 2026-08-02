@@ -40,7 +40,7 @@ public final class TestProjekt {
 	}
 
 	/**
-	 * Ein {@code ENTWURF} ohne vorbelegte ID — fuer Tests, die das Projekt
+	 * Ein {@code ENTWURF} ohne vorbelegte ID: fuer Tests, die das Projekt
 	 * tatsaechlich speichern (Begruendung wie bei
 	 * {@code TestUser.aktivOhneId}).
 	 */
