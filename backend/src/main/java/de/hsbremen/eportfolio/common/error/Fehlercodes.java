@@ -51,6 +51,17 @@ public final class Fehlercodes {
 	public static final String VALIDIERUNG_FEHLGESCHLAGEN = "VALIDIERUNG_FEHLGESCHLAGEN";
 
 	/**
+	 * 404: unter dieser ID gibt es kein Projekt.
+	 *
+	 * <p>Wird auch dann geliefert, wenn die anfragende Person das Projekt gar
+	 * nicht lesen duerfte: die Existenz einer Ressource wird nach §6.3.1 nicht
+	 * verschleiert. Ein vorhandenes Projekt ohne Leserecht ergibt stattdessen
+	 * 403 {@link #KEINE_BERECHTIGUNG} bzw. 401
+	 * {@link #NICHT_AUTHENTIFIZIERT}.
+	 */
+	public static final String PROJEKT_NICHT_GEFUNDEN = "PROJEKT_NICHT_GEFUNDEN";
+
+	/**
 	 * 409: das Projekt wurde zwischen Laden und Speichern von jemand anderem
 	 * geaendert (Optimistic Locking, §6.4). Der Client laedt neu und meldet den
 	 * Konflikt, statt fremde Arbeit zu ueberschreiben.

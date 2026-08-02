@@ -9,6 +9,17 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  data:
+    web:
+      pageable:
+        # Paginierung nach API-Contract §1: ?page=<0-basiert>&size=<n>.
+        # Die Parameternamen sind Springs Defaults und passen damit schon.
+        default-page-size: 20
+        # Obergrenze, damit ein ?size=100000 nicht die gesamte Tabelle in einer
+        # Antwort ausliefert. Spring kappt still auf diesen Wert, statt den
+        # Request abzulehnen; fuer einen Filterparameter ist das die
+        # freundlichere Reaktion.
+        max-page-size: 100
 
 springdoc:
   # Aus in der Basiskonfiguration, an nur im Profil dev

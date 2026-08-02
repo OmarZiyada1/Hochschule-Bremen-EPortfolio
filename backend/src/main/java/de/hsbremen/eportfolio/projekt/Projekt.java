@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.hibernate.annotations.BatchSize;
 
 /**
  * Projekt als Aggregatwurzel. Autor:in ist verpflichtend, die fachliche
@@ -107,9 +108,21 @@ public class Projekt extends AuditableEntity {
 	@Column(nullable = false)
 	private Long version;
 
+	/**
+	 * Freie Schlagwoerter, hoechstens fuenf (§3.3).
+	 *
+	 * <p>{@code @BatchSize} ist die Antwort auf das N+1-Problem der Kachelliste:
+	 * ohne die Angabe laedt Hibernate die Tags jedes Treffers mit einer eigenen
+	 * Abfrage nach, bei zwanzig Kacheln also zwanzig Abfragen. Mit ihr holt es
+	 * sie fuer bis zu 50 Projekte auf einmal, womit eine Seite immer mit einer
+	 * einzigen Zusatzabfrage auskommt. Ein {@code JOIN FETCH} scheidet hier aus,
+	 * weil eine Sammlung mitzuladen die Paginierung in den Arbeitsspeicher
+	 * verschieben wuerde.
+	 */
 	@ElementCollection
 	@CollectionTable(name = "projekt_tag", joinColumns = @JoinColumn(name = "projekt_id"))
 	@Column(name = "tag", length = 64)
+	@BatchSize(size = 50)
 	private Set<String> tags = new HashSet<>();
 
 	@ManyToMany(fetch = FetchType.LAZY)

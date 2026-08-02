@@ -106,6 +106,33 @@ public class ProjektBerechtigungService {
 		return benutzer.hatRolle(Rolle.REDAKTEUR, Rolle.ADMIN) || istProjektseite(benutzer, projekt);
 	}
 
+	/**
+	 * Zeile „Statushistorie eines Projekts sehen": PUBLIC ✗, STUDIERENDE (✓)⁷,
+	 * REDAKTEUR ✓⁷, ADMIN ✓.
+	 *
+	 * <p>Fussnote ⁷ engt den Haken bei REDAKTEUR ausdruecklich ein: „Nur die
+	 * Projektseite sowie zugewiesene Redaktion und Admin". Deshalb reicht die
+	 * System-Rolle REDAKTEUR hier nicht, anders als bei
+	 * {@link #darfProjektLesen}. §3.12 sagt dasselbe noch einmal in Worten. Der
+	 * Verlauf legt offen, wie oft ein Projekt zurueckgewiesen wurde; das ist
+	 * eine Information ueber den Arbeitsprozess einer Person und nicht Teil der
+	 * oeffentlichen Darstellung ihres Ergebnisses.
+	 *
+	 * <p><strong>Gilt auch fuer {@code redakteure}</strong> in
+	 * {@code ProjektDetailAntwort}: KAN-16 nennt fuer beide Felder dieselbe
+	 * Zielgruppe. Wer das Projekt betreut, ist ebenso eine Aussage ueber den
+	 * laufenden Begutachtungsvorgang wie der Verlauf selbst; die beiden Felder
+	 * auseinanderzuziehen haette keinen fachlichen Grund.
+	 */
+	public boolean darfProjektinternaSehen(AngemeldeterBenutzer benutzer, Projekt projekt) {
+		if (!angemeldet(benutzer)) {
+			return false;
+		}
+		return benutzer.hatRolle(Rolle.ADMIN)
+				|| istProjektseite(benutzer, projekt)
+				|| istZugewiesenerRedakteur(benutzer, projekt);
+	}
+
 	// ------------------------------------------------------------------
 	// §5 — Anlegen und Bearbeiten
 	// ------------------------------------------------------------------
