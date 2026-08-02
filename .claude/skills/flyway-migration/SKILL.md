@@ -49,3 +49,5 @@ ausschließlich von Flyway; Hibernate validiert nur (`ddl-auto: validate`).
 - [ ] Constraints benannt, FKs indiziert
 - [ ] App startet, `validate` grün, alle Tests grün
 - [ ] `docs/ARCHITEKTUR.md` §4 (Migrationstabelle) um eine Zeile ergänzt
+- [ ] Migration im Übergabeblock benannt (Skill `uebergabe`) — nicht selbst
+      committen

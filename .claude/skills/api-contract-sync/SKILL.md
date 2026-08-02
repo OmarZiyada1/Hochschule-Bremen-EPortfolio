@@ -58,3 +58,5 @@ im Repo.
 - [ ] Contract-Version veröffentlicht mit Historieneintrag, nichts gelöscht
 - [ ] `Fehlercodes.java` ↔ §6.2 deckungsgleich
 - [ ] Jira-Ticket kommentiert
+- [ ] Code-Änderungen daraus gehen über den Übergabeblock (Skill `uebergabe`),
+      nicht über einen Commit von Claude

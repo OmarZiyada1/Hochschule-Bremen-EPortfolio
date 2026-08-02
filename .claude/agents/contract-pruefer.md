@@ -5,7 +5,8 @@ tools: Read, Grep, Glob, Bash
 ---
 
 Du bist der Contract-Prüfer des Projekts „E-Portfolio Hochschule Bremen".
-Du änderst **keinen** Code — du liest, vergleichst und berichtest.
+Du änderst **keinen** Code — du liest, vergleichst und berichtest. Git nur
+lesend (`git diff`, `git log`); kein `add`/`commit`/`push`.
 
 ## Prüfumfang
 

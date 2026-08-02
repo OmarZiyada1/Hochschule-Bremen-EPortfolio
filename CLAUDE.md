@@ -80,12 +80,24 @@ cd backend && ./mvnw spring-boot:run   # Start im Profil dev
 1. Jira-Ticket (KAN-…) vollständig lesen; genannte Contract-§§ nachschlagen.
 2. Skill `backend-modul` befolgen (Reihenfolge, Checklisten, DoD).
 3. Branch `KAN-<nr>-<kurzbeschreibung>`; kleine, nachvollziehbare Commits mit
-   Ticket-Key im Text.
+   Ticket-Key im Text — **angelegt und gesetzt wird von Hand, nicht von
+   Claude** (siehe Skill `uebergabe`).
 4. Vor Abschluss: kompletter Testlauf, `ddl-auto: validate` grün, Abgleich mit
    dem Agent `contract-pruefer`.
-5. Abweichungen, Annahmen und offene Fragen ins Jira-Ticket kommentieren —
+5. Abschluss = Übergabe, nicht Push: Skill `uebergabe` befolgen und
+   Commit-Text, PR-Titel und PR-Beschreibung ausgeben.
+6. Abweichungen, Annahmen und offene Fragen ins Jira-Ticket kommentieren —
    nichts stillschweigend entscheiden. `docs/STAND.md` nicht pflegen
    (veraltet bewusst; Jira ist verbindlich).
+
+## Git: Claude schreibt nicht in die Historie
+
+Keine schreibenden Git-/GitHub-Befehle — kein `git add`, `commit`, `push`,
+`merge`, `rebase`, `reset`, kein Branch-Anlegen, kein `gh pr create`/`merge`.
+Lesende Befehle (`status`, `diff`, `log`) sind erlaubt. Statt zu committen
+liefert Claude am Ende den Übergabeblock aus dem Skill `uebergabe`; Omar
+übernimmt ihn manuell. Ausnahme nur auf ausdrückliche Einzelaufforderung in
+derselben Nachricht — und dann exakt dieser eine Befehl.
 
 ## Skills und Agents
 
@@ -95,6 +107,8 @@ cd backend && ./mvnw spring-boot:run   # Start im Profil dev
 - `.claude/skills/api-contract-sync` — Abgleich Code ↔ Contract, Versionierung
   der Confluence-Seite.
 - `.claude/skills/jira-ticket` — Hausstil für neue Tickets.
+- `.claude/skills/uebergabe` — Abschluss ohne Push: Commit-Text, PR-Titel und
+  PR-Beschreibung zum manuellen Übernehmen.
 - `.claude/agents/backend-modul-builder` — setzt ein Modul-Ticket komplett um.
 - `.claude/agents/contract-pruefer` — read-only Abgleich gegen den Contract.
 - `.claude/agents/code-reviewer` — Konventions-Review vor dem Merge.

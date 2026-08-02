@@ -87,3 +87,5 @@ passen (`ddl-auto: validate`).
 - [ ] `./mvnw test` komplett grün, `ddl-auto: validate` bestanden
 - [ ] Keine neuen Abhängigkeiten ohne Absprache
 - [ ] Jira-Kommentar: Annahmen, Abweichungen, offene Fragen
+- [ ] Kein Commit, kein Push, kein PR durch Claude — stattdessen Übergabeblock
+      (Commit-Text, PR-Titel, PR-Beschreibung) nach Skill `uebergabe`

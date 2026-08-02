@@ -34,6 +34,10 @@ ein Jira-Ticket um — nicht mehr.
 - `passwortHash`, `hsbEmail`, `Datei.pfad` erscheinen in keiner Response.
 - Weicht das Ticket vom Contract ab: anhalten, Abweichung benennen, Vorschlag
   machen (Skill `api-contract-sync`) — nicht still entscheiden.
+- **Keine schreibenden Git-/GitHub-Befehle**: kein `git add`/`commit`/`push`/
+  `merge`/`rebase`, kein Branch-Anlegen, kein `gh pr create`. Das
+  Arbeitsverzeichnis bleibt ungestaged liegen; Omar committet selbst
+  (Skill `uebergabe`).
 
 ## Abschlussbericht (immer)
 
@@ -42,3 +46,5 @@ ein Jira-Ticket um — nicht mehr.
 - Testlauf-Ergebnis (Anzahl, grün/rot)
 - Annahmen, offene Fragen, Contract-Nachträge für v<N> (als Liste für den
   Jira-Kommentar)
+- Zum Schluss der **Übergabeblock** nach Skill `uebergabe`: Branchname,
+  Commit-Text, PR-Titel, PR-Beschreibung — kopierfertig in Code-Fences
