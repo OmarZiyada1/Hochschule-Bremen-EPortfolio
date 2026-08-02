@@ -59,6 +59,19 @@ public class GlobalExceptionHandler {
 	}
 
 	/**
+	 * Die adressierte Ressource gibt es nicht (§6.3.1, erste Zeile).
+	 *
+	 * <p>Die Meldung nennt die angefragte ID. Das ist unbedenklich, weil der
+	 * Aufrufer sie selbst geschickt hat, und es macht den haeufigsten
+	 * Client-Fehler sofort erkennbar: eine vertippte oder veraltete ID.
+	 */
+	@ExceptionHandler(RessourceNichtGefundenException.class)
+	public ResponseEntity<ApiFehler> behandleNichtGefunden(RessourceNichtGefundenException ex,
+			HttpServletRequest request) {
+		return baue(HttpStatus.NOT_FOUND, ex.getFehlercode(), ex.getMessage(), request);
+	}
+
+	/**
 	 * Optimistic-Locking-Konflikt am Projekt (§6.4): zwischen Laden und
 	 * Speichern hat jemand anderes dieselbe Zeile geaendert, die
 	 * {@code version} im Request passt also nicht mehr zum Stand in der

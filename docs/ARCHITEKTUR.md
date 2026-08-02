@@ -1,7 +1,7 @@
 # Architektur
 
-Beschreibt den Stand von Branch `main` einschließlich KAN-14
-(Stammdaten-Endpoints), dessen Merge noch aussteht. Basis-Paket ist
+Beschreibt den Stand von Branch `main` einschließlich KAN-16
+(Projekt-Lese-Endpoints), dessen Merge noch aussteht. Basis-Paket ist
 `de.hsbremen.eportfolio`, Gruppen-ID `de.hsbremen`, Artefakt `eportfolio`.
 
 ---
@@ -20,13 +20,14 @@ de.hsbremen.eportfolio
 ├── benutzer/                      Benutzerkonten und Profildaten
 ├── common/
 │   ├── domain/                    feature-übergreifende Basisklassen für Entities
+│   ├── dto/                       feature-übergreifende DTOs (Seitenformat aus §6.6)
 │   ├── enums/                     von mehreren Features genutzte Aufzählungstypen
 │   └── error/                     zentrale Fehlerbehandlung, Exceptions, globaler Handler
 ├── config/                        anwendungsweite Spring-Konfiguration (Security, JPA, Properties)
 ├── kommentar/                     Kommentare zu Projekten
 ├── portfolio/                     das E-Portfolio eines Benutzers als Sammlung seiner Projekte
 ├── projekt/                       einzelne Projektbeiträge inkl. Inhaltsblöcken
-│   └── dto/                       DTOs des Projekt-Features (bisher nur package-info.java)
+│   └── dto/                       DTOs des Projekt-Features (Kachel, Detail, Filter, Teil-DTOs)
 ├── reaktion/                      Reaktionen/Bewertungen auf Projekte
 ├── stammdaten/                    Referenzdaten: Fakultät, Studiengang, Modul, Kategorie
 │   └── dto/                       DTOs der vier Stammdaten-Endpoints
@@ -40,13 +41,14 @@ Was in welchem Paket steckt:
 | `auth`       | `AuthController`, `AuthService`, `JwtService`, `JwtAuthentifizierungsFilter`, `AnmeldeversuchService`, `BenutzerDetailsService`, `AngemeldeterBenutzer`, `RestAuthentifizierungsEinstieg`, `RestZugriffVerweigertHandler`, Properties-Records (`JwtEigenschaften`, `AnmeldeversuchEigenschaften`), `dto/{LoginAnfrage, LoginAntwort, BenutzerAntwort}` |
 | `benutzer`   | `User`, `UserRepository`, `DevTestnutzerSeeder` |
 | `common.domain` | `BaseEntity`, `AuditableEntity` |
+| `common.dto`    | `SeiteAntwort` (Seitenformat aus Contract §6.6) |
 | `common.enums`  | `Abschluss`, `BlockTyp`, `KommentarStatus`, `KommentarTyp`, `NominierungStatus`, `ProjektStatus`, `Projekttyp`, `Rolle`, `UserStatus` |
-| `common.error`  | `ApiFehler`, `ApiFehlerSchreiber`, `Fehlercodes`, `GlobalExceptionHandler`, `ValidierungException` |
+| `common.error`  | `ApiFehler`, `ApiFehlerSchreiber`, `Fehlercodes`, `GlobalExceptionHandler`, `ValidierungException`, `RessourceNichtGefundenException` |
 | `config`     | `SecurityConfig`, `JpaConfig`, `OpenApiConfig`, `CorsEigenschaften` |
 | `kommentar`  | `Kommentar`, `KommentarRepository` |
 | `portfolio`  | `Portfolio`, `PortfolioRepository` |
-| `projekt`    | `Projekt`, `Block`, `Projektmitglied`, `ProjektStatusHistorie` + je ein Repository, `BlockValidationService`, `ProjektBerechtigungService`, `BerechtigungEigenschaften` |
-| `reaktion`   | `Reaktion`, `ReaktionRepository` |
+| `projekt`    | `Projekt`, `Block`, `Projektmitglied`, `ProjektStatusHistorie` + je ein Repository, `BlockValidationService`, `ProjektBerechtigungService`, `BerechtigungEigenschaften`, `ProjektController`, `ProjektLeseService`, `ProjektSpezifikationen`, `dto/{ProjektKachelAntwort, ProjektDetailAntwort, ProjektFilterAnfrage, PersonAntwort, MitgliedAntwort, ReferenzAntwort, BlockAntwort, StatusHistorieAntwort}` |
+| `reaktion`   | `Reaktion`, `ReaktionRepository`, `ReaktionAnzahl` (Abfrageergebnis für die Kachelzählung) |
 | `stammdaten` | `Fakultaet`, `Kategorie`, `Modul`, `Studiengang` + je ein Repository, `StammdatenController`, `StammdatenService`, `DevStammdatenSeeder`, `dto/{KategorieAntwort, FakultaetAntwort, StudiengangAntwort, ModulAntwort}` |
 | `top10`      | `Top10Eintrag`, `Top10Nominierung` + je ein Repository |
 
@@ -84,23 +86,23 @@ liest.
 | `Studiengang`           | ✓      | ✓ (2)     | ✓          | `StammdatenService` (nur lesend) | ✓ `GET /api/studiengaenge?fakultaet={id}` |
 | `Modul`                 | ✓      | ✓ (2)     | ✓          | `StammdatenService` (nur lesend) | ✓ `GET /api/module?studiengang={id}` |
 | `Portfolio`             | ✓      | ✓ (2)     | ✓          | —       | — |
-| `Projekt`               | ✓      | ✓ (3)     | ✓          | nur `ProjektBerechtigungService` (Rechteprüfung, kein CRUD) | — |
-| `Projektmitglied`       | ✓      | ✓ (3)     | ✓          | —       | — |
-| Tags (`projekt_tag`)    | `@ElementCollection` in `Projekt` | ✓ (3) | — | — | — |
-| Redakteurszuweisung (`projekt_redakteur`) | `@ManyToMany` in `Projekt` | ✓ (3) | — | — | — |
+| `Projekt`               | ✓      | ✓ (3)     | ✓          | `ProjektBerechtigungService` (Rechteprüfung), `ProjektLeseService` (nur lesend) | ✓ `GET /api/projekte`, `GET /api/projekte/{id}` |
+| `Projektmitglied`       | ✓      | ✓ (3)     | ✓          | —       | eingebettet in `GET /api/projekte/{id}` |
+| Tags (`projekt_tag`)    | `@ElementCollection` in `Projekt` | ✓ (3) | — | — | eingebettet in beide Projekt-Endpoints |
+| Redakteurszuweisung (`projekt_redakteur`) | `@ManyToMany` in `Projekt` | ✓ (3) | — | — | Filter `?redakteur=`, eingebettet in `GET /api/projekte/{id}` |
 | `Kommentar`             | ✓      | ✓ (4)     | ✓          | —       | — |
-| `Reaktion`              | ✓      | ✓ (4)     | ✓          | —       | — |
-| `ProjektStatusHistorie` | ✓      | ✓ (4)     | ✓          | —       | — |
+| `Reaktion`              | ✓      | ✓ (4)     | ✓          | —       | nur als `reaktionAnzahl` in den Projekt-Antworten |
+| `ProjektStatusHistorie` | ✓      | ✓ (4)     | ✓          | —       | eingebettet in `GET /api/projekte/{id}`, nur für Beteiligte |
 | `Top10Eintrag`          | ✓      | ✓ (5)     | ✓          | —       | — |
 | `Top10Nominierung`      | ✓      | ✓ (5)     | ✓          | —       | — |
-| `Block`                 | ✓      | ✓ (6, 7)  | ✓          | `BlockValidationService` (Validierung, kein CRUD) | — |
+| `Block`                 | ✓      | ✓ (6, 7)  | ✓          | `BlockValidationService` (Validierung, kein CRUD) | eingebettet in `GET /api/projekte/{id}` |
 | Auth                    | keine Entity | —   | —          | `AuthService`, `JwtService`, `AnmeldeversuchService` | ✓ `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` |
 
-Es gibt zwei Controller: `auth.AuthController` und
-`stammdaten.StammdatenController`. Datei-Upload, Registrierung, Admin-Bereich,
-Projekt-CRUD und Top-10-Verwaltung sind noch nicht implementiert. Die
-Security-Regeln für einen Teil dieser Pfade stehen bereits in `SecurityConfig`
-(siehe Abschnitt 5).
+Es gibt drei Controller: `auth.AuthController`, `stammdaten.StammdatenController`
+und `projekt.ProjektController` (nur die beiden Lese-Endpoints aus KAN-16).
+Datei-Upload, Registrierung, Admin-Bereich, die schreibenden Projekt-Endpoints
+und die Top-10-Verwaltung sind noch nicht implementiert. Die Security-Regeln für
+einen Teil dieser Pfade stehen bereits in `SecurityConfig` (siehe Abschnitt 5).
 
 Die Stammdaten haben zusätzlich einen `DevStammdatenSeeder` (Profil `dev`,
 idempotent): FK1–FK5 mit Beispiel-Studiengängen und -Modulen sowie ein Satz
@@ -216,6 +218,8 @@ sich. Als Client-IP wird bewusst `request.getRemoteAddr()` genommen, ohne
 | Neues Repository | neben die Entity, z. B. `…/projekt/FooRepository.java`, Interface über `JpaRepository` |
 | Neuer Service | neben die Entity, z. B. `…/projekt/FooService.java`, `@Service` |
 | Neuer Endpoint | `…/<feature>/FooController.java`, `@RestController` mit `@RequestMapping("/api/…")`; Zugriffsregel in `config/SecurityConfig` prüfen |
+| Neuer paginierter Endpoint | `Pageable`-Parameter im Controller mit `@PageableDefault`, Antwort als `common/dto/SeiteAntwort<T>` (Contract §6.6); Springs `Page` wird nie direkt serialisiert. Die erlaubten Sortierfelder im Service als Positivliste prüfen, sonst sortiert ein `?sort=autor.passwortHash` über beliebige Pfade des Objektmodells (Vorbild `projekt/ProjektLeseService`) |
+| Neuer Listenfilter | Baustein als `Specification<T>` neben die Entity, z. B. `projekt/ProjektSpezifikationen`; die Sichtbarkeitsschranke aus Contract §5 bleibt Startwert der UND-Verknüpfung, damit kein Filter sie aufweichen kann |
 | Neues DTO | `…/<feature>/dto/`, z. B. `…/projekt/dto/FooAntwort.java` (dieses Paket existiert bereits, bisher nur mit `package-info.java`); Records mit Bean-Validation-Annotationen wie in `auth/dto/LoginAnfrage`, Abbildung aus der Entity über eine statische `aus(…)`-Methode wie in `stammdaten/dto/StudiengangAntwort` |
 | Neuer Fehlercode | Konstante in `common/error/Fehlercodes.java` **und** Zeile in Contract §6.2 (Contract-Version erhöhen, Skill `api-contract-sync`); ein Code an nur einem der beiden Orte ist ein Befund. Siehe Abschnitt 8 |
 | Neue Konfigurationswerte | `@ConfigurationProperties`-Record neben das Feature (Vorbild `auth/JwtEigenschaften`), Werte in `application.yml`; Registrierung passiert automatisch über `@ConfigurationPropertiesScan` |

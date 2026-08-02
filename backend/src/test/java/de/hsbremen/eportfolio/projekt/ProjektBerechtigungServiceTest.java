@@ -107,6 +107,43 @@ class ProjektBerechtigungServiceTest {
 	}
 
 	@Nested
+	@DisplayName("Zeile: Statushistorie eines Projekts sehen (Fussnote ⁷)")
+	class Projektinterna {
+
+		@Test
+		@DisplayName("Projektseite ja, zugewiesene Redaktion ja, Admin ja")
+		void beteiligteDuerfen() {
+			User mitgliedUser = TestUser.aktiv(Rolle.STUDIERENDE, "hash");
+			Projekt p = TestProjekt.mitMitglied(projekt(ProjektStatus.EINGEREICHT), mitgliedUser);
+
+			assertThat(service.darfProjektinternaSehen(autor, p)).isTrue();
+			assertThat(service.darfProjektinternaSehen(AngemeldeterBenutzer.aus(mitgliedUser), p)).isTrue();
+			assertThat(service.darfProjektinternaSehen(redakteur, p)).isTrue();
+			assertThat(service.darfProjektinternaSehen(admin, p)).isTrue();
+		}
+
+		@Test
+		@DisplayName("PUBLIC nein und unbeteiligte Angemeldete nein, auch bei veroeffentlichtem Projekt")
+		void unbeteiligteNicht() {
+			Projekt p = projekt(ProjektStatus.VEROEFFENTLICHT);
+
+			assertThat(service.darfProjektinternaSehen(PUBLIC, p)).isFalse();
+			assertThat(service.darfProjektinternaSehen(fremderStudi, p)).isFalse();
+		}
+
+		@Test
+		@DisplayName("Fussnote ⁷ engt den Haken bei REDAKTEUR ein: nicht zugewiesen heisst nein")
+		void nichtZugewieseneRedaktionNicht() {
+			Projekt p = projekt(ProjektStatus.EINGEREICHT);
+
+			// Unterschied zu darfProjektLesen: dort darf jede:r Redakteur:in,
+			// hier nur die zugewiesene.
+			assertThat(service.darfProjektLesen(fremderRedakteur, p)).isTrue();
+			assertThat(service.darfProjektinternaSehen(fremderRedakteur, p)).isFalse();
+		}
+	}
+
+	@Nested
 	@DisplayName("Zeile: Projekt anlegen")
 	class Anlegen {
 

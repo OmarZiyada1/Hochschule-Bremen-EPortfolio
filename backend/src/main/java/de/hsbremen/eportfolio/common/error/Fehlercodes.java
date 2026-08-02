@@ -3,14 +3,19 @@ package de.hsbremen.eportfolio.common.error;
 /**
  * Fehlercodes fuer das Envelope aus API-Contract §6.2.
  *
- * <p>Stand Contract v15 steht jede Konstante dieser Klasse auch in §6.2. Zuletzt
- * nachgetragen wurde {@link #VALIDIERUNG_FEHLGESCHLAGEN}, der bis v14 nur hier
- * gefuehrt war (Tabelle „Fehlercodes Anfrageformat", Historieneintrag in §10).
+ * <p>Stand Contract v16 steht jede Konstante dieser Klasse auch in §6.2.
+ * {@link #VALIDIERUNG_FEHLGESCHLAGEN} war bis v14 nur hier gefuehrt und wurde
+ * mit v15 nachgetragen (Tabelle „Fehlercodes Anfrageformat", Historieneintrag
+ * in §10). {@link #PROJEKT_NICHT_GEFUNDEN} lag umgekehrt: er stand seit jeher
+ * in §6.2 und kam mit KAN-16 hier dazu.
  *
- * <p>Umgekehrt fuehrt §6.2 Codes, die hier noch fehlen (etwa
- * {@code PROJEKT_NICHT_GEFUNDEN} oder die Block- und Datei-Codes). Sie kommen
- * mit dem jeweiligen Modul dazu; das ist keine Abweichung, sondern der noch
- * offene Umsetzungsstand aus §8.
+ * <p>Umgekehrt fuehrt §6.2 Codes, die hier noch fehlen: die Block- und
+ * Datei-Codes, {@code PROJEKT_UNVOLLSTAENDIG}, {@code RESSOURCE_NICHT_GEFUNDEN},
+ * die beiden {@code PROJEKT_STATUS_*}-Konflikte,
+ * {@code RESSOURCE_IN_VERWENDUNG} und
+ * {@code PASSWORTAENDERUNG_ERFORDERLICH}. Sie kommen mit dem jeweiligen Modul
+ * dazu; das ist keine Abweichung, sondern der noch offene Umsetzungsstand aus
+ * §8.
  */
 public final class Fehlercodes {
 
@@ -49,6 +54,17 @@ public final class Fehlercodes {
 	 * laufen kann. Wie die uebrigen Codes ist er in §6.2 nachzutragen.
 	 */
 	public static final String VALIDIERUNG_FEHLGESCHLAGEN = "VALIDIERUNG_FEHLGESCHLAGEN";
+
+	/**
+	 * 404: unter dieser ID gibt es kein Projekt.
+	 *
+	 * <p>Wird auch dann geliefert, wenn die anfragende Person das Projekt gar
+	 * nicht lesen duerfte: die Existenz einer Ressource wird nach §6.3.1 nicht
+	 * verschleiert. Ein vorhandenes Projekt ohne Leserecht ergibt stattdessen
+	 * 403 {@link #KEINE_BERECHTIGUNG} bzw. 401
+	 * {@link #NICHT_AUTHENTIFIZIERT}.
+	 */
+	public static final String PROJEKT_NICHT_GEFUNDEN = "PROJEKT_NICHT_GEFUNDEN";
 
 	/**
 	 * 409: das Projekt wurde zwischen Laden und Speichern von jemand anderem
