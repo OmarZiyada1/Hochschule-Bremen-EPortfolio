@@ -5,9 +5,9 @@ description: Abschluss jeder Arbeit im E-Portfolio-Repository. Claude committet,
 
 # Übergabe statt Push
 
-Git führt Omar selbst aus — Branch anlegen, `add`, `commit`, `push`, PR
-öffnen und mergen. Claude schreibt den Code und liefert am Ende die **Texte**
-dazu. Sonst nichts.
+Git führt Omar selbst aus: Branch anlegen, `add`, `commit`, `push`, PR öffnen
+und mergen. Claude schreibt den Code und liefert am Ende die **Texte** dazu.
+Sonst nichts.
 
 ## Harte Grenze: keine schreibenden Git-/GitHub-Befehle
 
@@ -24,15 +24,15 @@ Erlaubt und erwünscht sind lesende Befehle zum Formulieren der Übergabe:
 
 **Einzige Ausnahme:** Omar fordert in genau dieser Nachricht ausdrücklich
 einen Git-Befehl an („commit das bitte"). Dann genau diesen einen Befehl
-ausführen — kein Push und kein PR als Dreingabe.
+ausführen, ohne Push und ohne PR als Dreingabe.
 
 Das Arbeitsverzeichnis bleibt also unangetastet: geänderte Dateien liegen
 ungestaged da, damit Omar den Diff selbst sieht, bevor er ihn übernimmt.
 
 ## Übergabeblock (am Ende jeder abgeschlossenen Arbeit)
 
-Immer in dieser Form ausgeben — Code-Fences, damit sich alles direkt kopieren
-lässt:
+Immer in dieser Form ausgeben, mit Code-Fences, damit sich alles direkt
+kopieren lässt:
 
 ````markdown
 ## Übergabe
@@ -42,7 +42,7 @@ lässt:
 ### Commit
 
 ```text
-KAN-<nr>: <Was ist jetzt da — eine Zeile, ≤ 72 Zeichen>
+KAN-<nr>: <Was ist jetzt da, eine Zeile, höchstens 72 Zeichen>
 
 - <Warum/Was, ein Punkt je fachlicher Änderung>
 - <Migration, Fehlercode, Contract-Bezug, falls betroffen>
@@ -61,15 +61,15 @@ KAN-<nr>: <dieselbe Kurzfassung wie Zeile 1 des Commits>
 Ein bis zwei Sätze: Was kann das System danach, das es vorher nicht konnte.
 
 ## Änderungen
-- `pfad/zur/Datei.java` — was und warum
-- Migration `V…__….sql` — welche Spalte/Constraint (falls vorhanden)
+- `pfad/zur/Datei.java`: was und warum
+- Migration `V…__….sql`: welche Spalte/Constraint (falls vorhanden)
 
 ## Tests
-`./mvnw test`: <Ergebnis, z. B. „147 Tests, alle grün"> — oder ehrlich
+`./mvnw test`: <Ergebnis, z. B. „147 Tests, alle grün">. Oder ehrlich
 „nicht ausgeführt, weil <Grund>".
 
 ## Contract
-Datenmodell & API-Contract v<N>, §… — deckungsgleich / Nachtrag nötig für …
+Datenmodell & API-Contract v<N>, §…: deckungsgleich / Nachtrag nötig für …
 
 ## Hinweise für das Review
 Bewusste Entscheidungen, Annahmen, offene Fragen. Sonst „keine".
@@ -79,9 +79,9 @@ Bewusste Entscheidungen, Annahmen, offene Fragen. Sonst „keine".
 ## Regeln für die Texte
 
 1. **Commit-Betreff wie im bestehenden Log:** `KAN-<nr>: <Kurzfassung>`,
-   Deutsch, keine Punkte am Ende (Vorbild:
+   Deutsch, kein Punkt am Ende (Vorbild:
    `KAN-15: Optimistic Locking für Projekt (version-Spalte, 409-Handling)`).
-2. **Body erklärt das Warum**, nicht die Dateiliste — die steht im Diff.
+2. **Body erklärt das Warum**, nicht die Dateiliste; die steht im Diff.
 3. **Mehrere Commits, wenn die Arbeit fachlich zerfällt** (z. B. Migration
    getrennt von Endpoints): mehrere Commit-Blöcke in der Reihenfolge, in der
    sie gesetzt werden sollen, jeweils mit einem Satz, welche Dateien dazu
@@ -89,9 +89,11 @@ Bewusste Entscheidungen, Annahmen, offene Fragen. Sonst „keine".
 4. **Nichts behaupten, was nicht geprüft ist.** Testergebnisse nur nennen,
    wenn der Lauf tatsächlich stattgefunden hat; sonst „nicht ausgeführt" mit
    Grund. Ein geschönter PR-Text ist wertlos.
-5. **Kein Push-Angebot.** Nicht fragen „soll ich pushen?" — die Übergabe ist
+5. **Kein Push-Angebot.** Nicht fragen „soll ich pushen?": die Übergabe ist
    das Ergebnis, Omar macht den Rest.
-6. Läuft die Arbeit über mehrere Tickets, je Ticket ein eigener
+6. **Kein Em-Dash `—`** in Commit-Text, PR-Titel und PR-Beschreibung
+   (Schreibstil-Regel aus `CLAUDE.md`).
+7. Läuft die Arbeit über mehrere Tickets, je Ticket ein eigener
    Übergabeblock.
 
 ## Definition of Done
@@ -99,4 +101,5 @@ Bewusste Entscheidungen, Annahmen, offene Fragen. Sonst „keine".
 - [ ] Kein schreibender Git-/GitHub-Befehl ausgeführt
 - [ ] Übergabeblock vollständig: Branch, Commit-Text, PR-Titel, PR-Beschreibung
 - [ ] Testaussage entspricht dem tatsächlichen Lauf
+- [ ] Kein `—` in den gelieferten Texten
 - [ ] Annahmen/offene Fragen stehen im PR-Text **und** im Jira-Kommentar

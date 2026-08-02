@@ -6,20 +6,21 @@ description: Baut ein Backend-Feature-Modul für das E-Portfolio Hochschule Brem
 # Backend-Modul bauen (Controller bis Service)
 
 Ziel: Jedes Modul entsteht in derselben Reihenfolge, mit denselben
-Konventionen und derselben Testtiefe. Vorbild für alles ist das `auth`-Paket —
+Konventionen und derselben Testtiefe. Vorbild für alles ist das `auth`-Paket,
 der einzige bislang vollständige vertikale Schnitt.
 
 ## 0. Vorbereitung (nie überspringen)
 
 1. Jira-Ticket lesen; alle genannten Contract-§§ der Seite
-   „Datenmodell & API-Contract" (ID 36732929) nachschlagen — mindestens §5
+   „Datenmodell & API-Contract" (ID 36732929) nachschlagen, mindestens §5
    (Rechtematrix), §6.1 (Endpoint-Zeilen), §6.2/§6.3 (Fehler).
 2. `docs/ARCHITEKTUR.md` §6 („Wo kommt was hin") und das Zielpaket ansehen:
    Welche Entities, Repositories und `darf…`-Methoden existieren schon?
-   `ProjektBerechtigungService` deckt die komplette Rechtematrix bereits ab —
-   fast nie neue Berechtigungslogik schreiben, sondern vorhandene aufrufen.
+   `ProjektBerechtigungService` deckt die komplette Rechtematrix bereits ab,
+   also fast nie neue Berechtigungslogik schreiben, sondern vorhandene
+   aufrufen.
 3. Prüfen, ob `config/SecurityConfig` den neuen Pfad schon kennt (viele
-   PUBLIC-GET-Regeln stehen vorab da). Fehlt eine Regel → ergänzen und im
+   PUBLIC-GET-Regeln stehen vorab da). Fehlt eine Regel: ergänzen und im
    Code-Kommentar begründen, wie dort üblich.
 
 ## 1. DTOs (`<feature>/dto/`)
@@ -52,12 +53,12 @@ der einzige bislang vollständige vertikale Schnitt.
 
 ## 3. Controller (`<feature>/<Feature>Controller.java`)
 
-- `@RestController` + `@RequestMapping("/api/…")`; dünn — keine Fachlogik,
+- `@RestController` + `@RequestMapping("/api/…")`; dünn, keine Fachlogik,
   nur Parameter binden, Service rufen, Statuscode setzen.
 - Statuscodes nach §6.3: 200 (GET/PUT/PATCH), 201 (POST legt an),
   204 (DELETE, Logout).
 - Angemeldete:r Benutzer:in über `@AuthenticationPrincipal
-  AngemeldeterBenutzer` (kann bei PUBLIC-Pfaden `null` sein — der Service
+  AngemeldeterBenutzer` (kann bei PUBLIC-Pfaden `null` sein; der Service
   behandelt beide Fälle).
 - OpenAPI: sparsame `@Operation`/`@Schema` wie im `AuthController`; keine
   verbotenen Felder in angezeigten Schemata.
@@ -70,7 +71,7 @@ passen (`ddl-auto: validate`).
 
 ## 5. Tests (`backend/src/test/java/...`, gleiche Paketstruktur)
 
-- Unit-Tests für Service-Logik; `@SpringBootTest`/MockMvc für Endpoints —
+- Unit-Tests für Service-Logik; `@SpringBootTest`/MockMvc für Endpoints,
   gegen die echte Postgres aus `docker-compose.yml`.
 - Pflichtfälle je Endpoint: Happy Path · 401 ohne Token (falls geschützt) ·
   403/404 nach Rechtematrix · 409-Statusregeln · Validierungsfehler 400 im
@@ -86,6 +87,7 @@ passen (`ddl-auto: validate`).
       (bzw. als v-Nachtrag im Jira-Ticket vermerkt)
 - [ ] `./mvnw test` komplett grün, `ddl-auto: validate` bestanden
 - [ ] Keine neuen Abhängigkeiten ohne Absprache
+- [ ] Javadoc, Kommentare und Jira-Text ohne Em-Dash `—`
 - [ ] Jira-Kommentar: Annahmen, Abweichungen, offene Fragen
-- [ ] Kein Commit, kein Push, kein PR durch Claude — stattdessen Übergabeblock
+- [ ] Kein Commit, kein Push, kein PR durch Claude, stattdessen Übergabeblock
       (Commit-Text, PR-Titel, PR-Beschreibung) nach Skill `uebergabe`

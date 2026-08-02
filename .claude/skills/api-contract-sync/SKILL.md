@@ -7,14 +7,14 @@ description: Abgleich zwischen Backend-Code und der Confluence-Seite „Datenmod
 
 Der Contract (Space BEH, Seiten-ID `36732929`, aktuell v11) ist die
 verbindliche gemeinsame Grundlage von Backend und Frontend. Er ist nur dann
-etwas wert, wenn er stimmt — deshalb wird **jede** Abweichung behandelt,
-keine still hingenommen.
+etwas wert, wenn er stimmt; deshalb wird **jede** Abweichung behandelt, keine
+still hingenommen.
 
 ## Entscheidungsbaum bei einer Abweichung
 
 1. **Code ist falsch, Contract richtig** (Regelfall): Code anpassen.
 2. **Contract ist lückenhaft oder überholt**: Contract in einer neuen
-   Version ergänzen (siehe unten) — erst dann den Code bauen.
+   Version ergänzen (siehe unten), erst dann den Code bauen.
 3. **Fachlich unklar** (z. B. Berechtigungsfrage): als offenen Punkt in §7
    des Contracts und auf der Seite „Offene Fragen" (ID 1802249) erfassen,
    Default-Annahme dokumentieren, konfigurierbar umsetzen (Vorbild
@@ -22,16 +22,19 @@ keine still hingenommen.
 
 ## Contract-Version erhöhen (Confluence)
 
-1. Seite 36732929 vollständig laden — das Update-Werkzeug ersetzt den
+1. Seite 36732929 vollständig laden: das Update-Werkzeug ersetzt den
    **gesamten** Seiteninhalt; es wird immer der komplette, ergänzte Text
    zurückgeschrieben.
-2. **Bestehenden Inhalt nie löschen oder umformulieren** — nur ergänzen und
-   präzisieren; Widersprüche über Hinweiskästen auflösen (so arbeiten v9–v11).
+2. **Bestehenden Inhalt nie löschen oder umformulieren**, nur ergänzen und
+   präzisieren; Widersprüche über Hinweiskästen auflösen (so arbeiten v9 bis
+   v11).
 3. Kopfbereich: neue Versionsnummer; unten in der „Änderungshistorie
    (fachlich)" einen Eintrag im Stil der bestehenden ergänzen:
    betroffene §§, was, warum.
 4. Versionskommentar beim Speichern: `v<N>: <Kurzfassung> (KAN-<Ticket>)`.
 5. Im zugehörigen Jira-Ticket kommentieren, dass v<N> veröffentlicht ist.
+6. Neu geschriebene Absätze ohne Em-Dash `—` formulieren (Schreibstil-Regel
+   aus `CLAUDE.md`); bestehender Seitentext bleibt unangetastet.
 
 ## Fehlercodes (häufigster Sync-Fall)
 
@@ -49,7 +52,7 @@ Konstante ist ein Befund.
 Für jede Endpoint-Zeile des Moduls in §6.1 prüfen: Pfad · Methode ·
 Rollenspalte (gegen `SecurityConfig` + `darf…`-Aufruf) · Statuscodes ·
 Body-/Response-Form. Die maschinenlesbare Fassung ist `/v3/api-docs`
-(springdoc, Profil dev) — es gibt bewusst keine gepflegte `openapi.yaml`
+(springdoc, Profil dev); es gibt bewusst keine gepflegte `openapi.yaml`
 im Repo.
 
 ## Definition of Done
