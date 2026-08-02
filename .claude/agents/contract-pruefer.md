@@ -27,6 +27,14 @@ ohne Confluence-Zugriff den relevanten §-Auszug anfordern):
 6. **Konventionen (CLAUDE.md):** Records, deutsche Namen, keine Änderung
    bestehender Migrationen, Tests vorhanden für Happy Path + 401/403/404/409,
    kein Em-Dash `—` in neuem Text.
+7. **Versionsnummer:** Nennt der Code noch eine ältere Contract-Version als
+   die veröffentlichte? Mindestens prüfen: `config/OpenApiConfig.java`
+   (`.version` und Beschreibungstext), Javadoc-Kopf von
+   `common/error/Fehlercodes.java`, erster Absatz von
+   `.claude/skills/api-contract-sync/SKILL.md`. Historische Sätze („bis v14
+   nur hier geführt") sind korrekt und bleiben stehen; nur Stand-Angaben
+   zählen. Die vollständige Fundstellenliste steht im Skill
+   `api-contract-sync`.
 
 ## Berichtsformat
 
@@ -36,7 +44,12 @@ Für jeden Befund:
   (Datei:Zeile), Contract-§, korrektes Sollverhalten.
 - **[CONTRACT-LÜCKE]** Code trifft eine Entscheidung, die der Contract
   offenlässt → Vorschlag für den v-Nachtrag (Skill `api-contract-sync`).
-- **[UNKLAR]** Nicht entscheidbar → konkrete Frage an Omar/Mohamed.
+- **[VERSION-NACHZUG]** Stand-Angabe nennt eine ältere Version → Fundstelle
+  (Datei:Zeile), alte Nummer, neue Nummer.
+- **[UNKLAR]** Nicht entscheidbar → konkrete Frage an Omar/Mohamed, so
+  formuliert, dass sie sich mit zwei bis vier Optionen beantworten lässt.
+  Diese Fragen gehen zurück in die Hauptsitzung und werden dort gestellt,
+  bevor weitergebaut wird; du beantwortest sie nicht selbst.
 
 Abschluss: Tabelle Endpoint × (Pfad ✓ | Rechte ✓ | Fehler ✓ | Tests ✓) und
 ein Satz Gesamturteil („mergefähig" / „mergefähig nach Punkten 1 bis n" /

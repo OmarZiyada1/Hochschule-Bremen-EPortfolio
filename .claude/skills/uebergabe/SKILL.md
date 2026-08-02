@@ -70,9 +70,15 @@ Ein bis zwei Sätze: Was kann das System danach, das es vorher nicht konnte.
 
 ## Contract
 Datenmodell & API-Contract v<N>, §…: deckungsgleich / Nachtrag nötig für …
+Bei erhöhter Version zusätzlich die Fundstellen-Tabelle „alt → neu" aus dem
+Skill `api-contract-sync`, inklusive der Stellen, die Omar selbst ändert.
+
+## Entscheidungen
+Was in der Klärungsrunde entschieden wurde, je Punkt eine Zeile:
+Frage, gewählte Antwort, Umsetzung. Sonst „keine".
 
 ## Hinweise für das Review
-Bewusste Entscheidungen, Annahmen, offene Fragen. Sonst „keine".
+Bewusste Abwägungen und Stolpersteine. Sonst „keine".
 ```
 ````
 
@@ -91,9 +97,19 @@ Bewusste Entscheidungen, Annahmen, offene Fragen. Sonst „keine".
    Grund. Ein geschönter PR-Text ist wertlos.
 5. **Kein Push-Angebot.** Nicht fragen „soll ich pushen?": die Übergabe ist
    das Ergebnis, Omar macht den Rest.
-6. **Kein Em-Dash `—`** in Commit-Text, PR-Titel und PR-Beschreibung
+6. **Keine offenen Fragen im Übergabeblock.** Fragen werden vor der
+   Umsetzung gestellt (`CLAUDE.md`, Abschnitt „Fragen vor der Umsetzung"),
+   nicht hier gesammelt. Taucht beim Schreiben der Übergabe doch noch eine
+   auf: Übergabe zurückstellen, Frage stellen, Antwort einarbeiten, dann
+   liefern. Nur ausdrücklich von Omar vertagte Punkte stehen hier, benannt
+   als „vertagt, Jira KAN-…", nie als stille Annahme.
+7. **Contract-Versionsnummern gehören in den PR-Text.** Wurde der Contract
+   erhöht, steht die Tabelle „alt → neu" mit Datei und Zeile im Abschnitt
+   „Contract", getrennt nach „im Diff enthalten" und „von Omar zu ändern"
+   (Skill `api-contract-sync`).
+8. **Kein Em-Dash `—`** in Commit-Text, PR-Titel und PR-Beschreibung
    (Schreibstil-Regel aus `CLAUDE.md`).
-7. Läuft die Arbeit über mehrere Tickets, je Ticket ein eigener
+9. Läuft die Arbeit über mehrere Tickets, je Ticket ein eigener
    Übergabeblock.
 
 ## Definition of Done
@@ -102,4 +118,7 @@ Bewusste Entscheidungen, Annahmen, offene Fragen. Sonst „keine".
 - [ ] Übergabeblock vollständig: Branch, Commit-Text, PR-Titel, PR-Beschreibung
 - [ ] Testaussage entspricht dem tatsächlichen Lauf
 - [ ] Kein `—` in den gelieferten Texten
-- [ ] Annahmen/offene Fragen stehen im PR-Text **und** im Jira-Kommentar
+- [ ] Keine offene Frage im Übergabeblock; getroffene Entscheidungen stehen
+      im PR-Text **und** im Jira-Kommentar
+- [ ] Bei erhöhter Contract-Version: Fundstellen-Tabelle „alt → neu" im
+      PR-Text, mit Trennung Diff / von Omar zu ändern

@@ -36,12 +36,22 @@ Blockiert: KAN-…
 2. Nur beschreiben, was verifiziert ist: Aussagen über den Repo-Stand müssen
    im Repo gesehen worden sein („Grundregel" aus KAN-12). Unklares als
    **unklar** kennzeichnen statt plausibel zu erfinden.
-3. Annahmen explizit als Annahme markieren und mit dem Merkposten „wird mit
-   v<N> festgeschrieben" versehen, wenn der Contract die Frage offenlässt.
-4. Deutsch, präzise, keine Füllsätze; Code- und Pfadnamen in Backticks.
+3. **Vor dem Anlegen klären, nicht im Ticket sammeln.** Was den Zuschnitt des
+   Tickets verändert (Umfang, Endpoint-Menge, Statuscodes, Abgrenzung), wird
+   vorher gefragt (`CLAUDE.md`, Abschnitt „Fragen vor der Umsetzung"); das
+   fertige Ticket enthält Entscheidungen, keine Rückfragen an Omar. Nur
+   ausdrücklich vertagte Punkte stehen als markierte Annahme mit dem
+   Merkposten „wird mit v<N> festgeschrieben" darin, wenn der Contract die
+   Frage offenlässt.
+4. **Versionsnummer in der Bezug-Zeile aktuell halten.** Sie nennt die
+   Version, die beim Anlegen gilt. Steigt der Contract später und ist das
+   Ticket inhaltlich betroffen, wird die Zeile nachgezogen; die Fundstellen
+   dafür liefert der Skill `api-contract-sync` (Tabelle „alt → neu"). Nicht
+   betroffene Tickets bleiben auf ihrer alten Nummer stehen.
+5. Deutsch, präzise, keine Füllsätze; Code- und Pfadnamen in Backticks.
    **Kein Em-Dash `—`** in Titel, Beschreibung oder Kommentaren
    (Schreibstil-Regel aus `CLAUDE.md`): Doppelpunkt, Komma, Klammern oder
    zwei Sätze verwenden.
-5. Abhängigkeiten ehrlich pflegen (Vorgänger/Blockiert): die Reihenfolge auf
+6. Abhängigkeiten ehrlich pflegen (Vorgänger/Blockiert): die Reihenfolge auf
    dem Board folgt daraus.
-6. Descope-Kandidaten (Zeitrisiko der 9 Wochen) offen als solche benennen.
+7. Descope-Kandidaten (Zeitrisiko der 9 Wochen) offen als solche benennen.

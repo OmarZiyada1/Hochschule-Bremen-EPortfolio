@@ -19,9 +19,18 @@ ein Jira-Ticket um, nicht mehr.
    Warum-Begründungen, Tabs, deutsche Namen) und den
    `ProjektBerechtigungService`: Berechtigungen werden aufgerufen, nicht
    neu erfunden.
-4. Baue in der Reihenfolge DTOs → Service → Controller → Migration → Tests.
+4. **Klärungsstand prüfen, bevor du baust.** Sammle die entscheidungsrelevanten
+   Fragen (Contract-Lücke, Ticket widerspricht Contract, Statuscode nicht
+   eindeutig, neuer Fehlercode, mehrere vertretbare Schemavarianten,
+   Ticketabgrenzung). Stehen die Antworten schon im Auftrag: danach bauen.
+   Fehlt eine Antwort: **anhalten und die Frage zurückmelden**, statt eine
+   Annahme in den Code zu schreiben. Du hast keinen direkten Draht zu Omar;
+   die Hauptsitzung stellt die Frage und startet dich mit der Antwort erneut.
+   Melde in dem Fall knapp: Frage, mögliche Optionen, deine Empfehlung, was
+   bis dahin schon fertig ist.
+5. Baue in der Reihenfolge DTOs → Service → Controller → Migration → Tests.
    Kleine, kompilierende Zwischenschritte.
-5. Führe am Ende `docker compose up -d` (falls nötig) und `./mvnw test` im
+6. Führe am Ende `docker compose up -d` (falls nötig) und `./mvnw test` im
    Ordner `backend/` aus. Abbruchkriterium: alle Tests grün, auch die
    bestehenden.
 
@@ -34,6 +43,9 @@ ein Jira-Ticket um, nicht mehr.
 - `passwortHash`, `hsbEmail`, `Datei.pfad` erscheinen in keiner Response.
 - Weicht das Ticket vom Contract ab: anhalten, Abweichung benennen, Vorschlag
   machen (Skill `api-contract-sync`), nicht still entscheiden.
+- Taucht **während** der Umsetzung eine entscheidungsrelevante Frage auf:
+  sofort anhalten und zurückmelden. Kein Weiterbauen auf einer Annahme, kein
+  Nachreichen der Frage im Abschlussbericht.
 - **Keine schreibenden Git-/GitHub-Befehle**: kein `git add`/`commit`/`push`/
   `merge`/`rebase`, kein Branch-Anlegen, kein `gh pr create`. Das
   Arbeitsverzeichnis bleibt ungestaged liegen; Omar committet selbst
@@ -46,7 +58,11 @@ ein Jira-Ticket um, nicht mehr.
 - Umgesetzte Endpoints mit Pfad und Statuscodes
 - Neue/geänderte Dateien in Baumform
 - Testlauf-Ergebnis (Anzahl, grün/rot)
-- Annahmen, offene Fragen, Contract-Nachträge für v<N> (als Liste für den
-  Jira-Kommentar)
+- Getroffene Entscheidungen mit Begründung und, falls vorhanden, der Antwort
+  aus der Klärungsrunde, auf die sie sich stützen (als Liste für den
+  Jira-Kommentar). Offene Fragen gehören hier **nicht** hinein: die sind
+  vorher gestellt worden oder haben dich vorher angehalten.
+- Contract-Nachträge für v<N>: was nachzutragen ist und welche Stellen die
+  Versionsnummer nennen (Skill `api-contract-sync`, Tabelle „alt → neu")
 - Zum Schluss der **Übergabeblock** nach Skill `uebergabe`: Branchname,
   Commit-Text, PR-Titel, PR-Beschreibung, kopierfertig in Code-Fences

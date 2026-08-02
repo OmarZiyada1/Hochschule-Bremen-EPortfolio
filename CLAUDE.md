@@ -33,6 +33,30 @@ am Zeilenanfang sind davon nicht betroffen.
 Widerspricht der Code dem Contract: **niemals still abweichen.** Entweder den
 Code an den Contract anpassen oder die Abweichung nach dem Skill
 `api-contract-sync` dokumentieren (neue Contract-Version + Jira-Kommentar).
+Jede neue Contract-Version zieht Fundstellen nach sich: Versionsnummer im
+Code, in der Doku, in Jira und in Confluence. Welche Stellen das sind und wie
+sie gemeldet werden, steht im Skill `api-contract-sync`.
+
+## Fragen vor der Umsetzung, nicht danach
+
+Offene Fragen gehören an den Anfang eines Tickets, nicht in den
+Abschlussbericht. Am Ende einer Änderung steht keine Frage mehr offen.
+
+1. **Klärungsrunde zuerst.** Ticket und die genannten Contract-§§ lesen, den
+   betroffenen Code ansehen, dann die entscheidungsrelevanten Fragen
+   gebündelt in **einer** Runde stellen (Werkzeug `AskUserQuestion`, je Frage
+   zwei bis vier konkrete Optionen, die empfohlene zuerst und als
+   „(Empfohlen)" gekennzeichnet). Erst nach den Antworten wird gebaut.
+2. **Entscheidungsrelevant** heißt: zwei vertretbare Lesarten führen zu
+   anderem Code, Schema, Verhalten, Statuscode oder Fehlercode. Routinefragen
+   (Namensdetails, Testaufbau, Paketablage, Reihenfolge) entscheidet Claude
+   selbst nach Contract, `docs/ARCHITEKTUR.md` und den Skills, ohne zu fragen.
+3. **Frage mitten in der Umsetzung: sofort anhalten und fragen.** Nicht mit
+   einer stillen Annahme weiterbauen und die Frage später nachreichen.
+4. **Am Ende** nennen Übergabeblock und Jira-Kommentar die getroffenen
+   Entscheidungen mit Begründung, aber keine ungeklärten Punkte. Vertagt Omar
+   eine Antwort ausdrücklich, steht der Punkt als benannter offener Punkt mit
+   Jira-Bezug da, nie als unmarkierte Annahme im Code.
 
 ## Stack und Repo-Aufbau
 
@@ -90,17 +114,20 @@ cd backend && ./mvnw spring-boot:run   # Start im Profil dev
 ## Arbeitsablauf je Ticket
 
 1. Jira-Ticket (KAN-…) vollständig lesen; genannte Contract-§§ nachschlagen.
-2. Skill `backend-modul` befolgen (Reihenfolge, Checklisten, DoD).
-3. Branch `KAN-<nr>-<kurzbeschreibung>`; kleine, nachvollziehbare Commits mit
+2. Klärungsrunde nach dem Abschnitt „Fragen vor der Umsetzung": offene Punkte
+   gebündelt fragen, Antworten abwarten, erst dann bauen.
+3. Skill `backend-modul` befolgen (Reihenfolge, Checklisten, DoD).
+4. Branch `KAN-<nr>-<kurzbeschreibung>`; kleine, nachvollziehbare Commits mit
    Ticket-Key im Text. **Angelegt und gesetzt wird von Hand, nicht von
    Claude** (siehe Skill `uebergabe`).
-4. Vor Abschluss: kompletter Testlauf, `ddl-auto: validate` grün, Abgleich mit
+5. Vor Abschluss: kompletter Testlauf, `ddl-auto: validate` grün, Abgleich mit
    dem Agent `contract-pruefer`.
-5. Abschluss heißt Übergabe, nicht Push: Skill `uebergabe` befolgen und
+6. Abschluss heißt Übergabe, nicht Push: Skill `uebergabe` befolgen und
    Commit-Text, PR-Titel und PR-Beschreibung ausgeben.
-6. Abweichungen, Annahmen und offene Fragen ins Jira-Ticket kommentieren,
-   nichts stillschweigend entscheiden. `docs/STAND.md` nicht pflegen
-   (veraltet bewusst; Jira ist verbindlich).
+7. Abweichungen und getroffene Entscheidungen ins Jira-Ticket kommentieren,
+   nichts stillschweigend entscheiden; offene Fragen sind zu diesem Zeitpunkt
+   bereits aus Schritt 2 geklärt. `docs/STAND.md` nicht pflegen (veraltet
+   bewusst; Jira ist verbindlich).
 
 ## Git: Claude schreibt nicht in die Historie
 

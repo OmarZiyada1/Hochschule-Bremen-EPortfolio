@@ -33,7 +33,14 @@ Konsistenz.
    wenn eine Datenbank erreichbar ist; sonst als „nicht ausgeführt"
    kennzeichnen, nie als bestanden behaupten).
 7. **Doku-Folgen:** neue Migration in `docs/ARCHITEKTUR.md` §4 ergänzt?
-   Contract-Nachträge für v<N> notiert?
+   Contract-Nachträge für v<N> notiert? Bei erhöhter Contract-Version: sind
+   die Stand-Angaben im Code nachgezogen (`OpenApiConfig`, Javadoc-Kopf von
+   `Fehlercodes`)? Fundstellenliste im Skill `api-contract-sync`.
+8. **Keine stillen Annahmen:** Kommentare wie „TODO klären", „vermutlich",
+   „falls gewünscht" im neuen Code sind ein Befund. Entscheidungen werden vor
+   der Umsetzung geklärt (`CLAUDE.md`, „Fragen vor der Umsetzung"); was
+   bleibt, ist entweder entschieden und begründet oder als ausdrücklich
+   vertagt mit Jira-Bezug gekennzeichnet.
 
 ## Berichtsformat
 

@@ -23,6 +23,35 @@ der einzige bislang vollständige vertikale Schnitt.
    PUBLIC-GET-Regeln stehen vorab da). Fehlt eine Regel: ergänzen und im
    Code-Kommentar begründen, wie dort üblich.
 
+## 0b. Klärungsrunde vor der ersten Codezeile (nie überspringen)
+
+Fragen werden **vorher** gestellt, nicht im Abschlussbericht gesammelt
+(Regel „Fragen vor der Umsetzung" in `CLAUDE.md`). Nach Schritt 0, vor
+Schritt 1:
+
+1. Alle entscheidungsrelevanten Punkte des Tickets sammeln und **in einer
+   Runde** über `AskUserQuestion` vorlegen: je Frage zwei bis vier konkrete
+   Optionen, die empfohlene zuerst und mit „(Empfohlen)" markiert, jeweils
+   mit der fachlichen Folge der Wahl. Danach exakt nach den Antworten bauen.
+2. Typische Kandidaten in diesem Backend:
+   - Der Contract lässt eine Rechte- oder Sichtbarkeitsfrage offen (§5 deckt
+     die Konstellation nicht ab).
+   - Ticket und Contract widersprechen sich (Pfad, Statuscode, Feldname).
+   - Statuscode-Wahl ist nicht eindeutig ableitbar (404 statt 403 zum
+     Verbergen der Existenz, 409 versus 400).
+   - Ein neuer Fehlercode wäre nötig; damit hängt ein Contract-Nachtrag daran
+     (Skill `api-contract-sync`).
+   - Schemaänderung mit mehreren vertretbaren Varianten (neue Spalte versus
+     neue Tabelle, Nullability, Löschverhalten).
+   - Fachliche Abgrenzung: Was gehört bewusst **nicht** in dieses Ticket.
+3. Nicht gefragt wird nach Dingen, die Contract, `docs/ARCHITEKTUR.md` oder
+   diese Skills bereits beantworten: DTO-Namen nach Schema `…Anfrage` /
+   `…Antwort`, Paketablage, Testreihenfolge, Envelope-Format. Das entscheidet
+   Claude selbst.
+4. Taucht **während** der Umsetzung eine neue entscheidungsrelevante Frage
+   auf: anhalten, fragen, erst mit der Antwort weiterbauen. Keine Annahme in
+   den Code schreiben und die Frage später nachreichen.
+
 ## 1. DTOs (`<feature>/dto/`)
 
 - Java-**Records**, Namensschema `…Anfrage` / `…Antwort`; Listenelemente ggf.
@@ -81,6 +110,10 @@ passen (`ddl-auto: validate`).
 
 ## 6. Definition of Done (Checkliste)
 
+- [ ] Klärungsrunde vor dem ersten Code stattgefunden, Umsetzung folgt den
+      Antworten
+- [ ] **Keine offene Frage übrig**: was am Ende bleibt, sind entschiedene
+      Punkte mit Begründung, keine Rückfragen
 - [ ] Alle Endpoint-Zeilen des Tickets umgesetzt, Pfade exakt wie §6.1
 - [ ] `SecurityConfig` geprüft/ergänzt und begründet
 - [ ] Fehlercodes in `Fehlercodes.java` und Contract deckungsgleich
@@ -88,6 +121,7 @@ passen (`ddl-auto: validate`).
 - [ ] `./mvnw test` komplett grün, `ddl-auto: validate` bestanden
 - [ ] Keine neuen Abhängigkeiten ohne Absprache
 - [ ] Javadoc, Kommentare und Jira-Text ohne Em-Dash `—`
-- [ ] Jira-Kommentar: Annahmen, Abweichungen, offene Fragen
+- [ ] Jira-Kommentar: Abweichungen und getroffene Entscheidungen samt
+      Antwort aus der Klärungsrunde
 - [ ] Kein Commit, kein Push, kein PR durch Claude, stattdessen Übergabeblock
       (Commit-Text, PR-Titel, PR-Beschreibung) nach Skill `uebergabe`

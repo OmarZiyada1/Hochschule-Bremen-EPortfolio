@@ -37,10 +37,15 @@ ausschließlich von Flyway; Hibernate validiert nur (`ddl-auto: validate`).
 ## Ablauf
 
 1. Bestehende Migrationen und Entity ansehen; Versionstempel wählen.
-2. SQL schreiben, mit Kommentarkopf: Ticket-Key + Zweck in einem Satz.
-3. `docker compose up -d`, dann `./mvnw test`; der Start beweist Migration
+2. Sind mehrere Schemavarianten vertretbar (neue Spalte versus neue Tabelle,
+   Nullability, Default, Löschverhalten, Backfill bestehender Zeilen): **vor**
+   dem Schreiben fragen, mit Optionen und Empfehlung (`CLAUDE.md`, Abschnitt
+   „Fragen vor der Umsetzung"). Eine eingespielte Migration lässt sich nicht
+   mehr ändern, deshalb ist die Rückfrage hier billiger als überall sonst.
+3. SQL schreiben, mit Kommentarkopf: Ticket-Key + Zweck in einem Satz.
+4. `docker compose up -d`, dann `./mvnw test`; der Start beweist Migration
    **und** `validate`.
-4. Bei ALTER auf bestehende Tabellen prüfen, ob Seed-/Testdaten noch gültig
+5. Bei ALTER auf bestehende Tabellen prüfen, ob Seed-/Testdaten noch gültig
    sind.
 
 ## Definition of Done
