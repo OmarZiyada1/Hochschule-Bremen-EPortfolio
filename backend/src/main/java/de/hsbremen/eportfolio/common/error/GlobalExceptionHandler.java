@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
@@ -37,6 +38,31 @@ public class GlobalExceptionHandler {
 				.reduce((a, b) -> a + "; " + b)
 				.orElse("Die Anfrage ist ungueltig.");
 		return build(HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_FAILED, message, request);
+	}
+
+	/**
+	 * Der Request-Body laesst sich gar nicht erst lesen: kein oder kaputtes JSON,
+	 * ein Wert, der nicht in das Zielfeld passt, ein fehlender Body bei einem
+	 * {@code POST} oder {@code PUT}.
+	 *
+	 * <p>Ohne diesen Handler beantwortet Spring den Fall mit seinem eigenen
+	 * Standardkoerper. Damit haette die API neben §6.2 ein zweites Fehlerformat,
+	 * und zwar ausgerechnet an der Stelle, an der ein Client-Fehler am
+	 * wahrscheinlichsten ist. Aufgefallen ist die Luecke bei den
+	 * Block-Endpoints (KAN-18).
+	 *
+	 * <p>Die Meldung bleibt bewusst allgemein und gibt {@code ex.getMessage()}
+	 * nicht weiter: Jackson nennt darin Klassennamen, Feldpfade und den Ausschnitt
+	 * des eingeschickten Bodys, also Interna und ungeprueft hereingekommene
+	 * Zeichen. Dieselbe Zurueckhaltung wie bei
+	 * {@link #handleTypeMismatch(MethodArgumentTypeMismatchException, HttpServletRequest)}.
+	 */
+	@ExceptionHandler(HttpMessageNotReadableException.class)
+	public ResponseEntity<ApiError> handleUnreadableBody(HttpMessageNotReadableException ex,
+			HttpServletRequest request) {
+		return build(HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_FAILED,
+				"Der Request-Body fehlt oder ist kein gueltiges JSON in der erwarteten Form.",
+				request);
 	}
 
 	/**

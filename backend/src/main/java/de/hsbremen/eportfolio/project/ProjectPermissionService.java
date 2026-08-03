@@ -150,6 +150,13 @@ public class ProjectPermissionService {
 	 * {@code DRAFT} und {@code REVISION} aenderbar. In den uebrigen Status ist
 	 * die Bearbeitung fuer <em>alle</em> gesperrt (409
 	 * {@code PROJECT_STATUS_NOT_EDITABLE}), unabhaengig von der Rolle.
+	 *
+	 * <p><strong>Diese Methode bildet die Matrixzeile ab, nicht den
+	 * Block-Endpoint.</strong> Fuer {@code PUT /projects/{id}/blocks} gilt die
+	 * engere Endpoint-Zeile aus §6.1, siehe {@link #mayEditBlocks}. Die Methode
+	 * bleibt trotzdem stehen: sie ist die Umsetzung der Zeile „Projekt-Inhalt
+	 * bearbeiten" aus §5 und die richtige Grundlage fuer jeden weiteren Weg, auf
+	 * dem Inhalt entsteht, etwa den Datei-Upload zu einem Projekt (§3.15).
 	 */
 	public boolean mayEditContent(AuthenticatedUser user, Project project) {
 		if (!isLoggedIn(user) || !isContentEditable(project)) {
@@ -185,8 +192,6 @@ public class ProjectPermissionService {
 	 * ausdruecklich nur „Autor:in und Mitglieder". Die Endpoint-Zeile ist die
 	 * speziellere Aussage und gewinnt: die Redaktion beurteilt ein Projekt und
 	 * schickt es zurueck, sie schreibt nicht die Metadaten ihrer Autor:innen um.
-	 * Fuer die Bloecke (KAN-18) bleibt {@link #mayEditContent} zustaendig, dort
-	 * steht die Matrixzeile ohne Gegenrede.
 	 *
 	 * <p><strong>Zur Fehlerunterscheidung:</strong> diese Methode fasst zwei
 	 * Gruende zusammen, die der Client auseinanderhalten muss. Der aufrufende
@@ -196,6 +201,39 @@ public class ProjectPermissionService {
 	 * {@code NO_PERMISSION}).
 	 */
 	public boolean mayEditMetadata(AuthenticatedUser user, Project project) {
+		return isProjectSide(user, project) && isContentEditable(project);
+	}
+
+	/**
+	 * Inhalt aendern ueber {@code PUT /projects/{id}/blocks} (KAN-18):
+	 * Autor:in und Projektmitglieder, in {@code DRAFT} und {@code REVISION}.
+	 *
+	 * <p><strong>Warum enger als {@link #mayEditContent}.</strong> KAN-17 hielt
+	 * hier noch fest, fuer die Bloecke stehe die Matrixzeile „Projekt-Inhalt
+	 * bearbeiten" mit ihrem (✓) fuer EDITOR ohne Gegenrede. Das trifft nicht zu:
+	 * §6.1 fuehrt fuer genau diesen Pfad „Autor:in und Mitglieder, in DRAFT und
+	 * REVISION", also dieselbe Einschraenkung wie bei den Metadaten. Nach
+	 * derselben Ueberlegung wie dort gewinnt die Endpoint-Zeile als die
+	 * speziellere Aussage, und sie passt zum Ablauf aus §4.1: die Redaktion
+	 * schreibt einen Aenderungswunsch und gibt das Projekt nach
+	 * {@code REVISION} zurueck, sie schreibt nicht im fremden Dokument. Wer den
+	 * Text verantwortet, bleibt damit erkennbar dieselbe Person, die ihn
+	 * eingereicht hat.
+	 *
+	 * <p><strong>Warum trotzdem eine eigene Methode</strong> und nicht der Aufruf
+	 * von {@link #mayEditMetadata}: die beiden beantworten verschiedene Fragen
+	 * und stuetzen sich auf verschiedene Zeilen des Contracts. Sie geben heute
+	 * dasselbe zurueck; faellt eine der beiden Zeilen spaeter anders aus, ist
+	 * genau eine Methode zu aendern. Dieselbe Ueberlegung wie bei
+	 * {@link #mayManageMembers}.
+	 *
+	 * <p><strong>Zur Fehlerunterscheidung</strong> gilt wie bei den Metadaten:
+	 * ein {@code false} kann am Status oder am Recht liegen. Der aufrufende
+	 * Dienst prueft deshalb zusaetzlich {@link #isProjectSide} und antwortet
+	 * gehoert-zum-Projekt mit 409 {@code PROJECT_STATUS_NOT_EDITABLE}, sonst mit
+	 * 403 {@code NO_PERMISSION}.
+	 */
+	public boolean mayEditBlocks(AuthenticatedUser user, Project project) {
 		return isProjectSide(user, project) && isContentEditable(project);
 	}
 

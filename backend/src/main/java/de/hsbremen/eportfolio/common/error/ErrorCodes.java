@@ -9,15 +9,16 @@ package de.hsbremen.eportfolio.common.error;
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
  * mit KAN-16 hier dazu.
  *
- * <p>Umgekehrt fuehrt §6.2 Codes, die hier noch fehlen: die uebrigen Block- und
- * die Datei-Codes, {@code PROJECT_INCOMPLETE}, {@code RESOURCE_NOT_FOUND},
+ * <p>Umgekehrt fuehrt §6.2 Codes, die hier noch fehlen: die Datei-Codes,
+ * {@code PROJECT_INCOMPLETE}, {@code RESOURCE_NOT_FOUND},
  * {@code PROJECT_STATUS_TRANSITION_INVALID}, {@code RESOURCE_IN_USE},
  * {@code PASSWORD_CHANGE_REQUIRED} und seit v17
  * {@code VERIFICATION_CODE_INVALID}. Sie kommen mit dem jeweiligen Modul dazu;
  * das ist keine Abweichung, sondern der noch offene Umsetzungsstand aus §8.
- * {@link #PROJECT_STATUS_NOT_EDITABLE} kam mit KAN-17 dazu und stand wie die
- * uebrigen schon vorher in §6.2; eine neue Contract-Version braucht es dafuer
- * nicht.
+ * {@link #PROJECT_STATUS_NOT_EDITABLE} kam mit KAN-17 dazu,
+ * {@link #BLOCK_TYPE_UNKNOWN} und {@link #EMBED_PROVIDER_NOT_ALLOWED} mit
+ * KAN-18. Alle drei standen wie die uebrigen schon vorher in §6.2; eine neue
+ * Contract-Version braucht es dafuer nicht.
  */
 public final class ErrorCodes {
 
@@ -68,15 +69,47 @@ public final class ErrorCodes {
 	public static final String PROJECT_NOT_FOUND = "PROJECT_NOT_FOUND";
 
 	/**
+	 * 400: der Wert im Feld {@code type} eines Inhaltsblocks steht nicht in der
+	 * Liste aus §2.5.
+	 *
+	 * <p><strong>Warum {@code BlockRequest.type} deshalb ein {@code String}
+	 * ist</strong> und kein {@code BlockType}: als Enum scheiterte ein
+	 * unbekannter Wert schon an der JSON-Umwandlung, also bevor fachlicher Code
+	 * laeuft. Der Client bekaeme dann {@link #VALIDATION_FAILED} und koennte
+	 * einen vertippten Blocktyp nicht von einem kaputten Body unterscheiden,
+	 * obwohl §6.2 fuer beides verschiedene Codes fuehrt.
+	 *
+	 * <p><strong>Nicht zu verwechseln mit</strong> {@link #BLOCK_CONTENT_INVALID}:
+	 * dort ist der Typ bekannt und der Inhalt passt nicht dazu.
+	 */
+	public static final String BLOCK_TYPE_UNKNOWN = "BLOCK_TYPE_UNKNOWN";
+
+	/**
 	 * 400: ein Inhaltsblock passt nicht zum Block-Schema aus §2.5. Der Typ passt
-	 * nicht zu {@code content.type}, ein typabhaengiges Pflichtfeld fehlt, oder
-	 * die Provider-Allowlist fuer VIDEO und EMBED greift.
+	 * nicht zu {@code content.type} oder ein typabhaengiges Pflichtfeld fehlt.
 	 *
 	 * <p>Der {@code BlockValidationService} fuehrte den Code bis KAN-49 als
 	 * eigenes Literal {@code BLOCK_UNGUELTIG}, das es in §6.2 nie gab. Er heisst
-	 * jetzt wie dort und steht wie jeder andere Code an dieser einen Stelle.
+	 * jetzt wie dort und steht wie jeder andere Code an dieser einen Stelle. Bis
+	 * KAN-18 beantwortete er zusaetzlich die Provider-Allowlist; dafuer fuehrt
+	 * §6.2 mit {@link #EMBED_PROVIDER_NOT_ALLOWED} einen eigenen Code.
 	 */
 	public static final String BLOCK_CONTENT_INVALID = "BLOCK_CONTENT_INVALID";
+
+	/**
+	 * 400: der Provider eines VIDEO- oder EMBED-Blocks steht nicht in der
+	 * Allowlist aus §2.5 ({@code youtube}, {@code vimeo}, {@code figma},
+	 * {@code codepen}, {@code gist}), oder der Host der {@code embedUrl} gehoert
+	 * nicht zum angegebenen Provider.
+	 *
+	 * <p><strong>Warum ein eigener Code neben
+	 * {@link #BLOCK_CONTENT_INVALID}:</strong> die beiden verlangen von der
+	 * Person am Editor Verschiedenes. Ein ungueltiger Inhalt ist ein Fehler im
+	 * Dokument, eine gesperrte Quelle dagegen eine Aussage darueber, was das
+	 * Portal ueberhaupt einbettet. Nur mit eigenem Code kann das Frontend „diese
+	 * Quelle ist hier nicht erlaubt" statt „der Block ist kaputt" melden.
+	 */
+	public static final String EMBED_PROVIDER_NOT_ALLOWED = "EMBED_PROVIDER_NOT_ALLOWED";
 
 	/**
 	 * 409: das Projekt wurde zwischen Laden und Speichern von jemand anderem
