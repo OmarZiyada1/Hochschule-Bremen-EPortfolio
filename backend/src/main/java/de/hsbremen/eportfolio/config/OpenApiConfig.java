@@ -48,17 +48,11 @@ public class OpenApiConfig {
 		return new OpenAPI()
 				.info(new Info()
 						.title("E-Portfolio Hochschule Bremen: API")
-						.version("v17")
+						.version("v18")
 						.description("""
 								REST-API des E-Portfolio-Systems der Hochschule \
-								Bremen (FK4). Fachlich entspricht der Stand dem \
-								API-Contract v17, §6.
-
-								Die Bezeichner sind seit KAN-49 englisch nach \
-								docs/NAMENSSCHEMA.md. Der Contract fuehrt sie \
-								noch unter ihren deutschen Namen; nachgezogen \
-								wird das mit v18, danach wandert die \
-								Versionsnummer hier mit.
+								Bremen (FK4). Stand entspricht dem API-Contract \
+								v18, §6.
 
 								Authentifizierung: JWT als Bearer-Token. Ohne \
 								gueltiges Token antworten geschuetzte Pfade mit \

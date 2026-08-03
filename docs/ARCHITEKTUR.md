@@ -1,16 +1,14 @@
 # Architektur
 
 Beschreibt den Stand von Branch `main` einschließlich KAN-16
-(Projekt-Lese-Endpoints) und KAN-49 (englische Bezeichner), deren Merge noch
-aussteht. Basis-Paket ist `de.hsbremen.eportfolio`, Gruppen-ID `de.hsbremen`,
-Artefakt `eportfolio`.
+(Projekt-Lese-Endpoints) und KAN-49 (englische Bezeichner). Basis-Paket ist
+`de.hsbremen.eportfolio`, Gruppen-ID `de.hsbremen`, Artefakt `eportfolio`.
 
 Seit KAN-49 sind alle Bezeichner englisch nach `docs/NAMENSSCHEMA.md`: Klassen,
 Felder, Methoden, JSON-Feldnamen, Enum-Werte, Fehlercodes, Endpoint-Pfade,
 Query-Parameter, Datenbankspalten und Konfigurationsschlüssel. Deutsch bleibt
 die Prosa: Javadoc, Kommentare, `@DisplayName`, diese Doku und Jira. Der
-Contract steht dazu noch auf v17 und führt die Bezeichner unter ihren deutschen
-Namen; nachgezogen wird das mit v18.
+Contract führt sie seit v18 ebenso.
 
 ---
 

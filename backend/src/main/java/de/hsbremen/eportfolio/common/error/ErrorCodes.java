@@ -3,9 +3,7 @@ package de.hsbremen.eportfolio.common.error;
 /**
  * Fehlercodes fuer das Envelope aus API-Contract §6.2.
  *
- * <p>Stand Contract v17 steht jede Konstante dieser Klasse auch in §6.2, dort
- * noch unter ihrem deutschen Namen; die englische Fassung der Codes ist in
- * docs/NAMENSSCHEMA.md §6 festgelegt und wird mit Contract v18 nachgezogen.
+ * <p>Stand Contract v18 steht jede Konstante dieser Klasse auch in §6.2.
  * {@link #VALIDATION_FAILED} war bis v14 nur hier gefuehrt und wurde mit v15
  * nachgetragen (Tabelle „Fehlercodes Anfrageformat", Historieneintrag in §10).
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
