@@ -9,13 +9,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import de.hsbremen.eportfolio.auth.dto.LoginAnfrage;
-import de.hsbremen.eportfolio.auth.dto.LoginAntwort;
-import de.hsbremen.eportfolio.benutzer.TestUser;
-import de.hsbremen.eportfolio.benutzer.User;
-import de.hsbremen.eportfolio.benutzer.UserRepository;
-import de.hsbremen.eportfolio.common.enums.Rolle;
+import de.hsbremen.eportfolio.auth.dto.LoginRequest;
+import de.hsbremen.eportfolio.auth.dto.LoginResponse;
+import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
+import de.hsbremen.eportfolio.user.TestUser;
+import de.hsbremen.eportfolio.user.User;
+import de.hsbremen.eportfolio.user.UserRepository;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
@@ -35,7 +35,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
-	private static final String PASSWORT = "geheim1234";
+	private static final String PASSWORD = "geheim1234";
 
 	private static final String PRIVATE_EMAIL = "studi.privat@example.org";
 
@@ -50,102 +50,102 @@ class AuthServiceTest {
 
 	private AuthService authService;
 
-	private AnmeldeversuchService anmeldeversuchService;
+	private LoginAttemptService loginAttemptService;
 
-	private String passwortHash;
+	private String passwordHash;
 
 	@BeforeEach
 	void setUp() {
 		passwordEncoder = new BCryptPasswordEncoder();
-		passwortHash = passwordEncoder.encode(PASSWORT);
+		passwordHash = passwordEncoder.encode(PASSWORD);
 
-		JwtEigenschaften eigenschaften = new JwtEigenschaften(
+		JwtProperties properties = new JwtProperties(
 				"a".repeat(88), Duration.ofHours(8), "eportfolio");
-		anmeldeversuchService = new AnmeldeversuchService(
-				new AnmeldeversuchEigenschaften(5, Duration.ofMinutes(15)));
-		authService = new AuthService(userRepository, passwordEncoder, new JwtService(eigenschaften),
-				anmeldeversuchService);
+		loginAttemptService = new LoginAttemptService(
+				new LoginAttemptProperties(5, Duration.ofMinutes(15)));
+		authService = new AuthService(userRepository, passwordEncoder, new JwtService(properties),
+				loginAttemptService);
 	}
 
-	private User nutzer(UserStatus status) {
-		return TestUser.erzeuge(UUID.randomUUID(), PRIVATE_EMAIL, HSB_EMAIL,
-				Rolle.STUDIERENDE, status, passwortHash);
+	private User account(UserStatus status) {
+		return TestUser.create(UUID.randomUUID(), PRIVATE_EMAIL, HSB_EMAIL,
+				Role.STUDENT, status, passwordHash);
 	}
 
 	@Test
 	@DisplayName("Gueltige Anmeldung mit privater E-Mail liefert Token und Benutzerdaten")
-	void anmeldungMitPrivaterEmailErfolgreich() {
-		User user = nutzer(UserStatus.AKTIV);
+	void loginWithPrivateEmailSucceeds() {
+		User user = account(UserStatus.ACTIVE);
 		when(userRepository.findByEmail(PRIVATE_EMAIL)).thenReturn(Optional.of(user));
 
-		LoginAntwort antwort = authService.anmelden(new LoginAnfrage(PRIVATE_EMAIL, PASSWORT), TEST_IP);
+		LoginResponse response = authService.login(new LoginRequest(PRIVATE_EMAIL, PASSWORD), TEST_IP);
 
-		assertThat(antwort.token()).isNotBlank();
-		assertThat(antwort.ablaufZeitpunkt()).isNotNull();
-		assertThat(antwort.benutzer().id()).isEqualTo(user.getId());
-		assertThat(antwort.benutzer().email()).isEqualTo(PRIVATE_EMAIL);
-		assertThat(antwort.benutzer().rolle()).isEqualTo(Rolle.STUDIERENDE);
+		assertThat(response.token()).isNotBlank();
+		assertThat(response.expiresAt()).isNotNull();
+		assertThat(response.user().id()).isEqualTo(user.getId());
+		assertThat(response.user().email()).isEqualTo(PRIVATE_EMAIL);
+		assertThat(response.user().role()).isEqualTo(Role.STUDENT);
 	}
 
 	@Test
 	@DisplayName("Falsches Passwort wird abgewiesen")
-	void falschesPasswort() {
-		when(userRepository.findByEmail(PRIVATE_EMAIL)).thenReturn(Optional.of(nutzer(UserStatus.AKTIV)));
+	void wrongPassword() {
+		when(userRepository.findByEmail(PRIVATE_EMAIL)).thenReturn(Optional.of(account(UserStatus.ACTIVE)));
 
-		assertThatThrownBy(() -> authService.anmelden(new LoginAnfrage(PRIVATE_EMAIL, "falsch"), TEST_IP))
-				.isInstanceOf(AuthService.AnmeldungFehlgeschlagenException.class);
+		assertThatThrownBy(() -> authService.login(new LoginRequest(PRIVATE_EMAIL, "falsch"), TEST_IP))
+				.isInstanceOf(AuthService.LoginFailedException.class);
 	}
 
 	@Test
 	@DisplayName("Unbekannte E-Mail wird abgewiesen")
-	void unbekannteEmail() {
+	void unknownEmail() {
 		when(userRepository.findByEmail(any())).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> authService.anmelden(new LoginAnfrage("niemand@example.org", PASSWORT), TEST_IP))
-				.isInstanceOf(AuthService.AnmeldungFehlgeschlagenException.class);
+		assertThatThrownBy(() -> authService.login(new LoginRequest("niemand@example.org", PASSWORD), TEST_IP))
+				.isInstanceOf(AuthService.LoginFailedException.class);
 	}
 
 	@Test
 	@DisplayName("Unbekannte E-Mail und falsches Passwort liefern dieselbe Meldung")
-	void gleicheMeldungFuerBeideFehlerfaelle() {
+	void sameMessageForBothFailures() {
 		when(userRepository.findByEmail("niemand@example.org")).thenReturn(Optional.empty());
-		when(userRepository.findByEmail(PRIVATE_EMAIL)).thenReturn(Optional.of(nutzer(UserStatus.AKTIV)));
+		when(userRepository.findByEmail(PRIVATE_EMAIL)).thenReturn(Optional.of(account(UserStatus.ACTIVE)));
 
-		String meldungUnbekannt = fehlermeldung("niemand@example.org", PASSWORT);
-		String meldungFalschesPasswort = fehlermeldung(PRIVATE_EMAIL, "falsch");
+		String messageUnknown = errorMessage("niemand@example.org", PASSWORD);
+		String messageWrongPassword = errorMessage(PRIVATE_EMAIL, "falsch");
 
 		// Sonst laesst sich ueber die API herausfinden, welche Adressen
 		// registriert sind.
-		assertThat(meldungUnbekannt).isEqualTo(meldungFalschesPasswort);
+		assertThat(messageUnknown).isEqualTo(messageWrongPassword);
 	}
 
-	private String fehlermeldung(String email, String passwort) {
+	private String errorMessage(String email, String password) {
 		try {
-			authService.anmelden(new LoginAnfrage(email, passwort), TEST_IP);
+			authService.login(new LoginRequest(email, password), TEST_IP);
 			throw new AssertionError("Anmeldung haette fehlschlagen muessen.");
-		} catch (AuthService.AnmeldungFehlgeschlagenException ex) {
+		} catch (AuthService.LoginFailedException ex) {
 			return ex.getMessage();
 		}
 	}
 
 	@Test
-	@DisplayName("Status DEAKTIVIERT verhindert die Anmeldung (§2.9)")
-	void deaktiviertesKonto() {
-		when(userRepository.findByEmail(PRIVATE_EMAIL)).thenReturn(Optional.of(nutzer(UserStatus.DEAKTIVIERT)));
+	@DisplayName("Status DEACTIVATED verhindert die Anmeldung (§2.9)")
+	void deactivatedAccount() {
+		when(userRepository.findByEmail(PRIVATE_EMAIL)).thenReturn(Optional.of(account(UserStatus.DEACTIVATED)));
 
-		assertThatThrownBy(() -> authService.anmelden(new LoginAnfrage(PRIVATE_EMAIL, PASSWORT), TEST_IP))
-				.isInstanceOf(AuthService.KontoNichtAktivException.class)
+		assertThatThrownBy(() -> authService.login(new LoginRequest(PRIVATE_EMAIL, PASSWORD), TEST_IP))
+				.isInstanceOf(AuthService.AccountNotActiveException.class)
 				.hasMessageContaining("deaktiviert");
 	}
 
 	@Test
-	@DisplayName("Status REGISTRIERUNG_OFFEN verhindert die Anmeldung (§2.9)")
-	void registrierungNochOffen() {
+	@DisplayName("Status REGISTRATION_PENDING verhindert die Anmeldung (§2.9)")
+	void registrationStillPending() {
 		when(userRepository.findByEmail(PRIVATE_EMAIL))
-				.thenReturn(Optional.of(nutzer(UserStatus.REGISTRIERUNG_OFFEN)));
+				.thenReturn(Optional.of(account(UserStatus.REGISTRATION_PENDING)));
 
-		assertThatThrownBy(() -> authService.anmelden(new LoginAnfrage(PRIVATE_EMAIL, PASSWORT), TEST_IP))
-				.isInstanceOf(AuthService.KontoNichtAktivException.class)
+		assertThatThrownBy(() -> authService.login(new LoginRequest(PRIVATE_EMAIL, PASSWORD), TEST_IP))
+				.isInstanceOf(AuthService.AccountNotActiveException.class)
 				.hasMessageContaining("Registrierung");
 	}
 
@@ -155,27 +155,27 @@ class AuthServiceTest {
 	 */
 	@Nested
 	@DisplayName("Trennung von privater und HSB-Adresse (§3.1.1)")
-	class HsbAdresseTest {
+	class HsbAddressTest {
 
 		@Test
 		@DisplayName("Anmeldung mit der HSB-Adresse schlaegt fehl, obwohl das Konto existiert")
-		void loginMitHsbAdresseSchlaegtFehl() {
+		void loginWithHsbAddressFails() {
 			// Das Konto existiert und ist aktiv - gesucht wird aber
 			// ausschliesslich ueber die private Adresse, deshalb findet
 			// findByEmail(hsbEmail) nichts.
 			when(userRepository.findByEmail(HSB_EMAIL)).thenReturn(Optional.empty());
 
-			assertThatThrownBy(() -> authService.anmelden(new LoginAnfrage(HSB_EMAIL, PASSWORT), TEST_IP))
-					.isInstanceOf(AuthService.AnmeldungFehlgeschlagenException.class);
+			assertThatThrownBy(() -> authService.login(new LoginRequest(HSB_EMAIL, PASSWORD), TEST_IP))
+					.isInstanceOf(AuthService.LoginFailedException.class);
 		}
 
 		@Test
 		@DisplayName("Die Anmeldung fragt niemals ueber findByHsbEmail")
-		void findByHsbEmailWirdNieBenutzt() {
+		void findByHsbEmailIsNeverUsed() {
 			when(userRepository.findByEmail(HSB_EMAIL)).thenReturn(Optional.empty());
 
-			assertThatThrownBy(() -> authService.anmelden(new LoginAnfrage(HSB_EMAIL, PASSWORT), TEST_IP))
-					.isInstanceOf(AuthService.AnmeldungFehlgeschlagenException.class);
+			assertThatThrownBy(() -> authService.login(new LoginRequest(HSB_EMAIL, PASSWORD), TEST_IP))
+					.isInstanceOf(AuthService.LoginFailedException.class);
 
 			// UserRepository.findByHsbEmail existiert fuer die Registrierung.
 			// Wuerde der Login darauf ausweichen, waere die Trennung aus
@@ -189,39 +189,39 @@ class AuthServiceTest {
 	 */
 	@Nested
 	@DisplayName("Brute-Force-Sperre am Login")
-	class SperreTest {
+	class LockoutTest {
 
-		private void versucheMitFalschemPasswort(int anzahl) {
-			for (int i = 0; i < anzahl; i++) {
-				assertThatThrownBy(() -> authService.anmelden(
-						new LoginAnfrage(PRIVATE_EMAIL, "falsch"), TEST_IP))
-						.isInstanceOf(AuthService.AnmeldungFehlgeschlagenException.class);
+		private void attemptsWithWrongPassword(int count) {
+			for (int i = 0; i < count; i++) {
+				assertThatThrownBy(() -> authService.login(
+						new LoginRequest(PRIVATE_EMAIL, "falsch"), TEST_IP))
+						.isInstanceOf(AuthService.LoginFailedException.class);
 			}
 		}
 
 		@Test
-		@DisplayName("Nach fuenf Fehlversuchen greift die Sperre - auch mit dem richtigen Passwort")
-		void sechsterVersuchWirdGesperrt() {
-			when(userRepository.findByEmail(PRIVATE_EMAIL)).thenReturn(Optional.of(nutzer(UserStatus.AKTIV)));
+		@DisplayName("Nach fuenf Fehlversuchen greift die Sperre, auch mit dem richtigen Passwort")
+		void sixthAttemptIsBlocked() {
+			when(userRepository.findByEmail(PRIVATE_EMAIL)).thenReturn(Optional.of(account(UserStatus.ACTIVE)));
 
-			versucheMitFalschemPasswort(5);
+			attemptsWithWrongPassword(5);
 
 			// Diesmal ist das Passwort korrekt - die Sperre gilt trotzdem, weil
 			// sie vor der Passwortpruefung greift.
-			assertThatThrownBy(() -> authService.anmelden(new LoginAnfrage(PRIVATE_EMAIL, PASSWORT), TEST_IP))
-					.isInstanceOf(AuthService.ZuVieleAnmeldeversucheException.class);
+			assertThatThrownBy(() -> authService.login(new LoginRequest(PRIVATE_EMAIL, PASSWORD), TEST_IP))
+					.isInstanceOf(AuthService.TooManyLoginAttemptsException.class);
 		}
 
 		@Test
 		@DisplayName("Bei gesperrtem Schluessel wird die Datenbank gar nicht erst gefragt")
-		void keinDatenbankzugriffBeiSperre() {
-			when(userRepository.findByEmail(PRIVATE_EMAIL)).thenReturn(Optional.of(nutzer(UserStatus.AKTIV)));
+		void noDatabaseAccessWhenBlocked() {
+			when(userRepository.findByEmail(PRIVATE_EMAIL)).thenReturn(Optional.of(account(UserStatus.ACTIVE)));
 
-			versucheMitFalschemPasswort(5);
+			attemptsWithWrongPassword(5);
 			verify(userRepository, times(5)).findByEmail(PRIVATE_EMAIL);
 
-			assertThatThrownBy(() -> authService.anmelden(new LoginAnfrage(PRIVATE_EMAIL, PASSWORT), TEST_IP))
-					.isInstanceOf(AuthService.ZuVieleAnmeldeversucheException.class);
+			assertThatThrownBy(() -> authService.login(new LoginRequest(PRIVATE_EMAIL, PASSWORD), TEST_IP))
+					.isInstanceOf(AuthService.TooManyLoginAttemptsException.class);
 
 			// Immer noch fuenf: der gesperrte Versuch hat nicht nachgeschlagen.
 			verify(userRepository, times(5)).findByEmail(PRIVATE_EMAIL);
@@ -229,67 +229,67 @@ class AuthServiceTest {
 
 		@Test
 		@DisplayName("Erfolgreicher Login vor der Grenze setzt den Zaehler zurueck")
-		void erfolgSetztZaehlerZurueck() {
-			when(userRepository.findByEmail(PRIVATE_EMAIL)).thenReturn(Optional.of(nutzer(UserStatus.AKTIV)));
+		void successResetsCounter() {
+			when(userRepository.findByEmail(PRIVATE_EMAIL)).thenReturn(Optional.of(account(UserStatus.ACTIVE)));
 
-			versucheMitFalschemPasswort(4);
+			attemptsWithWrongPassword(4);
 
 			// Der Erfolg raeumt den Zaehler ab ...
-			assertThat(authService.anmelden(new LoginAnfrage(PRIVATE_EMAIL, PASSWORT), TEST_IP).token())
+			assertThat(authService.login(new LoginRequest(PRIVATE_EMAIL, PASSWORD), TEST_IP).token())
 					.isNotBlank();
 
 			// ... daher fuehren vier weitere Fehlversuche noch nicht zur Sperre.
-			versucheMitFalschemPasswort(4);
-			assertThat(authService.anmelden(new LoginAnfrage(PRIVATE_EMAIL, PASSWORT), TEST_IP).token())
+			attemptsWithWrongPassword(4);
+			assertThat(authService.login(new LoginRequest(PRIVATE_EMAIL, PASSWORD), TEST_IP).token())
 					.isNotBlank();
 		}
 
 		@Test
 		@DisplayName("Unbekannte E-Mail wird genauso gesperrt wie eine existierende")
-		void keinUnterschiedZwischenBekanntUndUnbekannt() {
-			String unbekannt = "gibtesnicht@example.org";
-			when(userRepository.findByEmail(PRIVATE_EMAIL)).thenReturn(Optional.of(nutzer(UserStatus.AKTIV)));
-			when(userRepository.findByEmail(unbekannt)).thenReturn(Optional.empty());
+		void noDifferenceBetweenKnownAndUnknown() {
+			String unknown = "gibtesnicht@example.org";
+			when(userRepository.findByEmail(PRIVATE_EMAIL)).thenReturn(Optional.of(account(UserStatus.ACTIVE)));
+			when(userRepository.findByEmail(unknown)).thenReturn(Optional.empty());
 
 			// Beide Adressen von verschiedenen IPs aus, damit sich die
 			// IP-Zaehler nicht gegenseitig beeinflussen.
 			for (int i = 0; i < 5; i++) {
-				assertThatThrownBy(() -> authService.anmelden(
-						new LoginAnfrage(PRIVATE_EMAIL, "falsch"), "192.0.2.1"))
-						.isInstanceOf(AuthService.AnmeldungFehlgeschlagenException.class);
-				assertThatThrownBy(() -> authService.anmelden(
-						new LoginAnfrage(unbekannt, "falsch"), "192.0.2.2"))
-						.isInstanceOf(AuthService.AnmeldungFehlgeschlagenException.class);
+				assertThatThrownBy(() -> authService.login(
+						new LoginRequest(PRIVATE_EMAIL, "falsch"), "192.0.2.1"))
+						.isInstanceOf(AuthService.LoginFailedException.class);
+				assertThatThrownBy(() -> authService.login(
+						new LoginRequest(unknown, "falsch"), "192.0.2.2"))
+						.isInstanceOf(AuthService.LoginFailedException.class);
 			}
 
-			Throwable bekannt = catchThrowable(
-					() -> authService.anmelden(new LoginAnfrage(PRIVATE_EMAIL, "falsch"), "192.0.2.1"));
-			Throwable unbekanntesKonto = catchThrowable(
-					() -> authService.anmelden(new LoginAnfrage(unbekannt, "falsch"), "192.0.2.2"));
+			Throwable known = catchThrowable(
+					() -> authService.login(new LoginRequest(PRIVATE_EMAIL, "falsch"), "192.0.2.1"));
+			Throwable unknownAccount = catchThrowable(
+					() -> authService.login(new LoginRequest(unknown, "falsch"), "192.0.2.2"));
 
 			// Gleiche Ausnahme, gleiche Meldung. Aus dem Sperrverhalten laesst
 			// sich nicht ableiten, welche Adressen registriert sind.
-			assertThat(bekannt).isInstanceOf(AuthService.ZuVieleAnmeldeversucheException.class);
-			assertThat(unbekanntesKonto).isInstanceOf(AuthService.ZuVieleAnmeldeversucheException.class);
-			assertThat(bekannt.getMessage()).isEqualTo(unbekanntesKonto.getMessage());
+			assertThat(known).isInstanceOf(AuthService.TooManyLoginAttemptsException.class);
+			assertThat(unknownAccount).isInstanceOf(AuthService.TooManyLoginAttemptsException.class);
+			assertThat(known.getMessage()).isEqualTo(unknownAccount.getMessage());
 		}
 
 		@Test
 		@DisplayName("Die Sperre trennt nach E-Mail und nach IP")
-		void getrennteSchluessel() {
-			when(userRepository.findByEmail(PRIVATE_EMAIL)).thenReturn(Optional.of(nutzer(UserStatus.AKTIV)));
+		void separateKeys() {
+			when(userRepository.findByEmail(PRIVATE_EMAIL)).thenReturn(Optional.of(account(UserStatus.ACTIVE)));
 
-			versucheMitFalschemPasswort(5);
+			attemptsWithWrongPassword(5);
 
 			// Dieselbe Adresse von einer anderen IP: bleibt gesperrt (E-Mail-Zaehler).
-			assertThatThrownBy(() -> authService.anmelden(
-					new LoginAnfrage(PRIVATE_EMAIL, PASSWORT), "203.0.113.99"))
-					.isInstanceOf(AuthService.ZuVieleAnmeldeversucheException.class);
+			assertThatThrownBy(() -> authService.login(
+					new LoginRequest(PRIVATE_EMAIL, PASSWORD), "203.0.113.99"))
+					.isInstanceOf(AuthService.TooManyLoginAttemptsException.class);
 
 			// Dieselbe IP mit anderer Adresse: ebenfalls gesperrt (IP-Zaehler).
-			assertThatThrownBy(() -> authService.anmelden(
-					new LoginAnfrage("jemand.anderes@example.org", PASSWORT), TEST_IP))
-					.isInstanceOf(AuthService.ZuVieleAnmeldeversucheException.class);
+			assertThatThrownBy(() -> authService.login(
+					new LoginRequest("jemand.anderes@example.org", PASSWORD), TEST_IP))
+					.isInstanceOf(AuthService.TooManyLoginAttemptsException.class);
 		}
 	}
 }

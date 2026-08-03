@@ -207,6 +207,7 @@ und wird im Contract gestrichen statt stehen gelassen.
 | `VERIFIZIERUNGSCODE_UNGUELTIG` | `VERIFICATION_CODE_INVALID` |
 | `BLOCKTYP_UNBEKANNT` | `BLOCK_TYPE_UNKNOWN` |
 | `BLOCK_INHALT_UNGUELTIG` | `BLOCK_CONTENT_INVALID` |
+| `BLOCK_UNGUELTIG` (nur im Code) | `BLOCK_CONTENT_INVALID` |
 | `EMBED_PROVIDER_NICHT_ERLAUBT` | `EMBED_PROVIDER_NOT_ALLOWED` |
 | `DATEI_TYP_NICHT_ERLAUBT` · `DATEI_ZU_GROSS` | `FILE_TYPE_NOT_ALLOWED` · `FILE_TOO_LARGE` |
 | `PROJEKT_UNVOLLSTAENDIG` | `PROJECT_INCOMPLETE` |
@@ -216,6 +217,12 @@ und wird im Contract gestrichen statt stehen gelassen.
 | `PROJEKT_STATUS_NICHT_BEARBEITBAR` | `PROJECT_STATUS_NOT_EDITABLE` |
 | `PROJEKT_STATUS_UEBERGANG_UNGUELTIG` | `PROJECT_STATUS_TRANSITION_INVALID` |
 | `RESSOURCE_IN_VERWENDUNG` | `RESOURCE_IN_USE` |
+
+`BLOCK_UNGUELTIG` war ein Sonderfall und ist mit KAN-49 verschwunden: der
+`BlockValidationService` führte den Code als eigenes Literal, das es in
+Contract §6.2 nie gab. Er heißt jetzt wie dort und steht als Konstante in
+`ErrorCodes.java`, damit die Regel „ein Fehlercode existiert erst, wenn er an
+beiden Orten steht" auch für ihn gilt.
 
 ## 7. Endpoints
 
@@ -309,14 +316,44 @@ Constraints, Indizes und Fremdschlüssel dabei automatisch mit; benannte
 Constraints werden zusätzlich per `ALTER … RENAME CONSTRAINT` angeglichen,
 damit `ck_block_typ` nicht neben `block.type` stehen bleibt.
 
-Betroffene benannte Constraints:
+**Berichtigung mit KAN-49.** Diese Tabelle nannte ursprünglich vier
+„betroffene benannte Constraints", von denen es drei gar nicht gab: benannt
+war allein `uq_block_projekt_reihenfolge`, alle Check-Constraints trugen von
+Postgres erzeugte Namen (`block_typ_check`, `app_user_rolle_check`, …), und
+`top10_protokoll` ist bis heute nicht angelegt (kommt mit KAN-24).
 
-| Alt | Neu |
-| --- | --- |
-| `ck_block_typ` | `ck_block_type` |
-| `ck_block_reihenfolge` | `ck_block_order_index` |
-| `uq_block_projekt_reihenfolge` | `uq_block_project_order_index` |
-| `ck_top10_protokoll_aktion` | `ck_top10_audit_action` |
+Hinzu kommt: ein reines `RENAME` genügt bei den Check-Constraints nicht, weil
+sich die **Enum-Werte** mitändern (`ENTWURF` wird `DRAFT`). Jede betroffene
+Constraint wird deshalb gelöst, der Bestand per `UPDATE` umgeschrieben und die
+Constraint mit explizitem Namen neu gesetzt (Skill `flyway-migration`,
+Regel 3). Wo sich nur der Spaltenname ändert und nicht die erlaubten Werte,
+genügt `ALTER TABLE … RENAME CONSTRAINT`.
+
+| Alt | Neu | Weg |
+| --- | --- | --- |
+| `app_user_rolle_check` | `ck_app_user_role` | neu, Werte ändern sich |
+| `app_user_status_check` | `ck_app_user_status` | neu, Werte ändern sich |
+| `projekt_status_check` | `ck_project_status` | neu, Werte ändern sich |
+| `projekt_status_historie_von_status_check` | `ck_project_status_history_from_status` | neu, Werte ändern sich |
+| `projekt_status_historie_nach_status_check` | `ck_project_status_history_to_status` | neu, Werte ändern sich |
+| `kommentar_typ_check` | `ck_comment_type` | neu, Werte ändern sich |
+| `kommentar_status_check` | `ck_comment_status` | neu, Werte ändern sich |
+| `top10_nominierung_status_check` | `ck_top10_nomination_status` | neu, Werte ändern sich |
+| `block_typ_check` | `ck_block_type` | neu, Werte ändern sich |
+| `projekt_projekttyp_check` | `ck_project_project_type` | nur `RENAME` |
+| `projekt_abschluss_check` | `ck_project_degree` | nur `RENAME` |
+| `top10_eintrag_position_check` | `ck_top10_entry_position` | nur `RENAME` |
+| `top10_nominierung_vorgeschlagene_position_check` | `ck_top10_nomination_proposed_position` | nur `RENAME` |
+| `uq_block_projekt_reihenfolge` | `uq_block_project_order_index` | nur `RENAME`, bleibt `deferrable` |
+
+Primär-, Unique- und Fremdschlüssel wandern ebenfalls per `RENAME CONSTRAINT`
+mit (`projekt_pkey` wird `project_pkey` usw.), die eigenständigen Indizes per
+`ALTER INDEX … RENAME TO` (`idx_projekt_autor_id` wird
+`idx_project_author_id`). Postgres benennt beides bei einem Tabellen- oder
+Spalten-Rename nicht selbst um.
+
+`ck_top10_audit_action` entsteht erst mit der Tabelle `top10_audit_entry`
+(KAN-24) und gehört deshalb nicht in diese Migration.
 
 `ddl-auto: validate` ist danach der Beleg: läuft die Anwendung hoch, passen
 Entitäten und Schema zusammen.
@@ -332,6 +369,19 @@ hinge.
 | `app.security.cors.erlaubte-origins` | `app.security.cors.allowed-origins` |
 | `CORS_ERLAUBTE_ORIGINS` | `CORS_ALLOWED_ORIGINS` |
 | `app.berechtigung.*` | `app.permission.*` |
+| `app.berechtigung.vier-augen-prinzip` | `app.permission.four-eyes-principle` |
+| `app.berechtigung.admin-darf-fremde-inhalte-bearbeiten` | `app.permission.admin-may-edit-foreign-content` |
+| `app.security.jwt.laufzeit` | `app.security.jwt.lifetime` |
+| `app.security.anmeldeversuche.*` | `app.security.login-attempts.*` |
+| `app.security.anmeldeversuche.max-fehlversuche` | `app.security.login-attempts.max-failed-attempts` |
+| `app.security.anmeldeversuche.sperrdauer` | `app.security.login-attempts.lockout-duration` |
+| `DEV_TEST_PASSWORT` | `DEV_TEST_PASSWORD` |
+
+Die Zeilen ab `vier-augen-prinzip` sind mit KAN-49 dazugekommen: die Regel
+„auch `application.yml` und `.env` tragen deutsche Schlüssel, sie wandern mit"
+stand schon da, die Liste nannte aber nur drei Beispiele. Unverändert bleiben
+`JWT_SECRET`, `POSTGRES_*` und `app.security.jwt.issuer`, die sind bereits
+englisch.
 
 `.env` und `.env.example` sind mitzuziehen, sonst startet die Anwendung
 lokal mit stillen Standardwerten statt mit den gesetzten.

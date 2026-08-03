@@ -1,12 +1,12 @@
 package de.hsbremen.eportfolio.auth;
 
-import de.hsbremen.eportfolio.auth.dto.BenutzerAntwort;
-import de.hsbremen.eportfolio.auth.dto.LoginAnfrage;
-import de.hsbremen.eportfolio.auth.dto.LoginAntwort;
-import de.hsbremen.eportfolio.benutzer.User;
-import de.hsbremen.eportfolio.benutzer.UserRepository;
-import de.hsbremen.eportfolio.common.error.ApiFehler;
-import de.hsbremen.eportfolio.common.error.Fehlercodes;
+import de.hsbremen.eportfolio.auth.dto.LoginRequest;
+import de.hsbremen.eportfolio.auth.dto.LoginResponse;
+import de.hsbremen.eportfolio.auth.dto.UserResponse;
+import de.hsbremen.eportfolio.common.error.ApiError;
+import de.hsbremen.eportfolio.common.error.ErrorCodes;
+import de.hsbremen.eportfolio.user.User;
+import de.hsbremen.eportfolio.user.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
@@ -44,7 +44,7 @@ public class AuthController {
 
 	/**
 	 * Anmeldung mit privater E-Mail + Passwort. Liefert Token und
-	 * Benutzerdaten (ohne {@code passwortHash}, ohne {@code hsbEmail}).
+	 * Benutzerdaten (ohne {@code passwordHash}, ohne {@code hsbEmail}).
 	 */
 	// Kein Bearer-Token: dieser Endpoint liefert das Token ja erst. Hebt die
 	// global registrierte Anforderung aus OpenApiConfig gezielt fuer diesen
@@ -61,8 +61,8 @@ public class AuthController {
 	@ApiResponse(responseCode = "401", description = "Anmeldedaten falsch oder Konto nicht aktiv.")
 	@ApiResponse(responseCode = "429", description = "Zu viele Fehlversuche, Konto bzw. IP ist voruebergehend gesperrt.")
 	@PostMapping("/login")
-	public LoginAntwort login(@Valid @RequestBody LoginAnfrage anfrage, HttpServletRequest request) {
-		return authService.anmelden(anfrage, clientIp(request));
+	public LoginResponse login(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest request) {
+		return authService.login(loginRequest, clientIp(request));
 	}
 
 	/**
@@ -70,7 +70,7 @@ public class AuthController {
 	 *
 	 * <p>Bewusst {@code getRemoteAddr()} ohne Auswertung von
 	 * {@code X-Forwarded-For}: dieser Header ist frei setzbar, solange kein
-	 * vertrauenswuerdiger Reverse Proxy davorsteht, der ihn ueberschreibt — ein
+	 * vertrauenswuerdiger Reverse Proxy davorsteht, der ihn ueberschreibt. Ein
 	 * Angreifer koennte die IP-Sperre sonst mit jedem Request umgehen. Sobald
 	 * die Anwendung hinter einem Proxy laeuft, gehoert das ueber
 	 * {@code server.forward-headers-strategy} geloest, nicht hier.
@@ -86,18 +86,18 @@ public class AuthController {
 	 * nichts, was das ausgegebene Token entwerten wuerde. Die API ist stateless
 	 * (§1); ein einmal signiertes JWT bleibt bis zum Ablauf gueltig, weil der
 	 * Server keine Sitzung fuehrt, die er beenden koennte. Der Endpoint leert
-	 * den SecurityContext dieses einen Requests und quittiert mit 204 — die
+	 * den SecurityContext dieses einen Requests und quittiert mit 204; die
 	 * eigentliche Abmeldung ist, dass der Client sein Token verwirft.
 	 *
 	 * <p>Er existiert trotzdem, weil §6.1 ihn vorsieht und das Frontend einen
 	 * definierten Aufhaenger braucht. Wer tatsaechlich serverseitig
 	 * zurueckziehen will, braucht kurzlebige Access-Tokens plus Refresh-Token
-	 * oder eine Denylist — beides eigene Tickets, siehe Rueckmeldung zu KAN-5.
+	 * oder eine Denylist, beides eigene Tickets, siehe Rueckmeldung zu KAN-5.
 	 *
 	 * <p>Kompensiert wird das Restrisiko dadurch, dass der
-	 * {@link JwtAuthentifizierungsFilter} bei jedem Request
-	 * {@code User.status = AKTIV} nachprueft: ein deaktiviertes Konto ist sofort
-	 * draussen, unabhaengig von der Token-Laufzeit.
+	 * {@link JwtAuthenticationFilter} bei jedem Request
+	 * {@code User.status = ACTIVE} nachprueft: ein deaktiviertes Konto ist
+	 * sofort draussen, unabhaengig von der Token-Laufzeit.
 	 */
 	@Operation(summary = "Abmelden",
 			description = "Antwortet mit 204 und leert den SecurityContext dieses Requests. "
@@ -124,45 +124,45 @@ public class AuthController {
 	@ApiResponse(responseCode = "200", description = "Benutzerdaten des Token-Inhabers.")
 	@ApiResponse(responseCode = "401", description = "Kein, abgelaufenes oder ungueltiges Token.")
 	@GetMapping("/me")
-	public BenutzerAntwort me(@AuthenticationPrincipal AngemeldeterBenutzer benutzer) {
-		User user = userRepository.findById(benutzer.getId())
-				.orElseThrow(() -> new AuthService.AnmeldungFehlgeschlagenException());
-		return BenutzerAntwort.aus(user);
+	public UserResponse me(@AuthenticationPrincipal AuthenticatedUser authenticatedUser) {
+		User user = userRepository.findById(authenticatedUser.getId())
+				.orElseThrow(() -> new AuthService.LoginFailedException());
+		return UserResponse.from(user);
 	}
 
 	// --- Fehlerabbildung auf das Envelope aus §6.2 -------------------------
 	// Liegt hier statt im GlobalExceptionHandler, weil beide Exceptions rein
 	// auth-fachlich sind und ausserhalb dieses Controllers nicht auftreten.
 
-	@ExceptionHandler(AuthService.AnmeldungFehlgeschlagenException.class)
-	public ResponseEntity<ApiFehler> behandleAnmeldungFehlgeschlagen(
-			AuthService.AnmeldungFehlgeschlagenException ex, HttpServletRequest request) {
-		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiFehler(
+	@ExceptionHandler(AuthService.LoginFailedException.class)
+	public ResponseEntity<ApiError> handleLoginFailed(
+			AuthService.LoginFailedException ex, HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiError(
 				Instant.now(),
 				HttpStatus.UNAUTHORIZED.value(),
-				Fehlercodes.ANMELDUNG_FEHLGESCHLAGEN,
+				ErrorCodes.LOGIN_FAILED,
 				ex.getMessage(),
 				request.getRequestURI()));
 	}
 
-	@ExceptionHandler(AuthService.ZuVieleAnmeldeversucheException.class)
-	public ResponseEntity<ApiFehler> behandleZuVieleVersuche(
-			AuthService.ZuVieleAnmeldeversucheException ex, HttpServletRequest request) {
-		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(new ApiFehler(
+	@ExceptionHandler(AuthService.TooManyLoginAttemptsException.class)
+	public ResponseEntity<ApiError> handleTooManyAttempts(
+			AuthService.TooManyLoginAttemptsException ex, HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(new ApiError(
 				Instant.now(),
 				HttpStatus.TOO_MANY_REQUESTS.value(),
-				Fehlercodes.ZU_VIELE_ANMELDEVERSUCHE,
+				ErrorCodes.TOO_MANY_LOGIN_ATTEMPTS,
 				ex.getMessage(),
 				request.getRequestURI()));
 	}
 
-	@ExceptionHandler(AuthService.KontoNichtAktivException.class)
-	public ResponseEntity<ApiFehler> behandleKontoNichtAktiv(
-			AuthService.KontoNichtAktivException ex, HttpServletRequest request) {
-		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiFehler(
+	@ExceptionHandler(AuthService.AccountNotActiveException.class)
+	public ResponseEntity<ApiError> handleAccountNotActive(
+			AuthService.AccountNotActiveException ex, HttpServletRequest request) {
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiError(
 				Instant.now(),
 				HttpStatus.UNAUTHORIZED.value(),
-				Fehlercodes.KONTO_NICHT_AKTIV,
+				ErrorCodes.ACCOUNT_NOT_ACTIVE,
 				ex.getMessage(),
 				request.getRequestURI()));
 	}

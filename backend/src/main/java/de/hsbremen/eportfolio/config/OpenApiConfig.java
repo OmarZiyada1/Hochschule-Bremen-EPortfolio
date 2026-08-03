@@ -41,30 +41,36 @@ public class OpenApiConfig {
 						Token aus POST /api/auth/login (Feld "token") hier \
 						eintragen. Die UI setzt daraufhin bei jedem Aufruf den \
 						Header "Authorization: Bearer <token>", so wie es der \
-						JwtAuthentifizierungsFilter erwartet. Das "Bearer "- \
+						JwtAuthenticationFilter erwartet. Das "Bearer "- \
 						Praefix ergaenzt die UI selbst, es gehoert nicht ins \
 						Eingabefeld.""");
 
 		return new OpenAPI()
 				.info(new Info()
-						.title("E-Portfolio Hochschule Bremen — API")
+						.title("E-Portfolio Hochschule Bremen: API")
 						.version("v17")
 						.description("""
 								REST-API des E-Portfolio-Systems der Hochschule \
-								Bremen (FK4). Stand entspricht dem API-Contract \
-								v17, §6.
+								Bremen (FK4). Fachlich entspricht der Stand dem \
+								API-Contract v17, §6.
+
+								Die Bezeichner sind seit KAN-49 englisch nach \
+								docs/NAMENSSCHEMA.md. Der Contract fuehrt sie \
+								noch unter ihren deutschen Namen; nachgezogen \
+								wird das mit v18, danach wandert die \
+								Versionsnummer hier mit.
 
 								Authentifizierung: JWT als Bearer-Token. Ohne \
 								gueltiges Token antworten geschuetzte Pfade mit \
 								401 im Fehler-Envelope aus §6.2 \
-								(zeitpunkt, status, fehlercode, meldung, pfad).
+								(timestamp, status, errorCode, message, path).
 
 								Diese Oberflaeche ist nur im Profil dev \
 								erreichbar."""))
 				.components(new Components().addSecuritySchemes(BEARER_SCHEMA, bearer))
 				// Global statt pro Controller: jeder kuenftige Endpoint erbt das
 				// Schema automatisch und niemand muss daran denken, es zu
-				// annotieren. Das ist eine reine Doku-Angabe — welche Pfade
+				// annotieren. Das ist eine reine Doku-Angabe; welche Pfade
 				// tatsaechlich ein Token verlangen, entscheidet allein die
 				// SecurityFilterChain.
 				.addSecurityItem(new SecurityRequirement().addList(BEARER_SCHEMA));

@@ -16,46 +16,46 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
  * Bildet Ausnahmen auf das einheitliche Fehler-Envelope ab (API-Contract §6.2).
  *
  * <p>Fehler, die bereits in den Security-Filtern auftreten, erreichen diesen
- * Handler nicht — dafuer gibt es {@code RestAuthentifizierungsEinstieg} und
- * {@code RestZugriffVerweigertHandler}, die denselben {@link ApiFehlerSchreiber}
+ * Handler nicht. Dafuer gibt es {@code RestAuthenticationEntryPoint} und
+ * {@code RestAccessDeniedHandler}, die denselben {@link ApiErrorWriter}
  * benutzen. Beide Wege muessen dasselbe Format liefern.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-	@ExceptionHandler(ValidierungException.class)
-	public ResponseEntity<ApiFehler> behandleValidierung(ValidierungException ex, HttpServletRequest request) {
-		return baue(HttpStatus.BAD_REQUEST, ex.getFehlercode(), ex.getMessage(), request);
+	@ExceptionHandler(ValidationException.class)
+	public ResponseEntity<ApiError> handleValidation(ValidationException ex, HttpServletRequest request) {
+		return build(HttpStatus.BAD_REQUEST, ex.getErrorCode(), ex.getMessage(), request);
 	}
 
 	/** Bean-Validation an Request-Bodies, z. B. leeres Passwort beim Login. */
 	@ExceptionHandler(MethodArgumentNotValidException.class)
-	public ResponseEntity<ApiFehler> behandleBeanValidierung(MethodArgumentNotValidException ex,
+	public ResponseEntity<ApiError> handleBeanValidation(MethodArgumentNotValidException ex,
 			HttpServletRequest request) {
-		String meldung = ex.getBindingResult().getFieldErrors().stream()
-				.map(fehler -> fehler.getField() + ": " + fehler.getDefaultMessage())
+		String message = ex.getBindingResult().getFieldErrors().stream()
+				.map(error -> error.getField() + ": " + error.getDefaultMessage())
 				.reduce((a, b) -> a + "; " + b)
 				.orElse("Die Anfrage ist ungueltig.");
-		return baue(HttpStatus.BAD_REQUEST, Fehlercodes.VALIDIERUNG_FEHLGESCHLAGEN, meldung, request);
+		return build(HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_FAILED, message, request);
 	}
 
 	/**
 	 * Ein Query- oder Pfadparameter laesst sich nicht in den erwarteten Typ
-	 * umwandeln, etwa {@code GET /api/studiengaenge?fakultaet=abc}.
+	 * umwandeln, etwa {@code GET /api/study-programs?faculty=abc}.
 	 *
 	 * <p>Ohne diesen Handler beantwortet Spring den Fall mit seinem eigenen
-	 * Standardkoerper — die API haette damit ein zweites Fehlerformat neben §6.2.
+	 * Standardkoerper; die API haette damit ein zweites Fehlerformat neben §6.2.
 	 * Die Meldung nennt nur Parametername und erwarteten Typ und gibt bewusst
 	 * nicht den Wert zurueck, den der Aufrufer geschickt hat: was ungeprueft
 	 * hereinkommt, geht nicht ungeprueft wieder hinaus.
 	 */
 	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
-	public ResponseEntity<ApiFehler> behandleTypfehler(MethodArgumentTypeMismatchException ex,
+	public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
 			HttpServletRequest request) {
-		Class<?> erwartet = ex.getRequiredType();
-		String meldung = "Der Parameter \"" + ex.getName() + "\" hat nicht das erwartete Format"
-				+ (erwartet == null ? "." : " (" + erwartet.getSimpleName() + ").");
-		return baue(HttpStatus.BAD_REQUEST, Fehlercodes.VALIDIERUNG_FEHLGESCHLAGEN, meldung, request);
+		Class<?> expected = ex.getRequiredType();
+		String message = "Der Parameter \"" + ex.getName() + "\" hat nicht das erwartete Format"
+				+ (expected == null ? "." : " (" + expected.getSimpleName() + ").");
+		return build(HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_FAILED, message, request);
 	}
 
 	/**
@@ -65,10 +65,10 @@ public class GlobalExceptionHandler {
 	 * Aufrufer sie selbst geschickt hat, und es macht den haeufigsten
 	 * Client-Fehler sofort erkennbar: eine vertippte oder veraltete ID.
 	 */
-	@ExceptionHandler(RessourceNichtGefundenException.class)
-	public ResponseEntity<ApiFehler> behandleNichtGefunden(RessourceNichtGefundenException ex,
+	@ExceptionHandler(ResourceNotFoundException.class)
+	public ResponseEntity<ApiError> handleNotFound(ResourceNotFoundException ex,
 			HttpServletRequest request) {
-		return baue(HttpStatus.NOT_FOUND, ex.getFehlercode(), ex.getMessage(), request);
+		return build(HttpStatus.NOT_FOUND, ex.getErrorCode(), ex.getMessage(), request);
 	}
 
 	/**
@@ -77,7 +77,7 @@ public class GlobalExceptionHandler {
 	 * {@code version} im Request passt also nicht mehr zum Stand in der
 	 * Datenbank. Hibernate bricht den Schreibvorgang ab, Spring uebersetzt das
 	 * in {@link ObjectOptimisticLockingFailureException}, und hier wird daraus
-	 * 409 {@code PROJEKT_VERSION_KONFLIKT}.
+	 * 409 {@code PROJECT_VERSION_CONFLICT}.
 	 *
 	 * <p>Die Meldung ist bewusst fest verdrahtet und uebernimmt nicht
 	 * {@code ex.getMessage()}: die Ausnahme nennt Entity-Klasse und
@@ -87,44 +87,44 @@ public class GlobalExceptionHandler {
 	 *
 	 * <p><strong>Einschraenkung:</strong> die Methode fangt jede
 	 * {@code ObjectOptimisticLockingFailureException} ab, nicht nur die von
-	 * {@code Projekt}. Das stimmt, solange {@code Projekt} die einzige Entity
+	 * {@code Project}. Das stimmt, solange {@code Project} die einzige Entity
 	 * mit {@code @Version} ist. Was bei einer zweiten zu tun ist, steht in
 	 * {@code docs/ARCHITEKTUR.md} §8.
 	 */
 	@ExceptionHandler(ObjectOptimisticLockingFailureException.class)
-	public ResponseEntity<ApiFehler> behandleVersionskonflikt(ObjectOptimisticLockingFailureException ex,
+	public ResponseEntity<ApiError> handleVersionConflict(ObjectOptimisticLockingFailureException ex,
 			HttpServletRequest request) {
-		return baue(HttpStatus.CONFLICT, Fehlercodes.PROJEKT_VERSION_KONFLIKT,
+		return build(HttpStatus.CONFLICT, ErrorCodes.PROJECT_VERSION_CONFLICT,
 				"Das Projekt wurde zwischenzeitlich von jemand anderem geaendert. "
 						+ "Bitte neu laden und die Aenderung wiederholen.", request);
 	}
 
 	/**
 	 * Greift, wenn die Autorisierung erst in der Methodensicherheit
-	 * ({@code @PreAuthorize}) scheitert — also nach den Filtern.
+	 * ({@code @PreAuthorize}) scheitert, also nach den Filtern.
 	 */
 	@ExceptionHandler(AccessDeniedException.class)
-	public ResponseEntity<ApiFehler> behandleZugriffVerweigert(AccessDeniedException ex,
+	public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex,
 			HttpServletRequest request) {
-		return baue(HttpStatus.FORBIDDEN, Fehlercodes.KEINE_BERECHTIGUNG,
+		return build(HttpStatus.FORBIDDEN, ErrorCodes.NO_PERMISSION,
 				"Fuer diese Aktion fehlt die Berechtigung.", request);
 	}
 
 	@ExceptionHandler(AuthenticationException.class)
-	public ResponseEntity<ApiFehler> behandleAuthentifizierung(AuthenticationException ex,
+	public ResponseEntity<ApiError> handleAuthentication(AuthenticationException ex,
 			HttpServletRequest request) {
-		return baue(HttpStatus.UNAUTHORIZED, Fehlercodes.NICHT_AUTHENTIFIZIERT,
+		return build(HttpStatus.UNAUTHORIZED, ErrorCodes.NOT_AUTHENTICATED,
 				"Anmeldung erforderlich.", request);
 	}
 
-	private ResponseEntity<ApiFehler> baue(HttpStatus status, String fehlercode, String meldung,
+	private ResponseEntity<ApiError> build(HttpStatus status, String errorCode, String message,
 			HttpServletRequest request) {
-		ApiFehler fehler = new ApiFehler(
+		ApiError error = new ApiError(
 				Instant.now(),
 				status.value(),
-				fehlercode,
-				meldung,
+				errorCode,
+				message,
 				request.getRequestURI());
-		return ResponseEntity.status(status).body(fehler);
+		return ResponseEntity.status(status).body(error);
 	}
 }

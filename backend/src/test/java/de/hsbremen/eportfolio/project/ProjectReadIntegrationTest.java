@@ -1,0 +1,739 @@
+package de.hsbremen.eportfolio.project;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import de.hsbremen.eportfolio.auth.AuthenticatedUser;
+import de.hsbremen.eportfolio.auth.JwtService;
+import de.hsbremen.eportfolio.common.enums.BlockType;
+import de.hsbremen.eportfolio.common.enums.Degree;
+import de.hsbremen.eportfolio.common.enums.ProjectStatus;
+import de.hsbremen.eportfolio.common.enums.ProjectType;
+import de.hsbremen.eportfolio.common.enums.Role;
+import de.hsbremen.eportfolio.common.error.ErrorCodes;
+import de.hsbremen.eportfolio.masterdata.Category;
+import de.hsbremen.eportfolio.masterdata.CategoryRepository;
+import de.hsbremen.eportfolio.masterdata.DevMasterDataSeeder;
+import de.hsbremen.eportfolio.masterdata.FacultyRepository;
+import de.hsbremen.eportfolio.masterdata.Module;
+import de.hsbremen.eportfolio.masterdata.ModuleRepository;
+import de.hsbremen.eportfolio.masterdata.StudyProgram;
+import de.hsbremen.eportfolio.masterdata.StudyProgramRepository;
+import de.hsbremen.eportfolio.reaction.ReactionRepository;
+import de.hsbremen.eportfolio.reaction.TestReaction;
+import de.hsbremen.eportfolio.user.TestUser;
+import de.hsbremen.eportfolio.user.User;
+import de.hsbremen.eportfolio.user.UserRepository;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.DefaultApplicationArguments;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * Die beiden Lese-Endpoints aus §6.1 gegen die echte Datenbank: rollenabhaengige
+ * Sichtbarkeit (§5), Filter, Paginierung (§6.6) und die Fehlerpolitik aus
+ * §6.3.1.
+ *
+ * <p>{@code @Transactional} rollt am Ende alles zurueck, die
+ * Entwicklungsdatenbank bleibt unveraendert. Die Endpoints laufen im selben
+ * Thread und damit in derselben Transaktion und sehen die Testdaten auch ohne
+ * Commit.
+ *
+ * <p><strong>Zur Isolation:</strong> Eine benutzte Entwicklungsdatenbank kann
+ * bereits Projekte enthalten. Jeder Lauf vergibt deshalb ein eigenes
+ * {@code semester} und filtert jede Listenabfrage darauf. Ohne diesen Kniff
+ * haetten Aussagen wie „PUBLIC sieht genau ein Projekt" keinen Bestand, sobald
+ * jemand lokal ein Projekt anlegt.
+ *
+ * <p>Die Anmeldung laeuft ueber echte Tokens aus dem {@link JwtService} statt
+ * ueber einen gesetzten SecurityContext: nur so durchlaeuft jede Anfrage
+ * dieselbe Filterkette wie in Produktion, einschliesslich der Nachfrage nach
+ * {@code User.status} bei jedem Request.
+ */
+@SpringBootTest
+@AutoConfigureMockMvc
+@Transactional
+class ProjectReadIntegrationTest {
+
+	@Autowired
+	private MockMvc mockMvc;
+
+	@Autowired
+	private ObjectMapper objectMapper;
+
+	@Autowired
+	private JwtService jwtService;
+
+	@Autowired
+	private DevMasterDataSeeder seeder;
+
+	@Autowired
+	private UserRepository userRepository;
+
+	@Autowired
+	private ProjectRepository projectRepository;
+
+	@Autowired
+	private ProjectMemberRepository projectMemberRepository;
+
+	@Autowired
+	private ProjectStatusHistoryRepository statusHistoryRepository;
+
+	@Autowired
+	private BlockRepository blockRepository;
+
+	@Autowired
+	private ReactionRepository reactionRepository;
+
+	@Autowired
+	private CategoryRepository categoryRepository;
+
+	@Autowired
+	private FacultyRepository facultyRepository;
+
+	@Autowired
+	private StudyProgramRepository studyProgramRepository;
+
+	@Autowired
+	private ModuleRepository moduleRepository;
+
+	/** Klammert die Projekte dieses Laufs von allem ab, was sonst in der DB steht. */
+	private String semester;
+
+	private User author;
+
+	private User member;
+
+	private User otherStudent;
+
+	private User assignedEditor;
+
+	private User otherEditor;
+
+	private User admin;
+
+	private Project draftOfAuthor;
+
+	private Project publishedProject;
+
+	private Project submittedForeignProject;
+
+	private Project foreignDraftWithMember;
+
+	private Category category;
+
+	private StudyProgram studyProgram;
+
+	private Module module;
+
+	@BeforeEach
+	void buildData() {
+		seeder.run(new DefaultApplicationArguments());
+		semester = "KAN16 " + UUID.randomUUID();
+
+		author = save(Role.STUDENT);
+		member = save(Role.STUDENT);
+		otherStudent = save(Role.STUDENT);
+		assignedEditor = save(Role.EDITOR);
+		otherEditor = save(Role.EDITOR);
+		admin = save(Role.ADMIN);
+
+		category = categoryRepository.findAllByOrderByNameAsc().getFirst();
+		UUID fk4 = facultyRepository.findByAbbreviation("FK4").orElseThrow().getId();
+		studyProgram = studyProgramRepository.findByFacultyIdAndName(fk4, "Informatik").orElseThrow();
+		module = moduleRepository.findByStudyProgramIdOrderByNameAsc(studyProgram.getId()).getFirst();
+
+		draftOfAuthor = newProject(author, ProjectStatus.DRAFT, "Alpha Entwurf");
+
+		publishedProject = newProject(author, ProjectStatus.PUBLISHED, "Beta Portfolio");
+		publishedProject.setSummary("Ein Teaser ueber Barrierefreiheit");
+		publishedProject.setCategory(category);
+		publishedProject.setFaculty(studyProgram.getFaculty());
+		publishedProject.setStudyProgram(studyProgram);
+		publishedProject.setModule(module);
+		publishedProject.setProjectType(ProjectType.THESIS);
+		publishedProject.setDegree(Degree.BACHELOR);
+		publishedProject.setPublishedAt(Instant.now().truncatedTo(ChronoUnit.SECONDS));
+		// Die bestehende Sammlung fuellen statt sie zu ersetzen: das Projekt ist
+		// bereits gespeichert, seine Tag-Sammlung wird also von Hibernate
+		// verwaltet.
+		publishedProject.getTags().addAll(List.of("ux", "react"));
+		publishedProject = projectRepository.saveAndFlush(publishedProject);
+
+		submittedForeignProject = newProject(otherStudent, ProjectStatus.SUBMITTED, "Gamma Review");
+		submittedForeignProject.getEditors().add(assignedEditor);
+		submittedForeignProject = projectRepository.saveAndFlush(submittedForeignProject);
+
+		foreignDraftWithMember = newProject(otherStudent, ProjectStatus.DRAFT, "Delta Gruppenarbeit");
+		ProjectMember membership = projectMemberRepository.saveAndFlush(
+				TestProject.memberWithoutId(foreignDraftWithMember, member, "Frontend"));
+		// Die Zeile steht in der Datenbank, aber die Sammlung des bereits
+		// verwalteten Projekts kennt sie noch nicht. Test und Endpoint teilen
+		// sich hier einen Persistenzkontext; in Produktion faellt das nicht an,
+		// weil jeder Request seinen eigenen hat und die Sammlung frisch laedt.
+		// Der ProjectPermissionService liest genau diese Sammlung, deshalb
+		// wird sie hier nachgezogen.
+		foreignDraftWithMember.getMembers().add(membership);
+	}
+
+	// ==================================================================
+	// GET /api/projects: Sichtbarkeit (§5)
+	// ==================================================================
+
+	@Nested
+	@DisplayName("Liste: rollenabhaengige Sichtbarkeit")
+	class Visibility {
+
+		@Test
+		@DisplayName("PUBLIC sieht ausschliesslich veroeffentlichte Projekte")
+		void publicSeesOnlyPublished() throws Exception {
+			assertThat(listIds(null)).containsExactly(publishedProject.getId());
+		}
+
+		@Test
+		@DisplayName("Studierende sehen zusaetzlich die eigenen Projekte, nicht die fremden Entwuerfe")
+		void authorSeesOwn() throws Exception {
+			assertThat(listIds(author)).containsExactlyInAnyOrder(
+					publishedProject.getId(),
+					draftOfAuthor.getId());
+		}
+
+		@Test
+		@DisplayName("Projektmitglieder sehen den fremden Entwurf, an dem sie mitarbeiten (§3.13)")
+		void memberSeesGroupWork() throws Exception {
+			assertThat(listIds(member)).containsExactlyInAnyOrder(
+					publishedProject.getId(),
+					foreignDraftWithMember.getId());
+		}
+
+		@Test
+		@DisplayName("Redaktion sieht alle Projekte in allen Status, auch nicht zugewiesene")
+		void editorSeesEverything() throws Exception {
+			assertThat(listIds(otherEditor)).containsExactlyInAnyOrder(
+					publishedProject.getId(),
+					draftOfAuthor.getId(),
+					submittedForeignProject.getId(),
+					foreignDraftWithMember.getId());
+		}
+
+		@Test
+		@DisplayName("Admin sieht alle Projekte in allen Status")
+		void adminSeesEverything() throws Exception {
+			assertThat(listIds(admin)).hasSize(4);
+		}
+
+		@Test
+		@DisplayName("Ein Filter kann die Sichtbarkeitsschranke nicht aufweichen")
+		void filterOpensNothing() throws Exception {
+			// PUBLIC fragt gezielt nach Entwuerfen: die Antwort bleibt leer,
+			// statt den Entwurf des Autors herauszugeben.
+			assertThat(listIds(null, "status", "DRAFT")).isEmpty();
+			assertThat(listIds(null, "author", author.getId().toString()))
+					.containsExactly(publishedProject.getId());
+		}
+	}
+
+	// ==================================================================
+	// GET /api/projects: „Meine Reviews" (§6.1)
+	// ==================================================================
+
+	@Nested
+	@DisplayName("Liste: editor=me")
+	class MyReviews {
+
+		@Test
+		@DisplayName("Liefert genau die zugewiesenen Projekte")
+		void onlyAssigned() throws Exception {
+			assertThat(listIds(assignedEditor, "editor", "me"))
+					.containsExactly(submittedForeignProject.getId());
+		}
+
+		@Test
+		@DisplayName("Eine Redakteur:in ohne Zuweisung bekommt eine leere Liste, obwohl sie alles lesen darf")
+		void withoutAssignmentEmpty() throws Exception {
+			assertThat(listIds(otherEditor)).hasSize(4);
+			assertThat(listIds(otherEditor, "editor", "me")).isEmpty();
+		}
+
+		@Test
+		@DisplayName("Dieselbe Wirkung ueber die ausgeschriebene Redakteurs-ID")
+		void viaId() throws Exception {
+			assertThat(listIds(admin, "editor", assignedEditor.getId().toString()))
+					.containsExactly(submittedForeignProject.getId());
+		}
+
+		@Test
+		@DisplayName("Ohne Anmeldung ergibt \"me\" 401 und keine leere Liste")
+		void withoutLogin() throws Exception {
+			mockMvc.perform(get("/api/projects").param("editor", "me"))
+					.andExpect(status().isUnauthorized())
+					.andExpect(jsonPath("$.errorCode").value(ErrorCodes.NOT_AUTHENTICATED));
+		}
+
+		@Test
+		@DisplayName("Weder \"me\" noch UUID: 400 im Envelope, ohne den eingeschickten Wert")
+		void unusableValue() throws Exception {
+			mockMvc.perform(asUser(get("/api/projects").param("editor", "irgendwas"), admin))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.errorCode").value(ErrorCodes.VALIDATION_FAILED))
+					.andExpect(jsonPath("$.message", not(containsString("irgendwas"))));
+		}
+	}
+
+	// ==================================================================
+	// GET /api/projects: Filter (§6.1)
+	// ==================================================================
+
+	@Nested
+	@DisplayName("Liste: Filter und Suche")
+	class Filters {
+
+		@Test
+		@DisplayName("Stammdatenfilter greifen einzeln")
+		void masterDataFilters() throws Exception {
+			UUID expected = publishedProject.getId();
+
+			assertThat(listIds(admin, "category", category.getId().toString()))
+					.containsExactly(expected);
+			assertThat(listIds(admin, "faculty", studyProgram.getFaculty().getId().toString()))
+					.containsExactly(expected);
+			assertThat(listIds(admin, "studyProgram", studyProgram.getId().toString()))
+					.containsExactly(expected);
+			assertThat(listIds(admin, "module", module.getId().toString()))
+					.containsExactly(expected);
+			assertThat(listIds(admin, "degree", "BACHELOR")).containsExactly(expected);
+			assertThat(listIds(admin, "type", "THESIS")).containsExactly(expected);
+		}
+
+		@Test
+		@DisplayName("Mehrere Filter werden mit UND verknuepft")
+		void combination() throws Exception {
+			assertThat(listIds(admin, "type", "THESIS", "degree", "BACHELOR", "q", "Beta"))
+					.containsExactly(publishedProject.getId());
+
+			// Ein Filter, der nicht passt, macht die Kombination leer.
+			assertThat(listIds(admin, "type", "THESIS", "degree", "MASTER")).isEmpty();
+		}
+
+		@Test
+		@DisplayName("q sucht in Titel und Kurzbeschreibung, unabhaengig von der Schreibweise")
+		void searchText() throws Exception {
+			assertThat(listIds(admin, "q", "beta portfolio"))
+					.containsExactly(publishedProject.getId());
+			assertThat(listIds(admin, "q", "BARRIEREFREIHEIT"))
+					.containsExactly(publishedProject.getId());
+			assertThat(listIds(admin, "q", "gamma"))
+					.containsExactly(submittedForeignProject.getId());
+		}
+
+		@Test
+		@DisplayName("Platzhalter im Suchbegriff werden maskiert und wirken nicht als Joker")
+		void wildcardsAreEscaped() throws Exception {
+			assertThat(listIds(admin, "q", "%")).isEmpty();
+			assertThat(listIds(admin, "q", "_")).isEmpty();
+		}
+
+		@Test
+		@DisplayName("Ein leerer Parameter wirkt wie ein fehlender")
+		void emptyParameter() throws Exception {
+			assertThat(listIds(admin, "q", "")).hasSize(4);
+		}
+
+		@Test
+		@DisplayName("Unbekannte Filter-ID ergibt eine leere Liste, kein 404")
+		void unknownFilterId() throws Exception {
+			mockMvc.perform(asUser(listRequest("category", UUID.randomUUID().toString()), admin))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.content").isEmpty());
+		}
+	}
+
+	// ==================================================================
+	// GET /api/projects: Seitenformat und Sortierung (§6.6, §1)
+	// ==================================================================
+
+	@Nested
+	@DisplayName("Liste: Paginierung und Sortierung")
+	class Pages {
+
+		@Test
+		@DisplayName("Das Seitenformat traegt die fuenf Felder aus §6.6")
+		void pageFormat() throws Exception {
+			mockMvc.perform(asUser(listRequest("page", "1", "size", "3"), admin))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.page").value(1))
+					.andExpect(jsonPath("$.size").value(3))
+					.andExpect(jsonPath("$.totalElements").value(4))
+					.andExpect(jsonPath("$.totalPages").value(2))
+					.andExpect(jsonPath("$.content.length()").value(1))
+					// Springs Page-Felder duerfen nicht durchschlagen (§6.6).
+					.andExpect(jsonPath("$.pageable").doesNotExist())
+					.andExpect(jsonPath("$.numberOfElements").doesNotExist());
+		}
+
+		@Test
+		@DisplayName("Ueber alle Seiten kommt jedes Projekt genau einmal")
+		void pagingWithoutGaps() throws Exception {
+			List<UUID> firstPage = listIds(admin, "page", "0", "size", "2");
+			List<UUID> secondPage = listIds(admin, "page", "1", "size", "2");
+
+			assertThat(firstPage).hasSize(2);
+			assertThat(secondPage).hasSize(2);
+			assertThat(firstPage).doesNotContainAnyElementsOf(secondPage);
+		}
+
+		@Test
+		@DisplayName("sort=title,asc ordnet nach Titel")
+		void sortByTitle() throws Exception {
+			assertThat(listTitles(admin, "sort", "title,asc"))
+					.containsExactly("Alpha Entwurf", "Beta Portfolio", "Delta Gruppenarbeit", "Gamma Review");
+		}
+
+		@Test
+		@DisplayName("sort=title,desc dreht die Reihenfolge um")
+		void sortDescending() throws Exception {
+			assertThat(listTitles(admin, "sort", "title,desc"))
+					.containsExactly("Gamma Review", "Delta Gruppenarbeit", "Beta Portfolio", "Alpha Entwurf");
+		}
+
+		@Test
+		@DisplayName("Nicht erlaubtes Sortierfeld: 400 statt 500, und kein Zugriff auf fremde Pfade")
+		void forbiddenSortField() throws Exception {
+			mockMvc.perform(asUser(listRequest("sort", "author.passwordHash,asc"), admin))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.status").value(400))
+					.andExpect(jsonPath("$.errorCode").value(ErrorCodes.VALIDATION_FAILED));
+		}
+	}
+
+	// ==================================================================
+	// GET /api/projects/{id}
+	// ==================================================================
+
+	@Nested
+	@DisplayName("Detail: Fehlerpolitik nach §6.3.1")
+	class DetailErrors {
+
+		@Test
+		@DisplayName("Unbekannte ID: 404 PROJECT_NOT_FOUND")
+		void unknownId() throws Exception {
+			UUID id = UUID.randomUUID();
+
+			mockMvc.perform(get("/api/projects/" + id))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.errorCode").value(ErrorCodes.PROJECT_NOT_FOUND));
+		}
+
+		@Test
+		@DisplayName("Fremder Entwurf ohne Anmeldung: 401 NOT_AUTHENTICATED")
+		void foreignDraftWithoutToken() throws Exception {
+			mockMvc.perform(get("/api/projects/" + draftOfAuthor.getId()))
+					.andExpect(status().isUnauthorized())
+					.andExpect(jsonPath("$.status").value(401))
+					.andExpect(jsonPath("$.errorCode").value(ErrorCodes.NOT_AUTHENTICATED));
+		}
+
+		@Test
+		@DisplayName("Fremder Entwurf mit Token einer unbeteiligten Person: 403 NO_PERMISSION")
+		void foreignDraftWithoutReadPermission() throws Exception {
+			mockMvc.perform(asUser(get("/api/projects/" + draftOfAuthor.getId()), otherStudent))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.status").value(403))
+					.andExpect(jsonPath("$.errorCode").value(ErrorCodes.NO_PERMISSION));
+		}
+
+		@Test
+		@DisplayName("Die Autor:in bekommt ihren eigenen Entwurf")
+		void ownDraft() throws Exception {
+			mockMvc.perform(asUser(get("/api/projects/" + draftOfAuthor.getId()), author))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.title").value("Alpha Entwurf"));
+		}
+
+		@Test
+		@DisplayName("Ein veroeffentlichtes Projekt ist auch ohne Token lesbar")
+		void publishedWithoutToken() throws Exception {
+			mockMvc.perform(get("/api/projects/" + publishedProject.getId()))
+					.andExpect(status().isOk());
+		}
+	}
+
+	@Nested
+	@DisplayName("Detail: Inhalt der Antwort")
+	class DetailContent {
+
+		@Test
+		@DisplayName("Metadaten, Bezuege, version und Zeitstempel")
+		void metadata() throws Exception {
+			mockMvc.perform(get("/api/projects/" + publishedProject.getId()))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.id").value(publishedProject.getId().toString()))
+					.andExpect(jsonPath("$.title").value("Beta Portfolio"))
+					.andExpect(jsonPath("$.status").value("PUBLISHED"))
+					.andExpect(jsonPath("$.projectType").value("THESIS"))
+					.andExpect(jsonPath("$.degree").value("BACHELOR"))
+					.andExpect(jsonPath("$.semester").value(semester))
+					.andExpect(jsonPath("$.category.id").value(category.getId().toString()))
+					.andExpect(jsonPath("$.studyProgram.abbreviation").value(studyProgram.getAbbreviation()))
+					.andExpect(jsonPath("$.module.id").value(module.getId().toString()))
+					.andExpect(jsonPath("$.author.id").value(author.getId().toString()))
+					.andExpect(jsonPath("$.version").exists())
+					.andExpect(jsonPath("$.createdAt").exists())
+					.andExpect(jsonPath("$.updatedAt").exists())
+					.andExpect(jsonPath("$.publishedAt").exists())
+					// Tags kommen alphabetisch, damit die Antwort stabil ist.
+					.andExpect(jsonPath("$.tags[0]").value("react"))
+					.andExpect(jsonPath("$.tags[1]").value("ux"));
+		}
+
+		@Test
+		@DisplayName("Bloecke kommen nach orderIndex geordnet, mit unveraendertem content")
+		void blocksOrdered() throws Exception {
+			blockRepository.saveAndFlush(TestProject.blockWithoutId(publishedProject,
+					BlockType.TEXT, 1, prosemirror("paragraph", "zweiter")));
+			blockRepository.saveAndFlush(TestProject.blockWithoutId(publishedProject,
+					BlockType.HEADING, 0, prosemirror("heading", "erster")));
+
+			mockMvc.perform(get("/api/projects/" + publishedProject.getId()))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.blocks.length()").value(2))
+					.andExpect(jsonPath("$.blocks[0].type").value("HEADING"))
+					.andExpect(jsonPath("$.blocks[0].orderIndex").value(0))
+					.andExpect(jsonPath("$.blocks[0].schemaVersion").value(1))
+					.andExpect(jsonPath("$.blocks[0].content.type").value("heading"))
+					.andExpect(jsonPath("$.blocks[1].type").value("TEXT"))
+					.andExpect(jsonPath("$.blocks[1].orderIndex").value(1));
+		}
+
+		@Test
+		@DisplayName("Mitglieder erscheinen mit userId, Namen und Rolle im Projekt (§3.13)")
+		void members() throws Exception {
+			mockMvc.perform(asUser(
+							get("/api/projects/" + foreignDraftWithMember.getId()), member))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.members.length()").value(1))
+					.andExpect(jsonPath("$.members[0].userId").value(member.getId().toString()))
+					.andExpect(jsonPath("$.members[0].projectRole").value("Frontend"));
+		}
+
+		@Test
+		@DisplayName("reactionCount ist die Zahl der Reaktionen (§3.10)")
+		void reactionCount() throws Exception {
+			reactionRepository.saveAndFlush(
+					TestReaction.withoutId(publishedProject, member));
+			reactionRepository.saveAndFlush(
+					TestReaction.withoutId(publishedProject, otherStudent));
+
+			mockMvc.perform(get("/api/projects/" + publishedProject.getId()))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.reactionCount").value(2));
+
+			// Dieselbe Zahl in der Kachel; Projekte ohne Reaktion zaehlen als 0.
+			mockMvc.perform(asUser(listRequest("sort", "title,asc"), admin))
+					.andExpect(jsonPath("$.content[0].reactionCount").value(0))
+					.andExpect(jsonPath("$.content[1].reactionCount").value(2));
+		}
+
+		@Test
+		@DisplayName("Weder passwordHash noch hsbEmail stehen irgendwo in der Antwort (§3.1)")
+		void noSensitiveFields() throws Exception {
+			String detail = body(get("/api/projects/" + publishedProject.getId()));
+			String list = body(asUser(listRequest(), admin));
+
+			assertThat(detail).doesNotContain("passwordHash", "hsbEmail", author.getHsbEmail());
+			assertThat(list).doesNotContain("passwordHash", "hsbEmail", author.getHsbEmail());
+		}
+	}
+
+	@Nested
+	@DisplayName("Detail: editors und Statushistorie (§3.12, §5 Fussnote 7)")
+	class ProjectInternals {
+
+		@BeforeEach
+		void createHistory() {
+			statusHistoryRepository.saveAndFlush(TestProject.historyWithoutId(
+					publishedProject, null, ProjectStatus.DRAFT, author, Instant.now()));
+			publishedProject.getEditors().add(assignedEditor);
+			projectRepository.saveAndFlush(publishedProject);
+		}
+
+		@Test
+		@DisplayName("Fuer PUBLIC stehen beide Felder auf null, nicht auf der leeren Liste")
+		void publicSeesNothing() throws Exception {
+			mockMvc.perform(get("/api/projects/" + publishedProject.getId()))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.editors").value(nullValue()))
+					.andExpect(jsonPath("$.statusHistory").value(nullValue()));
+		}
+
+		@Test
+		@DisplayName("Unbeteiligte Angemeldete sehen sie ebenfalls nicht")
+		void othersSeeNothing() throws Exception {
+			mockMvc.perform(asUser(
+							get("/api/projects/" + publishedProject.getId()), otherStudent))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.editors").value(nullValue()))
+					.andExpect(jsonPath("$.statusHistory").value(nullValue()));
+		}
+
+		@Test
+		@DisplayName("Die Autor:in sieht Zuweisung und Verlauf")
+		void authorSeesBoth() throws Exception {
+			mockMvc.perform(asUser(
+							get("/api/projects/" + publishedProject.getId()), author))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.editors.length()").value(1))
+					.andExpect(jsonPath("$.editors[0].id")
+							.value(assignedEditor.getId().toString()))
+					.andExpect(jsonPath("$.statusHistory.length()").value(1))
+					.andExpect(jsonPath("$.statusHistory[0].fromStatus").doesNotExist())
+					.andExpect(jsonPath("$.statusHistory[0].toStatus").value("DRAFT"))
+					.andExpect(jsonPath("$.statusHistory[0].changedBy.id")
+							.value(author.getId().toString()));
+		}
+
+		@Test
+		@DisplayName("Die zugewiesene Redaktion sieht sie, eine nicht zugewiesene nicht")
+		void onlyAssignedEditor() throws Exception {
+			mockMvc.perform(asUser(
+							get("/api/projects/" + publishedProject.getId()), assignedEditor))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.statusHistory.length()").value(1));
+
+			// Lesen darf sie das Projekt trotzdem, nur die Interna nicht.
+			mockMvc.perform(asUser(
+							get("/api/projects/" + publishedProject.getId()), otherEditor))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.title").value("Beta Portfolio"))
+					.andExpect(jsonPath("$.statusHistory").value(nullValue()));
+		}
+
+		@Test
+		@DisplayName("Der Admin sieht sie bei jedem Projekt")
+		void adminSeesBoth() throws Exception {
+			mockMvc.perform(asUser(
+							get("/api/projects/" + publishedProject.getId()), admin))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.editors.length()").value(1))
+					.andExpect(jsonPath("$.statusHistory.length()").value(1));
+		}
+	}
+
+	// ==================================================================
+	// Hilfsmittel
+	// ==================================================================
+
+	private User save(Role role) {
+		return userRepository.saveAndFlush(TestUser.activeWithoutId(role, "nicht-relevant"));
+	}
+
+	private Project newProject(User owner, ProjectStatus status, String title) {
+		Project project = TestProject.withoutId(owner, status, title);
+		project.setSemester(semester);
+		return projectRepository.saveAndFlush(project);
+	}
+
+	private JsonNode prosemirror(String type, String text) {
+		return objectMapper.createObjectNode()
+				.put("type", type)
+				.put("text", text);
+	}
+
+	/**
+	 * Listenanfrage, immer auf das Semester dieses Laufs eingegrenzt und mit
+	 * einer Seitengroesse, die alle Testprojekte aufnimmt.
+	 *
+	 * <p>Die Parameter laufen ueber eine Map und nicht direkt in den Builder,
+	 * damit ein Aufruf {@code listRequest("size", "3")} die Vorgabe wirklich
+	 * ersetzt. Zweimal {@code size} im selben Request wuerde Spring nicht
+	 * zusammenfuehren, sondern den ersten Wert nehmen, und der Test pruefte
+	 * dann etwas anderes als gemeint.
+	 *
+	 * @param extra Paare aus Parametername und Wert
+	 */
+	private MockHttpServletRequestBuilder listRequest(String... extra) {
+		Map<String, String> parameters = new LinkedHashMap<>();
+		parameters.put("semester", semester);
+		parameters.put("size", "50");
+		for (int i = 0; i + 1 < extra.length; i += 2) {
+			parameters.put(extra[i], extra[i + 1]);
+		}
+
+		MockHttpServletRequestBuilder request = get("/api/projects");
+		for (Map.Entry<String, String> entry : parameters.entrySet()) {
+			request = request.param(entry.getKey(), entry.getValue());
+		}
+		return request;
+	}
+
+	/** Haengt ein echtes Bearer-Token an; {@code null} laesst die Anfrage anonym. */
+	private MockHttpServletRequestBuilder asUser(MockHttpServletRequestBuilder request, User user) {
+		if (user == null) {
+			return request;
+		}
+		String token = jwtService.createToken(AuthenticatedUser.from(user));
+		return request.header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+	}
+
+	private List<UUID> listIds(User user, String... extra) throws Exception {
+		return listField(user, "id", extra).stream().map(UUID::fromString).toList();
+	}
+
+	private List<String> listTitles(User user, String... extra) throws Exception {
+		return listField(user, "title", extra);
+	}
+
+	/**
+	 * Liest ein Feld aus jeder Kachel der Antwort, in der gelieferten
+	 * Reihenfolge.
+	 *
+	 * <p>Bewusst mit einer Schleife ueber die Elemente und nicht mit
+	 * {@code findValuesAsText}: das durchsucht den Baum rekursiv und wuerde
+	 * unter „id" auch die IDs von Kategorie, Fakultaet und Autor:in einsammeln.
+	 */
+	private List<String> listField(User user, String field, String... extra) throws Exception {
+		JsonNode response = objectMapper.readTree(body(asUser(listRequest(extra), user)));
+
+		List<String> values = new ArrayList<>();
+		for (JsonNode card : response.get("content")) {
+			values.add(card.get(field).asText());
+		}
+		return values;
+	}
+
+	/**
+	 * Fuehrt die Anfrage aus, erwartet 200 und liefert den Koerper. Bewusst mit
+	 * ausdruecklichem UTF-8, damit Umlaute in Titeln nicht am Zeichensatz der
+	 * Testantwort scheitern.
+	 */
+	private String body(MockHttpServletRequestBuilder request) throws Exception {
+		return mockMvc.perform(request)
+				.andExpect(status().isOk())
+				.andReturn()
+				.getResponse()
+				.getContentAsString(StandardCharsets.UTF_8);
+	}
+}
