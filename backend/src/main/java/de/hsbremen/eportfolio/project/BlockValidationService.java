@@ -17,6 +17,13 @@ import org.springframework.stereotype.Service;
  * gesetzt sein, und fuer VIDEO/EMBED wird die Provider-Allowlist serverseitig
  * durchgesetzt. Verstoesse fuehren zu einer {@link ValidationException}, die
  * als HTTP 400 mit dem Envelope aus §6.2 beantwortet wird.
+ *
+ * <p><strong>Zwei Fehlercodes, nicht einer.</strong> Ein unpassender Inhalt
+ * ergibt {@code BLOCK_CONTENT_INVALID}, eine gesperrte Quelle dagegen
+ * {@code EMBED_PROVIDER_NOT_ALLOWED}. §6.2 fuehrt beide getrennt, und sie
+ * verlangen Verschiedenes: den einen behebt eine Korrektur am Block, den
+ * anderen nur eine andere Quelle. Bis KAN-18 lieferte diese Klasse fuer beides
+ * denselben Code.
  */
 @Service
 public class BlockValidationService {
@@ -64,11 +71,26 @@ public class BlockValidationService {
 	}
 
 	public void validateBlock(Block block, int index) {
-		BlockType type = block.getType();
+		validate(block.getType(), block.getContent(), index);
+	}
+
+	/**
+	 * Prueft Typ und Inhalt eines Blocks, ohne dafuer eine {@link Block}-Instanz
+	 * zu verlangen.
+	 *
+	 * <p>{@code PUT /api/projects/{id}/blocks} prueft die gesamte eingeschickte
+	 * Liste, <em>bevor</em> es die erste Zeile anfasst: sonst liesse ein
+	 * ungueltiger Block am Ende der Liste ein halb geaendertes Projekt zurueck.
+	 * Zu diesem Zeitpunkt gibt es die Entities noch nicht, wohl aber Typ und
+	 * Inhalt aus dem Request.
+	 *
+	 * @param index Position in der eingeschickten Liste, damit die Meldung sagt,
+	 *              welcher Block gemeint ist
+	 */
+	public void validate(BlockType type, JsonNode content, int index) {
 		if (type == null) {
 			throw error(index, "type fehlt");
 		}
-		JsonNode content = block.getContent();
 		if (content == null || !content.isObject()) {
 			throw error(index, "content fehlt oder ist kein Objekt");
 		}
@@ -97,7 +119,7 @@ public class BlockValidationService {
 				// provider + videoId abgeleitet und nie vom Client uebernommen.
 				String provider = attrs.path("provider").asText("");
 				if (!VIDEO_PROVIDERS.contains(provider)) {
-					throw error(index, "VIDEO: provider '" + provider
+					throw providerError(index, "VIDEO: provider '" + provider
 							+ "' ist nicht erlaubt (zulaessig: youtube, vimeo)");
 				}
 				String videoId = attrs.path("videoId").asText("");
@@ -142,17 +164,28 @@ public class BlockValidationService {
 		return switch (provider) {
 			case "youtube" -> "https://www.youtube.com/embed/" + videoId;
 			case "vimeo" -> "https://player.vimeo.com/video/" + videoId;
-			default -> throw new ValidationException(ErrorCodes.BLOCK_CONTENT_INVALID,
+			default -> throw new ValidationException(ErrorCodes.EMBED_PROVIDER_NOT_ALLOWED,
 					"VIDEO: provider '" + provider + "' ist nicht erlaubt (zulaessig: youtube, vimeo)");
 		};
 	}
 
-	/** Provider-Allowlist serverseitig: Provider erlaubt und embedUrl-Host passend zum Provider. */
+	/**
+	 * Provider-Allowlist serverseitig: Provider erlaubt und embedUrl-Host passend
+	 * zum Provider.
+	 *
+	 * <p>Die fehlende {@code embedUrl} ist ein Inhaltsfehler und ergibt
+	 * {@code BLOCK_CONTENT_INVALID}; ein gesperrter Provider und ein Host, der
+	 * nicht zu ihm gehoert, ergeben {@code EMBED_PROVIDER_NOT_ALLOWED}. §2.5
+	 * nennt fuer „andere Hosts" ausdruecklich denselben Code wie fuer den
+	 * Provider selbst: ein passender Providername mit fremdem Host waere sonst
+	 * der Weg, die Allowlist zu umgehen.
+	 */
 	private void checkEmbed(int index, BlockType type, JsonNode attrs, Set<String> allowedProviders) {
 		requireText(index, type, attrs, "embedUrl");
 		String provider = attrs.path("provider").asText("");
 		if (!allowedProviders.contains(provider)) {
-			throw error(index, type + ": provider '" + provider + "' ist nicht erlaubt (zulaessig: "
+			throw providerError(index, type + ": provider '" + provider
+					+ "' ist nicht erlaubt (zulaessig: "
 					+ String.join(", ", allowedProviders.stream().sorted().toList()) + ")");
 		}
 		String embedUrl = attrs.path("embedUrl").asText("");
@@ -161,7 +194,8 @@ public class BlockValidationService {
 			if (!"https".equals(uri.getScheme())
 					|| uri.getHost() == null
 					|| !ALLOWED_EMBED_HOSTS.get(provider).contains(uri.getHost())) {
-				throw error(index, type + ": embedUrl-Host passt nicht zum Provider '" + provider + "'");
+				throw providerError(index,
+						type + ": embedUrl-Host passt nicht zum Provider '" + provider + "'");
 			}
 		} catch (IllegalArgumentException e) {
 			throw error(index, type + ": embedUrl ist keine gueltige URL");
@@ -190,5 +224,11 @@ public class BlockValidationService {
 
 	private ValidationException error(int index, String reason) {
 		return new ValidationException(ErrorCodes.BLOCK_CONTENT_INVALID, "Block " + index + ": " + reason);
+	}
+
+	/** Verstoss gegen die Provider-Allowlist aus §2.5, eigener Code nach §6.2. */
+	private ValidationException providerError(int index, String reason) {
+		return new ValidationException(ErrorCodes.EMBED_PROVIDER_NOT_ALLOWED,
+				"Block " + index + ": " + reason);
 	}
 }
