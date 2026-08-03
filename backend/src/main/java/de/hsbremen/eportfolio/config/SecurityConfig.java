@@ -1,8 +1,8 @@
 package de.hsbremen.eportfolio.config;
 
-import de.hsbremen.eportfolio.auth.JwtAuthentifizierungsFilter;
-import de.hsbremen.eportfolio.auth.RestAuthentifizierungsEinstieg;
-import de.hsbremen.eportfolio.auth.RestZugriffVerweigertHandler;
+import de.hsbremen.eportfolio.auth.JwtAuthenticationFilter;
+import de.hsbremen.eportfolio.auth.RestAccessDeniedHandler;
+import de.hsbremen.eportfolio.auth.RestAuthenticationEntryPoint;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,30 +25,30 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
  *
  * <p>{@code @EnableMethodSecurity} schaltet die Rollenebene der Autorisierung
  * frei ({@code @PreAuthorize} auf den kommenden Controllern, §5). Die
- * Ressourcenebene — „nur eigene Ressource" (✓) — laesst sich damit nicht
- * abbilden und liegt im {@code ProjektBerechtigungService}.
+ * Ressourcenebene („nur eigene Ressource", ✓) laesst sich damit nicht abbilden
+ * und liegt im {@code ProjectPermissionService}.
  */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
 
-	private final JwtAuthentifizierungsFilter jwtFilter;
+	private final JwtAuthenticationFilter jwtFilter;
 
-	private final RestAuthentifizierungsEinstieg authentifizierungsEinstieg;
+	private final RestAuthenticationEntryPoint authenticationEntryPoint;
 
-	private final RestZugriffVerweigertHandler zugriffVerweigertHandler;
+	private final RestAccessDeniedHandler accessDeniedHandler;
 
-	private final CorsEigenschaften corsEigenschaften;
+	private final CorsProperties corsProperties;
 
-	public SecurityConfig(JwtAuthentifizierungsFilter jwtFilter,
-			RestAuthentifizierungsEinstieg authentifizierungsEinstieg,
-			RestZugriffVerweigertHandler zugriffVerweigertHandler,
-			CorsEigenschaften corsEigenschaften) {
+	public SecurityConfig(JwtAuthenticationFilter jwtFilter,
+			RestAuthenticationEntryPoint authenticationEntryPoint,
+			RestAccessDeniedHandler accessDeniedHandler,
+			CorsProperties corsProperties) {
 		this.jwtFilter = jwtFilter;
-		this.authentifizierungsEinstieg = authentifizierungsEinstieg;
-		this.zugriffVerweigertHandler = zugriffVerweigertHandler;
-		this.corsEigenschaften = corsEigenschaften;
+		this.authenticationEntryPoint = authenticationEntryPoint;
+		this.accessDeniedHandler = accessDeniedHandler;
+		this.corsProperties = corsProperties;
 	}
 
 	@Bean
@@ -64,19 +64,19 @@ public class SecurityConfig {
 			// jedem Request aktiv setzen muss. Eine fremde Seite kann diesen
 			// Header nicht erzeugen, also gibt es nichts zu faelschen.
 			// Diese Begruendung faellt in dem Moment weg, in dem das Token in
-			// einem Cookie landet — dann muss CSRF-Schutz zurueck.
+			// einem Cookie landet: dann muss CSRF-Schutz zurueck.
 			.csrf(csrf -> csrf.disable())
 
-			.sessionManagement(sitzung -> sitzung.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-			.exceptionHandling(fehler -> fehler
+			.exceptionHandling(exceptions -> exceptions
 					// Ohne diese beiden Zeilen antwortet Spring Security an
 					// GlobalExceptionHandler vorbei und die API haette zwei
 					// verschiedene Fehlerformate (§6.2).
-					.authenticationEntryPoint(authentifizierungsEinstieg)
-					.accessDeniedHandler(zugriffVerweigertHandler))
+					.authenticationEntryPoint(authenticationEntryPoint)
+					.accessDeniedHandler(accessDeniedHandler))
 
-			.authorizeHttpRequests(anfragen -> anfragen
+			.authorizeHttpRequests(requests -> requests
 					// Preflight muss ohne Token durchgehen.
 					.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
@@ -85,7 +85,7 @@ public class SecurityConfig {
 
 					// Swagger-UI und das OpenAPI-Dokument (KAN-11).
 					// Ohne diese Freigabe greift .anyRequest().authenticated()
-					// und der Aufruf der Doku endet mit 401 — die Seite ist ja
+					// und der Aufruf der Doku endet mit 401; die Seite ist ja
 					// gerade der Ort, an dem man sich sein Token erst besorgt.
 					// Bewusst nur diese drei Muster; ein pauschales permitAll
 					// auf statische Pfade wuerde mehr oeffnen als noetig.
@@ -96,17 +96,18 @@ public class SecurityConfig {
 					.requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
 
 					// PUBLIC-Lesezugriff aus §5 auf veroeffentlichte Inhalte.
-					// Die Endpoints gibt es noch nicht; die Regeln stehen hier,
-					// damit die spaeteren Controller nicht versehentlich hinter
-					// authenticated() verschwinden. Innerhalb dieser Pfade
-					// entscheidet der Berechtigungsservice, was ein nicht
-					// angemeldeter Aufrufer tatsaechlich zu sehen bekommt.
+					// Ein Teil dieser Endpoints gibt es noch nicht; die Regeln
+					// stehen hier, damit die spaeteren Controller nicht
+					// versehentlich hinter authenticated() verschwinden.
+					// Innerhalb dieser Pfade entscheidet der
+					// Berechtigungsservice, was ein nicht angemeldeter Aufrufer
+					// tatsaechlich zu sehen bekommt.
 					.requestMatchers(HttpMethod.GET,
-							"/api/projekte", "/api/projekte/*",
-							"/api/projekte/*/blocks",
+							"/api/projects", "/api/projects/*",
+							"/api/projects/*/blocks",
 							"/api/portfolios/*",
-							"/api/kategorien", "/api/fakultaeten",
-							"/api/studiengaenge", "/api/module",
+							"/api/categories", "/api/faculties",
+							"/api/study-programs", "/api/modules",
 							"/api/top10").permitAll()
 
 					// Rollenebene fuer den Admin-Bereich. Der Rest der Matrix
@@ -131,17 +132,17 @@ public class SecurityConfig {
 
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
-		CorsConfiguration konfiguration = new CorsConfiguration();
-		konfiguration.setAllowedOrigins(corsEigenschaften.erlaubteOrigins());
-		konfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-		konfiguration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+		CorsConfiguration configuration = new CorsConfiguration();
+		configuration.setAllowedOrigins(corsProperties.allowedOrigins());
+		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
 		// Keine Credentials: die Anmeldung laeuft ueber den Authorization-Header,
 		// nicht ueber Cookies.
-		konfiguration.setAllowCredentials(false);
-		konfiguration.setMaxAge(3600L);
+		configuration.setAllowCredentials(false);
+		configuration.setMaxAge(3600L);
 
-		UrlBasedCorsConfigurationSource quelle = new UrlBasedCorsConfigurationSource();
-		quelle.registerCorsConfiguration("/api/**", konfiguration);
-		return quelle;
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/api/**", configuration);
+		return source;
 	}
 }

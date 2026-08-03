@@ -1,7 +1,7 @@
 package de.hsbremen.eportfolio.portfolio;
 
-import de.hsbremen.eportfolio.benutzer.User;
 import de.hsbremen.eportfolio.common.domain.AuditableEntity;
+import de.hsbremen.eportfolio.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -20,7 +20,7 @@ public class Portfolio extends AuditableEntity {
 	private User user;
 
 	@Column(columnDefinition = "text")
-	private String biografie;
+	private String biography;
 
 	@Column(length = 1024)
 	private String avatarUrl;
@@ -37,12 +37,12 @@ public class Portfolio extends AuditableEntity {
 		this.user = user;
 	}
 
-	public String getBiografie() {
-		return biografie;
+	public String getBiography() {
+		return biography;
 	}
 
-	public void setBiografie(String biografie) {
-		this.biografie = biografie;
+	public void setBiography(String biography) {
+		this.biography = biography;
 	}
 
 	public String getAvatarUrl() {

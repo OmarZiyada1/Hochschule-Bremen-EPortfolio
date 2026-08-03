@@ -17,17 +17,17 @@ public abstract class AuditableEntity extends BaseEntity {
 
 	@CreatedDate
 	@Column(nullable = false, updatable = false)
-	private Instant erstelltAm;
+	private Instant createdAt;
 
 	@LastModifiedDate
 	@Column(nullable = false)
-	private Instant aktualisiertAm;
+	private Instant updatedAt;
 
-	public Instant getErstelltAm() {
-		return erstelltAm;
+	public Instant getCreatedAt() {
+		return createdAt;
 	}
 
-	public Instant getAktualisiertAm() {
-		return aktualisiertAm;
+	public Instant getUpdatedAt() {
+		return updatedAt;
 	}
 }
