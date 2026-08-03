@@ -1,0 +1,211 @@
+---
+name: frontend-modul
+description: Baut eine Frontend-Feature-Einheit für das E-Portfolio Hochschule Bremen (Typen, Query-Hooks, Komponenten, Route, Tests) nach API-Contract, Figma-Template und Hauskonventionen. Immer verwenden, wenn ein KAN-Ticket eine neue Seite, Ansicht oder Komponente im React-Frontend verlangt.
+---
+
+# Frontend-Modul bauen (Typen bis Seite)
+
+Ziel: Jede Ansicht entsteht in derselben Reihenfolge, aus denselben Quellen
+und mit derselben Testtiefe. Das Frontend liegt als Ordner `frontend/` im
+selben Repository wie das Backend.
+
+Es gibt **zwei** verbindliche Vorlagen je Ticket, und sie beantworten
+verschiedene Fragen:
+
+- die **Confluence-Template-Seite** unter „Figma-Prototype (Embed)" sagt,
+  *was* auf der Seite steht und wie sie aufgebaut ist,
+- der **API-Contract** (Seite 36732929) sagt, *welche Daten* es gibt, wer sie
+  sehen darf und welche Fehler auftreten.
+
+Widersprechen sie sich, ist das kein Umsetzungsdetail, sondern eine
+Entscheidung. Siehe Schritt 0b.
+
+## 0. Vorbereitung (nie überspringen)
+
+1. Jira-Ticket lesen; die genannte Template-Seite in Confluence lesen
+   (Abschnitte „Layout-Bereiche", „Verknüpfte Komponenten", „Verweist auf").
+2. Die genannten Contract-§§ nachschlagen, mindestens §5 (Rechtematrix),
+   §6.1 (Endpoint-Zeilen), §6.2 (Fehlercodes). Ohne die Endpoint-Zeile wird
+   keine Ansicht gebaut, sonst entsteht eine Oberfläche für Daten, die es
+   nicht gibt.
+3. Prüfen, was schon existiert: `frontend/src/components/`,
+   `frontend/src/api/`, `frontend/src/styles/tokens/`. Komponenten werden
+   wiederverwendet, nicht je Seite neu gebaut. Fehlt eine Komponente, die
+   mehrere Seiten brauchen, gehört sie in die Bibliothek (Skill
+   `frontend-design`), nicht in den Feature-Ordner.
+4. Prüfen, ob der benötigte Endpoint im Backend **wirklich existiert**:
+   die Controller unter `backend/src/main/java/de/hsbremen/eportfolio/` oder
+   `/v3/api-docs` im laufenden Dev-Profil. Eine Contract-Zeile ist kein
+   Beleg für einen umgesetzten Endpoint; §8 nennt den Umsetzungsstand.
+
+## 0b. Klärungsrunde vor der ersten Codezeile (nie überspringen)
+
+Fragen werden **vorher** gestellt, nicht im Abschlussbericht gesammelt
+(Regel „Fragen vor der Umsetzung" in `CLAUDE.md`). Nach Schritt 0, vor
+Schritt 1: alle entscheidungsrelevanten Punkte **in einer Runde** über
+`AskUserQuestion` vorlegen, je Frage zwei bis vier Optionen, die empfohlene
+zuerst und mit „(Empfohlen)" markiert.
+
+Typische Kandidaten im Frontend:
+
+- **Template zeigt etwas, das der Contract nicht hergibt.** Ein Feld, ein
+  Filter, eine Aktion ohne Endpoint. Entweder das Template gewinnt (dann
+  Contract-Nachtrag, Skill `api-contract-sync`) oder der Contract (dann
+  entfällt das Element). Nie eine Attrappe bauen, die nichts tut.
+- **Contract gibt mehr her, als das Template zeigt.** Weglassen oder
+  ergänzen?
+- Verhalten bei einem Fehlerfall, den weder Template noch Contract
+  beschreiben (leere Liste, Teilberechtigung, Versionskonflikt).
+- Eine neue Abhängigkeit wäre nötig (`CLAUDE.md`, Regel 9).
+
+Nicht gefragt wird nach Dingen, die Contract, Template oder diese Skills
+schon beantworten: Komponentennamen, Ordnerablage, Testaufbau, Reihenfolge.
+
+## 1. Typen (`frontend/src/api/schema.d.ts`)
+
+Response- und Request-Typen werden **aus `/v3/api-docs` generiert**
+(`openapi-typescript`) und nie von Hand nachgebaut. Die generierte Datei
+wird eingecheckt und nicht bearbeitet.
+
+Grund: der Contract nennt `/v3/api-docs` als autoritative maschinenlesbare
+Fassung. Ein handgeschriebener Typ weicht spätestens beim zweiten
+Feldnamen ab, und der Bruch fällt erst zur Laufzeit auf.
+
+Erlaubt sind abgeleitete Typaliase im Feature (`type Projekt =
+components['schemas']['ProjektDetailAntwort']`), damit die Importpfade
+lesbar bleiben.
+
+## 2. Datenzugriff (`features/<feature>/hooks/`)
+
+- Ein Hook je Serveroperation, benannt nach der Fachlichkeit:
+  `useProjectList`, `useProjectDetail`, `useSaveProject`.
+- Lesen über `useQuery`, Schreiben über `useMutation` (TanStack Query).
+  Kein `fetch` im Komponentenkörper, kein `useEffect` zum Laden.
+- Der Aufruf läuft immer über den zentralen Client aus
+  `frontend/src/api/` (Skill `frontend-api`), nie über ein eigenes `fetch`.
+- Query-Keys tragen alle Parameter, die das Ergebnis beeinflussen. Sonst
+  zeigt die Liste nach einem Filterwechsel das Ergebnis des vorigen Filters.
+- Nach einer erfolgreichen Mutation die betroffenen Queries invalidieren,
+  statt den lokalen Zustand von Hand nachzuziehen.
+
+## 3. Komponenten und Seite (`features/<feature>/`)
+
+Ablage nach Feature, analog zum package-by-feature im Backend
+(`docs/ARCHITEKTUR.md` §6):
+
+```
+frontend/src/
+  api/                    client.ts, errors.ts, schema.d.ts, page.ts
+  components/
+    ui/                   shadcn/Base-UI-Primitiven (generiert)
+    layout/               NavBar, Footer, Breadcrumb
+    common/               ProjectCard, StatusBadge, RoleBadge, EmptyState
+  features/<feature>/
+    <Feature>Page.tsx     die Route-Komponente
+    components/           nur hier verwendete Bausteine
+    hooks/                Query- und Mutation-Hooks
+  i18n/                   de.json, en.json, index.ts
+  lib/
+  routes/
+  styles/tokens/
+```
+
+**Namensregel:** Bezeichner sind englisch (`ProjectCard`, `useProjectList`,
+`projectId`); die verbindliche Zuordnung steht in `docs/NAMENSSCHEMA.md`.
+Enum-Werte aus dem Contract erscheinen unverändert (`PUBLISHED`, `EDITOR`)
+und werden nur für die Anzeige übersetzt, nie im Datenfluss umbenannt.
+
+Der blockbasierte Editor liegt unter `features/project-content/`, seine
+Hauptkomponente heißt `BlockEditor`. Sonst bezeichnete „editor" zugleich die
+Rolle `EDITOR` und das Eingabewerkzeug.
+
+- Die Seite komponiert, sie rechnet nicht. Ableitungen und Formatierungen
+  gehören in kleine Funktionen daneben, damit sie ohne Rendern testbar sind.
+- Kein Zustand doppelt halten: was der Server weiß, kommt aus Query;
+  was in der URL steht, kommt aus der URL.
+- Filter, Suche, Sortierung und Seite gehören **in die URL**, nicht in
+  `useState`. Sonst ist ein Ergebnis weder teilbar noch überlebt es den
+  Zurück-Knopf.
+
+## 4. Route (`frontend/src/routes/`)
+
+- Route in den bestehenden Baum eintragen, mit dem Wrapper der passenden
+  Zugriffsebene (§2.1: nicht angemeldet, `STUDIERENDE`, `REDAKTEUR`,
+  `ADMIN`).
+- Die Sichtbarkeitsregel im Routing ist eine Bequemlichkeit, **keine
+  Sicherheitsmaßnahme** (§5). Die Seite muss 401 und 403 trotzdem sichtbar
+  behandeln.
+
+## 5. Drei Zustände, immer (nicht optional)
+
+Jede Ansicht, die Serverdaten zeigt, behandelt alle drei:
+
+| Zustand | Darstellung |
+| --- | --- |
+| Laden | Skeleton in der Form des Ergebnisses, kein zentrierter Spinner |
+| Leer | `EmptyState` mit Erklärung und, wo sinnvoll, einer Handlung |
+| Fehler | Meldung aus dem `ApiError` (§6.2), nie ein roher Statuscode |
+
+Eine leere Fläche ist kein Zustand, sondern ein übersehener Fall. Das gilt
+besonders für 401: ein abgelaufenes Token darf nie in einer leeren Seite
+enden (§6.5).
+
+## 5b. Texte kommen aus i18n
+
+Kein sichtbarer Text steht als Literal im JSX. Jeder Text ist ein
+i18n-Schlüssel (`react-i18next`), gepflegt in `de.json` **und** `en.json`;
+Deutsch ist die Standardsprache.
+
+- Schlüssel nach Bereich gliedern: `project.list.title`,
+  `project.status.PUBLISHED`, `common.action.save`.
+- **Enum-Werte sind Schlüsselbestandteil, nicht Text.** Der Wert
+  `PUBLISHED` läuft unverändert durch den Code; übersetzt wird über
+  `t('project.status.' + status)`. So gibt es je Enum genau eine
+  Übersetzungsstelle statt einer pro Seite.
+- Zahlen, Daten und Pluralformen über die Formatierung der Bibliothek, nicht
+  von Hand zusammengesetzt. „1 Projekte gefunden" entsteht sonst zuverlässig.
+- Fehlermeldungen: die Anzeige richtet sich nach `errorCode` aus dem
+  Envelope (§6.2), der Text kommt aus i18n. Der `message` des Servers ist
+  Rückfallebene, nicht die Hauptquelle, weil er nur deutsch existiert.
+- Ein neuer Schlüssel wird in **beiden** Dateien angelegt. Ein Schlüssel nur
+  in `de.json` fällt im englischen Betrieb als roher Schlüsselname auf.
+
+## 6. Tests (`features/<feature>/*.test.tsx`)
+
+Tests sind Teil jedes Tickets, wie im Backend. Vitest, Testing Library,
+Serverantworten über MSW.
+
+Pflichtfälle je Ansicht:
+
+- Happy Path mit realistischer Antwort
+- leere Ergebnismenge zeigt den Leerzustand
+- Fehlerantwort aus dem §6.2-Envelope wird sichtbar
+- geschützte Ansicht ohne Token führt sichtbar zum Login
+- je Mutation: Erfolg und der fachlich erwartete Fehler (409, 400)
+
+Getestet wird über die sichtbare Oberfläche (Rollen, Beschriftungen), nicht
+über interne Props. Ein Test, der die Implementierung nachbaut, bricht bei
+jeder Umbenennung und belegt nichts.
+
+## 7. Definition of Done (Checkliste)
+
+- [ ] Klärungsrunde vor dem ersten Code stattgefunden, Umsetzung folgt den
+      Antworten
+- [ ] **Keine offene Frage übrig**: was bleibt, sind entschiedene Punkte mit
+      Begründung
+- [ ] Alle „Layout-Bereiche" der Template-Seite umgesetzt oder ihr Entfallen
+      begründet
+- [ ] Kein handgeschriebener Response-Typ, alles aus `schema.d.ts`
+- [ ] Kein sichtbarer Text als Literal im JSX, jeder Schlüssel in `de.json`
+      **und** `en.json`
+- [ ] Laden, Leere und Fehler sind je Ansicht behandelt
+- [ ] Filter- und Seitenzustand steht in der URL und übersteht einen Reload
+- [ ] Keine Hex-Farbe außerhalb von `frontend/src/styles/tokens/`
+- [ ] Bedienbar mit der Tastatur, sichtbarer Fokus (Skill `frontend-design`)
+- [ ] `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build` grün
+- [ ] Keine neuen Abhängigkeiten ohne Absprache
+- [ ] Kein Mock und keine Attrappe im ausgelieferten Code
+- [ ] Texte, Kommentare und Jira-Text ohne Em-Dash `—`
+- [ ] Jira-Kommentar mit den getroffenen Entscheidungen
+- [ ] Kein Commit, kein Push, kein PR durch Claude, stattdessen Übergabeblock
+      nach Skill `uebergabe`

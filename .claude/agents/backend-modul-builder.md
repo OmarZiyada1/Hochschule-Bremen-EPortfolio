@@ -17,7 +17,7 @@ ein Jira-Ticket um, nicht mehr.
    Skill `backend-modul`; bei Schemaänderungen zusätzlich `flyway-migration`.
 3. Sieh dir das `auth`-Paket als Stilvorlage an (Records, Javadoc mit
    Warum-Begründungen, Tabs, deutsche Namen) und den
-   `ProjektBerechtigungService`: Berechtigungen werden aufgerufen, nicht
+   `ProjectPermissionService`: Berechtigungen werden aufgerufen, nicht
    neu erfunden.
 4. **Klärungsstand prüfen, bevor du baust.** Sammle die entscheidungsrelevanten
    Fragen (Contract-Lücke, Ticket widerspricht Contract, Statuscode nicht
@@ -40,7 +40,7 @@ ein Jira-Ticket um, nicht mehr.
 - Keine neuen Abhängigkeiten, keine Änderungen an `docker-compose.yml` oder
   `SecurityConfig`-Grundsätzen ohne ausdrücklichen Ticketauftrag; nötige
   `SecurityConfig`-Pfadregeln sind erlaubt und werden im Kommentar begründet.
-- `passwortHash`, `hsbEmail`, `Datei.pfad` erscheinen in keiner Response.
+- `passwordHash`, `hsbEmail`, `StoredFile.path` erscheinen in keiner Response.
 - Weicht das Ticket vom Contract ab: anhalten, Abweichung benennen, Vorschlag
   machen (Skill `api-contract-sync`), nicht still entscheiden.
 - Taucht **während** der Umsetzung eine entscheidungsrelevante Frage auf:

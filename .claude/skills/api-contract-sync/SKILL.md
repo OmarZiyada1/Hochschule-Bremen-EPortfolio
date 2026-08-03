@@ -5,7 +5,7 @@ description: Abgleich zwischen Backend-Code und der Confluence-Seite „Datenmod
 
 # Code ↔ API-Contract synchron halten
 
-Der Contract (Space BEH, Seiten-ID `36732929`, aktuell v16, Stand KAN-16) ist die
+Der Contract (Space BEH, Seiten-ID `36732929`, aktuell v17, Stand KAN-47) ist die
 verbindliche gemeinsame Grundlage von Backend und Frontend. Er ist nur dann
 etwas wert, wenn er stimmt; deshalb wird **jede** Abweichung behandelt, keine
 still hingenommen.
@@ -69,7 +69,7 @@ Bekannte Stellen als Ausgangspunkt, jede einzeln ansehen:
 | Ort | Fundstelle | Was steht dort |
 |-----|-----------|----------------|
 | Code | `backend/src/main/java/de/hsbremen/eportfolio/config/OpenApiConfig.java` | zwei Stellen: `.version("v<N>")` und im `description`-Text „Stand entspricht dem API-Contract v<N>, §6" |
-| Code | `backend/src/main/java/de/hsbremen/eportfolio/common/error/Fehlercodes.java` | Javadoc-Kopf „Stand Contract v<N> steht jede Konstante …" |
+| Code | `backend/src/main/java/de/hsbremen/eportfolio/common/error/ErrorCodes.java` | Javadoc-Kopf „Stand Contract v<N> steht jede Konstante …" |
 | Code | weitere Javadoc-/Kommentarsätze mit „v<N>" | nur der **Stand**-Satz wird nachgezogen; historische Sätze („war bis v14 nur hier geführt", „mit v15 nachgetragen") bleiben unverändert stehen, sie beschreiben die Vergangenheit |
 | Doku | `docs/ARCHITEKTUR.md` | nennt bislang keine Versionsnummer, aber §-Verweise: prüfen, ob die Änderung einen §-Verweis oder eine Tabellenzeile verschiebt |
 | Doku | `README.md` | nennt nur die Seiten-ID `36732929`, keine Version: in der Regel nichts zu tun |
@@ -93,12 +93,12 @@ Nummer wo wechselt. Keine Sammelaussage wie „Versionsnummern aktualisiert":
 |-----|-----------|-----|-----|-----|
 | Code | `config/OpenApiConfig.java:51` (`.version`) | v16 | v17 | Claude, im Diff |
 | Code | `config/OpenApiConfig.java:55` (Beschreibungstext) | v16 | v17 | Claude, im Diff |
-| Code | `common/error/Fehlercodes.java:6` (Javadoc-Kopf) | v16 | v17 | Claude, im Diff |
+| Code | `common/error/ErrorCodes.java:6` (Javadoc-Kopf) | v16 | v17 | Claude, im Diff |
 | Skill | `.claude/skills/api-contract-sync/SKILL.md:8` | v16 | v17 | Claude, im Diff |
 | Confluence | Seite 36732929, Kopf + Änderungshistorie | v16 | v17 | Claude, veröffentlicht |
 | Jira | KAN-18, Abschnitt „Bezug" | v16 | v17 | Omar, manuell |
 
-Unverändert und warum: `Fehlercodes.java:7` („bis v14"), `docs/STAND.md`
+Unverändert und warum: `ErrorCodes.java:7` („bis v14"), `docs/STAND.md`
 (veraltet bewusst), `README.md` (nennt nur die Seiten-ID).
 ```
 
@@ -113,21 +113,21 @@ Regeln dazu:
 - **Bewusst unverändert gelassene Treffer** werden mit Begründung aufgeführt,
   sonst sieht das Review nicht, ob sie übersehen oder geprüft wurden.
 
-## Fehlercodes (häufigster Sync-Fall)
+## ErrorCodes (häufigster Sync-Fall)
 
 Ein Fehlercode existiert erst, wenn er an **beiden** Orten steht:
 
-- Konstante in `common/error/Fehlercodes.java` mit Javadoc
+- Konstante in `common/error/ErrorCodes.java` mit Javadoc
   (HTTP-Status + Auslöser),
 - Zeile in Contract §6.2 (und ggf. §6.3, falls neuer Statuscode).
 
-Beim Modul-Abschluss `Fehlercodes.java` gegen §6.2 diffen; jede einseitige
+Beim Modul-Abschluss `ErrorCodes.java` gegen §6.2 diffen; jede einseitige
 Konstante ist ein Befund.
 
 ## Endpoint-Abgleich beim Modul-Abschluss
 
 Für jede Endpoint-Zeile des Moduls in §6.1 prüfen: Pfad · Methode ·
-Rollenspalte (gegen `SecurityConfig` + `darf…`-Aufruf) · Statuscodes ·
+Rollenspalte (gegen `SecurityConfig` + `may…`-Aufruf) · Statuscodes ·
 Body-/Response-Form. Die maschinenlesbare Fassung ist `/v3/api-docs`
 (springdoc, Profil dev); es gibt bewusst keine gepflegte `openapi.yaml`
 im Repo.
@@ -141,7 +141,7 @@ im Repo.
 - [ ] Fundstellen der alten Versionsnummer gesucht (Repo, Jira, Confluence)
       und als Tabelle „alt → neu" mit Datei und Zeile gemeldet
 - [ ] Erster Absatz dieses Skills auf die neue Version nachgezogen
-- [ ] `Fehlercodes.java` ↔ §6.2 deckungsgleich
+- [ ] `ErrorCodes.java` ↔ §6.2 deckungsgleich
 - [ ] Jira-Ticket kommentiert
 - [ ] Code-Änderungen daraus gehen über den Übergabeblock (Skill `uebergabe`),
       nicht über einen Commit von Claude

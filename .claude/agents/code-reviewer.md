@@ -12,19 +12,20 @@ Konsistenz.
 
 ## Checkliste
 
-1. **Stil:** deutsche Fachnamen (`…Anfrage`/`…Antwort`, `darf…`,
-   `…Eigenschaften`), Records für DTOs, kein Lombok, Tabs, Javadoc erklärt
-   das *Warum* und verweist auf Contract-§§, wie im `auth`-Paket. Neuer Text
-   ohne Em-Dash `—` (Schreibstil-Regel aus `CLAUDE.md`).
+1. **Stil:** englische Bezeichner nach `docs/NAMENSSCHEMA.md`
+   (`…Request`/`…Response`, `may…`, `…Properties`), Records für DTOs, kein
+   Lombok, Tabs. Die Prosa bleibt deutsch: Javadoc erklärt das *Warum* und
+   verweist auf Contract-§§, wie im `auth`-Paket. Neuer Text ohne Em-Dash
+   `—` (Schreibstil-Regel aus `CLAUDE.md`).
 2. **Architektur:** package-by-feature eingehalten (`docs/ARCHITEKTUR.md` §6);
    Controller dünn, Fachlogik im Service, Berechtigungen nur über
-   `ProjektBerechtigungService`; keine Entity direkt serialisiert.
+   `ProjectPermissionService`; keine Entity direkt serialisiert.
 3. **Fehlerbehandlung:** alles läuft über `GlobalExceptionHandler` und das
-   §6.2-Envelope; keine ad-hoc `ResponseEntity`-Fehlerbastelei; Fehlercodes
-   als Konstanten aus `Fehlercodes.java`.
+   §6.2-Envelope; keine ad-hoc `ResponseEntity`-Fehlerbastelei; ErrorCodes
+   als Konstanten aus `ErrorCodes.java`.
 4. **Sicherheit:** neue Pfade in `SecurityConfig` korrekt und mit Begründung;
-   keine Secrets, keine Log-Ausgabe sensibler Felder; `passwortHash`,
-   `hsbEmail`, `Datei.pfad` in keiner Response und keinem OpenAPI-Schema.
+   keine Secrets, keine Log-Ausgabe sensibler Felder; `passwordHash`,
+   `hsbEmail`, `StoredFile.path` in keiner Response und keinem OpenAPI-Schema.
 5. **Persistenz:** keine bestehende Migration angefasst; neue Migration nach
    Skill `flyway-migration`; `@Transactional`-Grenzen sinnvoll;
    N+1-Verdachtsfälle benennen.
@@ -35,7 +36,7 @@ Konsistenz.
 7. **Doku-Folgen:** neue Migration in `docs/ARCHITEKTUR.md` §4 ergänzt?
    Contract-Nachträge für v<N> notiert? Bei erhöhter Contract-Version: sind
    die Stand-Angaben im Code nachgezogen (`OpenApiConfig`, Javadoc-Kopf von
-   `Fehlercodes`)? Fundstellenliste im Skill `api-contract-sync`.
+   `ErrorCodes`)? Fundstellenliste im Skill `api-contract-sync`.
 8. **Keine stillen Annahmen:** Kommentare wie „TODO klären", „vermutlich",
    „falls gewünscht" im neuen Code sind ein Befund. Entscheidungen werden vor
    der Umsetzung geklärt (`CLAUDE.md`, „Fragen vor der Umsetzung"); was
