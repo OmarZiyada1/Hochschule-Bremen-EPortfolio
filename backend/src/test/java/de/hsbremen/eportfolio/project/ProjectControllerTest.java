@@ -94,6 +94,16 @@ class ProjectControllerTest {
 	@MockitoBean
 	private ProjectReadService projectReadService;
 
+	/**
+	 * Der Controller bedient seit KAN-17 auch die schreibenden Endpoints und
+	 * braucht den Dienst deshalb im Kontext. Befragt wird er hier nicht: was
+	 * die Schreibpfade tun, prueft {@link ProjectWriteIntegrationTest} gegen
+	 * die echte Datenbank, weil daran Statusregeln, Versionsstand und
+	 * Cascade haengen, die ohne Persistenz keine Aussage haetten.
+	 */
+	@MockitoBean
+	private ProjectWriteService projectWriteService;
+
 	/** Wird vom {@link JwtAuthenticationFilter} gebraucht, hier aber nie befragt. */
 	@MockitoBean
 	private UserRepository userRepository;

@@ -102,6 +102,17 @@ public class SecurityConfig {
 					// Innerhalb dieser Pfade entscheidet der
 					// Berechtigungsservice, was ein nicht angemeldeter Aufrufer
 					// tatsaechlich zu sehen bekommt.
+					// Die Einschraenkung auf GET ist der Grund, warum die
+					// schreibenden Projekt-Endpoints aus KAN-17 hier keine
+					// eigene Zeile brauchen: POST, PUT und DELETE auf
+					// dieselben Pfade fallen unter anyRequest().authenticated()
+					// und ergeben ohne Token 401. Wer angemeldet was darf,
+					// haengt an der Ressource und entscheidet der
+					// ProjectPermissionService, nicht die Filterkette. Auch
+					// PUT /api/projects/*/editors steht bewusst nicht als
+					// hasRole("ADMIN") hier: sonst kaeme der 403 vor dem
+					// Laden des Projekts und eine unbekannte ID ergaebe 403
+					// statt 404 (§6.3.1).
 					.requestMatchers(HttpMethod.GET,
 							"/api/projects", "/api/projects/*",
 							"/api/projects/*/blocks",

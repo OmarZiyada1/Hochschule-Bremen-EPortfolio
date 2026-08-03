@@ -72,12 +72,32 @@ public class GlobalExceptionHandler {
 	}
 
 	/**
+	 * Fachlicher Konflikt mit dem Zustand der Ressource (§6.3, Zeile 409):
+	 * Bearbeitung in einem gesperrten Status, unzulaessiger Statusuebergang,
+	 * Versionskonflikt oder eine noch referenzierte Zeile. Welcher der vier
+	 * Codes aus §6.2 es ist, entscheidet die Ausnahme selbst.
+	 */
+	@ExceptionHandler(ConflictException.class)
+	public ResponseEntity<ApiError> handleConflict(ConflictException ex, HttpServletRequest request) {
+		return build(HttpStatus.CONFLICT, ex.getErrorCode(), ex.getMessage(), request);
+	}
+
+	/**
 	 * Optimistic-Locking-Konflikt am Projekt (§6.4): zwischen Laden und
 	 * Speichern hat jemand anderes dieselbe Zeile geaendert, die
 	 * {@code version} im Request passt also nicht mehr zum Stand in der
 	 * Datenbank. Hibernate bricht den Schreibvorgang ab, Spring uebersetzt das
 	 * in {@link ObjectOptimisticLockingFailureException}, und hier wird daraus
 	 * 409 {@code PROJECT_VERSION_CONFLICT}.
+	 *
+	 * <p><strong>Zweiter Weg zum selben Code:</strong> der
+	 * {@code ProjectWriteService} vergleicht die {@code version} aus dem Body
+	 * schon vor dem Schreiben und wirft dabei
+	 * {@link ConflictException#versionConflict()}. Dieser Handler bleibt
+	 * trotzdem noetig, weil er den echten Wettlauf zweier gleichzeitiger
+	 * Transaktionen abfaengt, den eine Pruefung im Anwendungscode
+	 * grundsaetzlich nicht sehen kann. Beide Wege teilen sich den Wortlaut aus
+	 * {@link ConflictException#VERSION_CONFLICT_MESSAGE}.
 	 *
 	 * <p>Die Meldung ist bewusst fest verdrahtet und uebernimmt nicht
 	 * {@code ex.getMessage()}: die Ausnahme nennt Entity-Klasse und
@@ -95,8 +115,7 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ApiError> handleVersionConflict(ObjectOptimisticLockingFailureException ex,
 			HttpServletRequest request) {
 		return build(HttpStatus.CONFLICT, ErrorCodes.PROJECT_VERSION_CONFLICT,
-				"Das Projekt wurde zwischenzeitlich von jemand anderem geaendert. "
-						+ "Bitte neu laden und die Aenderung wiederholen.", request);
+				ConflictException.VERSION_CONFLICT_MESSAGE, request);
 	}
 
 	/**

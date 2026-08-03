@@ -222,6 +222,88 @@ class ProjectPermissionServiceTest {
 	}
 
 	@Nested
+	@DisplayName("Endpoint-Zeile: PUT /projects/{id} (Metadaten, §6.1)")
+	class EditingMetadata {
+
+		@Test
+		@DisplayName("Autor:in ja, Projektmitglied ja, fremde:r Studierende:r nein")
+		void projectSide() {
+			User memberUser = TestUser.active(Role.STUDENT, "hash");
+			Project p = TestProject.withMember(project(ProjectStatus.DRAFT), memberUser);
+
+			assertThat(service.mayEditMetadata(author, p)).isTrue();
+			assertThat(service.mayEditMetadata(AuthenticatedUser.from(memberUser), p)).isTrue();
+			assertThat(service.mayEditMetadata(otherStudent, p)).isFalse();
+			assertThat(service.mayEditMetadata(PUBLIC, p)).isFalse();
+		}
+
+		@Test
+		@DisplayName("Enger als mayEditContent: die zugewiesene Redaktion darf Metadaten nicht "
+				+ "aendern, den Inhalt aber schon")
+		void editorMayNotEditMetadata() {
+			Project p = project(ProjectStatus.REVISION);
+
+			assertThat(service.mayEditContent(editor, p)).isTrue();
+			assertThat(service.mayEditMetadata(editor, p)).isFalse();
+		}
+
+		@Test
+		@DisplayName("Auch der Admin nicht: §6.1 nennt in dieser Zeile nur Autor:in und Mitglieder")
+		void adminMayNotEditForeignMetadata() {
+			Project p = project(ProjectStatus.DRAFT);
+
+			assertThat(service.mayEditMetadata(admin, p)).isFalse();
+			// Auch nicht mit der Property aus OF 2: die betrifft den Inhalt.
+			assertThat(withProperties(true, true).mayEditMetadata(admin, p)).isFalse();
+		}
+
+		@ParameterizedTest
+		@EnumSource(value = ProjectStatus.class, names = {"SUBMITTED", "APPROVED", "PUBLISHED"})
+		@DisplayName("In gesperrten Status aendert auch die Autor:in keine Metadaten (§4.1)")
+		void lockedStatuses(ProjectStatus status) {
+			Project p = project(status);
+
+			assertThat(service.mayEditMetadata(author, p)).isFalse();
+		}
+	}
+
+	@Nested
+	@DisplayName("Zeile: Projektmitglieder pflegen (Fussnote ⁶, §3.13.1)")
+	class ManagingMembers {
+
+		@Test
+		@DisplayName("Ein Mitglied darf die Mitgliederliste pflegen, nicht nur die Autor:in")
+		void memberMayManage() {
+			User memberUser = TestUser.active(Role.STUDENT, "hash");
+			Project p = TestProject.withMember(project(ProjectStatus.DRAFT), memberUser);
+
+			assertThat(service.mayManageMembers(author, p)).isTrue();
+			assertThat(service.mayManageMembers(AuthenticatedUser.from(memberUser), p)).isTrue();
+		}
+
+		@Test
+		@DisplayName("Unbeteiligte nicht, auch nicht die zugewiesene Redaktion")
+		void othersMayNot() {
+			Project p = project(ProjectStatus.DRAFT);
+
+			assertThat(service.mayManageMembers(otherStudent, p)).isFalse();
+			assertThat(service.mayManageMembers(editor, p)).isFalse();
+			assertThat(service.mayManageMembers(PUBLIC, p)).isFalse();
+		}
+
+		@ParameterizedTest
+		@EnumSource(value = ProjectStatus.class, names = {"SUBMITTED", "APPROVED", "PUBLISHED"})
+		@DisplayName("Nur in DRAFT und REVISION: sobald eingereicht ist, aendert sich nichts mehr")
+		void onlyWhileEditable(ProjectStatus status) {
+			User memberUser = TestUser.active(Role.STUDENT, "hash");
+			Project p = TestProject.withMember(project(status), memberUser);
+
+			assertThat(service.mayManageMembers(author, p)).isFalse();
+			assertThat(service.mayManageMembers(AuthenticatedUser.from(memberUser), p)).isFalse();
+		}
+	}
+
+	@Nested
 	@DisplayName("Zeile: Projekt einreichen")
 	class Submitting {
 
@@ -455,6 +537,16 @@ class ProjectPermissionServiceTest {
 			// Nach dem Einreichen verteilt nur noch der Admin um.
 			assertThat(service.mayAssignEditors(author, project(ProjectStatus.SUBMITTED))).isFalse();
 			assertThat(service.mayAssignEditors(admin, project(ProjectStatus.SUBMITTED))).isTrue();
+		}
+
+		@Test
+		@DisplayName("Der dedizierte Endpoint PUT /projects/{id}/editors bleibt Admin-only, "
+				+ "dafuer in jedem Status (§6.1)")
+		void reassignEditors() {
+			assertThat(service.mayReassignEditors(admin)).isTrue();
+			assertThat(service.mayReassignEditors(author)).isFalse();
+			assertThat(service.mayReassignEditors(editor)).isFalse();
+			assertThat(service.mayReassignEditors(PUBLIC)).isFalse();
 		}
 
 		@Test
