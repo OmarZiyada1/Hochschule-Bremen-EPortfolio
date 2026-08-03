@@ -28,7 +28,10 @@ am Zeilenanfang sind davon nicht betroffen.
    nur eine Momentaufnahme.
 3. **docs/ARCHITEKTUR.md**: Paketbaum, Basisklassen, Migrationsliste,
    Security-Ablauf und die Tabelle „Wo kommt was hin" (§6 dort).
-4. **docs/SETUP.md**: Umgebung, `.env`, Testlauf.
+4. **docs/NAMENSSCHEMA.md**: verbindliche Zuordnung Deutsch nach Englisch
+   für Klassen, Felder, Enums, Fehlercodes, Endpoints und DB-Spalten.
+   Nachschlagen, bevor ein neuer Name entsteht.
+5. **docs/SETUP.md**: Umgebung, `.env`, Testlauf.
 
 Widerspricht der Code dem Contract: **niemals still abweichen.** Entweder den
 Code an den Contract anpassen oder die Abweichung nach dem Skill
@@ -73,31 +76,33 @@ Abschlussbericht. Am Ende einer Änderung steht keine Frage mehr offen.
    Details im Skill `flyway-migration`.
 2. **Kein Lombok.** Entities mit explizitem Getter/Setter-Minimum; DTOs als
    **Java-Records** mit Bean-Validation und sparsamen `@Schema`-Annotationen
-   (Vorbild `auth/dto/LoginAnfrage`).
-3. **Deutsche Fachsprache** in Klassen-, Feld- und DTO-Namen: `…Anfrage` /
-   `…Antwort`, `Fehlercodes`, `Eigenschaften`-Records. JSON-Felder `camelCase`,
-   DB `snake_case`. Einrückung mit Tabs. Javadoc erklärt das *Warum* und
-   verweist auf Contract-§§.
+   (Vorbild `auth/dto/LoginRequest`).
+3. **Englische Bezeichner** in Klassen-, Feld- und DTO-Namen: `…Request` /
+   `…Response`, `ErrorCodes`, `…Properties`-Records. JSON-Felder `camelCase`,
+   DB `snake_case`, beides englisch. Verbindliche Zuordnung Deutsch nach
+   Englisch: `docs/NAMENSSCHEMA.md`. **Die Prosa bleibt deutsch:** Javadoc,
+   Kommentare, Commit-Texte, Doku und Jira. Einrückung mit Tabs. Javadoc
+   erklärt das *Warum* und verweist auf Contract-§§.
 4. **Ein Fehlerformat.** Jede Fehlerantwort läuft über das Envelope aus
-   Contract §6.2 (`ApiFehler`). Neue Fehlercodes: Konstante in
-   `common/error/Fehlercodes.java` **und** Nachtrag in §6.2 (Contract-Version
+   Contract §6.2 (`ApiError`). Neue Fehlercodes: Konstante in
+   `common/error/ErrorCodes.java` **und** Nachtrag in §6.2 (Contract-Version
    erhöhen). Niemals einen Code nur im Code oder nur im Contract führen.
 5. **Berechtigungen zweistufig.** Rollenebene über `SecurityFilterChain` /
    Methodensicherheit; Ressourcenebene ausschließlich über
-   `projekt/ProjektBerechtigungService` (`darf…`-Methoden). Keine
+   `project/ProjectPermissionService` (`may…`-Methoden). Keine
    Berechtigungslogik in Controllern verstreuen. Neue Endpoints: prüfen, ob
    `config/SecurityConfig` den Pfad korrekt behandelt (viele PUBLIC-GET-Pfade
    stehen dort schon vorab).
-6. **Statusregeln serverseitig.** Inhaltsbearbeitung nur in `ENTWURF` /
-   `UEBERARBEITUNG` (sonst 409 `PROJEKT_STATUS_NICHT_BEARBEITBAR`);
+6. **Statusregeln serverseitig.** Inhaltsbearbeitung nur in `DRAFT` /
+   `REVISION` (sonst 409 `PROJECT_STATUS_NOT_EDITABLE`);
    Zustandsautomat strikt nach Contract §4.1.
-7. **Sensible Felder.** `passwortHash` und `hsbEmail` verlassen den Server in
+7. **Sensible Felder.** `passwordHash` und `hsbEmail` verlassen den Server in
    keiner Response (Contract §3.1). Keine Secrets im Code: `JWT_SECRET` u. a.
    kommen aus `.env`; es gibt bewusst keine Fallbacks.
 8. **Tests sind Teil jedes Tickets.** `./mvnw test` läuft gegen die echte
    Postgres aus `docker-compose.yml` (kein H2, keine Testcontainers).
    Bestehende Tests bleiben grün. Testdaten-Helfer wie `TestUser` /
-   `TestProjekt` wiederverwenden bzw. daneben ergänzen.
+   `TestProject` wiederverwenden bzw. daneben ergänzen.
 9. **Keine neuen Abhängigkeiten ohne Rückfrage** und keine Änderungen an
    `docker-compose.yml`, sofern das Ticket es nicht verlangt.
 
@@ -148,9 +153,47 @@ derselben Nachricht, und dann exakt dieser eine Befehl.
 - `.claude/skills/jira-ticket`: Hausstil für neue Tickets.
 - `.claude/skills/uebergabe`: Abschluss ohne Push, also Commit-Text, PR-Titel
   und PR-Beschreibung zum manuellen Übernehmen.
+- `.claude/skills/frontend-modul`: Rezept für jede neue Seite oder Ansicht
+  (Typen bis Route), inkl. DoD-Checkliste.
+- `.claude/skills/frontend-api`: Anbindung an die API, also generierte Typen,
+  Fehler-Envelope, 401/403, Seitenformat, Optimistic Locking, Autosave.
+- `.claude/skills/frontend-design`: Design-Tokens, Komponentenbibliothek,
+  Beschriftungen, Barrierefreiheit nach WCAG 2.2.
 - `.claude/agents/backend-modul-builder`: setzt ein Modul-Ticket komplett um.
+- `.claude/agents/frontend-modul-builder`: setzt ein Frontend-Ticket komplett um.
 - `.claude/agents/contract-pruefer`: read-only Abgleich gegen den Contract.
-- `.claude/agents/code-reviewer`: Konventions-Review vor dem Merge.
+- `.claude/agents/code-reviewer`: Konventions-Review Backend vor dem Merge.
+- `.claude/agents/frontend-reviewer`: Konventions- und
+  Barrierefreiheits-Review für `frontend/`.
 
-Frontend-Konventionen folgen als eigener Skill, sobald KAN-6/KAN-7 auf `main`
-liegen; bis dahin gilt für `frontend/` das jeweilige Ticket.
+## Nicht verhandelbare Regeln (Frontend)
+
+Ausführlich in den drei Frontend-Skills; hier nur, was überall gilt.
+
+1. **Zwei Vorlagen je Ticket.** Die Confluence-Template-Seite unter
+   „Figma-Prototype (Embed)" sagt, *was* auf der Seite steht; der
+   API-Contract sagt, *welche Daten* es gibt und wer sie sehen darf.
+   Widersprechen sie sich, ist das eine Entscheidung und keine
+   Umsetzungsfrage (Abschnitt „Fragen vor der Umsetzung").
+2. **Response-Typen werden generiert**, nicht geschrieben: aus
+   `/v3/api-docs` nach `frontend/src/api/schema.d.ts`.
+3. **Ein Client, ein Fehlertyp.** Kein `fetch` außerhalb von
+   `frontend/src/api/`; jede Fehlerantwort wird zum `ApiFehler` aus §6.2,
+   und entschieden wird über `fehlercode`, nie über den Meldungstext.
+4. **401 und 403 sind sichtbar**, nie eine leere Seite. Bei 409
+   `PROJEKT_VERSION_KONFLIKT` wird nie automatisch wiederholt.
+5. **Farben stehen genau einmal**, in `frontend/src/styles/tokens/`. Eine
+   Hex-Farbe daneben ist ein Befund.
+6. **Namen englisch**, wie im ganzen Projekt: `ProjectCard`, `StatusBadge`,
+   `useProjectList` (`docs/NAMENSSCHEMA.md`). Contract-Enums laufen
+   unverändert durch den Code und werden nur für die Anzeige übersetzt.
+7. **Kein Oberflächentext im Code.** Jeder sichtbare Text kommt aus i18n
+   (`react-i18next`, Deutsch und Englisch gepflegt, Deutsch als Standard).
+   Enum-Anzeige über Schlüssel der Form `project.status.PUBLISHED`.
+8. **Barrierefreiheit ist Teil des Tickets**, nicht der Nacharbeit: Tastatur,
+   sichtbarer Fokus, Labels, Überschriftenhierarchie, Kontrast in hell und
+   dunkel (§2.5 beruft sich auf WCAG 2.2).
+9. **Tests sind Teil jedes Tickets** (Vitest, Testing Library, MSW), analog
+   zur Backend-Regel 8.
+10. **Keine Attrappe im ausgelieferten Code.** Fehlt der Endpoint, wird die
+    Ansicht nicht gebaut, sondern das blockierende Backend-Ticket benannt.

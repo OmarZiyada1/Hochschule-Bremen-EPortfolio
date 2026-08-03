@@ -8,9 +8,9 @@ description: Baut ein Backend-Feature-Modul für das E-Portfolio Hochschule Brem
 Ziel: Jedes Modul entsteht in derselben Reihenfolge, mit denselben
 Konventionen und derselben Testtiefe. Stilvorbild ist das `auth`-Paket
 (Records, Javadoc mit Warum-Begründungen, Tabs, deutsche Namen). Für
-lesende Endpoints ist `projekt` aus KAN-16 das nähere Vorbild
-(`ProjektController`, `ProjektLeseService`, `ProjektSpezifikationen`,
-`projekt/dto`), für einfache Referenzlisten ohne Paginierung `stammdaten`
+lesende Endpoints ist `project` aus KAN-16 das nähere Vorbild
+(`ProjectController`, `ProjectReadService`, `ProjectSpecifications`,
+`project/dto`), für einfache Referenzlisten ohne Paginierung `masterdata`
 aus KAN-14.
 
 ## 0. Vorbereitung (nie überspringen)
@@ -19,8 +19,8 @@ aus KAN-14.
    „Datenmodell & API-Contract" (ID 36732929) nachschlagen, mindestens §5
    (Rechtematrix), §6.1 (Endpoint-Zeilen), §6.2/§6.3 (Fehler).
 2. `docs/ARCHITEKTUR.md` §6 („Wo kommt was hin") und das Zielpaket ansehen:
-   Welche Entities, Repositories und `darf…`-Methoden existieren schon?
-   `ProjektBerechtigungService` deckt die komplette Rechtematrix bereits ab,
+   Welche Entities, Repositories und `may…`-Methoden existieren schon?
+   `ProjectPermissionService` deckt die komplette Rechtematrix bereits ab,
    also fast nie neue Berechtigungslogik schreiben, sondern vorhandene
    aufrufen.
 3. Prüfen, ob `config/SecurityConfig` den neuen Pfad schon kennt (viele
@@ -49,8 +49,8 @@ Schritt 1:
      neue Tabelle, Nullability, Löschverhalten).
    - Fachliche Abgrenzung: Was gehört bewusst **nicht** in dieses Ticket.
 3. Nicht gefragt wird nach Dingen, die Contract, `docs/ARCHITEKTUR.md` oder
-   diese Skills bereits beantworten: DTO-Namen nach Schema `…Anfrage` /
-   `…Antwort`, Paketablage, Testreihenfolge, Envelope-Format. Das entscheidet
+   diese Skills bereits beantworten: DTO-Namen nach Schema `…Request` /
+   `…Response`, Paketablage, Testreihenfolge, Envelope-Format. Das entscheidet
    Claude selbst.
 4. Taucht **während** der Umsetzung eine neue entscheidungsrelevante Frage
    auf: anhalten, fragen, erst mit der Antwort weiterbauen. Keine Annahme in
@@ -58,30 +58,30 @@ Schritt 1:
 
 ## 1. DTOs (`<feature>/dto/`)
 
-- Java-**Records**, Namensschema `…Anfrage` / `…Antwort`; Listenelemente ggf.
-  eigene Records (z. B. `ProjektKachelAntwort`).
+- Java-**Records**, Namensschema `…Request` / `…Response`; Listenelemente ggf.
+  eigene Records (z. B. `ProjectCardResponse`).
 - Bean-Validation direkt am Record (`@NotBlank`, `@Size`, …) mit deutschen
   Meldungen; `@Schema` nur dort, wo Feldbedeutung nicht selbsterklärend ist
-  (Vorbild `auth/dto/LoginAnfrage`).
+  (Vorbild `auth/dto/LoginRequest`).
 - Niemals Entities direkt serialisieren. Verbotene Felder in Antworten:
-  `passwortHash`, `hsbEmail`, `Datei.pfad`.
-- Paginierte Listen immer im `SeiteAntwort`-Format
+  `passwordHash`, `hsbEmail`, `StoredFile.path`.
+- Paginierte Listen immer im `PageResponse`-Format
   `{ inhalt, seite, groesse, gesamtElemente, gesamtSeiten }`. Das Record
-  existiert seit KAN-16 als `common/dto/SeiteAntwort<T>`, es wird nicht je
+  existiert seit KAN-16 als `common/dto/PageResponse<T>`, es wird nicht je
   Feature neu gebaut. Springs `Page` wird nie direkt serialisiert (§6.6).
   Der Controller nimmt einen `Pageable` mit `@PageableDefault`; welche
   Felder sortierbar sind, prüft der Service gegen eine Positivliste
-  (Vorbild `ProjektLeseService`), sonst sortiert ein `?sort=` über
+  (Vorbild `ProjectReadService`), sonst sortiert ein `?sort=` über
   beliebige Pfade des Objektmodells.
 
 ## 2. Service (`<feature>/<Feature>Service.java`)
 
 - `@Service`; schreibende Methoden `@Transactional`, Lesepfade
   `@Transactional(readOnly = true)`.
-- Ablaufmuster je Methode: laden (fehlt → `PROJEKT_NICHT_GEFUNDEN` bzw.
-  `RESSOURCE_NICHT_GEFUNDEN`, 404) → Berechtigung über
-  `ProjektBerechtigungService.darf…` (nein → 403 `KEINE_BERECHTIGUNG`, bei
-  fehlender Anmeldung 401 `NICHT_AUTHENTIFIZIERT`) → Statusregeln (§4.1,
+- Ablaufmuster je Methode: laden (fehlt → `PROJECT_NOT_FOUND` bzw.
+  `RESOURCE_NOT_FOUND`, 404) → Berechtigung über
+  `ProjectPermissionService.may…` (nein → 403 `NO_PERMISSION`, bei
+  fehlender Anmeldung 401 `NOT_AUTHENTICATED`) → Statusregeln (§4.1,
   sonst 409) → fachliche Validierung (400) → schreiben → DTO zurückgeben.
 - **Die Existenz einer Ressource wird nicht hinter einem 404 verborgen**
   (§6.3.1). 404 heißt „gibt es nicht", 403 heißt „gibt es, du darfst nicht",
@@ -89,12 +89,12 @@ Schritt 1:
   und verwirft die Maskierung: IDs sind UUIDs und nicht erratbar, die
   Semantik bleibt über alle Endpoints gleich, und ein Tippfehler im Client
   bleibt von einem Rechteproblem unterscheidbar. Umgesetzt und getestet in
-  KAN-16 (`ProjektLeseService.detail`).
+  KAN-16 (`ProjectReadService.detail`).
 - Fehler ausschließlich über Exceptions, die der `GlobalExceptionHandler` in
   das §6.2-Envelope übersetzt. Neuer Fehlercode? → Konstante in
-  `Fehlercodes.java` mit Javadoc (Status + Auslöser) **und** Merkposten für
+  `ErrorCodes.java` mit Javadoc (Status + Auslöser) **und** Merkposten für
   den Contract (Skill `api-contract-sync`).
-- Statusübergänge schreiben immer einen `ProjektStatusHistorie`-Eintrag.
+- Statusübergänge schreiben immer einen `ProjectStatusHistory`-Eintrag.
 
 ## 3. Controller (`<feature>/<Feature>Controller.java`)
 
@@ -103,7 +103,7 @@ Schritt 1:
 - Statuscodes nach §6.3: 200 (GET/PUT/PATCH), 201 (POST legt an),
   204 (DELETE, Logout).
 - Angemeldete:r Benutzer:in über `@AuthenticationPrincipal
-  AngemeldeterBenutzer` (kann bei PUBLIC-Pfaden `null` sein; der Service
+  AuthenticatedUser` (kann bei PUBLIC-Pfaden `null` sein; der Service
   behandelt beide Fälle).
 - OpenAPI: sparsame `@Operation`/`@Schema` wie im `AuthController`; keine
   verbotenen Felder in angezeigten Schemata.
@@ -121,7 +121,7 @@ passen (`ddl-auto: validate`).
 - Pflichtfälle je Endpoint: Happy Path · 401 ohne Token (falls geschützt) ·
   403/404 nach Rechtematrix · 409-Statusregeln · Validierungsfehler 400 im
   Envelope.
-- Testdaten über Helfer wie `TestUser`/`TestProjekt` (wiederverwenden oder im
+- Testdaten über Helfer wie `TestUser`/`TestProject` (wiederverwenden oder im
   selben Stil ergänzen). Alle bestehenden Tests bleiben grün.
 
 ## 6. Definition of Done (Checkliste)
@@ -132,7 +132,7 @@ passen (`ddl-auto: validate`).
       Punkte mit Begründung, keine Rückfragen
 - [ ] Alle Endpoint-Zeilen des Tickets umgesetzt, Pfade exakt wie §6.1
 - [ ] `SecurityConfig` geprüft/ergänzt und begründet
-- [ ] Fehlercodes in `Fehlercodes.java` und Contract deckungsgleich
+- [ ] ErrorCodes in `ErrorCodes.java` und Contract deckungsgleich
       (bzw. als v-Nachtrag im Jira-Ticket vermerkt)
 - [ ] `./mvnw test` komplett grün, `ddl-auto: validate` bestanden
 - [ ] Keine neuen Abhängigkeiten ohne Absprache

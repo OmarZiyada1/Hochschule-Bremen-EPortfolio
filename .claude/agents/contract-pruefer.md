@@ -16,29 +16,29 @@ ohne Confluence-Zugriff den relevanten §-Auszug anfordern):
 1. **Endpoints (§6.1):** Pfad, Methode, Rollenspalte, Statuscodes,
    Body-/Response-Form, Zeile für Zeile.
 2. **Rechtematrix (§5):** Wird jede Zelle über `SecurityConfig` bzw. eine
-   `darf…`-Methode des `ProjektBerechtigungService` abgebildet? Gibt es
+   `may…`-Methode des `ProjectPermissionService` abgebildet? Gibt es
    Berechtigungslogik außerhalb dieses Services (Befund)?
 3. **Zustandsautomat (§4.1):** Sind nur die erlaubten Übergänge möglich,
    Inhaltsbearbeitung nur in ENTWURF/UEBERARBEITUNG, Historie geschrieben?
-4. **Fehler (§6.2/§6.3):** Envelope überall; `Fehlercodes.java` gegen §6.2
+4. **Fehler (§6.2/§6.3):** Envelope überall; `ErrorCodes.java` gegen §6.2
    diffen. Nur eine Richtung ist ein Befund: eine Konstante im Code ohne
    Zeile in §6.2. Umgekehrt beschreibt §6.2 den Zielstand und §8 den
    Umsetzungsstand, deshalb ist eine Contract-Zeile ohne Konstante der
    Normalfall und nur dann ein Befund, wenn das geprüfte Modul diesen Code
    verwenden müsste. Stand KAN-16 fehlen elf Codes im Java-Code (Block,
-   Datei, `PROJEKT_UNVOLLSTAENDIG`, `RESSOURCE_NICHT_GEFUNDEN`, beide
-   `PROJEKT_STATUS_*`, `RESSOURCE_IN_VERWENDUNG`,
+   Datei, `PROJEKT_UNVOLLSTAENDIG`, `RESOURCE_NOT_FOUND`, beide
+   `PROJEKT_STATUS_*`, `RESOURCE_IN_USE`,
    `PASSWORTAENDERUNG_ERFORDERLICH`); sie alle als Befund zu melden wäre
    Rauschen.
 5. **Entities/DTOs (§3):** Feldnamen und Nullability; verbotene Felder
-   (`passwortHash`, `hsbEmail`, `Datei.pfad`) in keiner Antwort.
+   (`passwordHash`, `hsbEmail`, `StoredFile.path`) in keiner Antwort.
 6. **Konventionen (CLAUDE.md):** Records, deutsche Namen, keine Änderung
    bestehender Migrationen, Tests vorhanden für Happy Path + 401/403/404/409,
    kein Em-Dash `—` in neuem Text.
 7. **Versionsnummer:** Nennt der Code noch eine ältere Contract-Version als
    die veröffentlichte? Mindestens prüfen: `config/OpenApiConfig.java`
    (`.version` und Beschreibungstext), Javadoc-Kopf von
-   `common/error/Fehlercodes.java`, erster Absatz von
+   `common/error/ErrorCodes.java`, erster Absatz von
    `.claude/skills/api-contract-sync/SKILL.md`. Historische Sätze („bis v14
    nur hier geführt") sind korrekt und bleiben stehen; nur Stand-Angaben
    zählen. Die vollständige Fundstellenliste steht im Skill

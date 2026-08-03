@@ -16,7 +16,7 @@ Ein bis zwei Sätze: Was existiert danach, und warum jetzt.
 
 ## Umfang
 Aufzählung der konkreten Arbeitspakete, mit exakten Pfaden
-(`GET /api/…`), DTO-/Klassennamen, Fehlercodes und HTTP-Statuscodes.
+(`GET /api/…`), DTO-/Klassennamen, ErrorCodes und HTTP-Statuscodes.
 
 ## Technische Hinweise   (nur wenn nötig)
 Stolpersteine, bewusste Entscheidungen, was NICHT dazugehört.
