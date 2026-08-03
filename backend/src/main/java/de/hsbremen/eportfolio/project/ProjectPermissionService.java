@@ -176,6 +176,61 @@ public class ProjectPermissionService {
 	}
 
 	/**
+	 * Metadaten aendern ueber {@code PUT /projects/{id}}: Autor:in und
+	 * Projektmitglieder, in {@code DRAFT} und {@code REVISION}.
+	 *
+	 * <p><strong>Warum enger als {@link #mayEditContent}:</strong> die
+	 * Matrixzeile „Projekt-Inhalt bearbeiten" gibt der Redaktion ein (✓), die
+	 * Endpoint-Zeile zu {@code PUT /projects/{id}} in §6.1 nennt dagegen
+	 * ausdruecklich nur „Autor:in und Mitglieder". Die Endpoint-Zeile ist die
+	 * speziellere Aussage und gewinnt: die Redaktion beurteilt ein Projekt und
+	 * schickt es zurueck, sie schreibt nicht die Metadaten ihrer Autor:innen um.
+	 * Fuer die Bloecke (KAN-18) bleibt {@link #mayEditContent} zustaendig, dort
+	 * steht die Matrixzeile ohne Gegenrede.
+	 *
+	 * <p><strong>Zur Fehlerunterscheidung:</strong> diese Methode fasst zwei
+	 * Gruende zusammen, die der Client auseinanderhalten muss. Der aufrufende
+	 * Dienst prueft deshalb bei einem {@code false} zusaetzlich
+	 * {@link #isProjectSide}: gehoert die Person zum Projekt, liegt es am Status
+	 * (409 {@code PROJECT_STATUS_NOT_EDITABLE}), sonst am Recht (403
+	 * {@code NO_PERMISSION}).
+	 */
+	public boolean mayEditMetadata(AuthenticatedUser user, Project project) {
+		return isProjectSide(user, project) && isContentEditable(project);
+	}
+
+	/**
+	 * Zeile „Projektmitglieder pflegen": STUDENT (✓)⁶, EDITOR (✓)⁶, ADMIN ✓.
+	 * Fussnote ⁶ und §3.13.1: Autor:in und bestehende Projektmitglieder, nur in
+	 * {@code DRAFT} und {@code REVISION}.
+	 *
+	 * <p>Ein Mitglied darf also weitere Mitglieder aufnehmen und andere
+	 * entfernen. Das ist gewollt (§3.13.1): Gruppenarbeiten organisieren sich
+	 * nicht ueber eine einzelne privilegierte Person, und bei Abwesenheit der
+	 * Autor:in kaeme die Gruppe sonst nicht weiter. Die Schranke ist der Status,
+	 * nicht die Person.
+	 *
+	 * <p><strong>Warum eine eigene Methode</strong>, obwohl sie heute dasselbe
+	 * beantwortet wie {@link #mayEditMetadata}: §3.13.1 verlangt sie
+	 * ausdruecklich und die beiden Regeln stehen an verschiedenen Stellen des
+	 * Contracts. Faellt eine von ihnen spaeter anders aus, etwa weil die
+	 * Endpoint-Zeile die Redaktion doch aufnimmt, muss genau eine der beiden
+	 * Methoden geaendert werden und nicht eine gemeinsame, an der beide Regeln
+	 * unsichtbar haengen.
+	 *
+	 * <p>Die Zeile in §5 traegt in der ADMIN-Spalte einen vollen Haken. Er greift
+	 * hier trotzdem nicht: die Mitgliederliste wird ausschliesslich eingebettet
+	 * ueber {@code POST}/{@code PUT /projects} gepflegt, und diese Endpoints
+	 * stehen dem Admin nach der Endpoint-Zeile aus §6.1 nicht offen. Ein Admin,
+	 * der an einer fremden Mitgliederliste etwas aendern muesste, hat dafuer
+	 * derzeit keinen Weg; das ist dieselbe Luecke wie bei offenem Punkt 2 (§7)
+	 * und keine eigene Entscheidung dieses Moduls.
+	 */
+	public boolean mayManageMembers(AuthenticatedUser user, Project project) {
+		return mayEditMetadata(user, project);
+	}
+
+	/**
 	 * Zeile „Projekt loeschen" nach §6.1: Autor:in nur im Entwurf, Admin
 	 * jederzeit.
 	 */
@@ -364,6 +419,14 @@ public class ProjectPermissionService {
 	 * passt nur zusammen, wenn die studentische Auswahl ueber
 	 * {@code POST /projects} laeuft und nicht ueber diesen Endpoint. Siehe
 	 * Rueckmeldung zu KAN-5.
+	 *
+	 * <p>Diese Methode gilt deshalb fuer den <em>eingebetteten</em> Weg, also
+	 * das Feld {@code editorIds} in {@code POST /projects} und
+	 * {@code PUT /projects/{id}}. Fuer den dedizierten Endpoint gilt
+	 * {@link #mayReassignEditors}. Mitglieder sind hier bewusst nicht dabei:
+	 * §3.13.1 nimmt ihnen {@code editorIds} ausdruecklich weg, obwohl sie sonst
+	 * dieselben Felder pflegen duerfen. Wer die Redaktion bestimmt, entscheidet
+	 * darueber, wer das Ergebnis beurteilt; das bleibt bei der Autor:in.
 	 */
 	public boolean mayAssignEditors(AuthenticatedUser user, Project project) {
 		if (!isLoggedIn(user)) {
@@ -376,6 +439,26 @@ public class ProjectPermissionService {
 			return false;
 		}
 		return isAuthor(user, project) && project.getStatus() == ProjectStatus.DRAFT;
+	}
+
+	/**
+	 * Der dedizierte Endpoint {@code PUT /projects/{id}/editors} aus §6.1:
+	 * „Redaktion umverteilen, jederzeit und unabhaengig vom Status", Rolle
+	 * ADMIN.
+	 *
+	 * <p><strong>Warum getrennt von {@link #mayAssignEditors}:</strong> die
+	 * beiden beantworten verschiedene Fragen. Dort geht es um die Auswahl der
+	 * Autor:in am eigenen Entwurf, hier um den Eingriff der Administration in
+	 * ein beliebiges Projekt in beliebigem Status. Waere es eine Methode,
+	 * bekaeme entweder die Autor:in Zugriff auf den Admin-Endpoint oder der
+	 * Admin verloere den Zugriff auf eingereichte Projekte, also genau die
+	 * Faelle, fuer die es diesen Endpoint gibt.
+	 *
+	 * <p>Ohne Projektbezug, weil die Antwort keinen braucht: der Status spielt
+	 * hier ausdruecklich keine Rolle, und ADMIN ist eine reine Rollenfrage.
+	 */
+	public boolean mayReassignEditors(AuthenticatedUser user) {
+		return isAdmin(user);
 	}
 
 	/** Zeile „Projekt fuer Top-10 nominieren": EDITOR ✓, ADMIN ✓. */

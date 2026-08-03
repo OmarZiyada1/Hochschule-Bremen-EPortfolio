@@ -9,12 +9,15 @@ package de.hsbremen.eportfolio.common.error;
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
  * mit KAN-16 hier dazu.
  *
- * <p>Umgekehrt fuehrt §6.2 Codes, die hier noch fehlen: die Block- und
- * Datei-Codes, {@code PROJECT_INCOMPLETE}, {@code RESOURCE_NOT_FOUND}, die
- * beiden {@code PROJECT_STATUS_*}-Konflikte, {@code RESOURCE_IN_USE},
+ * <p>Umgekehrt fuehrt §6.2 Codes, die hier noch fehlen: die uebrigen Block- und
+ * die Datei-Codes, {@code PROJECT_INCOMPLETE}, {@code RESOURCE_NOT_FOUND},
+ * {@code PROJECT_STATUS_TRANSITION_INVALID}, {@code RESOURCE_IN_USE},
  * {@code PASSWORD_CHANGE_REQUIRED} und seit v17
  * {@code VERIFICATION_CODE_INVALID}. Sie kommen mit dem jeweiligen Modul dazu;
  * das ist keine Abweichung, sondern der noch offene Umsetzungsstand aus §8.
+ * {@link #PROJECT_STATUS_NOT_EDITABLE} kam mit KAN-17 dazu und stand wie die
+ * uebrigen schon vorher in §6.2; eine neue Contract-Version braucht es dafuer
+ * nicht.
  */
 public final class ErrorCodes {
 
@@ -81,6 +84,19 @@ public final class ErrorCodes {
 	 * Konflikt, statt fremde Arbeit zu ueberschreiben.
 	 */
 	public static final String PROJECT_VERSION_CONFLICT = "PROJECT_VERSION_CONFLICT";
+
+	/**
+	 * 409: das Projekt steht in einem Status, in dem sein Inhalt nicht mehr
+	 * geaendert werden darf. Nach §4.1 sind das alle ausser {@code DRAFT} und
+	 * {@code REVISION}.
+	 *
+	 * <p><strong>Nicht zu verwechseln mit</strong>
+	 * {@code PROJECT_STATUS_TRANSITION_INVALID} (§4.1, kommt mit KAN-19): dort
+	 * ist der <em>Uebergang</em> unzulaessig, etwa DRAFT direkt nach PUBLISHED.
+	 * Hier ist der Uebergang gar nicht gemeint, sondern die Bearbeitung im
+	 * aktuellen Zustand.
+	 */
+	public static final String PROJECT_STATUS_NOT_EDITABLE = "PROJECT_STATUS_NOT_EDITABLE";
 
 	private ErrorCodes() {
 		// Nur Konstanten.
