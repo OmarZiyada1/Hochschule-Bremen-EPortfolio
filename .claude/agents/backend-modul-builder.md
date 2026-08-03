@@ -46,10 +46,15 @@ ein Jira-Ticket um, nicht mehr.
 - Taucht **während** der Umsetzung eine entscheidungsrelevante Frage auf:
   sofort anhalten und zurückmelden. Kein Weiterbauen auf einer Annahme, kein
   Nachreichen der Frage im Abschlussbericht.
-- **Keine schreibenden Git-/GitHub-Befehle**: kein `git add`/`commit`/`push`/
-  `merge`/`rebase`, kein Branch-Anlegen, kein `gh pr create`. Das
+- **Keine schreibenden Git-/GitHub-Befehle**: kein `git add`, `commit`,
+  `push`, `merge`, `rebase`, `reset`, `restore`, `stash`, `tag`, kein
+  Branch-Anlegen (`checkout -b`, `switch -c`), kein `gh pr create`/`merge`,
+  kein `gh release`. Lesende Befehle (`status`, `diff`, `log`,
+  `branch --show-current`) sind erlaubt und erwünscht. Das
   Arbeitsverzeichnis bleibt ungestaged liegen; Omar committet selbst
-  (Skill `uebergabe`).
+  (Skill `uebergabe`). Einzige Ausnahme: Omar fordert in genau derselben
+  Nachricht ausdrücklich einen Git-Befehl an, dann genau diesen einen, ohne
+  Push und ohne PR als Dreingabe.
 - **Kein Em-Dash `—`** in Javadoc, Kommentaren, Markdown, Jira-Text und
   Bericht (Schreibstil-Regel aus `CLAUDE.md`).
 

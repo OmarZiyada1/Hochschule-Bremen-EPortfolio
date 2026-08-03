@@ -6,8 +6,12 @@ description: Baut ein Backend-Feature-Modul für das E-Portfolio Hochschule Brem
 # Backend-Modul bauen (Controller bis Service)
 
 Ziel: Jedes Modul entsteht in derselben Reihenfolge, mit denselben
-Konventionen und derselben Testtiefe. Vorbild für alles ist das `auth`-Paket,
-der einzige bislang vollständige vertikale Schnitt.
+Konventionen und derselben Testtiefe. Stilvorbild ist das `auth`-Paket
+(Records, Javadoc mit Warum-Begründungen, Tabs, deutsche Namen). Für
+lesende Endpoints ist `projekt` aus KAN-16 das nähere Vorbild
+(`ProjektController`, `ProjektLeseService`, `ProjektSpezifikationen`,
+`projekt/dto`), für einfache Referenzlisten ohne Paginierung `stammdaten`
+aus KAN-14.
 
 ## 0. Vorbereitung (nie überspringen)
 
@@ -62,7 +66,13 @@ Schritt 1:
 - Niemals Entities direkt serialisieren. Verbotene Felder in Antworten:
   `passwortHash`, `hsbEmail`, `Datei.pfad`.
 - Paginierte Listen immer im `SeiteAntwort`-Format
-  `{ inhalt, seite, groesse, gesamtElemente, gesamtSeiten }`.
+  `{ inhalt, seite, groesse, gesamtElemente, gesamtSeiten }`. Das Record
+  existiert seit KAN-16 als `common/dto/SeiteAntwort<T>`, es wird nicht je
+  Feature neu gebaut. Springs `Page` wird nie direkt serialisiert (§6.6).
+  Der Controller nimmt einen `Pageable` mit `@PageableDefault`; welche
+  Felder sortierbar sind, prüft der Service gegen eine Positivliste
+  (Vorbild `ProjektLeseService`), sonst sortiert ein `?sort=` über
+  beliebige Pfade des Objektmodells.
 
 ## 2. Service (`<feature>/<Feature>Service.java`)
 
@@ -70,10 +80,16 @@ Schritt 1:
   `@Transactional(readOnly = true)`.
 - Ablaufmuster je Methode: laden (fehlt → `PROJEKT_NICHT_GEFUNDEN` bzw.
   `RESSOURCE_NICHT_GEFUNDEN`, 404) → Berechtigung über
-  `ProjektBerechtigungService.darf…` (nein → 403 `KEINE_BERECHTIGUNG`;
-  bei Projekten ohne Leserecht stattdessen 404, Existenz nicht leaken) →
-  Statusregeln (§4.1, sonst 409) → fachliche Validierung (400) → schreiben →
-  DTO zurückgeben.
+  `ProjektBerechtigungService.darf…` (nein → 403 `KEINE_BERECHTIGUNG`, bei
+  fehlender Anmeldung 401 `NICHT_AUTHENTIFIZIERT`) → Statusregeln (§4.1,
+  sonst 409) → fachliche Validierung (400) → schreiben → DTO zurückgeben.
+- **Die Existenz einer Ressource wird nicht hinter einem 404 verborgen**
+  (§6.3.1). 404 heißt „gibt es nicht", 403 heißt „gibt es, du darfst nicht",
+  401 heißt „gibt es, melde dich an". Der Contract wägt das ausdrücklich ab
+  und verwirft die Maskierung: IDs sind UUIDs und nicht erratbar, die
+  Semantik bleibt über alle Endpoints gleich, und ein Tippfehler im Client
+  bleibt von einem Rechteproblem unterscheidbar. Umgesetzt und getestet in
+  KAN-16 (`ProjektLeseService.detail`).
 - Fehler ausschließlich über Exceptions, die der `GlobalExceptionHandler` in
   das §6.2-Envelope übersetzt. Neuer Fehlercode? → Konstante in
   `Fehlercodes.java` mit Javadoc (Status + Auslöser) **und** Merkposten für

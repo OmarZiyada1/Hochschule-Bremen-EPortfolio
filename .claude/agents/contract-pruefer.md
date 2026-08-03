@@ -21,7 +21,15 @@ ohne Confluence-Zugriff den relevanten §-Auszug anfordern):
 3. **Zustandsautomat (§4.1):** Sind nur die erlaubten Übergänge möglich,
    Inhaltsbearbeitung nur in ENTWURF/UEBERARBEITUNG, Historie geschrieben?
 4. **Fehler (§6.2/§6.3):** Envelope überall; `Fehlercodes.java` gegen §6.2
-   diffen, jede einseitige Konstante ist ein Befund.
+   diffen. Nur eine Richtung ist ein Befund: eine Konstante im Code ohne
+   Zeile in §6.2. Umgekehrt beschreibt §6.2 den Zielstand und §8 den
+   Umsetzungsstand, deshalb ist eine Contract-Zeile ohne Konstante der
+   Normalfall und nur dann ein Befund, wenn das geprüfte Modul diesen Code
+   verwenden müsste. Stand KAN-16 fehlen elf Codes im Java-Code (Block,
+   Datei, `PROJEKT_UNVOLLSTAENDIG`, `RESSOURCE_NICHT_GEFUNDEN`, beide
+   `PROJEKT_STATUS_*`, `RESSOURCE_IN_VERWENDUNG`,
+   `PASSWORTAENDERUNG_ERFORDERLICH`); sie alle als Befund zu melden wäre
+   Rauschen.
 5. **Entities/DTOs (§3):** Feldnamen und Nullability; verbotene Felder
    (`passwortHash`, `hsbEmail`, `Datei.pfad`) in keiner Antwort.
 6. **Konventionen (CLAUDE.md):** Records, deutsche Namen, keine Änderung
