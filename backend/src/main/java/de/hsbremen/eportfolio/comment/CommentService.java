@@ -214,8 +214,8 @@ public class CommentService {
 	 * umsetzt, haakt sie ab, damit keine Warteschleife entsteht. Die Haken in §5
 	 * bleiben davon unberuehrt, und praktisch braucht es sie: ein zu frueh
 	 * gesetztes {@code RESOLVED} muss die Redaktion wieder oeffnen koennen.
-	 * Entschieden in der Klaerungsrunde zu KAN-20; §6.1 und §2.4 werden mit v19
-	 * entsprechend praezisiert.
+	 * Entschieden in der Klaerungsrunde zu KAN-20; §6.1 und §2.4 sind mit v19
+	 * entsprechend praezisiert worden.
 	 *
 	 * <p>Beide Richtungen sind moeglich, Begruendung in
 	 * {@code CommentStatusRequest}.

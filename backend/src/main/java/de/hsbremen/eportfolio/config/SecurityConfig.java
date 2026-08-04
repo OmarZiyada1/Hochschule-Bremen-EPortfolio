@@ -130,6 +130,14 @@ public class SecurityConfig {
 					// fuer niemanden ausser Redaktion und Administration dabei.
 					// PATCH und DELETE auf /api/comments/* stehen bewusst nicht
 					// hier und fallen damit unter authenticated().
+					// Die Reaktions-Endpoints aus KAN-21 (POST und DELETE auf
+					// /api/projects/*/reaction) brauchen aus demselben Grund
+					// keine eigene Zeile: das Muster /api/projects/* gilt nur
+					// fuer GET, sie fallen also unter authenticated() und
+					// ergeben ohne Token 401. Genau das verlangt §5, wo die
+					// Zeile "Reaktion geben" fuer PUBLIC ein Kreuz traegt. Eine
+					// Rollenregel waere hier zu grob, weil das Recht am
+					// Projektstatus haengt (§3.10) und nicht an der Rolle.
 					.requestMatchers(HttpMethod.GET,
 							"/api/projects", "/api/projects/*",
 							"/api/projects/*/blocks",
