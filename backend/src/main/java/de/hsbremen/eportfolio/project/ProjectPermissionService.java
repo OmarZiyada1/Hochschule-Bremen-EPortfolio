@@ -432,6 +432,42 @@ public class ProjectPermissionService {
 		return user.hasRole(Role.EDITOR, Role.ADMIN) || isProjectSide(user, project);
 	}
 
+	/**
+	 * Endpoint-Zeile {@code PATCH /comments/{id}} aus §6.1: den Text eines
+	 * Kommentars aendert ausschliesslich seine Verfasser:in.
+	 *
+	 * <p><strong>Ausdruecklich auch nicht die Administration</strong>, anders als
+	 * bei {@link #mayDeleteComment}: §6.1 fuehrt in dieser Zeile allein die
+	 * „Autor:in des Kommentars", in der {@code DELETE}-Zeile zusaetzlich ADMIN.
+	 * Das ist stimmig. Ein Kommentar ist die Aeusserung einer Person; wer sie
+	 * entfernen darf, darf deshalb noch lange nicht in ihrem Namen etwas anderes
+	 * sagen.
+	 *
+	 * <p><strong>Ohne Kommentar-Entity als Parameter</strong>, sondern mit der ID
+	 * der Verfasser:in, aus demselben Grund wie bei {@link #mayEditPortfolio}:
+	 * die Antwort braucht nichts weiter, und dieser Dienst liegt im Paket
+	 * {@code project}. Ein Verweis von hier auf {@code comment.Comment} machte
+	 * aus der einseitigen Abhaengigkeit der beiden Pakete einen Kreis.
+	 *
+	 * @param commentAuthorId ID der Person, die den Kommentar verfasst hat
+	 */
+	public boolean mayEditComment(AuthenticatedUser user, UUID commentAuthorId) {
+		return isLoggedIn(user) && user.getId().equals(commentAuthorId);
+	}
+
+	/**
+	 * Endpoint-Zeile {@code DELETE /comments/{id}} aus §6.1: „Autor:in / ADMIN".
+	 *
+	 * <p>Die Redaktion gehoert nicht dazu, auch nicht die zugewiesene: sie darf
+	 * einen fremden Beitrag zurueckgeben, aber nicht die Rueckfrage der Autor:in
+	 * daran verschwinden lassen. Zum Parameter siehe {@link #mayEditComment}.
+	 *
+	 * @param commentAuthorId ID der Person, die den Kommentar verfasst hat
+	 */
+	public boolean mayDeleteComment(AuthenticatedUser user, UUID commentAuthorId) {
+		return mayEditComment(user, commentAuthorId) || isAdmin(user);
+	}
+
 	// ------------------------------------------------------------------
 	// §5: Dateien, Reaktionen, Portfolio
 	// ------------------------------------------------------------------

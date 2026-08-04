@@ -10,16 +10,15 @@ package de.hsbremen.eportfolio.common.error;
  * mit KAN-16 hier dazu.
  *
  * <p>Umgekehrt fuehrt §6.2 Codes, die hier noch fehlen: die Datei-Codes,
- * {@code RESOURCE_NOT_FOUND}, {@code RESOURCE_IN_USE},
- * {@code PASSWORD_CHANGE_REQUIRED} und seit v17
+ * {@code RESOURCE_IN_USE}, {@code PASSWORD_CHANGE_REQUIRED} und seit v17
  * {@code VERIFICATION_CODE_INVALID}. Sie kommen mit dem jeweiligen Modul dazu;
  * das ist keine Abweichung, sondern der noch offene Umsetzungsstand aus §8.
  * {@link #PROJECT_STATUS_NOT_EDITABLE} kam mit KAN-17 dazu,
  * {@link #BLOCK_TYPE_UNKNOWN} und {@link #EMBED_PROVIDER_NOT_ALLOWED} mit
  * KAN-18, {@link #PROJECT_INCOMPLETE} und
- * {@link #PROJECT_STATUS_TRANSITION_INVALID} mit KAN-19. Alle fuenf standen wie
- * die uebrigen schon vorher in §6.2; eine neue Contract-Version braucht es
- * dafuer nicht.
+ * {@link #PROJECT_STATUS_TRANSITION_INVALID} mit KAN-19,
+ * {@link #RESOURCE_NOT_FOUND} mit KAN-20. Alle sechs standen wie die uebrigen
+ * schon vorher in §6.2; eine neue Contract-Version braucht es dafuer nicht.
  */
 public final class ErrorCodes {
 
@@ -68,6 +67,21 @@ public final class ErrorCodes {
 	 * 403 {@link #NO_PERMISSION} bzw. 401 {@link #NOT_AUTHENTICATED}.
 	 */
 	public static final String PROJECT_NOT_FOUND = "PROJECT_NOT_FOUND";
+
+	/**
+	 * 404: die adressierte Ressource existiert nicht. §6.2 fuehrt ihn als den
+	 * generischen 404 fuer Stammdaten, Kommentare, Dateien und User, also fuer
+	 * alles ausser dem Projekt mit seinem eigenen {@link #PROJECT_NOT_FOUND}.
+	 *
+	 * <p>Wie dort gilt §6.3.1: der Code sagt „gibt es nicht" und maskiert kein
+	 * fehlendes Recht. Ein vorhandener Kommentar, den die anfragende Person nicht
+	 * aendern darf, ergibt 403 {@link #NO_PERMISSION}.
+	 *
+	 * <p>Der Code stand seit jeher in §6.2 und kam mit KAN-20 hier dazu, weil die
+	 * Kommentar-Endpoints die erste Ressource ausser dem Projekt sind, die
+	 * einzeln adressiert wird.
+	 */
+	public static final String RESOURCE_NOT_FOUND = "RESOURCE_NOT_FOUND";
 
 	/**
 	 * 400: der Wert im Feld {@code type} eines Inhaltsblocks steht nicht in der

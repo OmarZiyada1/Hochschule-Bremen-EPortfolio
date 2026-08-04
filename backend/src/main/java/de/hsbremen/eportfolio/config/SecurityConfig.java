@@ -120,9 +120,20 @@ public class SecurityConfig {
 					// 401. Ein hasRole("EDITOR") fuer /approve und /publish
 					// waere hier ohnehin zu grob, weil das Recht am
 					// Projektstatus und an der Autorschaft haengt (§4.1).
+					// /api/projects/*/comments kam mit KAN-20 dazu und stand
+					// als einziger Lesepfad aus §6.1 noch nicht in dieser
+					// Liste. Nach §2.3 sind REPLY und CHANGE_REQUEST "sichtbar
+					// fuer alle mit Projektzugriff", und bei einem
+					// veroeffentlichten Projekt ist das auch ohne Anmeldung der
+					// Fall. Welche Kommentare tatsaechlich in der Antwort
+					// stehen, entscheidet der CommentService: eine NOTE ist dort
+					// fuer niemanden ausser Redaktion und Administration dabei.
+					// PATCH und DELETE auf /api/comments/* stehen bewusst nicht
+					// hier und fallen damit unter authenticated().
 					.requestMatchers(HttpMethod.GET,
 							"/api/projects", "/api/projects/*",
 							"/api/projects/*/blocks",
+							"/api/projects/*/comments",
 							"/api/portfolios/*",
 							"/api/categories", "/api/faculties",
 							"/api/study-programs", "/api/modules",

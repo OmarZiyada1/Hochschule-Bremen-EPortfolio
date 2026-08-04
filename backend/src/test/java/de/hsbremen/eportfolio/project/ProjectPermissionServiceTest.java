@@ -545,6 +545,28 @@ class ProjectPermissionServiceTest {
 			assertThat(service.maySetChangeRequestStatus(editor, p)).isTrue();
 			assertThat(service.maySetChangeRequestStatus(otherStudent, p)).isFalse();
 		}
+
+		@Test
+		@DisplayName("Kommentartext aendern: nur die Verfasser:in, auch nicht der Admin (§6.1)")
+		void editComment() {
+			assertThat(service.mayEditComment(author, author.getId())).isTrue();
+			assertThat(service.mayEditComment(editor, author.getId())).isFalse();
+			assertThat(service.mayEditComment(admin, author.getId())).isFalse();
+			assertThat(service.mayEditComment(PUBLIC, author.getId())).isFalse();
+			// Eine Zeile ohne Verfasser:in gibt es laut §3.5 nicht; die Antwort
+			// darauf ist trotzdem ein klares Nein und keine Ausnahme.
+			assertThat(service.mayEditComment(author, null)).isFalse();
+		}
+
+		@Test
+		@DisplayName("Kommentar loeschen: Verfasser:in und Admin, aber nicht die Redaktion (§6.1)")
+		void deleteComment() {
+			assertThat(service.mayDeleteComment(author, author.getId())).isTrue();
+			assertThat(service.mayDeleteComment(admin, author.getId())).isTrue();
+			assertThat(service.mayDeleteComment(editor, author.getId())).isFalse();
+			assertThat(service.mayDeleteComment(otherStudent, author.getId())).isFalse();
+			assertThat(service.mayDeleteComment(PUBLIC, author.getId())).isFalse();
+		}
 	}
 
 	@Nested

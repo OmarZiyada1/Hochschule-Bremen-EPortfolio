@@ -35,6 +35,16 @@ public class ResourceNotFoundException extends RuntimeException {
 				"Projekt mit ID " + projectId + " existiert nicht.");
 	}
 
+	/**
+	 * Eine Kommentar-ID, zu der es keine Zeile gibt (§3.5). Traegt den
+	 * generischen Code {@code RESOURCE_NOT_FOUND}, weil §6.2 einen eigenen 404er
+	 * nur fuer das Projekt fuehrt.
+	 */
+	public static ResourceNotFoundException forComment(UUID commentId) {
+		return new ResourceNotFoundException(ErrorCodes.RESOURCE_NOT_FOUND,
+				"Kommentar mit ID " + commentId + " existiert nicht.");
+	}
+
 	public String getErrorCode() {
 		return errorCode;
 	}
