@@ -22,6 +22,14 @@ import java.util.UUID;
  */
 public class ResourceNotFoundException extends RuntimeException {
 
+	/**
+	 * Gemeinsames Satzende aller Meldungen. Der Wortlaut steht an einer Stelle,
+	 * damit die drei Faelle nicht auseinanderlaufen: das Frontend entscheidet
+	 * zwar nach {@code errorCode} und nie nach dem Text, die Meldung landet aber
+	 * in Protokollen und in der Fehleranzeige.
+	 */
+	private static final String DOES_NOT_EXIST = " existiert nicht.";
+
 	private final String errorCode;
 
 	public ResourceNotFoundException(String errorCode, String message) {
@@ -32,7 +40,7 @@ public class ResourceNotFoundException extends RuntimeException {
 	/** Der haeufigste Fall: eine Projekt-ID, zu der es keine Zeile gibt. */
 	public static ResourceNotFoundException forProject(UUID projectId) {
 		return new ResourceNotFoundException(ErrorCodes.PROJECT_NOT_FOUND,
-				"Projekt mit ID " + projectId + " existiert nicht.");
+				"Projekt mit ID " + projectId + DOES_NOT_EXIST);
 	}
 
 	/**
@@ -42,7 +50,22 @@ public class ResourceNotFoundException extends RuntimeException {
 	 */
 	public static ResourceNotFoundException forComment(UUID commentId) {
 		return new ResourceNotFoundException(ErrorCodes.RESOURCE_NOT_FOUND,
-				"Kommentar mit ID " + commentId + " existiert nicht.");
+				"Kommentar mit ID " + commentId + DOES_NOT_EXIST);
+	}
+
+	/**
+	 * Eine Benutzer-ID, zu der es kein Konto gibt (§3.1), etwa in
+	 * {@code GET /api/portfolios/{userId}}. Traegt wie
+	 * {@link #forComment(UUID)} den generischen Code, den §6.2 fuer User
+	 * ausdruecklich vorsieht.
+	 *
+	 * <p>Die Meldung spricht bewusst vom Konto und nicht vom Portfolio: der 404
+	 * haengt an der Person, nicht an ihrer Profil-Zeile. Fehlt allein die Zeile,
+	 * antwortet der Endpoint mit 200 und leeren Feldern (§3.2.1).
+	 */
+	public static ResourceNotFoundException forUser(UUID userId) {
+		return new ResourceNotFoundException(ErrorCodes.RESOURCE_NOT_FOUND,
+				"Benutzer mit ID " + userId + DOES_NOT_EXIST);
 	}
 
 	public String getErrorCode() {

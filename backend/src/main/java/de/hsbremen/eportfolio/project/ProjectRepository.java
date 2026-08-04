@@ -49,6 +49,31 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, JpaSpec
 	@EntityGraph(attributePaths = {"author", "category", "faculty", "studyProgram", "module"})
 	Optional<Project> findWithReferencesById(UUID id);
 
+	/**
+	 * Die Projektliste des oeffentlichen Profils aus
+	 * {@code GET /api/portfolios/{userId}} (§3.2, KAN-22).
+	 *
+	 * <p><strong>Nur die eigenen Projekte</strong>, also {@code authorId = user}:
+	 * §3.2 nennt genau diese Abfrage. Projekte, an denen die Person nur als
+	 * Mitglied mitgewirkt hat, gehoeren nicht dazu; dafuer gaebe es
+	 * {@link #findByParticipationAndStatus}, das dieses Modul bewusst nicht
+	 * benutzt.
+	 *
+	 * <p>Der {@code @EntityGraph} hat denselben Grund wie bei
+	 * {@link #findAll(Specification, Pageable)}: ohne ihn laedt Hibernate Autor,
+	 * Kategorie, Fakultaet und Studiengang je Kachel einzeln nach (N+1).
+	 *
+	 * <p>Sortiert nach Veroeffentlichungsdatum, neueste zuerst. Das Feld ist bei
+	 * einem {@code PUBLISHED}-Projekt gesetzt (§3.3), und ein Profil ordnet seine
+	 * Arbeiten sinnvoll danach, seit wann sie zu sehen sind. Die ID haengt als
+	 * Gleichstandsbrecher hinten an, damit zwei am selben Zeitpunkt
+	 * veroeffentlichte Projekte zwischen zwei Aufrufen nicht die Plaetze
+	 * tauschen.
+	 */
+	@EntityGraph(attributePaths = {"author", "category", "faculty", "studyProgram"})
+	List<Project> findByAuthorIdAndStatusOrderByPublishedAtDescIdAsc(UUID authorId,
+			ProjectStatus status);
+
 	List<Project> findByStatus(ProjectStatus status);
 
 	List<Project> findByAuthorId(UUID authorId);
