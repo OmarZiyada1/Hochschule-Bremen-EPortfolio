@@ -431,6 +431,76 @@ class ProjectPermissionServiceTest {
 		}
 	}
 
+	/**
+	 * Die Trennung, von der die Fehlerpolitik der Workflow-Endpoints lebt:
+	 * {@code mayTrigger} beantwortet die Rechtefrage (403), die Statusfrage steht
+	 * in {@link ProjectTransition} (409). Ohne diese Trennung koennte der
+	 * Workflow-Dienst die beiden Antworten nicht auseinanderhalten (§6.3.1).
+	 */
+	@Nested
+	@DisplayName("Zweistufige Pruefung eines Uebergangs (§4.1, §6.3.1)")
+	class TwoStepCheck {
+
+		@ParameterizedTest
+		@EnumSource(ProjectStatus.class)
+		@DisplayName("mayTrigger ignoriert den Status: die Redaktion darf genehmigen, auch wenn das "
+				+ "Projekt gerade im falschen Status steht")
+		void triggerIgnoresStatus(ProjectStatus status) {
+			Project p = project(status);
+
+			assertThat(service.mayTrigger(editor, p, ProjectTransition.APPROVE)).isTrue();
+			// Erst die zweite Stufe weist ab, und genau deshalb kann daraus ein
+			// 409 werden statt eines irrefuehrenden 403.
+			assertThat(service.mayPerform(editor, p, ProjectTransition.APPROVE))
+					.isEqualTo(status == ProjectStatus.SUBMITTED);
+		}
+
+		@ParameterizedTest
+		@EnumSource(ProjectStatus.class)
+		@DisplayName("Wem das Recht fehlt, dem fehlt es in jedem Status: eine fremde Studierende "
+				+ "bekommt damit immer 403 und nie 409")
+		void missingPermissionIsIndependentOfStatus(ProjectStatus status) {
+			Project p = project(status);
+
+			for (ProjectTransition transition : ProjectTransition.values()) {
+				assertThat(service.mayTrigger(otherStudent, p, transition)).isFalse();
+				assertThat(service.mayTrigger(PUBLIC, p, transition)).isFalse();
+			}
+		}
+
+		@ParameterizedTest
+		@EnumSource(ProjectStatus.class)
+		@DisplayName("mayPerform entspricht in jedem Status den vier benannten Methoden")
+		void namedMethodsAreTheCombination(ProjectStatus status) {
+			Project p = project(status);
+
+			for (AuthenticatedUser user : new AuthenticatedUser[] {author, otherStudent, editor,
+					otherEditor, admin, PUBLIC}) {
+
+				assertThat(service.maySubmit(user, p))
+						.isEqualTo(service.mayPerform(user, p, ProjectTransition.SUBMIT));
+				assertThat(service.mayApprove(user, p))
+						.isEqualTo(service.mayPerform(user, p, ProjectTransition.APPROVE));
+				assertThat(service.mayPublish(user, p))
+						.isEqualTo(service.mayPerform(user, p, ProjectTransition.PUBLISH));
+				assertThat(service.mayRequestRevision(user, p))
+						.isEqualTo(service.mayPerform(user, p, ProjectTransition.REQUEST_REVISION));
+			}
+		}
+
+		@Test
+		@DisplayName("Das Vier-Augen-Prinzip haengt am Recht und nicht am Status: es sperrt schon "
+				+ "mayTrigger")
+		void fourEyesBlocksTheTrigger() {
+			Project own = TestProject.withAuthor(editorUser, ProjectStatus.SUBMITTED);
+
+			assertThat(service.mayTrigger(editor, own, ProjectTransition.APPROVE)).isFalse();
+			assertThat(service.mayTrigger(editor, own, ProjectTransition.PUBLISH)).isFalse();
+			// Die Ruecknahme traegt keine Fussnote ¹ und bleibt offen.
+			assertThat(service.mayTrigger(editor, own, ProjectTransition.REQUEST_REVISION)).isTrue();
+		}
+	}
+
 	@Nested
 	@DisplayName("Zeilen: Kommentare (§2.3, §2.4)")
 	class Comments {

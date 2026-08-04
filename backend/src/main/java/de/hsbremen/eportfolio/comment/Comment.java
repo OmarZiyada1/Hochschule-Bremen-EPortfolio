@@ -44,6 +44,32 @@ public class Comment extends AuditableEntity {
 		// Von JPA benoetigt.
 	}
 
+	/**
+	 * Ein Aenderungswunsch der Redaktion an die Projektseite: Typ
+	 * {@link CommentType#CHANGE_REQUEST} mit Status
+	 * {@link CommentStatus#OPEN} (§2.3, §2.4).
+	 *
+	 * <p><strong>Warum eine benannte Fabrik</strong> und kein oeffentlicher
+	 * Konstruktor: Typ und Status haengen bei diesem Kommentar zusammen, ein
+	 * {@code CHANGE_REQUEST} ohne Erledigungsstatus waere ein Arbeitsauftrag, den
+	 * niemand abhaken kann. Mit der Fabrik koennen die beiden Felder nicht
+	 * einzeln vergessen werden.
+	 *
+	 * <p>Gebraucht wird sie seit KAN-19 von
+	 * {@code ProjectWorkflowService.requestRevision}: §4.1 haelt die Begruendung
+	 * einer Ruecknahme als Kommentar fest und nicht in der Statushistorie, weil
+	 * nur der Kommentar einen Erledigungsstatus braucht.
+	 */
+	public static Comment changeRequest(Project project, User author, String text) {
+		Comment comment = new Comment();
+		comment.project = project;
+		comment.author = author;
+		comment.type = CommentType.CHANGE_REQUEST;
+		comment.text = text;
+		comment.status = CommentStatus.OPEN;
+		return comment;
+	}
+
 	public Project getProject() {
 		return project;
 	}

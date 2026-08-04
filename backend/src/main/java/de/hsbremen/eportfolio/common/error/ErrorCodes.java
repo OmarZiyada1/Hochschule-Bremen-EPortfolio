@@ -10,15 +10,16 @@ package de.hsbremen.eportfolio.common.error;
  * mit KAN-16 hier dazu.
  *
  * <p>Umgekehrt fuehrt §6.2 Codes, die hier noch fehlen: die Datei-Codes,
- * {@code PROJECT_INCOMPLETE}, {@code RESOURCE_NOT_FOUND},
- * {@code PROJECT_STATUS_TRANSITION_INVALID}, {@code RESOURCE_IN_USE},
+ * {@code RESOURCE_NOT_FOUND}, {@code RESOURCE_IN_USE},
  * {@code PASSWORD_CHANGE_REQUIRED} und seit v17
  * {@code VERIFICATION_CODE_INVALID}. Sie kommen mit dem jeweiligen Modul dazu;
  * das ist keine Abweichung, sondern der noch offene Umsetzungsstand aus §8.
  * {@link #PROJECT_STATUS_NOT_EDITABLE} kam mit KAN-17 dazu,
  * {@link #BLOCK_TYPE_UNKNOWN} und {@link #EMBED_PROVIDER_NOT_ALLOWED} mit
- * KAN-18. Alle drei standen wie die uebrigen schon vorher in §6.2; eine neue
- * Contract-Version braucht es dafuer nicht.
+ * KAN-18, {@link #PROJECT_INCOMPLETE} und
+ * {@link #PROJECT_STATUS_TRANSITION_INVALID} mit KAN-19. Alle fuenf standen wie
+ * die uebrigen schon vorher in §6.2; eine neue Contract-Version braucht es
+ * dafuer nicht.
  */
 public final class ErrorCodes {
 
@@ -112,6 +113,20 @@ public final class ErrorCodes {
 	public static final String EMBED_PROVIDER_NOT_ALLOWED = "EMBED_PROVIDER_NOT_ALLOWED";
 
 	/**
+	 * 400: beim Einreichen fehlt mindestens eines der Pflichtfelder aus §3.3
+	 * ({@code projectType}, {@code facultyId}, {@code studyProgramId},
+	 * {@code degree}, {@code categoryId}, {@code semester}).
+	 *
+	 * <p><strong>Warum die Pruefung erst hier greift und nicht im Entwurf:</strong>
+	 * ein {@code DRAFT} ist ein Arbeitszustand. Vollstaendigkeit schon beim ersten
+	 * Speichern zu verlangen hiesse, dass niemand mit dem Schreiben anfangen kann,
+	 * bevor alle Rahmendaten feststehen (§3.3). Die Meldung nennt deshalb die
+	 * fehlenden Felder namentlich: der Editor soll sie anzeigen koennen, ohne sie
+	 * selbst zu ermitteln.
+	 */
+	public static final String PROJECT_INCOMPLETE = "PROJECT_INCOMPLETE";
+
+	/**
 	 * 409: das Projekt wurde zwischen Laden und Speichern von jemand anderem
 	 * geaendert (Optimistic Locking, §6.4). Der Client laedt neu und meldet den
 	 * Konflikt, statt fremde Arbeit zu ueberschreiben.
@@ -124,12 +139,34 @@ public final class ErrorCodes {
 	 * {@code REVISION}.
 	 *
 	 * <p><strong>Nicht zu verwechseln mit</strong>
-	 * {@code PROJECT_STATUS_TRANSITION_INVALID} (§4.1, kommt mit KAN-19): dort
-	 * ist der <em>Uebergang</em> unzulaessig, etwa DRAFT direkt nach PUBLISHED.
-	 * Hier ist der Uebergang gar nicht gemeint, sondern die Bearbeitung im
-	 * aktuellen Zustand.
+	 * {@link #PROJECT_STATUS_TRANSITION_INVALID} (§4.1): dort ist der
+	 * <em>Uebergang</em> unzulaessig, etwa DRAFT direkt nach PUBLISHED. Hier ist
+	 * der Uebergang gar nicht gemeint, sondern die Bearbeitung im aktuellen
+	 * Zustand.
 	 */
 	public static final String PROJECT_STATUS_NOT_EDITABLE = "PROJECT_STATUS_NOT_EDITABLE";
+
+	/**
+	 * 409: der angeforderte Statusuebergang steht nicht in der Tabelle aus §4.1,
+	 * etwa {@code DRAFT} direkt nach {@code PUBLISHED} oder ein zweites
+	 * Genehmigen desselben Projekts.
+	 *
+	 * <p><strong>Nicht zu verwechseln mit</strong>
+	 * {@link #PROJECT_STATUS_NOT_EDITABLE}: dort geht es um eine Aenderung am
+	 * <em>Inhalt</em> in einem gesperrten Status, hier um den Wechsel des Status
+	 * selbst. Der Contract weist in §4.1 ausdruecklich darauf hin, die beiden beim
+	 * Implementieren nicht zu vertauschen; fuer das Frontend sind sie zwei
+	 * verschiedene Meldungen („bitte neu laden" gegenueber „das Projekt ist nicht
+	 * mehr bearbeitbar").
+	 *
+	 * <p><strong>Er ist auch die Antwort auf einen doppelten Klick.</strong> Weil
+	 * die Workflow-Endpoints ohne {@code version} arbeiten, ist der Vorzustand aus
+	 * §4.1 die Sperre gegen den zweiten, gleichlautenden Aufruf: der erste bewegt
+	 * das Projekt aus dem erwarteten Status heraus, der zweite findet ihn nicht
+	 * mehr vor.
+	 */
+	public static final String PROJECT_STATUS_TRANSITION_INVALID =
+			"PROJECT_STATUS_TRANSITION_INVALID";
 
 	private ErrorCodes() {
 		// Nur Konstanten.

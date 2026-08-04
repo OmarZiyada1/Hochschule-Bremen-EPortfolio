@@ -35,8 +35,9 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Die Projekt-Endpoints aus API-Contract §6.1, ohne Bloecke (KAN-18) und ohne
- * die Statusuebergaenge (KAN-19).
+ * Die Projekt-Endpoints aus API-Contract §6.1: Liste, Detail und die Pflege der
+ * Metadaten. Der Inhalt liegt im {@link BlockController} (KAN-18), die
+ * Statusuebergaenge im {@link ProjectWorkflowController} (KAN-19).
  *
  * <p><strong>Zwei Zugriffsarten in einem Controller.</strong> Die beiden
  * GET-Pfade sind in {@code SecurityConfig} als PUBLIC-GET freigegeben; die
