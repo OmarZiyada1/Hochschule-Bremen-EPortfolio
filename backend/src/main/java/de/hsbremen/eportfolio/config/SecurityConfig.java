@@ -138,6 +138,14 @@ public class SecurityConfig {
 					// Zeile "Reaktion geben" fuer PUBLIC ein Kreuz traegt. Eine
 					// Rollenregel waere hier zu grob, weil das Recht am
 					// Projektstatus haengt (§3.10) und nicht an der Rolle.
+					// /api/portfolios/* stand hier schon vorab und wird mit
+					// KAN-22 tatsaechlich bedient: das oeffentliche Profil ist
+					// nach §6.1 PUBLIC. Die beiden Pfade /api/portfolio/me
+					// (Einzahl) sind davon nicht erfasst, weder als GET noch
+					// als PUT, und fallen unter authenticated(). Das ist so
+					// gewollt: "me" ist ohne Identitaet nicht aufloesbar, und
+					// §5 gibt das eigene Portfolio nur seinem Besitzer frei.
+					// Wer das darf, entscheidet der ProjectPermissionService.
 					.requestMatchers(HttpMethod.GET,
 							"/api/projects", "/api/projects/*",
 							"/api/projects/*/blocks",

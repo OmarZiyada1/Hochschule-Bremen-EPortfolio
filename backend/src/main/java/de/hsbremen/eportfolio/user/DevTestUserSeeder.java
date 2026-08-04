@@ -2,6 +2,7 @@ package de.hsbremen.eportfolio.user;
 
 import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
+import de.hsbremen.eportfolio.portfolio.PortfolioService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,6 +38,14 @@ import org.springframework.transaction.annotation.Transactional;
  * garantiert nicht aufloesbar) und ein sprechendes {@code dev-}-Praefix. Sie
  * sind damit auf einen Blick als Testdaten erkennbar und koennen niemals mit
  * echten HSB-Adressen kollidieren.
+ *
+ * <p><strong>Jedes Konto bekommt sein Portfolio</strong> (KAN-22). §3.2.1 zaehlt
+ * den Dev-Seeder als einen der drei Anlagewege auf, und ohne ihn liefen die
+ * Portfolio-Endpoints in der Entwicklungsumgebung gegen eine leere Tabelle. Die
+ * Anlage laeuft ueber {@link PortfolioService#createFor(User)}, also ueber
+ * dieselbe idempotente Methode wie Registrierung (KAN-26) und Kontoanlage durch
+ * die Administration (KAN-25); eine zweite Anlagestelle entsteht hier
+ * ausdruecklich nicht.
  */
 @Component
 @Profile("dev")
@@ -49,6 +58,13 @@ public class DevTestUserSeeder implements ApplicationRunner {
 	private final PasswordEncoder passwordEncoder;
 
 	/**
+	 * Der dritte Anlageweg aus §3.2.1. Das Portfolio entsteht zusammen mit dem
+	 * Konto und nicht erst beim ersten Schreibzugriff; siehe
+	 * {@link PortfolioService#createFor(User)}.
+	 */
+	private final PortfolioService portfolioService;
+
+	/**
 	 * Passwort der Testkonten. Kommt aus der nicht eingecheckten {@code .env};
 	 * ohne den Wert legt der Seeder nichts an, statt auf ein fest verdrahtetes
 	 * Standardpasswort zurueckzufallen.
@@ -56,9 +72,11 @@ public class DevTestUserSeeder implements ApplicationRunner {
 	private final String testPassword;
 
 	public DevTestUserSeeder(UserRepository userRepository, PasswordEncoder passwordEncoder,
+			PortfolioService portfolioService,
 			@Value("${DEV_TEST_PASSWORD:}") String testPassword) {
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
+		this.portfolioService = portfolioService;
 		this.testPassword = testPassword;
 	}
 
@@ -79,8 +97,21 @@ public class DevTestUserSeeder implements ApplicationRunner {
 				"Dev", "Admin", Role.ADMIN);
 	}
 
+	/**
+	 * Legt das Konto an, falls es fehlt, und stellt in jedem Fall sicher, dass es
+	 * ein Portfolio hat (§3.2.1).
+	 *
+	 * <p>Die Portfolio-Anlage steht bewusst <em>ausserhalb</em> der Abfrage auf
+	 * ein vorhandenes Konto: die drei Testkonten existieren in jeder
+	 * Entwicklungsdatenbank bereits seit KAN-5, ihre Portfolio-Zeile aber erst
+	 * seit KAN-22. Stuende der Aufruf im Anlagezweig, bekaeme genau die
+	 * vorhandene Datenbank nie eines. {@code createFor} ist idempotent, ein
+	 * wiederholter Start legt also keine zweite Zeile an.
+	 */
 	private void createIfMissing(String email, String hsbEmail, String firstName, String lastName, Role role) {
-		if (userRepository.findByEmail(email).isPresent()) {
+		User existing = userRepository.findByEmail(email).orElse(null);
+		if (existing != null) {
+			portfolioService.createFor(existing);
 			return;
 		}
 
@@ -100,7 +131,9 @@ public class DevTestUserSeeder implements ApplicationRunner {
 		// Nur ACTIVE kann sich anmelden (§2.9).
 		user.setStatus(UserStatus.ACTIVE);
 
-		userRepository.save(user);
+		User saved = userRepository.save(user);
+		// Portfolio im selben Vorgang wie das Konto (§3.2.1).
+		portfolioService.createFor(saved);
 		LOG.info("Dev-Testnutzer angelegt: {} ({})", email, role);
 	}
 }

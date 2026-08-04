@@ -52,6 +52,17 @@ public final class TestUser {
 		return user;
 	}
 
+	/**
+	 * Wie {@link #activeWithoutId}, aber mit frei waehlbarem Status: fuer Tests,
+	 * die ein nicht aktives Konto tatsaechlich speichern muessen, etwa das
+	 * oeffentliche Profil einer deaktivierten Person (§2.9).
+	 */
+	public static User withoutId(Role role, UserStatus status, String passwordHash) {
+		User user = activeWithoutId(role, passwordHash);
+		user.setStatus(status);
+		return user;
+	}
+
 	private TestUser() {
 	}
 }

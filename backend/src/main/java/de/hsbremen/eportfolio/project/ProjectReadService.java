@@ -2,6 +2,7 @@ package de.hsbremen.eportfolio.project;
 
 import de.hsbremen.eportfolio.auth.AuthenticatedUser;
 import de.hsbremen.eportfolio.common.dto.PageResponse;
+import de.hsbremen.eportfolio.common.enums.ProjectStatus;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
 import de.hsbremen.eportfolio.common.error.ErrorCodes;
 import de.hsbremen.eportfolio.common.error.ResourceNotFoundException;
@@ -367,6 +368,36 @@ public class ProjectReadService {
 		return statusHistoryRepository.findByProjectIdOrderByTimestampAsc(projectId).stream()
 				.map(StatusHistoryResponse::from)
 				.toList();
+	}
+
+	// ------------------------------------------------------------------
+	// Kacheln fuer das oeffentliche Profil (§3.2, KAN-22)
+	// ------------------------------------------------------------------
+
+	/**
+	 * Die veroeffentlichten Projekte einer Person als Kacheln, fuer
+	 * {@code GET /api/portfolios/{userId}} (§3.2).
+	 *
+	 * <p><strong>Warum diese Methode hier steht und nicht im Portfolio-Modul:</strong>
+	 * die Abbildung auf {@link ProjectCardResponse} holt Tags und Reaktionszahlen
+	 * fuer die ganze Liste in je einer Abfrage nach. Baute das Portfolio seine
+	 * Kacheln selbst, entstuende diese Sammelabfrage ein zweites Mal oder, was
+	 * wahrscheinlicher ist, gar nicht.
+	 *
+	 * <p><strong>Ohne Rechtepruefung und ohne angemeldete Person</strong>, anders
+	 * als {@link #list} und {@link #detail}. Die Abfrage liefert ausschliesslich
+	 * {@code PUBLISHED}, und veroeffentlichte Projekte darf nach §5 jede:r lesen,
+	 * auch ohne Anmeldung. Eine Sichtbarkeitsschranke haette hier nichts zu
+	 * entscheiden, koennte den Umfang also auch nicht versehentlich erweitern.
+	 *
+	 * <p><strong>Ohne Paginierung</strong>, weil §6.1 fuer das Profil eine
+	 * schlichte Liste fuehrt und kein Seitenformat nach §6.6.
+	 *
+	 * @param authorId ID der Person, deren Profil abgerufen wird
+	 */
+	public List<ProjectCardResponse> publishedCardsOfAuthor(UUID authorId) {
+		return toCards(projectRepository.findByAuthorIdAndStatusOrderByPublishedAtDescIdAsc(
+				authorId, ProjectStatus.PUBLISHED));
 	}
 
 	// ------------------------------------------------------------------
