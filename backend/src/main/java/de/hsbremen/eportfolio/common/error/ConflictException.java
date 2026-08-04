@@ -58,6 +58,32 @@ public class ConflictException extends RuntimeException {
 						+ "Aenderungen sind nur in DRAFT und REVISION moeglich.");
 	}
 
+	/**
+	 * Der angeforderte Statusuebergang steht nicht in der Tabelle aus §4.1.
+	 *
+	 * <p>Die Meldung nennt den tatsaechlichen Status und die zulaessigen
+	 * Ausgangsstatus. Beides weiss der Aufrufer in dem Moment gerade nicht, sonst
+	 * haette er den Aufruf nicht abgeschickt: der haeufigste Weg hierher ist ein
+	 * zweiter Klick auf denselben Knopf oder eine Ansicht, die den Status noch
+	 * veraltet anzeigt.
+	 *
+	 * <p>Die Parameter sind Zeichenketten und nicht die Enums aus dem
+	 * Projekt-Paket: dieses Paket haelt die feature-uebergreifende
+	 * Fehlerbehandlung und kennt die Fachpakete nicht.
+	 *
+	 * @param actual         Status, in dem das Projekt tatsaechlich steht
+	 * @param transition     Name des angeforderten Uebergangs (§4.1)
+	 * @param allowedSources die dafuer zulaessigen Ausgangsstatus, lesbar
+	 *                       aufgezaehlt
+	 */
+	public static ConflictException statusTransitionInvalid(String actual, String transition,
+			String allowedSources) {
+
+		return new ConflictException(ErrorCodes.PROJECT_STATUS_TRANSITION_INVALID,
+				"Dieser Uebergang ist aus dem Status " + actual + " nicht vorgesehen (§4.1). "
+						+ transition + " ist nur aus " + allowedSources + " heraus moeglich.");
+	}
+
 	public String getErrorCode() {
 		return errorCode;
 	}

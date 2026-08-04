@@ -287,22 +287,67 @@ public class ProjectPermissionService {
 	// ------------------------------------------------------------------
 
 	/**
-	 * „Einreichen": DRAFT/REVISION nach SUBMITTED durch die Autor:in.
+	 * Wer einen Uebergang <em>grundsaetzlich</em> ausloesen darf, ohne den
+	 * aktuellen Status zu betrachten: die Rollen- und Beziehungsspalte aus §5
+	 * einschliesslich Vier-Augen-Prinzip.
 	 *
-	 * <p>ADMIN ist in der Matrix ausdruecklich mit ✗ eingetragen, auch wenn er
-	 * das Projekt selbst angelegt haette.
+	 * <p><strong>Warum die Frage getrennt von der Statusfrage beantwortet
+	 * wird.</strong> Ein abgewiesener Uebergang hat zwei verschiedene Antworten:
+	 * fehlt das Recht, ist es 403 {@code NO_PERMISSION}, passt nur der Status
+	 * nicht, ist es 409 {@code PROJECT_STATUS_TRANSITION_INVALID} (§4.1, §6.3.1).
+	 * Waeren beide Gruende in einem {@code boolean} vermischt, koennte der
+	 * aufrufende Dienst sie nicht auseinanderhalten. Die Reihenfolge ist dann
+	 * bewusst „Recht vor Status", wie schon bei
+	 * {@code ProjectWriteService.requireEditable}: sonst verraet ein 409 einer
+	 * unbeteiligten Person den Status eines fremden Entwurfs.
+	 *
+	 * <p>Zusammen mit {@link #mayPerform} bilden diese beiden Methoden die
+	 * Tabelle aus §4.1 vollstaendig ab; die Statusseite steht in
+	 * {@link ProjectTransition}.
 	 */
+	public boolean mayTrigger(AuthenticatedUser user, Project project,
+			ProjectTransition transition) {
+
+		if (!isLoggedIn(user)) {
+			return false;
+		}
+		return switch (transition) {
+			// „Projekt einreichen": STUDENT (✓), EDITOR (✓), ADMIN ✗. §4.1 und
+			// §6.1 nennen beide ausdruecklich die Autor:in und nicht die
+			// Projektseite: Mitglieder duerfen mitschreiben, aber nicht
+			// einreichen. Der Haken bei ADMIN fehlt in der Matrix selbst dann,
+			// wenn er das Projekt angelegt hat.
+			case SUBMIT -> !user.hasRole(Role.ADMIN) && isAuthor(user, project);
+
+			// „Projekt genehmigen" und „veroeffentlichen": EDITOR ✓¹, ADMIN ✓⁵.
+			case APPROVE, PUBLISH -> mayDecideEditorially(user, project);
+
+			// „Zur Ueberarbeitung zurueckgeben": EDITOR ✓, ADMIN ✓, hier ohne
+			// Fussnote ¹. Das Vier-Augen-Prinzip greift also nicht, und das ist
+			// plausibel: eine Ruecknahme ist keine Freigabe, niemand verschafft
+			// sich damit einen Vorteil.
+			case REQUEST_REVISION -> user.hasRole(Role.EDITOR, Role.ADMIN);
+		};
+	}
+
+	/**
+	 * Die vollstaendige Pruefung eines Uebergangs: darf diese Person, und laesst
+	 * der aktuelle Status es zu (§4.1)?
+	 *
+	 * <p>Fuer Aufrufer, die nur ein Ja oder Nein brauchen, etwa eine Oberflaeche,
+	 * die einen Knopf ausgraut. Der Workflow-Dienst nimmt stattdessen die beiden
+	 * Einzelfragen, weil er die Antworten unterscheiden muss.
+	 */
+	public boolean mayPerform(AuthenticatedUser user, Project project,
+			ProjectTransition transition) {
+
+		return mayTrigger(user, project, transition)
+				&& transition.isAllowedFrom(project.getStatus());
+	}
+
+	/** „Einreichen": DRAFT/REVISION nach SUBMITTED durch die Autor:in. */
 	public boolean maySubmit(AuthenticatedUser user, Project project) {
-		if (!isLoggedIn(user) || user.hasRole(Role.ADMIN)) {
-			return false;
-		}
-		if (project.getStatus() != ProjectStatus.DRAFT
-				&& project.getStatus() != ProjectStatus.REVISION) {
-			return false;
-		}
-		// §4.1 und §6.1 nennen beide ausdruecklich die Autor:in, nicht die
-		// Projektseite. Mitglieder duerfen mitschreiben, aber nicht einreichen.
-		return isAuthor(user, project);
+		return mayPerform(user, project, ProjectTransition.SUBMIT);
 	}
 
 	/**
@@ -310,7 +355,7 @@ public class ProjectPermissionService {
 	 * ADMIN.
 	 */
 	public boolean mayApprove(AuthenticatedUser user, Project project) {
-		return mayDecideEditorially(user, project, ProjectStatus.SUBMITTED);
+		return mayPerform(user, project, ProjectTransition.APPROVE);
 	}
 
 	/**
@@ -318,51 +363,35 @@ public class ProjectPermissionService {
 	 * oder ADMIN.
 	 */
 	public boolean mayPublish(AuthenticatedUser user, Project project) {
-		return mayDecideEditorially(user, project, ProjectStatus.APPROVED);
+		return mayPerform(user, project, ProjectTransition.PUBLISH);
 	}
 
 	/**
 	 * „Zur Ueberarbeitung zurueckgeben": SUBMITTED/APPROVED/PUBLISHED nach
 	 * REVISION durch EDITOR oder ADMIN.
-	 *
-	 * <p>Hier steht in der Matrix kein Fussnotenzeichen ¹, das
-	 * Vier-Augen-Prinzip greift also nicht. Das ist plausibel: eine Ruecknahme
-	 * ist keine Freigabe und niemand verschafft sich damit einen Vorteil.
 	 */
 	public boolean mayRequestRevision(AuthenticatedUser user, Project project) {
-		if (!isLoggedIn(user) || !user.hasRole(Role.EDITOR, Role.ADMIN)) {
-			return false;
-		}
-		return project.getStatus() == ProjectStatus.SUBMITTED
-				|| project.getStatus() == ProjectStatus.APPROVED
-				|| project.getStatus() == ProjectStatus.PUBLISHED;
+		return mayPerform(user, project, ProjectTransition.REQUEST_REVISION);
 	}
 
 	/**
-	 * Gemeinsame Pruefung fuer Genehmigen und Veroeffentlichen inklusive
+	 * Gemeinsame Rechtepruefung fuer Genehmigen und Veroeffentlichen inklusive
 	 * Vier-Augen-Prinzip.
 	 *
 	 * <p><strong>Zur Reichweite des Vier-Augen-Prinzips:</strong> Fussnote ¹
 	 * der Matrix haengt ausschliesslich an den EDITOR-Zellen; die ADMIN-Spalte
 	 * traegt einen unmarkierten Haken. Deshalb greift die Sperre hier nur fuer
 	 * EDITOR. Ob ein Admin sein eigenes Projekt freigeben koennen soll, ist mit
-	 * den Pruefern zu klaeren (siehe Rueckmeldung zu KAN-5).
+	 * den Pruefern zu klaeren (§7, offener Punkt 7).
 	 */
-	private boolean mayDecideEditorially(AuthenticatedUser user, Project project,
-			ProjectStatus expectedStatus) {
-		if (!isLoggedIn(user) || project.getStatus() != expectedStatus) {
-			return false;
-		}
+	private boolean mayDecideEditorially(AuthenticatedUser user, Project project) {
 		if (user.hasRole(Role.ADMIN)) {
 			return true;
 		}
 		if (!user.hasRole(Role.EDITOR)) {
 			return false;
 		}
-		if (properties.fourEyesPrinciple() && isAuthor(user, project)) {
-			return false;
-		}
-		return true;
+		return !properties.fourEyesPrinciple() || !isAuthor(user, project);
 	}
 
 	// ------------------------------------------------------------------

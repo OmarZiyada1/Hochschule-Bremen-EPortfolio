@@ -113,6 +113,13 @@ public class SecurityConfig {
 					// hasRole("ADMIN") hier: sonst kaeme der 403 vor dem
 					// Laden des Projekts und eine unbekannte ID ergaebe 403
 					// statt 404 (§6.3.1).
+					// Dasselbe gilt fuer die vier Workflow-Pfade aus KAN-19
+					// (POST /api/projects/*/submit, /approve, /publish und
+					// /request-revision): kein Muster hier erfasst sie, sie
+					// fallen also unter authenticated() und ergeben ohne Token
+					// 401. Ein hasRole("EDITOR") fuer /approve und /publish
+					// waere hier ohnehin zu grob, weil das Recht am
+					// Projektstatus und an der Autorschaft haengt (§4.1).
 					.requestMatchers(HttpMethod.GET,
 							"/api/projects", "/api/projects/*",
 							"/api/projects/*/blocks",
