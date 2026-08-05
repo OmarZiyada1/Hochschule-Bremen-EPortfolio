@@ -13,6 +13,8 @@ import de.hsbremen.eportfolio.auth.dto.LoginRequest;
 import de.hsbremen.eportfolio.auth.dto.LoginResponse;
 import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
+import de.hsbremen.eportfolio.config.JwtProperties;
+import de.hsbremen.eportfolio.config.LoginAttemptProperties;
 import de.hsbremen.eportfolio.user.TestUser;
 import de.hsbremen.eportfolio.user.User;
 import de.hsbremen.eportfolio.user.UserRepository;

@@ -71,6 +71,30 @@ app:
     four-eyes-principle: true
     admin-may-edit-foreign-content: false
 
+  # Austauschbare Fremddienste nach API-Contract §6.8. Hier steht nur, was
+  # kein Geheimnis ist; Zugangsdaten kommen ausschliesslich aus der Umgebung
+  # und ausschliesslich in application-prod.yml zusammen.
+  #
+  # app.storage.provider und app.mail.provider stehen bewusst NICHT hier,
+  # sondern je Profil (dev: local/log, prod: azure/smtp). Ein Default an
+  # dieser Stelle wuerde ein Profil, das die Auswahl vergisst, still in den
+  # Entwicklungsadapter fallen lassen: ein Produktivsystem, das Mails ins Log
+  # schreibt, faellt erst auf, wenn sich niemand mehr registrieren kann.
+  # Ohne die Property scheitert der Kontext, und genau so ist es gewollt.
+  mail:
+    # Absender, Anzeigename und Basis-URL sind oeffentliche Angaben und
+    # duerfen deshalb Vorgabewerte haben. Im Profil prod werden alle drei aus
+    # der Umgebung ueberschrieben.
+    #
+    # .invalid ist nach RFC 2606 garantiert nicht aufloesbar. Damit kann eine
+    # Entwicklungsumgebung, in der versehentlich der SMTP-Adapter laeuft,
+    # niemandem eine Mail zustellen.
+    from-address: noreply@eportfolio.invalid
+    from-name: E-Portfolio Hochschule Bremen
+    # Ziel der Links in Verifizierungs- und Ruecksetzmails: das Frontend,
+    # nicht das Backend.
+    base-url: http://localhost:5173
+
 management:
   endpoints:
     web:

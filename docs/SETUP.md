@@ -88,8 +88,19 @@ Gelesen wird die Datei von zwei Stellen:
 | `POSTGRES_USER`         | ja      | beide            | Compose bricht ab mit „POSTGRES_USER fehlt …" |
 | `POSTGRES_PASSWORD`     | ja      | beide            | Compose bricht ab mit „POSTGRES_PASSWORD fehlt …" |
 | `JWT_SECRET`            | **ja**  | `application.yml` → `app.security.jwt.secret` | **Die Anwendung startet nicht.** Es gibt bewusst keinen Default-Wert im Code. |
-| `CORS_ERLAUBTE_ORIGINS` | nein    | `application.yml`, Default `http://localhost:5173` | Default greift |
-| `DEV_TEST_PASSWORT`     | nein, aber praktisch nötig | `DevTestnutzerSeeder` | Die App startet, legt aber **keine** Testnutzer an und schreibt eine Warnung ins Log. Ohne Testnutzer kann man sich nirgends anmelden. |
+| `CORS_ALLOWED_ORIGINS`  | im Profil `dev` nein, im Profil `prod` ja | `application.yml`, Default `http://localhost:5173`; `application-prod.yml` ohne Default | im `dev` greift der Default, im `prod` startet die Anwendung nicht |
+| `DEV_TEST_PASSWORD`     | nein, aber praktisch nötig | `DevTestUserSeeder` | Die App startet, legt aber **keine** Testnutzer an und schreibt eine Warnung ins Log. Ohne Testnutzer kann man sich nirgends anmelden. |
+
+Seit KAN-50 kommen vier weitere Variablen dazu. Sie gehören **ausschließlich
+zum Profil `prod`**; zum Entwickeln bleiben sie leer, denn dort liegen Dateien
+im Dateisystem und Mails in der Serverkonsole (API-Contract §6.8):
+
+| Variable | Wird gelesen von | Wenn sie im Profil `prod` fehlt |
+|----------|------------------|----------------------------------|
+| `AZURE_STORAGE_CONTAINER` | `app.storage.container` | Start bricht ab: `app.storage.provider=azure, aber diese Pflichtwerte fehlen: app.storage.container (AZURE_STORAGE_CONTAINER)` |
+| `AZURE_STORAGE_CONNECTION_STRING` | `app.storage.connection-string` | wie oben, mit dem anderen Schlüssel. Der Wert ist ein Geheimnis (er enthält den Kontoschlüssel) |
+| `MAIL_FROM_ADDRESS` | `app.mail.from-address` | Start bricht ab |
+| `APP_BASE_URL` | `app.mail.base-url` | Start bricht ab |
 
 ### JWT-Secret erzeugen
 
@@ -145,8 +156,14 @@ cd backend
 Zum Profil: `application.yml` setzt `spring.profiles.default: dev`. Ohne
 gesetztes `SPRING_PROFILES_ACTIVE` läuft die Anwendung also im Profil `dev` —
 das ist der Normalfall für lokale Entwicklung und die Voraussetzung dafür, dass
-die `.env` geladen wird und der Testnutzer-Seeder greift. Ein anderes Profil
-(`prod`, `staging`) existiert bisher nicht.
+die `.env` geladen wird und der Testnutzer-Seeder greift.
+
+Seit KAN-50 gibt es daneben `application-prod.yml`. Es wird zum Entwickeln nicht
+gebraucht und ist bewusst unbequem: es liest **keine** `.env`, sondern
+ausschließlich die Umgebung des Prozesses, und jeder Wert darin ist Pflicht.
+Wer es trotzdem lokal ausprobieren will, setzt alle Variablen aus beiden
+Tabellen in Abschnitt 3 als echte Umgebungsvariablen und startet mit
+`SPRING_PROFILES_ACTIVE=prod`. Ein Profil `staging` existiert nicht.
 
 Der Port ist der Spring-Boot-Default **8080**; in keiner `application*.yml`
 steht ein `server.port`.
@@ -373,6 +390,22 @@ dieselbe.
 Vollständige Meldung: `JWT_SECRET ist zu kurz: HS512 braucht mindestens 64 Byte
 Schluesselmaterial. Neuen Wert erzeugen mit: openssl rand -base64 64`. Genau das
 tun und den kompletten Wert einsetzen.
+
+### `APPLICATION FAILED TO START`: „aber diese Pflichtwerte fehlen: app.storage…"
+
+Nur im Profil `prod`. Vollständige Meldung: `app.storage.provider=azure, aber
+diese Pflichtwerte fehlen: app.storage.container (AZURE_STORAGE_CONTAINER). Sie
+kommen aus der Umgebung, Vorlage: .env.example`. Genannt wird jeder fehlende
+Schlüssel mitsamt der Umgebungsvariablen, aus der er kommt.
+
+Zwei Ursachen sind gleich häufig: die Variable ist gar nicht gesetzt, oder sie
+ist gesetzt, aber der Prozess sieht sie nicht (etwa weil sie in der `.env`
+steht, die im Profil `prod` bewusst nicht geladen wird). In beiden Fällen
+enthält der Wert nach der Bindung den nicht aufgelösten Platzhalter, und genau
+darauf schlägt die Prüfung an.
+
+Wer das Profil nicht braucht: `SPRING_PROFILES_ACTIVE` nicht setzen, dann läuft
+`dev` und keine dieser Variablen wird gebraucht.
 
 ### Port 8080 ist belegt
 

@@ -1,4 +1,4 @@
-package de.hsbremen.eportfolio.project;
+package de.hsbremen.eportfolio.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

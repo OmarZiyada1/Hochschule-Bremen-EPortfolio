@@ -15,6 +15,8 @@ import de.hsbremen.eportfolio.common.enums.UserStatus;
 import de.hsbremen.eportfolio.common.error.ApiErrorWriter;
 import de.hsbremen.eportfolio.common.error.GlobalExceptionHandler;
 import de.hsbremen.eportfolio.config.CorsProperties;
+import de.hsbremen.eportfolio.config.JwtProperties;
+import de.hsbremen.eportfolio.config.LoginAttemptProperties;
 import de.hsbremen.eportfolio.config.SecurityConfig;
 import de.hsbremen.eportfolio.user.TestUser;
 import de.hsbremen.eportfolio.user.User;

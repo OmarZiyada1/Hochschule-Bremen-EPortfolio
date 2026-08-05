@@ -7,6 +7,10 @@
 # Build-Artefakte
 target/
 
+# Ablage des Local-Speicheradapters (app.storage.local-directory, KAN-50).
+# Enthaelt hochgeladene Dateien der Entwicklungsumgebung.
+var/
+
 # IDE
 .idea/
 *.iml

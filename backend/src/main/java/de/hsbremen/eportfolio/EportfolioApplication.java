@@ -8,8 +8,10 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
  * Einstiegspunkt der Anwendung.
  *
  * <p>{@code @ConfigurationPropertiesScan} registriert die Records mit
- * {@code @ConfigurationProperties} (JWT, CORS, Berechtigung), damit sie ohne
- * zusaetzliches {@code @EnableConfigurationProperties} injizierbar sind.
+ * {@code @ConfigurationProperties} aus dem Paket
+ * {@code de.hsbremen.eportfolio.config} (JWT, CORS, Anmeldeversuche,
+ * Berechtigung, Speicher, Mail), damit sie ohne zusaetzliches
+ * {@code @EnableConfigurationProperties} injizierbar sind.
  */
 @SpringBootApplication
 @ConfigurationPropertiesScan

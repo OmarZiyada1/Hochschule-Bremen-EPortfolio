@@ -1,4 +1,4 @@
-package de.hsbremen.eportfolio.auth;
+package de.hsbremen.eportfolio.config;
 
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
