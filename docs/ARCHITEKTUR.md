@@ -1,7 +1,8 @@
 # Architektur
 
 Beschreibt den Stand von Branch `main` einschließlich KAN-16
-(Projekt-Lese-Endpoints) und KAN-49 (englische Bezeichner). Basis-Paket ist
+(Projekt-Lese-Endpoints), KAN-49 (englische Bezeichner) und KAN-50
+(Konfiguration und Fremddienste, Abschnitt 9). Basis-Paket ist
 `de.hsbremen.eportfolio`, Gruppen-ID `de.hsbremen`, Artefakt `eportfolio`.
 
 Seit KAN-49 sind alle Bezeichner englisch nach `docs/NAMENSSCHEMA.md`: Klassen,
@@ -49,16 +50,16 @@ Was in welchem Paket steckt:
 
 | Paket        | Inhalt (Stand `main`) |
 |--------------|------------------------|
-| `auth`       | `AuthController`, `AuthService`, `JwtService`, `JwtAuthenticationFilter`, `LoginAttemptService`, `DatabaseUserDetailsService`, `AuthenticatedUser`, `RestAuthenticationEntryPoint`, `RestAccessDeniedHandler`, Properties-Records (`JwtProperties`, `LoginAttemptProperties`), `dto/{LoginRequest, LoginResponse, UserResponse}` |
+| `auth`       | `AuthController`, `AuthService`, `JwtService`, `JwtAuthenticationFilter`, `LoginAttemptService`, `DatabaseUserDetailsService`, `AuthenticatedUser`, `RestAuthenticationEntryPoint`, `RestAccessDeniedHandler`, `dto/{LoginRequest, LoginResponse, UserResponse}`. Die Properties-Records liegen seit KAN-50 in `config` |
 | `comment`    | `Comment`, `CommentRepository` |
 | `common.domain` | `BaseEntity`, `AuditableEntity` |
 | `common.dto`    | `PageResponse` (Seitenformat aus Contract §6.6) |
 | `common.enums`  | `BlockType`, `CommentStatus`, `CommentType`, `Degree`, `NominationStatus`, `ProjectStatus`, `ProjectType`, `Role`, `UserStatus` |
 | `common.error`  | `ApiError`, `ApiErrorWriter`, `ErrorCodes`, `GlobalExceptionHandler`, `ValidationException`, `ResourceNotFoundException` |
-| `config`     | `SecurityConfig`, `JpaConfig`, `OpenApiConfig`, `CorsProperties` |
+| `config`     | `SecurityConfig`, `JpaConfig`, `OpenApiConfig`, `ConfigurationStartupLogger`, `ConfigurationValues` + **alle** Properties-Records (`CorsProperties`, `JwtProperties`, `LoginAttemptProperties`, `PermissionProperties`, `StorageProperties`, `MailProperties`) und die Auswahl-Enums `StorageProvider`, `MailProvider` |
 | `masterdata` | `Category`, `Faculty`, `Module`, `StudyProgram` + je ein Repository, `MasterDataController`, `MasterDataService`, `DevMasterDataSeeder`, `dto/{CategoryResponse, FacultyResponse, StudyProgramResponse, ModuleResponse}` |
 | `portfolio`  | `Portfolio`, `PortfolioRepository` |
-| `project`    | `Project`, `Block`, `ProjectMember`, `ProjectStatusHistory` + je ein Repository, `BlockValidationService`, `ProjectPermissionService`, `PermissionProperties`, `ProjectController`, `ProjectReadService`, `ProjectSpecifications`, `dto/{ProjectCardResponse, ProjectDetailResponse, ProjectFilterRequest, PersonResponse, MemberResponse, ReferenceResponse, BlockResponse, StatusHistoryResponse}` |
+| `project`    | `Project`, `Block`, `ProjectMember`, `ProjectStatusHistory` + je ein Repository, `BlockValidationService`, `ProjectPermissionService`, `ProjectController`, `ProjectReadService`, `ProjectSpecifications`, `dto/{ProjectCardResponse, ProjectDetailResponse, ProjectFilterRequest, PersonResponse, MemberResponse, ReferenceResponse, BlockResponse, StatusHistoryResponse}`. `PermissionProperties` liegt seit KAN-50 in `config` |
 | `reaction`   | `Reaction`, `ReactionRepository`, `ReactionCount` (Abfrageergebnis für die Kachelzählung) |
 | `top10`      | `Top10Entry`, `Top10Nomination` + je ein Repository |
 | `user`       | `User`, `UserRepository`, `DevTestUserSeeder` |
@@ -241,7 +242,8 @@ sich. Als Client-IP wird bewusst `request.getRemoteAddr()` genommen, ohne
 | Neuer Listenfilter | Baustein als `Specification<T>` neben die Entity, z. B. `project/ProjectSpecifications`; die Sichtbarkeitsschranke aus Contract §5 bleibt Startwert der UND-Verknüpfung, damit kein Filter sie aufweichen kann |
 | Neues DTO | `…/<feature>/dto/`, z. B. `…/project/dto/FooResponse.java`; Records mit Bean-Validation-Annotationen wie in `auth/dto/LoginRequest`, Abbildung aus der Entity über eine statische `from(…)`-Methode wie in `masterdata/dto/StudyProgramResponse`. Suffixe `…Request` und `…Response` |
 | Neuer Fehlercode | Konstante in `common/error/ErrorCodes.java` **und** Zeile in Contract §6.2 (Contract-Version erhöhen, Skill `api-contract-sync`); ein Code an nur einem der beiden Orte ist ein Befund. Siehe Abschnitt 8 |
-| Neue Konfigurationswerte | `@ConfigurationProperties`-Record neben das Feature (Vorbild `auth/JwtProperties`), Werte in `application.yml`; Schlüssel englisch und `kebab-case`, Registrierung passiert automatisch über `@ConfigurationPropertiesScan` |
+| Neue Konfigurationswerte | `@ConfigurationProperties`-Record in `config/` (Vorbild `config/JwtProperties`), **nie** neben das Feature; Werte in `application.yml`, profilabhängige Werte in `application-<profil>.yml`. Schlüssel englisch und `kebab-case`, Registrierung passiert automatisch über `@ConfigurationPropertiesScan`. Kommt der Wert aus der Umgebung: `ConfigurationValues.isMissing` gegen den nicht aufgelösten Platzhalter prüfen (siehe Abschnitt 9) |
+| Neues Geheimnis | Platzhalter **ohne Default** in `application-prod.yml` (`${AZURE_STORAGE_CONNECTION_STRING}`), Zeile in `.env.example`, niemals ein Wert in einer eingecheckten Datei. Beides prüfen `NoSecretsInConfigurationTest` und `ConfigurationPlaceholderTest` |
 | Neuer Test | `backend/src/test/java/de/hsbremen/eportfolio/<feature>/FooTest.java`, gleiche Paketstruktur wie der Produktivcode; Testdaten-Helfer wie `TestUser`/`TestProject`/`TestMasterData` daneben |
 | Neuer Bezeichner überhaupt | erst `docs/NAMENSSCHEMA.md` nachschlagen; steht er dort nicht, nach den Grundregeln aus §1 bilden und die Tabelle ergänzen |
 
@@ -312,3 +314,89 @@ Dann ist zu tun:
    Entity) mit abdecken.
 
 Festgehalten in KAN-15, wo der Handler entstanden ist.
+
+---
+
+## 9. Konfiguration und austauschbare Fremddienste
+
+Stand KAN-50, Contract §6.8. Dieses Kapitel beschreibt, wo Konfiguration steht
+und warum sie so geschnitten ist. Die Adapter selbst gibt es noch nicht: die
+Interfaces `FileStorage` und `MailSender` entstehen mit KAN-23 beziehungsweise
+KAN-51, weil ein Interface ohne Aufrufer nicht prüfbar wäre.
+
+### Alle Properties-Records liegen in `config`
+
+Vorher lagen sie neben dem Feature, das sie liest (`auth/JwtProperties`,
+`project/PermissionProperties`). Mit den Fremddiensten wäre daraus eine halbe
+Regel geworden, denn Speicher und Mailversand gehören keinem Feature: gelesen
+werden sie später von KAN-23 und KAN-51, konfiguriert aber an einer Stelle.
+Deshalb gilt seit KAN-50 ohne Ausnahme: **jeder
+`@ConfigurationProperties`-Record liegt in `config`.** Die fachlichen Enums aus
+Contract §2 bleiben davon unberührt in `common/enums`; sie beschreiben Daten,
+nicht die Umgebung.
+
+### Die drei Profildateien
+
+| Datei | Inhalt |
+|-------|--------|
+| `application.yml` | alles Profilunabhängige und nichts Geheimes. Die Auswahl-Properties `app.storage.provider` und `app.mail.provider` stehen hier **nicht**: ein Default würde ein Profil, das die Auswahl vergisst, still in den Entwicklungsadapter fallen lassen. |
+| `application-dev.yml` | `local` und `log`, dazu die Datasource aus der `.env`. Kein einziger Wert aus der Umgebung für die Fremddienste, damit gar nicht erst die Versuchung entsteht, Zugangsdaten „nur kurz" in diese eingecheckte Datei zu schreiben. |
+| `application-prod.yml` | `azure` und `smtp`, ausschließlich Platzhalter ohne Default. Bewusst **kein** `spring.config.import` für eine `.env`: im Betrieb kommen die Werte aus der Umgebung des Prozesses. |
+
+### Ein Platzhalter ohne Default ist kein Fail-Fast-Netz
+
+Das ist die Falle, die in KAN-50 beim Ausprobieren aufgefallen ist und die
+`ConfigurationValues` schließt.
+
+Springs `Binder` löst Platzhalter mit `ignoreUnresolvablePlaceholders = true`
+auf. Fehlt `AZURE_STORAGE_CONTAINER` in der Umgebung, scheitert die Bindung
+also **nicht**: der Record bekommt die Zeichenfolge
+`${AZURE_STORAGE_CONTAINER}` als Wert. Die Anwendung startete damit anstandslos
+und schrieb ins Startprotokoll `Container=${AZURE_STORAGE_CONTAINER}`.
+Ein `@NotBlank` findet das nie, die Zeichenfolge ist nicht leer.
+
+`ConfigurationValues.isMissing` zählt deshalb drei Fälle als fehlend: nicht
+gesetzt, leer, und Platzhalter (auch mitten im Wert, denn
+`https://${APP_HOST}/portfolio` ist als Basis-URL genauso unbrauchbar). Geprüft
+wird in `StorageProperties`, `MailProperties`, `JwtProperties` und
+`CorsProperties`, also überall dort, wo ein Wert aus der Umgebung kommt.
+`UnresolvedPlaceholderTest` hält den Fall fest.
+
+**Für jeden neuen Konfigurationswert aus der Umgebung gilt damit:** die Prüfung
+mitziehen. Sonst gibt es genau wieder eine Property, die im Betrieb still den
+Namen ihrer eigenen Umgebungsvariablen trägt.
+
+Nicht abgedeckt bleibt `spring.datasource.*`: das sind Springs eigene
+Properties. Fehlt dort ein Wert, scheitert der Verbindungsaufbau, was laut
+genug ist.
+
+### Bedingte Pflichtwerte
+
+Die Azure-Zugangsdaten sind nur bei `provider=azure` Pflicht. Sie tragen
+deshalb kein `@NotBlank`, sondern werden im Kompaktkonstruktor von
+`StorageProperties` geprüft. Der Grund ist praktisch: mit `@NotBlank` an jedem
+Feld müssten im dev-Profil Platzhalterwerte in der eingecheckten
+`application-dev.yml` stehen, die von echten Zugangsdaten nicht zu
+unterscheiden wären. Die Meldung nennt jeden fehlenden Schlüssel samt
+Umgebungsvariable und niemals einen vorhandenen Wert.
+
+### Startprotokoll
+
+`ConfigurationStartupLogger` schreibt beim `ApplicationReadyEvent` je Port eine
+Zeile: welcher Adapter aktiv ist, bei `azure` zusätzlich Speicherkonto und
+Container. Aus der Verbindungszeichenfolge wird ausschließlich der Kontoname
+herausgelöst, weil in derselben Zeichenfolge auch der Kontoschlüssel steht.
+
+### Kein Geheimnis im Repository
+
+Zwei Tests halten das ohne Zutun fest:
+
+- `NoSecretsInConfigurationTest`: in keiner eingecheckten `application*.yml`
+  trägt ein Schlüssel, dessen Name auf ein Geheimnis hindeutet, etwas anderes
+  als einen Platzhalter ohne Default. Gerade der Default ist die Falle:
+  `${JWT_SECRET:geheim}` sieht richtig aus und ist ein eingecheckter Zugang.
+- `ConfigurationPlaceholderTest`: jeder Pflicht-Platzhalter aus den yml-Dateien
+  steht in `.env.example`.
+
+Beide suchen die Dateien, statt sie aufzuzählen; ein später angelegtes
+`application-staging.yml` fällt damit automatisch mit unter die Prüfung.

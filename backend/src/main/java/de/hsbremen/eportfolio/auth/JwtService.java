@@ -1,6 +1,7 @@
 package de.hsbremen.eportfolio.auth;
 
 import de.hsbremen.eportfolio.common.enums.Role;
+import de.hsbremen.eportfolio.config.JwtProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
+import de.hsbremen.eportfolio.config.JwtProperties;
 import java.time.Duration;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;

@@ -1,0 +1,50 @@
+# Betriebsprofil (KAN-50, API-Contract §6.8).
+#
+# Grundsatz dieser Datei: sie enthaelt keinen einzigen Wert, nur Verweise auf
+# die Umgebung. Jeder Platzhalter steht bewusst OHNE Default-Teil, also
+# ${POSTGRES_HOST} und nicht ${POSTGRES_HOST:localhost}. Ein Default waere hier
+# doppelt schaedlich: bei einem Geheimnis waere er ein eingecheckter Zugang, bei
+# einer Adresse liesse er die Anwendung im Betrieb still gegen die falsche
+# Gegenstelle laufen. Ohne Default scheitert stattdessen der Start und nennt den
+# fehlenden Schluessel.
+#
+# Bewusst NICHT hier: spring.config.import fuer eine .env. Im Betrieb kommen die
+# Werte aus der Umgebung des Prozesses, nicht aus einer Datei neben der
+# Anwendung.
+#
+# Alle Schluessel sind in .env.example aufgefuehrt; dass die Liste vollstaendig
+# bleibt, prueft ConfigurationPlaceholderTest.
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+
+app:
+  security:
+    cors:
+      # Kein Default: im Betrieb ist der Vite-Dev-Server aus der
+      # Basiskonfiguration die falsche Antwort.
+      allowed-origins: ${CORS_ALLOWED_ORIGINS}
+
+  storage:
+    # Azure Blob Storage (§3.15.1, Contract v20). Die Verbindungszeichenfolge
+    # traegt Endpoint, Kontoname und Kontoschluessel in einem Wert und ist
+    # damit ein Geheimnis; sie steht nur hier als Platzhalter und sonst
+    # nirgends im Repository.
+    provider: azure
+    container: ${AZURE_STORAGE_CONTAINER}
+    connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
+
+  mail:
+    # Versand ueber ein SMTP-Relay. Host, Port und Zugangsdaten gehoeren unter
+    # spring.mail.* und kommen mit dem Adapter in KAN-51 dazu; ohne Adapter
+    # gaebe es hier nichts, was sie liest.
+    provider: smtp
+    # Muss zur Domain des Relays passen, sonst weist es die Nachricht ab oder
+    # sie landet im Spamordner.
+    from-address: ${MAIL_FROM_ADDRESS}
+    # Basis der Links in Verifizierungs- und Ruecksetzmails: die oeffentliche
+    # Adresse des Frontends.
+    base-url: ${APP_BASE_URL}

@@ -2,6 +2,7 @@ package de.hsbremen.eportfolio.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.hsbremen.eportfolio.config.LoginAttemptProperties;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;

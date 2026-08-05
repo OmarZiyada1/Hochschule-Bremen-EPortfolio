@@ -9,13 +9,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import de.hsbremen.eportfolio.auth.JwtAuthenticationFilter;
-import de.hsbremen.eportfolio.auth.JwtProperties;
 import de.hsbremen.eportfolio.auth.JwtService;
 import de.hsbremen.eportfolio.auth.RestAccessDeniedHandler;
 import de.hsbremen.eportfolio.auth.RestAuthenticationEntryPoint;
 import de.hsbremen.eportfolio.common.error.ApiErrorWriter;
 import de.hsbremen.eportfolio.common.error.GlobalExceptionHandler;
 import de.hsbremen.eportfolio.config.CorsProperties;
+import de.hsbremen.eportfolio.config.JwtProperties;
 import de.hsbremen.eportfolio.config.SecurityConfig;
 import de.hsbremen.eportfolio.masterdata.dto.CategoryResponse;
 import de.hsbremen.eportfolio.masterdata.dto.FacultyResponse;

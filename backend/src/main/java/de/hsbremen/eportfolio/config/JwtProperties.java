@@ -1,7 +1,8 @@
-package de.hsbremen.eportfolio.auth;
+package de.hsbremen.eportfolio.config;
 
 import jakarta.validation.constraints.NotBlank;
 import java.time.Duration;
+import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
@@ -30,6 +31,14 @@ public record JwtProperties(
 		}
 		if (issuer == null || issuer.isBlank()) {
 			issuer = "eportfolio";
+		}
+		// Fehlt JWT_SECRET, bindet Spring die Zeichenfolge "${JWT_SECRET}"
+		// statt zu scheitern (siehe ConfigurationValues). Der JwtService faengt
+		// das heute nur nebenbei ab, weil der Platzhalter fuer HS512 zu kurz
+		// ist; das ist ein Zufall und keine Zusicherung.
+		if (secret != null && ConfigurationValues.isMissing(secret)) {
+			ConfigurationValues.failIfMissing("app.security.jwt ist konfiguriert",
+					List.of("app.security.jwt.secret (JWT_SECRET)"));
 		}
 	}
 }

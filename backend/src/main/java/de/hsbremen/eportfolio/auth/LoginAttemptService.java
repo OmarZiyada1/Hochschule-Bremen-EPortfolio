@@ -1,5 +1,6 @@
 package de.hsbremen.eportfolio.auth;
 
+import de.hsbremen.eportfolio.config.LoginAttemptProperties;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Locale;

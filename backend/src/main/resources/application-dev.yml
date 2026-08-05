@@ -19,6 +19,24 @@ spring:
     livereload:
       enabled: true
 
+app:
+  # Fremddienste im Entwicklungsprofil (API-Contract §6.8): beide Adapter
+  # kommen ohne fremden Dienst aus. "docker compose up -d" plus ".env" reicht
+  # damit zum Entwickeln, es braucht kein Speicherkonto und kein Postfach.
+  #
+  # Hier steht bewusst kein einziger Wert aus der Umgebung: haette das
+  # Entwicklungsprofil Zugangsdaten noetig, waere die Versuchung gross, sie
+  # "nur kurz" in diese eingecheckte Datei zu schreiben.
+  storage:
+    provider: local
+    # Relativ zum Arbeitsverzeichnis des Prozesses, also backend/var/storage
+    # beim Start ueber mvnw. Der Ordner ist in .gitignore ausgeschlossen.
+    local-directory: var/storage
+  mail:
+    # Schreibt die Nachricht in die Serverkonsole. Der Verifizierungscode aus
+    # §3.1.1 steht damit im Log und ist ohne Postfach nachvollziehbar.
+    provider: log
+
 springdoc:
   # Nur hier eingeschaltet - in der Basiskonfiguration steht beides auf false.
   # Die Swagger-UI ist ein Entwicklungswerkzeug zum Ausprobieren der Endpoints
