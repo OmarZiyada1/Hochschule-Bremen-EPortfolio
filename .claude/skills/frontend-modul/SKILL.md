@@ -32,7 +32,10 @@ Entscheidung. Siehe Schritt 0b.
    `frontend/src/api/`, `frontend/src/styles/tokens/`. Komponenten werden
    wiederverwendet, nicht je Seite neu gebaut. Fehlt eine Komponente, die
    mehrere Seiten brauchen, gehört sie in die Bibliothek (Skill
-   `frontend-design`), nicht in den Feature-Ordner.
+   `frontend-design`), nicht in den Feature-Ordner. Fehlt eine **Primitive**,
+   wird sie per `pnpm dlx shadcn@latest add` erzeugt und nicht geschrieben
+   (Skill `frontend-shadcn`); `pnpm dlx shadcn@latest info` zeigt, was
+   bereits installiert ist.
 4. Prüfen, ob der benötigte Endpoint im Backend **wirklich existiert**:
    die Controller unter `backend/src/main/java/de/hsbremen/eportfolio/` oder
    `/v3/api-docs` im laufenden Dev-Profil. Eine Contract-Zeile ist kein
@@ -95,9 +98,10 @@ Ablage nach Feature, analog zum package-by-feature im Backend
 
 ```
 frontend/src/
+  index.css               CSS-Einstiegspunkt: Tailwind, Tokendateien
   api/                    client.ts, errors.ts, schema.d.ts, page.ts
   components/
-    ui/                   shadcn/Base-UI-Primitiven (generiert)
+    ui/                   shadcn-Primitiven auf Radix (nur per CLI erzeugt)
     layout/               NavBar, Footer, Breadcrumb
     common/               ProjectCard, StatusBadge, RoleBadge, EmptyState
   features/<feature>/
@@ -109,6 +113,13 @@ frontend/src/
   routes/
   styles/tokens/
 ```
+
+**Bevor eine Komponente von Hand entsteht: `pnpm dlx shadcn@latest search`.**
+Gibt es eine Registry-Entsprechung, wird sie über `add` erzeugt und nicht
+nachgebaut; von Hand entsteht nur, was Domänenwissen trägt, und das
+komponiert die Primitiven. Ein selbst gebautes Auswahlmenü sieht im Browser
+richtig aus und ist mit der Tastatur fast immer unbrauchbar. Regeln dazu im
+Skill `frontend-shadcn`.
 
 **Namensregel:** Bezeichner sind englisch (`ProjectCard`, `useProjectList`,
 `projectId`); die verbindliche Zuordnung steht in `docs/NAMENSSCHEMA.md`.
@@ -196,8 +207,11 @@ jeder Umbenennung und belegt nichts.
 - [ ] Alle „Layout-Bereiche" der Template-Seite umgesetzt oder ihr Entfallen
       begründet
 - [ ] Kein handgeschriebener Response-Typ, alles aus `schema.d.ts`
+- [ ] Keine Primitive von Hand nachgebaut, für die es einen Registry-Eintrag
+      gibt; Dateien unter `components/ui/` nur per CLI erzeugt
+      (Skill `frontend-shadcn`)
 - [ ] Kein sichtbarer Text als Literal im JSX, jeder Schlüssel in `de.json`
-      **und** `en.json`
+      **und** `en.json`, auch die aus generierten Komponenten
 - [ ] Laden, Leere und Fehler sind je Ansicht behandelt
 - [ ] Filter- und Seitenzustand steht in der URL und übersteht einen Reload
 - [ ] Keine Hex-Farbe außerhalb von `frontend/src/styles/tokens/`

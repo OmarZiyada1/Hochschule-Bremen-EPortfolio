@@ -77,11 +77,21 @@ Kommentare direkt in `tokens.css`). Das Figma-Design ist nur hell angelegt;
 neue dunkle Werte werden abgeleitet und auf Kontrast geprüft, nicht
 geschätzt (Confluence „Designentscheidungen", Abschnitt 2.8).
 
+**Die vier Brückenzeilen sind kein Fremdkörper.** Im `@theme inline`-Block
+stehen zusätzlich `--radius-sm`, `--radius-md`, `--radius-lg` und
+`--radius-xl` als Aliase auf `selection`, `control`, `card` und `modal`.
+Sie tragen keinen eigenen Wert und stehen nicht in Figma: sie sind die
+zweite Adresse der sechs Stufen, unter der die per CLI erzeugten Komponenten
+sie finden. Wer sie beim Abgleich gegen die Figma-Collection als
+überzähligen Token löscht, macht jede shadcn-Primitive still eckig, ohne
+dass ein Test, ein Lint oder ein Typecheck darauf anspringt
+(Skill `frontend-shadcn`, Abschnitt 7).
+
 ## 2. Wo eine Komponente wohnt
 
 | Ort | Was dort hingehört |
 | --- | --- |
-| `components/ui/` | shadcn/Base-UI-Primitiven, per CLI erzeugt, Bibliotheksnamen unverändert |
+| `components/ui/` | shadcn-Primitiven auf Radix UI, **ausschließlich per CLI erzeugt**, Bibliotheksnamen unverändert |
 | `components/layout/` | NavBar, Footer, Breadcrumb |
 | `components/common/` | alles mit Domänenbezug: `ProjectCard`, `StatusBadge`, `RoleBadge`, `EmptyState`, `KpiTile` |
 | `features/<feature>/components/` | nur in diesem Feature verwendet |
@@ -89,6 +99,14 @@ geschätzt (Confluence „Designentscheidungen", Abschnitt 2.8).
 Wird ein Baustein von der zweiten Seite gebraucht, wandert er nach oben,
 statt kopiert zu werden. Zwei Fassungen derselben Projektkachel driften
 zuverlässig auseinander.
+
+**Primitiven werden nicht geschrieben, sondern erzeugt.** Alles unter
+`components/ui/` kommt über `pnpm dlx shadcn@latest add <name>`; eine dort
+von Hand angelegte Datei ist ein Befund. Von Hand entsteht nur, was
+Domänenwissen trägt, und das komponiert die Primitiven, statt sie
+nachzubauen: `StatusBadge` kennt die fünf Werte aus §2.2, `badge` kennt sie
+nicht. Befehle, erlaubte Eingriffe an generierten Dateien und die
+Tokenbrücke stehen im Skill `frontend-shadcn`.
 
 **Namensregel:** Bezeichner englisch (`docs/NAMENSSCHEMA.md`). Generierte
 Primitiven behalten ihren Bibliotheksnamen; ein Umbenennen von `button.tsx`
@@ -183,6 +201,8 @@ Beim Bauen jeder Komponente:
 ## 6. Definition of Done
 
 - [ ] Keine Hex-Farbe außerhalb von `frontend/src/styles/tokens/`
+- [ ] Jede Primitive unter `components/ui/` per CLI erzeugt, keine von Hand
+      angelegt oder inhaltlich verändert (Skill `frontend-shadcn`)
 - [ ] Komponente in hell und dunkel geprüft
 - [ ] Enum-Anzeige über i18n-Schlüssel, nicht über Literale; Schlüssel in
       `de.json` und `en.json`

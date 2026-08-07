@@ -65,8 +65,10 @@ Abschlussbericht. Am Ende einer Änderung steht keine Frage mehr offen.
 
 - Backend: Spring Boot 3.5.x, Java 21, PostgreSQL 16 (Container), Flyway,
   springdoc-openapi. Basis-Paket `de.hsbremen.eportfolio`, Ordner `backend/`.
-- Frontend: Vite + React 19 + TypeScript + Tailwind 4 + shadcn/ui (`frontend/`,
-  aktuell auf Branch `KAN-6-…`, noch nicht auf `main`).
+- Frontend: Vite + React 19 + TypeScript + Tailwind 4 + shadcn/ui auf
+  **Radix UI** (`frontend/`, aktuell auf Branch `KAN-6`, noch nicht auf
+  `main`). Primitiven entstehen ausschließlich über die shadcn-CLI, nie von
+  Hand (Skill `frontend-shadcn`).
 - Referenzplattform: Portfolio-Portal der HfG Schwäbisch Gmünd.
 
 ## Nicht verhandelbare Regeln (Backend)
@@ -163,6 +165,9 @@ derselben Nachricht, und dann exakt dieser eine Befehl.
   Fehler-Envelope, 401/403, Seitenformat, Optimistic Locking, Autosave.
 - `.claude/skills/frontend-design`: Design-Tokens, Komponentenbibliothek,
   Beschriftungen, Barrierefreiheit nach WCAG 2.2.
+- `.claude/skills/frontend-shadcn`: shadcn/ui auf Radix, also Primitiven per
+  CLI statt von Hand, `components.json`, Tokenbrücke und was an einer
+  generierten Datei geändert werden darf.
 - `.claude/agents/backend-modul-builder`: setzt ein Modul-Ticket komplett um.
 - `.claude/agents/frontend-modul-builder`: setzt ein Frontend-Ticket komplett um.
 - `.claude/agents/contract-pruefer`: read-only Abgleich gegen den Contract.
@@ -201,3 +206,9 @@ Ausführlich in den drei Frontend-Skills; hier nur, was überall gilt.
    zur Backend-Regel 8.
 10. **Keine Attrappe im ausgelieferten Code.** Fehlt der Endpoint, wird die
     Ansicht nicht gebaut, sondern das blockierende Backend-Ticket benannt.
+11. **Primitiven kommen aus der CLI, nicht aus der Hand.** Alles unter
+    `frontend/src/components/ui/` entsteht über
+    `pnpm dlx shadcn@latest add <name>`; eine dort von Hand angelegte oder
+    inhaltlich geänderte Datei ist ein Befund. Von Hand entsteht nur, was
+    Domänenwissen trägt, und das komponiert die Primitiven, statt sie
+    nachzubauen. Einzelheiten im Skill `frontend-shadcn`.

@@ -44,11 +44,32 @@ Backend-Handwerk der `code-reviewer`; du prüfst das Frontend.
    `docs/NAMENSSCHEMA.md` (`ProjectCard`, `useProjectList`), generierte
    shadcn-Primitiven unverändert. Ein Baustein, der auf der zweiten Seite
    gebraucht wird, liegt in `components/`, nicht kopiert im Feature.
+8a. **Herkunft der Primitiven** (Skill `frontend-shadcn`): jede Datei unter
+    `components/ui/` ist per CLI erzeugt. Eine dort von Hand angelegte Datei
+    ist ein **[MUSS]**-Befund, auch wenn sie funktioniert: sie fällt aus
+    `shadcn diff` heraus und baut Tastaturbedienung und ARIA-Rollen nach,
+    die Radix mitbringt. Ebenso ein Befund: ein umbenannter Dateiname, ein
+    geänderter Exportname, eine zusätzliche `cva`-Variante oder ein
+    eingesetzter Farbwert in einer generierten Datei. Varianten gehören in
+    die Domänenkomponente. Prüfe außerdem, ob eine von Hand gebaute
+    Komponente eine Registry-Entsprechung hat (`select`, `dialog`,
+    `dropdown-menu`, `pagination`, `tabs`, `tooltip`); dann ist der Nachbau
+    der Befund.
 8b. **Oberflächentexte:** kein sichtbares Literal im JSX, alles über i18n.
     Jeder neue Schlüssel steht in `de.json` **und** `en.json`; ein Schlüssel
     nur in einer Datei ist ein Befund. Enum-Anzeige über
     `t('project.status.' + status)`, nicht über eine eigene Zuordnung
-    je Seite.
+    je Seite. **Auch generierte Komponenten zählen:** `pagination` bringt
+    „Previous" und „Next" mit, `sheet` bringt „Close". Ein durchgerutschtes
+    englisches Literal aus `components/ui/` ist derselbe Befund wie ein
+    selbst geschriebenes.
+8c. **Wirkungslose Utility-Klassen:** `tokens.css` schaltet die
+    Tailwind-Standardskalen ab (`--color-*: initial`, `--radius-*: initial`).
+    Eine Klasse wie `rounded-md` ohne Brückenzeile erzeugt keinen Fehler,
+    keine Lint-Warnung und keinen roten Test, sondern nur falsches Aussehen.
+    Fällt eine ungewöhnliche Farb- oder Radiusklasse auf, gegen den
+    `@theme inline`-Block halten. Ein Befund hier gehört in die
+    Tokenschicht, nicht in den Komponentencode.
 9. **Barrierefreiheit** (Skill `frontend-design`): Tastaturbedienung,
    sichtbarer Fokus, verbundene Labels, benannte Symbolschaltflächen,
    Überschriftenhierarchie ohne Sprung, Live-Region für Statusmeldungen,
