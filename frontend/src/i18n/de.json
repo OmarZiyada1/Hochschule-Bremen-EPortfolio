@@ -1,0 +1,39 @@
+{
+	"common": {
+		"app": {
+			"title": "E-Portfolio Hochschule Bremen"
+		},
+		"theme": {
+			"switchToDark": "Dunkles Farbschema einschalten",
+			"switchToLight": "Helles Farbschema einschalten"
+		}
+	},
+	"home": {
+		"setupNotice": "Das Frontend ist eingerichtet. Die ersten Ansichten entstehen mit den folgenden Tickets.",
+		"tokenGalleryLink": "Design-Tokens ansehen (nur Entwicklung)"
+	},
+	"tokenGallery": {
+		"title": "Design-Tokens",
+		"intro": "Prüffläche für die Tokenschicht: jede Semantic-Rolle, jede Radius-Stufe und jede Schriftrolle, umschaltbar zwischen hell und dunkel.",
+		"section": {
+			"semantic": "Semantic-Rollen",
+			"radius": "Radius-Stufen",
+			"typography": "Schriftrollen"
+		},
+		"group": {
+			"surfaceText": "Fläche und Text",
+			"interaction": "Interaktion",
+			"sidebar": "Sidebar",
+			"status": "Projektstatus",
+			"role": "Rollen",
+			"badgeNeutral": "Neutrales Badge",
+			"brandSurface": "Markenflächen",
+			"feedback": "UI-Feedback"
+		},
+		"primaryButtonSample": "Primäre Aktion",
+		"sample": {
+			"paragraph": "Ein E-Portfolio zeigt Studienprojekte der Hochschule Bremen mit Texten, Bildern und Ergebnissen aus mehreren Semestern und bricht dabei auch auf schmalen Bildschirmen sauber um.",
+			"numbers": "10 9 8 7 6 5 4 3 2 1 42 137 2026 88 56 64"
+		}
+	}
+}

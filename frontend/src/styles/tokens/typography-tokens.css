@@ -1,0 +1,182 @@
+/*
+ * Typografie-Tokens des E-Portfolio Hochschule Bremen (KAN-6, Abschnitt 3.2).
+ *
+ * Quelle: Figma-Collection "Typographie/Size" (Modi Mobile und Desktop) und
+ * die Figma-Textstile, gespiegelt auf der Confluence-Seite "Foundation",
+ * Abschnitt 5. Die clamp()-Formeln sind fuer einen Mindest-Viewport von
+ * 360px und einen Maximal-Viewport von 1280px bei Basis 16px berechnet und
+ * gehoeren genau hierhin, nicht inline an die Komponenten.
+ *
+ * Schriften: Zilla Slab (Ueberschriften) und Source Sans 3 (Fliesstext, UI
+ * und Zahlen), beide selbst gehostet ueber Fontsource. Die Schnitte sind
+ * nicht beliebig: --lh-num-rank haengt an der Metrik von Source Sans 3
+ * ExtraBold; ein Austausch der Schrift aendert diese Zeilenhoehe.
+ */
+
+:root {
+	--font-heading: "Zilla Slab", Georgia, serif;
+	--font-body: "Source Sans 3", system-ui, -apple-system, sans-serif;
+
+	/* Sechs fluide Groessen (Anker 360px und 1280px). */
+	--fs-display: clamp(2.5rem, 1.424rem + 4.783vw, 5.25rem); /* 40 bis 84 */
+	--fs-title: clamp(1.875rem, 1.63rem + 1.087vw, 2.5rem); /* 30 bis 40 */
+	--fs-num-rank: clamp(3.5rem, 2.717rem + 3.478vw, 5.5rem); /* 56 bis 88 */
+	--fs-num-stat: clamp(1.625rem, 1.478rem + 0.652vw, 2rem); /* 26 bis 32 */
+	--fs-h1: clamp(1.5rem, 1.402rem + 0.435vw, 1.75rem); /* 24 bis 28 */
+	--fs-h2: clamp(1.125rem, 1.076rem + 0.217vw, 1.25rem); /* 18 bis 20 */
+
+	/* Feste Groessen, mobil gleich Desktop. Fliesstext fluid schrumpfen zu
+	   lassen wuerde die Nutzer-Vergroesserung nach SC 1.4.4 untergraben. */
+	--fs-h3: 1rem; /* 16 */
+	--fs-body-lg: 1rem; /* 16 */
+	--fs-body-base: 0.875rem; /* 14 */
+	--fs-body-sm: 0.8125rem; /* 13 */
+	--fs-caption: 0.75rem; /* 12 */
+	--fs-caption-xs: 0.6875rem; /* 11 */
+	--fs-overline: 0.6875rem; /* 11 */
+	--fs-button-lg: 0.875rem; /* 14 */
+	--fs-button-md: 0.8125rem; /* 13 */
+	--fs-button-sm: 0.75rem; /* 12 */
+	--fs-label-xs: 0.6875rem; /* 11 */
+	--fs-label-badge: 0.6875rem; /* 11 */
+	--fs-avatar-sm: 0.6875rem; /* 11 */
+	--fs-avatar-md: 0.875rem; /* 14 */
+	--fs-nav-brand-lg: 1.375rem; /* 22 */
+	--fs-nav-brand: 1.0625rem; /* 17 */
+	--fs-nav-item: 0.9375rem; /* 15 */
+
+	/* Zeilenhoehen als Verhaeltnis, damit sie mit der fluiden Groesse
+	   mitskalieren (Foundation 5.3). */
+	--lh-title: 1.1; /* Figma 110 % (44px auf 40px) */
+	--lh-h1: 1.5714; /* Figma 157,14 % (44px auf 28px) */
+	--lh-h2: 1.8; /* Figma 180 % (36px auf 20px) */
+	--lh-num-stat: 1.1875; /* Figma 118,75 % (38px auf 32px) */
+
+	/* Sonderfall 1: Figma fuehrt Numeral/Rank als AUTO; die Zeilenhoehe
+	   kommt aus der Metrik von Source Sans 3 und ist kein gestalteter
+	   Wert. Der an einem Knoten gemessene Wert (bei 88px rund 1,136) waere
+	   eine festgeschriebene Schriftmetrik, die beim naechsten Schnitt-
+	   oder Schriftwechsel still falsch wird. "normal" ist die einzige
+	   Fassung, die AUTO wirklich abbildet. */
+	--lh-num-rank: normal;
+
+	/* Sonderfall 2, Zwischenstand bis zur Design-Entscheidung: Figma
+	   fuehrt Heading/Display mit 76,19 % fuer beide Modi. Desktop ergibt
+	   das die gestalteten 64px (76,19 % von 84px), mobil aber nur 30,5px
+	   auf 40px Schrift, also ueberlappende Zeilen beim Umbruch. Der Fehler
+	   steckt im Designsystem, nicht in der Uebersetzung nach CSS. Bis das
+	   Design eine eigene Mobile-Zeilenhoehe festlegt: 44px mobil bis 64px
+	   Desktop, fluide mit denselben Ankern 360px und 1280px. Desktop
+	   entspricht exakt Figma; mobil 44px auf 40px Schrift, also dasselbe
+	   Verhaeltnis wie Heading/Title. Dieser Wert ist ein Laengenwert, kein
+	   Verhaeltnis, und wird ersetzt, sobald das Design den Mobile-Wert
+	   nennt. */
+	--lh-display: clamp(2.75rem, 2.2609rem + 2.1739vw, 4rem);
+
+	/* Laufweite der Overline, 4px. */
+	--ls-overline: 0.25rem;
+}
+
+@layer base {
+	body {
+		font-family: var(--font-body);
+		font-size: var(--fs-body-base);
+		line-height: 1.5;
+	}
+}
+
+/* ============================================================
+ * Rollen-Klassen. Ueberschriften nutzen --font-heading, Fliesstext und
+ * Zahlen --font-body. Schriftschnitte folgen den beschafften Cuts:
+ * Zilla Slab 600; Source Sans 3 400/500/600/700/800, wobei num-rank
+ * ausdruecklich an ExtraBold (800) haengt. Zeilenhoehe fuer Textrollen
+ * ohne Figma-Verhaeltnis: 1,5 nach Foundation 5.3 (Fliesstext 1,4 bis
+ * 1,5; SC 1.4.12 verlangt mindestens 1,5), Caption und Overline 1,4.
+ * ============================================================ */
+@layer components {
+	.type-display {
+		font-family: var(--font-heading);
+		font-weight: 600;
+		font-size: var(--fs-display);
+		line-height: var(--lh-display);
+	}
+
+	.type-title {
+		font-family: var(--font-heading);
+		font-weight: 600;
+		font-size: var(--fs-title);
+		line-height: var(--lh-title);
+	}
+
+	.type-h1 {
+		font-family: var(--font-heading);
+		font-weight: 600;
+		font-size: var(--fs-h1);
+		line-height: var(--lh-h1);
+	}
+
+	.type-h2 {
+		font-family: var(--font-heading);
+		font-weight: 600;
+		font-size: var(--fs-h2);
+		line-height: var(--lh-h2);
+	}
+
+	.type-h3 {
+		font-family: var(--font-heading);
+		font-weight: 600;
+		font-size: var(--fs-h3);
+		line-height: 1.5;
+	}
+
+	.type-num-rank {
+		font-family: var(--font-body);
+		font-weight: 800;
+		font-size: var(--fs-num-rank);
+		line-height: var(--lh-num-rank);
+	}
+
+	.type-num-stat {
+		font-family: var(--font-body);
+		font-weight: 700;
+		font-size: var(--fs-num-stat);
+		line-height: var(--lh-num-stat);
+	}
+
+	.type-body-lg {
+		font-family: var(--font-body);
+		font-weight: 400;
+		font-size: var(--fs-body-lg);
+		line-height: 1.5;
+	}
+
+	.type-body {
+		font-family: var(--font-body);
+		font-weight: 400;
+		font-size: var(--fs-body-base);
+		line-height: 1.5;
+	}
+
+	.type-body-sm {
+		font-family: var(--font-body);
+		font-weight: 400;
+		font-size: var(--fs-body-sm);
+		line-height: 1.5;
+	}
+
+	.type-caption {
+		font-family: var(--font-body);
+		font-weight: 400;
+		font-size: var(--fs-caption);
+		line-height: 1.4;
+	}
+
+	.type-overline {
+		font-family: var(--font-body);
+		font-weight: 600;
+		font-size: var(--fs-overline);
+		line-height: 1.4;
+		letter-spacing: var(--ls-overline);
+		text-transform: uppercase;
+	}
+}

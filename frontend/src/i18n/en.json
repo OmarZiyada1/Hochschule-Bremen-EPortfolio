@@ -1,0 +1,39 @@
+{
+	"common": {
+		"app": {
+			"title": "E-Portfolio Hochschule Bremen"
+		},
+		"theme": {
+			"switchToDark": "Switch to dark color scheme",
+			"switchToLight": "Switch to light color scheme"
+		}
+	},
+	"home": {
+		"setupNotice": "The frontend is set up. The first views will be built in the upcoming tickets.",
+		"tokenGalleryLink": "View design tokens (development only)"
+	},
+	"tokenGallery": {
+		"title": "Design tokens",
+		"intro": "Verification surface for the token layer: every semantic role, every radius step, and every type role, switchable between light and dark.",
+		"section": {
+			"semantic": "Semantic roles",
+			"radius": "Radius steps",
+			"typography": "Type roles"
+		},
+		"group": {
+			"surfaceText": "Surface and text",
+			"interaction": "Interaction",
+			"sidebar": "Sidebar",
+			"status": "Project status",
+			"role": "Roles",
+			"badgeNeutral": "Neutral badge",
+			"brandSurface": "Brand surfaces",
+			"feedback": "UI feedback"
+		},
+		"primaryButtonSample": "Primary action",
+		"sample": {
+			"paragraph": "An e-portfolio presents study projects of Hochschule Bremen with texts, images, and results from several semesters, and wraps cleanly even on narrow screens.",
+			"numbers": "10 9 8 7 6 5 4 3 2 1 42 137 2026 88 56 64"
+		}
+	}
+}
