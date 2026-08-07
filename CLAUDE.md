@@ -151,6 +151,10 @@ derselben Nachricht, und dann exakt dieser eine Befehl.
 - `.claude/skills/api-contract-sync`: Abgleich Code ↔ Contract, Versionierung
   der Confluence-Seite.
 - `.claude/skills/jira-ticket`: Hausstil für neue Tickets.
+- `.claude/skills/ticket-refinement`: Abgleich bestehender Tickets gegen
+  Repo-Stand und Contract. Refinement wird **in die Beschreibung
+  geschrieben**, nie als Kommentar; der Kommentarbereich bleibt dem
+  Übergabekommentar vorbehalten.
 - `.claude/skills/uebergabe`: Abschluss ohne Push, also Commit-Text, PR-Titel
   und PR-Beschreibung zum manuellen Übernehmen.
 - `.claude/skills/frontend-modul`: Rezept für jede neue Seite oder Ansicht
