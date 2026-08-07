@@ -30,6 +30,7 @@
 		<java.version>21</java.version>
 		<jjwt.version>0.12.6</jjwt.version>
 		<springdoc.version>2.8.6</springdoc.version>
+		<greenmail.version>2.1.3</greenmail.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -73,6 +74,15 @@
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 
+		<!-- Mailversand (KAN-51, API-Contract §6.8). Bringt JavaMailSender und
+		     die Autokonfiguration unter spring.mail.* mit. Ohne gesetzten Host
+		     entsteht kein Versand-Bean; im Profil dev laeuft deshalb der
+		     Log-Adapter, ohne dass hier etwas fehlt. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+
 		<!-- OpenAPI/Swagger-UI (KAN-11). Der Starter bringt sowohl die
 		     Dokument-Erzeugung (/v3/api-docs) als auch die Weboberflaeche
 		     (/swagger-ui) mit, deshalb reicht diese eine Abhaengigkeit.
@@ -113,6 +123,17 @@
 		<dependency>
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- SMTP-Server im Arbeitsspeicher fuer den Zustelltest des
+		     SMTP-Adapters (KAN-51). Bewusst als Testabhaengigkeit und nicht als
+		     Dienst in docker-compose.yml: der Test soll ohne laufenden Container
+		     durchlaufen, und die gemeinsame Compose-Datei bleibt unveraendert. -->
+		<dependency>
+			<groupId>com.icegreen</groupId>
+			<artifactId>greenmail-junit5</artifactId>
+			<version>${greenmail.version}</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
