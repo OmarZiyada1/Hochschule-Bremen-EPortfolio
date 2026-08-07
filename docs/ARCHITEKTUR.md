@@ -251,25 +251,116 @@ sich. Als Client-IP wird bewusst `request.getRemoteAddr()` genommen, ohne
 
 ## 7. Frontend
 
-Liegt **nicht** in `main`, sondern auf Branch
-`KAN-6-Frontend-Projekt-Setup-Design-Tokens-aus-Figma-übernehmen` im Verzeichnis
-`frontend/`.
+Das Frontend liegt als Verzeichnis `frontend/` im selben Repository wie das
+Backend. Grundlage ist KAN-6: Werkzeugkette, Ordnerstruktur und Tokenschicht.
+Alle Seiten-Tickets setzen darauf auf.
 
-Stand dort: das unveränderte Vite-Startprojekt mit React 19, TypeScript,
-Tailwind CSS 4 und shadcn/ui. Enthalten sind `main.tsx`, eine `App.tsx`, die
-„Project ready!" und einen Beispiel-Button rendert, ein `theme-provider.tsx`,
-die shadcn-Button-Komponente und `lib/utils.ts`. `frontend/README.md` ist die
-Template-Datei von shadcn.
+### 7.1 Stack
 
-Es gibt kein Routing, keinen API-Client, keine Anbindung an das Backend und
-keine eigenen Seiten.
+| Bereich | Wahl |
+|---------|------|
+| Paketmanager, Build | pnpm, Vite |
+| Sprache und Bibliothek | TypeScript, React 19 |
+| Styling | Tailwind CSS 4 (Konfiguration im CSS über `@theme inline`, keine `tailwind.config.js`), shadcn/ui |
+| Routing | React Router |
+| Serverdaten | TanStack Query |
+| Oberflächentext | react-i18next, Deutsch als Standard, Englisch gepflegt |
+| Tests | Vitest, Testing Library, MSW |
 
-Zum Ticketziel „Design-Tokens aus Figma übernehmen": `frontend/src/index.css`
-definiert zwar den vollständigen Token-Satz (Farben in `oklch`, Radien,
-Schriften), die Farbwerte sind aber die neutralen shadcn-Defaults mit Chroma 0.
-Übernommen ist bisher nur die Schrift (Geist Variable) und die abgestufte
-Radius-Skala. Ob darüber hinaus Tokens aus Figma gesetzt werden sollten und
-welche, ist aus dem Repo nicht ersichtlich — **unklar**.
+### 7.2 Struktur
+
+Ablage nach Feature, dieselbe Idee wie package-by-feature im Backend (§1):
+Was fachlich zusammengehört, liegt beieinander, statt nach technischer
+Schicht sortiert zu werden.
+
+```
+frontend/src/
+  api/                    client.ts, errors.ts, schema.d.ts, page.ts
+  components/
+    ui/                   shadcn-Primitiven (generiert, Namen unverändert)
+    layout/               NavBar, Footer, Breadcrumb
+    common/               ProjectCard, StatusBadge, RoleBadge, EmptyState
+  features/<feature>/
+    <Feature>Page.tsx     die Route-Komponente
+    components/           nur hier verwendete Bausteine
+    hooks/                Query- und Mutation-Hooks
+  i18n/                   de.json, en.json, index.ts
+  lib/                    utils.ts
+  routes/
+  styles/tokens/          tokens.css, typography-tokens.css
+```
+
+Ein Baustein, den eine zweite Seite braucht, wandert nach `components/common/`,
+statt kopiert zu werden. Zwei Fassungen derselben Projektkachel driften
+zuverlässig auseinander.
+
+### 7.3 Tokenschicht
+
+Alle Farben, Radien und Schriftgrößen liegen in zwei Dateien unter
+`frontend/src/styles/tokens/`: `tokens.css` (Farben und Radien) und
+`typography-tokens.css` (Schrift). Beide spiegeln die Figma-Collections;
+maßgeblich ist Figma, die Werte-Tabelle steht in Confluence „Foundation".
+
+Die Farben liegen in **zwei Ebenen**, und diese Trennung ist keine Formalie,
+sondern die technische Voraussetzung für zwei Dinge:
+
+1. **Primitives** (`--blau-*`, `--neutral-*`, `--rot-*`, `--bernstein-*`,
+   `--gruen-*`, `--basis-*`) sind Rohwerte ohne Bedeutung, identisch in hell
+   und dunkel. Komponenten binden **nie** direkt daran.
+2. **Semantic** ordnet jedem Rohwert eine Rolle zu, mit eigenem hellem und
+   dunklem Verweis. Komponenten binden ausschließlich hier an.
+
+Ohne die Alias-Ebene ist ein Moduswechsel nicht abbildbar: Ein Rohwert kann
+nicht gleichzeitig hell und dunkel sein, eine Rolle dagegen kann je Modus auf
+einen anderen Rohwert zeigen. Zusätzlich setzt shadcn/ui genau dieses
+Rollenmodell mit diesen Bezeichnern voraus.
+
+Daraus folgen zwei Regeln, die im Repository gelten:
+
+- Eine Hex-Farbe außerhalb von `frontend/src/styles/tokens/` ist ein Befund.
+- Eine Primitive-Stufe, auf die keine Semantic-Rolle mehr verweist, bleibt
+  nicht im Code. Sie ist unerreichbar und verleitet dazu, sie doch direkt zu
+  verwenden.
+
+Die Tokennamen sind englisch, auch dort, wo das Projekt sonst deutsch
+benennt: shadcn/ui erwartet diese Bezeichner. Die Gruppen `status-*` und
+`role-*` tragen wörtlich die Enum-Werte des API-Contracts (§2.1, §2.2), damit
+sich die Badge-Farbe ohne Übersetzungstabelle aus der API-Antwort ableiten
+lässt.
+
+Fakultäts- und Studiengangs-Badges sind bewusst einfarbig
+(`badge-neutral-bg`/`-fg`) und unterscheiden sich allein durch ihre
+Beschriftung (Confluence „Designentscheidungen", Abschnitt 2.4).
+
+### 7.4 Wo kommt was hin
+
+| Vorhaben | Ort |
+|----------|-----|
+| Neue Seite | `features/<feature>/<Feature>Page.tsx`, Route in `routes/` eintragen mit dem Wrapper der passenden Zugriffsebene |
+| Baustein für genau eine Seite | `features/<feature>/components/` |
+| Baustein für mehrere Seiten | `components/common/` bei Domänenbezug, `components/layout/` bei Rahmen (NavBar, Footer, Breadcrumb) |
+| shadcn-Primitive | `components/ui/`, über die CLI erzeugt, Bibliotheksname unverändert; ein Umbenennen bricht jedes spätere `shadcn add` |
+| Zugriff auf einen Endpoint | ein Hook je Serveroperation in `features/<feature>/hooks/`, Aufruf über den zentralen Client in `api/`; **kein `fetch` außerhalb von `api/`** |
+| Response- oder Request-Typ | nicht schreiben, sondern aus `/v3/api-docs` nach `api/schema.d.ts` generieren; die Datei wird eingecheckt und nicht bearbeitet |
+| Neue Farbe oder Größe | als **Rolle** in `styles/tokens/`, nie als Rohwert in der Komponente; fehlt die Rolle, wird sie angelegt |
+| Sichtbarer Text | i18n-Schlüssel in `i18n/de.json` **und** `en.json`; Enum-Werte sind Schlüsselbestandteil (`project.status.PUBLISHED`), nicht Text |
+| Filter-, Sortier- und Seitenzustand | in die URL, nicht in `useState`; sonst ist ein Ergebnis weder teilbar noch übersteht es den Zurück-Knopf |
+| Neuer Test | neben die Einheit als `*.test.tsx`, Serverantworten über MSW |
+
+### 7.5 Grenzen, die das Frontend nicht überschreitet
+
+- **Die Sichtbarkeitsregel im Routing ist Bequemlichkeit, keine
+  Sicherheitsmaßnahme** (Contract §5). Jede Seite behandelt 401 und 403
+  trotzdem sichtbar; eine leere Fläche ist kein Zustand, sondern ein
+  übersehener Fall.
+- **Jede Fehlerantwort wird zum Envelope aus §6.2**, und entschieden wird
+  über `errorCode`, nie über den Meldungstext.
+- **Keine Attrappe im ausgelieferten Code.** Fehlt der Endpoint, wird die
+  Ansicht nicht gebaut, sondern das blockierende Backend-Ticket benannt.
+
+Details zu Aussehen, Komponentenablage und Barrierefreiheit stehen im Skill
+`frontend-design`, zur Anbindung an die API im Skill `frontend-api`, zum
+Ablauf je Ticket im Skill `frontend-modul`.
 
 ---
 

@@ -12,28 +12,70 @@ einem separaten Repository mit abweichendem Stack und wird nicht übernommen.
 
 ## 1. Farben stehen genau einmal
 
-Alle Farbwerte liegen in `frontend/src/styles/tokens/colors.css` und sind
-über den `@theme inline`-Block als Tailwind-Utilities verfügbar.
+Alle Farbwerte liegen in `frontend/src/styles/tokens/tokens.css`
+(Farben und Radien) und `frontend/src/styles/tokens/typography-tokens.css`
+(Schrift), beide 1:1 aus der Figma-Collection „Primitives" und „Semantic"
+exportiert und über den `@theme inline`-Block als Tailwind-Utilities
+verfügbar (`bg-primary`, `text-muted-foreground`, `rounded-card` und so
+weiter).
 
 **Eine Hex-Farbe außerhalb von `frontend/src/styles/tokens/` ist ein
 Befund.** Auch in einer Komponente, auch „nur kurz", auch im Diagramm.
 Sonst gibt es das HSB-Blau in vier Nuancen und niemand weiß, welche gilt.
 
-Vorhandene Gruppen:
+Das Tokensystem hat zwei Ebenen, und beide Regeln dazu verhindern fast jeden
+Fehler:
+
+1. **Primitives** (`--blau-*`, `--neutral-*`, `--rot-*`, `--bernstein-*`,
+   `--gruen-*`, `--basis-*`) sind reine Rohwerte ohne Bedeutung, identisch in
+   hell und dunkel. Sie werden **nie direkt in Komponenten verwendet**, nur
+   von der Semantic-Ebene referenziert. Eine Primitive ohne Semantic-Rolle
+   fliegt raus statt „vielleicht später" liegen zu bleiben; ein neuer
+   Rohwert kommt aus einem frischen Figma-Export, nie freihändig aus dem
+   Code.
+2. **Semantic** ordnet jeder Primitive eine Rolle zu, mit eigenem hellem und
+   dunklem Wert. Jede Vordergrundrolle gehört zu genau einer Flächenrolle
+   (`card`/`card-foreground`, `primary`/`primary-foreground` und so weiter);
+   eine Flächenrolle ist nie eine Textfarbe (`accent`, `muted`, `card`,
+   `background` gehören an Flächen). Komponenten binden ausschließlich hier
+   an.
+
+Vorhandene Semantic-Gruppen:
 
 | Gruppe | Beispiele | Themenabhängig |
 | --- | --- | --- |
-| Marke | `--brand-blue-dark`, `--brand-blue`, `--brand-tuerkis` | nein |
-| Fakultät | `--faculty-f1` bis `--faculty-f5` | nein |
-| Fläche und Text | `--surface-page`, `--text-primary`, `--border-subtle` | ja |
+| Fläche und Text | `--background`, `--card`, `--foreground`, `--border` | ja |
+| Interaktion | `--primary`, `--secondary`, `--accent`, `--destructive`, `--ring` | ja |
+| Markenfläche | `--surface-brand`, `--surface-highlight` | ja (siehe unten) |
+| Hinweis | `--warning`, `--success` | ja |
 | Status | `--status-draft-bg` bis `--status-revision-fg` | ja |
-| Rolle | `--role-studierende-bg` bis `--role-admin-fg` | ja |
+| Rolle | `--role-student-bg` bis `--role-admin-fg` | ja |
+| Radius | `--radius-none` bis `--radius-pill` | nein |
 
-Marken- und Fakultätsfarben bleiben in hell und dunkel gleich, weil sie
-Identität tragen. Alles andere hat einen abgeleiteten dunklen Wert.
+Status- und Rollen-Tokennamen folgen exakt den Enum-Werten aus dem
+API-Contract (`ProjectStatus`, `Role`; `docs/NAMENSSCHEMA.md`): ein Umbenennen
+hier bricht die Zuordnung zwischen API-Antwort und Badge-Farbe.
 
-Das Figma-Design ist nur hell angelegt. Neue dunkle Werte werden abgeleitet
-und auf Kontrast geprüft, nicht geschätzt.
+**Umgekehrt gilt dieselbe Regel: ein Token ohne Enum-Wert gehört nicht in
+die Gruppe.** Es gibt drei Rollen (`STUDENT`, `EDITOR`, `ADMIN`) und damit
+drei Token-Paare. „Öffentlich" ist keine Rolle, sondern der Zustand „nicht
+angemeldet" (Abschnitt 3), und bekommt deshalb kein eigenes Token: ein
+`role-public-*` legt eine vierte Rolle nahe, die weder im Backend noch in
+der Rechtematrix existiert.
+
+**Ein Badge nutzt immer sein eigenes `-fg`**, nie `muted-foreground` oder
+eine andere allgemeine Textfarbe. Das sieht fast gleich aus, verliert aber
+genau die Kontrastzusage, für die das Paar angelegt wurde.
+
+**Fakultäts- und Studiengangs-Badges sind bewusst einfarbig**
+(`--badge-neutral-bg`/`-fg`), keine Rainbow-Farbe je Fakultät. Begründung in
+Confluence „Designentscheidungen", Abschnitt 2.4.
+
+Markenflächen bleiben in hell und dunkel auf derselben Grundfarbe, wechseln
+aber die Nuance, damit sie sich vom Seitenhintergrund absetzen (siehe
+Kommentare direkt in `tokens.css`). Das Figma-Design ist nur hell angelegt;
+neue dunkle Werte werden abgeleitet und auf Kontrast geprüft, nicht
+geschätzt (Confluence „Designentscheidungen", Abschnitt 2.8).
 
 ## 2. Wo eine Komponente wohnt
 
@@ -112,8 +154,21 @@ Beim Bauen jeder Komponente:
   Live-Region, sonst bleiben sie für Screenreader unsichtbar.
 - **Bilder** aus Blöcken tragen den `alt`-Text aus den Node-Attributen
   (§2.5). Ein dekoratives Bild bekommt ein leeres `alt`, nicht keins.
-- **Kontrast:** 4.5:1 für Text, 3:1 für Bedienelemente, in hell **und**
+- **Kontrast:** 4,5:1 für Text, 3:1 für Bedienelemente, in hell **und**
   dunkel. Betroffen sind vor allem die Status- und Rollenpillen.
+  Zwei Fallen, die in der Praxis fast jeden Befund erklären:
+  - **Gegen die tatsächlich sichtbare Fläche prüfen, nicht gegen die
+    Elternfläche.** Liegt eine vollflächige Kachel oder ein Verlauf über
+    einer weißen Karte, ist der Untergrund die Kachel. Wer die Elternfläche
+    nimmt, hält eine weiße Karte für den Untergrund und übersieht dunkle
+    Schrift auf dunklem Grund.
+  - **Ein gemischtes Rollenpaar ist der häufigste Auslöser.**
+    `surface-brand-muted` auf `card` ergibt 1,5:1, dieselbe Farbe auf
+    `surface-brand` ergibt 7,2:1. Nicht die Farbe ist falsch, sondern die
+    Fläche darunter (Abschnitt 1, Regel 2).
+  - Ausgenommen ist allein `text-disabled`: WCAG nimmt inaktive
+    Bedienelemente ausdrücklich von der Kontrastpflicht aus. Platzhalter
+    zählen dagegen als Text und sind **keine** Ausnahme.
 - **Farbe allein trägt keine Information.** Ein Status ist Text plus Farbe.
   Die Fakultätsfarbe ist Schmuck; die Fakultät steht daneben.
 
