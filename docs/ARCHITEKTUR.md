@@ -31,6 +31,7 @@ de.hsbremen.eportfolio
 │   ├── enums/                     von mehreren Features genutzte Aufzählungstypen
 │   └── error/                     zentrale Fehlerbehandlung, Exceptions, globaler Handler
 ├── config/                        anwendungsweite Spring-Konfiguration (Security, JPA, Properties)
+├── mail/                          Zustellung der Verifizierungs- und Rücksetzcodes (Port + zwei Adapter)
 ├── masterdata/                    Referenzdaten: Fakultät, Studiengang, Modul, Kategorie
 │   └── dto/                       DTOs der vier Stammdaten-Endpoints
 ├── portfolio/                     das E-Portfolio eines Benutzers als Sammlung seiner Projekte
@@ -56,7 +57,8 @@ Was in welchem Paket steckt:
 | `common.dto`    | `PageResponse` (Seitenformat aus Contract §6.6) |
 | `common.enums`  | `BlockType`, `CommentStatus`, `CommentType`, `Degree`, `NominationStatus`, `ProjectStatus`, `ProjectType`, `Role`, `UserStatus` |
 | `common.error`  | `ApiError`, `ApiErrorWriter`, `ErrorCodes`, `GlobalExceptionHandler`, `ValidationException`, `ResourceNotFoundException` |
-| `config`     | `SecurityConfig`, `JpaConfig`, `OpenApiConfig`, `ConfigurationStartupLogger`, `ConfigurationValues` + **alle** Properties-Records (`CorsProperties`, `JwtProperties`, `LoginAttemptProperties`, `PermissionProperties`, `StorageProperties`, `MailProperties`) und die Auswahl-Enums `StorageProvider`, `MailProvider` |
+| `config`     | `SecurityConfig`, `JpaConfig`, `OpenApiConfig`, `AsyncConfig`, `ConfigurationStartupLogger`, `ConfigurationValues` + **alle** Properties-Records (`CorsProperties`, `JwtProperties`, `LoginAttemptProperties`, `PermissionProperties`, `StorageProperties`, `MailProperties`) und die Auswahl-Enums `StorageProvider`, `MailProvider` |
+| `mail`       | `MailSender` (Port), `MailMessage`, `LogMailSender`, `SmtpMailSender`, `MailTemplateService`. Seit KAN-51, siehe Kapitel 10 |
 | `masterdata` | `Category`, `Faculty`, `Module`, `StudyProgram` + je ein Repository, `MasterDataController`, `MasterDataService`, `DevMasterDataSeeder`, `dto/{CategoryResponse, FacultyResponse, StudyProgramResponse, ModuleResponse}` |
 | `portfolio`  | `Portfolio`, `PortfolioRepository` |
 | `project`    | `Project`, `Block`, `ProjectMember`, `ProjectStatusHistory` + je ein Repository, `BlockValidationService`, `ProjectPermissionService`, `ProjectController`, `ProjectReadService`, `ProjectSpecifications`, `dto/{ProjectCardResponse, ProjectDetailResponse, ProjectFilterRequest, PersonResponse, MemberResponse, ReferenceResponse, BlockResponse, StatusHistoryResponse}`. `PermissionProperties` liegt seit KAN-50 in `config` |
@@ -411,9 +413,8 @@ Festgehalten in KAN-15, wo der Handler entstanden ist.
 ## 9. Konfiguration und austauschbare Fremddienste
 
 Stand KAN-50, Contract §6.8. Dieses Kapitel beschreibt, wo Konfiguration steht
-und warum sie so geschnitten ist. Die Adapter selbst gibt es noch nicht: die
-Interfaces `FileStorage` und `MailSender` entstehen mit KAN-23 beziehungsweise
-KAN-51, weil ein Interface ohne Aufrufer nicht prüfbar wäre.
+und warum sie so geschnitten ist. Der Port `MailSender` samt beiden Adaptern
+steht seit KAN-51 (Kapitel 10); `FileStorage` entsteht mit KAN-23.
 
 ### Alle Properties-Records liegen in `config`
 
@@ -491,3 +492,59 @@ Zwei Tests halten das ohne Zutun fest:
 
 Beide suchen die Dateien, statt sie aufzuzählen; ein später angelegtes
 `application-staging.yml` fällt damit automatisch mit unter die Prüfung.
+
+---
+
+## 10. Das Mail-Modul
+
+Stand KAN-51, Contract §6.8 und §3.1.1. Paket `mail`, der erste Adapter hinter
+einem der beiden Ports aus Kapitel 9.
+
+| Klasse | Rolle |
+|--------|-------|
+| `MailSender` | Port, eine Methode `send(MailMessage)`. Synchron und werfend |
+| `MailMessage` | Record: `to`, `subject`, `bodyText`, `bodyHtml` (optional) |
+| `LogMailSender` | Adapter bei `app.mail.provider=log`, schreibt in die Serverkonsole |
+| `SmtpMailSender` | Adapter bei `app.mail.provider=smtp`, versendet über `spring.mail.*` |
+| `MailTemplateService` | **die einzige Klasse, die aufrufende Services benutzen.** Je fachlichem Anlass eine Methode; hier sitzen `@Async` und die Fehlerbehandlung |
+
+Die Arbeitsteilung ist der Kern des Moduls: der Port bleibt eine gewöhnliche,
+synchrone Methode, die bei einem Fehler wirft. Asynchronität und das Schlucken
+des Fehlers stehen genau einmal, nämlich im `MailTemplateService`. Damit gilt
+die Zusage aus §6.8 automatisch auch für jeden künftigen Adapter, und ein
+Adapter muss nichts über sie wissen.
+
+**Absender steht nicht in der Nachricht.** Adresse und Anzeigename sind eine
+Eigenschaft des Systems und kommen aus `MailProperties`. Stünden sie in
+`MailMessage`, müsste jede aufrufende Stelle sie mitgeben und könnte sie
+unterschiedlich setzen.
+
+**Kein Code in einer Betreffzeile.** Betreffzeilen erscheinen in
+Benachrichtigungen auf Sperrbildschirmen, also dort, wo niemand angemeldet sein
+muss. `MailTemplateServiceTest` hält das für alle drei Vorlagen fest. Aus
+demselben Grund gibt `MailMessage.toString()` den Textkörper nicht preis: sonst
+genügte eine einzige spätere Logzeile, um das Einmalgeheimnis ins Protokoll zu
+tragen.
+
+**Der Versand blockiert den Fachvorgang nicht.** Die Methoden des
+`MailTemplateService` laufen über `@Async` mit dem begrenzten Executor aus
+`config/AsyncConfig` und fangen jeden Fehler ab. Scheitert die Zustellung, gilt
+die Registrierung trotzdem als erfolgreich; der Wiederholungsweg ist
+`POST /auth/verify/resend` durch die Person selbst (§6.8).
+
+Bei voller Warteschlange wird verworfen und protokolliert. Die übliche
+`CallerRunsPolicy` liefe im aufrufenden Thread und erzeugte genau die Blockade,
+die §6.8 ausschließt; `AbortPolicy` würde den Fachvorgang scheitern lassen.
+
+**Auch die Relay-Verbindung ist fail-fast.** `spring.mail.*` sind Springs eigene
+Properties und tragen keine Prüfung; ein fehlendes `MAIL_HOST` fiele deshalb
+nirgends auf, weil dieses Modul den Fehlschlag ja bewusst leise macht. Genau die
+Verbindung aus beidem wäre das Szenario aus §6.8, das erst auffällt, wenn sich
+niemand mehr registrieren kann. `SmtpMailSender` prüft den Host deshalb beim
+Start mit derselben `ConfigurationValues.isMissing`-Regel wie Kapitel 9.
+
+**Grenze, bewusst getragen:** keine Zustellgarantie, keine Wiedervorlage
+fehlgeschlagener Mails. Gehört in den Ausblick der Arbeit.
+
+Der Zustelltest läuft gegen GreenMail, einen SMTP-Server im Arbeitsspeicher
+(Testabhängigkeit, kein Dienst in `docker-compose.yml`).

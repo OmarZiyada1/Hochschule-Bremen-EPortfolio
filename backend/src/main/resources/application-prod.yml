@@ -21,6 +21,28 @@ spring:
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
 
+  # Verbindung zum SMTP-Relay (KAN-51). Steht unter spring.mail.* und nicht
+  # unter app.mail.*, weil sie die Autokonfiguration von Spring bedient; app.mail
+  # traegt die anwendungsseitigen Werte (Absender, Basis-URL, Auswahl des
+  # Adapters). Nur hier und nicht in application.yml: im Profil dev laeuft der
+  # Log-Adapter, dort liest diese Werte niemand.
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          # Verschluesselung ab dem ersten Befehl erzwingen. Ohne diesen
+          # Schalter versendet JavaMail im Klartext, sobald das Relay STARTTLS
+          # nicht von sich aus verlangt, und die Zugangsdaten gingen unverpackt
+          # ueber die Leitung.
+          starttls:
+            enable: true
+            required: true
+
 app:
   security:
     cors:

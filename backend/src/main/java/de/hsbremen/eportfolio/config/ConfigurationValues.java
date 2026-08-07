@@ -19,8 +19,14 @@ import java.util.regex.Pattern;
  * <p>Das ist genau der Fehler, den §6.5 und §6.8 ausschliessen wollen, nur
  * schlimmer als der offene Fall: statt beim Start zu scheitern, laeuft die
  * Anwendung scheinbar normal und faellt erst beim ersten Upload auf.
+ *
+ * <p><strong>Oeffentlich seit KAN-51.</strong> Bis dahin lasen nur die
+ * Properties-Records dieses Pakets die Regel. Sie gilt aber fuer jeden Wert aus
+ * der Umgebung, und manche stehen unter Springs eigenen Praefixen
+ * ({@code spring.mail.*}), wo kein {@code @Validated}-Record sie abfangen kann.
+ * Der aktive Adapter prueft sie dann selbst, siehe {@code SmtpMailSender}.
  */
-final class ConfigurationValues {
+public final class ConfigurationValues {
 
 	/**
 	 * Ein nicht aufgeloester Platzhalter, auch mitten im Wert. Absichtlich
@@ -36,7 +42,7 @@ final class ConfigurationValues {
 	 * Ob ein Konfigurationswert fehlt: nicht gesetzt, leer, oder ein
 	 * Platzhalter, den niemand aufgeloest hat.
 	 */
-	static boolean isMissing(String value) {
+	public static boolean isMissing(String value) {
 		return value == null || value.isBlank() || UNRESOLVED_PLACEHOLDER.matcher(value).find();
 	}
 
@@ -51,7 +57,7 @@ final class ConfigurationValues {
 	 * @param missingKeys Schluessel in der Form
 	 *                    {@code app.storage.container (AZURE_STORAGE_CONTAINER)}
 	 */
-	static void failIfMissing(String context, List<String> missingKeys) {
+	public static void failIfMissing(String context, List<String> missingKeys) {
 		if (missingKeys.isEmpty()) {
 			return;
 		}
