@@ -21,41 +21,216 @@ nicht anders angegeben.
 Maven wird **nicht** gebraucht — das Repository bringt den Maven Wrapper
 (`backend/mvnw`, `backend/mvnw.cmd`) mit.
 
-Node.js/pnpm werden nur für das Frontend gebraucht, das in `main` nicht
-enthalten ist (siehe Abschnitt 6).
+Wer alles im Container laufen lässt (Abschnitt 2), braucht von dieser Liste
+nur Docker, Git und OpenSSL: JDK, Node.js und pnpm stecken dann in den
+Images. JDK 21 wird erst gebraucht, um das Backend auf dem Host zu starten
+(Abschnitt 4) oder die Tests laufen zu lassen (Abschnitt 7); Node.js und pnpm
+erst für das Frontend auf dem Host (Abschnitt 6).
 
 Getestet wurde diese Anleitung unter Windows 11 mit Temurin JDK 21.0.8,
 Docker 29.1.5 und Docker Compose v5.0.1.
 
 ---
 
-## 2. Datenbank starten
+## 2. Container starten
 
-Die Datenbank läuft als Container, definiert in `docker-compose.yml`:
+Es gibt drei Betriebsarten. Sie liegen in **getrennten Compose-Projekten**,
+haben eigene Ports und eigene Volumes und können deshalb nebeneinander
+laufen. Sie teilen sich insbesondere **keine Datenbank**: wer in DEV etwas
+anlegt, findet es in ARTIFACT-DEV nicht wieder.
 
-- Image: `postgres:16`
-- Containername: `eportfolio-db`
-- Compose-Projektname: `eportfolio`
-- Port: `${POSTGRES_PORT}` auf dem Host → `5432` im Container (Default `5432:5432`)
-- Volume: `pgdata`, wegen des Projektnamens tatsächlich `eportfolio_pgdata`, gemountet auf `/var/lib/postgresql/data`
+|  | DEV | ARTIFACT-DEV | PROD |
+|---|---|---|---|
+| Zweck | entwickeln | Auslieferungsstand prüfen | Produktivkonfiguration |
+| Backend | `spring-boot:run`, Quellcode gemountet | Fat-Jar im JRE-Image | Fat-Jar im JRE-Image |
+| Frontend | Vite-Dev-Server | Build hinter nginx | Build hinter nginx |
+| Hot Reload | ja | nein | nein |
+| Spring-Profil | `dev` | `dev` | `prod` |
+| Dateien | Dateisystem | Dateisystem | Azure Blob Storage |
+| Mails | Serverkonsole | Serverkonsole | SMTP-Relay |
+| Swagger-UI | an | an | aus |
+| Dev-Testnutzer | ja | ja | nein |
+| Zugangsdaten nötig | nein | nein | **ja** |
+| Oberfläche | 5173 | 5273 | 5373 |
+| Backend | 8080 | 8180 | 8280 |
+| Datenbank | 5432 | 5433 | 5434 |
+| Compose-Projekt | `eportfolio-dev` | `eportfolio-artifact` | `eportfolio-prod` |
 
-`docker-compose.yml` liest `POSTGRES_DB`, `POSTGRES_USER` und
-`POSTGRES_PASSWORD` aus der `.env`. Alle drei sind mit `:?`-Syntax als
-Pflichtwerte markiert — fehlt einer, bricht Compose mit einer Meldung ab, statt
-mit Defaults zu starten. Also zuerst Schritt 3, dann:
+**ARTIFACT-DEV heißt so, weil beides zutrifft:** ausgeliefert wird das
+gebaute Artefakt, konfiguriert ist weiterhin die Entwicklung. Diese
+Betriebsart beantwortet die Frage „läuft mein Code auch als gebautes
+Artefakt und nicht nur im Dev-Server?", nicht die Frage „verhält sich das
+System wie im Betrieb?". Für die zweite Frage gibt es PROD.
+
+### Die Befehle
+
+Jede Betriebsart nennt ihre beiden Dateien ausdrücklich:
 
 ```bash
-docker compose up -d db
+docker compose -f compose.base.yml -f compose.dev.yml      up -d --build
+docker compose -f compose.base.yml -f compose.artifact.yml up -d --build
+docker compose -f compose.base.yml -f compose.prod.yml     up -d --build
 ```
 
-Prüfen:
+Dieselben Dateien gelten für alles Weitere, also `ps`, `logs`, `exec`,
+`stop`, `down`. Wer sich das nicht merken will, nimmt das Menü (siehe
+unten).
+
+`compose.base.yml` enthält, was in allen drei gleich ist. Alles, was sich
+unterscheidet, steht in genau einer Overlay-Datei: Projektname, Ports,
+Bau-Stufe, Spring-Profil, Volumes. Wer wissen will, was eine Betriebsart
+ausmacht, liest **eine** Datei.
+
+### `docker compose up` ohne `-f` scheitert mit Absicht
+
+```
+no configuration file provided: not found
+```
+
+Das ist kein Fehler im Aufbau, sondern der Zweck der Namensgebung. Compose
+findet nur Dateien namens `compose.yml`, `compose.yaml`,
+`docker-compose.yml` oder `docker-compose.yaml` von allein, und eine
+`docker-compose.override.yml` daneben zieht es unsichtbar mit. Genau das
+wollen wir hier nicht: bei drei Betriebsarten muss aus dem Befehl ablesbar
+sein, welche lief. Deshalb heißt die Basisdatei `compose.base.yml`, und
+deshalb gibt es keine Override-Datei mehr.
+
+### Nebeneinander laufen lassen
+
+Weil jede Betriebsart ein eigenes Projekt ist, stören sie sich nicht:
 
 ```bash
-docker ps --filter name=eportfolio-db
+docker compose -f compose.base.yml -f compose.dev.yml      up -d
+docker compose -f compose.base.yml -f compose.artifact.yml up -d
+docker ps --filter name=eportfolio- --format "table {{.Names}}\t{{.Status}}"
 ```
 
-Es gibt (noch) keine Container für Backend und Frontend; die entsprechenden
-Blöcke in `docker-compose.yml` sind auskommentiert.
+```
+eportfolio-artifact-backend-1   Up (healthy)
+eportfolio-artifact-db-1        Up (healthy)
+eportfolio-artifact-frontend-1  Up
+eportfolio-dev-backend-1        Up (healthy)
+eportfolio-dev-db-1             Up (healthy)
+eportfolio-dev-frontend-1       Up
+```
+
+Die Volumes sind ebenso getrennt (`eportfolio-dev_pgdata` gegen
+`eportfolio-artifact_pgdata`). Der Preis dafür sind drei Datenstände: jede
+Betriebsart spielt beim ersten Start ihre eigenen Migrationen ein und füllt
+ihre eigene Datenbank mit den Dev-Daten.
+
+### Menü statt Befehle
+
+Wer sich die Befehle nicht merken will, startet das Menü im
+Wurzelverzeichnis:
+
+```powershell
+.\eportfolio.ps1
+.\eportfolio.ps1 -Mode artifact    # mit vorgewählter Betriebsart
+```
+
+Im Kopf steht immer, welche Betriebsart gewählt ist; alle Punkte beziehen
+sich darauf, gewechselt wird mit `b`. Es bündelt Starten und Bauen, Status
+(auch über alle Betriebsarten hinweg), Gesundheit, Logs je Dienst, Shell und
+`psql`, die Testläufe sowie das Aufräumen. Die löschenden Punkte fragen
+vorher nach und benennen, was verloren geht. Jeder Docker-Befehl wird vor
+der Ausführung angezeigt, damit man ihn auch von Hand verwenden kann.
+
+Weigert sich PowerShell wegen der Ausführungsrichtlinie:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\eportfolio.ps1
+```
+
+### Ein Origin
+
+Das Frontend spricht die API unter der Adresse an, unter der es selbst
+ausgeliefert wird, in DEV also `http://localhost:5173/api/…`. In DEV leitet
+der Vite-Dev-Server weiter (`server.proxy` in `vite.config.ts`), in
+ARTIFACT-DEV und PROD nginx (`frontend/nginx.conf`). Der Browser sieht
+deshalb nie einen fremden Ursprung, es gibt kein CORS und keinen Preflight,
+und im Anwendungscode steht keine Basis-URL.
+
+### PROD braucht echte Zugangsdaten
+
+`application-prod.yml` hat für jeden Pflichtwert bewusst keinen Default.
+Fehlen die Werte, startet das Backend nicht und nennt beim Beenden, welche:
+
+```
+APPLICATION FAILED TO START
+
+Reason: java.lang.IllegalStateException: app.storage.provider=azure, aber diese
+Pflichtwerte fehlen: app.storage.container (AZURE_STORAGE_CONTAINER),
+app.storage.connection-string (AZURE_STORAGE_CONNECTION_STRING).
+Sie kommen aus der Umgebung, Vorlage: .env.example
+```
+
+`compose.prod.yml` reicht die Werte deshalb **ohne** die `:?`-Syntax durch,
+obwohl Compose damit früher abbrechen könnte: die Meldung der Anwendung
+nennt den fehlenden Schlüssel samt Herkunft und ist die nützlichere. Sie ist
+außerdem dieselbe, die beim echten Ausrollen erscheint.
+
+Ausgefüllt werden die acht Werte im zweiten Block der `.env` (Abschnitt 3).
+Einzige Ausnahme ist `MAIL_PORT`: dort steht in `compose.prod.yml` ein
+Default von 587, weil ein leerer Wert einen Umwandlungsfehler auslösen und
+damit die eigentliche Meldung verdecken würde.
+
+### In PROD hängt die Gesundheit am Mailserver
+
+Weil im Profil `prod` `spring.mail.host` gesetzt ist, legt Spring Boot von
+allein eine Gesundheitsprüfung für den Mailserver an. Sie öffnet bei **jedem**
+Aufruf von `/actuator/health` eine SMTP-Verbindung. Ist das Relay nicht
+erreichbar, ist der Container folgerichtig `unhealthy`:
+
+```
+HTTP 503
+
+{"status":"DOWN","components":{
+  "db":{"status":"UP"},
+  "mail":{"status":"DOWN","details":{"error":"jakarta.mail.MessagingException: ..."}}}}
+```
+
+Das ist kein Fehler des Container-Aufbaus, sondern die richtige Auskunft: ohne
+Mailversand kann sich niemand registrieren (Contract §3.1.1). Mit einem
+erreichbaren Relay meldet dieselbe Prüfung `UP`.
+
+Wichtig ist nur, dass sie **antwortet**. JavaMail wartet ohne Timeout
+unbegrenzt; `/actuator/health` blieb dann stumm, der Docker-Healthcheck lief
+in seinen eigenen Timeout, und am Container stand `unhealthy` ohne jeden
+Hinweis auf den Grund. `application-prod.yml` setzt deshalb
+`connectiontimeout`, `timeout` und `writetimeout` auf je 5000 ms. Die Antwort
+kommt damit nach gut fünf Sekunden und nennt die Ursache.
+
+In DEV und ARTIFACT-DEV tritt das nicht auf: dort läuft der Log-Adapter,
+`spring.mail.host` ist nicht gesetzt, und die Prüfung entsteht gar nicht.
+
+### Nur die Datenbank
+
+Wer Backend und Frontend auf dem Host starten will (Abschnitte 4 und 6),
+braucht nur die Datenbank. Sinnvoll ist dafür die von DEV:
+
+```bash
+docker compose -f compose.base.yml -f compose.dev.yml up -d db
+```
+
+Der Dienst hat einen Healthcheck (`pg_isready`). Das Backend **im Container**
+wartet darüber; beim Start von Hand ersetzt er das Warten nicht.
+
+### `POSTGRES_HOST` und `POSTGRES_PORT`, die Falle
+
+Die beiden Werte in der `.env` beschreiben den Weg **vom Host** zur
+Datenbank und bleiben deshalb auf `localhost` und dem veröffentlichten Port.
+Innerhalb eines Compose-Netzes gilt etwas anderes: dort heißt die Datenbank
+`db` und hört immer auf `5432`. `compose.base.yml` setzt diese beiden Werte
+für den Backend-Container daher fest und liest die `.env` an dieser Stelle
+nicht.
+
+`POSTGRES_PORT` ist zugleich der Host-Port, den **DEV** veröffentlicht. Das
+ist Absicht und der Grund, warum DEV als einzige Betriebsart keine eigene
+Portvariable für die Datenbank hat: wer das Backend aus der IDE gegen die
+DEV-Datenbank startet, trifft damit denselben Port. ARTIFACT-DEV und PROD
+haben eigene Variablen, weil sie für den Start aus der IDE nicht gedacht
+sind.
 
 ---
 
@@ -70,7 +245,7 @@ cp .env.example .env
 
 Gelesen wird die Datei von zwei Stellen:
 
-- `docker-compose.yml` — Compose lädt `.env` aus dem Verzeichnis, in dem es
+- die `compose.*.yml` — Compose lädt `.env` aus dem Verzeichnis, in dem es
   aufgerufen wird.
 - `backend/src/main/resources/application-dev.yml` — importiert
   `optional:file:../.env[.properties]` und `optional:file:./.env[.properties]`,
@@ -83,7 +258,7 @@ Gelesen wird die Datei von zwei Stellen:
 | Variable                | Pflicht | Wird gelesen von | Wenn sie fehlt |
 |-------------------------|---------|------------------|----------------|
 | `POSTGRES_HOST`         | ja (Backend) | `application-dev.yml` (JDBC-URL) | Start bricht ab: Platzhalter in der Datasource-URL nicht auflösbar |
-| `POSTGRES_PORT`         | ja (Backend) | `application-dev.yml`, `docker-compose.yml` (Default `5432`) | wie oben |
+| `POSTGRES_PORT`         | ja (Backend) | `application-dev.yml`, `compose.dev.yml` (Default `5432`) | wie oben |
 | `POSTGRES_DB`           | ja      | beide            | Compose bricht ab mit „POSTGRES_DB fehlt …" |
 | `POSTGRES_USER`         | ja      | beide            | Compose bricht ab mit „POSTGRES_USER fehlt …" |
 | `POSTGRES_PASSWORD`     | ja      | beide            | Compose bricht ab mit „POSTGRES_PASSWORD fehlt …" |
@@ -140,6 +315,10 @@ Passwort steckt nach dem ersten Start im Volume fest.
 ---
 
 ## 4. Backend starten
+
+Dieser Abschnitt beschreibt den Start **auf dem Host**. Wer den Weg aus
+Abschnitt 2 gewählt hat, hat das Backend bereits laufen; dort steht auch, wie
+eine Codeänderung im Container wirksam wird.
 
 ```bash
 cd backend
@@ -280,27 +459,34 @@ Anders als beim Testnutzer-Seeder braucht er keine Variable in der `.env`.
 
 ## 6. Frontend starten
 
-Im Branch `main` gibt es **kein** `frontend/`-Verzeichnis. Das Frontend liegt
-auf Branch
-`KAN-6-Frontend-Projekt-Setup-Design-Tokens-aus-Figma-übernehmen` und ist dort
-ein **Scaffold**: das unveränderte Vite-/React-/shadcn-Startprojekt mit einer
-`App.tsx`, die „Project ready!" und einen Button anzeigt. Es gibt keine Seiten,
-kein Routing und keine Anbindung an das Backend.
-
-Wer es sich ansehen will:
+Dieser Abschnitt beschreibt den Start **auf dem Host**. Wer den Weg aus
+Abschnitt 2 gewählt hat, hat das Frontend bereits laufen.
 
 ```bash
-git checkout KAN-6-Frontend-Projekt-Setup-Design-Tokens-aus-Figma-übernehmen
 cd frontend
 pnpm install
 pnpm dev
 ```
 
-Paketmanager ist pnpm (im Repo liegt `pnpm-lock.yaml` und
-`pnpm-workspace.yaml`). Der Vite-Dev-Server läuft standardmäßig auf Port 5173 —
-genau die Adresse, die in `CORS_ERLAUBTE_ORIGINS` voreingestellt ist. Ob der
-Port tatsächlich 5173 ist, ist nicht verifiziert; in `vite.config.ts` wurde
-nicht nachgesehen.
+Paketmanager ist pnpm; im Repo liegen `pnpm-lock.yaml` und
+`pnpm-workspace.yaml`. Die Version steht als `packageManager` in der
+`package.json`, Corepack nimmt sie von dort.
+
+Der Vite-Dev-Server hört auf **5173**, festgelegt in `vite.config.ts`
+(`strictPort: true`). Fest deshalb, weil `CORS_ALLOWED_ORIGINS` und
+`app.mail.base-url` auf diese Adresse zeigen: ein stilles Ausweichen auf 5174
+würde beides ins Leere laufen lassen.
+
+`vite.config.ts` leitet außerdem `/api` und `/v3/api-docs` an das Backend
+weiter. Ziel ist `http://localhost:8080`, im Container der Dienstname aus
+`VITE_PROXY_TARGET`. Damit liegt die API immer unter demselben Ursprung wie
+die Oberfläche, und im Anwendungscode steht keine Basis-URL.
+
+Was auf `main` vorhanden ist: Routing, i18n (Deutsch und Englisch),
+Design-Tokens samt Token-Galerie unter `/dev/tokens` und die
+shadcn-Grundlage. Eine Anbindung an die API gibt es noch nicht,
+`frontend/src/api/` ist leer. `pnpm gen:api` erzeugt die Typen aus dem
+laufenden Backend nach `src/api/schema.d.ts`.
 
 ---
 
@@ -350,21 +536,42 @@ Dev-Daten.
 
 ## 8. Aufräumen
 
+**Jeder Befehl gilt nur für die genannte Betriebsart.** Wer alle drei
+loswerden will, wiederholt ihn mit `compose.artifact.yml` und
+`compose.prod.yml` oder nimmt Menüpunkt 23.
+
 ```bash
 # Backend beenden: Strg+C im Terminal, in dem mvnw läuft
 
 # Container stoppen (Daten bleiben im Volume erhalten)
-docker compose stop db
+docker compose -f compose.base.yml -f compose.dev.yml stop
 
-# Container entfernen, Volume behalten
-docker compose down
+# Container entfernen, Volumes behalten
+docker compose -f compose.base.yml -f compose.dev.yml down
 
-# Container UND Datenbankinhalt entfernen
-docker compose down -v
+# Container UND die Volumes DIESER Betriebsart entfernen: Datenbankinhalt,
+# hochgeladene Dateien, und in DEV zusätzlich das Maven-Repository und
+# node_modules. Der nächste Start dauert danach wieder so lange wie der
+# allererste.
+docker compose -f compose.base.yml -f compose.dev.yml down -v
 
-# Prüfen, ob Port 8080 noch belegt ist
+# Was ist überhaupt noch da?
+docker ps   --filter name=eportfolio- --format "table {{.Names}}\t{{.Status}}"
+docker volume ls --filter name=eportfolio-
+
+# Prüfen, ob ein Port noch belegt ist (hier DEV-Backend)
 netstat -ano | findstr :8080     # Windows
 lsof -i :8080                    # macOS/Linux
+```
+
+Aus der Zeit vor der Trennung in drei Betriebsarten können Volumes mit dem
+Präfix `eportfolio_` übrig sein (ohne Bindestrich, also
+`eportfolio_pgdata` statt `eportfolio-dev_pgdata`). Sie gehören zu keinem
+der drei Projekte mehr, belegen aber weiter Platz. Vor dem Löschen prüfen,
+ob darin noch ein Datenstand liegt, den jemand braucht:
+
+```bash
+docker volume ls --filter name=eportfolio_
 ```
 
 ---
@@ -438,7 +645,7 @@ Statt die fremde Instanz zu stoppen, reicht ein anderer Host-Port in der `.env`:
 POSTGRES_PORT=5433
 ```
 
-Die Variable steuert beides — das Port-Mapping in `docker-compose.yml` und die
+Die Variable steuert beides — den Host-Port von DEV in `compose.dev.yml` und die
 JDBC-URL in `application-dev.yml`. Ein Wert genügt also, danach
 `docker compose up -d db`. Im Container bleibt der Port unverändert 5432.
 
@@ -457,7 +664,7 @@ Zwei Wege:
    Flyway legt das Schema beim nächsten Backend-Start neu an:
 
    ```bash
-   docker compose down -v
+   docker compose -f compose.base.yml -f compose.dev.yml down -v
    docker compose up -d db
    ```
 
@@ -465,8 +672,20 @@ Zwei Wege:
 
 Der Container läuft nicht oder ist noch nicht bereit. `docker ps --filter
 name=eportfolio-db` prüfen; frisch gestartetes Postgres braucht ein paar
-Sekunden. Ein Healthcheck ist in `docker-compose.yml` nicht definiert, das
-Backend wartet also nicht.
+Sekunden.
+
+Der Dienst `db` hat einen Healthcheck (`pg_isready`), und das Backend **im
+Container** wartet darüber (`depends_on: condition: service_healthy`). Wer das
+Backend von Hand auf dem Host startet, wartet nicht: dort muss die Datenbank
+vorher oben sein.
+
+Kommt der Fehler aus dem Backend-Container, zeigt die Adresse in der Meldung,
+wo es klemmt. Steht dort `localhost:5432`, greift die `.env` statt der in
+`compose.base.yml` fest gesetzten Werte `db` und `5432`. Prüfen mit:
+
+```bash
+docker compose -f compose.base.yml -f compose.dev.yml exec backend env | grep POSTGRES
+```
 
 ### Kein Login möglich, keine Testnutzer vorhanden
 
@@ -490,4 +709,71 @@ nur im Arbeitsspeicher — ein Neustart der Anwendung hebt die Sperre sofort auf
 
 Eine bereits ausgeführte Migrationsdatei wurde nachträglich geändert.
 Migrationen werden nicht editiert, sondern durch eine neue Datei ergänzt. Lokal
-hilft `docker compose down -v` und ein Neuaufbau.
+hilft `docker compose -f compose.base.yml -f compose.dev.yml down -v` und ein Neuaufbau.
+
+### `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` beim Bau des Frontend-Images
+
+pnpm weist Pakete ab, die jünger als 24 Stunden sind. Die Regel ist ein
+Standardwert von pnpm 11 und steht nirgends im Repo. Sie trifft jeden frischen
+`pnpm install`, also auch den auf dem Host, sobald zuletzt eine sehr neue
+Version ins Lockfile gekommen ist.
+
+Der Image-Bau setzt deshalb `PNPM_CONFIG_MINIMUM_RELEASE_AGE=0`, und zwar nur
+dort (Begründung im Kommentar in `frontend/Dockerfile`): bei eingefrorenem
+Lockfile wird nichts aufgelöst, sondern genau das installiert, was eingecheckt
+ist, mitsamt Prüfsummen.
+
+Als Umgebungsvariable und nicht als Schalter am Aufruf, weil jeder
+pnpm-Befehl vorab noch einmal selbst `pnpm install` startet: ein
+`--config.minimumReleaseAge=0` am `pnpm install` wirkt deshalb nicht auf das
+anschließende `pnpm build`. Aus demselben Grund hilft der Schalter auch auf
+dem Host nicht weiter.
+
+Auf dem Host bleibt die Regel bewusst aktiv. Wer dort davon aufgehalten wird,
+wartet die 24 Stunden ab oder setzt die Variable für die eine Sitzung:
+
+```bash
+PNPM_CONFIG_MINIMUM_RELEASE_AGE=0 pnpm test
+```
+
+### `failed to stat active key during commit: snapshot … does not exist`
+
+Ein beschädigter Eintrag im Build-Cache von BuildKit, meist nach einem
+abgebrochenen Build. Der Cache wird bei jedem weiteren Versuch erneut
+gelesen, der Fehler wiederholt sich also unverändert. Gezielt umgehen:
+
+```bash
+docker compose -f compose.base.yml -f compose.dev.yml build --no-cache backend
+```
+
+### Der Frontend-Container zieht dauerhaft CPU, Vite antwortet nicht mehr
+
+Im Container überwacht Vite die Dateien per Polling, weil Bind Mounts von
+Windows keine Dateiereignisse melden. Polling kostet pro Datei und Durchlauf
+einen Zugriff. Gerät dabei ein großes Verzeichnis mit in die Überwachung,
+lastet der Watcher einen Kern dauerhaft aus, die Event-Loop verhungert, und
+der Dev-Server nimmt keine Anfragen mehr an. Von außen sieht das aus wie ein
+Timeout, nicht wie ein Fehler.
+
+Prüfen:
+
+```bash
+docker stats --no-stream --format "{{.Name}}\t{{.CPUPerc}}"
+```
+
+`vite.config.ts` schließt deshalb `node_modules`, `dist`, `.git` und
+`.pnpm-store` aus. Der letzte Punkt ist der wichtigste: `pnpm` legt einen
+Paketspeicher im Projekt an, sobald das Repository auf einem anderen Laufwerk
+liegt als der globale Speicher (unter Windows der Normalfall, Projekt auf
+`D:`, Speicher auf `C:`). Das Verzeichnis ist mehrere hundert Megabyte groß
+und taucht erst auf, wenn jemand `pnpm install` auf dem Host ausgeführt hat.
+
+Kommt ein weiteres großes Verzeichnis hinzu, gehört es in dieselbe Liste.
+
+### nginx beendet sich mit `host not found in upstream "backend"`
+
+Betrifft nur ARTIFACT-DEV und PROD. nginx löst den Dienstnamen beim
+Start auf; existiert der Backend-Container zu diesem Zeitpunkt nicht, bricht
+es ab. `depends_on` in `compose.base.yml` verhindert das im Normalfall.
+Tritt es doch auf, wurde der Frontend-Container einzeln gestartet: dann
+die Betriebsart ohne Dienstnamen starten, also `... up -d` statt `... up -d frontend`.

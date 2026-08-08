@@ -10,8 +10,7 @@ noch nicht (siehe [docs/STAND.md](docs/STAND.md)).
 
 ## Tech-Stack
 
-Alle Versionen aus `backend/pom.xml` bzw. `frontend/package.json` (Branch
-`KAN-6-Frontend-Projekt-Setup-…`).
+Alle Versionen aus `backend/pom.xml` bzw. `frontend/package.json`.
 
 | Bereich    | Technologie                                          |
 |------------|------------------------------------------------------|
@@ -24,27 +23,63 @@ Alle Versionen aus `backend/pom.xml` bzw. `frontend/package.json` (Branch
 
 ## Repo-Aufbau
 
-- `backend/` — Spring-Boot-Anwendung (Maven), inkl. Flyway-Migrationen unter `backend/src/main/resources/db/migration`
-- `frontend/` — React/Vite-App; liegt **nicht in `main`**, sondern auf Branch `KAN-6-Frontend-Projekt-Setup-Design-Tokens-aus-Figma-übernehmen`
-- `docs/` — diese Dokumentation
+- `backend/`: Spring-Boot-Anwendung (Maven), inkl. Flyway-Migrationen unter `backend/src/main/resources/db/migration` und `Dockerfile`
+- `frontend/`: React/Vite-App, inkl. `Dockerfile` und `nginx.conf`
+- `docs/`: diese Dokumentation
+- `compose.base.yml`: gemeinsame Grundlage; daneben `compose.dev.yml`, `compose.artifact.yml` und `compose.prod.yml`, je eine Betriebsart
+- `eportfolio.ps1`: Menü für Starten, Bauen, Logs, Tests und Aufräumen
 
 ## Schnellstart
 
-Voraussetzungen: JDK 21, Docker Desktop. Ausführlich in
+Voraussetzung ist Docker Desktop. Ausführlich in
 [docs/SETUP.md](docs/SETUP.md).
 
 ```bash
 cp .env.example .env
-# In der .env mindestens POSTGRES_PASSWORD, JWT_SECRET und DEV_TEST_PASSWORT
+# In der .env mindestens POSTGRES_PASSWORD, JWT_SECRET und DEV_TEST_PASSWORD
 # durch eigene Werte ersetzen. JWT_SECRET erzeugen mit:
 #   openssl rand -base64 64
-docker compose up -d db
-cd backend && ./mvnw spring-boot:run
+docker compose -f compose.base.yml -f compose.dev.yml up -d --build
 ```
 
-Prüfen: <http://localhost:8080/actuator/health> muss `{"status":"UP"}` liefern.
-Die API lässt sich danach über <http://localhost:8080/swagger-ui.html>
-ausprobieren.
+Das startet Datenbank, Backend und Frontend. Der erste Lauf dauert, weil die
+Maven-Abhängigkeiten und `node_modules` einmal geladen werden; beides bleibt
+danach in benannten Volumes liegen.
+
+Wer sich die Befehle nicht merken will, nimmt das Menü: `.\eportfolio.ps1`
+bündelt Starten, Bauen, Logs, Tests und Aufräumen.
+
+Prüfen: <http://localhost:5173> zeigt die Oberfläche,
+<http://localhost:8080/actuator/health> muss `{"status":"UP"}` liefern. Die API
+lässt sich über <http://localhost:8080/swagger-ui.html> ausprobieren.
+
+Das Frontend spricht die API unter seinem eigenen Ursprung an
+(`http://localhost:5173/api/…`), in DEV über den Vite-Proxy, sonst über
+nginx. Deshalb gibt es kein CORS und keine Basis-URL im Code.
+
+### Drei Betriebsarten
+
+Sie liegen in getrennten Compose-Projekten, haben eigene Ports und eigene
+Volumes und laufen bei Bedarf nebeneinander. Einzelheiten in
+[docs/SETUP.md](docs/SETUP.md), Abschnitt 2.
+
+| Betriebsart | Overlay | Profil | Oberfläche | Wofür |
+|---|---|---|---|---|
+| DEV | `compose.dev.yml` | `dev` | 5173 | entwickeln, mit Hot Reload |
+| ARTIFACT-DEV | `compose.artifact.yml` | `dev` | 5273 | gebautes Jar und Frontend prüfen |
+| PROD | `compose.prod.yml` | `prod` | 5373 | Produktivkonfiguration, braucht Azure und SMTP |
+
+`docker compose up` ohne `-f` scheitert absichtlich: bei drei Betriebsarten
+soll aus dem Befehl ablesbar sein, welche lief.
+
+Wer lieber auf dem Host entwickelt, braucht zusätzlich JDK 21, Node.js und
+pnpm und startet nur die Datenbank im Container:
+
+```bash
+docker compose -f compose.base.yml -f compose.dev.yml up -d db
+cd backend && ./mvnw spring-boot:run
+cd frontend && pnpm install && pnpm dev
+```
 
 Ohne gesetztes `JWT_SECRET` startet die Anwendung nicht: das ist Absicht, siehe
 [docs/SETUP.md](docs/SETUP.md).

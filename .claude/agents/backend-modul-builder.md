@@ -37,7 +37,7 @@ ein Jira-Ticket um, nicht mehr.
 ## Harte Grenzen
 
 - Niemals bestehende Migrationen ändern; niemals `ddl-auto` umstellen.
-- Keine neuen Abhängigkeiten, keine Änderungen an `docker-compose.yml` oder
+- Keine neuen Abhängigkeiten, keine Änderungen an den `compose.*.yml` oder
   `SecurityConfig`-Grundsätzen ohne ausdrücklichen Ticketauftrag; nötige
   `SecurityConfig`-Pfadregeln sind erlaubt und werden im Kommentar begründet.
 - `passwordHash`, `hsbEmail`, `StoredFile.path` erscheinen in keiner Response.

@@ -1,0 +1,54 @@
+# Betriebsart PROD: Auslieferungsstand mit Produktivkonfiguration.
+#
+#   docker compose -f compose.base.yml -f compose.prod.yml up -d
+#
+# Gleiche Images wie ARTIFACT-DEV, aber Spring-Profil "prod": Dateien in
+# Azure Blob Storage, Mails ueber ein SMTP-Relay, Swagger-UI aus, keine
+# Dev-Testnutzer.
+#
+# Diese Betriebsart laeuft nur mit echten Zugangsdaten. Sie stehen im zweiten
+# Block der .env.example und sind dort leer; ausgefuellt wird in der nicht
+# eingecheckten .env oder in der Umgebung des Prozesses.
+#
+# Die Werte werden hier bewusst OHNE die :?-Syntax durchgereicht, obwohl
+# Compose damit frueher abbrechen koennte. Grund: application-prod.yml hat
+# fuer jeden Pflichtwert absichtlich keinen Default, und die Anwendung nennt
+# beim Start den fehlenden Schluessel samt Herkunft. Diese Meldung ist die
+# nuetzlichere, und sie ist dieselbe, die auch beim echten Ausrollen kommt.
+# Ein Abbruch durch Compose wuerde sie verdecken.
+#
+# Einzige Ausnahme ist MAIL_PORT: ein leerer Wert liesse sich nicht in eine
+# Zahl umwandeln, und dieser Umwandlungsfehler wuerde die eigentliche Meldung
+# ueberdecken. 587 ist der Wert aus der .env.example.
+
+name: eportfolio-prod
+
+services:
+  db:
+    ports:
+      - "${PROD_POSTGRES_PORT:-5434}:5432"
+
+  backend:
+    build:
+      target: runtime
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      AZURE_STORAGE_CONTAINER: ${AZURE_STORAGE_CONTAINER}
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
+      APP_BASE_URL: ${APP_BASE_URL}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+    ports:
+      - "${PROD_BACKEND_PORT:-8280}:8080"
+    # Kein storage-Volume: im Profil prod liegen die Dateien in Azure Blob
+    # Storage, nicht im Dateisystem des Containers.
+
+  frontend:
+    build:
+      target: runtime
+    ports:
+      - "${PROD_FRONTEND_PORT:-5373}:80"
