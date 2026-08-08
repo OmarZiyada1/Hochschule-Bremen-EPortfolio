@@ -489,11 +489,29 @@ public class ProjectPermissionService {
 
 	/**
 	 * Zeile „Datei lesen": die Sichtbarkeit richtet sich nach dem zugehoerigen
-	 * Projekt (§3.15). Die Entity {@code StoredFile} gibt es noch nicht; sobald
-	 * sie existiert, laesst sich diese Methode direkt darauf anwenden.
+	 * Projekt (§3.15). Der {@code FileService} ruft sie fuer Dateien mit
+	 * Projektbezug auf; Avatare ({@code projectId = null}) sind ohne Anmeldung
+	 * abrufbar und kommen hier gar nicht erst an.
 	 */
 	public boolean mayReadFile(AuthenticatedUser user, Project project) {
 		return mayReadProject(user, project);
+	}
+
+	/**
+	 * Endpoint-Zeile {@code DELETE /files/{id}} aus §6.1: „Uploader:in /
+	 * ADMIN".
+	 *
+	 * <p>Die Redaktion gehoert bewusst nicht dazu, auch nicht die zugewiesene:
+	 * §6.1 fuehrt sie in dieser Zeile nicht, anders als beim Hochladen. Zum
+	 * Parameter (ID statt Entity) gilt dasselbe wie bei
+	 * {@link #mayEditComment}: die Antwort braucht nichts weiter, und ein
+	 * Verweis von hier auf {@code file.StoredFile} machte aus der einseitigen
+	 * Abhaengigkeit der Pakete einen Kreis.
+	 *
+	 * @param uploaderId ID der Person, die die Datei hochgeladen hat
+	 */
+	public boolean mayDeleteFile(AuthenticatedUser user, UUID uploaderId) {
+		return (isLoggedIn(user) && user.getId().equals(uploaderId)) || isAdmin(user);
 	}
 
 	/**

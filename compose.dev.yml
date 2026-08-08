@@ -46,6 +46,22 @@ services:
       start_period: 600s
       retries: 30
 
+  # Azurite, der Blob-Emulator von Microsoft (KAN-23). Nur in DEV: der
+  # Adaptertest AzureBlobFileStorageTest laeuft damit als echter Round-Trip
+  # gegen einen Blob-Dienst, ohne Zugangsdaten und ohne Speicherkonto.
+  # ARTIFACT-DEV bildet den Auslieferungsstand ab und PROD spricht mit echtem
+  # Azure, beide brauchen ihn nicht. Die Anwendung selbst redet in DEV nicht
+  # mit ihm (app.storage.provider steht auf local); er ist ein reines
+  # Testwerkzeug, wie die Datenbank fuer ./mvnw test.
+  # Bewusst nur der Blob-Dienst; Queue und Table braucht niemand.
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    command: ["azurite-blob", "--blobHost", "0.0.0.0", "--location", "/data"]
+    ports:
+      - "${AZURITE_BLOB_PORT:-10000}:10000"
+    volumes:
+      - azurite-data:/data
+
   frontend:
     build:
       target: dev
@@ -72,3 +88,4 @@ volumes:
   maven-repo:
   node-modules:
   storage:
+  azurite-data:

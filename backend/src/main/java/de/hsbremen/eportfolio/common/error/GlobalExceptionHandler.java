@@ -12,6 +12,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 /**
  * Bildet Ausnahmen auf das einheitliche Fehler-Envelope ab (API-Contract §6.2).
@@ -82,6 +84,43 @@ public class GlobalExceptionHandler {
 		String message = "Der Parameter \"" + ex.getName() + "\" hat nicht das erwartete Format"
 				+ (expected == null ? "." : " (" + expected.getSimpleName() + ").");
 		return build(HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_FAILED, message, request);
+	}
+
+	/**
+	 * Der Multipart-Filter hat einen Upload schon vor dem Controller
+	 * abgewiesen, weil er das Servlet-Limit aus
+	 * {@code spring.servlet.multipart} ueberschreitet (KAN-23).
+	 *
+	 * <p>Das Servlet-Limit liegt bewusst oberhalb des groessten fachlichen
+	 * Limits aus §3.15; wer hier landet, haette also auch die fachliche
+	 * Pruefung nicht bestanden. Die Antwort ist deshalb dieselbe wie dort:
+	 * 400 {@code FILE_TOO_LARGE} im Envelope aus §6.2, egal welche der beiden
+	 * Schranken zuerst griff. Ohne diesen Handler antwortete Spring mit einem
+	 * 500 in eigenem Format.
+	 */
+	@ExceptionHandler(MaxUploadSizeExceededException.class)
+	public ResponseEntity<ApiError> handleUploadTooLarge(MaxUploadSizeExceededException ex,
+			HttpServletRequest request) {
+		return build(HttpStatus.BAD_REQUEST, ErrorCodes.FILE_TOO_LARGE,
+				"Die Datei ueberschreitet das Groessenlimit (§3.15): hoechstens 10 MB fuer "
+						+ "Bilder, 25 MB fuer Audio und PDF.",
+				request);
+	}
+
+	/**
+	 * Ein Pflicht-Teil eines Multipart-Requests fehlt, etwa ein
+	 * {@code POST /api/files} ohne den Teil {@code file}.
+	 *
+	 * <p>Wie bei den uebrigen Formfehlern: ohne diesen Handler antwortete
+	 * Spring in eigenem Format an §6.2 vorbei. Die Meldung nennt nur den
+	 * Namen des fehlenden Teils, und der stammt aus der eigenen
+	 * Controller-Signatur, nicht aus dem Request.
+	 */
+	@ExceptionHandler(MissingServletRequestPartException.class)
+	public ResponseEntity<ApiError> handleMissingPart(MissingServletRequestPartException ex,
+			HttpServletRequest request) {
+		return build(HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_FAILED,
+				"Der Multipart-Teil \"" + ex.getRequestPartName() + "\" fehlt.", request);
 	}
 
 	/**
