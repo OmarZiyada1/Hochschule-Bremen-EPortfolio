@@ -39,6 +39,39 @@ hat genau einen Sollzustand, und der steht an genau einer Stelle. Die Historie
 geht dabei nicht verloren: Jira führt die Versionshistorie der Beschreibung
 selbst.
 
+## Ein vorhandener Nachtrag-Kommentar wird aufgelöst, nicht fortgeschrieben
+
+Trägt ein **offenes** Ticket bereits einen Kommentar, der den Sollzustand
+verändert („Nachtrag", „Ergänzung", „gilt jetzt anders", eine Namenskorrektur,
+ein neu erkannter Blocker), dann ist das ein Auslöser für Refinement und keine
+gültige Ablage. Das Verfahren:
+
+1. **Kommentar und Beschreibung nebeneinander lesen.** Häufig steht ein Teil
+   des Nachtrags längst oben; dann wird nur die Lücke ergänzt und nicht der
+   ganze Kommentar hineinkopiert.
+2. **Inhalt einarbeiten**, wo er hingehört: Bezeichner in den Umfang,
+   Begründungen in die Technischen Hinweise, Abhängigkeiten in die Bezug-Zeile
+   **und** in die Jira-Verknüpfungen.
+3. **Zeitlos formulieren.** Der eingearbeitete Text sagt, was gilt, nicht seit
+   wann. „Verbindlich sind die englischen Bezeichner, weil das Ticket vor
+   KAN-49 entstand" wird zu den Bezeichnern selbst. Sonst entsteht genau der
+   „Update vom …"-Abschnitt, den dieser Skill verbietet.
+4. **Kommentar zum Löschen melden.** Claude löscht keine Jira-Kommentare: das
+   Werkzeug kann Kommentare nur anlegen und ändern. Der aufgelöste Kommentar
+   wird deshalb im Refinement-Bericht mit Ticket-Key, Kommentar-ID und Link
+   aufgeführt, damit Omar ihn entfernt. Ein Kommentar wird erst gemeldet, wenn
+   sein **gesamter** Inhalt oben steht.
+
+Zwei Fälle bleiben ausdrücklich stehen:
+
+- **Übergabekommentare an erledigten Tickets** (Skill `uebergabe`). Sie
+  beschreiben das Ergebnis der Umsetzung, nicht den Sollzustand, und gehören
+  genau dorthin.
+- **Das Veröffentlichungsprotokoll einer Contract-Version** am auslösenden
+  Ticket (Skill `api-contract-sync`). Betrifft es zusätzlich die Umsetzung
+  dieses Tickets, wandert **dieser** Teil in die Beschreibung, der Rest bleibt
+  Kommentar.
+
 ## 0. Grundlage feststellen, bevor ein Ticket bewertet wird
 
 Ein Ticket kann nur gegen einen bekannten Stand geprüft werden. Diese Reihenfolge,
@@ -70,6 +103,7 @@ Ausgelöst wird es durch einen dieser Befunde:
 
 | Auslöser | Woran erkennbar |
 | --- | --- |
+| **Nachtrag im Kommentar** | Ein Kommentar verändert den Sollzustand des offenen Tickets: „Nachtrag", „Ergänzung", eine Namenskorrektur, ein neu erkannter Blocker. Behandlung im Abschnitt „Ein vorhandener Nachtrag-Kommentar wird aufgelöst" |
 | **Falsche Tatsachenbehauptung** | Das Ticket beschreibt den Repo-Stand anders, als er ist („baut auf dem vorhandenen API-Client auf", den es nicht gibt) |
 | **Unsichtbare Abhängigkeit** | Das Ticket setzt einen Baustein voraus, den kein Ticket liefert, und nennt ihn nicht als Blocker |
 | **Contract-Drift** | Endpoint-Pfade, DTO-Namen, Enum-Werte oder Fehlercodes im Ticket stimmen nicht mehr mit dem Contract überein |
@@ -150,6 +184,13 @@ kann, ohne jede Ticketversion in Jira zu vergleichen. Eine Zeile je Ticket:
 ### Gestrichene Anforderungen
 - KAN-…: „…" entfällt, weil …
 
+### Aufgelöste Kommentare, von Omar zu löschen
+- KAN-…, Kommentar-ID …: Inhalt steht jetzt in Abschnitt „…"
+  (`https://hsb-portfolio.atlassian.net/browse/KAN-…?focusedCommentId=…`)
+
+### Kommentare, die bleiben
+- KAN-…, Kommentar-ID …: Übergabekommentar / Veröffentlichungsprotokoll v…
+
 ### Neue Tickets vorgeschlagen
 - „…": deckt … ab, blockiert KAN-…
 ```
@@ -203,6 +244,10 @@ Vor der Bewertung eines Frontend-Tickets diese Bestandsfragen gegen
 - [ ] Klärungsrunde vor dem Umschreiben stattgefunden, wo der Zuschnitt betroffen war
 - [ ] Jede Änderung steht **in der Beschreibung**, kein Refinement-Kommentar
       angelegt
+- [ ] Vorhandene Nachtrag-Kommentare offener Tickets sind vollständig
+      eingearbeitet und zum Löschen gemeldet, mit Kommentar-ID
+- [ ] Kein eingearbeiteter Inhalt trägt noch ein „seit", „jetzt" oder „neu",
+      das nur die Herkunft des Nachtrags beschreibt
 - [ ] Kommentarbereich enthält weiterhin nur den Übergabekommentar
 - [ ] Kein „Update vom …"-Abschnitt und kein als veraltet markierter Absatz in
       der neuen Fassung

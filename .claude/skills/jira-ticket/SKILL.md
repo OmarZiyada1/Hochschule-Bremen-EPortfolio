@@ -59,3 +59,11 @@ Blockiert: KAN-…
 6. Abhängigkeiten ehrlich pflegen (Vorgänger/Blockiert): die Reihenfolge auf
    dem Board folgt daraus.
 7. Descope-Kandidaten (Zeitrisiko der 9 Wochen) offen als solche benennen.
+8. **Der Sollzustand steht in der Beschreibung, nie in einem Kommentar.**
+   Ändert sich am Ticket etwas, bevor es umgesetzt ist (ein Endpoint heißt
+   anders, ein Blocker kommt hinzu, eine Entscheidung fällt), wird die
+   Beschreibung überarbeitet und kein Nachtrag angehängt. Wie das abläuft,
+   steht im Skill `ticket-refinement`. Im Kommentarbereich stehen nur zwei
+   Dinge: der Übergabekommentar nach der Umsetzung (Skill `uebergabe`) und das
+   Veröffentlichungsprotokoll einer Contract-Version am auslösenden Ticket
+   (Skill `api-contract-sync`).

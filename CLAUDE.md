@@ -61,6 +61,31 @@ Abschlussbericht. Am Ende einer Änderung steht keine Frage mehr offen.
    eine Antwort ausdrücklich, steht der Punkt als benannter offener Punkt mit
    Jira-Bezug da, nie als unmarkierte Annahme im Code.
 
+## Ein Ticket hat genau einen Sollzustand: die Beschreibung
+
+Was ein Ticket verlangt, steht in seiner **Beschreibung**, vollständig und
+aktuell. Wer es zur Umsetzung öffnet, liest oben und ist unten fertig.
+
+Verschiebt sich daran etwas, bevor das Ticket erledigt ist (ein Endpoint heißt
+anders, ein Fehlercode kommt hinzu, ein Blocker wird erkannt, eine Frage ist
+entschieden), wird **die Beschreibung überarbeitet**. Ein Kommentar
+„Nachtrag: …" ist dafür nie der richtige Ort: Er steht unter dem Text, den er
+korrigieren soll, und wird beim Bauen übersehen. Der Ablauf steht im Skill
+`ticket-refinement`; die Historie geht nicht verloren, Jira führt die
+Versionshistorie der Beschreibung selbst.
+
+Im Kommentarbereich stehen genau zwei Dinge:
+
+1. der **Übergabekommentar** nach der Umsetzung, also Ergebnis und getroffene
+   Entscheidungen (Skill `uebergabe`),
+2. das **Veröffentlichungsprotokoll** einer neuen Contract-Version, und zwar
+   nur am auslösenden Ticket (Skill `api-contract-sync`).
+
+Findet sich in einem offenen Ticket ein alter Nachtrag-Kommentar, wird er bei
+der nächsten Berührung aufgelöst: Inhalt in die Beschreibung, danach den
+Kommentar mit ID und Link zum Löschen melden. **Claude löscht keine
+Jira-Kommentare**, das Werkzeug kann sie nur anlegen und ändern.
+
 ## Stack und Repo-Aufbau
 
 - Backend: Spring Boot 3.5.x, Java 21, PostgreSQL 16 (Container), Flyway,
@@ -133,8 +158,10 @@ cd backend && ./mvnw spring-boot:run   # Start im Profil dev
    Commit-Text, PR-Titel und PR-Beschreibung ausgeben.
 7. Abweichungen und getroffene Entscheidungen ins Jira-Ticket kommentieren,
    nichts stillschweigend entscheiden; offene Fragen sind zu diesem Zeitpunkt
-   bereits aus Schritt 2 geklärt. `docs/STAND.md` nicht pflegen (veraltet
-   bewusst; Jira ist verbindlich).
+   bereits aus Schritt 2 geklärt. Was den **Sollzustand** eines noch offenen
+   Tickets verändert, gehört dagegen in dessen Beschreibung und nicht in den
+   Kommentar (Abschnitt „Ein Ticket hat genau einen Sollzustand").
+   `docs/STAND.md` nicht pflegen (veraltet bewusst; Jira ist verbindlich).
 
 ## Git: Claude schreibt nicht in die Historie
 

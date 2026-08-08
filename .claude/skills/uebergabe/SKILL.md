@@ -111,6 +111,14 @@ Bewusste Abwägungen und Stolpersteine. Sonst „keine".
    (Schreibstil-Regel aus `CLAUDE.md`).
 9. Läuft die Arbeit über mehrere Tickets, je Ticket ein eigener
    Übergabeblock.
+10. **Der Jira-Kommentar berichtet, er schreibt nicht vor.** Er hält fest, was
+    umgesetzt und entschieden wurde. Fällt beim Abschluss auf, dass sich der
+    **Sollzustand** eines Tickets verschoben hat, gehört das nicht als
+    Nachtrag in den Kommentarbereich: Beim eigenen Ticket wird die
+    Beschreibung überarbeitet, bei einem fremden das betroffene Ticket
+    refined (Skill `ticket-refinement`). Ein Kommentar „Nachtrag: der
+    Endpoint heißt jetzt anders" wird von der nächsten Person übersehen, die
+    oben anfängt zu lesen.
 
 ## Definition of Done
 
@@ -120,5 +128,8 @@ Bewusste Abwägungen und Stolpersteine. Sonst „keine".
 - [ ] Kein `—` in den gelieferten Texten
 - [ ] Keine offene Frage im Übergabeblock; getroffene Entscheidungen stehen
       im PR-Text **und** im Jira-Kommentar
+- [ ] Der Jira-Kommentar berichtet nur die Umsetzung; verschobener
+      Sollzustand ist in der Beschreibung nachgezogen, nicht als Nachtrag
+      angehängt
 - [ ] Bei erhöhter Contract-Version: Fundstellen-Tabelle „alt → neu" im
       PR-Text, mit Trennung Diff / von Omar zu ändern

@@ -221,6 +221,8 @@ jeder Umbenennung und belegt nichts.
 - [ ] Keine neuen Abhängigkeiten ohne Absprache
 - [ ] Kein Mock und keine Attrappe im ausgelieferten Code
 - [ ] Texte, Kommentare und Jira-Text ohne Em-Dash `—`
-- [ ] Jira-Kommentar mit den getroffenen Entscheidungen
+- [ ] Jira-Kommentar mit den getroffenen Entscheidungen. **Kein Nachtrag zum
+      Sollzustand:** was sich am Ticketinhalt verschoben hat, wird in der
+      Beschreibung nachgezogen (Skill `ticket-refinement`)
 - [ ] Kein Commit, kein Push, kein PR durch Claude, stattdessen Übergabeblock
       nach Skill `uebergabe`

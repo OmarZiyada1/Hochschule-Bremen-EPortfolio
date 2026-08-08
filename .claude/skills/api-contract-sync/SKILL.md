@@ -41,9 +41,35 @@ Ergebnissen.
    (fachlich)" einen Eintrag im Stil der bestehenden ergänzen:
    betroffene §§, was, warum.
 4. Versionskommentar beim Speichern: `v<N>: <Kurzfassung> (KAN-<Ticket>)`.
-5. Im zugehörigen Jira-Ticket kommentieren, dass v<N> veröffentlicht ist.
+5. Im **auslösenden** Jira-Ticket kommentieren, dass v<N> veröffentlicht ist.
+   Dieser eine Kommentar ist das Veröffentlichungsprotokoll und bleibt stehen.
+   Betroffene **andere** Tickets werden nicht kommentiert, sondern refined:
+   siehe den nächsten Abschnitt.
 6. Neu geschriebene Absätze ohne Em-Dash `—` formulieren (Schreibstil-Regel
    aus `CLAUDE.md`); bestehender Seitentext bleibt unangetastet.
+
+## Betroffene Tickets: refinen, nicht kommentieren
+
+Eine neue Contract-Version verschiebt regelmäßig die Grundlage offener
+Tickets: ein Endpoint heißt anders, ein Fehlercode kommt hinzu, ein Filter
+wird umbenannt. Das ist die häufigste Quelle von „Nachtrag"-Kommentaren, und
+genau die entstehen hier **nicht**.
+
+**Bei jedem inhaltlich betroffenen offenen Ticket wird die Beschreibung
+geändert** (Skill `ticket-refinement`), nicht ein Kommentar angehängt. Wer das
+Ticket zur Umsetzung öffnet, liest oben; ein Nachtrag in Kommentar drei wird
+übersehen und gegen den alten Stand gebaut.
+
+| Fall | Was geschieht |
+| --- | --- |
+| Offenes Ticket, Inhalt betroffen | Beschreibung nachziehen: Umfang, Technische Hinweise, DoD, Bezug-Zeile. Kein Kommentar |
+| Offenes Ticket, nur Versionsnummer betroffen | Bezug-Zeile nachziehen. In der Regel entfällt die Nummer dort ganz, weil die §§ stabil sind (Skill `jira-ticket`, Regel 1) |
+| Erledigtes Ticket | Nichts ändern. Die Beschreibung beschreibt, wogegen gebaut wurde; der Übergabekommentar hält den Stand fest |
+| Auslösendes Ticket | Ein Kommentar mit dem Veröffentlichungsprotokoll (Schritt 5). Verändert die Version zusätzlich seine eigene Umsetzung, gehört **dieser** Teil in die Beschreibung |
+
+Trägt ein betroffenes Ticket bereits einen älteren Nachtrag-Kommentar, wird er
+bei dieser Gelegenheit aufgelöst: Inhalt in die Beschreibung, Kommentar-ID zum
+Löschen melden. Claude löscht selbst keine Jira-Kommentare.
 
 ## Versionsnummer nachziehen: alle Fundstellen
 
@@ -76,7 +102,7 @@ Bekannte Stellen als Ausgangspunkt, jede einzeln ansehen:
 | Doku | `docs/STAND.md` | **nicht anfassen**, veraltet bewusst (`CLAUDE.md`) |
 | Skill | `.claude/skills/api-contract-sync/SKILL.md`, erster Absatz („aktuell v<N>, Stand KAN-<nr>") | die Nachführung dieser Zeile gehört zu jeder Versionserhöhung dazu |
 | Jira | auslösendes Ticket: Abschnitt „Bezug" plus neuer Kommentar | „Referenz: Datenmodell & API-Contract v<N>, §…" |
-| Jira | offene Tickets mit älterer Nummer, deren Inhalt betroffen ist | Suche: `project = KAN AND statusCategory != Done AND text ~ "API-Contract v"`; nur **inhaltlich betroffene** Tickets nachziehen, nicht pauschal alle Nummern hochzählen |
+| Jira | offene Tickets mit älterer Nummer, deren Inhalt betroffen ist | Suche: `project = KAN AND statusCategory != Done AND text ~ "API-Contract v"`; nur **inhaltlich betroffene** Tickets nachziehen, nicht pauschal alle Nummern hochzählen. Nachgezogen wird **in der Beschreibung**, nie als Kommentar |
 | Confluence | Contract-Seite `36732929` | Kopfbereich, Änderungshistorie, Versionskommentar beim Speichern |
 | Confluence | Seite „Offene Fragen" (ID `1802249`) | mit dieser Version entschiedene Punkte als entschieden markieren, mit Verweis auf v<N> |
 | Confluence | weitere Seiten im Space BEH | Suche im Space nach `text ~ "API-Contract v"`; jede Trefferseite kurz prüfen |
@@ -142,6 +168,9 @@ im Repo.
       und als Tabelle „alt → neu" mit Datei und Zeile gemeldet
 - [ ] Erster Absatz dieses Skills auf die neue Version nachgezogen
 - [ ] `ErrorCodes.java` ↔ §6.2 deckungsgleich
-- [ ] Jira-Ticket kommentiert
+- [ ] Auslösendes Jira-Ticket kommentiert (Veröffentlichungsprotokoll)
+- [ ] Betroffene offene Tickets in der **Beschreibung** nachgezogen, kein
+      Nachtrag-Kommentar angelegt; dabei aufgelöste Altkommentare mit ID zum
+      Löschen gemeldet
 - [ ] Code-Änderungen daraus gehen über den Übergabeblock (Skill `uebergabe`),
       nicht über einen Commit von Claude

@@ -138,6 +138,8 @@ passen (`ddl-auto: validate`).
 - [ ] Keine neuen Abhängigkeiten ohne Absprache
 - [ ] Javadoc, Kommentare und Jira-Text ohne Em-Dash `—`
 - [ ] Jira-Kommentar: Abweichungen und getroffene Entscheidungen samt
-      Antwort aus der Klärungsrunde
+      Antwort aus der Klärungsrunde. **Kein Nachtrag zum Sollzustand:** was
+      sich am Ticketinhalt verschoben hat, wird in der Beschreibung
+      nachgezogen (Skill `ticket-refinement`)
 - [ ] Kein Commit, kein Push, kein PR durch Claude, stattdessen Übergabeblock
       (Commit-Text, PR-Titel, PR-Beschreibung) nach Skill `uebergabe`

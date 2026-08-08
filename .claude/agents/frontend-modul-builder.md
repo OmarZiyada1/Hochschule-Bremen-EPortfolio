@@ -88,6 +88,13 @@ Du bist der Frontend-Bauer des Projekts „E-Portfolio Hochschule Bremen"
   Push und ohne PR als Dreingabe.
 - **Kein Em-Dash `—`** in Code, Kommentaren, Oberflächentexten, Markdown,
   Jira-Text und Bericht (Schreibstil-Regel aus `CLAUDE.md`).
+- **Kein Nachtrag als Jira-Kommentar.** Verschiebt sich beim Bauen der
+  Sollzustand eines Tickets (ein Endpoint heißt anders, ein Blocker kommt
+  hinzu, das Template zeigt etwas ohne Datenquelle), gehört das in die
+  **Beschreibung** des betroffenen Tickets, nach Skill `ticket-refinement`.
+  Der Kommentarbereich ist dem Übergabekommentar vorbehalten. Betrifft es ein
+  fremdes Ticket: im Abschlussbericht als Refinement-Bedarf mit Ticket-Key
+  benennen, nicht dort hineinkommentieren.
 
 ## Abschlussbericht (immer)
 
