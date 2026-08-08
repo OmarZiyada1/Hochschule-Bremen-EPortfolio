@@ -1,0 +1,43 @@
+# Betriebsart ARTIFACT-DEV: Auslieferungsstand, Entwicklungskonfiguration.
+#
+#   docker compose -f compose.base.yml -f compose.artifact.yml up -d
+#
+# Gebautes Fat-Jar im schlanken JRE-Image, gebautes Frontend hinter nginx.
+# Beantwortet die Frage "laeuft mein Code auch als gebautes Artefakt und
+# nicht nur im Dev-Server?".
+#
+# Spring-Profil: dev, genau wie in DEV. Das ist der Unterschied zu PROD und
+# der Grund fuer den Namensteil "-DEV": Dateien liegen im Dateisystem statt
+# in Azure Blob Storage, Mails in der Serverkonsole statt im SMTP-Relay, die
+# Swagger-UI ist erreichbar, und die Dev-Testnutzer werden angelegt. Diese
+# Betriebsart braucht deshalb keinen einzigen Zugang zu einem Fremddienst.
+
+name: eportfolio-artifact
+
+services:
+  db:
+    ports:
+      - "${ARTIFACT_POSTGRES_PORT:-5433}:5432"
+
+  backend:
+    build:
+      target: runtime
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DEV_TEST_PASSWORD: ${DEV_TEST_PASSWORD:-}
+      # Eigener Port, also eigener Origin. Der Default aus application.yml
+      # zeigt auf 5173 und passt hier nicht.
+      CORS_ALLOWED_ORIGINS: ${ARTIFACT_CORS_ALLOWED_ORIGINS:-http://localhost:5273}
+    ports:
+      - "${ARTIFACT_BACKEND_PORT:-8180}:8080"
+    volumes:
+      - storage:/app/var/storage
+
+  frontend:
+    build:
+      target: runtime
+    ports:
+      - "${ARTIFACT_FRONTEND_PORT:-5273}:80"
+
+volumes:
+  storage:

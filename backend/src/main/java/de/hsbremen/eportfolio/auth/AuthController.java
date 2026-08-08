@@ -2,7 +2,12 @@ package de.hsbremen.eportfolio.auth;
 
 import de.hsbremen.eportfolio.auth.dto.LoginRequest;
 import de.hsbremen.eportfolio.auth.dto.LoginResponse;
+import de.hsbremen.eportfolio.auth.dto.PasswordChangeRequest;
+import de.hsbremen.eportfolio.auth.dto.RegisterRequest;
+import de.hsbremen.eportfolio.auth.dto.ResendVerificationRequest;
 import de.hsbremen.eportfolio.auth.dto.UserResponse;
+import de.hsbremen.eportfolio.auth.dto.VerificationStatusResponse;
+import de.hsbremen.eportfolio.auth.dto.VerifyRequest;
 import de.hsbremen.eportfolio.common.error.ApiError;
 import de.hsbremen.eportfolio.common.error.ErrorCodes;
 import de.hsbremen.eportfolio.user.User;
@@ -21,8 +26,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -30,15 +37,20 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/auth")
-@Tag(name = "Auth", description = "Anmeldung, Abmeldung und aktueller Benutzer (§6.1).")
+@Tag(name = "Auth", description = "Registrierung, Verifizierung, Anmeldung, Abmeldung und "
+		+ "aktueller Benutzer (§6.1).")
 public class AuthController {
 
 	private final AuthService authService;
 
+	private final RegistrationService registrationService;
+
 	private final UserRepository userRepository;
 
-	public AuthController(AuthService authService, UserRepository userRepository) {
+	public AuthController(AuthService authService, RegistrationService registrationService,
+			UserRepository userRepository) {
 		this.authService = authService;
+		this.registrationService = registrationService;
 		this.userRepository = userRepository;
 	}
 
@@ -63,6 +75,87 @@ public class AuthController {
 	@PostMapping("/login")
 	public LoginResponse login(@Valid @RequestBody LoginRequest loginRequest, HttpServletRequest request) {
 		return authService.login(loginRequest, clientIp(request));
+	}
+
+	// --- Registrierung und Verifizierung (§3.1.1, §6.1) --------------------
+	// Die drei Endpoints liegen in diesem Controller und nicht in einem eigenen,
+	// weil sie denselben Pfadpraefix und dieselbe Fehlerabbildung teilen: der
+	// 429-Handler weiter unten gilt fuer Anmeldung und Verifizierung
+	// gleichermassen. Ein zweiter Controller auf /api/auth muesste ihn
+	// verdoppeln, denn @ExceptionHandler wirkt nur in seiner eigenen Klasse.
+
+	/**
+	 * Selbstregistrierung, Schritte 1 und 2 aus §3.1.1.
+	 *
+	 * <p>Legt Konto und Portfolio an und verschickt beide Codes. Die Rolle kommt
+	 * aus der Domain der Hochschuladresse und nicht aus {@code selectedRole},
+	 * siehe {@link RegistrationService#register}.
+	 */
+	@SecurityRequirements
+	@Operation(summary = "Registrieren und beide Codes anfordern",
+			description = "Legt ein Konto im Status REGISTRATION_PENDING samt Portfolio an "
+					+ "und verschickt je einen sechsstelligen Code an die private und an die "
+					+ "Hochschuladresse. Die Rolle leitet der Server aus der Domain der "
+					+ "hsbEmail ab; selectedRole wird nur dagegen geprueft (§3.1.1). Eine "
+					+ "Anmeldung ist erst nach beiden Bestaetigungen moeglich.")
+	@ApiResponse(responseCode = "201", description = "Konto angelegt, Codes unterwegs.")
+	@ApiResponse(responseCode = "400",
+			description = "Pflichtfeld fehlt, Passwort zu kurz, HSB-Domain nicht anerkannt "
+					+ "oder selectedRole passt nicht zur abgeleiteten Rolle.")
+	@ApiResponse(responseCode = "409", description = "Private oder HSB-Adresse ist bereits vergeben.")
+	@PostMapping("/register")
+	@ResponseStatus(HttpStatus.CREATED)
+	public UserResponse register(@Valid @RequestBody RegisterRequest registerRequest) {
+		return registrationService.register(registerRequest);
+	}
+
+	/**
+	 * Bestaetigung einer der beiden Adressen, Schritte 3 bis 5 aus §3.1.1.
+	 *
+	 * <p>Antwortet fuer eine unbekannte Adresse genauso wie fuer einen falschen
+	 * Code, naemlich 400; sonst waere der Endpoint ein Verzeichnis registrierter
+	 * Adressen (§6.1).
+	 */
+	@SecurityRequirements
+	@Operation(summary = "E-Mail-Adresse mit Code bestaetigen",
+			description = "Setzt das Flag zur angegebenen Adresse. Sobald beide gesetzt sind, "
+					+ "wechselt das Konto nach ACTIVE und die Anmeldung ist moeglich. Die "
+					+ "Antwort gibt beide Flags und den Status zurueck, damit der Client den "
+					+ "Abschluss erkennt. Im Feld email steht immer die private Adresse, auch "
+					+ "beim Zweck HSB_EMAIL: sie ist die Kennung des Kontos.")
+	@ApiResponse(responseCode = "200", description = "Code angenommen, Verifizierungsstand der Antwort.")
+	// Bewusst dieselbe Antwort fuer unbekannte Adresse, falschen, abgelaufenen
+	// und bereits verbrauchten Code (§6.1, §6.2).
+	@ApiResponse(responseCode = "400", description = "Code ungueltig, abgelaufen oder bereits verwendet.")
+	@ApiResponse(responseCode = "429", description = "Zu viele Versuche, voruebergehend gesperrt.")
+	@PostMapping("/verify")
+	public VerificationStatusResponse verify(@Valid @RequestBody VerifyRequest verifyRequest,
+			HttpServletRequest request) {
+		return registrationService.verify(verifyRequest, clientIp(request));
+	}
+
+	/**
+	 * Neuer Code, der vorherige wird entwertet (§6.1).
+	 *
+	 * <p><strong>204 ohne Inhalt, und zwar immer.</strong> Ob es die Adresse gibt,
+	 * ob sie schon bestaetigt ist und ob eine Mail rausging, ist von aussen nicht
+	 * zu unterscheiden. Anders liesse sich ueber diesen Endpoint ermitteln, welche
+	 * Adressen registriert sind.
+	 */
+	@SecurityRequirements
+	@Operation(summary = "Verifizierungscode erneut anfordern",
+			description = "Erzeugt einen neuen Code und entwertet den vorherigen. Antwortet "
+					+ "immer mit 204, auch fuer unbekannte oder laengst bestaetigte Adressen: "
+					+ "eine unterscheidbare Antwort waere ein Verzeichnis registrierter "
+					+ "Adressen (§6.1). Gezaehlt wird jeder Aufruf, nicht nur ein "
+					+ "fehlgeschlagener, sonst waere der Endpoint ein Versandgenerator.")
+	@ApiResponse(responseCode = "204", description = "Angenommen. Ob eine Mail rausging, sagt die Antwort nicht.")
+	@ApiResponse(responseCode = "429", description = "Zu viele Anforderungen, voruebergehend gesperrt.")
+	@PostMapping("/verify/resend")
+	public ResponseEntity<Void> resendVerification(
+			@Valid @RequestBody ResendVerificationRequest resendRequest, HttpServletRequest request) {
+		registrationService.resend(resendRequest, clientIp(request));
+		return ResponseEntity.noContent().build();
 	}
 
 	/**
@@ -128,6 +221,31 @@ public class AuthController {
 		User user = userRepository.findById(authenticatedUser.getId())
 				.orElseThrow(() -> new AuthService.LoginFailedException());
 		return UserResponse.from(user);
+	}
+
+	/**
+	 * Eigenes Passwort aendern (§6.1); loest die erzwungene Passwortaenderung
+	 * aus §6.7 auf, deshalb ist der Endpoint vom Gate im
+	 * {@link JwtAuthenticationFilter} ausgenommen.
+	 *
+	 * <p><strong>200 ohne Body:</strong> §6.1 nennt hier bewusst kein
+	 * Antwortschema, anders als bei {@code PUT /auth/me}. Der Client braucht
+	 * nach der Aenderung keine Daten; dass das Flag jetzt {@code false} ist,
+	 * weiss er selbst. Entschieden in der Klaerungsrunde zu KAN-28.
+	 */
+	@Operation(summary = "Eigenes Passwort aendern",
+			description = "Prueft das bisherige Passwort und setzt den neuen BCrypt-Hash. "
+					+ "Setzt passwordChangeRequired zurueck und hebt damit die Sperre aus "
+					+ "§6.7 auf. Wessen Passwort gemeint ist, bestimmt allein das Token.")
+	@ApiResponse(responseCode = "200", description = "Passwort geaendert, ohne Body.")
+	@ApiResponse(responseCode = "400", description = "Pflichtfeld fehlt oder neues Passwort verletzt die Laengenregel.")
+	@ApiResponse(responseCode = "401", description = "Kein brauchbares Token, oder das aktuelle Passwort ist falsch.")
+	@PutMapping("/password")
+	public ResponseEntity<Void> changePassword(
+			@AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+			@Valid @RequestBody PasswordChangeRequest passwordChangeRequest) {
+		authService.changePassword(authenticatedUser.getId(), passwordChangeRequest);
+		return ResponseEntity.ok().build();
 	}
 
 	// --- Fehlerabbildung auf das Envelope aus §6.2 -------------------------

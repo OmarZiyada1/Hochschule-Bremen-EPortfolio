@@ -81,6 +81,25 @@ public class SecurityConfig {
 					.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
 					.requestMatchers("/api/auth/login").permitAll()
+
+					// Registrierung und Verifizierung (KAN-26, §6.1). Alle drei
+					// sind PUBLIC, und zwar zwangslaeufig: wer sich gerade erst
+					// registriert, hat noch kein Token, und wessen Konto in
+					// REGISTRATION_PENDING steht, bekaeme selbst mit Token ein
+					// 401 ACCOUNT_NOT_ACTIVE (§2.9). Waeren die Pfade
+					// authentifiziert, koennte niemand die Registrierung je
+					// abschliessen.
+					// An die Stelle der Anmeldung tritt hier zweierlei: das
+					// Einmalgeheimnis im Postfach und das Rate-Limit aus
+					// VerificationAttemptService. Die Pfade stehen einzeln da und
+					// nicht als /api/auth/**, weil unter demselben Praefix mit
+					// /auth/me und /auth/logout Endpoints liegen, die ein Token
+					// brauchen.
+					.requestMatchers(HttpMethod.POST,
+							"/api/auth/register",
+							"/api/auth/verify",
+							"/api/auth/verify/resend").permitAll()
+
 					.requestMatchers("/actuator/health").permitAll()
 
 					// Swagger-UI und das OpenAPI-Dokument (KAN-11).

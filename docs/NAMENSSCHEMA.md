@@ -299,6 +299,19 @@ Sortierbare Felder bei `GET /projects`: `title`, `semester`, `status`,
 | `DevTestnutzerSeeder` | `DevTestUserSeeder` |
 | `ReaktionAnzahl` | `ReactionCount` |
 | `darfMitgliederPflegen` | `mayManageMembers` |
+| `RegistrierungService` | `RegistrationService` |
+| `VerifizierungsCodeService` | `VerificationCodeService` |
+| `VerifizierungsversuchService` | `VerificationAttemptService` |
+| `Versuchszaehler` | `AttemptCounter` |
+| `RegistrierungAnfrage` | `RegisterRequest` |
+| `VerifizierungAnfrage` | `VerifyRequest` |
+| `ErneutSendenAnfrage` | `ResendVerificationRequest` |
+| `VerifizierungsstandAntwort` | `VerificationStatusResponse` |
+| `RegistrierungEigenschaften` | `RegistrationProperties` |
+| `Passwortregeln` | `PasswordPolicy` |
+| `EMailAdressen` | `EmailAddresses` |
+| `ausgestellterCode` · `klartextCode` | `IssuedCode` · `plainCode` |
+| `gewaehlteRolle` | `selectedRole` |
 
 `DatabaseUserDetailsService` heißt nicht `UserDetailsService`, weil Spring
 Security ein Interface dieses Namens mitbringt, das die Klasse implementiert.
@@ -376,6 +389,9 @@ hinge.
 | `app.security.anmeldeversuche.max-fehlversuche` | `app.security.login-attempts.max-failed-attempts` |
 | `app.security.anmeldeversuche.sperrdauer` | `app.security.login-attempts.lockout-duration` |
 | `DEV_TEST_PASSWORT` | `DEV_TEST_PASSWORD` |
+| `app.registrierung.studierenden-domains` | `app.registration.student-domains` |
+| `app.registrierung.mitarbeitenden-domains` | `app.registration.staff-domains` |
+| `app.registrierung.code-laufzeit` | `app.registration.code-lifetime` |
 
 Die Zeilen ab `vier-augen-prinzip` sind mit KAN-49 dazugekommen: die Regel
 „auch `application.yml` und `.env` tragen deutsche Schlüssel, sie wandern mit"

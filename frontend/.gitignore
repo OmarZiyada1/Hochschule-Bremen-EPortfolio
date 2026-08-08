@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Paketspeicher von pnpm. Entsteht im Projekt, wenn es auf einem anderen
+# Laufwerk liegt als der globale Speicher (Windows, Projekt auf D:).
+.pnpm-store
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

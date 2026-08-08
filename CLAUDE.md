@@ -127,11 +127,11 @@ Jira-Kommentare**, das Werkzeug kann sie nur anlegen und ändern.
    keiner Response (Contract §3.1). Keine Secrets im Code: `JWT_SECRET` u. a.
    kommen aus `.env`; es gibt bewusst keine Fallbacks.
 8. **Tests sind Teil jedes Tickets.** `./mvnw test` läuft gegen die echte
-   Postgres aus `docker-compose.yml` (kein H2, keine Testcontainers).
+   Postgres aus den `compose.*.yml` (kein H2, keine Testcontainers).
    Bestehende Tests bleiben grün. Testdaten-Helfer wie `TestUser` /
    `TestProject` wiederverwenden bzw. daneben ergänzen.
 9. **Keine neuen Abhängigkeiten ohne Rückfrage** und keine Änderungen an
-   `docker-compose.yml`, sofern das Ticket es nicht verlangt.
+   den `compose.*.yml`, sofern das Ticket es nicht verlangt.
 
 ## Befehle
 

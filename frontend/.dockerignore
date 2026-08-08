@@ -1,0 +1,17 @@
+# Muss im Container neu installiert werden: @tailwindcss/oxide bringt eine
+# native Bibliothek mit, die auf dem Host fuer Windows uebersetzt ist.
+node_modules
+
+# Paketspeicher von pnpm, mehrere hundert MB. Gehoert nie in den Kontext.
+.pnpm-store
+
+# Bauartefakte des Hosts, das Image baut selbst.
+dist
+dist-ssr
+
+.git
+.gitignore
+*.local
+*.log
+.vscode/
+.idea/

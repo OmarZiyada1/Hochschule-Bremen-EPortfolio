@@ -36,6 +36,16 @@ public class User extends AuditableEntity {
 	@Column(nullable = false, length = 255)
 	private String passwordHash;
 
+	/**
+	 * Erzwingt die Aenderung eines administrativ gesetzten Initialpassworts
+	 * (§6.7). Solange das Flag steht, beantwortet der
+	 * {@code JwtAuthenticationFilter} fast alle Endpoints mit 403. Bei selbst
+	 * registrierten Konten bleibt es {@code false}: das Passwort kennt dort nur
+	 * die Person selbst.
+	 */
+	@Column(nullable = false)
+	private boolean passwordChangeRequired;
+
 	@Column(nullable = false, length = 255)
 	private String firstName;
 
@@ -53,6 +63,38 @@ public class User extends AuditableEntity {
 
 	protected User() {
 		// Von JPA benoetigt.
+	}
+
+	/**
+	 * Legt ein neues Konto an, wie es aus der Selbstregistrierung hervorgeht
+	 * (§3.1.1, Schritt 2).
+	 *
+	 * <p>Es gibt sie, weil der Konstruktor {@code protected} bleibt: ausserhalb
+	 * dieses Pakets soll niemand eine halb befuellte Entity in der Hand haben,
+	 * denn jedes der sechs Felder ist {@code not null}. Bis KAN-26 loeste allein
+	 * der {@code DevTestUserSeeder} das dadurch, dass er in diesem Paket liegt;
+	 * das ist fuer einen Fachservice keine Loesung.
+	 *
+	 * <p><strong>Was die Methode bewusst nicht als Parameter nimmt:</strong> die
+	 * beiden Verifizierungs-Flags und den Status. Sie stehen auf ihren
+	 * Vorgabewerten, also {@code false} und {@code REGISTRATION_PENDING} (§2.9),
+	 * und genau das ist der Zustand, in dem ein neues Konto zu beginnen hat. Wer
+	 * ein sofort nutzbares Konto braucht, etwa der Seeder oder spaeter die
+	 * Kontoanlage durch die Administration, setzt beides danach ausdruecklich.
+	 *
+	 * @param role aus der Domain der Hochschuladresse abgeleitet, nie aus einer
+	 *             Angabe im Request (§3.1.1)
+	 */
+	public static User newAccount(String email, String hsbEmail, String passwordHash,
+			String firstName, String lastName, Role role) {
+		User user = new User();
+		user.setEmail(email);
+		user.setHsbEmail(hsbEmail);
+		user.setPasswordHash(passwordHash);
+		user.setFirstName(firstName);
+		user.setLastName(lastName);
+		user.setRole(role);
+		return user;
 	}
 
 	public String getEmail() {
@@ -93,6 +135,14 @@ public class User extends AuditableEntity {
 
 	public void setPasswordHash(String passwordHash) {
 		this.passwordHash = passwordHash;
+	}
+
+	public boolean isPasswordChangeRequired() {
+		return passwordChangeRequired;
+	}
+
+	public void setPasswordChangeRequired(boolean passwordChangeRequired) {
+		this.passwordChangeRequired = passwordChangeRequired;
 	}
 
 	public String getFirstName() {

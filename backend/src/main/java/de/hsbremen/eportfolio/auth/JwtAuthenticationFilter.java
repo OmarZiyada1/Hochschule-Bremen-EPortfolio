@@ -9,6 +9,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -32,17 +33,42 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * sehen; sonst quittiert das Frontend ein abgelaufenes Token mit einer leeren
  * Liste statt mit einer Anmeldeaufforderung.
  *
- * <p><strong>Nachladen aus der Datenbank:</strong> Rolle und Status kommen bei
- * jedem Request frisch aus {@code app_user}, nicht aus den Token-Claims. Das
- * kostet eine Abfrage pro Anfrage, ist aber der Preis dafuer, dass ein vom
- * Admin deaktiviertes Konto (§2.9) sofort ausgesperrt ist und nicht erst nach
- * Ablauf des Tokens. Bei acht Stunden Laufzeit waere das sonst ein reales
- * Zeitfenster.
+ * <p><strong>Nachladen aus der Datenbank:</strong> Rolle, Status und
+ * {@code passwordChangeRequired} kommen bei jedem Request frisch aus
+ * {@code app_user}, nicht aus den Token-Claims. Das kostet eine Abfrage pro
+ * Anfrage, ist aber der Preis dafuer, dass ein vom Admin deaktiviertes Konto
+ * (§2.9) sofort ausgesperrt ist und nicht erst nach Ablauf des Tokens. Bei
+ * acht Stunden Laufzeit waere das sonst ein reales Zeitfenster.
+ *
+ * <p><strong>Gate der erzwungenen Passwortaenderung (§6.7):</strong> traegt
+ * das Konto ein administrativ gesetztes Initialpasswort
+ * ({@code passwordChangeRequired}), antwortet der Filter auf alle Endpoints
+ * mit 403 {@code PASSWORD_CHANGE_REQUIRED}, auch auf oeffentliche, sofern die
+ * Anfrage ein Token traegt. Das Gate sitzt hier und nicht im Frontend, weil
+ * eine reine Client-Umleitung ueber direkte API-Aufrufe vollstaendig umgehbar
+ * waere. Ausgenommen sind genau die fuenf Endpoints aus §6.7, sonst sperrte
+ * sich die Person selbst aus; die Pfade der Passwort-Ruecksetzung (KAN-43)
+ * stehen schon bereit, obwohl die Endpoints noch fehlen, damit KAN-43 das
+ * Gate nicht anfassen muss.
  */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 	private static final String BEARER_PREFIX = "Bearer ";
+
+	/**
+	 * Die fuenf Ausnahmen vom Gate der erzwungenen Passwortaenderung (§6.7),
+	 * als "METHODE Pfad". Jede davon existiert, damit die Person das Flag
+	 * selbst aufloesen kann: Passwort aendern, die eigene Identitaet fuer die
+	 * Passwortseite lesen, sich abmelden oder das vergessene Initialpasswort
+	 * zuruecksetzen (KAN-43).
+	 */
+	private static final Set<String> PASSWORD_CHANGE_EXEMPT = Set.of(
+			"PUT /api/auth/password",
+			"GET /api/auth/me",
+			"POST /api/auth/logout",
+			"POST /api/auth/forgot-password",
+			"POST /api/auth/reset-password");
 
 	private final JwtService jwtService;
 
@@ -85,6 +111,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 			return;
 		}
 
+		if (user.isPasswordChangeRequired() && !isPasswordChangeExempt(request)) {
+			errorWriter.write(request, response, HttpStatus.FORBIDDEN.value(),
+					ErrorCodes.PASSWORD_CHANGE_REQUIRED,
+					"Das Initialpasswort muss zuerst geaendert werden (PUT /api/auth/password).");
+			return;
+		}
+
 		UsernamePasswordAuthenticationToken authentication =
 				new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
 		authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -104,6 +137,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 					"Das Konto ist nicht aktiv und kann die API nicht nutzen.");
 		}
 		return user;
+	}
+
+	/**
+	 * Exakter Vergleich auf Methode + Pfad, kein Praefix- oder Mustervergleich:
+	 * ein Muster wie {@code /api/auth/**} naehme kuenftige Auth-Endpoints
+	 * stillschweigend vom Gate aus, obwohl §6.7 genau fuenf Ausnahmen nennt.
+	 */
+	private boolean isPasswordChangeExempt(HttpServletRequest request) {
+		return PASSWORD_CHANGE_EXEMPT.contains(request.getMethod() + " " + request.getRequestURI());
 	}
 
 	private String readToken(HttpServletRequest request) {
