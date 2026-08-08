@@ -84,6 +84,25 @@ public class ConflictException extends RuntimeException {
 						+ transition + " ist nur aus " + allowedSources + " heraus moeglich.");
 	}
 
+	/**
+	 * Bei der Registrierung ist eine der beiden Adressen bereits vergeben (§6.1,
+	 * KAN-26).
+	 *
+	 * <p><strong>Die Meldung nennt das betroffene Feld</strong>, im selben Format
+	 * wie die Bean-Validation im {@link GlobalExceptionHandler}
+	 * ({@code "feld: Meldung"}), damit das Formular sie an die richtige Zeile
+	 * haengen kann. Das ist an dieser einen Stelle bewusst mehr Auskunft, als die
+	 * uebrigen Auth-Endpoints geben: beide Adressen sind eindeutig, eine zweite
+	 * Registrierung darauf muss scheitern, und wer nicht erfaehrt <em>welche</em>
+	 * der beiden schon vergeben ist, kann den Fehler nicht aufloesen.
+	 *
+	 * @param field {@code email} oder {@code hsbEmail}
+	 */
+	public static ConflictException addressInUse(String field) {
+		return new ConflictException(ErrorCodes.RESOURCE_IN_USE,
+				field + ": Diese E-Mail-Adresse ist bereits registriert.");
+	}
+
 	public String getErrorCode() {
 		return errorCode;
 	}

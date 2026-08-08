@@ -51,13 +51,13 @@ Was in welchem Paket steckt:
 
 | Paket        | Inhalt (Stand `main`) |
 |--------------|------------------------|
-| `auth`       | `AuthController`, `AuthService`, `JwtService`, `JwtAuthenticationFilter`, `LoginAttemptService`, `DatabaseUserDetailsService`, `AuthenticatedUser`, `RestAuthenticationEntryPoint`, `RestAccessDeniedHandler`, `dto/{LoginRequest, LoginResponse, UserResponse}`. Die Properties-Records liegen seit KAN-50 in `config` |
+| `auth`       | `AuthController`, `AuthService`, `JwtService`, `JwtAuthenticationFilter`, `AttemptCounter`, `LoginAttemptService`, `DatabaseUserDetailsService`, `AuthenticatedUser`, `RestAuthenticationEntryPoint`, `RestAccessDeniedHandler`, `dto/{LoginRequest, LoginResponse, UserResponse}`. Seit KAN-26 zusätzlich die Registrierung: `RegistrationService`, `VerificationCode`, `VerificationCodeRepository`, `VerificationCodeService`, `VerificationAttemptService`, `EmailAddresses`, `PasswordPolicy`, `dto/{RegisterRequest, VerifyRequest, ResendVerificationRequest, VerificationStatusResponse}`. Die Properties-Records liegen seit KAN-50 in `config` |
 | `comment`    | `Comment`, `CommentRepository` |
 | `common.domain` | `BaseEntity`, `AuditableEntity` |
 | `common.dto`    | `PageResponse` (Seitenformat aus Contract §6.6) |
-| `common.enums`  | `BlockType`, `CommentStatus`, `CommentType`, `Degree`, `NominationStatus`, `ProjectStatus`, `ProjectType`, `Role`, `UserStatus` |
+| `common.enums`  | `BlockType`, `CommentStatus`, `CommentType`, `Degree`, `NominationStatus`, `ProjectStatus`, `ProjectType`, `Role`, `UserStatus`, `VerificationPurpose` |
 | `common.error`  | `ApiError`, `ApiErrorWriter`, `ErrorCodes`, `GlobalExceptionHandler`, `ValidationException`, `ResourceNotFoundException` |
-| `config`     | `SecurityConfig`, `JpaConfig`, `OpenApiConfig`, `AsyncConfig`, `ConfigurationStartupLogger`, `ConfigurationValues` + **alle** Properties-Records (`CorsProperties`, `JwtProperties`, `LoginAttemptProperties`, `PermissionProperties`, `StorageProperties`, `MailProperties`) und die Auswahl-Enums `StorageProvider`, `MailProvider` |
+| `config`     | `SecurityConfig`, `JpaConfig`, `OpenApiConfig`, `AsyncConfig`, `SchedulingConfig`, `ConfigurationStartupLogger`, `ConfigurationValues` + **alle** Properties-Records (`CorsProperties`, `JwtProperties`, `LoginAttemptProperties`, `PermissionProperties`, `RegistrationProperties`, `StorageProperties`, `MailProperties`) und die Auswahl-Enums `StorageProvider`, `MailProvider` |
 | `mail`       | `MailSender` (Port), `MailMessage`, `LogMailSender`, `SmtpMailSender`, `MailTemplateService`. Seit KAN-51, siehe Kapitel 10 |
 | `masterdata` | `Category`, `Faculty`, `Module`, `StudyProgram` + je ein Repository, `MasterDataController`, `MasterDataService`, `DevMasterDataSeeder`, `dto/{CategoryResponse, FacultyResponse, StudyProgramResponse, ModuleResponse}` |
 | `portfolio`  | `Portfolio`, `PortfolioRepository` |
@@ -94,7 +94,8 @@ liest.
 
 | Entity / Feature        | Entity | Migration | Repository | Service | Endpoint |
 |-------------------------|:------:|:---------:|:----------:|:-------:|:--------:|
-| `User`                  | ✓      | ✓ (1)     | ✓          | teilweise (`DatabaseUserDetailsService`, `AuthService`, nur Anmeldung) | nur `GET /api/auth/me` |
+| `User`                  | ✓      | ✓ (1)     | ✓          | `DatabaseUserDetailsService`, `AuthService` (Anmeldung), `RegistrationService` (Anlage und Verifizierung, KAN-26) | `GET /api/auth/me`, `POST /api/auth/register`, `POST /api/auth/verify`, `POST /api/auth/verify/resend` |
+| `VerificationCode`      | ✓      | ✓ (10)    | ✓          | `VerificationCodeService` (Ausstellen, Prüfen, Aufräumen) | kein eigener; eingelöst über `POST /api/auth/verify` |
 | `Faculty`               | ✓      | ✓ (1)     | ✓          | `MasterDataService` (nur lesend) | ✓ `GET /api/faculties` |
 | `Category`              | ✓      | ✓ (1)     | ✓          | `MasterDataService` (nur lesend) | ✓ `GET /api/categories` |
 | `StudyProgram`          | ✓      | ✓ (2)     | ✓          | `MasterDataService` (nur lesend) | ✓ `GET /api/study-programs?faculty={id}` |
@@ -110,13 +111,11 @@ liest.
 | `Top10Entry`            | ✓      | ✓ (5)     | ✓          | -       | - |
 | `Top10Nomination`       | ✓      | ✓ (5)     | ✓          | -       | - |
 | `Block`                 | ✓      | ✓ (6, 7)  | ✓          | `BlockValidationService` (Validierung, kein CRUD) | eingebettet in `GET /api/projects/{id}` |
-| Auth                    | keine Entity | -   | -          | `AuthService`, `JwtService`, `LoginAttemptService` | ✓ `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` |
+| Auth                    | keine Entity | -   | -          | `AuthService`, `JwtService`, `LoginAttemptService`, `VerificationAttemptService` | ✓ `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` |
 
-Es gibt drei Controller: `auth.AuthController`, `masterdata.MasterDataController`
-und `project.ProjectController` (nur die beiden Lese-Endpoints aus KAN-16).
-Datei-Upload, Registrierung, Admin-Bereich, die schreibenden Projekt-Endpoints
-und die Top-10-Verwaltung sind noch nicht implementiert. Die Security-Regeln für
-einen Teil dieser Pfade stehen bereits in `SecurityConfig` (siehe Abschnitt 5).
+Datei-Upload, Admin-Bereich und die Top-10-Verwaltung sind noch nicht
+implementiert. Die Security-Regeln für einen Teil dieser Pfade stehen bereits in
+`SecurityConfig` (siehe Abschnitt 5).
 
 Die Stammdaten haben zusätzlich einen `DevMasterDataSeeder` (Profil `dev`,
 idempotent): FK1 bis FK5 mit Beispiel-Studiengängen und -Modulen sowie ein Satz
@@ -144,8 +143,9 @@ Liegen unter `backend/src/main/resources/db/migration`, Namensschema
 | 7 | `V202607221800__block_audit_und_schema_version.sql` | Nachtrag zu `block`: Spalte `schema_version` (Default 1) sowie `erstellt_am`/`aktualisiert_am` für die Umstellung auf `AuditableEntity`; die DB-Defaults werden anschließend wieder entfernt, damit JPA sie schreibt. |
 | 8 | `V202608011519__projekt_version.sql` | Spalte `projekt.version` (`bigint not null default 0`) für Optimistic Locking nach §3.3/§6.4. Der Default bleibt dauerhaft stehen, damit Inserts aus reinem SQL nicht an der not-null-Bedingung scheitern. |
 | 9 | `V202608031502__rename_to_english.sql` | KAN-49: das gesamte Schema auf englische Bezeichner. 13 Tabellen, 60 Spalten, alle Constraint- und Indexnamen. Die Enum-Werte wandern mit (`ENTWURF` wird `DRAFT`), deshalb werden die betroffenen Check-Constraints gelöst, der Bestand per `UPDATE` umgeschrieben und die Constraints mit explizitem Namen (`ck_project_status`) neu gesetzt. Details in `docs/NAMENSSCHEMA.md` §9. |
+| 10 | `V202608081410__verification_code.sql` | KAN-26: `verification_code` für die Einmalcodes des Registrierungsflusses (§3.16). `code_hash` statt Klartext, `on delete cascade` auf `app_user`, Check-Constraint `ck_verification_code_purpose` über alle drei Werte aus §2.11 einschließlich `PASSWORD_RESET`, den erst KAN-43 ausstellt. Ein gemeinsamer Index auf `(user_id, purpose)`, weil immer nach beidem zusammen gesucht wird. |
 
-Aktueller Schemastand laut Flyway: `202608031502`, 9 Migrationen.
+Aktueller Schemastand laut Flyway: `202608081410`, 10 Migrationen.
 
 Die Dateinamen 1 bis 8 tragen weiterhin deutsche Beschreibungen
 (`__projekt_und_zuordnungen.sql`). Das bleibt so: eingespielte Migrationen
@@ -209,6 +209,7 @@ Prüfsumme.
 |------|-------|
 | `OPTIONS /**` | CORS-Preflight muss ohne Token durchgehen. |
 | `POST /api/auth/login` | Hier holt man sich das Token erst. |
+| `POST` auf `/api/auth/register`, `/api/auth/verify`, `/api/auth/verify/resend` | Zwangsläufig offen (KAN-26): wer sich registriert, hat noch kein Token, und ein Konto in `REGISTRATION_PENDING` bekäme selbst mit Token ein 401 `ACCOUNT_NOT_ACTIVE`. An die Stelle der Anmeldung treten das Einmalgeheimnis im Postfach und das Rate-Limit aus `VerificationAttemptService`. Einzeln aufgeführt und nicht als `/api/auth/**`, weil unter demselben Präfix mit `/auth/me` und `/auth/logout` Pfade liegen, die ein Token brauchen. |
 | `GET /actuator/health` | Health-Check ohne Anmeldung; es ist der einzige freigeschaltete Actuator-Endpoint (`management.endpoints.web.exposure.include: health`). |
 | `GET` auf `/api/categories`, `/api/faculties`, `/api/study-programs`, `/api/modules` | PUBLIC-Lesezugriff auf die Stammdaten (§5). Umgesetzt im `MasterDataController`. Hier entscheidet **kein** Berechtigungsservice mit: die Listen hängen an keiner Ressource mit Eigentümer und enthalten nichts Schützenswertes. |
 | `GET` auf `/api/projects`, `/api/projects/*` | PUBLIC-Lesezugriff auf veröffentlichte Inhalte, umgesetzt im `ProjectController` (KAN-16). Was ein nicht angemeldeter Aufrufer tatsächlich sieht, entscheidet der `ProjectPermissionService`. |
@@ -227,6 +228,21 @@ liegt **nur im Arbeitsspeicher**:
 ein Neustart hebt die Sperre auf, und bei mehreren Instanzen zählt jede für
 sich. Als Client-IP wird bewusst `request.getRemoteAddr()` genommen, ohne
 `X-Forwarded-For` auszuwerten.
+
+Seit KAN-26 gibt es davon **zwei Ausprägungen**. Die Zählmechanik steht in
+`auth/AttemptCounter` und wird von zwei Diensten benutzt:
+
+| Dienst | Zählt | Setzt zurück bei |
+|--------|-------|------------------|
+| `LoginAttemptService` | fehlgeschlagene Anmeldungen | erfolgreicher Anmeldung |
+| `VerificationAttemptService` | **jeden** Aufruf von `POST /auth/verify` und `POST /auth/verify/resend` | erfolgreich eingelöstem Code |
+
+Beide lesen dieselben Grenzwerte, führen aber **getrennte Zähler**. Ein erneut
+angeforderter Verifizierungscode darf niemanden aus der Anmeldung aussperren:
+das wären zwei verschiedene Vorgänge, die sich gegenseitig blockieren, und die
+betroffene Person könnte den Zustand nicht deuten. Beim erneuten Senden wird
+jeder Aufruf gezählt und nicht nur ein fehlgeschlagener, weil dort der Versand
+selbst die begrenzte Ressource ist.
 
 ---
 
@@ -548,3 +564,83 @@ fehlgeschlagener Mails. Gehört in den Ausblick der Arbeit.
 
 Der Zustelltest läuft gegen GreenMail, einen SMTP-Server im Arbeitsspeicher
 (Testabhängigkeit, kein Dienst in `docker-compose.yml`).
+
+---
+
+## 11. Registrierung und Verifizierung
+
+Stand KAN-26, Contract §3.1.1, §3.16 und §6.1. Der erste fachliche Nutzer des
+Mail-Moduls aus Kapitel 10.
+
+| Klasse | Rolle |
+|--------|-------|
+| `RegistrationService` | die drei Endpoints: `register`, `verify`, `resend`. Hier steht die Domain-Regel und sonst nirgends |
+| `VerificationCodeService` | stellt Codes aus, prüft und entwertet sie, räumt verbrauchte weg. Die einzige Stelle, an der ein Code im Klartext existiert |
+| `VerificationAttemptService` | Rate-Limit beider Verifizierungs-Endpoints (Abschnitt 5) |
+| `EmailAddresses` | Kleinschreibung und „Teil hinter dem letzten `@`" |
+| `PasswordPolicy` | Mindest- und Höchstlänge, auch für KAN-28 und KAN-43 |
+| `config/RegistrationProperties` | die beiden Domainlisten und die Laufzeit der Codes |
+
+### Die Rolle folgt der Domain, nicht dem Formular
+
+`selectedRole` steuert in der Oberfläche nur Beschriftung und erwartete Domain.
+Persistiert wird die Rolle, die sich aus der Domain der `hsbEmail` ergibt;
+weicht die Auswahl davon ab, folgt 400 mit einer Meldung am Feld `hsbEmail`.
+Bestimmte die übermittelte Auswahl die Rolle, könnte jede Person mit
+studentischer Adresse durch Umsetzen eines Feldes im Request Redaktionsrechte
+erhalten, und die Freigabe von Portfolios hinge an einer Selbstauskunft.
+
+**Verglichen wird auf Gleichheit, nicht per Suffix.** Ein
+`endsWith("hs-bremen.de")` ließe `boesehs-bremen.de` durch und entwertete die
+ganze Prüfung. Soll eine Subdomain gelten, kommt sie in die Liste.
+
+Die Listen stehen in `application.yml` unter `app.registration` und nicht im
+Code, weil die Hochschule mehr als eine Adressendung führt und sich ihr Bestand
+unabhängig von dieser Software ändert. `RegistrationDomainConfigurationTest`
+läuft mit erfundenen Domains und belegt damit, dass die Konfiguration
+tatsächlich zieht.
+
+### Was am Code hängt und nicht in der Konfiguration steht
+
+| Festlegung | Wert | Wo |
+|------------|------|-----|
+| Länge des Codes | 6 Stellen inklusive führender Nullen, `SecureRandom` | `VerificationCodeService` |
+| Hash des Codes | BCrypt über denselben `PasswordEncoder` wie beim Passwort | `VerificationCodeService` |
+| Passwort | mindestens 12, höchstens 72 Zeichen, keine Zeichenklassen-Regel | `PasswordPolicy` |
+| Gültigkeit eines Codes | 24 Stunden | Property `app.registration.code-lifetime` |
+
+Die Obergrenze von 72 Zeichen ist kein Sicherheitsmerkmal, sondern ein
+BCrypt-Detail: der Algorithmus verarbeitet nur die ersten 72 Byte. Ohne die
+Grenze wären zwei lange Passwörter, die sich erst ab Zeichen 73 unterscheiden,
+dasselbe Passwort.
+
+### Adressen sind nicht zwischen Groß- und Kleinschreibung zu unterscheiden
+
+`EmailAddresses.normalize` schreibt jede Adresse klein, bei der Registrierung
+wie bei der Anmeldung und bei jedem Nachschlagen im Verifizierungsflow. Ohne
+diese Regel wären `Max@example.org` und `max@example.org` zwei Konten, obwohl
+beide dasselbe Postfach meinen: der Unique-Constraint aus §3.1 griffe nicht, und
+wer sich mit anderer Schreibweise anmeldet als er sich registriert hat, liefe in
+ein `LOGIN_FAILED`, das er nicht auflösen kann. `AuthService.login`
+normalisiert deshalb seit KAN-26 ebenfalls.
+
+### Ununterscheidbare Antworten
+
+`POST /auth/verify` und `POST /auth/verify/resend` antworten für bekannte und
+unbekannte Adressen gleich (§6.1). Bei `verify` heißt das 400
+`VERIFICATION_CODE_INVALID` für jeden Fall, in dem kein gültiger Code vorliegt,
+**einschließlich der Antwortzeit**: gibt es das Konto nicht, wird trotzdem
+einmal gegen einen Platzhalter-Hash gerechnet, wie in `AuthService.login`. Bei
+`resend` heißt es 204, ob nun eine Mail rausging oder nicht.
+
+Die Registrierung selbst kann das nicht leisten: beide Adressen sind eindeutig,
+eine zweite Anmeldung darauf muss scheitern, und der Grund muss benennbar sein.
+Deshalb 409 `RESOURCE_IN_USE` mit dem betroffenen Feld in der Meldung. §6.1
+trägt diese eine Offenlegung ausdrücklich.
+
+### Grenze, bewusst getragen
+
+Der Zähler des Rate-Limits liegt wie der des Logins nur im Arbeitsspeicher
+(Abschnitt 5). Ein Neustart hebt die Sperre auf; ein Automat mit langem Atem
+könnte danach weiterprobieren. Für den Prototyp ausreichend, gehört mit dem
+gemeinsamen Zähler aus Abschnitt 5 in den Ausblick.

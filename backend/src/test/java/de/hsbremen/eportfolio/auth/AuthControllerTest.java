@@ -113,6 +113,16 @@ class AuthControllerTest {
 	private UserRepository userRepository;
 
 	/**
+	 * Nur damit der Controller sich verdrahten laesst: die Registrierung kam mit
+	 * KAN-26 in denselben Controller. Ihre Endpoints prueft
+	 * {@code RegistrationIntegrationTest} gegen die echte Datenbank, weil an
+	 * ihnen Konto, Portfolio und Codes zusammenhaengen und ein Mock davon nichts
+	 * uebrig liesse, das noch etwas belegte.
+	 */
+	@MockitoBean
+	private RegistrationService registrationService;
+
+	/**
 	 * Der Zaehler ist ein Singleton im Testkontext. Ohne Ruecksetzen wuerden
 	 * sich die Fehlversuche der einzelnen Testmethoden addieren und die
 	 * Reihenfolge der Tests waere plotzlich relevant.

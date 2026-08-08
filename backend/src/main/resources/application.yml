@@ -64,6 +64,32 @@ app:
       max-failed-attempts: 5
       lockout-duration: PT15M
 
+  registration:
+    # Selbstregistrierung nach API-Contract §3.1.1 (KAN-26). Kein Geheimnis,
+    # deshalb im Klartext und profilunabhaengig.
+    #
+    # Die Domain der hsbEmail entscheidet ueber die Rolle: steht sie in
+    # student-domains, wird das Konto STUDENT, steht sie in staff-domains,
+    # wird es EDITOR. Steht sie in keiner der beiden Listen, scheitert die
+    # Registrierung mit 400 und es entsteht kein Konto. Verglichen wird der
+    # Teil hinter dem letzten @ auf Gleichheit, nicht per Suffix: ein
+    # endsWith("hs-bremen.de") liesse boesehs-bremen.de durch.
+    #
+    # Als Liste und nicht im Code, weil die Hochschule mehr als eine Endung
+    # fuehrt und sich ihr Bestand unabhaengig von dieser Software aendert.
+    # Eine weitere Endung ist damit eine Zeile hier statt einer neuen Version.
+    student-domains: [ "stud.hs-bremen.de" ]
+    # Darf leer bleiben. §7, offener Punkt 3 nennt das als Gegenmassnahme,
+    # falls die automatische Redakteursrolle abgelehnt wird: dann vergibt sie
+    # ausschliesslich der Admin ueber PATCH /admin/users/{id}.
+    staff-domains: [ "hs-bremen.de" ]
+    # Gueltigkeit eines Verifizierungscodes (§3.16). 24 Stunden, weil der Flow
+    # zwei Postfaecher verlangt, davon das HSB-Webmail, das viele nur selten
+    # oeffnen. Eine kurze Frist erzeugt hier vor allem erneuten Versand; die
+    # Sicherheit des Codes traegt die Einmalverwendung zusammen mit dem
+    # Rate-Limit, nicht seine Laufzeit.
+    code-lifetime: PT24H
+
   permission:
     # Beide Schalter bilden die dokumentierten Default-Annahmen aus
     # API-Contract §7 (offene Fragen 1 und 2) ab. Sie sind noch mit den
