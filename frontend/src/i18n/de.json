@@ -1,0 +1,66 @@
+{
+  "app": {
+    "name": "E-Portfolio Hochschule Bremen"
+  },
+  "common": {
+    "theme": {
+      "toDark": "Dunklen Modus einschalten",
+      "toLight": "Hellen Modus einschalten"
+    }
+  },
+  "home": {
+    "title": "E-Portfolio Hochschule Bremen",
+    "intro": "Die Anwendung ist aufgesetzt. Die fachlichen Ansichten entstehen mit ihren Tickets.",
+    "tokenGallery": "Zur Tokenschicht"
+  },
+  "tokens": {
+    "title": "Tokenschicht",
+    "intro": "Prüffläche für Farben, Radien, Schriftrollen und die per CLI erzeugte Primitive. Jede Änderung an der Tokenschicht ist hier sofort sichtbar.",
+    "colors": {
+      "title": "Semantic-Rollen",
+      "count": "{{count}} Rollen, je Modus ein eigener Wert.",
+      "group": {
+        "surface": "Flächen und Text",
+        "interaction": "Interaktion",
+        "sidebar": "Sidebar",
+        "status": "Projektstatus",
+        "role": "Rollen",
+        "badge": "Neutrales Badge",
+        "brand": "Markenflächen",
+        "feedback": "UI-Feedback"
+      }
+    },
+    "radius": {
+      "title": "Radien",
+      "intro": "Sechs Stufen, Prinzip: größerer Container, größerer Radius."
+    },
+    "typography": {
+      "title": "Schriftrollen",
+      "intro": "Jede Rolle einmal mit umbrechendem Text: eine zu enge Zeilenhöhe fällt an einer einzeiligen Beispielzeile nicht auf.",
+      "sample": "Das Portfolio dokumentiert studentische Projektarbeiten der Hochschule Bremen und macht sie über Fakultäten und Studiengänge hinweg auffindbar."
+    },
+    "button": {
+      "title": "Nachweis-Komponente",
+      "intro": "Der per CLI erzeugte Button in allen Varianten und Größen. Er belegt, dass CLI, Alias, cn(), Tokenbrücke und dunkler Modus zusammenpassen.",
+      "variants": "Varianten",
+      "sizes": "Größen",
+      "label": "Schaltfläche"
+    }
+  },
+  "project": {
+    "status": {
+      "DRAFT": "Entwurf",
+      "SUBMITTED": "Eingereicht",
+      "APPROVED": "Genehmigt",
+      "PUBLISHED": "Veröffentlicht",
+      "REVISION": "Überarbeitung"
+    }
+  },
+  "user": {
+    "role": {
+      "STUDENT": "Studierende:r",
+      "EDITOR": "Redakteur:in",
+      "ADMIN": "Admin"
+    }
+  }
+}

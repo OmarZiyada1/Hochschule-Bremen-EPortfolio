@@ -114,7 +114,8 @@ frontend/src/
   styles/tokens/
 ```
 
-**Bevor eine Komponente von Hand entsteht: `pnpm dlx shadcn@latest search`.**
+**Bevor eine Komponente von Hand entsteht:
+`pnpm dlx shadcn@latest search @shadcn -q <text>`.**
 Gibt es eine Registry-Entsprechung, wird sie über `add` erzeugt und nicht
 nachgebaut; von Hand entsteht nur, was Domänenwissen trägt, und das
 komponiert die Primitiven. Ein selbst gebautes Auswahlmenü sieht im Browser

@@ -1,0 +1,425 @@
+/*
+ * Tokenschicht: Farben und Radien (KAN-6, Abschnitt 4.1).
+ *
+ * Quelle der Werte sind die Figma-Collections "Primitives", "Semantic" und
+ * "Radius", gespiegelt auf der Confluence-Seite "Foundation" (Abschnitte 2,
+ * 3 und 7). Stand des Abgleichs: 07.08.2026, also 36 Primitives,
+ * 54 Semantic-Rollen je Modus und 6 Radien.
+ *
+ * Zwei Ebenen, und die Trennung ist der ganze Zweck:
+ * 1. Primitives sind Rohwerte ohne Bedeutung, in hell und dunkel gleich.
+ *    Sie werden nie direkt in einer Komponente verwendet und sind deshalb
+ *    bewusst nicht an Tailwind angebunden: ein bg-blau-600 existiert nicht.
+ * 2. Semantic ordnet jeder Rolle je Modus ein Primitive zu. Komponenten
+ *    binden ausschliesslich hier an. Ohne diese Regel ist der Dark Mode
+ *    nach drei Komponenten kaputt.
+ *
+ * Hex-Werte stehen im ganzen Frontend nur in dieser Datei.
+ */
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+ * Ebene 1: Primitives (Foundation, Abschnitt 2)
+ * ============================================================ */
+:root {
+  /* Blau, die einzige Markenfarbe (Foundation 2.1). Neun Stufen, keine elf:
+     blau/50 und blau/500 sind entfernt, weil keine Semantic-Rolle sie
+     referenziert (Foundation, Abschnitt 9). */
+  --blau-100: #e2ebf5;
+  --blau-200: #c0d8ee;
+  --blau-300: #8fbde4;
+  --blau-400: #5da5e8;
+  --blau-600: #0c5ba8;
+  --blau-700: #0a4d8f;
+  --blau-800: #0a3e7a;
+  --blau-900: #0b2f5c;
+  --blau-950: #071f3d;
+
+  /* Neutral (Foundation 2.2). neutral/500 ist am 07.08.2026 entfallen: die
+     letzten beiden Rollen darauf wurden wegen SC 1.4.3 angehoben. */
+  --neutral-50: #f8fafc;
+  --neutral-100: #f1f5f9;
+  --neutral-200: #e2e8f0;
+  --neutral-300: #cbd5e1;
+  --neutral-400: #94a3b8;
+  --neutral-600: #475569;
+  --neutral-700: #334155;
+  --neutral-800: #1e293b;
+  --neutral-900: #131c2b;
+  --neutral-950: #0b1220;
+
+  /* Funktionale Rampen (Foundation 2.3): Signalfarben mit fester Bedeutung
+     (Fehler, Warnung, Erfolg), keine zweiten Markenfarben. */
+  --rot-100: #fee2e2;
+  --rot-400: #f87171;
+  --rot-600: #dc2626;
+  --rot-700: #b91c1c;
+  --rot-800: #991b1b;
+  --rot-950: #450a0a;
+
+  --bernstein-100: #fef3c7;
+  --bernstein-400: #fbbf24;
+  --bernstein-700: #b45309;
+  --bernstein-800: #92400e;
+  --bernstein-950: #451a03;
+
+  --gruen-100: #d1fae5;
+  --gruen-400: #34d399;
+  --gruen-700: #047857;
+  --gruen-800: #065f46;
+  --gruen-950: #052e16;
+
+  /* Basis (Foundation 2.4). basis/schwarz existiert bewusst nicht: kein
+     Semantic-Token nutzt reines Schwarz. */
+  --basis-weiss: #ffffff;
+}
+
+/* ============================================================
+ * Ebene 2: Semantic, heller Modus (Foundation, Abschnitt 3)
+ * Ausschliesslich Aliase auf Primitives, kein Hex-Wert.
+ * ============================================================ */
+:root {
+  /* Flaechen und Text (Foundation 3.1). muted-foreground und
+     text-placeholder zeigen seit 07.08.2026 auf neutral/600 statt
+     neutral/500: neutral/500 lag auf der Flaeche muted bei 4,34:1 und damit
+     unter der Schwelle aus SC 1.4.3. Platzhalter zaehlt als Text. */
+  --background: var(--neutral-50);
+  --foreground: var(--neutral-900);
+  --card: var(--basis-weiss);
+  --card-foreground: var(--neutral-900);
+  --popover: var(--basis-weiss);
+  --popover-foreground: var(--neutral-900);
+  --muted: var(--neutral-100);
+  --muted-foreground: var(--neutral-600);
+  --text-disabled: var(--neutral-400);
+  --text-placeholder: var(--neutral-600);
+
+  /* Interaktion (Foundation 3.2). ring zeigt auf denselben Wert wie
+     primary; der Fokusring braucht deshalb den Versatz aus ring-offset,
+     sonst ist er auf einem Primary-Button unsichtbar (Foundation 4.4). */
+  --primary: var(--blau-600);
+  --primary-foreground: var(--basis-weiss);
+  --primary-hover: var(--blau-700);
+  --secondary: var(--neutral-100);
+  --secondary-foreground: var(--neutral-900);
+  --accent: var(--blau-100);
+  --accent-foreground: var(--blau-800);
+  --destructive: var(--rot-600);
+  --destructive-foreground: var(--basis-weiss);
+  --destructive-hover: var(--rot-700);
+  --border: var(--neutral-200);
+  --input: var(--neutral-300);
+  --ring: var(--blau-600);
+  --ring-offset: var(--neutral-50);
+
+  /* Sidebar (Foundation 3.3) */
+  --sidebar: var(--basis-weiss);
+  --sidebar-foreground: var(--neutral-900);
+  --sidebar-accent: var(--blau-100);
+  --sidebar-border: var(--neutral-200);
+
+  /* Projektstatus (Foundation 3.4). Die Namen tragen woertlich die
+     Enum-Werte aus API-Contract 2.2 in Kleinschreibung, damit die
+     Badge-Farbe ohne Uebersetzungstabelle aus dem status-Feld der Antwort
+     folgt. Ein Badge nutzt immer sein eigenes -fg, nie muted-foreground:
+     das sieht fast gleich aus, verliert aber die geprüfte Kontrastzusage
+     von 6,4 bis 7,2:1. */
+  --status-draft-bg: var(--neutral-100);
+  --status-draft-fg: var(--neutral-600);
+  --status-submitted-bg: var(--bernstein-100);
+  --status-submitted-fg: var(--bernstein-800);
+  --status-approved-bg: var(--blau-100);
+  --status-approved-fg: var(--blau-800);
+  --status-published-bg: var(--gruen-100);
+  --status-published-fg: var(--gruen-800);
+  --status-revision-bg: var(--rot-100);
+  --status-revision-fg: var(--rot-800);
+
+  /* Rollen (Foundation 3.5, API-Contract 2.1). Genau drei Rollen, genau
+     drei Paare. "Oeffentlich" ist keine Rolle, sondern der Zustand "nicht
+     angemeldet", und bekommt kein eigenes Token. */
+  --role-student-bg: var(--blau-100);
+  --role-student-fg: var(--blau-800);
+  --role-editor-bg: var(--neutral-200);
+  --role-editor-fg: var(--neutral-700);
+  --role-admin-bg: var(--bernstein-100);
+  --role-admin-fg: var(--bernstein-800);
+
+  /* Neutrales Badge (Foundation 3.6): Fakultaets-, Studiengangs-, Modul-
+     und Kategorie-Badges. Fakultaeten werden nicht farblich codiert, sie
+     unterscheiden sich allein durch ihre Beschriftung. */
+  --badge-neutral-bg: var(--neutral-100);
+  --badge-neutral-fg: var(--neutral-600);
+
+  /* Markenflaechen (Foundation 3.7). surface-brand-muted ist Zweittext
+     ausschliesslich auf einer Markenflaeche, nie auf card. */
+  --surface-brand: var(--blau-800);
+  --surface-brand-foreground: var(--basis-weiss);
+  --surface-highlight: var(--blau-700);
+  --surface-brand-muted: var(--blau-200);
+
+  /* UI-Feedback (Foundation 3.7), nicht zu verwechseln mit status-*. */
+  --warning: var(--bernstein-700);
+  --warning-foreground: var(--basis-weiss);
+  --success: var(--gruen-700);
+  --success-foreground: var(--basis-weiss);
+}
+
+/* ============================================================
+ * Ebene 2: Semantic, dunkler Modus (Foundation, Abschnitt 3)
+ *
+ * Dieselben Rollennamen, andere Primitives. Dark Mode ist keine
+ * Invertierung: primary wechselt von blau/600 auf blau/400, und die
+ * Vordergrundrolle dreht sich mit, helle Flaeche traegt weisse Schrift,
+ * dunkle Flaeche dunkle. Derselbe Blauton in beiden Modi laege bei 2,9:1.
+ * ============================================================ */
+.dark {
+  --background: var(--neutral-950);
+  --foreground: var(--neutral-100);
+  --card: var(--neutral-900);
+  --card-foreground: var(--neutral-100);
+  --popover: var(--neutral-900);
+  --popover-foreground: var(--neutral-100);
+  --muted: var(--neutral-800);
+  --muted-foreground: var(--neutral-400);
+  --text-disabled: var(--neutral-600);
+  --text-placeholder: var(--neutral-400);
+
+  --primary: var(--blau-400);
+  --primary-foreground: var(--neutral-950);
+  --primary-hover: var(--blau-300);
+  --secondary: var(--neutral-800);
+  --secondary-foreground: var(--neutral-100);
+  --accent: var(--neutral-800);
+  --accent-foreground: var(--neutral-100);
+  --destructive: var(--rot-400);
+  --destructive-foreground: var(--neutral-950);
+  --destructive-hover: var(--rot-600);
+  --border: var(--neutral-800);
+  --input: var(--neutral-700);
+  --ring: var(--blau-400);
+  --ring-offset: var(--neutral-950);
+
+  --sidebar: var(--neutral-900);
+  --sidebar-foreground: var(--neutral-100);
+  --sidebar-accent: var(--neutral-800);
+  --sidebar-border: var(--neutral-800);
+
+  /* Die dunklen Status- und Rollenpaare kombinieren die 950er-Stufe als
+     Flaeche mit der 400er-Stufe als Text derselben Rampe und liegen
+     durchgehend ueber 7:1 (Foundation 4.2). */
+  --status-draft-bg: var(--neutral-800);
+  --status-draft-fg: var(--neutral-300);
+  --status-submitted-bg: var(--bernstein-950);
+  --status-submitted-fg: var(--bernstein-400);
+  --status-approved-bg: var(--blau-950);
+  --status-approved-fg: var(--blau-400);
+  --status-published-bg: var(--gruen-950);
+  --status-published-fg: var(--gruen-400);
+  --status-revision-bg: var(--rot-950);
+  --status-revision-fg: var(--rot-400);
+
+  --role-student-bg: var(--neutral-800);
+  --role-student-fg: var(--blau-400);
+  --role-editor-bg: var(--neutral-800);
+  --role-editor-fg: var(--neutral-300);
+  --role-admin-bg: var(--bernstein-950);
+  --role-admin-fg: var(--bernstein-400);
+
+  --badge-neutral-bg: var(--neutral-800);
+  --badge-neutral-fg: var(--neutral-300);
+
+  /* surface-brand ist im dunklen Modus bewusst nicht blau, sonst setzt sich
+     die Flaeche nicht vom Seitenhintergrund ab. surface-highlight wird
+     dunkler statt heller (Foundation 3.7). */
+  --surface-brand: var(--neutral-900);
+  --surface-brand-foreground: var(--neutral-100);
+  --surface-highlight: var(--blau-900);
+  --surface-brand-muted: var(--blau-300);
+
+  --warning: var(--bernstein-400);
+  --warning-foreground: var(--neutral-950);
+  --success: var(--gruen-400);
+  --success-foreground: var(--neutral-950);
+}
+
+/* ============================================================
+ * Tailwind-Anbindung. Erzeugt bg-primary, text-muted-foreground,
+ * border-border, rounded-card und so weiter.
+ *
+ * Die Standardpaletten von Tailwind (bg-red-500, rounded-md, ...) sind
+ * bewusst abgeschaltet: jede Farbe und jeder Radius laeuft ueber die
+ * Semantic-Rollen dieser Datei. Die Primitives sind absichtlich nicht
+ * angebunden; ein bg-blau-600 darf es nicht geben.
+ * ============================================================ */
+@theme {
+  --color-*: initial;
+  --radius-*: initial;
+}
+
+/*
+ * "static" heisst: alle sechs Stufen stehen im gebauten CSS, auch die
+ * gerade unbenutzten. Ohne das Schluesselwort schreibt Tailwind nur die
+ * Variablen heraus, die eine Utility-Klasse anfasst; --radius-none und
+ * --radius-pill fielen weg, und die Pruefflaeche unter /dev/tokens, die
+ * die Werte zur Laufzeit ausliest, zeigte fuer sie nichts an.
+ */
+@theme static {
+  /* Radius (Foundation, Abschnitt 7). Sechs Stufen, Prinzip: groesserer
+     Container, groesserer Radius. Jede abgerundete Flaeche nutzt eine
+     dieser Variablen, nie einen freien Pixelwert.
+
+     Sie stehen hier und nicht unter :root, weil der Namensraum von
+     Tailwind (--radius-*) und die Namen der Figma-Collection zusammen-
+     fallen. Ein Alias wie bei den Farben (--color-card: var(--card))
+     waere hier --radius-card: var(--radius-card), also ein Verweis auf
+     sich selbst. Der Wert steht deshalb genau einmal, und zwar im
+     @theme-Block; Tailwind schreibt ihn von dort als echte CSS-Variable
+     nach :root. */
+  --radius-none: 0px;
+  --radius-selection: 4px;
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-modal: 16px;
+  --radius-pill: 9999px;
+
+  /* shadcn-Bruecke (KAN-6, Abschnitt 3.3). Die CLI erzeugt Komponenten mit
+     rounded-sm/md/lg/xl. Ohne diese vier Zeilen greifen die Klassen ins
+     Leere, weil --radius-*: initial die Tailwind-Standardskala abschaltet:
+     der Button laeuft gruen durch typecheck, lint und build und hat eckige
+     Ecken. Kein Fehler, keine Warnung, nur falsches Aussehen.
+
+     Die sechs benannten Stufen bleiben die einzige Wahrheit; das hier ist
+     nur ihre zweite Adresse. Generierte Komponenten lesen die Variable
+     ausserdem direkt, button.tsx etwa als
+     rounded-[min(var(--radius-md),10px)]: auch dafuer muss sie zur
+     Laufzeit existieren und nicht nur als Utility. */
+  --radius-sm: var(--radius-selection); /*  4px */
+  --radius-md: var(--radius-control); /*  8px */
+  --radius-lg: var(--radius-card); /* 12px */
+  --radius-xl: var(--radius-modal); /* 16px */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-text-disabled: var(--text-disabled);
+  --color-text-placeholder: var(--text-placeholder);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-hover: var(--destructive-hover);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset: var(--ring-offset);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --color-status-draft-bg: var(--status-draft-bg);
+  --color-status-draft-fg: var(--status-draft-fg);
+  --color-status-submitted-bg: var(--status-submitted-bg);
+  --color-status-submitted-fg: var(--status-submitted-fg);
+  --color-status-approved-bg: var(--status-approved-bg);
+  --color-status-approved-fg: var(--status-approved-fg);
+  --color-status-published-bg: var(--status-published-bg);
+  --color-status-published-fg: var(--status-published-fg);
+  --color-status-revision-bg: var(--status-revision-bg);
+  --color-status-revision-fg: var(--status-revision-fg);
+
+  --color-role-student-bg: var(--role-student-bg);
+  --color-role-student-fg: var(--role-student-fg);
+  --color-role-editor-bg: var(--role-editor-bg);
+  --color-role-editor-fg: var(--role-editor-fg);
+  --color-role-admin-bg: var(--role-admin-bg);
+  --color-role-admin-fg: var(--role-admin-fg);
+
+  --color-badge-neutral-bg: var(--badge-neutral-bg);
+  --color-badge-neutral-fg: var(--badge-neutral-fg);
+
+  --color-surface-brand: var(--surface-brand);
+  --color-surface-brand-foreground: var(--surface-brand-foreground);
+  --color-surface-highlight: var(--surface-highlight);
+  --color-surface-brand-muted: var(--surface-brand-muted);
+
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+
+  /* Schluesselwert, keine Farbe aus Figma: --color-*: initial entfernt auch
+     transparent, white, black und current. Der generierte Button setzt in
+     seiner Grundklasse border border-transparent. Ohne die folgende Zeile
+     greift border-transparent ins Leere, und weil die Grundregel weiter
+     unten jedem Element border-color: var(--border) gibt, traegt jeder
+     Button einen sichtbaren Rahmen. Wieder angebunden wird nur, was die
+     Nachweis-Komponente wirklich braucht, nicht die halbe Standardpalette
+     auf Verdacht (KAN-6, Abschnitt 3.3). */
+  --color-transparent: transparent;
+}
+
+/* ============================================================
+ * Grundregeln (KAN-6, Abschnitt 4.3). Funktional, keine Kosmetik.
+ * ============================================================ */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+
+  /* SC 1.4.3: Platzhalter zaehlt als Text und ist keine Ausnahme. */
+  ::placeholder {
+    color: var(--text-placeholder);
+    opacity: 1;
+  }
+
+  /* SC 2.4.7 und 1.4.11. Der outline-offset ist zwingend: ring und primary
+     zeigen auf denselben Wert; ohne den in Hintergrundfarbe gehaltenen
+     Zwischenraum ist der Fokusring auf einem Primary-Button unsichtbar. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* SC 2.5.8: Mindestgroesse interaktiver Ziele. */
+  button,
+  a[role="button"],
+  [role="tab"],
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-block-size: 24px;
+    min-inline-size: 24px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

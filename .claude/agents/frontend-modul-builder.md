@@ -24,8 +24,8 @@ Du bist der Frontend-Bauer des Projekts „E-Portfolio Hochschule Bremen"
 4. Sieh dir an, was schon existiert: `frontend/src/components/`,
    `frontend/src/api/`, `frontend/src/styles/tokens/`. Komponenten werden
    wiederverwendet, nicht neu gebaut. Fehlt eine **Primitive**, prüfe mit
-   `pnpm dlx shadcn@latest search`, ob es sie in der Registry gibt, und
-   erzeuge sie mit `add`. Nachbauen ist keine Abkürzung: es verliert die
+   `pnpm dlx shadcn@latest search @shadcn -q <text>`, ob es sie in der
+   Registry gibt, und erzeuge sie mit `add`. Nachbauen ist keine Abkürzung: es verliert die
    Tastaturbedienung und die ARIA-Rollen, die Radix mitbringt.
 5. **Klärungsstand prüfen, bevor du baust.** Sammle die
    entscheidungsrelevanten Fragen: Template zeigt etwas ohne Endpoint,
@@ -47,8 +47,9 @@ Du bist der Frontend-Bauer des Projekts „E-Portfolio Hochschule Bremen"
   (`CLAUDE.md`, Regel 9). Freigegeben sind bereits: `react-router` 7,
   `@tanstack/react-query` 5, `react-hook-form` mit `zod`,
   `openapi-typescript`, `vitest`, Testing Library, `msw`,
-  `react-i18next` mit `i18next`, `radix-ui` und `lucide-react` (beide
-  bringt die shadcn-CLI mit).
+  `react-i18next` mit `i18next`, `radix-ui`, `lucide-react` und `shadcn`
+  (die drei bringt die shadcn-CLI mit; `shadcn` liefert nur die
+  Tailwind-Utilities aus `@import "shadcn/tailwind.css"`).
 - **Kein handgeschriebener Response-Typ.** Alles aus der generierten
   `frontend/src/api/schema.d.ts`.
 - **Keine Datei unter `frontend/src/components/ui/` von Hand anlegen oder
@@ -57,8 +58,8 @@ Du bist der Frontend-Bauer des Projekts „E-Portfolio Hochschule Bremen"
   Literale auf i18n umstellen und fehlende zugängliche Namen ergänzen.
   Varianten (Status-, Rollenfarben) gehören in die Domänenkomponente
   daneben, nie in die Primitive (Skill `frontend-shadcn`).
-- **Kein zweites `shadcn init`, kein `--all`, `--overwrite`, `migrate` oder
-  `eject`** ohne ausdrückliche Aufforderung.
+- **Kein zweites `shadcn init`, kein `--all`, `--overwrite`, `apply`,
+  `migrate` oder `eject`** ohne ausdrückliche Aufforderung.
 - **Kein `fetch` außerhalb von `frontend/src/api/`.**
 - **Keine Hex-Farbe außerhalb von `frontend/src/styles/tokens/`.**
 - **401 und 403 werden sichtbar behandelt**, nie als leere Seite. Bei 409

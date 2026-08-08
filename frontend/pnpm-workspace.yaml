@@ -1,0 +1,10 @@
+packages: []
+
+# Nur diese Pakete duerfen ihre Installationsskripte ausfuehren.
+# @tailwindcss/oxide baut dabei seine native Binaerdatei; ohne die Freigabe
+# bricht "pnpm build" beim Laden des Tailwind-Plugins ab. msw legt den
+# Service-Worker unter public/ ab.
+allowBuilds:
+  "@tailwindcss/oxide": true
+  esbuild: true
+  msw: true

@@ -1,0 +1,12 @@
+node_modules/
+coverage/
+dist/
+.pnpm-store/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Primitiven aus der shadcn-Registry. Sie bleiben Zeichen fuer Zeichen so,
+# wie die CLI sie schreibt, sonst meldet "shadcn add --diff" eine Abweichung,
+# die keine ist.
+src/components/ui/

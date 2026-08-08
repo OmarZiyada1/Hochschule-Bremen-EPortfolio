@@ -20,8 +20,9 @@ ist ein Befund, auch wenn sie funktioniert und gut aussieht.
 
 Drei Gründe, und der dritte wiegt am schwersten:
 
-1. Sie fällt aus `shadcn diff` heraus. Ein Sicherheits- oder
-   Barrierefreiheitsfix in der Registry erreicht sie nie.
+1. Sie fällt aus dem Abgleich mit der Registry heraus (`add --diff`,
+   Abschnitt 5). Ein Sicherheits- oder Barrierefreiheitsfix dort erreicht sie
+   nie.
 2. Sie erfindet eine zweite Bauart neben der generierten. Nach fünf
    Komponenten gibt es zwei Konventionen und niemand weiß, welche gilt.
 3. Sie baut Tastaturbedienung, Fokusfallen, ARIA-Rollen und
@@ -40,18 +41,46 @@ benutzt. Gibt es keine, wird eine Hülle darum gebaut, nicht daneben.**
 
 ## 2. shadcn ist keine Abhängigkeit im üblichen Sinn
 
-Es gibt kein Paket `shadcn/ui`, das zur Laufzeit importiert wird. Die CLI
-kopiert Quelltext in das Repository; ab dem Moment gehört er dem Projekt und
-wird eingecheckt wie eigener Code.
+Es gibt kein Paket `shadcn/ui`, aus dem eine Komponente importiert wird. Die
+CLI kopiert Quelltext in das Repository; ab dem Moment gehört er dem Projekt
+und wird eingecheckt wie eigener Code.
 
 Daraus folgt praktisch:
 
 - Ein `pnpm update` aktualisiert die Komponenten **nicht**. Aktualisiert wird
-  bewusst über `shadcn diff` und ein eigenes Ticket.
-- Was die CLI installiert, sind die Basis-Pakete darunter (`radix-ui`) und
-  gegebenenfalls Hilfsbibliotheken. Nur die stehen in `package.json`.
+  bewusst über `add --diff` (Abschnitt 5) und ein eigenes Ticket.
+- Was die CLI installiert, sind die Basis-Pakete darunter (`radix-ui`),
+  Hilfsbibliotheken und `shadcn` selbst (siehe unten). Nur die stehen in
+  `package.json`, nie eine einzelne Komponente.
 - Ein Review liest die generierten Dateien wie eigenen Code. „Kommt von
   shadcn" ist keine Begründung dafür, dass etwas nicht geprüft wurde.
+
+### Eine Zeile gehört doch dazu: `shadcn/tailwind.css`
+
+Beim `init` trägt die CLI `@import "shadcn/tailwind.css"` in die globale
+CSS-Datei ein und nimmt `shadcn` als Paket in die `package.json`. Kein
+Laufzeit-Import, sondern eine Build-Abhängigkeit: der Import liefert die
+gemeinsamen Tailwind-v4-Utilities, auf die generierte Komponenten bauen,
+darunter die Zustandsvarianten `data-open:` und `data-closed:` und die
+Accordion-Animation.
+
+Die Reihenfolge in `src/index.css` ist damit:
+
+```css
+@import "tailwindcss";
+@import "shadcn/tailwind.css";
+/* danach erst die eigenen Token- und Themenschichten */
+```
+
+**Fehlt der Import, greift keine dieser Varianten, und nichts sagt es an:**
+kein Compilerfehler, keine Lint-Warnung, kein roter Test. Ein geöffnetes
+Menü sieht dann aus wie ein geschlossenes. Es ist derselbe Fehlermodus wie
+bei der Tokenbrücke in Abschnitt 7 und wird genauso geprüft, nämlich am
+gebauten CSS.
+
+`eject` löst diesen Import auf und schreibt seinen Inhalt fest in die eigene
+CSS-Datei. Das ist unumkehrbar und steht deshalb in der Tabelle in
+Abschnitt 5.
 
 ## 3. Basis ist Radix UI
 
@@ -63,12 +92,33 @@ KAN-6 Abschnitt 3.1). Begründung: reifste der drei Basen, breiteste Doku,
 längste Historie in Sachen Barrierefreiheit, und damit in der Thesis am
 leichtesten zu belegen.
 
-Die Wahl steckt im Code jeder erzeugten Komponente. Sie wird nicht je Ticket
-neu getroffen und nicht nebenbei geändert; ein Wechsel ist ein eigenes Ticket
-mit `shadcn migrate radix` und vollständiger Nachprüfung.
+**Radix ist nicht die Voreinstellung.** Ohne `--base radix` richtet die CLI
+das Projekt auf Base UI ein. Die Angabe ist beim `init` also Pflicht und
+nicht bloß Bestätigung.
 
-Beim Nachschlagen in der shadcn-Doku darauf achten, dass die
-Radix-Fassung gelesen wird. Die Beispiele unterscheiden sich je Basis.
+Die Wahl steckt im Code jeder erzeugten Komponente. Sie wird nicht je Ticket
+neu getroffen und nicht nebenbei geändert. Ein Wechsel der Basis heißt:
+sämtliche Primitiven neu erzeugen und vollständig nachprüfen, also ein
+eigenes Ticket.
+
+**`migrate radix` tut das nicht.** Der Befehl wechselt keine Basis, sondern
+schreibt Imports aus den Einzelpaketen `@radix-ui/react-*` auf das
+Sammelpaket `radix-ui` um. Für ein Projekt, das von Anfang an mit
+`--base radix` erzeugt wurde, ist er gegenstandslos.
+
+### Die Radix-Fassung nachschlagen
+
+Die Beispiele in der Doku unterscheiden sich je Basis, und die Web-Doku zeigt
+die Base-UI-Fassung als Voreinstellung. Deshalb nicht im Browser raten,
+sondern die Basis am Befehl mitgeben:
+
+```bash
+pnpm dlx shadcn@latest docs <item> -b radix
+```
+
+Ohne `-b` gilt die Basis aus `components.json`. Das ist im Projektordner das
+Richtige; sobald aber außerhalb von `frontend/` oder gegen die Web-Doku
+gearbeitet wird, ist das Ergebnis eine andere Bibliothek mit ähnlichem Code.
 
 ## 4. `components.json`
 
@@ -77,6 +127,7 @@ an der die CLI erfährt, wie das Projekt gebaut ist.
 
 | Schlüssel | Wert | Warum genau der |
 | --- | --- | --- |
+| `style` | was das `init` einträgt | Kennung der Registry-Fassung, aus der `add` liest. Wird von der CLI gesetzt und nie von Hand geändert |
 | `tailwind.config` | `""` | Tailwind v4 kennt keine Config-Datei |
 | `tailwind.css` | `src/index.css` | **nicht** die Tokendatei, siehe unten |
 | `tailwind.cssVariables` | `true` | Komponenten binden an Semantic-Rollen |
@@ -99,16 +150,23 @@ Vor jedem `add` gilt: erst sehen, dann erzeugen.
 | Befehl | Wofür |
 | --- | --- |
 | `shadcn info` | Was die CLI im Projekt sieht: Framework, Tailwind-Version, Aliase, Basis, installierte Komponenten. Erster Befehl bei jedem Zweifel, statt `components.json` zu interpretieren |
-| `shadcn search --query <text>` | In der Registry suchen (`list` ist ein Alias). Klärt, ob es die Komponente schon gibt, bevor sie von Hand entsteht |
-| `shadcn view <item>` | Quelltext ansehen, **bevor** er im Repository landet |
-| `shadcn docs <item>` | API-Referenz und Anwendungshinweise zur Komponente |
+| `shadcn search @shadcn -q <text>` | In der Registry suchen (`list` ist ein Alias). Klärt, ob es die Komponente schon gibt, bevor sie von Hand entsteht. Die Quelle ist ein Pflichtargument und trägt ein `@` |
+| `shadcn view <item...>` | Quelltext ansehen, **bevor** er im Repository landet |
+| `shadcn docs <item> -b radix` | API-Referenz und Anwendungshinweise, siehe Abschnitt 3 |
 | `shadcn add <item...>` | Erzeugt die Komponenten samt ihrer Abhängigkeiten |
-| `shadcn diff` | Abweichungen zwischen lokaler Fassung und Registry |
+| `shadcn add --dry-run <item...>` | Zeigt, welche Dateien entstünden, ohne zu schreiben |
+| `shadcn add --diff [pfad]` | Abweichungen zwischen lokaler Fassung und Registry |
 
 Alle mit `pnpm dlx shadcn@latest` davor, ausgeführt in `frontend/`.
 
 Mehrere Komponenten in **einem** `add` erzeugen, nicht nacheinander: die CLI
 löst gemeinsame Abhängigkeiten dann einmal auf.
+
+**Einen eigenständigen Befehl `shadcn diff` gibt es nicht.** Der Abgleich
+hängt als Option an `add`, zusammen mit `--view` und `--dry-run`. Wer aus
+älteren Anleitungen `shadcn diff` übernimmt, bekommt keinen leeren Bericht,
+sondern einen Fehler. Ändert sich das in einer künftigen Fassung, entscheidet
+`shadcn --help` im Projektordner, nicht diese Tabelle.
 
 ### Was nicht ohne Rücksprache läuft
 
@@ -116,9 +174,10 @@ löst gemeinsame Abhängigkeiten dann einmal auf.
 | --- | --- |
 | `init` ein zweites Mal | schreibt `components.json` und die CSS-Datei neu und kann die Tokenanbindung überschreiben |
 | `add --all` | zieht rund 60 Komponenten ins Repository, von denen die meisten nie benutzt werden. Jede ungenutzte Datei ist Pflegelast und Prüffläche im Review |
-| `add --overwrite` ohne vorheriges `diff` | überschreibt die i18n-Anpassungen aus Abschnitt 6 stillschweigend |
-| `migrate …` | verändert alle Komponenten auf einmal, gehört in ein eigenes Ticket |
-| `eject` | irreversibel |
+| `add --overwrite` ohne vorheriges `add --diff` | überschreibt die i18n-Anpassungen aus Abschnitt 6 stillschweigend |
+| `apply <preset>` | spielt Theme, Schrift und Komponenten eines fremden Presets ein und überschreibt dabei die Tokenanbindung. `--only theme` und `--only font` sind nicht harmloser, sie treffen genau die Dateien aus Abschnitt 7 |
+| `migrate …` (`icons`, `rtl`, `radix`) | schreibt alle Komponenten auf einmal um, gehört in ein eigenes Ticket |
+| `eject` | irreversibel: löst `@import "shadcn/tailwind.css"` auf und koppelt das Projekt von künftigen Korrekturen daran ab (Abschnitt 2) |
 | `add <URL>` oder eine neue Registry | eine neue Bezugsquelle für Code ist eine Abhängigkeitsentscheidung (`CLAUDE.md`, Frontend-Regel 9) |
 
 `build` betrifft nur Projekte, die selbst eine Registry veröffentlichen.
@@ -198,6 +257,22 @@ Figma-Stufen (KAN-6, Abschnitt 3.3):
 --radius-xl: var(--radius-modal);       /* 16px */
 ```
 
+### Die Skala reicht weiter als die Brücke
+
+shadcn leitet seine Radien aus einem einzelnen `--radius` ab und kommt dabei
+auf **sieben** Stufen: `sm`, `md`, `lg`, `xl`, `2xl`, `3xl` und `4xl`. Unsere
+Brücke deckt die ersten vier, weil die Figma-Collection dort endet. Für
+`rounded-2xl` bis `rounded-4xl` gibt es also keine Adresse, und wegen
+`--radius-*: initial` verschwinden diese Klassen ersatzlos.
+
+**Das ist kein Grund, drei Stufen auf Vorrat anzulegen** (Abschnitt 8: keine
+Rolle ohne Verwendung). Es ist ein Grund, sie zu bemerken. Deshalb nach jedem
+`add` einmal über die neuen Dateien nach `rounded-` suchen. Taucht eine Stufe
+oberhalb von `xl` auf, ist das ein Befund in der Tokenschicht und wird wie in
+Abschnitt 8 aufgelöst: Stufe in `tokens.css` ergänzen, über `@theme inline`
+anbinden, in Figma und auf der Confluence-Seite „Foundation" nachziehen. Der
+Komponentencode wird auch hier nicht angefasst.
+
 **Eine Utility-Klasse ohne Wirkung erzeugt keinen Fehler.** Kein Compilerfehler,
 keine Lint-Warnung, kein roter Test. Die Komponente sieht nur falsch aus, und
 wer sie nicht gegen den Entwurf hält, merkt nichts.
@@ -227,8 +302,8 @@ Dann gilt in dieser Reihenfolge:
 
 **Der Komponentencode wird dabei nicht angefasst.** Wer im generierten Code
 `bg-sidebar-primary` durch `bg-primary` ersetzt, koppelt die Komponente von
-der CLI ab und handelt sich beim nächsten `add` oder `diff` einen Konflikt
-ein. Der Aufwand ist derselbe, das Ergebnis schlechter.
+der CLI ab und handelt sich beim nächsten `add` oder `add --diff` einen
+Konflikt ein. Der Aufwand ist derselbe, das Ergebnis schlechter.
 
 Keine Rolle auf Vorrat anlegen: eine Rolle ohne Verwendung fliegt nach
 derselben Regel wieder raus wie eine Primitive ohne Semantic-Referenz
@@ -260,8 +335,11 @@ nach `CLAUDE.md`, Frontend-Regel 9: vorher fragen, nicht nebenbei eintragen.
 - [ ] Fehlende Semantic-Rollen ergänzt statt Komponentencode umgeschrieben,
       Nachtrag in Figma und Foundation benannt
 - [ ] Nach `pnpm build` stichprobenhaft geprüft, dass die verwendeten
-      `rounded-*` und Farbklassen im erzeugten CSS vorkommen
-- [ ] Keine neue Registry-Quelle und kein `--all`, `--overwrite`, `migrate`
-      oder `eject` ohne Absprache
+      `rounded-*` und Farbklassen im erzeugten CSS vorkommen; jede Stufe
+      oberhalb von `rounded-xl` als Befund behandelt (Abschnitt 7)
+- [ ] `@import "shadcn/tailwind.css"` steht in `src/index.css`; die
+      Zustandsvarianten (`data-open:`, `data-closed:`) greifen sichtbar
+- [ ] Keine neue Registry-Quelle und kein `--all`, `--overwrite`, `apply`,
+      `migrate` oder `eject` ohne Absprache
 - [ ] Jede erzeugte und jede komponierte Komponente in hell und dunkel
       angesehen, Tastaturbedienung und Fokusring geprüft

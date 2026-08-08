@@ -87,6 +87,12 @@ sie finden. Wer sie beim Abgleich gegen die Figma-Collection als
 dass ein Test, ein Lint oder ein Typecheck darauf anspringt
 (Skill `frontend-shadcn`, Abschnitt 7).
 
+**Vier Zeilen, aber sieben Stufen auf der Gegenseite.** shadcns Skala führt
+zusätzlich `2xl`, `3xl` und `4xl`. Die bleiben bewusst ohne Brückenzeile,
+weil die Figma-Collection dort endet und kein Token auf Vorrat entsteht.
+Taucht eine solche Klasse in einer erzeugten Komponente auf, ist das ein
+Befund in der Tokenschicht und wird dort aufgelöst, nicht im Komponentencode.
+
 ## 2. Wo eine Komponente wohnt
 
 | Ort | Was dort hingehört |
