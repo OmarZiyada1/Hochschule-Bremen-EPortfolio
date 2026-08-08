@@ -24,9 +24,9 @@ public enum StorageProvider {
 	LOCAL,
 
 	/**
-	 * Azure Blob Storage. Der Betriebsfall seit Contract v20.
+	 * Azure Blob Storage. Der Betriebsfall seit Contract v21.
 	 *
-	 * <p>Bis v19 stand hier ein S3-kompatibler Speicher. Die Umstellung ist eine
+	 * <p>Bis v20 stand hier ein S3-kompatibler Speicher. Die Umstellung ist eine
 	 * Entscheidung ueber die Betriebsumgebung und keine fachliche: was §3.15.1
 	 * ueber Sichtbarkeit, den anbieterneutralen Schluessel und die Auslieferung
 	 * ausschliesslich ueber {@code GET /api/files/{id}} sagt, gilt unveraendert.
