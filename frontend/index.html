@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>E-Portfolio Hochschule Bremen</title>
+    <script>
+      /*
+        Setzt die Modusklasse an <html>, bevor React rendert, damit die Seite
+        beim Laden nicht kurz im falschen Modus aufblitzt (KAN-6, Abschnitt 5).
+        Der ThemeProvider unter src/components/theme-provider.tsx stammt aus
+        der shadcn-CLI und traegt dieselbe Logik, kann sie aber erst im
+        useEffect anwenden, also nach dem ersten Bild.
+
+        Schluessel und Werte muessen mit dem Provider uebereinstimmen:
+        "theme" mit "light", "dark" oder "system"; ohne gespeicherte Wahl
+        gilt prefers-color-scheme.
+      */
+      ;(function () {
+        try {
+          var stored = window.localStorage.getItem("theme")
+          var dark =
+            stored === "dark" ||
+            ((stored === null || stored === "system") &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches)
+          document.documentElement.classList.add(dark ? "dark" : "light")
+        } catch {
+          /* Kein Zugriff auf Speicher oder matchMedia: hell als Standard. */
+          document.documentElement.classList.add("light")
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

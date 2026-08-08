@@ -1,0 +1,23 @@
+/*
+ * Einziger CSS-Einstiegspunkt der Anwendung (KAN-6, Abschnitt 3.2).
+ *
+ * Diese Datei steht in components.json unter tailwind.css. Bringt ein
+ * Registry-Eintrag eigene CSS-Variablen mit, schreibt die shadcn-CLI sie
+ * hierher. Genau deshalb zeigt der Eintrag nicht auf tokens.css: dort
+ * stehen ausschliesslich Werte aus der Figma-Collection, und ein von der
+ * CLI eingefuegtes --radius: 0.625rem waere dort spaeter nicht mehr als
+ * Fremdkoerper zu erkennen.
+ *
+ * Reihenfolge (Skill frontend-shadcn, Abschnitt 2):
+ * 1. tailwindcss selbst,
+ * 2. shadcn/tailwind.css: Build-Abhaengigkeit, kein Laufzeit-Import. Sie
+ *    liefert die Zustandsvarianten data-open:, data-closed:, data-checked:
+ *    und die Accordion-Keyframes, auf die generierte Komponenten bauen.
+ *    Fehlt der Import, greift keine dieser Varianten, und nichts meldet es.
+ * 3. die Tokenschicht: erst Farben und Radien, dann Schrift.
+ */
+
+@import "tailwindcss";
+@import "shadcn/tailwind.css";
+@import "./styles/tokens/tokens.css";
+@import "./styles/tokens/typography-tokens.css";

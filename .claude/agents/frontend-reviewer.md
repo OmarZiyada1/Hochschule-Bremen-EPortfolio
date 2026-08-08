@@ -46,9 +46,9 @@ Backend-Handwerk der `code-reviewer`; du prüfst das Frontend.
    gebraucht wird, liegt in `components/`, nicht kopiert im Feature.
 8a. **Herkunft der Primitiven** (Skill `frontend-shadcn`): jede Datei unter
     `components/ui/` ist per CLI erzeugt. Eine dort von Hand angelegte Datei
-    ist ein **[MUSS]**-Befund, auch wenn sie funktioniert: sie fällt aus
-    `shadcn diff` heraus und baut Tastaturbedienung und ARIA-Rollen nach,
-    die Radix mitbringt. Ebenso ein Befund: ein umbenannter Dateiname, ein
+    ist ein **[MUSS]**-Befund, auch wenn sie funktioniert: sie fällt aus dem
+    Registry-Abgleich (`add --diff`) heraus und baut Tastaturbedienung und
+    ARIA-Rollen nach, die Radix mitbringt. Ebenso ein Befund: ein umbenannter Dateiname, ein
     geänderter Exportname, eine zusätzliche `cva`-Variante oder ein
     eingesetzter Farbwert in einer generierten Datei. Varianten gehören in
     die Domänenkomponente. Prüfe außerdem, ob eine von Hand gebaute
@@ -69,7 +69,11 @@ Backend-Handwerk der `code-reviewer`; du prüfst das Frontend.
     keine Lint-Warnung und keinen roten Test, sondern nur falsches Aussehen.
     Fällt eine ungewöhnliche Farb- oder Radiusklasse auf, gegen den
     `@theme inline`-Block halten. Ein Befund hier gehört in die
-    Tokenschicht, nicht in den Komponentencode.
+    Tokenschicht, nicht in den Komponentencode. Zwei Stellen sind bekannt
+    und werden ausdrücklich geprüft: die Brücke deckt `rounded-sm` bis
+    `rounded-xl`, shadcns Skala reicht bis `rounded-4xl`; und die
+    Zustandsvarianten `data-open:` und `data-closed:` gibt es nur, solange
+    `@import "shadcn/tailwind.css"` in `src/index.css` steht.
 9. **Barrierefreiheit** (Skill `frontend-design`): Tastaturbedienung,
    sichtbarer Fokus, verbundene Labels, benannte Symbolschaltflächen,
    Überschriftenhierarchie ohne Sprung, Live-Region für Statusmeldungen,
