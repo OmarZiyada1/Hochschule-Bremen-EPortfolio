@@ -40,7 +40,8 @@ Vorgänger und blockiertem Ticket ein Vorgangs-Link vom Typ `Blocks`
    die §§ bleiben stabil, die Version steigt mit jedem Nachtrag und wäre im
    Ticket am Tag nach dem Anlegen falsch. Nur wo ein Ticket bewusst gegen
    einen alten Stand gebaut wurde, gehört die Version dazu (so hält es KAN-9
-   mit v9). Der aktuelle Stand steht im Skill `api-contract-sync`.
+   mit v9). Den geltenden Stand meldet
+   `python .claude/skills/api-contract-sync/contract.py pull`.
 2. Nur beschreiben, was verifiziert ist: Aussagen über den Repo-Stand müssen
    im Repo gesehen worden sein („Grundregel" aus KAN-12). Unklares als
    **unklar** kennzeichnen statt plausibel zu erfinden.

@@ -23,7 +23,11 @@ am Zeilenanfang sind davon nicht betroffen.
 1. **API-Contract**: Confluence-Seite „Datenmodell & API-Contract"
    (Space BEH, Seiten-ID `36732929`): die einzige Wahrheit für Entities,
    Enums, Rechtematrix (§5), Zustandsautomat (§4) und Endpoints (§6.1).
-   Vor jedem Modul die betroffenen §§ lesen.
+   Vor jedem Modul die betroffenen §§ lesen, und zwar selbst: gelesen und
+   geschrieben wird die Seite über
+   `python .claude/skills/api-contract-sync/contract.py` (Zugang aus
+   `.env.atlassian`). Die Seite ist zu groß für das MCP-Werkzeug, deshalb
+   arbeitet das Skript abschnittsweise auf einer lokalen Arbeitskopie.
 2. **Jira**: Projekt `KAN`, verbindlicher Arbeitsstand. `docs/STAND.md` ist
    nur eine Momentaufnahme.
 3. **docs/ARCHITEKTUR.md**: Paketbaum, Basisklassen, Migrationsliste,
@@ -37,8 +41,14 @@ Widerspricht der Code dem Contract: **niemals still abweichen.** Entweder den
 Code an den Contract anpassen oder die Abweichung nach dem Skill
 `api-contract-sync` dokumentieren (neue Contract-Version + Jira-Kommentar).
 Jede neue Contract-Version zieht Fundstellen nach sich: Versionsnummer im
-Code, in der Doku, in Jira und in Confluence. Welche Stellen das sind und wie
-sie gemeldet werden, steht im Skill `api-contract-sync`.
+Code, in der Doku, in Jira und in Confluence. **Diese Nachführung erledigt
+Claude vollständig selbst**, also Confluence-Seite, Jira-Beschreibungen und
+Jira-Kommentare, und meldet sie anschließend als Tabelle „alt → neu". Nicht
+gefragt wird nach Seitentext, Versionsnummern oder Handgriffen; gefragt wird
+allein nach fachlichen Entscheidungen (Abschnitt „Fragen vor der Umsetzung").
+Beim Menschen bleiben nur die Git-Schritte aus dem Übergabeblock. Welche
+Stellen das sind und wie sie gemeldet werden, steht im Skill
+`api-contract-sync`.
 
 ## Fragen vor der Umsetzung, nicht danach
 
@@ -177,7 +187,8 @@ derselben Nachricht, und dann exakt dieser eine Befehl.
 - `.claude/skills/backend-modul`: Rezept für jedes neue Backend-Modul
   (Controller bis Service), inkl. DoD-Checkliste.
 - `.claude/skills/flyway-migration`: Regeln für Schemaänderungen.
-- `.claude/skills/api-contract-sync`: Abgleich Code ↔ Contract, Versionierung
+- `.claude/skills/api-contract-sync` samt Werkzeug `contract.py`: Abgleich
+  Code ↔ Contract, Lesen und Veröffentlichen der Contract-Seite, Versionierung
   der Confluence-Seite.
 - `.claude/skills/jira-ticket`: Hausstil für neue Tickets.
 - `.claude/skills/ticket-refinement`: Abgleich bestehender Tickets gegen

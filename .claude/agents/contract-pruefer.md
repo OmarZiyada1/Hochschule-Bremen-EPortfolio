@@ -10,8 +10,19 @@ lesend (`git diff`, `git log`), kein `add`/`commit`/`push`.
 
 ## Prüfumfang
 
-Gleiche das zu prüfende Modul gegen den API-Contract ab (Seite 36732929;
-ohne Confluence-Zugriff den relevanten §-Auszug anfordern):
+Gleiche das zu prüfende Modul gegen den API-Contract ab (Seite 36732929).
+Den Contract liest du selbst, du forderst keinen §-Auszug an:
+
+```bash
+PY="python .claude/skills/api-contract-sync/contract.py"
+$PY pull                 # Arbeitskopie und geltende Versionsnummer
+$PY outline --depth 2    # Überschriften
+$PY show 6.1 --plain     # nur den §, den du gerade brauchst
+```
+
+Die Seite hat rund 270.000 Zeichen; lies nie mehr als die betroffenen §§.
+Einzelheiten im Skill `api-contract-sync`. Du prüfst read-only: `pull`, `show`,
+`find`, `outline`, `status`, `diff`. Kein `push`, kein `replace`.
 
 1. **Endpoints (§6.1):** Pfad, Methode, Rollenspalte, Statuscodes,
    Body-/Response-Form, Zeile für Zeile.
@@ -35,13 +46,15 @@ ohne Confluence-Zugriff den relevanten §-Auszug anfordern):
 6. **Konventionen (CLAUDE.md):** Records, deutsche Namen, keine Änderung
    bestehender Migrationen, Tests vorhanden für Happy Path + 401/403/404/409,
    kein Em-Dash `—` in neuem Text.
-7. **Versionsnummer:** Nennt der Code noch eine ältere Contract-Version als
-   die veröffentlichte? Mindestens prüfen: `config/OpenApiConfig.java`
-   (`.version` und Beschreibungstext), Javadoc-Kopf von
-   `common/error/ErrorCodes.java`, erster Absatz von
-   `.claude/skills/api-contract-sync/SKILL.md`. Historische Sätze („bis v14
-   nur hier geführt") sind korrekt und bleiben stehen; nur Stand-Angaben
-   zählen. Die vollständige Fundstellenliste steht im Skill
+7. **Versionsnummer:** Nennt der Code eine andere Contract-Version als die
+   veröffentlichte? Die veröffentlichte meldet `$PY pull`. Der Nachzug fehlt
+   in beide Richtungen gleich oft: der Code kann hinterherhinken, und eine
+   Nummer kann im Code vergeben sein, ohne dass sie je in Confluence stand
+   (so geschehen mit v23). Mindestens prüfen: `config/OpenApiConfig.java`
+   (`.version` und Beschreibungstext) und den Javadoc-Kopf von
+   `common/error/ErrorCodes.java`. Historische Sätze („bis v14 nur hier
+   geführt", „seit v21 Azure Blob Storage") sind korrekt und bleiben stehen;
+   nur Stand-Angaben zählen. Die vollständige Fundstellenliste steht im Skill
    `api-contract-sync`.
 
 ## Berichtsformat

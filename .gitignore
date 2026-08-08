@@ -11,6 +11,10 @@ target/
 # Enthaelt hochgeladene Dateien der Entwicklungsumgebung.
 var/
 
+# Arbeitskopie der Confluence-Contract-Seite (Skill api-contract-sync).
+# Wird per contract.py neu gezogen, gehoert nicht in die Historie.
+.contract-cache/
+
 # IDE
 .idea/
 *.iml

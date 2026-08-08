@@ -71,7 +71,9 @@ Ein bis zwei Sätze: Was kann das System danach, das es vorher nicht konnte.
 ## Contract
 Datenmodell & API-Contract v<N>, §…: deckungsgleich / Nachtrag nötig für …
 Bei erhöhter Version zusätzlich die Fundstellen-Tabelle „alt → neu" aus dem
-Skill `api-contract-sync`, inklusive der Stellen, die Omar selbst ändert.
+Skill `api-contract-sync`. Confluence und Jira sind dort bereits erledigt und
+werden als erledigt gemeldet; offen bleiben nur die Code-Stellen, die über
+diesen Übergabeblock gehen.
 
 ## Entscheidungen
 Was in der Klärungsrunde entschieden wurde, je Punkt eine Zeile:
