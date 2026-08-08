@@ -2,6 +2,7 @@ package de.hsbremen.eportfolio.auth;
 
 import de.hsbremen.eportfolio.auth.dto.LoginRequest;
 import de.hsbremen.eportfolio.auth.dto.LoginResponse;
+import de.hsbremen.eportfolio.auth.dto.PasswordChangeRequest;
 import de.hsbremen.eportfolio.auth.dto.RegisterRequest;
 import de.hsbremen.eportfolio.auth.dto.ResendVerificationRequest;
 import de.hsbremen.eportfolio.auth.dto.UserResponse;
@@ -25,6 +26,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -219,6 +221,31 @@ public class AuthController {
 		User user = userRepository.findById(authenticatedUser.getId())
 				.orElseThrow(() -> new AuthService.LoginFailedException());
 		return UserResponse.from(user);
+	}
+
+	/**
+	 * Eigenes Passwort aendern (§6.1); loest die erzwungene Passwortaenderung
+	 * aus §6.7 auf, deshalb ist der Endpoint vom Gate im
+	 * {@link JwtAuthenticationFilter} ausgenommen.
+	 *
+	 * <p><strong>200 ohne Body:</strong> §6.1 nennt hier bewusst kein
+	 * Antwortschema, anders als bei {@code PUT /auth/me}. Der Client braucht
+	 * nach der Aenderung keine Daten; dass das Flag jetzt {@code false} ist,
+	 * weiss er selbst. Entschieden in der Klaerungsrunde zu KAN-28.
+	 */
+	@Operation(summary = "Eigenes Passwort aendern",
+			description = "Prueft das bisherige Passwort und setzt den neuen BCrypt-Hash. "
+					+ "Setzt passwordChangeRequired zurueck und hebt damit die Sperre aus "
+					+ "§6.7 auf. Wessen Passwort gemeint ist, bestimmt allein das Token.")
+	@ApiResponse(responseCode = "200", description = "Passwort geaendert, ohne Body.")
+	@ApiResponse(responseCode = "400", description = "Pflichtfeld fehlt oder neues Passwort verletzt die Laengenregel.")
+	@ApiResponse(responseCode = "401", description = "Kein brauchbares Token, oder das aktuelle Passwort ist falsch.")
+	@PutMapping("/password")
+	public ResponseEntity<Void> changePassword(
+			@AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+			@Valid @RequestBody PasswordChangeRequest passwordChangeRequest) {
+		authService.changePassword(authenticatedUser.getId(), passwordChangeRequest);
+		return ResponseEntity.ok().build();
 	}
 
 	// --- Fehlerabbildung auf das Envelope aus §6.2 -------------------------

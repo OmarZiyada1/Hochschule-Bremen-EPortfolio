@@ -2,12 +2,14 @@ package de.hsbremen.eportfolio.auth;
 
 import de.hsbremen.eportfolio.auth.dto.LoginRequest;
 import de.hsbremen.eportfolio.auth.dto.LoginResponse;
+import de.hsbremen.eportfolio.auth.dto.PasswordChangeRequest;
 import de.hsbremen.eportfolio.auth.dto.UserResponse;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
 import de.hsbremen.eportfolio.user.User;
 import de.hsbremen.eportfolio.user.UserRepository;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -114,7 +116,38 @@ public class AuthService {
 		Instant issuedAt = Instant.now();
 		String token = jwtService.createToken(authenticatedUser);
 
-		return new LoginResponse(token, jwtService.expiresAt(issuedAt), UserResponse.from(user));
+		return new LoginResponse(token, jwtService.expiresAt(issuedAt),
+				user.isPasswordChangeRequired(), UserResponse.from(user));
+	}
+
+	/**
+	 * Aendert das Passwort der angemeldeten Person und loest damit eine
+	 * erzwungene Passwortaenderung auf (§6.7).
+	 *
+	 * <p>Setzt {@code passwordChangeRequired} immer zurueck, nicht nur wenn es
+	 * gesetzt war: nach einer selbst veranlassten Aenderung gibt es in beiden
+	 * Faellen kein fremdbekanntes Passwort mehr, das der Server noch erzwingen
+	 * muesste.
+	 *
+	 * @param userId ID aus dem SecurityContext, nie aus dem Request-Body
+	 * @throws LoginFailedException wenn {@code currentPassword} nicht zum
+	 *                              gespeicherten Hash passt. Das Flag bleibt
+	 *                              dann gesetzt.
+	 */
+	@Transactional
+	public void changePassword(UUID userId, PasswordChangeRequest request) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(LoginFailedException::new);
+
+		if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+			// Anders als beim Login darf die Meldung konkret sein: die Person
+			// ist authentifiziert, eine Konto-Enumeration ist hier unmoeglich.
+			throw new LoginFailedException("Das aktuelle Passwort ist falsch.");
+		}
+
+		user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+		user.setPasswordChangeRequired(false);
+		userRepository.save(user);
 	}
 
 	private static String messageFor(UserStatus status) {
@@ -134,10 +167,25 @@ public class AuthService {
 	private static final String PLACEHOLDER_HASH =
 			"$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
 
-	/** Unbekannte E-Mail oder falsches Passwort. Fuehrt zu 401. */
+	/**
+	 * Unbekannte E-Mail oder falsches Passwort. Fuehrt zu 401
+	 * {@code LOGIN_FAILED}.
+	 *
+	 * <p>Beim Login bleibt die Meldung bewusst unspezifisch (kein Hinweis, ob
+	 * es die Adresse gibt). Die zweite Fassung mit eigenem Wortlaut existiert
+	 * fuer {@code PUT /auth/password} (§6.7): dort ist die Person
+	 * authentifiziert, eine Konto-Enumeration ist unmoeglich, und die Meldung
+	 * darf das Feld benennen. Der Fehlercode bleibt derselbe, §6.2 fuehrt
+	 * „Falsches Passwort" als seinen Ausloeser.
+	 */
 	public static class LoginFailedException extends RuntimeException {
+
 		public LoginFailedException() {
 			super("E-Mail-Adresse oder Passwort ist falsch.");
+		}
+
+		public LoginFailedException(String message) {
+			super(message);
 		}
 	}
 

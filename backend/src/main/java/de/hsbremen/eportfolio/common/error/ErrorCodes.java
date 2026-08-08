@@ -9,16 +9,18 @@ package de.hsbremen.eportfolio.common.error;
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
  * mit KAN-16 hier dazu.
  *
- * <p>Umgekehrt fuehrt §6.2 Codes, die hier noch fehlen: die Datei-Codes und
- * {@code PASSWORD_CHANGE_REQUIRED}. Sie kommen mit dem jeweiligen Modul dazu;
- * das ist keine Abweichung, sondern der noch offene Umsetzungsstand aus §8.
+ * <p>Umgekehrt fuehrt §6.2 Codes, die hier noch fehlen: die Datei-Codes. Sie
+ * kommen mit dem jeweiligen Modul dazu; das ist keine Abweichung, sondern der
+ * noch offene Umsetzungsstand aus §8.
  * {@link #PROJECT_STATUS_NOT_EDITABLE} kam mit KAN-17 dazu,
  * {@link #BLOCK_TYPE_UNKNOWN} und {@link #EMBED_PROVIDER_NOT_ALLOWED} mit
  * KAN-18, {@link #PROJECT_INCOMPLETE} und
  * {@link #PROJECT_STATUS_TRANSITION_INVALID} mit KAN-19,
  * {@link #RESOURCE_NOT_FOUND} mit KAN-20, {@link #VERIFICATION_CODE_INVALID}
- * und {@link #RESOURCE_IN_USE} mit KAN-26. Alle acht standen wie die uebrigen
- * schon vorher in §6.2; eine neue Contract-Version braucht es dafuer nicht.
+ * und {@link #RESOURCE_IN_USE} mit KAN-26,
+ * {@link #PASSWORD_CHANGE_REQUIRED} mit KAN-28. Alle neun standen wie die
+ * uebrigen schon vorher in §6.2; eine neue Contract-Version braucht es dafuer
+ * nicht.
  */
 public final class ErrorCodes {
 
@@ -46,6 +48,21 @@ public final class ErrorCodes {
 
 	/** 403: angemeldet, aber die Rechtematrix (§5) erlaubt die Aktion nicht. */
 	public static final String NO_PERMISSION = "NO_PERMISSION";
+
+	/**
+	 * 403: das Konto traegt ein administrativ gesetztes Initialpasswort und muss
+	 * es zuerst aendern (§6.7). Der {@code JwtAuthenticationFilter} beantwortet
+	 * damit jeden Request mit gesetztem Flag, ausser den fuenf Ausnahmen aus
+	 * §6.7 ({@code PUT /auth/password}, {@code GET /auth/me},
+	 * {@code POST /auth/logout}, {@code POST /auth/forgot-password},
+	 * {@code POST /auth/reset-password}).
+	 *
+	 * <p><strong>Nicht zu verwechseln mit</strong> {@link #NO_PERMISSION}: beide
+	 * sind 403, aber dieser Zustand ist von der Person selbst aufloesbar. Nur
+	 * mit eigenem Code kann das Frontend zur Passwortseite umleiten, statt eine
+	 * Fehlermeldung zu zeigen.
+	 */
+	public static final String PASSWORD_CHANGE_REQUIRED = "PASSWORD_CHANGE_REQUIRED";
 
 	/**
 	 * 400: die Anfrage ist formal unbrauchbar. Bean-Validation an einem

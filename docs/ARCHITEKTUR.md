@@ -144,8 +144,9 @@ Liegen unter `backend/src/main/resources/db/migration`, Namensschema
 | 8 | `V202608011519__projekt_version.sql` | Spalte `projekt.version` (`bigint not null default 0`) für Optimistic Locking nach §3.3/§6.4. Der Default bleibt dauerhaft stehen, damit Inserts aus reinem SQL nicht an der not-null-Bedingung scheitern. |
 | 9 | `V202608031502__rename_to_english.sql` | KAN-49: das gesamte Schema auf englische Bezeichner. 13 Tabellen, 60 Spalten, alle Constraint- und Indexnamen. Die Enum-Werte wandern mit (`ENTWURF` wird `DRAFT`), deshalb werden die betroffenen Check-Constraints gelöst, der Bestand per `UPDATE` umgeschrieben und die Constraints mit explizitem Namen (`ck_project_status`) neu gesetzt. Details in `docs/NAMENSSCHEMA.md` §9. |
 | 10 | `V202608081410__verification_code.sql` | KAN-26: `verification_code` für die Einmalcodes des Registrierungsflusses (§3.16). `code_hash` statt Klartext, `on delete cascade` auf `app_user`, Check-Constraint `ck_verification_code_purpose` über alle drei Werte aus §2.11 einschließlich `PASSWORD_RESET`, den erst KAN-43 ausstellt. Ein gemeinsamer Index auf `(user_id, purpose)`, weil immer nach beidem zusammen gesucht wird. |
+| 11 | `V202608081524__user_password_change_required.sql` | KAN-28: Spalte `app_user.password_change_required` (`boolean not null default false`) für die erzwungene Passwortänderung (§3.1, §6.7). Der Default bleibt wie bei den Verifizierungs-Flags dauerhaft stehen: `false` ist der Regelzustand jedes selbst registrierten Kontos. |
 
-Aktueller Schemastand laut Flyway: `202608081410`, 10 Migrationen.
+Aktueller Schemastand laut Flyway: `202608081524`, 11 Migrationen.
 
 Die Dateinamen 1 bis 8 tragen weiterhin deutsche Beschreibungen
 (`__projekt_und_zuordnungen.sql`). Das bleibt so: eingespielte Migrationen

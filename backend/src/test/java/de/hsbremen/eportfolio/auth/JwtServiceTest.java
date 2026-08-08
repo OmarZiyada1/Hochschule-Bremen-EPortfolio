@@ -27,7 +27,7 @@ class JwtServiceTest {
 	}
 
 	private static AuthenticatedUser user(UUID id, Role role) {
-		return new AuthenticatedUser(id, "privat@example.org", "hash", role, UserStatus.ACTIVE);
+		return new AuthenticatedUser(id, "privat@example.org", "hash", role, UserStatus.ACTIVE, false);
 	}
 
 	@Test
