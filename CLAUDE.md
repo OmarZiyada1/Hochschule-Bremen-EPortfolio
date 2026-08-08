@@ -187,10 +187,11 @@ Ausführlich in den drei Frontend-Skills; hier nur, was überall gilt.
 2. **Response-Typen werden generiert**, nicht geschrieben: aus
    `/v3/api-docs` nach `frontend/src/api/schema.d.ts`.
 3. **Ein Client, ein Fehlertyp.** Kein `fetch` außerhalb von
-   `frontend/src/api/`; jede Fehlerantwort wird zum `ApiFehler` aus §6.2,
-   und entschieden wird über `fehlercode`, nie über den Meldungstext.
+   `frontend/src/api/`; jede Fehlerantwort wird zum `ApiError` aus §6.2
+   (`timestamp`, `status`, `errorCode`, `message`, `path`), und entschieden
+   wird über `errorCode`, nie über den Meldungstext.
 4. **401 und 403 sind sichtbar**, nie eine leere Seite. Bei 409
-   `PROJEKT_VERSION_KONFLIKT` wird nie automatisch wiederholt.
+   `PROJECT_VERSION_CONFLICT` wird nie automatisch wiederholt.
 5. **Farben stehen genau einmal**, in `frontend/src/styles/tokens/`. Eine
    Hex-Farbe daneben ist ein Befund.
 6. **Namen englisch**, wie im ganzen Projekt: `ProjectCard`, `StatusBadge`,

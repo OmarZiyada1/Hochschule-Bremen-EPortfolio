@@ -63,7 +63,7 @@ Du bist der Frontend-Bauer des Projekts „E-Portfolio Hochschule Bremen"
 - **Kein `fetch` außerhalb von `frontend/src/api/`.**
 - **Keine Hex-Farbe außerhalb von `frontend/src/styles/tokens/`.**
 - **401 und 403 werden sichtbar behandelt**, nie als leere Seite. Bei 409
-  `PROJEKT_VERSION_KONFLIKT` niemals automatisch wiederholen.
+  `PROJECT_VERSION_CONFLICT` niemals automatisch wiederholen.
 - **Keine Berechtigungslogik nachbauen.** Sichtbarkeit im UI ist
   Bequemlichkeit, die Prüfung liegt im Server (§5).
 - **Bezeichner englisch** nach `docs/NAMENSSCHEMA.md`; Contract-Enums laufen
