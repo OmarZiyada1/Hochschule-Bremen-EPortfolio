@@ -5,7 +5,7 @@ description: Abgleich zwischen Backend-Code und der Confluence-Seite „Datenmod
 
 # Code ↔ API-Contract synchron halten
 
-Der Contract (Space BEH, Seiten-ID `36732929`, aktuell v22, Stand KAN-45) ist die
+Der Contract (Space BEH, Seiten-ID `36732929`, aktuell v23, Stand KAN-24) ist die
 verbindliche gemeinsame Grundlage von Backend und Frontend. Er ist nur dann
 etwas wert, wenn er stimmt; deshalb wird **jede** Abweichung behandelt, keine
 still hingenommen.

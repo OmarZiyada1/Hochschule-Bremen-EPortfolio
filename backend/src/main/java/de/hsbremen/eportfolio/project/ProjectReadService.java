@@ -142,7 +142,7 @@ public class ProjectReadService {
 				conditions(user, filter),
 				completeSort(pageable));
 
-		return PageResponse.from(page, this::toCards);
+		return PageResponse.from(page, this::cards);
 	}
 
 	/**
@@ -254,8 +254,24 @@ public class ProjectReadService {
 	 * Abfrage abdecken. Zusammen mit dem {@code @EntityGraph} des Repositories
 	 * kostet eine Seite damit vier Abfragen (Treffer, Anzahl, Tags,
 	 * Reaktionen) statt vier plus dem Dreifachen der Seitengroesse.
+	 *
+	 * <p><strong>Oeffentlich, damit andere Module dieselbe Kachel bekommen.</strong>
+	 * {@code GET /api/top10} und {@code GET /api/admin/top10-nominations} (KAN-24)
+	 * zeigen dieselbe Projektkachel wie die Liste. Baute das Top-10-Modul sie
+	 * selbst, entstuende die Sammelabfrage fuer Tags und Reaktionen ein zweites
+	 * Mal oder, was wahrscheinlicher ist, gar nicht. Dieselbe Ueberlegung wie bei
+	 * {@link #publishedCardsOfAuthor}.
+	 *
+	 * <p><strong>Ohne Rechtepruefung.</strong> Diese Methode bildet ab, was ihr
+	 * gegeben wird; welche Projekte das sein duerfen, entscheidet der Aufrufer.
+	 * Die Sichtbarkeitsschranke aus §5 steckt in {@link #list} in der Abfrage und
+	 * nicht hier.
+	 *
+	 * @param projects Projekte mit bereits geladenen Bezuegen (Autor, Kategorie,
+	 *                 Fakultaet, Studiengang); der Aufrufer sorgt dafuer ueber
+	 *                 einen {@code @EntityGraph}
 	 */
-	private List<ProjectCardResponse> toCards(List<Project> projects) {
+	public List<ProjectCardResponse> cards(List<Project> projects) {
 		Map<UUID, Long> reactions = reactionsPerProject(projects);
 
 		return projects.stream()
@@ -396,7 +412,7 @@ public class ProjectReadService {
 	 * @param authorId ID der Person, deren Profil abgerufen wird
 	 */
 	public List<ProjectCardResponse> publishedCardsOfAuthor(UUID authorId) {
-		return toCards(projectRepository.findByAuthorIdAndStatusOrderByPublishedAtDescIdAsc(
+		return cards(projectRepository.findByAuthorIdAndStatusOrderByPublishedAtDescIdAsc(
 				authorId, ProjectStatus.PUBLISHED));
 	}
 

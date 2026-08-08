@@ -5,12 +5,13 @@ package de.hsbremen.eportfolio.common.error;
  * Ressource. Wird vom {@link GlobalExceptionHandler} auf HTTP 409 mit dem
  * Envelope aus API-Contract §6.2 abgebildet.
  *
- * <p>Der Fehlercode ist ein Feld und nicht fest verdrahtet, weil §6.2 vier
+ * <p>Der Fehlercode ist ein Feld und nicht fest verdrahtet, weil §6.2 sechs
  * verschiedene 409er kennt: {@code PROJECT_VERSION_CONFLICT},
- * {@code PROJECT_STATUS_NOT_EDITABLE}, {@code PROJECT_STATUS_TRANSITION_INVALID}
- * und {@code RESOURCE_IN_USE}. Dieselbe Ueberlegung wie bei
+ * {@code PROJECT_STATUS_NOT_EDITABLE}, {@code PROJECT_STATUS_TRANSITION_INVALID},
+ * {@code RESOURCE_IN_USE} sowie seit v23 {@code PROJECT_NOT_PUBLISHED} und
+ * {@code NOMINATION_ALREADY_DECIDED}. Dieselbe Ueberlegung wie bei
  * {@link ResourceNotFoundException}: eine Ausnahmeklasse je Code waere derselbe
- * Ablauf in vier Klassen.
+ * Ablauf in sechs Klassen.
  *
  * <p><strong>Abgrenzung zu 400:</strong> {@link ValidationException} meint „die
  * Anfrage selbst ist unbrauchbar" (fehlendes Pflichtfeld, unbekannte ID im
@@ -82,6 +83,54 @@ public class ConflictException extends RuntimeException {
 		return new ConflictException(ErrorCodes.PROJECT_STATUS_TRANSITION_INVALID,
 				"Dieser Uebergang ist aus dem Status " + actual + " nicht vorgesehen (§4.1). "
 						+ transition + " ist nur aus " + allowedSources + " heraus moeglich.");
+	}
+
+	/**
+	 * Die Ressource ist bereits gebunden und laesst die Aktion deshalb nicht zu
+	 * (§6.2, {@code RESOURCE_IN_USE}).
+	 *
+	 * <p>Die Meldung kommt von aussen, weil dieser Code sehr verschiedene Faelle
+	 * traegt: eine belegte Top-10-Position, ein Projekt, das schon in der Liste
+	 * steht, eine offene Nominierung desselben Projekts und spaeter das Loeschen
+	 * einer noch referenzierten Stammdaten-Zeile. Eine gemeinsame Formulierung
+	 * dafuer waere so allgemein, dass sie nichts mehr sagte; entschieden wird im
+	 * Client ohnehin nach {@code errorCode} und nie nach dem Text (§6.2).
+	 *
+	 * @param message was genau belegt ist, ohne ungeprueft hereingekommene Werte
+	 */
+	public static ConflictException resourceInUse(String message) {
+		return new ConflictException(ErrorCodes.RESOURCE_IN_USE, message);
+	}
+
+	/**
+	 * Die Aktion setzt ein veroeffentlichtes Projekt voraus (§3.11.1 Regel 1),
+	 * das Projekt steht aber in einem anderen Status.
+	 *
+	 * <p>Der Status wird als Zeichenkette uebergeben und nicht als Enum, aus
+	 * demselben Grund wie bei {@link #statusTransitionInvalid}: dieses Paket haelt
+	 * die feature-uebergreifende Fehlerbehandlung und kennt die Fachpakete nicht.
+	 *
+	 * @param actual Status, in dem das Projekt tatsaechlich steht
+	 */
+	public static ConflictException projectNotPublished(String actual) {
+		return new ConflictException(ErrorCodes.PROJECT_NOT_PUBLISHED,
+				"Dafuer muss das Projekt veroeffentlicht sein; es steht im Status " + actual
+						+ " (§3.11.1).");
+	}
+
+	/**
+	 * Ueber diese Nominierung ist bereits entschieden worden (§2.8, §3.11).
+	 *
+	 * <p>Die Meldung nennt den vorgefundenen Stand, weil der Aufrufer ihn in
+	 * diesem Moment gerade nicht kennt: der haeufigste Weg hierher ist ein
+	 * zweiter Klick oder eine veraltete Admin-Ansicht.
+	 *
+	 * @param actual Stand der Nominierung, {@code ACCEPTED} oder {@code REJECTED}
+	 */
+	public static ConflictException nominationAlreadyDecided(String actual) {
+		return new ConflictException(ErrorCodes.NOMINATION_ALREADY_DECIDED,
+				"Ueber diese Nominierung ist bereits entschieden worden (Stand: " + actual + "). "
+						+ "Bitte neu laden.");
 	}
 
 	public String getErrorCode() {

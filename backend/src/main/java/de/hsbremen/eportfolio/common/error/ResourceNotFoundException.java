@@ -68,6 +68,21 @@ public class ResourceNotFoundException extends RuntimeException {
 				"Benutzer mit ID " + userId + DOES_NOT_EXIST);
 	}
 
+	/**
+	 * Eine Top-10-Nominierung, zu der es keine Zeile gibt (§3.11), etwa in
+	 * {@code POST /api/admin/top10-nominations/{id}/accept}. Traegt wie die
+	 * uebrigen Faelle den generischen Code {@code RESOURCE_NOT_FOUND}, weil §6.2
+	 * einen eigenen 404er nur fuer das Projekt fuehrt.
+	 *
+	 * <p>Auch hier gilt §6.3.1: eine entschiedene Nominierung ist nicht „nicht
+	 * gefunden", sondern vorhanden. Sie ergibt 409
+	 * {@code NOMINATION_ALREADY_DECIDED} und nicht diesen 404.
+	 */
+	public static ResourceNotFoundException forNomination(UUID nominationId) {
+		return new ResourceNotFoundException(ErrorCodes.RESOURCE_NOT_FOUND,
+				"Top-10-Nominierung mit ID " + nominationId + DOES_NOT_EXIST);
+	}
+
 	public String getErrorCode() {
 		return errorCode;
 	}
