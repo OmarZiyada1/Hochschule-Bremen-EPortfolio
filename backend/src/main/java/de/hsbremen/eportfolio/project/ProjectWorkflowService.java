@@ -10,6 +10,7 @@ import de.hsbremen.eportfolio.common.error.ResourceNotFoundException;
 import de.hsbremen.eportfolio.common.error.ValidationException;
 import de.hsbremen.eportfolio.project.dto.ProjectDetailResponse;
 import de.hsbremen.eportfolio.project.dto.RevisionRequest;
+import de.hsbremen.eportfolio.top10.Top10Service;
 import de.hsbremen.eportfolio.user.User;
 import de.hsbremen.eportfolio.user.UserRepository;
 import java.time.Instant;
@@ -91,18 +92,22 @@ public class ProjectWorkflowService {
 
 	private final ProjectReadService readService;
 
+	private final Top10Service top10Service;
+
 	public ProjectWorkflowService(ProjectRepository projectRepository,
 			ProjectStatusHistoryRepository statusHistoryRepository,
 			CommentRepository commentRepository,
 			UserRepository userRepository,
 			ProjectPermissionService permissions,
-			ProjectReadService readService) {
+			ProjectReadService readService,
+			Top10Service top10Service) {
 		this.projectRepository = projectRepository;
 		this.statusHistoryRepository = statusHistoryRepository;
 		this.commentRepository = commentRepository;
 		this.userRepository = userRepository;
 		this.permissions = permissions;
 		this.readService = readService;
+		this.top10Service = top10Service;
 	}
 
 	// ------------------------------------------------------------------
@@ -209,6 +214,13 @@ public class ProjectWorkflowService {
 	 * Projekt trotzdem sofort, denn sichtbar ist es ueber
 	 * {@code status = PUBLISHED} und nicht ueber das Datum (§5).
 	 *
+	 * <p><strong>Stand das Projekt in der Top-10, raeumt es dabei seinen
+	 * Platz</strong> (§3.11.1, KAN-24). Die Startseite zeigt die Auswahl ohne
+	 * Anmeldung; ein zurueckgezogener Beitrag darf dort nicht stehen bleiben. Der
+	 * frei gewordene Platz bleibt frei, die uebrigen ruecken nicht nach. Umgesetzt
+	 * in {@link #perform}, weil die Bedingung am Zielstatus haengt und nicht an
+	 * diesem einen Uebergang.
+	 *
 	 * @param request Begruendung, Pflichtfeld (§6.1)
 	 */
 	public ProjectDetailResponse requestRevision(AuthenticatedUser user, UUID projectId,
@@ -301,6 +313,13 @@ public class ProjectWorkflowService {
 	 * {@code touch()}: anders als beim Autosave der Bloecke aendert ein Uebergang
 	 * die Zeile in {@code project} selbst, Hibernate schreibt also ein
 	 * {@code UPDATE} und das Auditing greift.
+	 *
+	 * <p><strong>Der Top-10-Entzug haengt hier und nicht an
+	 * {@link #requestRevision}</strong>, obwohl §4.1 heute nur einen einzigen
+	 * Uebergang aus {@code PUBLISHED} heraus kennt. Die Bedingung lautet „das
+	 * Projekt ist nicht mehr veroeffentlicht" und nicht „es wurde zurueckgegeben";
+	 * an dieser Stelle gilt sie fuer jeden kuenftigen Uebergang mit, ohne dass
+	 * jemand daran denken muss.
 	 */
 	private ProjectDetailResponse perform(AuthenticatedUser user, Project project,
 			ProjectTransition transition) {
@@ -310,6 +329,7 @@ public class ProjectWorkflowService {
 		projectRepository.saveAndFlush(project);
 
 		recordTransition(project, from, transition.target(), currentUser(user));
+		top10Service.removeOnLeavingPublished(project);
 
 		return readService.detail(user, project.getId());
 	}

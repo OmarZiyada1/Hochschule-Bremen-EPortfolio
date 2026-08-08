@@ -3,7 +3,7 @@ package de.hsbremen.eportfolio.common.error;
 /**
  * Fehlercodes fuer das Envelope aus API-Contract §6.2.
  *
- * <p>Stand Contract v22 steht jede Konstante dieser Klasse auch in §6.2.
+ * <p>Stand Contract v23 steht jede Konstante dieser Klasse auch in §6.2.
  * {@link #VALIDATION_FAILED} war bis v14 nur hier gefuehrt und wurde mit v15
  * nachgetragen (Tabelle „Fehlercodes Anfrageformat", Historieneintrag in §10).
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
@@ -21,6 +21,12 @@ package de.hsbremen.eportfolio.common.error;
  * {@link #PASSWORD_CHANGE_REQUIRED} mit KAN-28. Alle neun standen wie die
  * uebrigen schon vorher in §6.2; eine neue Contract-Version braucht es dafuer
  * nicht.
+ *
+ * <p>Zwei Codes sind dagegen mit KAN-24 <em>neu entstanden</em> und deshalb in
+ * §6.2 nachgetragen worden (Contract v23): {@link #PROJECT_NOT_PUBLISHED} und
+ * {@link #NOMINATION_ALREADY_DECIDED}. §3.11.1 verlangte fuer beide Faelle einen
+ * 409, ohne einen Code zu nennen, und keiner der bis dahin gefuehrten 409er
+ * beschreibt sie.
  */
 public final class ErrorCodes {
 
@@ -178,10 +184,19 @@ public final class ErrorCodes {
 
 	/**
 	 * 409: die Ressource ist bereits vergeben oder noch referenziert. §6.2 nennt
-	 * drei Ausloeser; umgesetzt ist bislang der dritte, die bei der Registrierung
-	 * bereits vergebene {@code email} oder {@code hsbEmail} (§6.1). Die beiden
-	 * anderen (referenzierte Stammdaten-Zeile, zweite offene
-	 * Top-10-Nominierung) kommen mit KAN-24 und KAN-25 dazu.
+	 * drei Ausloeser; umgesetzt sind bislang zwei davon. Der eine ist die bei der
+	 * Registrierung bereits vergebene {@code email} oder {@code hsbEmail} (§6.1,
+	 * KAN-26), der andere die Top-10 (§3.11.1, KAN-24), dort gleich in drei
+	 * Auspraegungen derselben Aussage „dieser Platz beziehungsweise dieses
+	 * Projekt ist schon vergeben": eine zweite offene Nominierung zum selben
+	 * Projekt, ein Projekt, das bereits in der Liste steht, und eine belegte
+	 * Position beim Annehmen. Der dritte Ausloeser, die noch referenzierte
+	 * Stammdaten-Zeile, kommt mit KAN-25 dazu.
+	 *
+	 * <p><strong>Nicht zu verwechseln mit</strong>
+	 * {@link #NOMINATION_ALREADY_DECIDED}: dort ist nicht der Platz belegt,
+	 * sondern die Entscheidung schon gefallen. Beide sind 409, verlangen vom
+	 * Client aber Verschiedenes (anderen Platz waehlen gegenueber neu laden).
 	 *
 	 * <p><strong>Warum die Registrierung hier eine Existenz preisgibt</strong>,
 	 * obwohl §6.1 sonst generisch antwortet: beide Adressen sind eindeutig
@@ -233,6 +248,44 @@ public final class ErrorCodes {
 	 */
 	public static final String PROJECT_STATUS_TRANSITION_INVALID =
 			"PROJECT_STATUS_TRANSITION_INVALID";
+
+	/**
+	 * 409: die Aktion setzt ein veroeffentlichtes Projekt voraus, das Projekt
+	 * steht aber in einem anderen Status (§2.2).
+	 *
+	 * <p>Ausloeser ist §3.11.1 Regel 1: nur Projekte im Status {@code PUBLISHED}
+	 * sind fuer die Top-10 nominierbar, und nur ein solches darf ueber
+	 * {@code POST /api/admin/top10-nominations/{id}/accept} in die Liste kommen.
+	 * Die Top-10 erscheint auf der oeffentlichen Startseite; ein Entwurf dort
+	 * waere ein Sichtbarkeitsleck, das die gesamte Statuslogik unterlaeuft.
+	 *
+	 * <p><strong>Warum ein eigener Code und nicht
+	 * {@link #PROJECT_STATUS_NOT_EDITABLE}:</strong> dieser sagt nach §4.1 „der
+	 * Inhalt darf im aktuellen Status nicht geaendert werden". Hier wird gar
+	 * nichts am Projekt geaendert; verlangt wird eine Eigenschaft, die es gerade
+	 * nicht hat. Der Client muss die beiden auseinanderhalten koennen, weil die
+	 * eine Meldung „erst veroeffentlichen" heisst und die andere „nicht mehr
+	 * bearbeitbar".
+	 *
+	 * <p>Vergeben mit KAN-24, nachgetragen in §6.2 mit Contract v23.
+	 */
+	public static final String PROJECT_NOT_PUBLISHED = "PROJECT_NOT_PUBLISHED";
+
+	/**
+	 * 409: ueber diese Top-10-Nominierung ist bereits entschieden worden, ihr
+	 * {@code status} ist also nicht mehr {@code PENDING} (§2.8).
+	 *
+	 * <p>Der haeufigste Weg hierher ist derselbe wie bei
+	 * {@link #PROJECT_STATUS_TRANSITION_INVALID}: ein zweiter Klick auf denselben
+	 * Knopf, ein zweiter offener Tab oder eine Admin-Ansicht, die den Stand noch
+	 * veraltet zeigt. Die Antwort ist deshalb kein stilles Ueberschreiben,
+	 * sondern die Aufforderung neu zu laden: das Entscheidungsprotokoll aus §3.11
+	 * haelt fest, wer wann entschieden hat, und das bliebe von einer zweiten
+	 * Entscheidung nicht uebrig.
+	 *
+	 * <p>Vergeben mit KAN-24, nachgetragen in §6.2 mit Contract v23.
+	 */
+	public static final String NOMINATION_ALREADY_DECIDED = "NOMINATION_ALREADY_DECIDED";
 
 	private ErrorCodes() {
 		// Nur Konstanten.
