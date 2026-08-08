@@ -29,6 +29,10 @@ Referenz: Datenmodell & API-Contract, §… · Vorgänger: KAN-… ·
 Blockiert: KAN-…
 ```
 
+Dazu, **außerhalb der Beschreibung**, im Ticket selbst: je genanntem
+Vorgänger und blockiertem Ticket ein Vorgangs-Link vom Typ `Blocks`
+(Regel 6). Die Bezug-Zeile allein genügt nicht.
+
 ## Regeln
 
 1. **Contract-§§ immer nennen**: ein Ticket ohne §-Referenz ist unvollständig,
@@ -56,8 +60,32 @@ Blockiert: KAN-…
    **Kein Em-Dash `—`** in Titel, Beschreibung oder Kommentaren
    (Schreibstil-Regel aus `CLAUDE.md`): Doppelpunkt, Komma, Klammern oder
    zwei Sätze verwenden.
-6. Abhängigkeiten ehrlich pflegen (Vorgänger/Blockiert): die Reihenfolge auf
-   dem Board folgt daraus.
+6. **Abhängigkeiten zweifach führen: Bezug-Zeile und Vorgangs-Link.** Die
+   Zeile nennt `Vorgänger`/`Blockiert` mit dem fachlichen Grund in Klammern
+   („KAN-50 (Konfiguration)"); zusätzlich wird am Ticket ein Vorgangs-Link vom
+   Typ `Blocks` gesetzt. Das ist keine Doppelung, beides sagt Verschiedenes:
+   der Text sagt, **warum** die Abhängigkeit besteht, der Link **stellt sie
+   her**. Nur aus dem Link folgen die Reihenfolge auf dem Board, die Warnung
+   beim Start eines blockierten Tickets, die Auswertbarkeit per JQL
+   (`issueLinkType = "is blocked by"`) und vor allem die Gegenrichtung: ein
+   Link erscheint automatisch in beiden Tickets, eine Textzeile steht nur in
+   dem, in das sie jemand geschrieben hat. Ein bloßer Ticket-Schlüssel im Text
+   sieht wie eine Verknüpfung aus (Jira rendert ihn als Chip mit Status), ist
+   aber keine.
+
+   Die Instanz kennt `Blocks`, `Cloners`, `Duplicate` und `Relates`; einen
+   eigenen Typ „Vorgänger/Nachfolger" gibt es nicht, `Blocks` deckt beide
+   Richtungen der Bezug-Zeile ab. Reine Konventionsverweise (etwa auf das
+   Namensschema aus KAN-49) bekommen **keinen** Link: sie sind keine
+   Abhängigkeit, und das Panel verliert seine Aussagekraft, wenn jede
+   Erwähnung darin landet.
+
+   Beim Anlegen über die REST-API ist `inwardIssue` das Subjekt und
+   `outwardIssue` das Objekt, `{"type":{"name":"Blocks"},"inwardIssue":
+   {"key":"KAN-51"},"outwardIssue":{"key":"KAN-26"}}` ergibt also
+   „KAN-51 blocks KAN-26". Die Richtung nach dem ersten Link nachlesen, bevor
+   weitere entstehen: eine verkehrt herum gesetzte Blockade behauptet das
+   Gegenteil und ist schlimmer als gar keine.
 7. Descope-Kandidaten (Zeitrisiko der 9 Wochen) offen als solche benennen.
 8. **Der Sollzustand steht in der Beschreibung, nie in einem Kommentar.**
    Ändert sich am Ticket etwas, bevor es umgesetzt ist (ein Endpoint heißt
