@@ -9,15 +9,15 @@ package de.hsbremen.eportfolio.common.error;
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
  * mit KAN-16 hier dazu.
  *
- * <p>Umgekehrt fuehrt §6.2 Codes, die hier noch fehlen: die Datei-Codes,
- * {@code RESOURCE_IN_USE}, {@code PASSWORD_CHANGE_REQUIRED} und seit v17
- * {@code VERIFICATION_CODE_INVALID}. Sie kommen mit dem jeweiligen Modul dazu;
+ * <p>Umgekehrt fuehrt §6.2 Codes, die hier noch fehlen: die Datei-Codes und
+ * {@code PASSWORD_CHANGE_REQUIRED}. Sie kommen mit dem jeweiligen Modul dazu;
  * das ist keine Abweichung, sondern der noch offene Umsetzungsstand aus §8.
  * {@link #PROJECT_STATUS_NOT_EDITABLE} kam mit KAN-17 dazu,
  * {@link #BLOCK_TYPE_UNKNOWN} und {@link #EMBED_PROVIDER_NOT_ALLOWED} mit
  * KAN-18, {@link #PROJECT_INCOMPLETE} und
  * {@link #PROJECT_STATUS_TRANSITION_INVALID} mit KAN-19,
- * {@link #RESOURCE_NOT_FOUND} mit KAN-20. Alle sechs standen wie die uebrigen
+ * {@link #RESOURCE_NOT_FOUND} mit KAN-20, {@link #VERIFICATION_CODE_INVALID}
+ * und {@link #RESOURCE_IN_USE} mit KAN-26. Alle acht standen wie die uebrigen
  * schon vorher in §6.2; eine neue Contract-Version braucht es dafuer nicht.
  */
 public final class ErrorCodes {
@@ -139,6 +139,41 @@ public final class ErrorCodes {
 	 * selbst zu ermitteln.
 	 */
 	public static final String PROJECT_INCOMPLETE = "PROJECT_INCOMPLETE";
+
+	/**
+	 * 400: der eingegebene Verifizierungscode passt nicht, ist abgelaufen oder
+	 * wurde bereits verbraucht (§3.16). Gilt fuer die Registrierung (§3.1.1)
+	 * ebenso wie spaeter fuer das Zuruecksetzen des Passworts (§6.1, KAN-43).
+	 *
+	 * <p><strong>Ein Code fuer alle drei Faelle, und das ist Absicht.</strong>
+	 * Nach §6.1 antworten die Verifizierungs-Endpoints fuer bekannte und
+	 * unbekannte Adressen identisch. Unterschiede zwischen „falsch",
+	 * „abgelaufen" und „schon benutzt" waeren derselbe Bruch: aus „abgelaufen"
+	 * liesse sich ablesen, dass es zu dieser Adresse ueberhaupt ein Konto mit
+	 * offener Verifizierung gibt. Was die Person tun muss, ist in allen drei
+	 * Faellen dasselbe, naemlich einen neuen Code anfordern.
+	 *
+	 * <p><strong>Nicht zu verwechseln mit</strong> {@link #VALIDATION_FAILED}:
+	 * der greift, wenn die Anfrage formal unbrauchbar ist, etwa ohne Code oder
+	 * mit einem Zweck, den dieser Endpoint nicht kennt.
+	 */
+	public static final String VERIFICATION_CODE_INVALID = "VERIFICATION_CODE_INVALID";
+
+	/**
+	 * 409: die Ressource ist bereits vergeben oder noch referenziert. §6.2 nennt
+	 * drei Ausloeser; umgesetzt ist bislang der dritte, die bei der Registrierung
+	 * bereits vergebene {@code email} oder {@code hsbEmail} (§6.1). Die beiden
+	 * anderen (referenzierte Stammdaten-Zeile, zweite offene
+	 * Top-10-Nominierung) kommen mit KAN-24 und KAN-25 dazu.
+	 *
+	 * <p><strong>Warum die Registrierung hier eine Existenz preisgibt</strong>,
+	 * obwohl §6.1 sonst generisch antwortet: beide Adressen sind eindeutig
+	 * (§3.1), eine zweite Registrierung darauf muss also scheitern, und der Grund
+	 * muss benennbar sein. Sonst steht die Person vor einem Fehler, den sie nicht
+	 * aufloesen kann. Diese Offenlegung ist bei jedem System mit
+	 * Selbstregistrierung unvermeidbar und wird deshalb getragen.
+	 */
+	public static final String RESOURCE_IN_USE = "RESOURCE_IN_USE";
 
 	/**
 	 * 409: das Projekt wurde zwischen Laden und Speichern von jemand anderem

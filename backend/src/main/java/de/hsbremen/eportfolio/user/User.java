@@ -55,6 +55,38 @@ public class User extends AuditableEntity {
 		// Von JPA benoetigt.
 	}
 
+	/**
+	 * Legt ein neues Konto an, wie es aus der Selbstregistrierung hervorgeht
+	 * (§3.1.1, Schritt 2).
+	 *
+	 * <p>Es gibt sie, weil der Konstruktor {@code protected} bleibt: ausserhalb
+	 * dieses Pakets soll niemand eine halb befuellte Entity in der Hand haben,
+	 * denn jedes der sechs Felder ist {@code not null}. Bis KAN-26 loeste allein
+	 * der {@code DevTestUserSeeder} das dadurch, dass er in diesem Paket liegt;
+	 * das ist fuer einen Fachservice keine Loesung.
+	 *
+	 * <p><strong>Was die Methode bewusst nicht als Parameter nimmt:</strong> die
+	 * beiden Verifizierungs-Flags und den Status. Sie stehen auf ihren
+	 * Vorgabewerten, also {@code false} und {@code REGISTRATION_PENDING} (§2.9),
+	 * und genau das ist der Zustand, in dem ein neues Konto zu beginnen hat. Wer
+	 * ein sofort nutzbares Konto braucht, etwa der Seeder oder spaeter die
+	 * Kontoanlage durch die Administration, setzt beides danach ausdruecklich.
+	 *
+	 * @param role aus der Domain der Hochschuladresse abgeleitet, nie aus einer
+	 *             Angabe im Request (§3.1.1)
+	 */
+	public static User newAccount(String email, String hsbEmail, String passwordHash,
+			String firstName, String lastName, Role role) {
+		User user = new User();
+		user.setEmail(email);
+		user.setHsbEmail(hsbEmail);
+		user.setPasswordHash(passwordHash);
+		user.setFirstName(firstName);
+		user.setLastName(lastName);
+		user.setRole(role);
+		return user;
+	}
+
 	public String getEmail() {
 		return email;
 	}
