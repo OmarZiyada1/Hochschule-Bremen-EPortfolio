@@ -42,6 +42,18 @@ spring:
           starttls:
             enable: true
             required: true
+          # JavaMail wartet ohne diese drei Werte unbegrenzt. Das trifft nicht
+          # nur den Versand: weil spring.mail.host gesetzt ist, legt Spring Boot
+          # von allein eine Gesundheitspruefung fuer den Mailserver an, und die
+          # oeffnet bei jedem Aufruf von /actuator/health eine SMTP-Verbindung.
+          # Ist das Relay nicht erreichbar, antwortet der Endpunkt dann gar
+          # nicht mehr, der Docker-Healthcheck laeuft in seinen Timeout und der
+          # Container gilt als unhealthy, obwohl die Anwendung laeuft. Mit
+          # Timeout meldet die Pruefung nach fuenf Sekunden DOWN und nennt den
+          # Grund; das ist die Auskunft, die man haben will.
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 
 app:
   security:

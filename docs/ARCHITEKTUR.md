@@ -547,4 +547,4 @@ Start mit derselben `ConfigurationValues.isMissing`-Regel wie Kapitel 9.
 fehlgeschlagener Mails. Gehört in den Ausblick der Arbeit.
 
 Der Zustelltest läuft gegen GreenMail, einen SMTP-Server im Arbeitsspeicher
-(Testabhängigkeit, kein Dienst in `docker-compose.yml`).
+(Testabhängigkeit, kein Dienst in den `compose.*.yml`).

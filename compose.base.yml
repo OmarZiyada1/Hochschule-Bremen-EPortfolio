@@ -1,0 +1,75 @@
+# Gemeinsame Grundlage aller drei Betriebsarten.
+#
+# Der Dateiname ist mit Absicht keiner, den Compose von allein findet:
+# "docker compose up" ohne -f soll mit "no configuration file" abbrechen und
+# nicht eine halb konfigurierte Mischung starten. Jede Betriebsart nennt ihre
+# Dateien ausdruecklich:
+#
+#   docker compose -f compose.base.yml -f compose.dev.yml      up -d
+#   docker compose -f compose.base.yml -f compose.artifact.yml up -d
+#   docker compose -f compose.base.yml -f compose.prod.yml     up -d
+#
+# Hier steht nur, was in allen drei gleich ist. Alles, was sich unterscheidet,
+# steht in genau einer Overlay-Datei: Projektname, Ports, Bau-Stufe,
+# Spring-Profil, Volumes. Wer wissen will, was eine Betriebsart ausmacht,
+# liest eine Datei und nicht drei.
+#
+# Bewusst NICHT hier:
+#   - "name": setzt jedes Overlay selbst, damit die drei Betriebsarten in
+#     getrennten Compose-Projekten liegen und nebeneinander laufen koennen.
+#   - "ports": die Host-Ports unterscheiden sich je Betriebsart, sonst
+#     koennten sie nicht gleichzeitig laufen.
+#   - "container_name": Compose benennt die Container von allein nach dem
+#     Projekt (etwa eportfolio-dev-backend-1). Ein fester Name waere in drei
+#     Projekten doppelt vergeben.
+#   - "SPRING_PROFILES_ACTIVE" und die Fremddienst-Werte: das ist der
+#     eigentliche Unterschied zwischen ARTIFACT und PROD.
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB fehlt - .env aus .env.example anlegen}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER fehlt - .env aus .env.example anlegen}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt - .env aus .env.example anlegen}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # Postgres ist erst nach der Initialisierung ansprechbar. Ohne diese
+      # Pruefung startet das Backend zu frueh und scheitert an Flyway.
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Fest verdrahtet und nicht aus der .env: dort steht POSTGRES_HOST auf
+      # localhost (fuer den Start aus der IDE), und POSTGRES_PORT ist der auf
+      # dem Host veroeffentlichte Port. Im Compose-Netz gilt immer db:5432.
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB fehlt - .env aus .env.example anlegen}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER fehlt - .env aus .env.example anlegen}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt - .env aus .env.example anlegen}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET fehlt - .env aus .env.example anlegen}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

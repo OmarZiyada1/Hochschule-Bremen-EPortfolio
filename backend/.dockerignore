@@ -1,0 +1,15 @@
+# Bauartefakte des Hosts: im Container wird neu uebersetzt, und ein von
+# Windows mitgebrachtes target/ macht den Schichten-Cache wertlos.
+target/
+
+# Ablage des Local-Speicheradapters, enthaelt hochgeladene Dateien.
+var/
+
+# Der Wrapper wird im Image nicht benutzt (siehe Kommentar im Dockerfile).
+.mvn/
+mvnw
+mvnw.cmd
+
+# IDE
+.idea/
+*.iml

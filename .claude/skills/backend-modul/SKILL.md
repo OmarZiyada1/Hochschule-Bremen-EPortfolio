@@ -117,7 +117,7 @@ passen (`ddl-auto: validate`).
 ## 5. Tests (`backend/src/test/java/...`, gleiche Paketstruktur)
 
 - Unit-Tests für Service-Logik; `@SpringBootTest`/MockMvc für Endpoints,
-  gegen die echte Postgres aus `docker-compose.yml`.
+  gegen die echte Postgres aus den `compose.*.yml`.
 - Pflichtfälle je Endpoint: Happy Path · 401 ohne Token (falls geschützt) ·
   403/404 nach Rechtematrix · 409-Statusregeln · Validierungsfehler 400 im
   Envelope.
