@@ -128,7 +128,7 @@
 
 		<!-- SMTP-Server im Arbeitsspeicher fuer den Zustelltest des
 		     SMTP-Adapters (KAN-51). Bewusst als Testabhaengigkeit und nicht als
-		     Dienst in docker-compose.yml: der Test soll ohne laufenden Container
+		     Dienst in den compose-Dateien: der Test soll ohne laufenden Container
 		     durchlaufen, und die gemeinsame Compose-Datei bleibt unveraendert. -->
 		<dependency>
 			<groupId>com.icegreen</groupId>

@@ -17,7 +17,7 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 /**
  * Zustelltest des SMTP-Adapters gegen einen echten SMTP-Server (KAN-51, §6.8).
  *
- * <p><strong>Warum GreenMail und kein Dienst in {@code docker-compose.yml}.</strong>
+ * <p><strong>Warum GreenMail und kein Dienst in den {@code compose.*.yml}.</strong>
  * Der Server laeuft im Arbeitsspeicher dieses Testlaufs und ist mit ihm wieder
  * verschwunden. Ein zusaetzlicher Container haette allen Mitarbeitenden des
  * Projekts eine Abhaengigkeit auferlegt, die nur ein einziger Test braucht, und
