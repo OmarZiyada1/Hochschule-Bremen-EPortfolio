@@ -9,17 +9,18 @@ package de.hsbremen.eportfolio.common.error;
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
  * mit KAN-16 hier dazu.
  *
- * <p>Umgekehrt fuehrt §6.2 Codes, die hier noch fehlen: die Datei-Codes,
- * {@code PASSWORD_CHANGE_REQUIRED} und seit v17
- * {@code VERIFICATION_CODE_INVALID}. Sie kommen mit dem jeweiligen Modul dazu;
- * das ist keine Abweichung, sondern der noch offene Umsetzungsstand aus §8.
+ * <p>Umgekehrt fuehrt §6.2 Codes, die hier noch fehlen: die Datei-Codes. Sie
+ * kommen mit dem jeweiligen Modul dazu; das ist keine Abweichung, sondern der
+ * noch offene Umsetzungsstand aus §8.
  * {@link #PROJECT_STATUS_NOT_EDITABLE} kam mit KAN-17 dazu,
  * {@link #BLOCK_TYPE_UNKNOWN} und {@link #EMBED_PROVIDER_NOT_ALLOWED} mit
  * KAN-18, {@link #PROJECT_INCOMPLETE} und
  * {@link #PROJECT_STATUS_TRANSITION_INVALID} mit KAN-19,
- * {@link #RESOURCE_NOT_FOUND} mit KAN-20 und {@link #RESOURCE_IN_USE} mit
- * KAN-24. Alle sieben standen wie die uebrigen schon vorher in §6.2; eine neue
- * Contract-Version braucht es dafuer nicht.
+ * {@link #RESOURCE_NOT_FOUND} mit KAN-20, {@link #VERIFICATION_CODE_INVALID}
+ * und {@link #RESOURCE_IN_USE} mit KAN-26,
+ * {@link #PASSWORD_CHANGE_REQUIRED} mit KAN-28. Alle neun standen wie die
+ * uebrigen schon vorher in §6.2; eine neue Contract-Version braucht es dafuer
+ * nicht.
  *
  * <p>Zwei Codes sind dagegen mit KAN-24 <em>neu entstanden</em> und deshalb in
  * §6.2 nachgetragen worden (Contract v23): {@link #PROJECT_NOT_PUBLISHED} und
@@ -53,6 +54,21 @@ public final class ErrorCodes {
 
 	/** 403: angemeldet, aber die Rechtematrix (§5) erlaubt die Aktion nicht. */
 	public static final String NO_PERMISSION = "NO_PERMISSION";
+
+	/**
+	 * 403: das Konto traegt ein administrativ gesetztes Initialpasswort und muss
+	 * es zuerst aendern (§6.7). Der {@code JwtAuthenticationFilter} beantwortet
+	 * damit jeden Request mit gesetztem Flag, ausser den fuenf Ausnahmen aus
+	 * §6.7 ({@code PUT /auth/password}, {@code GET /auth/me},
+	 * {@code POST /auth/logout}, {@code POST /auth/forgot-password},
+	 * {@code POST /auth/reset-password}).
+	 *
+	 * <p><strong>Nicht zu verwechseln mit</strong> {@link #NO_PERMISSION}: beide
+	 * sind 403, aber dieser Zustand ist von der Person selbst aufloesbar. Nur
+	 * mit eigenem Code kann das Frontend zur Passwortseite umleiten, statt eine
+	 * Fehlermeldung zu zeigen.
+	 */
+	public static final String PASSWORD_CHANGE_REQUIRED = "PASSWORD_CHANGE_REQUIRED";
 
 	/**
 	 * 400: die Anfrage ist formal unbrauchbar. Bean-Validation an einem
@@ -148,6 +164,50 @@ public final class ErrorCodes {
 	public static final String PROJECT_INCOMPLETE = "PROJECT_INCOMPLETE";
 
 	/**
+	 * 400: der eingegebene Verifizierungscode passt nicht, ist abgelaufen oder
+	 * wurde bereits verbraucht (§3.16). Gilt fuer die Registrierung (§3.1.1)
+	 * ebenso wie spaeter fuer das Zuruecksetzen des Passworts (§6.1, KAN-43).
+	 *
+	 * <p><strong>Ein Code fuer alle drei Faelle, und das ist Absicht.</strong>
+	 * Nach §6.1 antworten die Verifizierungs-Endpoints fuer bekannte und
+	 * unbekannte Adressen identisch. Unterschiede zwischen „falsch",
+	 * „abgelaufen" und „schon benutzt" waeren derselbe Bruch: aus „abgelaufen"
+	 * liesse sich ablesen, dass es zu dieser Adresse ueberhaupt ein Konto mit
+	 * offener Verifizierung gibt. Was die Person tun muss, ist in allen drei
+	 * Faellen dasselbe, naemlich einen neuen Code anfordern.
+	 *
+	 * <p><strong>Nicht zu verwechseln mit</strong> {@link #VALIDATION_FAILED}:
+	 * der greift, wenn die Anfrage formal unbrauchbar ist, etwa ohne Code oder
+	 * mit einem Zweck, den dieser Endpoint nicht kennt.
+	 */
+	public static final String VERIFICATION_CODE_INVALID = "VERIFICATION_CODE_INVALID";
+
+	/**
+	 * 409: die Ressource ist bereits vergeben oder noch referenziert. §6.2 nennt
+	 * drei Ausloeser; umgesetzt sind bislang zwei davon. Der eine ist die bei der
+	 * Registrierung bereits vergebene {@code email} oder {@code hsbEmail} (§6.1,
+	 * KAN-26), der andere die Top-10 (§3.11.1, KAN-24), dort gleich in drei
+	 * Auspraegungen derselben Aussage „dieser Platz beziehungsweise dieses
+	 * Projekt ist schon vergeben": eine zweite offene Nominierung zum selben
+	 * Projekt, ein Projekt, das bereits in der Liste steht, und eine belegte
+	 * Position beim Annehmen. Der dritte Ausloeser, die noch referenzierte
+	 * Stammdaten-Zeile, kommt mit KAN-25 dazu.
+	 *
+	 * <p><strong>Nicht zu verwechseln mit</strong>
+	 * {@link #NOMINATION_ALREADY_DECIDED}: dort ist nicht der Platz belegt,
+	 * sondern die Entscheidung schon gefallen. Beide sind 409, verlangen vom
+	 * Client aber Verschiedenes (anderen Platz waehlen gegenueber neu laden).
+	 *
+	 * <p><strong>Warum die Registrierung hier eine Existenz preisgibt</strong>,
+	 * obwohl §6.1 sonst generisch antwortet: beide Adressen sind eindeutig
+	 * (§3.1), eine zweite Registrierung darauf muss also scheitern, und der Grund
+	 * muss benennbar sein. Sonst steht die Person vor einem Fehler, den sie nicht
+	 * aufloesen kann. Diese Offenlegung ist bei jedem System mit
+	 * Selbstregistrierung unvermeidbar und wird deshalb getragen.
+	 */
+	public static final String RESOURCE_IN_USE = "RESOURCE_IN_USE";
+
+	/**
 	 * 409: das Projekt wurde zwischen Laden und Speichern von jemand anderem
 	 * geaendert (Optimistic Locking, §6.4). Der Client laedt neu und meldet den
 	 * Konflikt, statt fremde Arbeit zu ueberschreiben.
@@ -188,25 +248,6 @@ public final class ErrorCodes {
 	 */
 	public static final String PROJECT_STATUS_TRANSITION_INVALID =
 			"PROJECT_STATUS_TRANSITION_INVALID";
-
-	/**
-	 * 409: die adressierte Ressource ist noch gebunden und laesst die Aktion
-	 * deshalb nicht zu. §6.2 fuehrt drei Ausloeser: das Loeschen einer noch
-	 * referenzierten Stammdaten-Zeile, eine zweite offene Top-10-Nominierung
-	 * (§3.11.1 Regel 2) und eine bereits vergebene Adresse bei der Registrierung.
-	 *
-	 * <p>Mit KAN-24 kommt der Top-10-Fall dazu, und zwar in drei Auspraegungen
-	 * derselben Aussage „dieser Platz beziehungsweise dieses Projekt ist schon
-	 * vergeben": eine offene Nominierung fuer dasselbe Projekt, ein Projekt, das
-	 * bereits in der Liste steht, und eine bereits belegte Position beim Annehmen
-	 * einer Nominierung.
-	 *
-	 * <p><strong>Nicht zu verwechseln mit</strong>
-	 * {@link #NOMINATION_ALREADY_DECIDED}: dort ist nicht der Platz belegt,
-	 * sondern die Entscheidung schon gefallen. Beide sind 409, verlangen vom
-	 * Client aber Verschiedenes (anderen Platz waehlen gegenueber neu laden).
-	 */
-	public static final String RESOURCE_IN_USE = "RESOURCE_IN_USE";
 
 	/**
 	 * 409: die Aktion setzt ein veroeffentlichtes Projekt voraus, das Projekt

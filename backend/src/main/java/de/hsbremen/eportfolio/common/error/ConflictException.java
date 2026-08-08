@@ -91,15 +91,44 @@ public class ConflictException extends RuntimeException {
 	 *
 	 * <p>Die Meldung kommt von aussen, weil dieser Code sehr verschiedene Faelle
 	 * traegt: eine belegte Top-10-Position, ein Projekt, das schon in der Liste
-	 * steht, eine offene Nominierung desselben Projekts und spaeter das Loeschen
-	 * einer noch referenzierten Stammdaten-Zeile. Eine gemeinsame Formulierung
-	 * dafuer waere so allgemein, dass sie nichts mehr sagte; entschieden wird im
-	 * Client ohnehin nach {@code errorCode} und nie nach dem Text (§6.2).
+	 * steht, eine offene Nominierung desselben Projekts (§3.11.1) und spaeter das
+	 * Loeschen einer noch referenzierten Stammdaten-Zeile. Eine gemeinsame
+	 * Formulierung dafuer waere so allgemein, dass sie nichts mehr sagte;
+	 * entschieden wird im Client ohnehin nach {@code errorCode} und nie nach dem
+	 * Text (§6.2).
+	 *
+	 * <p><strong>Diese Fabrik baut den Code an einer Stelle</strong>, auch fuer
+	 * {@link #addressInUse(String)}. Sonst stuenden zwei Konstruktoraufrufe mit
+	 * demselben Code nebeneinander, und beim naechsten Ausloeser waere unklar,
+	 * welchem der beiden man folgt.
 	 *
 	 * @param message was genau belegt ist, ohne ungeprueft hereingekommene Werte
 	 */
 	public static ConflictException resourceInUse(String message) {
 		return new ConflictException(ErrorCodes.RESOURCE_IN_USE, message);
+	}
+
+	/**
+	 * Bei der Registrierung ist eine der beiden Adressen bereits vergeben (§6.1,
+	 * KAN-26).
+	 *
+	 * <p><strong>Die Meldung nennt das betroffene Feld</strong>, im selben Format
+	 * wie die Bean-Validation im {@link GlobalExceptionHandler}
+	 * ({@code "feld: Meldung"}), damit das Formular sie an die richtige Zeile
+	 * haengen kann. Das ist an dieser einen Stelle bewusst mehr Auskunft, als die
+	 * uebrigen Auth-Endpoints geben: beide Adressen sind eindeutig, eine zweite
+	 * Registrierung darauf muss scheitern, und wer nicht erfaehrt <em>welche</em>
+	 * der beiden schon vergeben ist, kann den Fehler nicht aufloesen.
+	 *
+	 * <p>Eigene Fabrik und nicht bloss ein Aufruf von
+	 * {@link #resourceInUse(String)} an der Aufrufstelle: der Wortlaut ist an das
+	 * Format des Formulars gebunden und gehoert deshalb an eine Stelle, nicht in
+	 * die drei Zweige des Registrierungsdienstes.
+	 *
+	 * @param field {@code email} oder {@code hsbEmail}
+	 */
+	public static ConflictException addressInUse(String field) {
+		return resourceInUse(field + ": Diese E-Mail-Adresse ist bereits registriert.");
 	}
 
 	/**
