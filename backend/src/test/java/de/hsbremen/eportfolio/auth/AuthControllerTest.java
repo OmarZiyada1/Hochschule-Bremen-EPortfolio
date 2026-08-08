@@ -5,11 +5,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.hsbremen.eportfolio.auth.dto.LoginRequest;
+import de.hsbremen.eportfolio.auth.dto.PasswordChangeRequest;
 import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
 import de.hsbremen.eportfolio.common.error.ApiErrorWriter;
@@ -251,7 +254,25 @@ class AuthControllerTest {
 						.content(asJson(new LoginRequest("privat@example.org", PASSWORD))))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.token").isNotEmpty())
+				.andExpect(jsonPath("$.passwordChangeRequired").value(false))
 				.andExpect(jsonPath("$.user.email").value("privat@example.org"));
+	}
+
+	@Test
+	@DisplayName("Login mit Initialpasswort: Response traegt passwordChangeRequired = true (§6.1)")
+	void loginAnnouncesPasswordChange() throws Exception {
+		User user = activeUser();
+		user.setPasswordChangeRequired(true);
+		when(userRepository.findByEmail("privat@example.org")).thenReturn(Optional.of(user));
+
+		// Der Login selbst gelingt normal (§6.7); der Client erfaehrt die
+		// anstehende Aenderung aus der Antwort statt aus dem ersten 403.
+		mockMvc.perform(post("/api/auth/login")
+						.contentType("application/json")
+						.content(asJson(new LoginRequest("privat@example.org", PASSWORD))))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.token").isNotEmpty())
+				.andExpect(jsonPath("$.passwordChangeRequired").value(true));
 	}
 
 	@Test
@@ -350,6 +371,123 @@ class AuthControllerTest {
 		// Client ihn verwirft.
 		mockMvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + token))
 				.andExpect(status().isOk());
+	}
+
+	// --- Gate der erzwungenen Passwortaenderung (§6.7) ---------------------
+
+	private User userWithInitialPassword() {
+		User user = activeUser();
+		user.setPasswordChangeRequired(true);
+		when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+		return user;
+	}
+
+	@Test
+	@DisplayName("Gesetztes Flag: 403 PASSWORD_CHANGE_REQUIRED im §6.2-Envelope, auch auf PUBLIC-Pfaden")
+	void gateBlocksEveryEndpoint() throws Exception {
+		User user = userWithInitialPassword();
+
+		// GET /api/projects ist PUBLIC; mit Token greift das Gate trotzdem,
+		// sonst bliebe das Initialpasswort fuer alles Lesbare nutzbar.
+		mockMvc.perform(get("/api/projects").header("Authorization", "Bearer " + tokenFor(user)))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.status").value(403))
+				.andExpect(jsonPath("$.errorCode").value("PASSWORD_CHANGE_REQUIRED"))
+				.andExpect(jsonPath("$.timestamp").exists())
+				.andExpect(jsonPath("$.message").exists())
+				.andExpect(jsonPath("$.path").value("/api/projects"));
+	}
+
+	@Test
+	@DisplayName("Ausnahmen vom Gate: /auth/me und /auth/logout bleiben erreichbar (§6.7)")
+	void gateExemptsMeAndLogout() throws Exception {
+		User user = userWithInitialPassword();
+		String token = tokenFor(user);
+
+		mockMvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + token))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.email").value("privat@example.org"));
+
+		mockMvc.perform(post("/api/auth/logout").header("Authorization", "Bearer " + token))
+				.andExpect(status().isNoContent());
+	}
+
+	@Test
+	@DisplayName("Ohne Flag kein Gate: /api/projects mit Token nicht 403")
+	void gateStaysQuietWithoutFlag() throws Exception {
+		User user = activeUser();
+		when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+
+		// 404, weil dieser Test-Slice keinen ProjectController kennt; belegt
+		// ist damit, dass der Filter die Anfrage passieren laesst.
+		mockMvc.perform(get("/api/projects").header("Authorization", "Bearer " + tokenFor(user)))
+				.andExpect(status().isNotFound());
+	}
+
+	// --- PUT /auth/password ------------------------------------------------
+
+	@Test
+	@DisplayName("Passwort aendern: 200 ohne Body, neuer Hash, Flag zurueckgesetzt")
+	void changePasswordSucceeds() throws Exception {
+		User user = userWithInitialPassword();
+
+		mockMvc.perform(put("/api/auth/password")
+						.header("Authorization", "Bearer " + tokenFor(user))
+						.contentType("application/json")
+						.content(asJson(new PasswordChangeRequest(PASSWORD, "korrekt-pferd-batterie"))))
+				.andExpect(status().isOk())
+				.andExpect(content().string(""));
+
+		assertThat(user.isPasswordChangeRequired())
+				.as("Das Flag ist nach der Aenderung aufgeloest (§6.7)")
+				.isFalse();
+		assertThat(passwordEncoder.matches("korrekt-pferd-batterie", user.getPasswordHash()))
+				.as("Der neue Hash gehoert zum neuen Passwort")
+				.isTrue();
+	}
+
+	@Test
+	@DisplayName("Falsches currentPassword: 401 LOGIN_FAILED, das Flag bleibt gesetzt")
+	void changePasswordWithWrongCurrentPassword() throws Exception {
+		User user = userWithInitialPassword();
+
+		mockMvc.perform(put("/api/auth/password")
+						.header("Authorization", "Bearer " + tokenFor(user))
+						.contentType("application/json")
+						.content(asJson(new PasswordChangeRequest("falsch", "korrekt-pferd-batterie"))))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.errorCode").value("LOGIN_FAILED"))
+				.andExpect(jsonPath("$.path").value("/api/auth/password"));
+
+		assertThat(user.isPasswordChangeRequired()).isTrue();
+		assertThat(passwordEncoder.matches(PASSWORD, user.getPasswordHash()))
+				.as("Der alte Hash bleibt unveraendert")
+				.isTrue();
+	}
+
+	@Test
+	@DisplayName("Neues Passwort zu kurz: 400 VALIDATION_FAILED, Regeln wie bei der Registrierung")
+	void changePasswordTooShort() throws Exception {
+		User user = userWithInitialPassword();
+
+		mockMvc.perform(put("/api/auth/password")
+						.header("Authorization", "Bearer " + tokenFor(user))
+						.contentType("application/json")
+						.content(asJson(new PasswordChangeRequest(PASSWORD, "kurz"))))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
+
+		assertThat(user.isPasswordChangeRequired()).isTrue();
+	}
+
+	@Test
+	@DisplayName("PUT /auth/password ohne Token: 401 NOT_AUTHENTICATED")
+	void changePasswordWithoutToken() throws Exception {
+		mockMvc.perform(put("/api/auth/password")
+						.contentType("application/json")
+						.content(asJson(new PasswordChangeRequest(PASSWORD, "korrekt-pferd-batterie"))))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.errorCode").value("NOT_AUTHENTICATED"));
 	}
 
 	// --- Keine Geheimnisse in Responses ------------------------------------

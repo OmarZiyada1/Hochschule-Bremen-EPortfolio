@@ -36,6 +36,16 @@ public class User extends AuditableEntity {
 	@Column(nullable = false, length = 255)
 	private String passwordHash;
 
+	/**
+	 * Erzwingt die Aenderung eines administrativ gesetzten Initialpassworts
+	 * (§6.7). Solange das Flag steht, beantwortet der
+	 * {@code JwtAuthenticationFilter} fast alle Endpoints mit 403. Bei selbst
+	 * registrierten Konten bleibt es {@code false}: das Passwort kennt dort nur
+	 * die Person selbst.
+	 */
+	@Column(nullable = false)
+	private boolean passwordChangeRequired;
+
 	@Column(nullable = false, length = 255)
 	private String firstName;
 
@@ -125,6 +135,14 @@ public class User extends AuditableEntity {
 
 	public void setPasswordHash(String passwordHash) {
 		this.passwordHash = passwordHash;
+	}
+
+	public boolean isPasswordChangeRequired() {
+		return passwordChangeRequired;
+	}
+
+	public void setPasswordChangeRequired(boolean passwordChangeRequired) {
+		this.passwordChangeRequired = passwordChangeRequired;
 	}
 
 	public String getFirstName() {

@@ -33,12 +33,22 @@ public class AuthenticatedUser implements UserDetails {
 
 	private final UserStatus status;
 
-	public AuthenticatedUser(UUID id, String email, String passwordHash, Role role, UserStatus status) {
+	/**
+	 * Flag der erzwungenen Passwortaenderung (§6.7). Liegt mit im Principal,
+	 * weil der {@code JwtAuthenticationFilter} es in derselben Datenbankabfrage
+	 * mitliest, die ohnehin Rolle und Status laedt (§6.5); das Gate kostet damit
+	 * keinen zusaetzlichen Query.
+	 */
+	private final boolean passwordChangeRequired;
+
+	public AuthenticatedUser(UUID id, String email, String passwordHash, Role role, UserStatus status,
+			boolean passwordChangeRequired) {
 		this.id = Objects.requireNonNull(id, "id");
 		this.email = Objects.requireNonNull(email, "email");
 		this.passwordHash = passwordHash;
 		this.role = Objects.requireNonNull(role, "role");
 		this.status = Objects.requireNonNull(status, "status");
+		this.passwordChangeRequired = passwordChangeRequired;
 	}
 
 	public static AuthenticatedUser from(User user) {
@@ -47,7 +57,8 @@ public class AuthenticatedUser implements UserDetails {
 				user.getEmail(),
 				user.getPasswordHash(),
 				user.getRole(),
-				user.getStatus());
+				user.getStatus(),
+				user.isPasswordChangeRequired());
 	}
 
 	public UUID getId() {
@@ -60,6 +71,10 @@ public class AuthenticatedUser implements UserDetails {
 
 	public UserStatus getStatus() {
 		return status;
+	}
+
+	public boolean isPasswordChangeRequired() {
+		return passwordChangeRequired;
 	}
 
 	public boolean hasRole(Role... roles) {
