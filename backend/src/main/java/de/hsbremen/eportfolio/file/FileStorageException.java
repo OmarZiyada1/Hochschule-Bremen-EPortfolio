@@ -12,7 +12,7 @@ package de.hsbremen.eportfolio.file;
  * nicht: er waere die Zusage, dass der Client mit der Unterscheidung etwas
  * anfangen koennte.
  *
- * <p>Bis Contract v28 endete sie stattdessen im Servlet-Container, und die
+ * <p>Vor Contract v31 endete sie stattdessen im Servlet-Container, und die
  * Antwort war der Standardkoerper des Rahmenwerks ohne {@code errorCode}.
  * Genau daran ist die Luecke aufgefallen.
  *

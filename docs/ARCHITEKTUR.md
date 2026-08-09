@@ -408,7 +408,7 @@ Jede Fehlerantwort verlässt den Server im Envelope aus Contract §6.2
   schreiben über denselben `ApiErrorWriter`, damit das Frontend nicht zwei
   Formate unterscheiden muss.
 
-**Nichts fällt hinten heraus** (KAN-55, Contract v29): Was keiner der
+**Nichts fällt hinten heraus** (KAN-55, Contract v31): Was keiner der
 spezifischen Methoden zugeordnet ist, fängt `handleUnexpected` ab und
 beantwortet es mit 500 `INTERNAL_ERROR`, generischer Meldung und vollständigem
 Stacktrace im Protokoll. Ausnahmen, die ihren Statuscode selbst mitbringen
