@@ -17,6 +17,7 @@ import de.hsbremen.eportfolio.project.dto.ProjectDetailResponse;
 import de.hsbremen.eportfolio.project.dto.ProjectEditorsRequest;
 import de.hsbremen.eportfolio.project.dto.ProjectMetadataRequest;
 import de.hsbremen.eportfolio.project.dto.ProjectUpdateRequest;
+import de.hsbremen.eportfolio.top10.Top10Service;
 import de.hsbremen.eportfolio.user.User;
 import de.hsbremen.eportfolio.user.UserRepository;
 import java.time.Instant;
@@ -85,6 +86,13 @@ public class ProjectWriteService {
 
 	private final ProjectReadService readService;
 
+	/**
+	 * Nur fuer den Protokolleintrag vor dem Loeschen (§3.17). Die Abhaengigkeit
+	 * zeigt in dieselbe Richtung wie die des {@link ProjectWorkflowService}, der
+	 * den Entzug beim Statuswechsel ausloest; sie kommt also nicht neu hinzu.
+	 */
+	private final Top10Service top10Service;
+
 	public ProjectWriteService(ProjectRepository projectRepository,
 			ProjectStatusHistoryRepository statusHistoryRepository,
 			UserRepository userRepository,
@@ -93,7 +101,8 @@ public class ProjectWriteService {
 			StudyProgramRepository studyProgramRepository,
 			ModuleRepository moduleRepository,
 			ProjectPermissionService permissions,
-			ProjectReadService readService) {
+			ProjectReadService readService,
+			Top10Service top10Service) {
 		this.projectRepository = projectRepository;
 		this.statusHistoryRepository = statusHistoryRepository;
 		this.userRepository = userRepository;
@@ -103,6 +112,7 @@ public class ProjectWriteService {
 		this.moduleRepository = moduleRepository;
 		this.permissions = permissions;
 		this.readService = readService;
+		this.top10Service = top10Service;
 	}
 
 	// ------------------------------------------------------------------
@@ -289,6 +299,14 @@ public class ProjectWriteService {
 	 * beim Speichern gibt es hier nichts zu ueberschreiben, was jemand anderes
 	 * verlieren koennte.
 	 *
+	 * <p><strong>Eine Ausnahme von der Cascade ist das Top-10-Protokoll</strong>
+	 * (§3.17, seit KAN-45). Belegt das Projekt einen Platz, wird der Entzug
+	 * <em>vor</em> dem Loeschen protokolliert; sonst verschwaende es lautlos aus
+	 * der kuratierten Liste, weil die Cascade in {@code top10_entry} keinen
+	 * Java-Code beruehrt. Die Protokollzeile selbst faellt nicht mit: ihr
+	 * Fremdschluessel steht auf {@code on delete set null}, sie verliert also nur
+	 * ihren Projektverweis und behaelt Zeitpunkt, Person, Aktion und Platz.
+	 *
 	 * @throws ResourceNotFoundException wenn es die ID nicht gibt (404)
 	 * @throws AccessDeniedException     wenn die Rechtematrix das Loeschen nicht
 	 *                                   zulaesst (403)
@@ -298,6 +316,8 @@ public class ProjectWriteService {
 		if (!permissions.mayDeleteProject(user, project)) {
 			throw new AccessDeniedException("Fuer dieses Projekt fehlt die Loeschberechtigung.");
 		}
+
+		top10Service.removeOnProjectDeletion(project, loadCurrentUser(user));
 		projectRepository.delete(project);
 	}
 

@@ -52,6 +52,16 @@ import org.springframework.transaction.annotation.Transactional;
  * {@link #addAt} weist einen belegten Platz ab, und {@link #setOrder} nimmt
  * hoechstens zehn IDs entgegen. Eine elfte Zeile kann damit nicht entstehen,
  * ohne dass irgendwo eine Anzahl mitgefuehrt werden muesste.
+ *
+ * <p><strong>Jede Aenderung an der Liste laeuft durch
+ * {@link Top10AuditService#record}</strong> (§3.17, KAN-45). Drei der vier
+ * Schreibwege aus dem Nachtrag zu Contract v28 liegen in dieser Klasse
+ * ({@link #setOrder}, {@link #addAt}, {@link #removeOnLeavingPublished}), der
+ * vierte ist {@link #removeOnProjectDeletion} und wird aus
+ * {@code ProjectWriteService.delete} gerufen. Die Protokollmethode bekommt
+ * jeweils nur den Vorher- und den Nachher-Zustand und leitet die Aktion selbst
+ * ab; keine dieser Methoden entscheidet ueber {@code ADDED}, {@code REMOVED}
+ * oder {@code REORDERED}.
  */
 @Service
 @Transactional
@@ -69,18 +79,22 @@ public class Top10Service {
 
 	private final ProjectPermissionService permissions;
 
+	private final Top10AuditService auditService;
+
 	public Top10Service(Top10EntryRepository entryRepository,
 			Top10NominationRepository nominationRepository,
 			ProjectRepository projectRepository,
 			UserRepository userRepository,
 			ProjectReadService readService,
-			ProjectPermissionService permissions) {
+			ProjectPermissionService permissions,
+			Top10AuditService auditService) {
 		this.entryRepository = entryRepository;
 		this.nominationRepository = nominationRepository;
 		this.projectRepository = projectRepository;
 		this.userRepository = userRepository;
 		this.readService = readService;
 		this.permissions = permissions;
+		this.auditService = auditService;
 	}
 
 	// ------------------------------------------------------------------
@@ -161,12 +175,18 @@ public class Top10Service {
 		Map<UUID, Project> projects = loadPublished(projectIds);
 
 		Map<UUID, Top10Entry> existing = new HashMap<>();
+		List<Top10Placement> before = new ArrayList<>();
 		for (Top10Entry entry : entryRepository.findAllByOrderByPositionAsc()) {
 			existing.put(entry.getProject().getId(), entry);
+			// Vor der Schleife unten festgehalten, weil sie die Plaetze der
+			// wiederverwendeten Eintraege ueberschreibt. Das Record kopiert die
+			// Position als int, der Vorzustand kann danach nicht mehr wandern.
+			before.add(Top10Placement.of(entry));
 		}
 
 		Instant now = Instant.now();
 		List<Top10Entry> kept = new ArrayList<>(projectIds.size());
+		List<Top10Placement> after = new ArrayList<>(projectIds.size());
 		for (int index = 0; index < projectIds.size(); index++) {
 			UUID projectId = projectIds.get(index);
 			Top10Entry entry = existing.remove(projectId);
@@ -177,6 +197,7 @@ public class Top10Service {
 			}
 			entry.setPosition(index + 1);
 			kept.add(entry);
+			after.add(Top10Placement.of(entry));
 		}
 
 		// Was in der Karte uebrig bleibt, stand vorher in der Liste und ist
@@ -194,7 +215,9 @@ public class Top10Service {
 		entryRepository.saveAll(kept);
 		entryRepository.flush();
 
-		closeOpenNominations(user, projectIds, now);
+		User admin = currentUser(user);
+		auditService.record(admin, before, after);
+		closeOpenNominations(admin, projectIds, now);
 
 		return list();
 	}
@@ -218,13 +241,18 @@ public class Top10Service {
 	 * jeder der zehn Plaetze belegt, und jede Position endet in derselben
 	 * Antwort. Eine eigene Zaehlung braucht es dafuer nicht.
 	 *
+	 * <p><strong>Protokolliert als {@code ADDED}</strong> (§3.17). Der Vorzustand
+	 * ist leer und der Nachzustand dieser eine Platz; die Protokollmethode leitet
+	 * daraus die Aktion ab, diese Methode nennt sie nicht.
+	 *
 	 * @param project  das aufzunehmende Projekt, bereits als {@code PUBLISHED}
 	 *                 geprueft
 	 * @param position Platz 1 bis 10, bereits durch Bean-Validation begrenzt
+	 * @param admin    entscheidende:r Admin, fuer das Protokoll
 	 * @throws ConflictException wenn der Platz belegt ist oder das Projekt bereits
 	 *                           in der Liste steht (409)
 	 */
-	void addAt(Project project, int position) {
+	void addAt(Project project, int position, User admin) {
 		if (entryRepository.existsByProjectId(project.getId())) {
 			throw ConflictException.resourceInUse(
 					"Dieses Projekt steht bereits in der Top-10 (§3.11.1).");
@@ -240,6 +268,8 @@ public class Top10Service {
 		entry.setPosition(position);
 		entry.setAddedAt(Instant.now());
 		entryRepository.saveAndFlush(entry);
+
+		auditService.record(admin, List.of(), List.of(Top10Placement.of(entry)));
 	}
 
 	// ------------------------------------------------------------------
@@ -267,13 +297,94 @@ public class Top10Service {
 	 * Wiederveroeffentlichung ist eine neue Entscheidung und braucht eine neue
 	 * Nominierung oder ein {@link #setOrder}.
 	 *
+	 * <p><strong>Protokolliert als {@code REMOVED}</strong>, seit Contract v28
+	 * (§3.17). Bis dahin nannte §3.17 nur die beiden Admin-Wege als Schreibwege
+	 * des Protokolls. Das war zu wenig: ein Projekt verliess die Liste, ohne dass
+	 * das Protokoll davon wusste, und gerade die Frage „welcher Platz war wann
+	 * durch welches Projekt belegt" liess sich damit nicht beantworten. Die
+	 * handelnde Person ist hier die Redaktion und nicht die Administration; das
+	 * Feld {@code adminId} haelt deshalb ausdruecklich die veranlassende Person und
+	 * nicht zwingend einen Admin.
+	 *
 	 * @param project das Projekt, dessen Status sich gerade geaendert hat
+	 * @param actor   wer den Statuswechsel ausgeloest hat, fuer das Protokoll
 	 */
-	public void removeOnLeavingPublished(Project project) {
+	public void removeOnLeavingPublished(Project project, User actor) {
 		if (project.getStatus() == ProjectStatus.PUBLISHED) {
 			return;
 		}
-		entryRepository.deleteByProjectId(project.getId());
+		releaseSeat(project, actor, true);
+	}
+
+	// ------------------------------------------------------------------
+	// Entzug beim Loeschen des Projekts
+	// ------------------------------------------------------------------
+
+	/**
+	 * Protokolliert den frei werdenden Platz, <strong>bevor</strong> ein Projekt
+	 * geloescht wird. Aufgerufen aus {@code ProjectWriteService.delete} (§6.1).
+	 *
+	 * <p><strong>Warum es diesen vierten Schreibweg gibt.</strong> Die Zeile in
+	 * {@code top10_entry} raeumt die Datenbank ueber {@code on delete cascade}
+	 * selbst ab, ohne dass eine Zeile Java-Code davon erfaehrt. Ohne diesen Aufruf
+	 * verschwaende ein Projekt also lautlos aus der kuratierten Liste, und das
+	 * Protokoll endete beim vorherigen Eintrag. Entschieden in der Klaerungsrunde
+	 * zu KAN-45, nachgetragen in §3.17 mit Contract v28.
+	 *
+	 * <p><strong>Die Zeile entsteht ohne Projektverweis.</strong> Der
+	 * Fremdschluessel steht auf {@code on delete set null}, der Verweis waere mit
+	 * dem Commit also ohnehin leer; ihn zu setzen wuerde ausserdem den ganzen
+	 * Loeschvorgang zum Scheitern bringen, siehe
+	 * {@link Top10Placement#withoutProject()}. Was bleibt, ist die Aussage, auf die
+	 * es hier ankommt: zu diesem Zeitpunkt hat diese Person diesen Platz
+	 * freigeraeumt. Ein Titel-Schnappschuss ist bewusst nicht mitgeschrieben
+	 * worden, er fuehrte eine Angabe, die niemand mehr pruefen kann (§3.17).
+	 *
+	 * <p><strong>Aeltere Zeilen zu demselben Projekt behalten mehr:</strong> sie
+	 * verlieren beim Loeschen ebenfalls ihren Verweis, standen aber mit ihm in der
+	 * Datenbank und sind der Grund fuer das {@code on delete set null}.
+	 *
+	 * <p><strong>Ohne Statuspruefung</strong>, anders als
+	 * {@link #removeOnLeavingPublished}: geloescht wird nach §6.1 im Entwurf durch
+	 * die Autor:in und in jedem Status durch den Admin. Einen Platz belegt dabei
+	 * ohnehin nur ein veroeffentlichtes Projekt.
+	 *
+	 * @param project das Projekt, das gleich geloescht wird
+	 * @param actor   wer das Loeschen ausgeloest hat, fuer das Protokoll
+	 */
+	public void removeOnProjectDeletion(Project project, User actor) {
+		releaseSeat(project, actor, false);
+	}
+
+	/**
+	 * Gibt einen Platz frei und schreibt genau eine Protokollzeile, sofern das
+	 * Projekt ueberhaupt einen belegt hat.
+	 *
+	 * <p>Gemeinsamer Rumpf der beiden Entzugswege. Die Abfrage ersetzt das
+	 * fruehere {@code deleteByProjectId}: fuer das Protokoll muss der Platz
+	 * bekannt sein, den das Projekt gerade verliert, und ein Loeschen nach
+	 * Fremdschluessel liefert ihn nicht.
+	 *
+	 * @param projectSurvives ob das Projekt den Vorgang ueberlebt. Beim
+	 *                        Statuswechsel ja, beim Loeschen nein; im zweiten Fall
+	 *                        entsteht die Protokollzeile ohne Projektverweis
+	 *                        ({@link Top10Placement#withoutProject()})
+	 */
+	private void releaseSeat(Project project, User actor, boolean projectSurvives) {
+		Top10Entry entry = entryRepository.findByProjectId(project.getId()).orElse(null);
+		if (entry == null) {
+			return;
+		}
+
+		Top10Placement released = Top10Placement.of(entry);
+		if (!projectSurvives) {
+			released = released.withoutProject();
+		}
+
+		entryRepository.delete(entry);
+		entryRepository.flush();
+
+		auditService.record(actor, List.of(released), List.of());
 	}
 
 	// ------------------------------------------------------------------
@@ -362,7 +473,7 @@ public class Top10Service {
 	 * Schliesst die offenen Nominierungen der eben aufgenommenen Projekte ab,
 	 * siehe {@link #setOrder}.
 	 */
-	private void closeOpenNominations(AuthenticatedUser user, List<UUID> projectIds, Instant now) {
+	private void closeOpenNominations(User admin, List<UUID> projectIds, Instant now) {
 		if (projectIds.isEmpty()) {
 			return;
 		}
@@ -373,7 +484,6 @@ public class Top10Service {
 			return;
 		}
 
-		User admin = currentUser(user);
 		for (Top10Nomination nomination : open) {
 			nomination.setStatus(NominationStatus.ACCEPTED);
 			nomination.setDecidedBy(admin);

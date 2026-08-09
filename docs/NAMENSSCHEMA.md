@@ -301,6 +301,10 @@ Sortierbare Felder bei `GET /projects`: `title`, `semester`, `status`,
 | `DevStammdatenSeeder` | `DevMasterDataSeeder` |
 | `DevTestnutzerSeeder` | `DevTestUserSeeder` |
 | `ReaktionAnzahl` | `ReactionCount` |
+| `ProjektVerweisAntwort` | `ProjectReferenceResponse` |
+| `Top10ProtokollAntwort` | `Top10AuditEntryResponse` |
+| `Top10ProtokollService` | `Top10AuditService` |
+| `Top10Platzierung` | `Top10Placement` |
 | `darfMitgliederPflegen` | `mayManageMembers` |
 | `RegistrierungService` | `RegistrationService` |
 | `VerifizierungsCodeService` | `VerificationCodeService` |
@@ -336,7 +340,7 @@ damit `ck_block_typ` nicht neben `block.type` stehen bleibt.
 „betroffene benannte Constraints", von denen es drei gar nicht gab: benannt
 war allein `uq_block_projekt_reihenfolge`, alle Check-Constraints trugen von
 Postgres erzeugte Namen (`block_typ_check`, `app_user_rolle_check`, …), und
-`top10_protokoll` ist bis heute nicht angelegt (kommt mit KAN-24).
+`top10_protokoll` war bis dahin nicht angelegt; die Tabelle heisst `top10_audit_entry` und ist mit KAN-45 entstanden, nicht mit KAN-24.
 
 Hinzu kommt: ein reines `RENAME` genügt bei den Check-Constraints nicht, weil
 sich die **Enum-Werte** mitändern (`ENTWURF` wird `DRAFT`). Jede betroffene
@@ -369,7 +373,9 @@ mit (`projekt_pkey` wird `project_pkey` usw.), die eigenständigen Indizes per
 Spalten-Rename nicht selbst um.
 
 `ck_top10_audit_action` entsteht erst mit der Tabelle `top10_audit_entry`
-(KAN-24) und gehört deshalb nicht in diese Migration.
+und gehört deshalb nicht in diese Migration. Angelegt hat sie **KAN-45**
+(Migration 13), nicht KAN-24: dort entstanden nur die kuratierte Liste und
+das Nominierungsprotokoll.
 
 `ddl-auto: validate` ist danach der Beleg: läuft die Anwendung hoch, passen
 Entitäten und Schema zusammen.

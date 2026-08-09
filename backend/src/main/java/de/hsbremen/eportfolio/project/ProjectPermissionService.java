@@ -593,6 +593,27 @@ public class ProjectPermissionService {
 		return isAdmin(user);
 	}
 
+	/**
+	 * Zeile „Top-10-Protokoll lesen" aus §5: nur ADMIN
+	 * ({@code GET /api/admin/top10-audit}, §3.17).
+	 *
+	 * <p><strong>Warum eine eigene Methode</strong>, obwohl sie heute dasselbe
+	 * beantwortet wie {@link #mayCurateTop10}: §5 fuehrt zwei Zeilen, und sie
+	 * sagen Verschiedenes. Kuratieren heisst die Liste aendern, das Protokoll
+	 * lesen heisst nachsehen, wer sie geaendert hat. Faellt eine der beiden Zeilen
+	 * spaeter anders aus, etwa weil die Redaktion ihre eigenen Nominierungen
+	 * nachvollziehen soll, ist genau eine Methode zu aendern. Dieselbe
+	 * Ueberlegung wie bei {@link #mayManageMembers} und {@link #mayEditBlocks}.
+	 *
+	 * <p><strong>Nicht zu verwechseln mit der Frage, wer im Protokoll
+	 * steht.</strong> Eine Zeile kann eine Person mit der Rolle EDITOR nennen,
+	 * weil der Entzug eines Platzes beim Verlassen von {@code PUBLISHED} von der
+	 * Redaktion ausgeloest wird (§3.17). Das erweitert das Leserecht nicht.
+	 */
+	public boolean mayReadTop10Audit(AuthenticatedUser user) {
+		return isAdmin(user);
+	}
+
 	/** Zeile „User verwalten (inkl. deaktivieren)": nur ADMIN. */
 	public boolean mayManageUsers(AuthenticatedUser user) {
 		return isAdmin(user);
