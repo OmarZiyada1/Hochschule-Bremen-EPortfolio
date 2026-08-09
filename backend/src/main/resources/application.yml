@@ -2,6 +2,18 @@ spring:
   profiles:
     # Ohne explizites SPRING_PROFILES_ACTIVE laeuft die Anwendung im dev-Profil.
     default: dev
+  servlet:
+    # Schranke des Multipart-Filters (KAN-23). Bewusst OBERHALB des groessten
+    # fachlichen Limits aus §3.15 (25 MB): stuende der Wert darunter, griffe
+    # er vor dem Controller und die Antwort waere nicht das Envelope aus
+    # §6.2. So prueft der FileService die fachlichen Limits selbst, und der
+    # Filter faengt nur ab, was ohnehin niemals zulaessig waere. Seine
+    # MaxUploadSizeExceededException bildet der GlobalExceptionHandler auf
+    # 400 FILE_TOO_LARGE ab, dieselbe Antwort wie bei der fachlichen
+    # Pruefung.
+    multipart:
+      max-file-size: 30MB
+      max-request-size: 32MB
   jpa:
     hibernate:
       ddl-auto: validate
@@ -120,6 +132,16 @@ app:
     # Ziel der Links in Verifizierungs- und Ruecksetzmails: das Frontend,
     # nicht das Backend.
     base-url: http://localhost:5173
+
+server:
+  tomcat:
+    # Gehoert zur Multipart-Schranke oben (KAN-23): weist die Anwendung einen
+    # Upload ab, liest Tomcat den Rest des Request-Koerpers zu Ende, damit
+    # die Antwort den Client ueberhaupt erreicht. Der Default (2 MB) ist
+    # kleiner als ein abgelehnter 30-MB-Upload; Tomcat wuerde die Verbindung
+    # kappen und der Client saehe einen Verbindungsfehler statt des 400
+    # FILE_TOO_LARGE. Der Wert liegt deshalb oberhalb von max-request-size.
+    max-swallow-size: 40MB
 
 management:
   endpoints:

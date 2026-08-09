@@ -3,24 +3,25 @@ package de.hsbremen.eportfolio.common.error;
 /**
  * Fehlercodes fuer das Envelope aus API-Contract §6.2.
  *
- * <p>Stand Contract v24 steht jede Konstante dieser Klasse auch in §6.2.
+ * <p>Stand Contract v25 steht jede Konstante dieser Klasse auch in §6.2.
  * {@link #VALIDATION_FAILED} war bis v14 nur hier gefuehrt und wurde mit v15
  * nachgetragen (Tabelle „Fehlercodes Anfrageformat", Historieneintrag in §10).
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
  * mit KAN-16 hier dazu.
  *
- * <p>Umgekehrt fuehrt §6.2 Codes, die hier noch fehlen: die Datei-Codes. Sie
- * kommen mit dem jeweiligen Modul dazu; das ist keine Abweichung, sondern der
- * noch offene Umsetzungsstand aus §8.
- * {@link #PROJECT_STATUS_NOT_EDITABLE} kam mit KAN-17 dazu,
+ * <p>Die uebrigen Codes kamen jeweils mit ihrem Modul dazu:
+ * {@link #PROJECT_STATUS_NOT_EDITABLE} mit KAN-17,
  * {@link #BLOCK_TYPE_UNKNOWN} und {@link #EMBED_PROVIDER_NOT_ALLOWED} mit
  * KAN-18, {@link #PROJECT_INCOMPLETE} und
  * {@link #PROJECT_STATUS_TRANSITION_INVALID} mit KAN-19,
  * {@link #RESOURCE_NOT_FOUND} mit KAN-20, {@link #VERIFICATION_CODE_INVALID}
  * und {@link #RESOURCE_IN_USE} mit KAN-26,
- * {@link #PASSWORD_CHANGE_REQUIRED} mit KAN-28. Alle neun standen wie die
- * uebrigen schon vorher in §6.2; eine neue Contract-Version braucht es dafuer
- * nicht.
+ * {@link #PASSWORD_CHANGE_REQUIRED} mit KAN-28, zuletzt
+ * {@link #FILE_TYPE_NOT_ALLOWED} und {@link #FILE_TOO_LARGE} mit KAN-23.
+ * Alle elf standen wie die uebrigen schon vorher in §6.2; eine neue
+ * Contract-Version brauchte es fuer die Konstanten selbst nicht. Contract v25
+ * hat bei {@link #FILE_TYPE_NOT_ALLOWED} nur den Ausloesertext um die
+ * Signaturpruefung ergaenzt, der Code blieb derselbe.
  *
  * <p>Zwei Codes sind dagegen mit KAN-24 <em>neu entstanden</em> und deshalb in
  * §6.2 nachgetragen worden (Contract v23): {@link #PROJECT_NOT_PUBLISHED} und
@@ -162,6 +163,33 @@ public final class ErrorCodes {
 	 * selbst zu ermitteln.
 	 */
 	public static final String PROJECT_INCOMPLETE = "PROJECT_INCOMPLETE";
+
+	/**
+	 * 400: der Dateityp eines Uploads ist nicht zugelassen (§3.15). Zwei
+	 * Ausloeser, bewusst unter einem Code: der gemeldete MIME-Typ steht nicht
+	 * in der Allowlist, oder die ersten Bytes der Datei passen nicht zur
+	 * Signatur dieses Typs.
+	 *
+	 * <p><strong>Warum die Signatur mitentscheidet:</strong> der Content-Type
+	 * eines Multipart-Teils ist ein Wert, den der Client frei setzt. Ohne die
+	 * Pruefung am Inhalt genuegte ein umbenanntes Archiv mit
+	 * {@code Content-Type: image/png}, um beliebige Bytes abzulegen, die das
+	 * Portal anschliessend als Bild ausliefert. Fuer den Client ist die
+	 * Antwort in beiden Faellen dieselbe: diese Datei nimmt das Portal so
+	 * nicht an.
+	 */
+	public static final String FILE_TYPE_NOT_ALLOWED = "FILE_TYPE_NOT_ALLOWED";
+
+	/**
+	 * 400: die Datei ueberschreitet das Groessenlimit ihrer Verwendung
+	 * (§3.15): 10 MB fuer Bilder, 25 MB fuer Audio und PDF.
+	 *
+	 * <p>Derselbe Code antwortet auch, wenn schon der Multipart-Filter den
+	 * Upload abweist ({@code MaxUploadSizeExceededException} im
+	 * {@code GlobalExceptionHandler}): fuer den Client ist es dieselbe
+	 * Aussage, egal welche der beiden Schranken zuerst griff.
+	 */
+	public static final String FILE_TOO_LARGE = "FILE_TOO_LARGE";
 
 	/**
 	 * 400: der eingegebene Verifizierungscode passt nicht, ist abgelaufen oder

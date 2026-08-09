@@ -165,11 +165,22 @@ public class SecurityConfig {
 					// gewollt: "me" ist ohne Identitaet nicht aufloesbar, und
 					// §5 gibt das eigene Portfolio nur seinem Besitzer frei.
 					// Wer das darf, entscheidet der ProjectPermissionService.
+					// /api/files/* kam mit KAN-23 dazu: Avatare und Dateien
+					// veroeffentlichter Projekte sind nach §3.15 ohne
+					// Anmeldung abrufbar, und ein oeffentliches Profil mit
+					// nicht abrufbarem Profilbild waere in sich
+					// widerspruechlich. Ohne diese Zeile ergaebe der Abruf
+					// eines Avatars 401, obwohl §5 ihn fuer PUBLIC freigibt.
+					// Freigegeben ist nur GET; POST und DELETE auf /api/files
+					// fallen unter authenticated(). Ob ein Aufrufer die Datei
+					// tatsaechlich zu sehen bekommt, entscheidet der
+					// FileService am Projektstatus, nicht die Filterkette.
 					.requestMatchers(HttpMethod.GET,
 							"/api/projects", "/api/projects/*",
 							"/api/projects/*/blocks",
 							"/api/projects/*/comments",
 							"/api/portfolios/*",
+							"/api/files/*",
 							"/api/categories", "/api/faculties",
 							"/api/study-programs", "/api/modules",
 							"/api/top10").permitAll()

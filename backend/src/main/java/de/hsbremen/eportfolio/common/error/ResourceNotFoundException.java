@@ -69,6 +69,19 @@ public class ResourceNotFoundException extends RuntimeException {
 	}
 
 	/**
+	 * Eine Datei-ID, zu der es keine Zeile gibt (§3.15). Traegt den
+	 * generischen Code, den §6.2 fuer Dateien ausdruecklich vorsieht.
+	 *
+	 * <p>Auch hier gilt §6.3.1: eine vorhandene Datei ohne Leserecht ergibt
+	 * 403 beziehungsweise 401, nicht diesen 404. Die Datei-ID ist eine UUID
+	 * und nicht erratbar; ein maskierender 404 waere kein Gewinn.
+	 */
+	public static ResourceNotFoundException forFile(UUID fileId) {
+		return new ResourceNotFoundException(ErrorCodes.RESOURCE_NOT_FOUND,
+				"Datei mit ID " + fileId + DOES_NOT_EXIST);
+	}
+
+	/**
 	 * Eine Top-10-Nominierung, zu der es keine Zeile gibt (§3.11), etwa in
 	 * {@code POST /api/admin/top10-nominations/{id}/accept}. Traegt wie die
 	 * uebrigen Faelle den generischen Code {@code RESOURCE_NOT_FOUND}, weil §6.2
