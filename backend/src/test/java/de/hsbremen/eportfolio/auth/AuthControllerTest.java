@@ -126,6 +126,14 @@ class AuthControllerTest {
 	private RegistrationService registrationService;
 
 	/**
+	 * Aus demselben Grund gemockt: die Passwort-Ruecksetzung kam mit KAN-43 in
+	 * denselben Controller, und ihre Endpoints prueft
+	 * {@code PasswordResetIntegrationTest} gegen die echte Datenbank.
+	 */
+	@MockitoBean
+	private PasswordResetService passwordResetService;
+
+	/**
 	 * Der Zaehler ist ein Singleton im Testkontext. Ohne Ruecksetzen wuerden
 	 * sich die Fehlversuche der einzelnen Testmethoden addieren und die
 	 * Reihenfolge der Tests waere plotzlich relevant.

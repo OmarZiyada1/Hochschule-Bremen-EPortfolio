@@ -1,10 +1,12 @@
 package de.hsbremen.eportfolio.admin;
 
+import de.hsbremen.eportfolio.admin.dto.AdminPasswordResetResponse;
 import de.hsbremen.eportfolio.admin.dto.AdminUserCreateRequest;
 import de.hsbremen.eportfolio.admin.dto.AdminUserResponse;
 import de.hsbremen.eportfolio.admin.dto.AdminUserUpdateRequest;
 import de.hsbremen.eportfolio.auth.AuthenticatedUser;
 import de.hsbremen.eportfolio.auth.EmailAddresses;
+import de.hsbremen.eportfolio.auth.PasswordPolicy;
 import de.hsbremen.eportfolio.common.dto.PageResponse;
 import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
@@ -17,6 +19,7 @@ import de.hsbremen.eportfolio.portfolio.PortfolioService;
 import de.hsbremen.eportfolio.project.ProjectPermissionService;
 import de.hsbremen.eportfolio.user.User;
 import de.hsbremen.eportfolio.user.UserRepository;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -345,8 +348,85 @@ public class AdminUserService {
 	}
 
 	// ------------------------------------------------------------------
+	// POST /api/admin/users/{id}/reset-password
+	// ------------------------------------------------------------------
+
+	/**
+	 * Setzt ein neues, serverseitig erzeugtes Initialpasswort,
+	 * <strong>200</strong> mit {@code { initialPassword }} (§6.1, KAN-43).
+	 *
+	 * <p><strong>Die Erzeugung liegt beim Server</strong>, anders als bei
+	 * {@link #create}, wo der Admin das Passwort selbst eintraegt: hier gibt es
+	 * kein Formularfeld, das er fuellen koennte (§6.1). In beiden Faellen kennt
+	 * am Ende eine zweite Person das Passwort, und in beiden Faellen steht
+	 * deshalb {@code passwordChangeRequired} auf {@code true} (§6.7); der
+	 * naechste Login der Person erzwingt die Aenderung. Das Klartextpasswort
+	 * erscheint genau einmal in der Antwort und wird nirgends geloggt.
+	 *
+	 * <p><strong>Ohne Statuspruefung und ohne Selbstschutz</strong>, beides
+	 * entschieden in der Klaerungsrunde zu KAN-43 und seit Contract v35 in
+	 * §6.1 festgehalten. Der Status: ob sich das Konto
+	 * anmelden kann, entscheidet §2.9 ohnehin beim Login, eine zweite Pruefung
+	 * hier waere dieselbe Regel an zwei Orten, und der Ablauf „erst Passwort
+	 * neu, dann reaktivieren" bliebe sonst an eine Reihenfolge gebunden. Das
+	 * eigene Konto: die {@code requireNotSelf}-Sperre aus KAN-25 schuetzt vor
+	 * Schritten, die sich nicht zuruecknehmen lassen; dieser laesst sich
+	 * zuruecknehmen, denn das {@code initialPassword} steht in der Antwort und
+	 * {@code PUT /auth/password} bleibt als Gate-Ausnahme erreichbar.
+	 *
+	 * @throws ResourceNotFoundException wenn es das Konto nicht gibt (404)
+	 * @throws AccessDeniedException     wenn die Rolle nicht ADMIN ist (403)
+	 */
+	@Transactional
+	public AdminPasswordResetResponse resetPassword(AuthenticatedUser user, UUID userId) {
+		User target = load(userId);
+		requireUserAdministration(user);
+
+		String initialPassword = generateInitialPassword();
+		target.setPasswordHash(passwordEncoder.encode(initialPassword));
+		target.setPasswordChangeRequired(true);
+		userRepository.save(target);
+
+		return new AdminPasswordResetResponse(initialPassword);
+	}
+
+	// ------------------------------------------------------------------
 	// Pruefungen und gemeinsame Hilfsmittel
 	// ------------------------------------------------------------------
+
+	/**
+	 * Zeichenvorrat des Initialpassworts: Buchstaben und Ziffern ohne die
+	 * verwechselbaren {@code 0/O}, {@code 1/l/I} und {@code o}. Das Passwort
+	 * wird vorgelesen oder abgetippt (§6.1: der Admin uebergibt es der Person);
+	 * ein Zeichen, das je nach Schriftart zwei Lesarten hat, produziert dabei
+	 * nur Fehlversuche.
+	 */
+	private static final char[] INITIAL_PASSWORD_ALPHABET =
+			"ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789".toCharArray();
+
+	/**
+	 * Laenge des Initialpassworts. Mehr als {@link PasswordPolicy#MIN_LENGTH},
+	 * weil das eingeschraenkte Alphabet je Zeichen weniger Moeglichkeiten
+	 * bietet; 16 Zeichen aus 54 sind rund 92 Bit und damit ausserhalb jeder
+	 * Rateweite. Ein Test haelt fest, dass die Laenge innerhalb der Policy
+	 * liegt.
+	 */
+	private static final int INITIAL_PASSWORD_LENGTH = 16;
+
+	private final SecureRandom random = new SecureRandom();
+
+	/**
+	 * Erzeugt das Initialpasswort mit {@link SecureRandom}, aus demselben Grund
+	 * wie beim Verifizierungscode (§3.1.1): ein vorhersagbarer Generator machte
+	 * aus dem Geheimnis eine Formalitaet.
+	 */
+	private String generateInitialPassword() {
+		StringBuilder password = new StringBuilder(INITIAL_PASSWORD_LENGTH);
+		for (int i = 0; i < INITIAL_PASSWORD_LENGTH; i++) {
+			password.append(INITIAL_PASSWORD_ALPHABET[random.nextInt(INITIAL_PASSWORD_ALPHABET.length)]);
+		}
+		return password.toString();
+	}
 
 	/**
 	 * Laedt ein Konto. Fehlt es, folgt <strong>404</strong>

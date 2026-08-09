@@ -97,7 +97,7 @@ liest.
 
 | Entity / Feature        | Entity | Migration | Repository | Service | Endpoint |
 |-------------------------|:------:|:---------:|:----------:|:-------:|:--------:|
-| `User`                  | ✓      | ✓ (1)     | ✓          | `DatabaseUserDetailsService`, `AuthService` (Anmeldung), `RegistrationService` (Anlage und Verifizierung, KAN-26), `AdminUserService` (Nutzerverwaltung, KAN-25) | `GET /api/auth/me`, `POST /api/auth/register`, `POST /api/auth/verify`, `POST /api/auth/verify/resend`, `GET`/`POST /api/admin/users`, `GET`/`PATCH`/`DELETE /api/admin/users/{id}` |
+| `User`                  | ✓      | ✓ (1)     | ✓          | `DatabaseUserDetailsService`, `AuthService` (Anmeldung), `RegistrationService` (Anlage und Verifizierung, KAN-26), `PasswordResetService` (Passwort-Rücksetzung, KAN-43), `AdminUserService` (Nutzerverwaltung, KAN-25) | `GET /api/auth/me`, `POST /api/auth/register`, `POST /api/auth/verify`, `POST /api/auth/verify/resend`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`, `GET`/`POST /api/admin/users`, `GET`/`PATCH`/`DELETE /api/admin/users/{id}`, `POST /api/admin/users/{id}/reset-password` |
 | `VerificationCode`      | ✓      | ✓ (10)    | ✓          | `VerificationCodeService` (Ausstellen, Prüfen, Aufräumen) | kein eigener; eingelöst über `POST /api/auth/verify` |
 | `Faculty`               | ✓      | ✓ (1)     | ✓          | `MasterDataService` (nur lesend), `MasterDataAdminService` (CRUD, KAN-25) | ✓ `GET /api/faculties`, `POST`/`PATCH`/`DELETE /api/admin/faculties` |
 | `Category`              | ✓      | ✓ (1)     | ✓          | `MasterDataService` (nur lesend), `MasterDataAdminService` (CRUD, KAN-25) | ✓ `GET /api/categories`, `POST`/`PATCH`/`DELETE /api/admin/categories` |
@@ -119,12 +119,14 @@ liest.
 
 Der Admin-Bereich steht seit KAN-25 (Kapitel 12): Dashboard, Nutzerverwaltung
 und Stammdaten-CRUD, dazu die Top-10-Kuratierung aus KAN-24 und das
-Änderungsprotokoll aus KAN-45 (Kapitel 13). Offen bleiben dort zwei Zeilen aus
-§6.1, jede mit eigenem Ticket: `POST /admin/users/{id}/reset-password` (KAN-43)
-sowie `POST /admin/categories/{id}/merge` und `POST /admin/projects/status`
-(KAN-46). Die Security-Regel für alle diese Pfade steht als `/api/admin/**` mit
-`hasRole("ADMIN")` schon lange in `SecurityConfig` (siehe Abschnitt 5); für
-KAN-25 und KAN-45 war dort nichts zu ergänzen.
+Änderungsprotokoll aus KAN-45 (Kapitel 13). Die zuletzt offenen Zeilen aus §6.1
+sind inzwischen umgesetzt: `POST /admin/categories/{id}/merge` und
+`POST /admin/projects/status` mit KAN-46, `POST /admin/users/{id}/reset-password`
+mit KAN-43 (das serverseitig erzeugte Initialpasswort steht genau einmal in der
+Antwort und setzt `passwordChangeRequired`, §6.7). Die Security-Regel für alle
+diese Pfade steht als `/api/admin/**` mit `hasRole("ADMIN")` schon lange in
+`SecurityConfig` (siehe Abschnitt 5); für KAN-25, KAN-45 und die beiden
+Nachzügler war dort nichts zu ergänzen.
 
 Die Stammdaten haben zusätzlich einen `DevMasterDataSeeder` (Profil `dev`,
 idempotent): FK1 bis FK5 mit Beispiel-Studiengängen und -Modulen sowie ein Satz
@@ -222,6 +224,7 @@ Prüfsumme.
 | `OPTIONS /**` | CORS-Preflight muss ohne Token durchgehen. |
 | `POST /api/auth/login` | Hier holt man sich das Token erst. |
 | `POST` auf `/api/auth/register`, `/api/auth/verify`, `/api/auth/verify/resend` | Zwangsläufig offen (KAN-26): wer sich registriert, hat noch kein Token, und ein Konto in `REGISTRATION_PENDING` bekäme selbst mit Token ein 401 `ACCOUNT_NOT_ACTIVE`. An die Stelle der Anmeldung treten das Einmalgeheimnis im Postfach und das Rate-Limit aus `VerificationAttemptService`. Einzeln aufgeführt und nicht als `/api/auth/**`, weil unter demselben Präfix mit `/auth/me` und `/auth/logout` Pfade liegen, die ein Token brauchen. |
+| `POST` auf `/api/auth/forgot-password`, `/api/auth/reset-password` | Aus demselben Grund offen (KAN-43): wer sein Passwort vergessen hat, kann sich nicht anmelden. An die Stelle der Anmeldung treten der Rücksetzcode im Postfach und das Rate-Limit aus `VerificationAttemptService` (§6.5, seit Contract v34 auch an `reset-password`). |
 | `GET /actuator/health` | Health-Check ohne Anmeldung; es ist der einzige freigeschaltete Actuator-Endpoint (`management.endpoints.web.exposure.include: health`). |
 | `GET` auf `/api/categories`, `/api/faculties`, `/api/study-programs`, `/api/modules` | PUBLIC-Lesezugriff auf die Stammdaten (§5). Umgesetzt im `MasterDataController`. Hier entscheidet **kein** Berechtigungsservice mit: die Listen hängen an keiner Ressource mit Eigentümer und enthalten nichts Schützenswertes. |
 | `GET` auf `/api/projects`, `/api/projects/*` | PUBLIC-Lesezugriff auf veröffentlichte Inhalte, umgesetzt im `ProjectController` (KAN-16). Was ein nicht angemeldeter Aufrufer tatsächlich sieht, entscheidet der `ProjectPermissionService`. |
@@ -247,7 +250,7 @@ Seit KAN-26 gibt es davon **zwei Ausprägungen**. Die Zählmechanik steht in
 | Dienst | Zählt | Setzt zurück bei |
 |--------|-------|------------------|
 | `LoginAttemptService` | fehlgeschlagene Anmeldungen | erfolgreicher Anmeldung |
-| `VerificationAttemptService` | **jeden** Aufruf von `POST /auth/verify` und `POST /auth/verify/resend` | erfolgreich eingelöstem Code |
+| `VerificationAttemptService` | **jeden** Aufruf von `POST /auth/verify`, `POST /auth/verify/resend`, `POST /auth/forgot-password` und `POST /auth/reset-password` (KAN-43, Contract v34) | erfolgreich eingelöstem Code |
 
 Beide lesen dieselben Grenzwerte, führen aber **getrennte Zähler**. Ein erneut
 angeforderter Verifizierungscode darf niemanden aus der Anmeldung aussperren:

@@ -1,6 +1,8 @@
 package de.hsbremen.eportfolio.auth;
 
 import de.hsbremen.eportfolio.common.enums.VerificationPurpose;
+import de.hsbremen.eportfolio.common.error.ErrorCodes;
+import de.hsbremen.eportfolio.common.error.ValidationException;
 import de.hsbremen.eportfolio.config.RegistrationProperties;
 import de.hsbremen.eportfolio.user.User;
 import java.security.SecureRandom;
@@ -190,6 +192,22 @@ public class VerificationCodeService {
 	 */
 	public void matchPlaceholder(String submittedCode) {
 		passwordEncoder.matches(submittedCode == null ? "" : submittedCode, PLACEHOLDER_HASH);
+	}
+
+	/**
+	 * Der eine Wortlaut fuer den abgelehnten Code, egal ob falsch, abgelaufen,
+	 * verbraucht oder zu einem Konto, das es gar nicht gibt (§6.2).
+	 *
+	 * <p>Liegt hier und nicht in den aufrufenden Services, weil Verifizierung
+	 * (KAN-26) und Passwort-Ruecksetzung (KAN-43) exakt dieselbe Antwort geben
+	 * muessen: zwei eigene Wortlaute waeren zwei Gelegenheiten, sie
+	 * auseinanderlaufen zu lassen, und jede Abweichung verriete, welcher der
+	 * Faelle vorliegt.
+	 */
+	public static ValidationException invalidCodeError() {
+		return new ValidationException(ErrorCodes.VERIFICATION_CODE_INVALID,
+				"Der Code ist ungueltig, abgelaufen oder bereits verwendet worden. "
+						+ "Bitte einen neuen Code anfordern.");
 	}
 
 	/** Entwertet alle offenen Codes eines Kontos zu einem Zweck. */

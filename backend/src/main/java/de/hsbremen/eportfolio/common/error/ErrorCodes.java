@@ -3,7 +3,7 @@ package de.hsbremen.eportfolio.common.error;
 /**
  * Fehlercodes fuer das Envelope aus API-Contract §6.2.
  *
- * <p>Stand Contract v32 steht jede Konstante dieser Klasse auch in §6.2.
+ * <p>Stand Contract v35 steht jede Konstante dieser Klasse auch in §6.2.
  * {@link #VALIDATION_FAILED} war bis v14 nur hier gefuehrt und wurde mit v15
  * nachgetragen (Tabelle „Fehlercodes Anfrageformat", Historieneintrag in §10).
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
@@ -27,7 +27,10 @@ package de.hsbremen.eportfolio.common.error;
  * Ausloeser, den §6.2 fuer ihn seit jeher nennt. Ebenso KAN-45: das
  * Top-10-Protokoll kommt mit {@link #NO_PERMISSION} und
  * {@link #VALIDATION_FAILED} aus, weil es nur gelesen wird und keinen Zustand
- * hat, mit dem eine Anfrage in Konflikt geraten koennte (Contract v28).
+ * hat, mit dem eine Anfrage in Konflikt geraten koennte (Contract v28). Ebenso
+ * KAN-43: die Passwort-Ruecksetzung benutzt {@link #VERIFICATION_CODE_INVALID}
+ * und {@link #TOO_MANY_LOGIN_ATTEMPTS}, beide seit KAN-26 vergeben; Contract
+ * v34 hat nur das Rate-Limit an der Endpoint-Zeile nachgetragen, keinen Code.
  *
  * <p>Zwei Codes sind dagegen mit KAN-24 <em>neu entstanden</em> und deshalb in
  * §6.2 nachgetragen worden (Contract v23): {@link #PROJECT_NOT_PUBLISHED} und
