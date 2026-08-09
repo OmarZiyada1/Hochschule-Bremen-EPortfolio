@@ -48,16 +48,19 @@ public class OpenApiConfig {
 		return new OpenAPI()
 				.info(new Info()
 						.title("E-Portfolio Hochschule Bremen: API")
-						.version("v28")
+						.version("v31")
 						.description("""
 								REST-API des E-Portfolio-Systems der Hochschule \
 								Bremen (FK4). Stand entspricht dem API-Contract \
-								v28, §6.
+								v31, §6.
 
 								Authentifizierung: JWT als Bearer-Token. Ohne \
 								gueltiges Token antworten geschuetzte Pfade mit \
 								401 im Fehler-Envelope aus §6.2 \
-								(timestamp, status, errorCode, message, path).
+								(timestamp, status, errorCode, message, path). \
+								Jede Fehlerantwort hat diese Form, auch ein \
+								unerwarteter Serverfehler: 500 INTERNAL_ERROR \
+								(§6.3).
 
 								Diese Oberflaeche ist nur im Profil dev \
 								erreichbar."""))

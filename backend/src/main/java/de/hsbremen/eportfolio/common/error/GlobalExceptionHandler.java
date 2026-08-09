@@ -2,12 +2,17 @@ package de.hsbremen.eportfolio.common.error;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -22,9 +27,23 @@ import org.springframework.web.multipart.support.MissingServletRequestPartExcept
  * Handler nicht. Dafuer gibt es {@code RestAuthenticationEntryPoint} und
  * {@code RestAccessDeniedHandler}, die denselben {@link ApiErrorWriter}
  * benutzen. Beide Wege muessen dasselbe Format liefern.
+ *
+ * <p><strong>Kein Weg fuehrt an §6.2 vorbei</strong> (KAN-55): Was keiner der
+ * spezifischen Methoden zugeordnet ist, faengt
+ * {@link #handleUnexpected(Exception, HttpServletRequest)} ab und beantwortet es
+ * mit 500 {@code INTERNAL_ERROR}. Spring waehlt immer den spezifischsten
+ * Handler, die bestehenden Zuordnungen bleiben davon also unberuehrt.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+	private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+	/**
+	 * Wortlaut jeder 500er-Antwort. Fest verdrahtet und ohne Ursache: was zur
+	 * Fehlersuche taugt, steht im Protokoll, nicht in der Response.
+	 */
+	static final String INTERNAL_ERROR_MESSAGE = "Interner Fehler. Bitte spaeter erneut versuchen.";
 
 	@ExceptionHandler(ValidationException.class)
 	public ResponseEntity<ApiError> handleValidation(ValidationException ex, HttpServletRequest request) {
@@ -201,14 +220,104 @@ public class GlobalExceptionHandler {
 				"Anmeldung erforderlich.", request);
 	}
 
-	private ResponseEntity<ApiError> build(HttpStatus status, String errorCode, String message,
+	/**
+	 * Auffang-Handler: was keine der Methoden oben kennt, wird trotzdem zu einer
+	 * Antwort nach §6.2 (KAN-55). Ohne ihn beantwortete Spring einen
+	 * unerwarteten Fehler mit seinem eigenen Standardkoerper, also ohne
+	 * {@code errorCode}, und das Frontend haette an genau der Stelle ein zweites
+	 * Fehlerformat, an der es ohnehin nichts mehr retten kann.
+	 *
+	 * <p>Aufgefallen ist die Luecke bei KAN-23: der Objektspeicher ist der erste
+	 * Fremddienst im Request-Pfad, und eine {@code FileStorageException} lief bis
+	 * zum Servlet-Container durch. Betroffen war aber jeder Endpoint.
+	 *
+	 * <p><strong>Die Antwort nennt die Ursache nicht.</strong> Weder
+	 * {@code ex.getMessage()} noch der Klassenname gehen hinaus: Ausnahmetexte
+	 * nennen Klassen, Pfade und bei Speicherfehlern den Speicherschluessel
+	 * (§3.15.1). Stattdessen protokolliert der Handler die Ausnahme vollstaendig
+	 * mit Stacktrace; die Zuordnung Protokollzeile zu Antwort laeuft ueber
+	 * Zeitpunkt, Methode und Pfad, die in beiden stehen.
+	 *
+	 * <p><strong>Ausnahmen mit eigenem Statuscode behalten ihn.</strong> Der
+	 * Handler traegt {@code Exception} und faengt damit auch die Faelle, die
+	 * Spring selbst beantwortet: unbekannter Pfad (404), nicht zugelassene
+	 * Methode (405), nicht unterstuetzter Content-Type (415). Sie alle tragen
+	 * {@link ErrorResponse} und werden deshalb an
+	 * {@link #frameworkError(Exception, ErrorResponse, HttpServletRequest)}
+	 * weitergereicht, statt zu einem 500 zu werden. Ohne diese Abzweigung
+	 * verdeckte der Auffang-Handler die Statuscodes des Rahmenwerks; aus einem
+	 * 405 wuerde ein 500.
+	 */
+	@ExceptionHandler(Exception.class)
+	public ResponseEntity<ApiError> handleUnexpected(Exception ex, HttpServletRequest request) {
+		if (ex instanceof ErrorResponse errorResponse) {
+			return frameworkError(ex, errorResponse, request);
+		}
+		LOG.error("Unerwarteter Fehler bei {} {}", request.getMethod(), request.getRequestURI(), ex);
+		return build(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCodes.INTERNAL_ERROR,
+				INTERNAL_ERROR_MESSAGE, request);
+	}
+
+	/**
+	 * Ausnahmen des Rahmenwerks, die ihren Statuscode selbst mitbringen: 404 fuer
+	 * einen Pfad, den kein Controller bedient, 405 fuer eine nicht zugelassene
+	 * Methode, 415 fuer einen Content-Type, den der Endpoint nicht liest.
+	 *
+	 * <p>Der Status bleibt der von Spring gesetzte, die Antwort ist aber das
+	 * Envelope aus §6.2 und traegt einen der bereits gefuehrten Codes: 404 ergibt
+	 * {@code RESOURCE_NOT_FOUND} wie jede andere nicht vorhandene Ressource, die
+	 * uebrigen 4xx {@code VALIDATION_FAILED}, weil die Anfrage in dieser Form
+	 * nicht bedient werden kann. Eigene Codes je Statuscode brauchte es dafuer
+	 * nicht: der Statuscode steht im Envelope und sagt bereits, was nicht passt
+	 * (Entscheidung zu KAN-55).
+	 *
+	 * <p>Die Header aus {@link ErrorResponse#getHeaders()} gehen mit hinaus. Bei
+	 * 405 ist das {@code Allow} und bei 415 {@code Accept}; beide gehoeren nach
+	 * RFC 9110 zur Antwort und sind das einzige maschinenlesbare Stueck, das der
+	 * Client hier bekommt.
+	 *
+	 * <p>Die wenigen Rahmenfehler mit 5xx (etwa eine fehlende Pfadvariable in
+	 * einer Controller-Signatur) sind Programmierfehler im Backend und laufen
+	 * deshalb wie jeder unerwartete Fehler: 500 {@code INTERNAL_ERROR} und
+	 * Stacktrace im Protokoll.
+	 */
+	private ResponseEntity<ApiError> frameworkError(Exception ex, ErrorResponse errorResponse,
 			HttpServletRequest request) {
+		HttpStatusCode status = errorResponse.getStatusCode();
+		if (status.is5xxServerError()) {
+			LOG.error("Unerwarteter Fehler bei {} {}", request.getMethod(),
+					request.getRequestURI(), ex);
+			return build(status, ErrorCodes.INTERNAL_ERROR, INTERNAL_ERROR_MESSAGE,
+					errorResponse.getHeaders(), request);
+		}
+
+		// Ein Client-Fehler ist kein Betriebsvorfall: er gehoert nicht als
+		// Fehlerzeile ins Protokoll, sondern hoechstens in die Fehlersuche.
+		LOG.debug("Vom Rahmenwerk abgewiesen ({}): {} {}", status.value(), request.getMethod(),
+				request.getRequestURI(), ex);
+
+		boolean notFound = status.value() == HttpStatus.NOT_FOUND.value();
+		return build(status,
+				notFound ? ErrorCodes.RESOURCE_NOT_FOUND : ErrorCodes.VALIDATION_FAILED,
+				notFound
+						? "Die angeforderte Ressource existiert nicht."
+						: "Die Anfrage ist in dieser Form nicht zulaessig.",
+				errorResponse.getHeaders(), request);
+	}
+
+	private ResponseEntity<ApiError> build(HttpStatusCode status, String errorCode, String message,
+			HttpServletRequest request) {
+		return build(status, errorCode, message, HttpHeaders.EMPTY, request);
+	}
+
+	private ResponseEntity<ApiError> build(HttpStatusCode status, String errorCode, String message,
+			HttpHeaders headers, HttpServletRequest request) {
 		ApiError error = new ApiError(
 				Instant.now(),
 				status.value(),
 				errorCode,
 				message,
 				request.getRequestURI());
-		return ResponseEntity.status(status).body(error);
+		return ResponseEntity.status(status).headers(headers).body(error);
 	}
 }
