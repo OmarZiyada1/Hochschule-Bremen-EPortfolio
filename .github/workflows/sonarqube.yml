@@ -104,17 +104,24 @@ jobs:
           # "Permission denied" ab.
           chmod +x ./mvnw
 
-          # JaCoCo wird direkt von der Kommandozeile aufgerufen statt in der
-          # pom.xml eingetragen: so bleibt der Build unveraendert (Projektregel
-          # 9, keine neuen Abhaengigkeiten ohne Ruecksprache). prepare-agent
-          # setzt argLine fuer Surefire, report schreibt
+          # Beide Plugins werden mit vollen Koordinaten aufgerufen und nicht
+          # ueber ihr Kuerzel. Fuer JaCoCo bleibt so die pom.xml unveraendert
+          # (Projektregel 9, keine neuen Abhaengigkeiten ohne Ruecksprache);
+          # prepare-agent setzt argLine fuer Surefire, report schreibt
           # target/site/jacoco/jacoco.xml, und genau dort sucht der
           # Sonar-Scanner die Abdeckung von sich aus.
+          #
+          # Beim Scanner ist die lange Form Pflicht: das Kuerzel "sonar" loest
+          # Maven nur ueber die pluginGroups aus der settings.xml auf, und die
+          # des Runners kennt org.sonarsource.scanner.maven nicht. "sonar:sonar"
+          # scheitert dort mit NoPluginFoundForPrefixException, und zwar sofort,
+          # weil Maven alle Ziele der Kommandozeile vor dem ersten Bauschritt
+          # aufloest.
           ./mvnw -B -ntp clean \
             org.jacoco:jacoco-maven-plugin:0.8.12:prepare-agent \
             verify \
             org.jacoco:jacoco-maven-plugin:0.8.12:report \
-            sonar:sonar \
+            org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar \
             -Dsonar.projectKey=OmarZiyada1_Hochschule-Bremen-EPortfolio \
             -Dsonar.organization=omarziyada1 \
             -Dsonar.host.url=https://sonarcloud.io \
