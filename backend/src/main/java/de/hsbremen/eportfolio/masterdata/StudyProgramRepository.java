@@ -31,4 +31,14 @@ public interface StudyProgramRepository extends JpaRepository<StudyProgram, UUID
 	 * eindeutig genug, um einen zweiten Lauf ohne Duplikate zu ueberstehen.
 	 */
 	Optional<StudyProgram> findByFacultyIdAndName(UUID facultyId, String name);
+
+	/**
+	 * Haengt an dieser Fakultaet noch ein Studiengang? Sperrt das Loeschen der
+	 * Fakultaet mit 409 {@code RESOURCE_IN_USE} (§6.1, KAN-25).
+	 *
+	 * <p>Die Fremdschluesselspalte ist {@code not null}: ohne diese Pruefung
+	 * scheiterte das {@code DELETE} an der Datenbank und ergaebe einen 500 statt
+	 * der Auskunft, was der Loeschung im Weg steht.
+	 */
+	boolean existsByFacultyId(UUID facultyId);
 }

@@ -22,6 +22,8 @@ selben Paket. Die Beschreibungen stammen aus den `package-info.java`-Dateien.
 ```
 de.hsbremen.eportfolio
 ├── EportfolioApplication          Einstiegspunkt, @SpringBootApplication + @ConfigurationPropertiesScan
+├── admin/                         Administrationsseite: Kennzahlen-Dashboard und Nutzerverwaltung
+│   └── dto/                       DTOs der Administrationsseite (u. a. AdminUserResponse)
 ├── auth/                          Anmeldung und Ausstellung von Zugriffstokens
 │   └── dto/                       (kein eigenes Paket; DTOs liegen in auth/dto)
 ├── comment/                       Kommentare zu Projekten
@@ -51,6 +53,7 @@ Was in welchem Paket steckt:
 
 | Paket        | Inhalt (Stand `main`) |
 |--------------|------------------------|
+| `admin`      | `AdminDashboardController`, `AdminDashboardService`, `AdminUserController`, `AdminUserService`, `AdminUserSpecifications`, `dto/{DashboardResponse, AdminUserResponse, AdminUserCreateRequest, AdminUserUpdateRequest}`. Seit KAN-25, siehe Kapitel 12 |
 | `auth`       | `AuthController`, `AuthService`, `JwtService`, `JwtAuthenticationFilter`, `AttemptCounter`, `LoginAttemptService`, `DatabaseUserDetailsService`, `AuthenticatedUser`, `RestAuthenticationEntryPoint`, `RestAccessDeniedHandler`, `dto/{LoginRequest, LoginResponse, UserResponse}`. Seit KAN-26 zusätzlich die Registrierung: `RegistrationService`, `VerificationCode`, `VerificationCodeRepository`, `VerificationCodeService`, `VerificationAttemptService`, `EmailAddresses`, `PasswordPolicy`, `dto/{RegisterRequest, VerifyRequest, ResendVerificationRequest, VerificationStatusResponse}`. Die Properties-Records liegen seit KAN-50 in `config` |
 | `comment`    | `Comment`, `CommentRepository` |
 | `common.domain` | `BaseEntity`, `AuditableEntity` |
@@ -59,12 +62,12 @@ Was in welchem Paket steckt:
 | `common.error`  | `ApiError`, `ApiErrorWriter`, `ErrorCodes`, `GlobalExceptionHandler`, `ValidationException`, `ResourceNotFoundException` |
 | `config`     | `SecurityConfig`, `JpaConfig`, `OpenApiConfig`, `AsyncConfig`, `SchedulingConfig`, `ConfigurationStartupLogger`, `ConfigurationValues` + **alle** Properties-Records (`CorsProperties`, `JwtProperties`, `LoginAttemptProperties`, `PermissionProperties`, `RegistrationProperties`, `StorageProperties`, `MailProperties`) und die Auswahl-Enums `StorageProvider`, `MailProvider` |
 | `mail`       | `MailSender` (Port), `MailMessage`, `LogMailSender`, `SmtpMailSender`, `MailTemplateService`. Seit KAN-51, siehe Kapitel 10 |
-| `masterdata` | `Category`, `Faculty`, `Module`, `StudyProgram` + je ein Repository, `MasterDataController`, `MasterDataService`, `DevMasterDataSeeder`, `dto/{CategoryResponse, FacultyResponse, StudyProgramResponse, ModuleResponse}` |
+| `masterdata` | `Category`, `Faculty`, `Module`, `StudyProgram` + je ein Repository, `MasterDataController`, `MasterDataService`, `DevMasterDataSeeder`, `dto/{CategoryResponse, FacultyResponse, StudyProgramResponse, ModuleResponse}`. Seit KAN-25 zusätzlich das Admin-CRUD: `MasterDataAdminController`, `MasterDataAdminService`, `dto/{Category, Faculty, StudyProgram, Module}{Create, Update}Request` |
 | `portfolio`  | `Portfolio`, `PortfolioRepository` |
 | `project`    | `Project`, `Block`, `ProjectMember`, `ProjectStatusHistory` + je ein Repository, `BlockValidationService`, `ProjectPermissionService`, `ProjectController`, `ProjectReadService`, `ProjectSpecifications`, `dto/{ProjectCardResponse, ProjectDetailResponse, ProjectFilterRequest, PersonResponse, MemberResponse, ReferenceResponse, BlockResponse, StatusHistoryResponse}`. `PermissionProperties` liegt seit KAN-50 in `config` |
 | `reaction`   | `Reaction`, `ReactionRepository`, `ReactionCount` (Abfrageergebnis für die Kachelzählung) |
 | `top10`      | `Top10Entry`, `Top10Nomination` + je ein Repository |
-| `user`       | `User`, `UserRepository`, `DevTestUserSeeder` |
+| `user`       | `User`, `UserRepository`, `DevTestUserSeeder`, seit KAN-25 die Abfrageergebnisse `UserRoleCount` und `UserStatusCount` für die Dashboard-Kennzahlen |
 
 ---
 
@@ -94,12 +97,12 @@ liest.
 
 | Entity / Feature        | Entity | Migration | Repository | Service | Endpoint |
 |-------------------------|:------:|:---------:|:----------:|:-------:|:--------:|
-| `User`                  | ✓      | ✓ (1)     | ✓          | `DatabaseUserDetailsService`, `AuthService` (Anmeldung), `RegistrationService` (Anlage und Verifizierung, KAN-26) | `GET /api/auth/me`, `POST /api/auth/register`, `POST /api/auth/verify`, `POST /api/auth/verify/resend` |
+| `User`                  | ✓      | ✓ (1)     | ✓          | `DatabaseUserDetailsService`, `AuthService` (Anmeldung), `RegistrationService` (Anlage und Verifizierung, KAN-26), `AdminUserService` (Nutzerverwaltung, KAN-25) | `GET /api/auth/me`, `POST /api/auth/register`, `POST /api/auth/verify`, `POST /api/auth/verify/resend`, `GET`/`POST /api/admin/users`, `GET`/`PATCH`/`DELETE /api/admin/users/{id}` |
 | `VerificationCode`      | ✓      | ✓ (10)    | ✓          | `VerificationCodeService` (Ausstellen, Prüfen, Aufräumen) | kein eigener; eingelöst über `POST /api/auth/verify` |
-| `Faculty`               | ✓      | ✓ (1)     | ✓          | `MasterDataService` (nur lesend) | ✓ `GET /api/faculties` |
-| `Category`              | ✓      | ✓ (1)     | ✓          | `MasterDataService` (nur lesend) | ✓ `GET /api/categories` |
-| `StudyProgram`          | ✓      | ✓ (2)     | ✓          | `MasterDataService` (nur lesend) | ✓ `GET /api/study-programs?faculty={id}` |
-| `Module`                | ✓      | ✓ (2)     | ✓          | `MasterDataService` (nur lesend) | ✓ `GET /api/modules?studyProgram={id}` |
+| `Faculty`               | ✓      | ✓ (1)     | ✓          | `MasterDataService` (nur lesend), `MasterDataAdminService` (CRUD, KAN-25) | ✓ `GET /api/faculties`, `POST`/`PATCH`/`DELETE /api/admin/faculties` |
+| `Category`              | ✓      | ✓ (1)     | ✓          | `MasterDataService` (nur lesend), `MasterDataAdminService` (CRUD, KAN-25) | ✓ `GET /api/categories`, `POST`/`PATCH`/`DELETE /api/admin/categories` |
+| `StudyProgram`          | ✓      | ✓ (2)     | ✓          | `MasterDataService` (nur lesend), `MasterDataAdminService` (CRUD, KAN-25) | ✓ `GET /api/study-programs?faculty={id}`, `POST`/`PATCH`/`DELETE /api/admin/study-programs` |
+| `Module`                | ✓      | ✓ (2)     | ✓          | `MasterDataService` (nur lesend), `MasterDataAdminService` (CRUD, KAN-25) | ✓ `GET /api/modules?studyProgram={id}`, `POST`/`PATCH`/`DELETE /api/admin/modules` |
 | `Portfolio`             | ✓      | ✓ (2)     | ✓          | -       | - |
 | `Project`               | ✓      | ✓ (3)     | ✓          | `ProjectPermissionService` (Rechteprüfung), `ProjectReadService` (nur lesend) | ✓ `GET /api/projects`, `GET /api/projects/{id}` |
 | `ProjectMember`         | ✓      | ✓ (3)     | ✓          | -       | eingebettet in `GET /api/projects/{id}` |
@@ -113,9 +116,13 @@ liest.
 | `Block`                 | ✓      | ✓ (6, 7)  | ✓          | `BlockValidationService` (Validierung, kein CRUD) | eingebettet in `GET /api/projects/{id}` |
 | Auth                    | keine Entity | -   | -          | `AuthService`, `JwtService`, `LoginAttemptService`, `VerificationAttemptService` | ✓ `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` |
 
-Datei-Upload, Admin-Bereich und die Top-10-Verwaltung sind noch nicht
-implementiert. Die Security-Regeln für einen Teil dieser Pfade stehen bereits in
-`SecurityConfig` (siehe Abschnitt 5).
+Der Admin-Bereich steht seit KAN-25 (Kapitel 12): Dashboard, Nutzerverwaltung
+und Stammdaten-CRUD, dazu die Top-10-Kuratierung aus KAN-24. Offen bleiben dort
+drei Zeilen aus §6.1, jede mit eigenem Ticket: `POST /admin/users/{id}/reset-password`
+(KAN-43), `GET /admin/top10-audit` (KAN-45) sowie `POST /admin/categories/{id}/merge`
+und `POST /admin/projects/status` (KAN-46). Die Security-Regel für alle diese
+Pfade steht als `/api/admin/**` mit `hasRole("ADMIN")` schon lange in
+`SecurityConfig` (siehe Abschnitt 5); für KAN-25 war dort nichts zu ergänzen.
 
 Die Stammdaten haben zusätzlich einen `DevMasterDataSeeder` (Profil `dev`,
 idempotent): FK1 bis FK5 mit Beispiel-Studiengängen und -Modulen sowie ein Satz
@@ -646,3 +653,104 @@ Der Zähler des Rate-Limits liegt wie der des Logins nur im Arbeitsspeicher
 (Abschnitt 5). Ein Neustart hebt die Sperre auf; ein Automat mit langem Atem
 könnte danach weiterprobieren. Für den Prototyp ausreichend, gehört mit dem
 gemeinsamen Zähler aus Abschnitt 5 in den Ausblick.
+
+---
+
+## 12. Die Administrationsseite
+
+Stand KAN-25, Contract §6.1 (Abschnitt „Administration"), §6.6 und §3.1. Der
+Bereich heißt durchgehend **Administrationsseite**, nie Cockpit.
+
+### Der Schnitt liegt quer, und das ist begründet
+
+Die Endpoints unter `/api/admin` liegen bewusst **nicht** alle in einem Paket:
+
+| Endpoint-Gruppe | Paket | Warum dort |
+|-----------------|-------|------------|
+| `GET /admin/dashboard`, `/admin/users/**` | `admin` | siehe unten |
+| `POST`/`PATCH`/`DELETE` auf `/admin/categories`, `/admin/faculties`, `/admin/study-programs`, `/admin/modules` | `masterdata` | arbeitet auf den Entities dieses Features, wie der Lesedienst daneben |
+| `/admin/top10-nominations/**`, `PUT /admin/top10` | `top10` | dasselbe, seit KAN-24 |
+
+Das gemeinsame Merkmal dieser Endpoints ist ihr Pfadpräfix und die Regel in
+`SecurityConfig`, nicht ihr Gegenstand. Sie nach Zielgruppe zusammenzulegen
+hieße, den Schnitt nach Fachlichkeit aus Abschnitt 1 aufzugeben.
+
+Zwei Bausteine passen in kein Feature und begründen das Paket `admin`:
+
+1. **Das Dashboard** zählt Projekte, Konten, Blöcke und Nominierungen zusammen.
+   In eines dieser vier Pakete gelegt, wäre es dort ein Fremdkörper mit drei
+   Abhängigkeiten nach außen.
+2. **Die Nutzerverwaltung** läge nach dem Schnitt in `user`, kann es aber nicht:
+   sie braucht `AuthenticatedUser`, `EmailAddresses` und `PasswordPolicy` aus
+   `auth`, und `auth` kennt bereits `user.User` und `user.UserRepository`. Aus
+   der heute einseitigen Abhängigkeit würde ein Kreis. Von `admin` aus zeigen
+   dagegen alle Pfeile nach außen.
+
+### Das Dashboard: vier Gruppenabfragen statt fünfundzwanzig Zählungen
+
+Die vier Aufschlüsselungen umfassen fünf Projektstatus, drei Rollen, drei
+Kontostatus und vierzehn Blocktypen. Jeden Wert einzeln zu zählen wäre derselbe
+Inhalt in fünfundzwanzig Datenbankrunden, und jede neue Enum-Konstante bräuchte
+eine weitere Zeile Code. Stattdessen liefert je ein `group by` die
+Ergebniszeilen (`ProjectStatusCount`, `BlockTypeCount`, `UserRoleCount`,
+`UserStatusCount`, im Stil von `ReactionCount`), und der Dienst füllt die
+fehlenden Enum-Werte mit 0 auf.
+
+**Das Auffüllen ist Teil der Zusage** (Contract v26): eine Karte enthält immer
+alle Werte ihres Enums. Ohne das müsste das Frontend die Listen aus §2 ein
+zweites Mal führen, um ein vollständiges Diagramm zu zeichnen. `EnumMap` sorgt
+zusätzlich für eine stabile, fachlich lesbare Reihenfolge; bei `ProjectStatus`
+ist es die des Zustandsautomaten aus §4.1.
+
+`blocksByType` ist überhaupt nur möglich, weil `Block.type` eine eigene Spalte
+ist und nicht bloß im `jsonb` des Inhalts steckt (§2.5).
+
+### `AdminUserResponse` ist der einzige Ort mit `hsbEmail`
+
+§3.1 erlaubt die HSB-Adresse ausschließlich in der Nutzerverwaltung und
+verlangt dafür ein **eigenes** Record, getrennt von `auth.dto.UserResponse`.
+Wäre es dasselbe, gelangte die Adresse zwangsläufig in jede Antwort, die einen
+User einbettet. `AdminUserHsbEmailVisibilityTest` hält beide Seiten fest und
+prüft dabei den gesamten Antworttext, nicht nur ein benanntes Feld.
+
+### Was KAN-25 entschieden hat, weil der Contract schwieg
+
+Alle fünf Punkte stehen seit v26 auch im Contract (§6.1):
+
+| Punkt | Regel | Grund |
+|-------|-------|-------|
+| Rolle bei `POST /admin/users` | kommt aus dem Body, auch `ADMIN`; die Domain der `hsbEmail` wird trotzdem gegen §3.1.1 geprüft | Die Ableitung aus der Domain schützt die *Selbst*registrierung vor Selbstauskunft. Hier entscheidet ein Admin, und `ADMIN` kann keine Domain ergeben. Die Adresse bleibt aber Zugehörigkeitsnachweis |
+| Eigenes Konto | `role` und `status` nicht änderbar, `DELETE` auf sich selbst abgewiesen, beides 400; der Name bleibt änderbar | §6.5 lässt beides sofort wirken; danach ist der Endpoint nicht mehr erreichbar und der Schritt nicht zurückzunehmen |
+| Letzter Admin | **nicht** zusätzlich geschützt | Kostete je Schreibvorgang eine Zählabfrage und verhinderte doch nur einen von mehreren Wegen in denselben Zustand |
+| `status` im `PATCH` | nur `ACTIVE` und `DEACTIVATED`; `REGISTRATION_PENDING` ergibt 400 | Der Wert beschreibt eine laufende Registrierung. Bei einem verifizierten Konto wäre er eine Sperre ohne Ausweg: Login 401, und `resend` verschickt für ein bestätigtes Flag nichts mehr |
+| Doppelter Stammdaten-Wert | 409 `RESOURCE_IN_USE` | Dieselbe Aussage wie die vergebene Adresse bei der Registrierung, und §6.3 führt „bereits vergeben" unter 409 |
+
+### Löschen von Stammdaten
+
+Eine noch referenzierte Zeile ergibt 409 `RESOURCE_IN_USE`. Bei Fakultät und
+Studiengang zählen **beide** Richtungen: die Projekte, die direkt darauf
+verweisen, und die Stammdaten-Zeilen darunter. Deren Fremdschlüssel sind
+`not null`; ohne die Prüfung scheiterte das `DELETE` an der Datenbank und ergäbe
+einen 500 statt der Auskunft, was im Weg steht.
+
+Abgegrenzt davon: eine unbekannte ID im **Body** (etwa `facultyId`) ergibt 400
+`VALIDATION_FAILED`, nur die unbekannte ID im **Pfad** ergibt 404 (§6.3.1).
+
+### Kein Hard-Delete, und keine neue Migration
+
+`DELETE /admin/users/{id}` setzt `status = DEACTIVATED`. `Project.authorId` ist
+`not null` (§3.3); ein echtes Löschen müsste fremde Projekte mitreißen oder die
+Fremdschlüssel verletzen, dasselbe gilt für Kommentare, Reaktionen und die
+Statushistorie. Ein zweiter Aufruf ergibt wieder 204: das Ergebnis ist dasselbe,
+ein 409 meldete einen Fehler, den niemand beheben müsste.
+
+KAN-25 bringt **keine Schemaänderung** mit. Alle Felder, die die
+Administrationsseite liest und schreibt, gibt es seit Migration 1 bis 11; neu
+sind allein Abfragen darauf.
+
+### Grenze, bewusst getragen
+
+Ein vollständiges Löschen eines Kontos auf Betroffenenverlangen bräuchte eine
+Anonymisierung der Autorschaft statt einer Kaskade. Für den Prototyp
+zurückgestellt, in §7 als offener Punkt 9 vermerkt und im Ausblick der Arbeit
+aufzugreifen.

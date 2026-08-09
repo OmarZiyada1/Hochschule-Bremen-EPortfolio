@@ -3,7 +3,7 @@ package de.hsbremen.eportfolio.common.error;
 /**
  * Fehlercodes fuer das Envelope aus API-Contract §6.2.
  *
- * <p>Stand Contract v25 steht jede Konstante dieser Klasse auch in §6.2.
+ * <p>Stand Contract v26 steht jede Konstante dieser Klasse auch in §6.2.
  * {@link #VALIDATION_FAILED} war bis v14 nur hier gefuehrt und wurde mit v15
  * nachgetragen (Tabelle „Fehlercodes Anfrageformat", Historieneintrag in §10).
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
@@ -21,7 +21,10 @@ package de.hsbremen.eportfolio.common.error;
  * Alle elf standen wie die uebrigen schon vorher in §6.2; eine neue
  * Contract-Version brauchte es fuer die Konstanten selbst nicht. Contract v25
  * hat bei {@link #FILE_TYPE_NOT_ALLOWED} nur den Ausloesertext um die
- * Signaturpruefung ergaenzt, der Code blieb derselbe.
+ * Signaturpruefung ergaenzt, der Code blieb derselbe. Ebenso KAN-25: die
+ * Administrationsseite kommt mit den vorhandenen Codes aus, {@link #RESOURCE_IN_USE}
+ * traegt dort mit der noch referenzierten Stammdaten-Zeile den dritten
+ * Ausloeser, den §6.2 fuer ihn seit jeher nennt.
  *
  * <p>Zwei Codes sind dagegen mit KAN-24 <em>neu entstanden</em> und deshalb in
  * §6.2 nachgetragen worden (Contract v23): {@link #PROJECT_NOT_PUBLISHED} und
@@ -212,14 +215,23 @@ public final class ErrorCodes {
 
 	/**
 	 * 409: die Ressource ist bereits vergeben oder noch referenziert. §6.2 nennt
-	 * drei Ausloeser; umgesetzt sind bislang zwei davon. Der eine ist die bei der
-	 * Registrierung bereits vergebene {@code email} oder {@code hsbEmail} (§6.1,
-	 * KAN-26), der andere die Top-10 (§3.11.1, KAN-24), dort gleich in drei
-	 * Auspraegungen derselben Aussage „dieser Platz beziehungsweise dieses
-	 * Projekt ist schon vergeben": eine zweite offene Nominierung zum selben
-	 * Projekt, ein Projekt, das bereits in der Liste steht, und eine belegte
-	 * Position beim Annehmen. Der dritte Ausloeser, die noch referenzierte
-	 * Stammdaten-Zeile, kommt mit KAN-25 dazu.
+	 * drei Ausloeser, und seit KAN-25 sind alle drei umgesetzt. Der erste ist die
+	 * bei der Registrierung bereits vergebene {@code email} oder
+	 * {@code hsbEmail} (§6.1, KAN-26), der zweite die Top-10 (§3.11.1, KAN-24),
+	 * dort gleich in drei Auspraegungen derselben Aussage „dieser Platz
+	 * beziehungsweise dieses Projekt ist schon vergeben": eine zweite offene
+	 * Nominierung zum selben Projekt, ein Projekt, das bereits in der Liste
+	 * steht, und eine belegte Position beim Annehmen.
+	 *
+	 * <p>Der dritte ist die <strong>noch referenzierte Stammdaten-Zeile</strong>
+	 * beim Loeschen ueber die Administrationsseite (§6.1, KAN-25): eine
+	 * Kategorie mit anhaengenden Projekten, eine Fakultaet mit Studiengaengen
+	 * oder Projekten, ein Studiengang mit Modulen oder Projekten, ein Modul mit
+	 * Projekten. Denselben Code traegt dort auch der bereits vergebene
+	 * eindeutige Wert ({@code category.name}, {@code faculty.abbreviation}),
+	 * weil er dieselbe Aussage macht wie die vergebene Adresse bei der
+	 * Registrierung: der Wert ist in Ordnung, nur schon in Gebrauch
+	 * (Contract v26).
 	 *
 	 * <p><strong>Nicht zu verwechseln mit</strong>
 	 * {@link #NOMINATION_ALREADY_DECIDED}: dort ist nicht der Platz belegt,
