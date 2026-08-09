@@ -320,6 +320,13 @@ public class ProjectWorkflowService {
 	 * Projekt ist nicht mehr veroeffentlicht" und nicht „es wurde zurueckgegeben";
 	 * an dieser Stelle gilt sie fuer jeden kuenftigen Uebergang mit, ohne dass
 	 * jemand daran denken muss.
+	 *
+	 * <p><strong>Die handelnde Person wird einmal geladen und zweimal
+	 * verwendet</strong>, fuer die Statushistorie (§3.12) und fuer das
+	 * Top-10-Protokoll (§3.17, seit KAN-45). Im Protokoll der Top-10 steht damit
+	 * eine Redakteur:in, denn den Entzug loest die Ruecknahme aus und nicht die
+	 * Administration; das Feld dort heisst deshalb ausdruecklich „wer die
+	 * Aenderung veranlasst hat".
 	 */
 	private ProjectDetailResponse perform(AuthenticatedUser user, Project project,
 			ProjectTransition transition) {
@@ -328,8 +335,9 @@ public class ProjectWorkflowService {
 		project.setStatus(transition.target());
 		projectRepository.saveAndFlush(project);
 
-		recordTransition(project, from, transition.target(), currentUser(user));
-		top10Service.removeOnLeavingPublished(project);
+		User actor = currentUser(user);
+		recordTransition(project, from, transition.target(), actor);
+		top10Service.removeOnLeavingPublished(project, actor);
 
 		return readService.detail(user, project.getId());
 	}

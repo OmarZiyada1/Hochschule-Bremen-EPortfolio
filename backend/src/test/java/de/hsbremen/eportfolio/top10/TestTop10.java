@@ -1,6 +1,7 @@
 package de.hsbremen.eportfolio.top10;
 
 import de.hsbremen.eportfolio.common.enums.NominationStatus;
+import de.hsbremen.eportfolio.common.enums.Top10Action;
 import de.hsbremen.eportfolio.project.Project;
 import de.hsbremen.eportfolio.user.User;
 import java.time.Instant;
@@ -55,6 +56,33 @@ public final class TestTop10 {
 		nomination.setDecidedBy(decidedBy);
 		nomination.setDecidedAt(Instant.now());
 		return nomination;
+	}
+
+	/**
+	 * Eine Zeile des Aenderungsprotokolls (§3.17), fuer die Lesetests von
+	 * {@code GET /api/admin/top10-audit}.
+	 *
+	 * <p>Der einzige Weg, einen Eintrag zu einem <em>gewaehlten</em> Zeitpunkt zu
+	 * bekommen: im Produktivcode setzt {@code Top10AuditService} immer
+	 * {@code Instant.now()}, ein Protokoll mit Eintraegen von letzter Woche liesse
+	 * sich ueber die API also nicht herstellen. Genau die brauchen die Filter
+	 * {@code from} und {@code to}.
+	 *
+	 * <p>Dass die Setter der Entity paketprivat sind, ist hier kein Hindernis: die
+	 * Klasse liegt im selben Paket. Ausserhalb von {@code top10} bleibt das
+	 * Protokoll unschreibbar, und das ist die Zusage aus §3.17.
+	 */
+	public static Top10AuditEntry auditEntry(User admin, Project project, Top10Action action,
+			Instant timestamp, Integer previousPosition, Integer newPosition) {
+
+		Top10AuditEntry entry = new Top10AuditEntry();
+		entry.setAdmin(admin);
+		entry.setProject(project);
+		entry.setAction(action);
+		entry.setTimestamp(timestamp);
+		entry.setPreviousPosition(previousPosition);
+		entry.setNewPosition(newPosition);
+		return entry;
 	}
 
 	private TestTop10() {

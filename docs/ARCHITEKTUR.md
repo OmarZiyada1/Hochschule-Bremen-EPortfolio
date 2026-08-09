@@ -64,9 +64,9 @@ Was in welchem Paket steckt:
 | `mail`       | `MailSender` (Port), `MailMessage`, `LogMailSender`, `SmtpMailSender`, `MailTemplateService`. Seit KAN-51, siehe Kapitel 10 |
 | `masterdata` | `Category`, `Faculty`, `Module`, `StudyProgram` + je ein Repository, `MasterDataController`, `MasterDataService`, `DevMasterDataSeeder`, `dto/{CategoryResponse, FacultyResponse, StudyProgramResponse, ModuleResponse}`. Seit KAN-25 zusätzlich das Admin-CRUD: `MasterDataAdminController`, `MasterDataAdminService`, `dto/{Category, Faculty, StudyProgram, Module}{Create, Update}Request` |
 | `portfolio`  | `Portfolio`, `PortfolioRepository` |
-| `project`    | `Project`, `Block`, `ProjectMember`, `ProjectStatusHistory` + je ein Repository, `BlockValidationService`, `ProjectPermissionService`, `ProjectController`, `ProjectReadService`, `ProjectSpecifications`, `dto/{ProjectCardResponse, ProjectDetailResponse, ProjectFilterRequest, PersonResponse, MemberResponse, ReferenceResponse, BlockResponse, StatusHistoryResponse}`. `PermissionProperties` liegt seit KAN-50 in `config` |
+| `project`    | `Project`, `Block`, `ProjectMember`, `ProjectStatusHistory` + je ein Repository, `BlockValidationService`, `ProjectPermissionService`, `ProjectController`, `ProjectReadService`, `ProjectSpecifications`, `dto/{ProjectCardResponse, ProjectDetailResponse, ProjectFilterRequest, PersonResponse, MemberResponse, ReferenceResponse, BlockResponse, StatusHistoryResponse}`. Seit KAN-45 zusätzlich `dto/ProjectReferenceResponse` (nur ID und Titel, für Antworten, die ein Projekt bloß nennen). `PermissionProperties` liegt seit KAN-50 in `config` |
 | `reaction`   | `Reaction`, `ReactionRepository`, `ReactionCount` (Abfrageergebnis für die Kachelzählung) |
-| `top10`      | `Top10Entry`, `Top10Nomination` + je ein Repository |
+| `top10`      | `Top10Entry`, `Top10Nomination`, `Top10Service`, `Top10NominationService`, `Top10Controller`, `Top10AdminController`, `Top10NominationController`, `dto/{Top10EntryResponse, Top10NominationResponse, Top10NominationRequest, Top10AcceptRequest, Top10OrderRequest}` (KAN-24). Seit KAN-45 das Änderungsprotokoll: `Top10AuditEntry`, `Top10AuditEntryRepository`, `Top10AuditService`, `Top10AuditSpecifications`, `Top10Placement`, `dto/Top10AuditEntryResponse`, siehe Kapitel 13 |
 | `user`       | `User`, `UserRepository`, `DevTestUserSeeder`, seit KAN-25 die Abfrageergebnisse `UserRoleCount` und `UserStatusCount` für die Dashboard-Kennzahlen |
 
 ---
@@ -111,18 +111,20 @@ liest.
 | `Comment`               | ✓      | ✓ (4)     | ✓          | -       | - |
 | `Reaction`              | ✓      | ✓ (4)     | ✓          | -       | nur als `reactionCount` in den Projekt-Antworten |
 | `ProjectStatusHistory`  | ✓      | ✓ (4)     | ✓          | -       | eingebettet in `GET /api/projects/{id}`, nur für Beteiligte |
-| `Top10Entry`            | ✓      | ✓ (5)     | ✓          | -       | - |
-| `Top10Nomination`       | ✓      | ✓ (5)     | ✓          | -       | - |
+| `Top10Entry`            | ✓      | ✓ (5)     | ✓          | `Top10Service` (öffentliche Liste, Reihenfolge, Entzug des Platzes) | ✓ `GET /api/top10`, `PUT /api/admin/top10` |
+| `Top10Nomination`       | ✓      | ✓ (5)     | ✓          | `Top10NominationService` (Vorschlag und Entscheidung) | ✓ `POST /api/projects/{id}/top10-nomination`, `GET /api/admin/top10-nominations`, `POST /api/admin/top10-nominations/{id}/accept` bzw. `/reject` |
+| `Top10AuditEntry`       | ✓      | ✓ (13)    | ✓          | `Top10AuditService` (ein Schreibweg, vier Aufrufer; KAN-45) | ✓ `GET /api/admin/top10-audit`, nur lesend |
 | `Block`                 | ✓      | ✓ (6, 7)  | ✓          | `BlockValidationService` (Validierung, kein CRUD) | eingebettet in `GET /api/projects/{id}` |
 | Auth                    | keine Entity | -   | -          | `AuthService`, `JwtService`, `LoginAttemptService`, `VerificationAttemptService` | ✓ `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` |
 
 Der Admin-Bereich steht seit KAN-25 (Kapitel 12): Dashboard, Nutzerverwaltung
-und Stammdaten-CRUD, dazu die Top-10-Kuratierung aus KAN-24. Offen bleiben dort
-drei Zeilen aus §6.1, jede mit eigenem Ticket: `POST /admin/users/{id}/reset-password`
-(KAN-43), `GET /admin/top10-audit` (KAN-45) sowie `POST /admin/categories/{id}/merge`
-und `POST /admin/projects/status` (KAN-46). Die Security-Regel für alle diese
-Pfade steht als `/api/admin/**` mit `hasRole("ADMIN")` schon lange in
-`SecurityConfig` (siehe Abschnitt 5); für KAN-25 war dort nichts zu ergänzen.
+und Stammdaten-CRUD, dazu die Top-10-Kuratierung aus KAN-24 und das
+Änderungsprotokoll aus KAN-45 (Kapitel 13). Offen bleiben dort zwei Zeilen aus
+§6.1, jede mit eigenem Ticket: `POST /admin/users/{id}/reset-password` (KAN-43)
+sowie `POST /admin/categories/{id}/merge` und `POST /admin/projects/status`
+(KAN-46). Die Security-Regel für alle diese Pfade steht als `/api/admin/**` mit
+`hasRole("ADMIN")` schon lange in `SecurityConfig` (siehe Abschnitt 5); für
+KAN-25 und KAN-45 war dort nichts zu ergänzen.
 
 Die Stammdaten haben zusätzlich einen `DevMasterDataSeeder` (Profil `dev`,
 idempotent): FK1 bis FK5 mit Beispiel-Studiengängen und -Modulen sowie ein Satz
@@ -153,6 +155,7 @@ Liegen unter `backend/src/main/resources/db/migration`, Namensschema
 | 10 | `V202608081410__verification_code.sql` | KAN-26: `verification_code` für die Einmalcodes des Registrierungsflusses (§3.16). `code_hash` statt Klartext, `on delete cascade` auf `app_user`, Check-Constraint `ck_verification_code_purpose` über alle drei Werte aus §2.11 einschließlich `PASSWORD_RESET`, den erst KAN-43 ausstellt. Ein gemeinsamer Index auf `(user_id, purpose)`, weil immer nach beidem zusammen gesucht wird. |
 | 11 | `V202608081524__user_password_change_required.sql` | KAN-28: Spalte `app_user.password_change_required` (`boolean not null default false`) für die erzwungene Passwortänderung (§3.1, §6.7). Der Default bleibt wie bei den Verifizierungs-Flags dauerhaft stehen: `false` ist der Regelzustand jedes selbst registrierten Kontos. |
 | 12 | `V202608081745__stored_file.sql` | KAN-23: `stored_file` für hochgeladene Medien (§3.15). Die Bytes liegen im Objektspeicher (§3.15.1), die Spalte `path` hält nur den anbieterneutralen Schlüssel ohne Container und Endpoint. `project_id` nullable (`null` = Avatar) mit `on delete cascade`; `uploaded_by` kaskadiert bewusst nicht, weil die Person Teil der Rechteprüfung beim Löschen ist (§6.1). Index auf `project_id`. |
+| 13 | `V202608091930__top10_audit_entry.sql` | KAN-45: `top10_audit_entry` für das unveränderliche Änderungsprotokoll der Top-10 (§3.17). Check-Constraint `ck_top10_audit_action` über die drei Werte aus §2.12. `project_id` nullable mit **`on delete set null`**: ein Projekt wird über `DELETE /projects/{id}` wirklich gelöscht, und mit `cascade` verschwänden genau die Zeilen, die festhalten, dass es einmal einen Platz belegt hat. `admin_id` kaskadiert nicht, weil Konten deaktiviert und nicht gelöscht werden (§6.1). Indizes auf beiden Fremdschlüsseln sowie ein zusammengesetzter Index `(timestamp desc, id asc)` für die Standardsortierung des Endpoints (§6.6). |
 
 Aktueller Schemastand laut Flyway: `202608081745`, 12 Migrationen.
 
@@ -754,3 +757,94 @@ Ein vollständiges Löschen eines Kontos auf Betroffenenverlangen bräuchte eine
 Anonymisierung der Autorschaft statt einer Kaskade. Für den Prototyp
 zurückgestellt, in §7 als offener Punkt 9 vermerkt und im Ausblick der Arbeit
 aufzugreifen.
+
+---
+
+## 13. Das Top-10-Änderungsprotokoll
+
+Umgesetzt mit KAN-45 (§2.12, §3.17, `GET /admin/top10-audit`). Die Top-10 ist
+die sichtbarste kuratorische Entscheidung des Portals und wird von einer
+einzigen Rolle ohne Vier-Augen-Prinzip getroffen. Das Protokoll beantwortet
+deshalb eine Frage, die die Statushistorie (§3.12) nicht beantworten kann:
+welcher Platz war wann durch welches Projekt belegt, und wer hat das veranlasst.
+
+### Ein Schreibweg, vier Aufrufer
+
+`Top10AuditService.record` ist die einzige Stelle, an der eine Protokollzeile
+entsteht. Die Methode nimmt **keine Aktion** entgegen, sondern zwei Zustände der
+Liste (vorher, nachher) und bildet die Differenz:
+
+| Projekt | Ergebnis |
+|---------|----------|
+| nur nachher vorhanden | `ADDED` mit `newPosition` |
+| nur vorher vorhanden | `REMOVED` mit `previousPosition` |
+| in beiden, anderer Platz | `REORDERED` mit beiden Positionen |
+| in beiden, gleicher Platz | keine Zeile |
+
+Der Zuschnitt ist die Antwort auf den Satz aus §3.17, verteilte Protokollierung
+führe zuverlässig dazu, dass ein Pfad vergessen wird. Wäre die Aktion ein
+Parameter, müsste jeder Aufrufer sie selbst bestimmen, und `PUT /admin/top10`
+müsste alle drei Fälle nebeneinander behandeln.
+
+Aufgerufen wird `record` von vier Stellen, alle über `Top10Service` gebündelt:
+
+1. `PUT /admin/top10` (`setOrder`): Aufnahme, Entfernung und Umsortierung in
+   einem Zug. Der Vorzustand wird **vor** der Positionsschleife festgehalten,
+   weil diese die Plätze der wiederverwendeten Einträge überschreibt.
+2. die Annahme einer Nominierung (`addAt`): `ADDED`.
+3. der Entzug des Platzes beim Verlassen von `PUBLISHED`
+   (`removeOnLeavingPublished`, gerufen aus `ProjectWorkflowService`):
+   `REMOVED`.
+4. das Löschen eines Projekts, das einen Platz belegt
+   (`removeOnProjectDeletion`, gerufen aus `ProjectWriteService.delete`):
+   `REMOVED`.
+
+Die Wege 3 und 4 sind Entscheidungen aus der Klärungsrunde zu KAN-45 und mit
+Contract v28 in §3.17 nachgetragen. Ohne sie verließe ein Projekt die Liste,
+ohne dass das Protokoll davon wüsste.
+
+### `adminId` heißt „wer es veranlasst hat", nicht „welcher Admin"
+
+Weg 3 wird von der Redaktion ausgelöst, das Feld hält dort also eine Person mit
+der Rolle `EDITOR`. An der Rechtematrix ändert das nichts: kuratieren darf
+weiterhin allein ADMIN, und die Zeile „Top-10-Protokoll lesen" aus §5 liegt als
+`ProjectPermissionService.mayReadTop10Audit` ebenfalls bei ADMIN.
+
+### Das Protokoll ist unveränderlich, und zwar strukturell
+
+Es gibt keinen schreibenden Endpoint, kein `DELETE` und keine Korrekturmethode.
+Durchgesetzt wird das nicht nur durch Verzicht: die Setter von
+`Top10AuditEntry` sind **paketprivat**, und `Top10AuditEntryRepository` führt
+keine Lösch- oder Ändermethode. Außerhalb von `top10` kann niemand eine Zeile
+bauen oder umschreiben.
+
+### Warum der Fremdschlüssel auf `on delete set null` steht
+
+`DELETE /projects/{id}` löscht wirklich (§6.1). Mit `on delete cascade`
+verschwänden genau die Zeilen, die festhalten, dass ein Projekt einmal einen
+Platz belegt hat, und die Zusage „das Protokoll wird nie gelöscht" wäre nicht zu
+halten. Ältere Zeilen verlieren beim Löschen also nur ihren Verweis.
+
+Die Zeile aus Weg 4 entsteht dagegen von Anfang an **ohne** Projektverweis. Zwei
+Gründe, die in dieselbe Richtung zeigen: der Verweis wäre mit demselben Vorgang
+wieder leer, und eine frisch geschriebene Zeile, die auf ein zum Löschen
+vorgemerktes Projekt zeigt, lässt Hibernate beim Flush nicht durch
+(`TransientObjectException`, der Endpoint endete in einem 500). Ein
+Titel-Schnappschuss ist bewusst nicht mitgeschrieben worden: er führte eine
+Angabe, die niemand mehr prüfen kann.
+
+### Sortierung: der Gleichstandsbrecher ist hier der Regelfall
+
+Alle Zeilen eines `PUT /admin/top10` tragen denselben Zeitstempel; sie gehören
+zu einer Entscheidung. Sortierbar ist deshalb ausschließlich `timestamp`
+(Positivliste wie im `ProjectReadService`), Standard ist `timestamp,desc`, und
+`id,asc` hängt immer an. Ohne ihn erschiene beim Blättern dieselbe Zeile auf
+zwei Seiten und eine andere auf keiner. Die Migration legt dafür den
+zusammengesetzten Index `(timestamp desc, id asc)` an.
+
+### Grenze, bewusst getragen
+
+Ein gelöschtes Projekt ist im Protokoll nicht mehr benennbar, nur noch als
+freigewordener Platz erkennbar. Das ist der Preis dafür, keine Angabe zu
+führen, die niemand mehr gegen die Wirklichkeit prüfen kann; die Oberfläche
+zeigt solche Zeilen als „Projekt gelöscht" (KAN-40).

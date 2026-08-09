@@ -230,9 +230,14 @@ public class Top10NominationService {
 		Project project = nomination.getProject();
 		requirePublished(project);
 
-		top10Service.addAt(project, request.position());
+		// Einmal aufgeloest und an beide Schritte weitergegeben: die Entscheidung
+		// an der Nominierung und der Protokolleintrag zur Aufnahme (§3.17) nennen
+		// dieselbe Person, und ein zweiter Ladevorgang koennte das nur
+		// auseinanderlaufen lassen.
+		User admin = currentUser(user);
+		top10Service.addAt(project, request.position(), admin);
 
-		return decide(nomination, user, NominationStatus.ACCEPTED);
+		return decide(nomination, admin, NominationStatus.ACCEPTED);
 	}
 
 	// ------------------------------------------------------------------
@@ -263,7 +268,7 @@ public class Top10NominationService {
 		requireCurator(user);
 		requirePending(nomination);
 
-		return decide(nomination, user, NominationStatus.REJECTED);
+		return decide(nomination, currentUser(user), NominationStatus.REJECTED);
 	}
 
 	// ------------------------------------------------------------------
@@ -274,11 +279,11 @@ public class Top10NominationService {
 	 * Schreibt die Entscheidung an die Nominierung. Beide Wege, Annahme wie
 	 * Ablehnung, setzen dieselben drei Felder; nur der Wert unterscheidet sich.
 	 */
-	private Top10NominationResponse decide(Top10Nomination nomination, AuthenticatedUser user,
+	private Top10NominationResponse decide(Top10Nomination nomination, User admin,
 			NominationStatus decision) {
 
 		nomination.setStatus(decision);
-		nomination.setDecidedBy(currentUser(user));
+		nomination.setDecidedBy(admin);
 		nomination.setDecidedAt(Instant.now());
 
 		return toResponse(nominationRepository.saveAndFlush(nomination));
