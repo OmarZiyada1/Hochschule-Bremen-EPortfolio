@@ -3,7 +3,7 @@ package de.hsbremen.eportfolio.common.error;
 /**
  * Fehlercodes fuer das Envelope aus API-Contract §6.2.
  *
- * <p>Stand Contract v27 steht jede Konstante dieser Klasse auch in §6.2.
+ * <p>Stand Contract v29 steht jede Konstante dieser Klasse auch in §6.2.
  * {@link #VALIDATION_FAILED} war bis v14 nur hier gefuehrt und wurde mit v15
  * nachgetragen (Tabelle „Fehlercodes Anfrageformat", Historieneintrag in §10).
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
@@ -31,6 +31,10 @@ package de.hsbremen.eportfolio.common.error;
  * {@link #NOMINATION_ALREADY_DECIDED}. §3.11.1 verlangte fuer beide Faelle einen
  * 409, ohne einen Code zu nennen, und keiner der bis dahin gefuehrten 409er
  * beschreibt sie.
+ *
+ * <p>Ebenso neu entstanden ist {@link #INTERNAL_ERROR} mit KAN-55 (Contract
+ * v29): bis dahin fuehrte §6.2 ueberhaupt keinen Code fuer den unerwarteten
+ * Serverfehler, und ein 500 lief an dem einen Fehlerformat vorbei.
  */
 public final class ErrorCodes {
 
@@ -326,6 +330,33 @@ public final class ErrorCodes {
 	 * <p>Vergeben mit KAN-24, nachgetragen in §6.2 mit Contract v23.
 	 */
 	public static final String NOMINATION_ALREADY_DECIDED = "NOMINATION_ALREADY_DECIDED";
+
+	/**
+	 * 500: unerwarteter Serverfehler. Die Anfrage war in Ordnung, die
+	 * Verarbeitung ist gescheitert (§6.2, §6.3). Aufgefallen bei KAN-23: eine
+	 * {@code FileStorageException} lief bis zum Servlet-Container durch, und die
+	 * Antwort war der Standardkoerper des Rahmenwerks ohne {@code errorCode}.
+	 *
+	 * <p><strong>Ein einziger Code fuer jede Ursache, und das ist Absicht.</strong>
+	 * Ein nicht erreichbarer Objektspeicher, ein Fehler im Anwendungscode und eine
+	 * gerissene Datenbankverbindung verlangen vom Client dasselbe, naemlich
+	 * spaeter erneut zu versuchen und den Fehler zu melden. Ein eigener Code je
+	 * Ursache (etwa {@code STORAGE_UNAVAILABLE}) waere die Zusage, dass er die
+	 * Unterscheidung auswerten kann, und die gibt es nicht.
+	 *
+	 * <p><strong>Die Meldung bleibt generisch.</strong> Ausnahmetexte nennen
+	 * Klassen, Pfade und bei Speicherfehlern den Schluessel; nichts davon gehoert
+	 * in eine Response. Was zur Fehlersuche noetig ist, steht im Protokoll: der
+	 * {@code GlobalExceptionHandler} schreibt jede solche Ausnahme mit Stacktrace
+	 * ins Log.
+	 *
+	 * <p>Denselben Code tragen auch die wenigen Rahmenfehler, die schon selbst
+	 * einen 5xx-Status mitbringen (etwa eine fehlende Pfadvariable in einer
+	 * Controller-Signatur). Rahmenfehler mit 4xx behalten dagegen ihren Status
+	 * und laufen ueber {@link #VALIDATION_FAILED} beziehungsweise
+	 * {@link #RESOURCE_NOT_FOUND}.
+	 */
+	public static final String INTERNAL_ERROR = "INTERNAL_ERROR";
 
 	private ErrorCodes() {
 		// Nur Konstanten.
