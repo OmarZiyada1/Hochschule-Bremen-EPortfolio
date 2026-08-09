@@ -312,6 +312,69 @@ $b = New-Object byte[] 64
 müssen ersetzt werden. Achtung bei `POSTGRES_PASSWORD`: siehe Abschnitt 8, das
 Passwort steckt nach dem ersten Start im Volume fest.
 
+### PROD-Werte beschaffen (KAN-54)
+
+Die acht Werte des zweiten Blocks stammen aus zwei Fremddiensten. Echte Werte
+gehören ausschließlich in die lokale `.env` beziehungsweise die Umgebung des
+Prozesses, niemals in dieses Dokument, ins Repository oder in ein Ticket.
+
+**Azure-Speicherkonto** (für `AZURE_STORAGE_CONTAINER` und
+`AZURE_STORAGE_CONNECTION_STRING`):
+
+1. Speicherkonto anlegen (Portal oder `az storage account create`):
+   Typ StorageV2, Redundanz Standard_LRS genügt, und zwingend
+   **„Anonymen Blob-Zugriff zulassen" deaktiviert**. Zur Region: manche
+   Abonnements (etwa Azure for Students) lassen nur bestimmte Regionen zu;
+   ein Verstoß scheitert mit `RequestDisallowedByAzure`, die erlaubte Liste
+   nennt `az policy assignment list --disable-scope-strict-match`.
+2. Darin einen Container anlegen, Zugriffsebene **privat** (der Standard).
+   Sein Name ist der Wert für `AZURE_STORAGE_CONTAINER`.
+3. Die Verbindungszeichenfolge steht im Portal unter Speicherkonto >
+   Sicherheit + Netzwerk > Zugriffsschlüssel (oder
+   `az storage account show-connection-string`). Sie enthält den
+   Kontoschlüssel und ist damit ein Geheimnis.
+
+**SMTP-Relay** (für die fünf `MAIL_*`-Werte und `APP_BASE_URL`): jeder
+Anbieter, der authentifiziertes SMTP mit STARTTLS anbietet; im Projekt wird
+ein Postfach eines gewöhnlichen Mail-Hosters verwendet. `MAIL_HOST` nennt der
+Anbieter, `MAIL_USERNAME` ist die Postfachadresse, `MAIL_FROM_ADDRESS` muss
+zur Domain des Relays passen, sonst weist es den Versand ab.
+**`MAIL_PORT` muss der STARTTLS-Port sein, üblicherweise 587.** Die Anwendung
+erzwingt STARTTLS (`application-prod.yml`); gegen den SMTPS-Port 465, der TLS
+ab dem ersten Byte erwartet, kommt keine Verbindung zustande und die
+Gesundheitsprüfung meldet `mail DOWN`. `APP_BASE_URL` ist die öffentliche
+Adresse des Frontends, für einen lokalen PROD-Lauf also
+`http://localhost:5373`, ohne abschließenden Schrägstrich: sie ist die Basis
+der Links in den Verifizierungsmails.
+
+### Prüfen, dass die PROD-Werte greifen
+
+Der Reihe nach, jeder Schritt setzt den vorherigen voraus:
+
+1. **Start und Startprotokoll.** `docker compose -f compose.base.yml -f
+   compose.prod.yml up -d --build`, dann `... logs backend`. Erwartet sind
+   die beiden Zeilen des `ConfigurationStartupLogger`: `Speicher-Adapter=azure`
+   mit Kontoname und Container (aus der Verbindungszeichenfolge wird nur der
+   Kontoname gelöst, nie der Schlüssel) und `Mail-Adapter=smtp` mit dem
+   Absender. Fehlt ein Pflichtwert, bricht der Start ab und nennt ihn
+   (Abschnitt 9).
+2. **Gesundheit.** `curl http://localhost:8280/actuator/health` muss
+   innerhalb weniger Sekunden `"db":{"status":"UP"}` und
+   `"mail":{"status":"UP"}` liefern. `mail DOWN` nennt in `details` die
+   Ursache; der häufigste Fall ist der falsche Port (465 statt 587).
+3. **Mailversand.** Eine Registrierung über `POST /api/auth/register` mit
+   echten, erreichbaren Adressen; beide Codes müssen zugestellt werden, die
+   Bestätigung über `POST /api/auth/verify` setzt das Konto auf `ACTIVE`.
+4. **Speicher.** Nach Login ein Upload über `POST /api/files` und der Abruf
+   über `GET /api/files/{id}`: gleicher Inhalt, korrekter `Content-Type`.
+5. **Gegenprobe Zugriffsebene.** Die direkte Blob-URL
+   (`https://<kontoname>.blob.core.windows.net/<container>/<schlüssel>`, der
+   Schlüssel steht in der Spalte `path` der Tabelle `file`) muss **ohne**
+   Signatur scheitern, erwartet ist 409 `PublicAccessNotPermitted`. Diese
+   Probe gehört dazu, weil eine versehentlich öffentliche Zugriffsebene von
+   der Anwendung aus nicht auffällt: ausgeliefert wird immer über
+   `GET /api/files/{id}` (§3.15.1).
+
 ---
 
 ## 4. Backend starten
@@ -613,6 +676,16 @@ darauf schlägt die Prüfung an.
 
 Wer das Profil nicht braucht: `SPRING_PROFILES_ACTIVE` nicht setzen, dann läuft
 `dev` und keine dieser Variablen wird gebraucht.
+
+### PROD: `mail DOWN` trotz korrekter Zugangsdaten
+
+`/actuator/health` meldet nach gut fünf Sekunden `"mail":{"status":"DOWN"}`
+mit einer `MessagingException` in den Details. Häufigste Ursache:
+`MAIL_PORT=465`. Das ist der SMTPS-Port, der TLS ab dem ersten Byte erwartet;
+die Anwendung erzwingt aber STARTTLS auf einer zunächst unverschlüsselten
+Verbindung (`application-prod.yml`). Richtig ist der STARTTLS-Port des
+Anbieters, üblicherweise **587**. Danach Betriebsart PROD neu starten, ein
+Neuladen der `.env` ohne Neustart gibt es nicht.
 
 ### Port 8080 ist belegt
 
