@@ -36,6 +36,13 @@ public interface Top10NominationRepository extends JpaRepository<Top10Nomination
 	boolean existsByProjectIdAndStatus(UUID projectId, NominationStatus status);
 
 	/**
+	 * Kennzahl {@code openNominations} des Admin-Dashboards (§6.1): die
+	 * Vorschlaege, ueber die noch zu entscheiden ist, also {@code PENDING}
+	 * (§2.8).
+	 */
+	long countByStatus(NominationStatus status);
+
+	/**
 	 * Die offenen Nominierungen zu einer Menge von Projekten, fuer den Fall, dass
 	 * der Admin ein Projekt ueber {@code PUT /api/admin/top10} direkt aufnimmt und
 	 * die dazu vorliegenden Vorschlaege damit entschieden sind.

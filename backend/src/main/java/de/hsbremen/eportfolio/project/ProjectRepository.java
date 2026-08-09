@@ -97,4 +97,34 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, JpaSpec
 			+ "and p.status = :status")
 	List<Project> findByParticipationAndStatus(@Param("userId") UUID userId,
 			@Param("status") ProjectStatus status);
+
+	/**
+	 * Kennzahl {@code projectsByStatus} des Admin-Dashboards (§6.1), ueber alle
+	 * Projekte und ohne Sichtbarkeitsschranke: das Dashboard sieht nur ADMIN, und
+	 * §5 gibt dieser Rolle jedes Projekt in jedem Status frei.
+	 *
+	 * <p>Eine Abfrage mit {@code group by} statt eines {@code countByStatus} je
+	 * Enum-Wert, siehe {@link ProjectStatusCount}.
+	 */
+	@Query("select new de.hsbremen.eportfolio.project.ProjectStatusCount(p.status, count(p)) "
+			+ "from Project p group by p.status")
+	List<ProjectStatusCount> countPerStatus();
+
+	// ------------------------------------------------------------------
+	// Referenzpruefungen fuer das Loeschen von Stammdaten (§6.1, KAN-25)
+	//
+	// Ein DELETE auf eine noch referenzierte Stammdaten-Zeile ergibt 409
+	// RESOURCE_IN_USE; andernfalls verloeren die betroffenen Projekte ihre
+	// Klassifikation ohne Vorwarnung. Bewusst vier einzelne Methoden und keine
+	// gemeinsame: alle vier Spalten sind nullable, ein Projekt kann also an
+	// keiner, einer oder allen vier Zeilen haengen.
+	// ------------------------------------------------------------------
+
+	boolean existsByCategoryId(UUID categoryId);
+
+	boolean existsByFacultyId(UUID facultyId);
+
+	boolean existsByStudyProgramId(UUID studyProgramId);
+
+	boolean existsByModuleId(UUID moduleId);
 }

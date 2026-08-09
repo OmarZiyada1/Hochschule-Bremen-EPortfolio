@@ -26,4 +26,19 @@ public interface CategoryRepository extends JpaRepository<Category, UUID> {
 	 * nichts doppelt anlegt.
 	 */
 	Optional<Category> findByName(String name);
+
+	/**
+	 * Ist dieser Name schon an eine <em>andere</em> Zeile vergeben (§6.1,
+	 * KAN-25)? Ergibt beim Anlegen und Aendern 409 {@code RESOURCE_IN_USE}.
+	 *
+	 * <p>Verglichen wird exakt und nicht ohne Ruecksicht auf Gross- und
+	 * Kleinschreibung, weil genau so auch der Unique-Index der Tabelle vergleicht.
+	 * Eine strengere Pruefung wuerde einen Namen abweisen, den die Datenbank
+	 * annehmen wuerde, und die Meldung „bereits vergeben" waere dann nachweislich
+	 * falsch.
+	 *
+	 * <p>Beim Anlegen steht in {@code id} eine zufaellige UUID, die es nicht gibt;
+	 * die Ausnahme greift dann fuer keine Zeile.
+	 */
+	boolean existsByNameAndIdNot(String name, UUID id);
 }
