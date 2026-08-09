@@ -1,0 +1,121 @@
+# Statische Analyse mit SonarQube Cloud.
+#
+# Analysiert wird ausschliesslich das Maven-Modul unter backend/: das ist die
+# einzige pom.xml des Repositories. Das Frontend bleibt aussen vor, es liegt
+# noch auf Branch KAN-6 und braucht eine eigene Analysekette (Node statt Maven).
+#
+# Einmalig einzurichten unter Settings > Secrets and variables > Actions:
+#   SONAR_TOKEN   Analyse-Token aus SonarQube Cloud (My Account > Security)
+# GITHUB_TOKEN stellt Actions selbst bereit; SonarQube braucht es, um die
+# Befunde als Kommentar an den Pull Request zu haengen.
+
+name: SonarQube Analysis
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Ein neuer Push auf denselben Branch beendet den noch laufenden Lauf. Ohne das
+# stauen sich bei mehreren Commits hintereinander Analysen, die alle denselben
+# Branch bewerten und einander ueberholen.
+concurrency:
+  group: sonarqube-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sonarqube:
+    runs-on: ubuntu-latest
+
+    # Die Tests laufen laut Projektregel 8 gegen eine echte PostgreSQL 16 und
+    # nicht gegen H2 oder Testcontainers. Dieser Dienstcontainer ist das
+    # CI-Gegenstueck zu:
+    #   docker compose -f compose.base.yml -f compose.dev.yml up -d
+    # Die Zugangsdaten sind Wegwerfwerte fuer die Dauer des Laufs, deshalb
+    # stehen sie im Klartext und nicht in den Secrets.
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_DB: eportfolio
+          POSTGRES_USER: eportfolio
+          POSTGRES_PASSWORD: eportfolio
+        ports:
+          - 5432:5432
+        # Ohne diese Pruefung startet Maven, bevor Postgres seine
+        # Initialisierung abgeschlossen hat, und Flyway laeuft ins Leere.
+        options: >-
+          --health-cmd "pg_isready -U eportfolio -d eportfolio"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    steps:
+      - name: Quellcode auschecken
+        uses: actions/checkout@v4
+        with:
+          # SonarQube ordnet neue Befunde ueber git blame einem Autor und einem
+          # Datum zu. Mit der Voreinstellung (Tiefe 1) gaebe es keine Historie,
+          # und jede Zeile der Datenbank gaelte als heute geaendert.
+          fetch-depth: 0
+
+      - name: JDK 21 einrichten
+        uses: actions/setup-java@v4
+        with:
+          # 21 und nicht 17: backend/pom.xml setzt java.version auf 21, und
+          # Spring Boot 3.5 laeuft ohnehin erst ab 17. Mit 17 scheitert schon
+          # der Uebersetzungslauf.
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: SonarQube-Cache wiederverwenden
+        uses: actions/cache@v4
+        with:
+          # Der Scanner laedt seine Analysatoren beim ersten Lauf herunter.
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Bauen, testen und analysieren
+        working-directory: backend
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+          # Zugang zum Dienstcontainer von oben. Gelesen wird das von
+          # application-dev.yml: ohne gesetztes SPRING_PROFILES_ACTIVE laufen
+          # die Tests im Profil dev (spring.profiles.default in application.yml).
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: '5432'
+          POSTGRES_DB: eportfolio
+          POSTGRES_USER: eportfolio
+          POSTGRES_PASSWORD: eportfolio
+
+          # Wegwerfschluessel fuer diesen einen Lauf, deshalb kein Secret. Die
+          # Bindestriche sind Absicht: der Wert ist damit kein gueltiges Base64,
+          # JwtService faellt auf die Rohbytes zurueck (siehe deriveKey) und
+          # kommt so ueber die 64-Byte-Grenze von HS512.
+          JWT_SECRET: ci-only-secret-fuer-github-actions-nicht-fuer-produktion-verwenden-0123456789
+        run: |
+          # Der Wrapper ist im Index als 100644 abgelegt (angelegt unter
+          # Windows). Ohne das Ausfuehrungsrecht bricht ./mvnw hier mit
+          # "Permission denied" ab.
+          chmod +x ./mvnw
+
+          # JaCoCo wird direkt von der Kommandozeile aufgerufen statt in der
+          # pom.xml eingetragen: so bleibt der Build unveraendert (Projektregel
+          # 9, keine neuen Abhaengigkeiten ohne Ruecksprache). prepare-agent
+          # setzt argLine fuer Surefire, report schreibt
+          # target/site/jacoco/jacoco.xml, und genau dort sucht der
+          # Sonar-Scanner die Abdeckung von sich aus.
+          ./mvnw -B -ntp clean \
+            org.jacoco:jacoco-maven-plugin:0.8.12:prepare-agent \
+            verify \
+            org.jacoco:jacoco-maven-plugin:0.8.12:report \
+            sonar:sonar \
+            -Dsonar.projectKey=OmarZiyada1_Hochschule-Bremen-EPortfolio \
+            -Dsonar.organization=omarziyada1 \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.token=$SONAR_TOKEN
