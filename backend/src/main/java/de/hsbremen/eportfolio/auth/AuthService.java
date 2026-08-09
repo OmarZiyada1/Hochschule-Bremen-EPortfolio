@@ -3,6 +3,7 @@ package de.hsbremen.eportfolio.auth;
 import de.hsbremen.eportfolio.auth.dto.LoginRequest;
 import de.hsbremen.eportfolio.auth.dto.LoginResponse;
 import de.hsbremen.eportfolio.auth.dto.PasswordChangeRequest;
+import de.hsbremen.eportfolio.auth.dto.ProfileUpdateRequest;
 import de.hsbremen.eportfolio.auth.dto.UserResponse;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
 import de.hsbremen.eportfolio.user.User;
@@ -148,6 +149,28 @@ public class AuthService {
 		user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
 		user.setPasswordChangeRequired(false);
 		userRepository.save(user);
+	}
+
+	/**
+	 * Aendert Vor- und Nachnamen der angemeldeten Person (§6.1, KAN-44).
+	 *
+	 * <p>Mehr als die beiden Namensfelder aendert die Methode nicht, und zwar
+	 * strukturell: {@link ProfileUpdateRequest} kennt keine weiteren Felder.
+	 * Die private E-Mail ist die Login-Identitaet und bleibt hier unantastbar
+	 * (§3.1.1, offener Punkt in §7); Rolle und Status vergibt die
+	 * Administration (§5).
+	 *
+	 * @param userId ID aus dem SecurityContext, nie aus dem Request-Body
+	 * @return der aktualisierte Stand in der Form von {@code GET /auth/me}
+	 */
+	@Transactional
+	public UserResponse updateProfile(UUID userId, ProfileUpdateRequest request) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(LoginFailedException::new);
+
+		user.setFirstName(request.firstName());
+		user.setLastName(request.lastName());
+		return UserResponse.from(userRepository.save(user));
 	}
 
 	private static String messageFor(UserStatus status) {

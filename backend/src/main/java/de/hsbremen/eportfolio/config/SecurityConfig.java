@@ -181,6 +181,13 @@ public class SecurityConfig {
 					// fallen unter authenticated(). Ob ein Aufrufer die Datei
 					// tatsaechlich zu sehen bekommt, entscheidet der
 					// FileService am Projektstatus, nicht die Filterkette.
+					// GET /api/users/lookup (KAN-44) steht bewusst nicht hier:
+					// §6.1 verlangt eine gueltige Anmeldung, ohne Token 401
+					// NOT_AUTHENTICATED. Eine oeffentliche Personensuche ueber
+					// alle Konten waere etwas anderes als eine Auswahlhilfe
+					// fuer angemeldete Autor:innen. Eine Rollenregel braucht
+					// der Pfad nicht, schon Studierende nutzen ihn fuer die
+					// Redaktionszuweisung (§5, Fussnote 3).
 					.requestMatchers(HttpMethod.GET,
 							"/api/projects", "/api/projects/*",
 							"/api/projects/*/blocks",

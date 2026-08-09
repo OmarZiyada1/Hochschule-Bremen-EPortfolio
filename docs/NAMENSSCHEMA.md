@@ -322,6 +322,10 @@ Sortierbare Felder bei `GET /projects`: `title`, `semester`, `status`,
 | `EMailAdressen` | `EmailAddresses` |
 | `ausgestellterCode` · `klartextCode` | `IssuedCode` · `plainCode` |
 | `gewaehlteRolle` | `selectedRole` |
+| `ProfilAendernAnfrage` | `ProfileUpdateRequest` |
+| `NutzerAuswahlAntwort` | `UserLookupResponse` |
+| `NutzerAuswahlService` · `NutzerAuswahlController` | `UserLookupService` · `UserLookupController` |
+| `NutzerAuswahlSpezifikationen` | `UserLookupSpecifications` |
 
 `DatabaseUserDetailsService` heißt nicht `UserDetailsService`, weil Spring
 Security ein Interface dieses Namens mitbringt, das die Klasse implementiert.
