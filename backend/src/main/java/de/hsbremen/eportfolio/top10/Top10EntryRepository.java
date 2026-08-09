@@ -44,11 +44,18 @@ public interface Top10EntryRepository extends JpaRepository<Top10Entry, UUID> {
 	@EntityGraph(attributePaths = {"project"})
 	List<Top10Entry> findAllByOrderByPositionAsc();
 
+	/**
+	 * Der Platz eines Projekts, sofern es einen belegt.
+	 *
+	 * <p>Seit KAN-45 auch der Weg, auf dem ein Platz <em>freigegeben</em> wird
+	 * ({@code Top10Service.releaseSeat}). Ein {@code deleteByProjectId} stand hier
+	 * bis dahin und ist entfallen: das Protokoll muss den Platz kennen, den das
+	 * Projekt gerade verliert (§3.17), und ein Loeschen nach Fremdschluessel
+	 * liefert ihn nicht.
+	 */
 	Optional<Top10Entry> findByProjectId(UUID projectId);
 
 	boolean existsByProjectId(UUID projectId);
 
 	boolean existsByPosition(int position);
-
-	void deleteByProjectId(UUID projectId);
 }

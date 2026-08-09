@@ -3,7 +3,7 @@ package de.hsbremen.eportfolio.common.error;
 /**
  * Fehlercodes fuer das Envelope aus API-Contract §6.2.
  *
- * <p>Stand Contract v27 steht jede Konstante dieser Klasse auch in §6.2.
+ * <p>Stand Contract v28 steht jede Konstante dieser Klasse auch in §6.2.
  * {@link #VALIDATION_FAILED} war bis v14 nur hier gefuehrt und wurde mit v15
  * nachgetragen (Tabelle „Fehlercodes Anfrageformat", Historieneintrag in §10).
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
@@ -24,7 +24,10 @@ package de.hsbremen.eportfolio.common.error;
  * Signaturpruefung ergaenzt, der Code blieb derselbe. Ebenso KAN-25: die
  * Administrationsseite kommt mit den vorhandenen Codes aus, {@link #RESOURCE_IN_USE}
  * traegt dort mit der noch referenzierten Stammdaten-Zeile den dritten
- * Ausloeser, den §6.2 fuer ihn seit jeher nennt.
+ * Ausloeser, den §6.2 fuer ihn seit jeher nennt. Ebenso KAN-45: das
+ * Top-10-Protokoll kommt mit {@link #NO_PERMISSION} und
+ * {@link #VALIDATION_FAILED} aus, weil es nur gelesen wird und keinen Zustand
+ * hat, mit dem eine Anfrage in Konflikt geraten koennte (Contract v28).
  *
  * <p>Zwei Codes sind dagegen mit KAN-24 <em>neu entstanden</em> und deshalb in
  * §6.2 nachgetragen worden (Contract v23): {@link #PROJECT_NOT_PUBLISHED} und

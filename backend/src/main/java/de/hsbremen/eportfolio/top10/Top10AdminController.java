@@ -1,8 +1,10 @@
 package de.hsbremen.eportfolio.top10;
 
 import de.hsbremen.eportfolio.auth.AuthenticatedUser;
+import de.hsbremen.eportfolio.common.dto.PageResponse;
 import de.hsbremen.eportfolio.common.enums.NominationStatus;
 import de.hsbremen.eportfolio.top10.dto.Top10AcceptRequest;
+import de.hsbremen.eportfolio.top10.dto.Top10AuditEntryResponse;
 import de.hsbremen.eportfolio.top10.dto.Top10EntryResponse;
 import de.hsbremen.eportfolio.top10.dto.Top10NominationResponse;
 import de.hsbremen.eportfolio.top10.dto.Top10OrderRequest;
@@ -11,8 +13,13 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,8 +31,17 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Die vier Top-10-Zeilen des Admin-Bereichs aus API-Contract §6.1 (KAN-24):
- * Protokoll lesen, Nominierung annehmen oder ablehnen, Reihenfolge setzen.
+ * Die fuenf Top-10-Zeilen des Admin-Bereichs aus API-Contract §6.1:
+ * Nominierungen lesen, annehmen oder ablehnen und die Reihenfolge setzen
+ * (KAN-24), dazu das Aenderungsprotokoll der Kuratierung (KAN-45).
+ *
+ * <p><strong>Zwei Protokolle, nicht zu verwechseln.</strong>
+ * {@code GET /top10-nominations} liefert das Protokoll der <em>Vorschlaege</em>
+ * (§3.11), {@code GET /top10-audit} das der <em>Aenderungen an der Liste</em>
+ * (§3.17). Das erste beantwortet „welche Projekte waren im Gespraech und wie
+ * wurde entschieden", das zweite „wer hat wann welches Projekt aufgenommen,
+ * entfernt oder umsortiert". Nur das zweite ist paginiert, weil nur es
+ * unbegrenzt waechst.
  *
  * <p><strong>Die Rollenebene liegt in der Filterkette.</strong>
  * {@code SecurityConfig} fuehrt {@code /api/admin/**} mit
@@ -53,10 +69,14 @@ public class Top10AdminController {
 
 	private final Top10NominationService nominationService;
 
+	private final Top10AuditService auditService;
+
 	public Top10AdminController(Top10Service top10Service,
-			Top10NominationService nominationService) {
+			Top10NominationService nominationService,
+			Top10AuditService auditService) {
 		this.top10Service = top10Service;
 		this.nominationService = nominationService;
+		this.auditService = auditService;
 	}
 
 	// ------------------------------------------------------------------
@@ -167,5 +187,49 @@ public class Top10AdminController {
 			@RequestBody @Valid Top10OrderRequest request) {
 
 		return top10Service.setOrder(user, request);
+	}
+
+	// ------------------------------------------------------------------
+	// GET /api/admin/top10-audit
+	// ------------------------------------------------------------------
+
+	@Operation(summary = "Aenderungsprotokoll lesen",
+			description = "Wer wann welches Projekt aufgenommen, entfernt oder umsortiert hat "
+					+ "(§3.17), im Seitenformat aus §6.6 und ohne \"sort\" nach timestamp "
+					+ "absteigend. Sortierbar ist ausschliesslich timestamp; jedes andere Feld "
+					+ "ergibt 400. Eine Umsortierung schreibt eine Zeile je bewegtem Projekt, "
+					+ "ein unveraenderter Platz keine. Protokolliert werden auch die beiden "
+					+ "Wege, auf denen ein Platz ohne Entscheidung der Administration frei "
+					+ "wird: das Projekt verlaesst PUBLISHED oder es wird geloescht. Das "
+					+ "Protokoll ist unveraenderlich, es gibt weder einen Schreib- noch einen "
+					+ "Loeschweg.")
+	@ApiResponse(responseCode = "200", description = "Eine Seite des Protokolls.")
+	@ApiResponse(responseCode = "400", description = "VALIDATION_FAILED: unbekanntes Sortierfeld, "
+			+ "\"from\" liegt nach \"to\", oder ein Parameter hat nicht das erwartete Format "
+			+ "(Zeitpunkt bzw. UUID).")
+	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
+	@ApiResponse(responseCode = "403", description = "NO_PERMISSION: die Rolle ist nicht ADMIN.")
+	@GetMapping("/top10-audit")
+	public PageResponse<Top10AuditEntryResponse> audit(
+			@AuthenticationPrincipal AuthenticatedUser user,
+
+			@Parameter(description = "Filter: fruehester beruecksichtigter Zeitpunkt, Grenze "
+					+ "eingeschlossen. ISO-8601 UTC (§1), z. B. 2026-08-01T00:00:00Z.",
+					example = "2026-08-01T00:00:00Z")
+			@RequestParam(name = "from", required = false) Instant from,
+
+			@Parameter(description = "Filter: spaetester beruecksichtigter Zeitpunkt, Grenze "
+					+ "eingeschlossen.", example = "2026-08-31T21:59:59Z")
+			@RequestParam(name = "to", required = false) Instant to,
+
+			@Parameter(description = "Filter: Konto der handelnden Person. Beim automatischen "
+					+ "Entzug eines Platzes ist das nicht zwingend ein Admin (§3.17).")
+			@RequestParam(name = "admin", required = false) UUID admin,
+
+			@ParameterObject
+			@PageableDefault(size = 20, sort = "timestamp", direction = Sort.Direction.DESC)
+			Pageable pageable) {
+
+		return auditService.list(user, from, to, admin, pageable);
 	}
 }
