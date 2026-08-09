@@ -670,8 +670,8 @@ gemeinsamen Zähler aus Abschnitt 5 in den Ausblick.
 
 ## 12. Die Administrationsseite
 
-Stand KAN-25, Contract §6.1 (Abschnitt „Administration"), §6.6 und §3.1. Der
-Bereich heißt durchgehend **Administrationsseite**, nie Cockpit.
+Stand KAN-25 und KAN-46, Contract §6.1 (Abschnitt „Administration"), §6.6 und
+§3.1. Der Bereich heißt durchgehend **Administrationsseite**, nie Cockpit.
 
 ### Der Schnitt liegt quer, und das ist begründet
 
@@ -680,8 +680,9 @@ Die Endpoints unter `/api/admin` liegen bewusst **nicht** alle in einem Paket:
 | Endpoint-Gruppe | Paket | Warum dort |
 |-----------------|-------|------------|
 | `GET /admin/dashboard`, `/admin/users/**` | `admin` | siehe unten |
-| `POST`/`PATCH`/`DELETE` auf `/admin/categories`, `/admin/faculties`, `/admin/study-programs`, `/admin/modules` | `masterdata` | arbeitet auf den Entities dieses Features, wie der Lesedienst daneben |
+| `POST`/`PATCH`/`DELETE` auf `/admin/categories`, `/admin/faculties`, `/admin/study-programs`, `/admin/modules`, dazu `POST /admin/categories/{id}/merge` | `masterdata` | arbeitet auf den Entities dieses Features, wie der Lesedienst daneben |
 | `/admin/top10-nominations/**`, `PUT /admin/top10` | `top10` | dasselbe, seit KAN-24 |
+| `POST /admin/projects/status` | `project` | dasselbe, seit KAN-46: der Endpoint bewegt Projekte durch den Zustandsautomaten und ruft dafür den `ProjectWorkflowService` |
 
 Das gemeinsame Merkmal dieser Endpoints ist ihr Pfadpräfix und die Regel in
 `SecurityConfig`, nicht ihr Gegenstand. Sie nach Zielgruppe zusammenzulegen
@@ -747,6 +748,58 @@ einen 500 statt der Auskunft, was im Weg steht.
 
 Abgegrenzt davon: eine unbekannte ID im **Body** (etwa `facultyId`) ergibt 400
 `VALIDATION_FAILED`, nur die unbekannte ID im **Pfad** ergibt 404 (§6.3.1).
+
+### Zusammenführen von Kategorien: der dritte Weg
+
+Umgesetzt mit KAN-46 (`POST /admin/categories/{id}/merge`, Contract §6.1).
+Die Löschsperre oben hat eine Kehrseite: eine versehentlich doppelt angelegte
+Kategorie, an der schon Projekte hängen, ließ sich bis dahin überhaupt nicht
+mehr loswerden. Löschen ist gesperrt, und umhängen konnte man die Projekte
+nirgends. Das Zusammenführen schließt genau diese Lücke; es hängt alle Projekte
+der Quelle an das Ziel und löscht danach die Quelle, beides in einem Vorgang,
+weil es zwischen den zwei Schritten keinen Endpoint gibt, mit dem sich der erste
+ausführen ließe.
+
+Zwei Festlegungen dazu (Contract v32):
+
+- **Veröffentlichte Projekte gehen mit.** §4.1 sperrt die *Inhaltsbearbeitung*
+  außerhalb von `DRAFT` und `REVISION`, gerichtet an `PUT /projects/{id}` und
+  `PUT /projects/{id}/blocks`. Hier räumt die Administration Stammdaten auf.
+  Wären veröffentlichte Projekte ausgenommen, bliebe die Quelle referenziert und
+  der Endpoint träfe genau die Fälle nicht, für die es ihn gibt.
+- **Die Zeilen werden geladen und einzeln geschrieben**, kein Massen-`UPDATE` in
+  JPQL. Nur so wandern `version` und `updatedAt` mit, und ein gleichzeitig
+  geöffneter Editor läuft in 409 `PROJECT_VERSION_CONFLICT`, statt die alte
+  Kategorie stillschweigend zurückzuschreiben (§6.4). Der Preis ist bekannt: die
+  betroffenen Projekte rücken in der nach `updatedAt` sortierten Liste nach vorn.
+
+### Sammel-Statuswechsel: eine Schleife, kein zweiter Zustandsautomat
+
+`POST /admin/projects/status` (KAN-46) liegt im Paket `project` und ruft je
+Projekt dieselbe Methode des `ProjectWorkflowService` wie der jeweilige
+Einzel-Endpoint. Damit gelten Rechteprüfung (§5), Übergangstabelle (§4.1),
+Statushistorie (§3.12), Top-10-Entzug (§3.11.1) und der
+`CHANGE_REQUEST`-Kommentar unverändert; eine zweite Umsetzung der
+Übergangslogik entsteht nicht.
+
+Drei Punkte tragen den Endpoint:
+
+1. **Bericht je Zeile statt Alles-oder-nichts.** In einer Auswahl kann ein
+   einzelnes Projekt in einem Status stehen, den §4.1 nicht zulässt. Die Antwort
+   ist deshalb 200 mit `{ results: [ { projectId, success, errorCode } ] }`, ein
+   Eintrag je angefragter ID in der Reihenfolge des Bodys.
+2. **Eine Transaktion je Projekt.** Die Schleife im `ProjectAdminService` läuft
+   mit `Propagation.NOT_SUPPORTED`, jeder Aufruf des Workflow-Dienstes öffnet
+   daraufhin seine eigene. Ohne das machte die erste gescheiterte Zeile die ganze
+   Transaktion `rollback-only`, und die als erfolgreich gemeldeten Übergänge
+   wären wieder weg. Aus demselben Grund ist `ProjectBulkStatusIntegrationTest`
+   der einzige Integrationstest im Paket ohne `@Transactional`: er räumt selbst
+   auf.
+3. **Fehler im Aufruf sind keine Zeile.** Eine unbekannte `action`, eine leere
+   Auswahl oder eine `reason`, die nicht zur Aktion passt, ergeben 400
+   `VALIDATION_FAILED` für die ganze Anfrage. Alles, was §6.2 nicht als
+   Fehlercode kennt, wird weitergeworfen und ergibt einen 500: ein
+   Programmfehler ist keine Aussage über ein einzelnes Projekt.
 
 ### Kein Hard-Delete, und keine neue Migration
 

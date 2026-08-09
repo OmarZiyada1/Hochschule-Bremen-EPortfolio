@@ -127,4 +127,23 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, JpaSpec
 	boolean existsByStudyProgramId(UUID studyProgramId);
 
 	boolean existsByModuleId(UUID moduleId);
+
+	/**
+	 * Die Projekte einer Kategorie, fuer
+	 * {@code POST /api/admin/categories/{id}/merge} (§6.1, KAN-46).
+	 *
+	 * <p><strong>Warum die Zeilen geladen werden und kein {@code update … set
+	 * category = …} laeuft.</strong> Ein Massen-UPDATE in JPQL ginge an
+	 * {@code @Version} und {@code @LastModifiedDate} vorbei: die
+	 * {@code version} bliebe stehen, und ein gleichzeitig geoeffneter Editor
+	 * schriebe die alte Kategorie beim naechsten Speichern stillschweigend
+	 * zurueck, statt in 409 {@code PROJECT_VERSION_CONFLICT} zu laufen (§6.4).
+	 * Der Preis ist bekannt und getragen: die betroffenen Projekte bekommen ein
+	 * neues {@code updatedAt} und ruecken in der danach sortierten Liste nach
+	 * vorn. Entschieden in der Klaerungsrunde zu KAN-46.
+	 *
+	 * <p>Ohne {@code @EntityGraph}: gebraucht wird allein die Zeile selbst, und
+	 * die Antwort des Endpoints ist die Zielkategorie und keine Projektliste.
+	 */
+	List<Project> findByCategoryId(UUID categoryId);
 }

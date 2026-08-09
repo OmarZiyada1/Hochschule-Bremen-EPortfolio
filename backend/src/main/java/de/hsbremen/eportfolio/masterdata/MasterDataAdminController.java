@@ -2,6 +2,7 @@ package de.hsbremen.eportfolio.masterdata;
 
 import de.hsbremen.eportfolio.auth.AuthenticatedUser;
 import de.hsbremen.eportfolio.masterdata.dto.CategoryCreateRequest;
+import de.hsbremen.eportfolio.masterdata.dto.CategoryMergeRequest;
 import de.hsbremen.eportfolio.masterdata.dto.CategoryResponse;
 import de.hsbremen.eportfolio.masterdata.dto.CategoryUpdateRequest;
 import de.hsbremen.eportfolio.masterdata.dto.FacultyCreateRequest;
@@ -31,9 +32,10 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Die zwoelf Stammdaten-Zeilen des Admin-Bereichs aus API-Contract §6.1
- * (KAN-25): {@code POST}, {@code PATCH} und {@code DELETE} fuer Kategorien,
- * Fakultaeten, Studiengaenge und Module.
+ * Die Stammdaten-Zeilen des Admin-Bereichs aus API-Contract §6.1 (KAN-25):
+ * {@code POST}, {@code PATCH} und {@code DELETE} fuer Kategorien, Fakultaeten,
+ * Studiengaenge und Module, dazu seit KAN-46 das Zusammenfuehren zweier
+ * Kategorien.
  *
  * <p><strong>Getrennt vom {@link MasterDataController}</strong>, der dieselben
  * vier Tabellen unter {@code /api} liest. Die Lese-Endpoints sind PUBLIC und
@@ -48,10 +50,10 @@ import org.springframework.web.bind.annotation.RestController;
  * {@code mayManageMasterData} trotzdem noch einmal (§5).
  *
  * <p><strong>Kein {@code GET} hier.</strong> Die Administrationsseite liest die
- * vier Listen ueber die vorhandenen PUBLIC-Endpoints; §6.1 fuehrt fuer den
- * Admin-Bereich ausdruecklich nur {@code POST}, {@code PATCH} und
- * {@code DELETE}. Ein zweiter Lesepfad mit identischer Antwort waere eine
- * Kopie, die beim naechsten Feld auseinanderlaeuft.
+ * vier Listen ueber die vorhandenen PUBLIC-Endpoints; §6.1 fuehrt fuer die
+ * Stammdaten im Admin-Bereich nur schreibende Zeilen. Ein zweiter Lesepfad mit
+ * identischer Antwort waere eine Kopie, die beim naechsten Feld
+ * auseinanderlaeuft.
  */
 @RestController
 @RequestMapping("/api/admin")
@@ -134,6 +136,30 @@ public class MasterDataAdminController {
 			@PathVariable("id") UUID id) {
 
 		adminService.deleteCategory(user, id);
+	}
+
+	@Operation(summary = "Kategorien zusammenfuehren",
+			description = "Haengt alle Projekte der Kategorie aus dem Pfad an die Kategorie aus "
+					+ "dem Body um und loescht danach die Quelle. Der einzige Weg, eine doppelt "
+					+ "angelegte Kategorie aufzuraeumen: das Loeschen ist gesperrt, solange noch "
+					+ "Projekte daran haengen. Die Antwort ist die Zielkategorie.")
+	@ApiResponse(responseCode = "200", description = "Die Zielkategorie; die Quelle ist geloescht.")
+	@ApiResponse(responseCode = "400", description = "VALIDATION_FAILED: targetCategoryId fehlt, "
+			+ "ist unbekannt oder gleich der ID im Pfad.")
+	@ApiResponse(responseCode = "401", description = UNAUTHORIZED)
+	@ApiResponse(responseCode = "403", description = FORBIDDEN)
+	@ApiResponse(responseCode = "404", description = "RESOURCE_NOT_FOUND: unter der ID im Pfad "
+			+ "gibt es keine Kategorie. Eine unbekannte ID im Body ergibt dagegen 400 (§6.3.1).")
+	@PostMapping("/categories/{id}/merge")
+	public CategoryResponse mergeCategory(
+			@AuthenticationPrincipal AuthenticatedUser user,
+
+			@Parameter(description = "ID der Quellkategorie. Sie ist am Ende geloescht.")
+			@PathVariable("id") UUID id,
+
+			@RequestBody @Valid CategoryMergeRequest request) {
+
+		return adminService.mergeCategory(user, id, request);
 	}
 
 	// ==================================================================
