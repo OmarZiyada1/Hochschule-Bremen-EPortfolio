@@ -6,9 +6,15 @@ package de.hsbremen.eportfolio.file;
  * <p>Unchecked, weil die Aufrufseite den Fehler nicht sinnvoll behandeln
  * kann: ein nicht erreichbarer Speicher oder ein fehlendes Objekt zu einer
  * vorhandenen Datenbankzeile ist ein Betriebsfehler, kein Fachfall. Die
- * Ausnahme laeuft deshalb bis zum Servlet-Container durch und ergibt 500;
- * ein eigener Fehlercode in §6.2 waere die Zusage, dass der Client damit
- * etwas anfangen koennte, und die gibt es nicht.
+ * Ausnahme laeuft deshalb bis zum {@code GlobalExceptionHandler} durch und
+ * ergibt dort 500 {@code INTERNAL_ERROR} im Envelope aus §6.2 (KAN-55).
+ * Einen eigenen Fehlercode je Speicherfehler gibt es dagegen weiterhin
+ * nicht: er waere die Zusage, dass der Client mit der Unterscheidung etwas
+ * anfangen koennte.
+ *
+ * <p>Vor Contract v31 endete sie stattdessen im Servlet-Container, und die
+ * Antwort war der Standardkoerper des Rahmenwerks ohne {@code errorCode}.
+ * Genau daran ist die Luecke aufgefallen.
  *
  * <p>Die Meldung nennt den Schluessel, nie Container, Endpoint oder
  * Zugangsdaten: sie landet im Protokoll, und die Verbindungszeichenfolge ist

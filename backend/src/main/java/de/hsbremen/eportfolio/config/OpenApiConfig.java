@@ -57,7 +57,10 @@ public class OpenApiConfig {
 								Authentifizierung: JWT als Bearer-Token. Ohne \
 								gueltiges Token antworten geschuetzte Pfade mit \
 								401 im Fehler-Envelope aus §6.2 \
-								(timestamp, status, errorCode, message, path).
+								(timestamp, status, errorCode, message, path). \
+								Jede Fehlerantwort hat diese Form, auch ein \
+								unerwarteter Serverfehler: 500 INTERNAL_ERROR \
+								(§6.3).
 
 								Diese Oberflaeche ist nur im Profil dev \
 								erreichbar."""))

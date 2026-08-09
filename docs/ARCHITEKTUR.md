@@ -408,6 +408,15 @@ Jede Fehlerantwort verlässt den Server im Envelope aus Contract §6.2
   schreiben über denselben `ApiErrorWriter`, damit das Frontend nicht zwei
   Formate unterscheiden muss.
 
+**Nichts fällt hinten heraus** (KAN-55, Contract v31): Was keiner der
+spezifischen Methoden zugeordnet ist, fängt `handleUnexpected` ab und
+beantwortet es mit 500 `INTERNAL_ERROR`, generischer Meldung und vollständigem
+Stacktrace im Protokoll. Ausnahmen, die ihren Statuscode selbst mitbringen
+(unbekannter Pfad 404, nicht zugelassene Methode 405, nicht gelesener
+Content-Type 415), behalten ihn und laufen über `RESOURCE_NOT_FOUND`
+beziehungsweise `VALIDATION_FAILED`; ohne diese Abzweigung würde der
+Auffang-Handler aus einem 405 einen 500 machen.
+
 Fehlercodes stehen als Konstante in `common/error/ErrorCodes.java` **und** als
 Zeile in Contract §6.2: beides oder keins. Der `BlockValidationService` war bis
 KAN-49 die Ausnahme; sein Literal `BLOCK_UNGUELTIG` stand nur im Code und heißt

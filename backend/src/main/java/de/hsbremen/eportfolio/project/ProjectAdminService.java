@@ -131,10 +131,12 @@ public class ProjectAdminService {
 	 * Einzel-Endpoint vornimmt, nur in eine Zeile statt in eine Antwort.
 	 *
 	 * <p>Der {@code default}-Zweig wirft weiter, und das ist der Kern der
-	 * Methode: gefangen wird ausschliesslich, was §6.2 als Fehlercode kennt.
-	 * Alles andere ist ein Programmfehler und keine Aussage ueber dieses
-	 * Projekt; es hinter einem 200 als Zeile zu berichten hiesse, es zu
-	 * verstecken.
+	 * Methode: zu einer Zeile wird ausschliesslich, was §6.2 als Fehlercode
+	 * einer <em>Anfrage</em> kennt. Alles andere ist ein Programmfehler und
+	 * keine Aussage ueber dieses Projekt; es hinter einem 200 als Zeile zu
+	 * berichten hiesse, es zu verstecken. Es laeuft stattdessen in den
+	 * Auffang-Handler aus KAN-55 und ergibt 500
+	 * {@link ErrorCodes#INTERNAL_ERROR} fuer die ganze Anfrage.
 	 *
 	 * <p>{@code OptimisticLockingFailureException} ist der echte Wettlauf zweier
 	 * Transaktionen (§6.4). Sie steht hier, weil sie beim Sammel-Aufruf
