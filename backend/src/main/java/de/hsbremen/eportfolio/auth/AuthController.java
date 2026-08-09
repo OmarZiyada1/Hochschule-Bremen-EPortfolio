@@ -1,10 +1,12 @@
 package de.hsbremen.eportfolio.auth;
 
+import de.hsbremen.eportfolio.auth.dto.ForgotPasswordRequest;
 import de.hsbremen.eportfolio.auth.dto.LoginRequest;
 import de.hsbremen.eportfolio.auth.dto.LoginResponse;
 import de.hsbremen.eportfolio.auth.dto.PasswordChangeRequest;
 import de.hsbremen.eportfolio.auth.dto.RegisterRequest;
 import de.hsbremen.eportfolio.auth.dto.ResendVerificationRequest;
+import de.hsbremen.eportfolio.auth.dto.ResetPasswordRequest;
 import de.hsbremen.eportfolio.auth.dto.UserResponse;
 import de.hsbremen.eportfolio.auth.dto.VerificationStatusResponse;
 import de.hsbremen.eportfolio.auth.dto.VerifyRequest;
@@ -45,12 +47,15 @@ public class AuthController {
 
 	private final RegistrationService registrationService;
 
+	private final PasswordResetService passwordResetService;
+
 	private final UserRepository userRepository;
 
 	public AuthController(AuthService authService, RegistrationService registrationService,
-			UserRepository userRepository) {
+			PasswordResetService passwordResetService, UserRepository userRepository) {
 		this.authService = authService;
 		this.registrationService = registrationService;
+		this.passwordResetService = passwordResetService;
 		this.userRepository = userRepository;
 	}
 
@@ -156,6 +161,64 @@ public class AuthController {
 			@Valid @RequestBody ResendVerificationRequest resendRequest, HttpServletRequest request) {
 		registrationService.resend(resendRequest, clientIp(request));
 		return ResponseEntity.noContent().build();
+	}
+
+	// --- Passwort vergessen und zuruecksetzen (§6.1, KAN-43) ----------------
+	// Liegen aus demselben Grund in diesem Controller wie die
+	// Verifizierungs-Endpoints: gleicher Pfadpraefix, gleiche Fehlerabbildung,
+	// derselbe 429-Handler weiter unten.
+
+	/**
+	 * Ruecksetzcode anfordern (§6.1).
+	 *
+	 * <p><strong>204 ohne Inhalt, und zwar immer.</strong> Ob es die Adresse
+	 * gibt und ob eine Mail rausging, ist von aussen nicht zu unterscheiden;
+	 * sonst waere der Endpoint ein Verzeichnis registrierter Adressen. Vom
+	 * Passwortzwang-Gate (§6.7) ist der Pfad ausgenommen, sonst kaeme ein Konto
+	 * mit vergessenem Initialpasswort hier nie an.
+	 */
+	@SecurityRequirements
+	@Operation(summary = "Ruecksetzcode anfordern",
+			description = "Erzeugt einen sechsstelligen Code mit Zweck PASSWORD_RESET, "
+					+ "verschickt ihn an die private Adresse und entwertet einen etwaigen "
+					+ "vorherigen. Antwortet immer mit 204, auch fuer unbekannte Adressen: "
+					+ "eine unterscheidbare Antwort waere ein Verzeichnis registrierter "
+					+ "Adressen (§6.1). Gezaehlt wird jeder Aufruf, sonst waere der Endpoint "
+					+ "ein Versandgenerator.")
+	@ApiResponse(responseCode = "204", description = "Angenommen. Ob eine Mail rausging, sagt die Antwort nicht.")
+	@ApiResponse(responseCode = "400", description = "E-Mail-Adresse fehlt oder ist keine gueltige Adresse.")
+	@ApiResponse(responseCode = "429", description = "Zu viele Anforderungen, voruebergehend gesperrt.")
+	@PostMapping("/forgot-password")
+	public ResponseEntity<Void> forgotPassword(
+			@Valid @RequestBody ForgotPasswordRequest forgotPasswordRequest, HttpServletRequest request) {
+		passwordResetService.requestReset(forgotPasswordRequest, clientIp(request));
+		return ResponseEntity.noContent().build();
+	}
+
+	/**
+	 * Ruecksetzcode einloesen und neues Passwort setzen (§6.1).
+	 *
+	 * <p><strong>200 ohne Body</strong>, wie {@code PUT /auth/password}: der
+	 * Client braucht nach der Aenderung keine Daten, die Anmeldung laeuft
+	 * ohnehin ueber {@code POST /auth/login}.
+	 */
+	@SecurityRequirements
+	@Operation(summary = "Passwort mit Ruecksetzcode neu setzen",
+			description = "Prueft den Code mit Zweck PASSWORD_RESET, setzt den neuen "
+					+ "BCrypt-Hash, verbraucht den Code und setzt passwordChangeRequired "
+					+ "zurueck. Unbekannte Adresse, falscher, abgelaufener und bereits "
+					+ "verbrauchter Code ergeben dieselbe Antwort (§6.1).")
+	@ApiResponse(responseCode = "200", description = "Passwort gesetzt, ohne Body.")
+	// Bewusst dieselbe Antwort fuer unbekannte Adresse, falschen, abgelaufenen
+	// und bereits verbrauchten Code (§6.1, §6.2).
+	@ApiResponse(responseCode = "400", description = "Code ungueltig, abgelaufen oder bereits verwendet, "
+			+ "oder das neue Passwort verletzt die Laengenregel.")
+	@ApiResponse(responseCode = "429", description = "Zu viele Versuche, voruebergehend gesperrt.")
+	@PostMapping("/reset-password")
+	public ResponseEntity<Void> resetPassword(
+			@Valid @RequestBody ResetPasswordRequest resetPasswordRequest, HttpServletRequest request) {
+		passwordResetService.resetPassword(resetPasswordRequest, clientIp(request));
+		return ResponseEntity.ok().build();
 	}
 
 	/**

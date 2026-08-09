@@ -24,10 +24,14 @@ import org.springframework.stereotype.Service;
  * Ablauf <em>und</em> Rate-Limit statt auf seine Laenge. Ohne diese Zeile stuende
  * die Zusage aus §3.16 auf einem Bein. Nachgetragen in §6.1 mit Contract v23.
  *
- * <p><strong>Ein gemeinsamer Zaehler fuer beide Endpoints.</strong> Sie fuehren
- * zum selben Ziel, also waeren zwei Zaehler nur zwei Wege, dieselbe Grenze zu
- * umgehen: wer fuenf Codes durchprobiert hat, koennte sich sonst einen neuen
- * schicken lassen und weitermachen.
+ * <p><strong>Ein gemeinsamer Zaehler fuer alle Code-Endpoints.</strong> Sie
+ * fuehren zum selben Ziel, also waeren getrennte Zaehler nur mehrere Wege,
+ * dieselbe Grenze zu umgehen: wer fuenf Codes durchprobiert hat, koennte sich
+ * sonst einen neuen schicken lassen und weitermachen. Seit KAN-43 laufen auch
+ * {@code POST /auth/forgot-password} (Versandgenerator-Argument) und
+ * {@code POST /auth/reset-password} (Brute-Force-Argument, Contract v34) ueber
+ * diesen Zaehler; die Trennung vom Login-Zaehler bleibt, denn eine angeforderte
+ * Ruecksetzung darf niemanden aus der Anmeldung aussperren (§6.5).
  *
  * <p>Grenzwert und Sperrdauer kommen aus {@link LoginAttemptProperties}, also
  * denselben fuenf Versuchen und fuenfzehn Minuten wie am Login. §6.5 verlangt

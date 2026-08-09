@@ -95,10 +95,16 @@ public class SecurityConfig {
 					// nicht als /api/auth/**, weil unter demselben Praefix mit
 					// /auth/me und /auth/logout Endpoints liegen, die ein Token
 					// brauchen.
+					// Die Passwort-Ruecksetzung (KAN-43, §6.1) ist aus demselben
+					// Grund PUBLIC: wer sein Passwort vergessen hat, kann sich
+					// nicht anmelden. An die Stelle der Anmeldung treten der
+					// Ruecksetzcode im Postfach und das Rate-Limit aus §6.5.
 					.requestMatchers(HttpMethod.POST,
 							"/api/auth/register",
 							"/api/auth/verify",
-							"/api/auth/verify/resend").permitAll()
+							"/api/auth/verify/resend",
+							"/api/auth/forgot-password",
+							"/api/auth/reset-password").permitAll()
 
 					.requestMatchers("/actuator/health").permitAll()
 

@@ -1,5 +1,6 @@
 package de.hsbremen.eportfolio.admin;
 
+import de.hsbremen.eportfolio.admin.dto.AdminPasswordResetResponse;
 import de.hsbremen.eportfolio.admin.dto.AdminUserCreateRequest;
 import de.hsbremen.eportfolio.admin.dto.AdminUserResponse;
 import de.hsbremen.eportfolio.admin.dto.AdminUserUpdateRequest;
@@ -177,6 +178,34 @@ public class AdminUserController {
 			@RequestBody @Valid AdminUserUpdateRequest request) {
 
 		return userService.update(user, id, request);
+	}
+
+	// ------------------------------------------------------------------
+	// POST /api/admin/users/{id}/reset-password
+	// ------------------------------------------------------------------
+
+	@Operation(summary = "Initialpasswort neu setzen",
+			description = "Erzeugt serverseitig ein neues Initialpasswort, setzt den Hash und "
+					+ "passwordChangeRequired = true (§6.7). Das Klartextpasswort steht genau "
+					+ "einmal in dieser Antwort und wird nirgends geloggt; der Admin uebergibt "
+					+ "es der Person, und die erste Anmeldung erzwingt die Aenderung. "
+					+ "Funktioniert fuer jedes Konto einschliesslich des eigenen: der Schritt "
+					+ "laesst sich anders als eine Rollen- oder Statusaenderung selbst "
+					+ "aufloesen, und ob sich das Konto anmelden kann, entscheidet weiterhin "
+					+ "sein Status (§2.9).")
+	@ApiResponse(responseCode = "200", description = "Das neue Initialpasswort, einmalig.")
+	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
+	@ApiResponse(responseCode = "403", description = "NO_PERMISSION: die Rolle ist nicht ADMIN.")
+	@ApiResponse(responseCode = "404", description = "RESOURCE_NOT_FOUND: unter dieser ID gibt es "
+			+ "kein Konto.")
+	@PostMapping("/{id}/reset-password")
+	public AdminPasswordResetResponse resetPassword(
+			@AuthenticationPrincipal AuthenticatedUser user,
+
+			@Parameter(description = "ID des Kontos.")
+			@PathVariable("id") UUID id) {
+
+		return userService.resetPassword(user, id);
 	}
 
 	// ------------------------------------------------------------------

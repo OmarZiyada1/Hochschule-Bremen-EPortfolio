@@ -177,12 +177,12 @@ public class RegistrationService {
 		Optional<User> found = userRepository.findByEmail(email);
 		if (found.isEmpty()) {
 			codeService.matchPlaceholder(request.code());
-			throw invalidCode();
+			throw VerificationCodeService.invalidCodeError();
 		}
 
 		User user = found.get();
 		if (!codeService.consume(user, purpose, request.code())) {
-			throw invalidCode();
+			throw VerificationCodeService.invalidCodeError();
 		}
 
 		markVerified(user, purpose);
@@ -412,12 +412,5 @@ public class RegistrationService {
 				&& user.getStatus() == UserStatus.REGISTRATION_PENDING) {
 			user.setStatus(UserStatus.ACTIVE);
 		}
-	}
-
-	/** Ein Wortlaut fuer alle drei Faelle aus §6.2, siehe dort. */
-	private static ValidationException invalidCode() {
-		return new ValidationException(ErrorCodes.VERIFICATION_CODE_INVALID,
-				"Der Code ist ungueltig, abgelaufen oder bereits verwendet worden. "
-						+ "Bitte einen neuen Code anfordern.");
 	}
 }

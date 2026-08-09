@@ -47,9 +47,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * Anfrage ein Token traegt. Das Gate sitzt hier und nicht im Frontend, weil
  * eine reine Client-Umleitung ueber direkte API-Aufrufe vollstaendig umgehbar
  * waere. Ausgenommen sind genau die fuenf Endpoints aus §6.7, sonst sperrte
- * sich die Person selbst aus; die Pfade der Passwort-Ruecksetzung (KAN-43)
- * stehen schon bereit, obwohl die Endpoints noch fehlen, damit KAN-43 das
- * Gate nicht anfassen muss.
+ * sich die Person selbst aus; die Pfade der Passwort-Ruecksetzung standen hier
+ * schon vor KAN-43 bereit. {@code POST /admin/users/{id}/reset-password}
+ * (KAN-43) steht bewusst nicht in der Liste: ihn ruft ein Admin mit eigenem
+ * Token fuer ein fremdes Konto auf, nicht das gesperrte Konto selbst; ein
+ * Admin mit eigenem Initialpasswort aendert erst sein Passwort und verwaltet
+ * dann.
  */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
