@@ -4,6 +4,7 @@ import de.hsbremen.eportfolio.auth.dto.ForgotPasswordRequest;
 import de.hsbremen.eportfolio.auth.dto.LoginRequest;
 import de.hsbremen.eportfolio.auth.dto.LoginResponse;
 import de.hsbremen.eportfolio.auth.dto.PasswordChangeRequest;
+import de.hsbremen.eportfolio.auth.dto.ProfileUpdateRequest;
 import de.hsbremen.eportfolio.auth.dto.RegisterRequest;
 import de.hsbremen.eportfolio.auth.dto.ResendVerificationRequest;
 import de.hsbremen.eportfolio.auth.dto.ResetPasswordRequest;
@@ -284,6 +285,29 @@ public class AuthController {
 		User user = userRepository.findById(authenticatedUser.getId())
 				.orElseThrow(() -> new AuthService.LoginFailedException());
 		return UserResponse.from(user);
+	}
+
+	/**
+	 * Eigene Profildaten aendern (§6.1, KAN-44).
+	 *
+	 * <p>Nur Vor- und Nachname. Die private E-Mail ist die Login-Identitaet
+	 * und hier bewusst nicht aenderbar (§3.1.1, offener Punkt in §7); Rolle
+	 * und Status vergibt die Administration. Vom Gate der erzwungenen
+	 * Passwortaenderung (§6.7) ist dieser Pfad <em>nicht</em> ausgenommen:
+	 * die Ausnahmeliste im {@link JwtAuthenticationFilter} unterscheidet nach
+	 * Methode und laesst nur {@code GET /auth/me} durch.
+	 */
+	@Operation(summary = "Eigene Profildaten aendern",
+			description = "Aendert Vor- und Nachnamen der angemeldeten Person und antwortet "
+					+ "wie GET /auth/me. Die private E-Mail ist die Login-Kennung und hier "
+					+ "nicht aenderbar; unbekannte Felder im Body werden ignoriert (§6.1).")
+	@ApiResponse(responseCode = "200", description = "Aktualisierte Benutzerdaten.")
+	@ApiResponse(responseCode = "400", description = "Vor- oder Nachname fehlt oder ist zu lang.")
+	@ApiResponse(responseCode = "401", description = "Kein, abgelaufenes oder ungueltiges Token.")
+	@PutMapping("/me")
+	public UserResponse updateMe(@AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+			@Valid @RequestBody ProfileUpdateRequest profileUpdateRequest) {
+		return authService.updateProfile(authenticatedUser.getId(), profileUpdateRequest);
 	}
 
 	/**
