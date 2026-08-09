@@ -16,9 +16,9 @@ import {
 const colorTokens = flattenColorTokens()
 
 describe("Katalog der Tokenschicht", () => {
-  it("fuehrt die 54 Semantic-Rollen des Abgleichs vom 07.08.2026", () => {
-    expect(colorTokens).toHaveLength(54)
-    expect(new Set(colorTokens).size).toBe(54)
+  it("fuehrt die 55 Semantic-Rollen (54 aus dem Abgleich vom 07.08.2026, dazu overlay)", () => {
+    expect(colorTokens).toHaveLength(55)
+    expect(new Set(colorTokens).size).toBe(55)
   })
 
   it("fuehrt die sechs Radius-Stufen", () => {

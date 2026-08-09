@@ -73,6 +73,17 @@
   /* Basis (Foundation 2.4). basis/schwarz existiert bewusst nicht: kein
      Semantic-Token nutzt reines Schwarz. */
   --basis-weiss: #ffffff;
+
+  /* Transparente Stufen (Foundation 2.5). Die beiden einzigen Rohwerte mit
+     Alphakanal, und sie stehen aus einem Grund hier und nicht eine Ebene
+     hoeher: ein Alias kann keine Transparenz ausdruecken. Laege die
+     Deckkraft in der Semantic-Rolle, waere die Ebene keine reine
+     Alias-Ebene mehr; laege sie in der Komponente, setzte jede Komponente
+     sie erneut und der Wert stuende nirgends fest. Beide werden
+     ausschliesslich von der Rolle overlay referenziert, je Modus eine.
+     Achtstelliges Hex: die letzten beiden Ziffern sind der Alphakanal. */
+  --neutral-950-a50: #0b122080;
+  --neutral-950-a70: #0b1220b3;
 }
 
 /* ============================================================
@@ -90,6 +101,9 @@
   --card-foreground: var(--neutral-900);
   --popover: var(--basis-weiss);
   --popover-foreground: var(--neutral-900);
+  /* Abdunkelnde Flaeche hinter einem modalen Dialog (Foundation 3.1). Die
+     Deckkraft steckt im Token, damit keine Komponente sie von Hand setzt. */
+  --overlay: var(--neutral-950-a50);
   --muted: var(--neutral-100);
   --muted-foreground: var(--neutral-600);
   --text-disabled: var(--neutral-400);
@@ -181,6 +195,12 @@
   --card-foreground: var(--neutral-100);
   --popover: var(--neutral-900);
   --popover-foreground: var(--neutral-100);
+  /* Hoehere Deckkraft als im hellen Modus, und das ist keine Willkuer: die
+     Seitenflaeche liegt hier selbst auf neutral/950, ein Scrim derselben
+     Farbe veraendert sie also gar nicht. Sichtbar zurueck schiebt der
+     Scrim allein die Karten darunter (neutral/900), und dafuer braucht es
+     den hoeheren Wert. */
+  --overlay: var(--neutral-950-a70);
   --muted: var(--neutral-800);
   --muted-foreground: var(--neutral-400);
   --text-disabled: var(--neutral-600);
@@ -308,6 +328,7 @@
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-overlay: var(--overlay);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-text-disabled: var(--text-disabled);

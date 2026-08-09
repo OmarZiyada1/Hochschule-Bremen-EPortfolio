@@ -3,7 +3,7 @@
  *
  * Die Liste ist Daten, keine Darstellung: sie ist ohne Rendern pruefbar und
  * haelt die Zusage aus der Definition of Done fest, dass die Pruefflaeche
- * alle 54 Semantic-Rollen zeigt. Kommt eine Rolle in tokens.css dazu und
+ * alle 55 Semantic-Rollen zeigt. Kommt eine Rolle in tokens.css dazu und
  * hier nicht, faellt das im Test auf und nicht erst im Entwurf.
  *
  * Die Namen sind die CSS-Variablen ohne die beiden fuehrenden Bindestriche
@@ -36,6 +36,7 @@ export const colorGroups: readonly TokenGroup[] = [
       "card-foreground",
       "popover",
       "popover-foreground",
+      "overlay",
       "muted",
       "muted-foreground",
       "text-disabled",

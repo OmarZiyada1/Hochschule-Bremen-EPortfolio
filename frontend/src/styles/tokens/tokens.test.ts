@@ -83,14 +83,28 @@ const themeInline = declarationsOf(blocksOf(tokensCss, "@theme inline")[0])
 const radius = declarationsOf(blocksOf(tokensCss, "@theme static")[0])
 
 describe("Primitives (Foundation, Abschnitt 2)", () => {
-  it("fuehrt genau die 36 Stufen des Abgleichs vom 07.08.2026", () => {
-    expect(primitives.size).toBe(36)
+  it("fuehrt 38 Stufen: 36 aus dem Abgleich vom 07.08.2026 plus die zwei transparenten", () => {
+    expect(primitives.size).toBe(38)
   })
 
   it("enthaelt ausschliesslich Rohwerte, keine Aliase", () => {
+    /* Acht Stellen sind erlaubt, sechs bleiben die Regel: die letzten beiden
+       Ziffern sind der Alphakanal, und den tragen nur die beiden Stufen aus
+       Foundation 2.5. Ein Alias kann Transparenz nicht ausdruecken, deshalb
+       liegt sie hier im Rohwert und nicht in der Semantic-Ebene. */
     for (const value of primitives.values()) {
-      expect(value).toMatch(/^#[0-9a-f]{6}$/)
+      expect(value).toMatch(/^#(?:[0-9a-f]{6}|[0-9a-f]{8})$/)
     }
+  })
+
+  it("traegt Transparenz nur in den beiden Stufen, die overlay bedienen", () => {
+    const transparent = [...primitives.entries()]
+      .filter(([, value]) => value.length === 9)
+      .map(([name]) => name)
+
+    expect(transparent.sort()).toEqual(["neutral-950-a50", "neutral-950-a70"])
+    expect(semanticLight.get("overlay")).toBe("var(--neutral-950-a50)")
+    expect(semanticDark.get("overlay")).toBe("var(--neutral-950-a70)")
   })
 
   it("laesst keine Stufe ohne Semantic-Referenz zurueck", () => {
@@ -117,9 +131,9 @@ describe("Primitives (Foundation, Abschnitt 2)", () => {
 })
 
 describe("Semantic-Rollen (Foundation, Abschnitt 3)", () => {
-  it("fuehrt 54 Rollen je Modus", () => {
-    expect(semanticLight.size).toBe(54)
-    expect(semanticDark.size).toBe(54)
+  it("fuehrt 55 Rollen je Modus", () => {
+    expect(semanticLight.size).toBe(55)
+    expect(semanticDark.size).toBe(55)
   })
 
   it("nutzt in beiden Modi dieselben Rollennamen", () => {
