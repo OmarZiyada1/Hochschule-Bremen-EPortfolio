@@ -38,6 +38,11 @@ import org.springframework.transaction.annotation.Transactional;
  * Das Stammdaten-CRUD des Admin-Bereichs aus §6.1 gegen die echte Datenbank
  * (KAN-25).
  *
+ * <p>Seit KAN-46 gehoert das Zusammenfuehren zweier Kategorien dazu
+ * ({@code POST /admin/categories/{id}/merge}), der Gegenpol zur Loeschsperre:
+ * es ist der einzige Weg, eine doppelt angelegte Kategorie loszuwerden, an der
+ * noch Projekte haengen.
+ *
  * <p>Zwei Zusagen stehen im Mittelpunkt. Erstens die Loeschsperre: eine noch
  * referenzierte Zeile ergibt 409 {@code RESOURCE_IN_USE} und bleibt stehen, und
  * zwar sowohl bei Verweisen aus Projekten als auch bei Stammdaten-Zeilen
@@ -187,6 +192,107 @@ class MasterDataAdminIntegrationTest {
 			mockMvc.perform(as(admin, delete(CATEGORIES + "/" + UUID.randomUUID())))
 					.andExpect(status().isNotFound())
 					.andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"));
+		}
+
+		@Test
+		@DisplayName("merge haengt alle Projekte um und loescht die Quelle (§6.1, KAN-46)")
+		void mergeMovesProjectsAndRemovesSource() throws Exception {
+			UUID sourceId = createdId(CATEGORIES, Map.of("name", "Quelle " + marker));
+			UUID targetId = createdId(CATEGORIES, Map.of("name", "Ziel " + marker));
+
+			Project first = TestProject.withoutId(admin, ProjectStatus.DRAFT, "Erstes");
+			first.setCategory(categoryRepository.findById(sourceId).orElseThrow());
+			first = projectRepository.saveAndFlush(first);
+
+			// Auch ein veroeffentlichtes Projekt geht mit: §4.1 sperrt die
+			// Inhaltsbearbeitung, nicht das Aufraeumen der Stammdaten.
+			Project published = TestProject.withoutId(admin, ProjectStatus.PUBLISHED, "Zweites");
+			published.setCategory(categoryRepository.findById(sourceId).orElseThrow());
+			published = projectRepository.saveAndFlush(published);
+
+			mockMvc.perform(as(admin, post(CATEGORIES + "/" + sourceId + "/merge")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(json(Map.of("targetCategoryId", targetId.toString())))))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.id").value(targetId.toString()))
+					.andExpect(jsonPath("$.name").value("Ziel " + marker));
+
+			assertThat(categoryRepository.findById(sourceId)).isEmpty();
+			assertThat(projectRepository.existsByCategoryId(sourceId)).isFalse();
+			assertThat(projectRepository.findById(first.getId()).orElseThrow()
+					.getCategory().getId()).isEqualTo(targetId);
+			assertThat(projectRepository.findById(published.getId()).orElseThrow()
+					.getCategory().getId()).isEqualTo(targetId);
+		}
+
+		@Test
+		@DisplayName("merge ohne anhaengende Projekte loescht die Quelle ebenfalls")
+		void mergeWorksWithoutProjects() throws Exception {
+			UUID sourceId = createdId(CATEGORIES, Map.of("name", "Leer " + marker));
+			UUID targetId = createdId(CATEGORIES, Map.of("name", "Sammelt " + marker));
+
+			mockMvc.perform(as(admin, post(CATEGORIES + "/" + sourceId + "/merge")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(json(Map.of("targetCategoryId", targetId.toString())))))
+					.andExpect(status().isOk());
+
+			assertThat(categoryRepository.findById(sourceId)).isEmpty();
+			assertThat(categoryRepository.findById(targetId)).isPresent();
+		}
+
+		@Test
+		@DisplayName("merge auf sich selbst ergibt 400 und loescht nichts (§6.1)")
+		void mergeIntoItselfIsRejected() throws Exception {
+			UUID id = createdId(CATEGORIES, Map.of("name", "Selbst " + marker));
+
+			mockMvc.perform(as(admin, post(CATEGORIES + "/" + id + "/merge")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(json(Map.of("targetCategoryId", id.toString())))))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
+
+			assertThat(categoryRepository.findById(id)).isPresent();
+		}
+
+		@Test
+		@DisplayName("Unbekannte targetCategoryId ergibt 400, unbekannte ID im Pfad 404 (§6.3.1)")
+		void mergeDistinguishesBodyAndPath() throws Exception {
+			UUID sourceId = createdId(CATEGORIES, Map.of("name", "Bleibt stehen " + marker));
+
+			mockMvc.perform(as(admin, post(CATEGORIES + "/" + sourceId + "/merge")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(json(Map.of("targetCategoryId", UUID.randomUUID().toString())))))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
+
+			mockMvc.perform(as(admin, post(CATEGORIES + "/" + UUID.randomUUID() + "/merge")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(json(Map.of("targetCategoryId", sourceId.toString())))))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"));
+
+			assertThat(categoryRepository.findById(sourceId)).isPresent();
+		}
+
+		@Test
+		@DisplayName("merge ohne Admin-Rolle: 401 ohne Token, 403 mit EDITOR, nichts geloescht (§5)")
+		void mergeRequiresAdmin() throws Exception {
+			UUID sourceId = createdId(CATEGORIES, Map.of("name", "Geschuetzt " + marker));
+			UUID targetId = createdId(CATEGORIES, Map.of("name", "Geschuetzt Ziel " + marker));
+			String body = json(Map.of("targetCategoryId", targetId.toString()));
+
+			mockMvc.perform(post(CATEGORIES + "/" + sourceId + "/merge")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(body))
+					.andExpect(status().isUnauthorized());
+
+			mockMvc.perform(as(editor, post(CATEGORIES + "/" + sourceId + "/merge")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(body)))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+
+			assertThat(categoryRepository.findById(sourceId)).isPresent();
 		}
 
 		@Test

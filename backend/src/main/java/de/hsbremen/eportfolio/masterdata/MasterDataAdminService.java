@@ -6,6 +6,7 @@ import de.hsbremen.eportfolio.common.error.ErrorCodes;
 import de.hsbremen.eportfolio.common.error.ResourceNotFoundException;
 import de.hsbremen.eportfolio.common.error.ValidationException;
 import de.hsbremen.eportfolio.masterdata.dto.CategoryCreateRequest;
+import de.hsbremen.eportfolio.masterdata.dto.CategoryMergeRequest;
 import de.hsbremen.eportfolio.masterdata.dto.CategoryResponse;
 import de.hsbremen.eportfolio.masterdata.dto.CategoryUpdateRequest;
 import de.hsbremen.eportfolio.masterdata.dto.FacultyCreateRequest;
@@ -17,8 +18,10 @@ import de.hsbremen.eportfolio.masterdata.dto.ModuleUpdateRequest;
 import de.hsbremen.eportfolio.masterdata.dto.StudyProgramCreateRequest;
 import de.hsbremen.eportfolio.masterdata.dto.StudyProgramResponse;
 import de.hsbremen.eportfolio.masterdata.dto.StudyProgramUpdateRequest;
+import de.hsbremen.eportfolio.project.Project;
 import de.hsbremen.eportfolio.project.ProjectPermissionService;
 import de.hsbremen.eportfolio.project.ProjectRepository;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
@@ -28,7 +31,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Das Stammdaten-CRUD der Administrationsseite aus §6.1 (KAN-25): Anlegen,
  * Aendern und Loeschen von Kategorien, Fakultaeten, Studiengaengen und Modulen
- * (§3.6 bis §3.9).
+ * (§3.6 bis §3.9), dazu seit KAN-46 das Zusammenfuehren zweier Kategorien
+ * ({@link #mergeCategory}).
  *
  * <p><strong>Getrennt vom {@link MasterDataService}</strong>, der dieselben vier
  * Tabellen liest. Der Lesedienst ist PUBLIC und kennt keine Rechtepruefung, weil
@@ -129,6 +133,68 @@ public class MasterDataAdminService {
 		}
 
 		categoryRepository.delete(category);
+	}
+
+	/**
+	 * {@code POST /api/admin/categories/{id}/merge}, <strong>200</strong>
+	 * (§6.1, KAN-46): haengt alle Projekte der Quellkategorie an das Ziel um und
+	 * loescht danach die Quelle.
+	 *
+	 * <p><strong>Der dritte Weg neben Anlegen und Loeschen.</strong> Weil
+	 * {@link #deleteCategory} eine noch referenzierte Kategorie mit 409
+	 * {@code RESOURCE_IN_USE} stehen laesst, war eine doppelt angelegte Kategorie
+	 * bisher dauerhaft nicht aufraeumbar. Erst das Umhaengen macht die Quelle
+	 * referenzlos, und deshalb sind beide Schritte hier ein Vorgang und nicht
+	 * zwei Aufrufe: zwischen ihnen gaebe es keinen Endpoint, mit dem sich der
+	 * erste ueberhaupt ausfuehren liesse.
+	 *
+	 * <p><strong>Quelle gleich Ziel ergibt 400</strong>
+	 * {@code VALIDATION_FAILED} (§6.1). Die Anfrage waere sonst ein Loeschen mit
+	 * Umweg: die Projekte behielten ihre Kategorie und die Zeile verschwaende
+	 * trotzdem, also genau das, was die Loeschsperre verhindern soll.
+	 *
+	 * <p><strong>§4.1 steht dem nicht entgegen.</strong> Die Sperre
+	 * „Inhaltsbearbeitung nur in {@code DRAFT} und {@code REVISION}" richtet sich
+	 * an {@code PUT /projects/{id}} und {@code PUT /projects/{id}/blocks}, also
+	 * an die Projektseite. Hier raeumt die Administration Stammdaten auf, und die
+	 * Klassifikation eines veroeffentlichten Projekts von der doppelten auf die
+	 * verbleibende Kategorie zu ziehen aendert nichts an dem, was die Redaktion
+	 * geprueft hat. Waeren veroeffentlichte Projekte ausgenommen, bliebe die
+	 * Quelle referenziert und der Endpoint traefe genau die Faelle nicht, fuer die
+	 * es ihn gibt.
+	 *
+	 * <p>Die Antwort ist die <strong>Zielkategorie</strong> und keine Bilanz des
+	 * Vorgangs. Die Administrationsseite laedt ihre Liste danach ohnehin neu; was
+	 * sie braucht, ist die Zeile, die uebrig bleibt.
+	 *
+	 * @param id die Quellkategorie aus dem Pfad; sie ist am Ende geloescht
+	 */
+	public CategoryResponse mergeCategory(AuthenticatedUser user, UUID id,
+			CategoryMergeRequest request) {
+
+		Category source = loadCategory(id);
+		requireMasterDataAdministration(user);
+
+		Category target = referencedCategory(request.targetCategoryId());
+		if (source.getId().equals(target.getId())) {
+			throw new ValidationException(ErrorCodes.VALIDATION_FAILED,
+					"targetCategoryId: Quelle und Ziel sind dieselbe Kategorie. Zum Loeschen "
+							+ "einer leeren Kategorie dient DELETE /api/admin/categories/{id}.");
+		}
+
+		List<Project> affected = projectRepository.findByCategoryId(id);
+		for (Project project : affected) {
+			project.setCategory(target);
+		}
+		// Erst die Projekte schreiben, dann die Quelle loeschen: umgekehrt
+		// scheiterte das DELETE am Fremdschluessel project.category_id.
+		projectRepository.saveAll(affected);
+		projectRepository.flush();
+
+		categoryRepository.delete(source);
+		categoryRepository.flush();
+
+		return CategoryResponse.from(target);
 	}
 
 	// ==================================================================
@@ -345,6 +411,17 @@ public class MasterDataAdminService {
 	// Bezuege aus dem Body; eine unbekannte ID ergibt hier 400 und nicht 404,
 	// siehe Klassenkommentar.
 	// ------------------------------------------------------------------
+
+	/**
+	 * Die Zielkategorie aus dem Body von {@code /merge} (§6.1, KAN-46). Wie bei
+	 * {@link #referencedFaculty} ergibt eine unbekannte ID hier 400 und nicht
+	 * 404, weil sie im Body steht und nicht im Pfad.
+	 */
+	private Category referencedCategory(UUID categoryId) {
+		return categoryRepository.findById(categoryId)
+				.orElseThrow(() -> new ValidationException(ErrorCodes.VALIDATION_FAILED,
+						"targetCategoryId: Unter dieser ID gibt es keine Kategorie."));
+	}
 
 	private Faculty referencedFaculty(UUID facultyId) {
 		return facultyRepository.findById(facultyId)
