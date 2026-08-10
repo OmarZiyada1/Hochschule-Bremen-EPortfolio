@@ -1,0 +1,3693 @@
+{
+	"info": {
+		"name": "E-Portfolio Hochschule Bremen: API-Testsuite",
+		"description": "Kompletter End-to-End-Durchlauf aller Endpoints des E-Portfolio-Backends in einer Ausfuehrung, mit Assertions je Request und automatischer Token/ID-Verkettung. Reihenfolge der Ordner nicht aendern: spaetere Requests bauen auf frueheren auf. Quelle der Wahrheit ist postman/E-Portfolio-HSB.postman_collection.json im Repository; Anleitung in postman/README.md.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "noauth"
+	},
+	"event": [
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Läuft nach jedem Request (Contract 3.1: sensible Felder verlassen den Server nie).",
+					"pm.test('Keine Response enthaelt passwordHash', function () {",
+					"\tpm.expect(pm.response.text() || '').to.not.include('passwordHash');",
+					"});"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "tokenStudent",
+			"value": ""
+		},
+		{
+			"key": "tokenEditor",
+			"value": ""
+		},
+		{
+			"key": "tokenAdmin",
+			"value": ""
+		},
+		{
+			"key": "tempUserToken",
+			"value": ""
+		},
+		{
+			"key": "studentUserId",
+			"value": ""
+		},
+		{
+			"key": "editorUserId",
+			"value": ""
+		},
+		{
+			"key": "adminUserId",
+			"value": ""
+		},
+		{
+			"key": "tempUserId",
+			"value": ""
+		},
+		{
+			"key": "categoryId",
+			"value": ""
+		},
+		{
+			"key": "facultyId",
+			"value": ""
+		},
+		{
+			"key": "studyProgramId",
+			"value": ""
+		},
+		{
+			"key": "moduleId",
+			"value": ""
+		},
+		{
+			"key": "projectId",
+			"value": ""
+		},
+		{
+			"key": "projectVersion",
+			"value": ""
+		},
+		{
+			"key": "staleVersion",
+			"value": ""
+		},
+		{
+			"key": "editorProjectId",
+			"value": ""
+		},
+		{
+			"key": "fileId",
+			"value": ""
+		},
+		{
+			"key": "changeRequestId",
+			"value": ""
+		},
+		{
+			"key": "commentId",
+			"value": ""
+		},
+		{
+			"key": "nominationId",
+			"value": ""
+		},
+		{
+			"key": "top10NextPosition",
+			"value": ""
+		},
+		{
+			"key": "top10Ids",
+			"value": ""
+		},
+		{
+			"key": "registerEmail",
+			"value": ""
+		},
+		{
+			"key": "registerHsbEmail",
+			"value": ""
+		},
+		{
+			"key": "tempUserEmail",
+			"value": ""
+		},
+		{
+			"key": "tempUserHsbEmail",
+			"value": ""
+		},
+		{
+			"key": "tempUserInitialPassword",
+			"value": ""
+		},
+		{
+			"key": "tmpCategoryName",
+			"value": ""
+		},
+		{
+			"key": "tmpCategoryId",
+			"value": ""
+		},
+		{
+			"key": "tmpCategory2Name",
+			"value": ""
+		},
+		{
+			"key": "tmpCategory2Id",
+			"value": ""
+		},
+		{
+			"key": "tmpFacultyName",
+			"value": ""
+		},
+		{
+			"key": "tmpFacultyAbbr",
+			"value": ""
+		},
+		{
+			"key": "tmpFacultyId",
+			"value": ""
+		},
+		{
+			"key": "tmpStudyProgramAbbr",
+			"value": ""
+		},
+		{
+			"key": "tmpStudyProgramId",
+			"value": ""
+		},
+		{
+			"key": "tmpModuleAbbr",
+			"value": ""
+		},
+		{
+			"key": "tmpModuleId",
+			"value": ""
+		}
+	],
+	"item": [
+		{
+			"name": "00 Smoke",
+			"description": "Erreichbarkeit des Backends, ohne Anmeldung.",
+			"item": [
+				{
+					"name": "Health-Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/actuator/health"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Anwendung meldet UP', function () { pm.expect(pm.response.json().status).to.eql('UP'); });"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "01 Stammdaten und oeffentliche Listen",
+			"description": "PUBLIC-GET-Endpoints. Die IDs der Dev-Stammdaten werden fuer die spaeteren Projekt-Requests gemerkt.",
+			"item": [
+				{
+					"name": "Kategorien lesen",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/categories"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Liste nicht leer, Felder id und name', function () {",
+									"\tpm.expect(body).to.be.an('array').that.is.not.empty;",
+									"\tpm.expect(body[0]).to.have.keys('id', 'name');",
+									"});",
+									"pm.collectionVariables.set('categoryId', body[0].id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Fakultaeten lesen",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/faculties"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Liste nicht leer, Felder id, name, abbreviation', function () {",
+									"\tpm.expect(body).to.be.an('array').that.is.not.empty;",
+									"\tpm.expect(body[0]).to.have.keys('id', 'name', 'abbreviation');",
+									"});",
+									"pm.collectionVariables.set('facultyId', body[0].id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Studiengaenge je Fakultaet",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/study-programs?faculty={{facultyId}}"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Studiengaenge der Fakultaet vorhanden', function () {",
+									"\tpm.expect(body).to.be.an('array').that.is.not.empty;",
+									"\tpm.expect(body[0].facultyId).to.eql(pm.collectionVariables.get('facultyId'));",
+									"});",
+									"pm.collectionVariables.set('studyProgramId', body[0].id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Module je Studiengang",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/modules?studyProgram={{studyProgramId}}"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Module des Studiengangs vorhanden', function () {",
+									"\tpm.expect(body).to.be.an('array').that.is.not.empty;",
+									"\tpm.expect(body[0].studyProgramId).to.eql(pm.collectionVariables.get('studyProgramId'));",
+									"});",
+									"pm.collectionVariables.set('moduleId', body[0].id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Projektliste (oeffentlich)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/projects"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Seitenformat nach Contract 6.6', function () {",
+									"\tpm.expect(body).to.have.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
+									"});",
+									"pm.test('Ohne Anmeldung nur PUBLISHED sichtbar', function () {",
+									"\tpm.expect(body.content.every(function (p) { return p.status === 'PUBLISHED'; })).to.be.true;",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Top 10 lesen (vorher)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/top10"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Antwort ist eine Liste', function () { pm.expect(body).to.be.an('array'); });",
+									"const nextPosition = Math.min(body.length + 1, 10);",
+									"pm.collectionVariables.set('top10NextPosition', String(nextPosition));"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "02 Auth und Nutzer",
+			"description": "Logins der drei Dev-Testnutzer; Tokens und User-IDs werden fuer alle Folge-Requests gemerkt. POST /auth/verify ist bewusst nicht enthalten: der Code steht in dev nur im Serverlog.",
+			"item": [
+				{
+					"name": "Login Student",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/auth/login",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"email\": \"{{studentEmail}}\",\n\t\"password\": \"{{devTestPassword}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Token vorhanden', function () { pm.expect(body.token).to.be.a('string').that.is.not.empty; });",
+									"pm.test('expiresAt vorhanden', function () { pm.expect(body.expiresAt).to.be.a('string'); });",
+									"pm.test('Keine Passwortaenderung erzwungen', function () { pm.expect(body.passwordChangeRequired).to.be.false; });",
+									"pm.test('Rolle STUDENT', function () { pm.expect(body.user.role).to.eql('STUDENT'); });",
+									"pm.collectionVariables.set('tokenStudent', body.token);",
+									"pm.collectionVariables.set('studentUserId', body.user.id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Login Redakteur",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/auth/login",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"email\": \"{{editorEmail}}\",\n\t\"password\": \"{{devTestPassword}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Rolle EDITOR', function () { pm.expect(body.user.role).to.eql('EDITOR'); });",
+									"pm.collectionVariables.set('tokenEditor', body.token);",
+									"pm.collectionVariables.set('editorUserId', body.user.id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Login Admin",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/auth/login",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"email\": \"{{adminEmail}}\",\n\t\"password\": \"{{devTestPassword}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Rolle ADMIN', function () { pm.expect(body.user.role).to.eql('ADMIN'); });",
+									"pm.collectionVariables.set('tokenAdmin', body.token);",
+									"pm.collectionVariables.set('adminUserId', body.user.id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Negativ: /auth/me ohne Token",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/auth/me"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 401', function () { pm.response.to.have.status(401); });",
+									"const err = pm.response.json();",
+									"pm.test('Fehlercode NOT_AUTHENTICATED', function () { pm.expect(err.errorCode).to.eql('NOT_AUTHENTICATED'); });",
+									"pm.test('ApiError-Envelope vollstaendig', function () { pm.expect(err).to.have.keys('timestamp', 'status', 'errorCode', 'message', 'path'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Eigenes Profil lesen",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/auth/me"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Profil gehoert zum Student-Login', function () {",
+									"\tpm.expect(body.id).to.eql(pm.collectionVariables.get('studentUserId'));",
+									"\tpm.expect(body.email).to.eql(pm.variables.replaceIn('{{studentEmail}}'));",
+									"});",
+									"pm.test('hsbEmail wird nicht ausgegeben (Contract 3.1)', function () { pm.expect(body).to.not.have.property('hsbEmail'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Profil aendern (PUT /auth/me)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/auth/me",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"firstName\": \"Dev\",\n\t\"lastName\": \"Studierende PMTEST\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Nachname uebernommen', function () { pm.expect(pm.response.json().lastName).to.eql('Studierende PMTEST'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Profil zuruecksetzen",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/auth/me",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"firstName\": \"Dev\",\n\t\"lastName\": \"Studierende\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Nachname wieder im Ausgangszustand', function () { pm.expect(pm.response.json().lastName).to.eql('Studierende'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Nutzerauswahl (users/lookup)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/users/lookup?role=EDITOR"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Liste enthaelt den Dev-Redakteur', function () {",
+									"\tpm.expect(body).to.be.an('array').that.is.not.empty;",
+									"\tpm.expect(body.some(function (u) { return u.id === pm.collectionVariables.get('editorUserId'); })).to.be.true;",
+									"});",
+									"pm.test('Nur id, firstName, lastName (Datensparsamkeit)', function () {",
+									"\tpm.expect(body[0]).to.have.keys('id', 'firstName', 'lastName');",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Registrierung (nur Statuscode)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/auth/register",
+						"description": "Der Verifizierungscode landet in dev nur im Serverlog; der Flow endet hier bewusst nach dem 201.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"selectedRole\": \"STUDENT\",\n\t\"firstName\": \"PMTEST\",\n\t\"lastName\": \"Registrierung\",\n\t\"email\": \"{{registerEmail}}\",\n\t\"hsbEmail\": \"{{registerHsbEmail}}\",\n\t\"password\": \"PmTestRegister123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const stamp = Date.now();",
+									"pm.collectionVariables.set('registerEmail', 'pmtest-reg-' + stamp + '@example.org');",
+									"pm.collectionVariables.set('registerHsbEmail', 'pmtest-reg-' + stamp + '@stud.hs-bremen.de');"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+									"const body = pm.response.json();",
+									"pm.test('Konto wartet auf Verifizierung', function () { pm.expect(body.status).to.eql('REGISTRATION_PENDING'); });",
+									"pm.test('Rolle aus HSB-Domain abgeleitet', function () { pm.expect(body.role).to.eql('STUDENT'); });",
+									"pm.test('hsbEmail wird nicht ausgegeben (Contract 3.1)', function () { pm.expect(body).to.not.have.property('hsbEmail'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Code erneut senden (nur Statuscode)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/auth/verify/resend",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"email\": \"{{registerEmail}}\",\n\t\"purpose\": \"PRIVATE_EMAIL\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 204', function () { pm.response.to.have.status(204); });",
+									"pm.test('Kein Body (Enumeration-Schutz)', function () { pm.expect(pm.response.text()).to.eql(''); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Passwort vergessen (nur Statuscode)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/auth/forgot-password",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"email\": \"{{registerEmail}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 204', function () { pm.response.to.have.status(204); });",
+									"pm.test('Kein Body (Enumeration-Schutz)', function () { pm.expect(pm.response.text()).to.eql(''); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/auth/logout"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 204', function () { pm.response.to.have.status(204); });"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "03 Projekt anlegen und bearbeiten",
+			"description": "Lebenszyklus im Status DRAFT. Nach jedem Schreibzugriff wird die neue version gemerkt (Optimistic Locking, Contract 6.4).",
+			"item": [
+				{
+					"name": "Projekt anlegen (DRAFT)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"title\": \"PMTEST Projekt {{$timestamp}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+									"const body = pm.response.json();",
+									"pm.test('Status DRAFT', function () { pm.expect(body.status).to.eql('DRAFT'); });",
+									"pm.test('version vorhanden', function () { pm.expect(body.version).to.be.a('number'); });",
+									"pm.test('Autor ist der Student', function () { pm.expect(body.author.id).to.eql(pm.collectionVariables.get('studentUserId')); });",
+									"pm.collectionVariables.set('projectId', body.id);",
+									"pm.collectionVariables.set('projectVersion', String(body.version));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Negativ: Einreichen unvollstaendig",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/submit"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 400', function () { pm.response.to.have.status(400); });",
+									"const err = pm.response.json();",
+									"pm.test('Fehlercode PROJECT_INCOMPLETE', function () { pm.expect(err.errorCode).to.eql('PROJECT_INCOMPLETE'); });",
+									"pm.test('ApiError-Envelope vollstaendig', function () { pm.expect(err).to.have.keys('timestamp', 'status', 'errorCode', 'message', 'path'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Metadaten vervollstaendigen",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"version\": {{projectVersion}},\n\t\"title\": \"PMTEST Projekt vollstaendig\",\n\t\"summary\": \"PMTEST Teaser fuer den Testlauf\",\n\t\"projectType\": \"REGULAR\",\n\t\"degree\": \"BACHELOR\",\n\t\"semester\": \"WS 2025/26\",\n\t\"categoryId\": \"{{categoryId}}\",\n\t\"facultyId\": \"{{facultyId}}\",\n\t\"studyProgramId\": \"{{studyProgramId}}\",\n\t\"moduleId\": \"{{moduleId}}\",\n\t\"tags\": [\n\t\t\"pmtest\"\n\t]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Kategorie uebernommen', function () { pm.expect(body.category.id).to.eql(pm.collectionVariables.get('categoryId')); });",
+									"pm.test('Tag uebernommen', function () { pm.expect(body.tags).to.include('pmtest'); });",
+									"pm.test('version hochgezaehlt', function () { pm.expect(body.version).to.be.above(Number(pm.collectionVariables.get('projectVersion'))); });",
+									"pm.collectionVariables.set('projectVersion', String(body.version));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Negativ: veralteter Stand (409)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"version\": {{staleVersion}},\n\t\"title\": \"PMTEST veralteter Stand\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const stale = Math.max(0, Number(pm.collectionVariables.get('projectVersion')) - 1);",
+									"pm.collectionVariables.set('staleVersion', String(stale));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 409', function () { pm.response.to.have.status(409); });",
+									"const err = pm.response.json();",
+									"pm.test('Fehlercode PROJECT_VERSION_CONFLICT', function () { pm.expect(err.errorCode).to.eql('PROJECT_VERSION_CONFLICT'); });",
+									"pm.test('ApiError-Envelope vollstaendig', function () { pm.expect(err).to.have.keys('timestamp', 'status', 'errorCode', 'message', 'path'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Redaktion zuweisen (Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/editors",
+						"description": "Der Endpoint ist der Admin-Weg und statusunabhaengig; die Autor:in aendert die Redaktion nur ueber editorIds im normalen PUT und nur im DRAFT.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"editorIds\": [\n\t\t\"{{editorUserId}}\"\n\t]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Redakteur zugewiesen', function () {",
+									"\tpm.expect(body.editors.some(function (e) { return e.id === pm.collectionVariables.get('editorUserId'); })).to.be.true;",
+									"});",
+									"pm.collectionVariables.set('projectVersion', String(body.version));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Projektdetail lesen",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Kernfelder vorhanden', function () {",
+									"\t['id', 'title', 'status', 'version', 'blocks', 'tags'].forEach(function (k) { pm.expect(body).to.have.property(k); });",
+									"});",
+									"pm.collectionVariables.set('projectVersion', String(body.version));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Bloecke schreiben",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/blocks",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"version\": {{projectVersion}},\n\t\"blocks\": [\n\t\t{\n\t\t\t\"type\": \"TEXT\",\n\t\t\t\"orderIndex\": 0,\n\t\t\t\"content\": {\n\t\t\t\t\"type\": \"paragraph\",\n\t\t\t\t\"content\": [\n\t\t\t\t\t{\n\t\t\t\t\t\t\"type\": \"text\",\n\t\t\t\t\t\t\"text\": \"PMTEST Inhalt\"\n\t\t\t\t\t}\n\t\t\t\t]\n\t\t\t}\n\t\t}\n\t]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Ein TEXT-Block gespeichert', function () {",
+									"\tpm.expect(body.blocks).to.have.lengthOf(1);",
+									"\tpm.expect(body.blocks[0].type).to.eql('TEXT');",
+									"\tpm.expect(body.blocks[0].id).to.be.a('string');",
+									"});",
+									"pm.collectionVariables.set('projectVersion', String(body.version));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Bloecke lesen",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/blocks"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Blockliste stimmt', function () {",
+									"\tpm.expect(body.blocks).to.have.lengthOf(1);",
+									"\tpm.expect(body.blocks[0].orderIndex).to.eql(0);",
+									"});",
+									"pm.collectionVariables.set('projectVersion', String(body.version));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Negativ: unbekannter Blocktyp",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/blocks",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"version\": {{projectVersion}},\n\t\"blocks\": [\n\t\t{\n\t\t\t\"type\": \"FOO\",\n\t\t\t\"orderIndex\": 0,\n\t\t\t\"content\": {}\n\t\t}\n\t]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 400', function () { pm.response.to.have.status(400); });",
+									"const err = pm.response.json();",
+									"pm.test('Fehlercode BLOCK_TYPE_UNKNOWN', function () { pm.expect(err.errorCode).to.eql('BLOCK_TYPE_UNKNOWN'); });",
+									"pm.test('ApiError-Envelope vollstaendig', function () { pm.expect(err).to.have.keys('timestamp', 'status', 'errorCode', 'message', 'path'); });"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "04 Dateien",
+			"description": "Upload nur in editierbarem Status; die Signaturpruefung verlangt ein echtes PNG (fixtures/test-image.png, Working Directory beachten).",
+			"item": [
+				{
+					"name": "Datei hochladen (PNG)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/files",
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "fixtures/test-image.png"
+								},
+								{
+									"key": "projectId",
+									"value": "{{projectId}}",
+									"type": "text"
+								}
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+									"const body = pm.response.json();",
+									"pm.test('Metadaten der Datei stimmen', function () {",
+									"\tpm.expect(body.mimeType).to.eql('image/png');",
+									"\tpm.expect(body.size).to.be.above(0);",
+									"\tpm.expect(body.url).to.be.a('string');",
+									"});",
+									"pm.collectionVariables.set('fileId', body.id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Datei abrufen",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/files/{{fileId}}"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Content-Type image/png', function () { pm.expect(pm.response.headers.get('Content-Type')).to.include('image/png'); });"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "05 Workflow",
+			"description": "Zustandsautomat nach Contract 4.1: DRAFT, SUBMITTED, REVISION, APPROVED, PUBLISHED. Genehmigen und Veroeffentlichen macht der Redakteur (Vier-Augen-Prinzip).",
+			"item": [
+				{
+					"name": "Einreichen (DRAFT zu SUBMITTED)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/submit"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Status SUBMITTED', function () { pm.expect(pm.response.json().status).to.eql('SUBMITTED'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Ueberarbeitung anfordern (zu REVISION)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenEditor}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/request-revision",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"reason\": \"PMTEST bitte ueberarbeiten\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Status REVISION', function () { pm.expect(pm.response.json().status).to.eql('REVISION'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Aenderungswunsch im Kommentarbereich",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/comments"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"const changeRequest = body.find(function (c) { return c.type === 'CHANGE_REQUEST' && c.status === 'OPEN'; });",
+									"pm.test('CHANGE_REQUEST aus request-revision vorhanden', function () { pm.expect(changeRequest).to.not.be.undefined; });",
+									"pm.collectionVariables.set('changeRequestId', changeRequest ? changeRequest.id : '');"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Erneut einreichen (REVISION zu SUBMITTED)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/submit"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Status SUBMITTED', function () { pm.expect(pm.response.json().status).to.eql('SUBMITTED'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Genehmigen (SUBMITTED zu APPROVED)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenEditor}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/approve"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Status APPROVED', function () { pm.expect(pm.response.json().status).to.eql('APPROVED'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Veroeffentlichen (APPROVED zu PUBLISHED)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenEditor}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/publish"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Status PUBLISHED', function () { pm.expect(body.status).to.eql('PUBLISHED'); });",
+									"pm.test('publishedAt gesetzt', function () { pm.expect(body.publishedAt).to.be.a('string'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Negativ: doppelt veroeffentlichen",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenEditor}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/publish"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 409', function () { pm.response.to.have.status(409); });",
+									"const err = pm.response.json();",
+									"pm.test('Fehlercode PROJECT_STATUS_TRANSITION_INVALID', function () { pm.expect(err.errorCode).to.eql('PROJECT_STATUS_TRANSITION_INVALID'); });",
+									"pm.test('ApiError-Envelope vollstaendig', function () { pm.expect(err).to.have.keys('timestamp', 'status', 'errorCode', 'message', 'path'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Projekt neu laden (version)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.collectionVariables.set('projectVersion', String(pm.response.json().version));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Negativ: Bearbeiten in PUBLISHED",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"version\": {{projectVersion}},\n\t\"title\": \"PMTEST gesperrt\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 409', function () { pm.response.to.have.status(409); });",
+									"const err = pm.response.json();",
+									"pm.test('Fehlercode PROJECT_STATUS_NOT_EDITABLE', function () { pm.expect(err.errorCode).to.eql('PROJECT_STATUS_NOT_EDITABLE'); });",
+									"pm.test('ApiError-Envelope vollstaendig', function () { pm.expect(err).to.have.keys('timestamp', 'status', 'errorCode', 'message', 'path'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Vier-Augen: Projekt als Redakteur anlegen",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenEditor}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"title\": \"PMTEST Vier-Augen {{$timestamp}}\",\n\t\"projectType\": \"REGULAR\",\n\t\"degree\": \"BACHELOR\",\n\t\"semester\": \"WS 2025/26\",\n\t\"categoryId\": \"{{categoryId}}\",\n\t\"facultyId\": \"{{facultyId}}\",\n\t\"studyProgramId\": \"{{studyProgramId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+									"const body = pm.response.json();",
+									"pm.test('Status DRAFT', function () { pm.expect(body.status).to.eql('DRAFT'); });",
+									"pm.collectionVariables.set('editorProjectId', body.id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Vier-Augen: selbst einreichen",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenEditor}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{editorProjectId}}/submit"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Status SUBMITTED', function () { pm.expect(pm.response.json().status).to.eql('SUBMITTED'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Negativ Vier-Augen: selbst genehmigen",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenEditor}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{editorProjectId}}/approve"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 403', function () { pm.response.to.have.status(403); });",
+									"const err = pm.response.json();",
+									"pm.test('Fehlercode NO_PERMISSION', function () { pm.expect(err.errorCode).to.eql('NO_PERMISSION'); });",
+									"pm.test('ApiError-Envelope vollstaendig', function () { pm.expect(err).to.have.keys('timestamp', 'status', 'errorCode', 'message', 'path'); });"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "06 Kommentare und Reaktionen",
+			"description": "Reaktionen nur an PUBLISHED-Projekten; der CHANGE_REQUEST aus dem Workflow wird hier erledigt.",
+			"item": [
+				{
+					"name": "Reaktion setzen",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenEditor}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/reaction"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Zaehler mindestens 1', function () { pm.expect(pm.response.json().count).to.be.at.least(1); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Kommentar anlegen (REPLY)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/comments",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"type\": \"REPLY\",\n\t\"text\": \"PMTEST Kommentar\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+									"const body = pm.response.json();",
+									"pm.test('Kommentar gehoert zum Student', function () { pm.expect(body.author.id).to.eql(pm.collectionVariables.get('studentUserId')); });",
+									"pm.test('Typ REPLY', function () { pm.expect(body.type).to.eql('REPLY'); });",
+									"pm.collectionVariables.set('commentId', body.id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Kommentar bearbeiten",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/comments/{{commentId}}",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"text\": \"PMTEST Kommentar bearbeitet\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Text uebernommen', function () { pm.expect(pm.response.json().text).to.eql('PMTEST Kommentar bearbeitet'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Aenderungswunsch erledigen",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenEditor}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/comments/{{changeRequestId}}/status",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"status\": \"RESOLVED\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Status RESOLVED', function () { pm.expect(pm.response.json().status).to.eql('RESOLVED'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Kommentar loeschen",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/comments/{{commentId}}"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 204', function () { pm.response.to.have.status(204); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Reaktion entfernen",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenEditor}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/reaction"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Zaehler ist eine Zahl', function () { pm.expect(pm.response.json().count).to.be.a('number'); });"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "07 Portfolio",
+			"description": "Eigenes Portfolio (angemeldet) und oeffentliche Profilseite.",
+			"item": [
+				{
+					"name": "Eigenes Portfolio lesen",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/portfolio/me"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('mayEditPortfolio ist boolesch', function () { pm.expect(pm.response.json().mayEditPortfolio).to.be.a('boolean'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Eigenes Portfolio aendern",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/portfolio/me",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"biography\": \"PMTEST Biografie\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Biografie uebernommen', function () { pm.expect(pm.response.json().biography).to.eql('PMTEST Biografie'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Oeffentliches Portfolio lesen",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/portfolios/{{studentUserId}}"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Profil gehoert zum Student', function () { pm.expect(body.user.id).to.eql(pm.collectionVariables.get('studentUserId')); });",
+									"pm.test('Biografie sichtbar', function () { pm.expect(body.biography).to.eql('PMTEST Biografie'); });",
+									"pm.test('Veroeffentlichtes Projekt gelistet', function () {",
+									"\tpm.expect(body.projects.some(function (p) { return p.id === pm.collectionVariables.get('projectId'); })).to.be.true;",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Eigenes Portfolio leeren",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/portfolio/me",
+						"body": {
+							"mode": "raw",
+							"raw": "{}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Biografie geleert (PUT-Semantik)', function () { pm.expect(pm.response.json().biography == null).to.be.true; });"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "08 Top 10",
+			"description": "Nominierung durch den Redakteur, Entscheidung durch den Admin. Ablehnung sperrt nicht, deshalb wird zweimal nominiert.",
+			"item": [
+				{
+					"name": "Nominierung einreichen",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenEditor}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/top10-nomination",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"proposedPosition\": {{top10NextPosition}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+									"const body = pm.response.json();",
+									"pm.test('Status PENDING', function () { pm.expect(body.status).to.eql('PENDING'); });",
+									"pm.test('Bezug zum Projekt', function () { pm.expect(body.project.id).to.eql(pm.collectionVariables.get('projectId')); });",
+									"pm.collectionVariables.set('nominationId', body.id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Nominierung ablehnen (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/top10-nominations/{{nominationId}}/reject"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Status REJECTED', function () { pm.expect(pm.response.json().status).to.eql('REJECTED'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Nominierung erneut einreichen",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenEditor}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/top10-nomination",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"proposedPosition\": {{top10NextPosition}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+									"const body = pm.response.json();",
+									"pm.test('Abgelehnte Nominierung sperrt nicht', function () { pm.expect(body.status).to.eql('PENDING'); });",
+									"pm.collectionVariables.set('nominationId', body.id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Offene Nominierungen (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/top10-nominations?status=PENDING"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Nominierung in der Liste', function () {",
+									"\tpm.expect(body.some(function (n) { return n.id === pm.collectionVariables.get('nominationId'); })).to.be.true;",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Nominierung annehmen (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/top10-nominations/{{nominationId}}/accept",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"position\": {{top10NextPosition}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Status ACCEPTED', function () { pm.expect(body.status).to.eql('ACCEPTED'); });",
+									"pm.test('Entscheidung protokolliert', function () { pm.expect(body.decidedAt).to.be.a('string'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Negativ: erneut entscheiden",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/top10-nominations/{{nominationId}}/accept",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"position\": {{top10NextPosition}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 409', function () { pm.response.to.have.status(409); });",
+									"const err = pm.response.json();",
+									"pm.test('Fehlercode NOMINATION_ALREADY_DECIDED', function () { pm.expect(err.errorCode).to.eql('NOMINATION_ALREADY_DECIDED'); });",
+									"pm.test('ApiError-Envelope vollstaendig', function () { pm.expect(err).to.have.keys('timestamp', 'status', 'errorCode', 'message', 'path'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Top 10 lesen (mit Projekt)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/top10"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Projekt steht in der Top 10', function () {",
+									"\tpm.expect(body.some(function (e) { return e.project.id === pm.collectionVariables.get('projectId'); })).to.be.true;",
+									"});",
+									"pm.collectionVariables.set('top10Ids', JSON.stringify(body.map(function (e) { return e.project.id; })));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Top 10 unveraendert neu ordnen (Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/top10",
+						"description": "Ersetzt die Liste vollstaendig; hier bewusst mit der soeben gelesenen Reihenfolge, damit nichts verloren geht.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"projectIds\": {{top10Ids}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"const expected = JSON.parse(pm.collectionVariables.get('top10Ids'));",
+									"pm.test('Liste unveraendert uebernommen', function () { pm.expect(body).to.have.lengthOf(expected.length); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Top-10-Audit (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/top10-audit?size=20"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Seitenformat nach Contract 6.6', function () {",
+									"\tpm.expect(body).to.have.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
+									"});",
+									"pm.test('Mindestens ein Audit-Eintrag (ADDED)', function () { pm.expect(body.totalElements).to.be.at.least(1); });"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "09 Administration",
+			"description": "Dashboard, Nutzerverwaltung mit Initialpasswort-Flow, Stammdaten-CRUD mit Wegwerfobjekten, Sammelaktion.",
+			"item": [
+				{
+					"name": "Dashboard",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/dashboard"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Kennzahlen vorhanden', function () {",
+									"\tpm.expect(body).to.have.keys('projectsByStatus', 'usersTotal', 'usersByRole', 'usersByStatus', 'openNominations', 'blocksByType');",
+									"});",
+									"pm.test('Mindestens die drei Dev-Nutzer', function () { pm.expect(body.usersTotal).to.be.at.least(3); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Negativ: Dashboard als Student",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/dashboard"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 403', function () { pm.response.to.have.status(403); });",
+									"const err = pm.response.json();",
+									"pm.test('Fehlercode NO_PERMISSION', function () { pm.expect(err.errorCode).to.eql('NO_PERMISSION'); });",
+									"pm.test('ApiError-Envelope vollstaendig', function () { pm.expect(err).to.have.keys('timestamp', 'status', 'errorCode', 'message', 'path'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Nutzerliste",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/users?size=5"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Seitenformat nach Contract 6.6', function () {",
+									"\tpm.expect(body).to.have.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
+									"});",
+									"pm.test('hsbEmail nur hier sichtbar', function () { pm.expect(body.content[0]).to.have.property('hsbEmail'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Nutzer anlegen (Initialpasswort)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/users",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"firstName\": \"PMTEST\",\n\t\"lastName\": \"Tempnutzer\",\n\t\"email\": \"{{tempUserEmail}}\",\n\t\"hsbEmail\": \"{{tempUserHsbEmail}}\",\n\t\"role\": \"STUDENT\",\n\t\"password\": \"PmTestInitial123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const stamp = Date.now();",
+									"pm.collectionVariables.set('tempUserEmail', 'pmtest-temp-' + stamp + '@example.org');",
+									"pm.collectionVariables.set('tempUserHsbEmail', 'pmtest-temp-' + stamp + '@stud.hs-bremen.de');"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+									"const body = pm.response.json();",
+									"pm.test('Konto aktiv, Passwortaenderung erzwungen', function () {",
+									"\tpm.expect(body.status).to.eql('ACTIVE');",
+									"\tpm.expect(body.passwordChangeRequired).to.be.true;",
+									"});",
+									"pm.collectionVariables.set('tempUserId', body.id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Nutzer lesen",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/users/{{tempUserId}}"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Richtige E-Mail', function () { pm.expect(pm.response.json().email).to.eql(pm.collectionVariables.get('tempUserEmail')); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Nutzer aendern",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/users/{{tempUserId}}",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"lastName\": \"Tempnutzer bearbeitet\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Nachname uebernommen', function () { pm.expect(pm.response.json().lastName).to.eql('Tempnutzer bearbeitet'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Login Tempnutzer (Initialpasswort)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/auth/login",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"email\": \"{{tempUserEmail}}\",\n\t\"password\": \"PmTestInitial123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Passwortaenderung verlangt', function () { pm.expect(body.passwordChangeRequired).to.be.true; });",
+									"pm.collectionVariables.set('tempUserToken', body.token);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Negativ: gesperrt bis Passwortaenderung",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tempUserToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"title\": \"PMTEST gesperrt\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 403', function () { pm.response.to.have.status(403); });",
+									"const err = pm.response.json();",
+									"pm.test('Fehlercode PASSWORD_CHANGE_REQUIRED', function () { pm.expect(err.errorCode).to.eql('PASSWORD_CHANGE_REQUIRED'); });",
+									"pm.test('ApiError-Envelope vollstaendig', function () { pm.expect(err).to.have.keys('timestamp', 'status', 'errorCode', 'message', 'path'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Passwort aendern (Tempnutzer)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tempUserToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/auth/password",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"currentPassword\": \"PmTestInitial123\",\n\t\"newPassword\": \"PmTestGeaendert456\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Sperre nach Passwortaenderung aufgehoben",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tempUserToken}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/users/lookup?role=EDITOR",
+						"description": "Derselbe Endpoint-Typ war vor der Passwortaenderung mit 403 PASSWORD_CHANGE_REQUIRED gesperrt."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Gesperrter Endpoint antwortet wieder', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Admin-Passwort-Reset",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/users/{{tempUserId}}/reset-password"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Initialpasswort geliefert', function () { pm.expect(body.initialPassword).to.be.a('string').that.is.not.empty; });",
+									"pm.collectionVariables.set('tempUserInitialPassword', body.initialPassword);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Login Tempnutzer (nach Reset)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/auth/login",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"email\": \"{{tempUserEmail}}\",\n\t\"password\": \"{{tempUserInitialPassword}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Passwortaenderung erneut verlangt', function () { pm.expect(body.passwordChangeRequired).to.be.true; });",
+									"pm.collectionVariables.set('tempUserToken', body.token);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Kategorie anlegen",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/categories",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"name\": \"{{tmpCategoryName}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.collectionVariables.set('tmpCategoryName', 'PMTEST Kategorie A ' + Date.now());"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+									"pm.collectionVariables.set('tmpCategoryId', pm.response.json().id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Kategorie umbenennen",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/categories/{{tmpCategoryId}}",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"name\": \"{{tmpCategoryName}} umbenannt\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Name uebernommen', function () { pm.expect(pm.response.json().name).to.include('umbenannt'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Zweite Kategorie anlegen",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/categories",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"name\": \"{{tmpCategory2Name}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.collectionVariables.set('tmpCategory2Name', 'PMTEST Kategorie B ' + Date.now());"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+									"pm.collectionVariables.set('tmpCategory2Id', pm.response.json().id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Kategorien zusammenfuehren",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/categories/{{tmpCategory2Id}}/merge",
+						"description": "Loescht die Quellkategorie (B) und liefert das Ziel (A) zurueck.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"targetCategoryId\": \"{{tmpCategoryId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Antwort ist die Zielkategorie', function () { pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('tmpCategoryId')); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Fakultaet anlegen",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/faculties",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"name\": \"{{tmpFacultyName}}\",\n\t\"abbreviation\": \"{{tmpFacultyAbbr}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const stamp = Date.now();",
+									"pm.collectionVariables.set('tmpFacultyName', 'PMTEST Fakultaet ' + stamp);",
+									"pm.collectionVariables.set('tmpFacultyAbbr', 'PMF' + (stamp % 1000000));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+									"pm.collectionVariables.set('tmpFacultyId', pm.response.json().id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Fakultaet aendern",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/faculties/{{tmpFacultyId}}",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"name\": \"{{tmpFacultyName}} umbenannt\",\n\t\"abbreviation\": \"{{tmpFacultyAbbr}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Name uebernommen', function () { pm.expect(pm.response.json().name).to.include('umbenannt'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Studiengang anlegen",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/study-programs",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"name\": \"PMTEST Studiengang\",\n\t\"abbreviation\": \"{{tmpStudyProgramAbbr}}\",\n\t\"facultyId\": \"{{tmpFacultyId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.collectionVariables.set('tmpStudyProgramAbbr', 'PMS' + (Date.now() % 1000000));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+									"const body = pm.response.json();",
+									"pm.test('Fakultaet verknuepft', function () { pm.expect(body.facultyId).to.eql(pm.collectionVariables.get('tmpFacultyId')); });",
+									"pm.collectionVariables.set('tmpStudyProgramId', body.id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Studiengang aendern",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/study-programs/{{tmpStudyProgramId}}",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"name\": \"PMTEST Studiengang umbenannt\",\n\t\"abbreviation\": \"{{tmpStudyProgramAbbr}}\",\n\t\"facultyId\": \"{{tmpFacultyId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Name uebernommen', function () { pm.expect(pm.response.json().name).to.include('umbenannt'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Modul anlegen",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/modules",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"name\": \"PMTEST Modul\",\n\t\"abbreviation\": \"{{tmpModuleAbbr}}\",\n\t\"studyProgramId\": \"{{tmpStudyProgramId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.collectionVariables.set('tmpModuleAbbr', 'PMM' + (Date.now() % 1000000));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+									"const body = pm.response.json();",
+									"pm.test('Studiengang verknuepft', function () { pm.expect(body.studyProgramId).to.eql(pm.collectionVariables.get('tmpStudyProgramId')); });",
+									"pm.collectionVariables.set('tmpModuleId', body.id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Modul aendern",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/modules/{{tmpModuleId}}",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"name\": \"PMTEST Modul umbenannt\",\n\t\"abbreviation\": \"{{tmpModuleAbbr}}\",\n\t\"studyProgramId\": \"{{tmpStudyProgramId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Name uebernommen', function () { pm.expect(pm.response.json().name).to.include('umbenannt'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Modul loeschen",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/modules/{{tmpModuleId}}"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 204', function () { pm.response.to.have.status(204); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Studiengang loeschen",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/study-programs/{{tmpStudyProgramId}}"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 204', function () { pm.response.to.have.status(204); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Fakultaet loeschen",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/faculties/{{tmpFacultyId}}"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 204', function () { pm.response.to.have.status(204); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Kategorie loeschen",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/categories/{{tmpCategoryId}}"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 204', function () { pm.response.to.have.status(204); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Sammelaktion Status (bulk)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/projects/status",
+						"description": "Schickt das Vier-Augen-Projekt (SUBMITTED) per Sammelaktion in die Ueberarbeitung.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"projectIds\": [\n\t\t\"{{editorProjectId}}\"\n\t],\n\t\"action\": \"request-revision\",\n\t\"reason\": \"PMTEST Sammelaktion\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Zeile fuer das Projekt erfolgreich', function () {",
+									"\tpm.expect(body.results).to.have.lengthOf(1);",
+									"\tpm.expect(body.results[0].projectId).to.eql(pm.collectionVariables.get('editorProjectId'));",
+									"\tpm.expect(body.results[0].success).to.be.true;",
+									"});"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "10 Cleanup",
+			"description": "Raeumt alles Angelegte weg. Auch alleinstehend lauffähig (eigener Admin-Login, Marker-Sweeps fuer Reste abgebrochener Laeufe): npx newman@6 run ... --folder \"10 Cleanup\"",
+			"item": [
+				{
+					"name": "Admin-Login (Cleanup)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/auth/login",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"email\": \"{{adminEmail}}\",\n\t\"password\": \"{{devTestPassword}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.collectionVariables.set('tokenAdmin', pm.response.json().token);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Projekt zurueckziehen (Top-10-Platz raeumen)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/request-revision",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"reason\": \"PMTEST Aufraeumen\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const missing = [\"projectId\"].filter(function (v) { return !pm.collectionVariables.get(v); });",
+									"if (missing.length) { console.log('Uebersprungen, Variable fehlt: ' + missing.join(', ')); pm.execution.skipRequest(); }"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Zurueckgezogen oder bereits zurueckgezogen (200/409)', function () { pm.expect([200, 409]).to.include(pm.response.code); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Datei loeschen",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/files/{{fileId}}"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const missing = [\"fileId\"].filter(function (v) { return !pm.collectionVariables.get(v); });",
+									"if (missing.length) { console.log('Uebersprungen, Variable fehlt: ' + missing.join(', ')); pm.execution.skipRequest(); }"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Geloescht oder bereits weg (204/404)', function () { pm.expect([204, 404]).to.include(pm.response.code); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Projekt loeschen",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const missing = [\"projectId\"].filter(function (v) { return !pm.collectionVariables.get(v); });",
+									"if (missing.length) { console.log('Uebersprungen, Variable fehlt: ' + missing.join(', ')); pm.execution.skipRequest(); }"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Geloescht oder bereits weg (204/404)', function () { pm.expect([204, 404]).to.include(pm.response.code); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Vier-Augen-Projekt loeschen",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{editorProjectId}}"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const missing = [\"editorProjectId\"].filter(function (v) { return !pm.collectionVariables.get(v); });",
+									"if (missing.length) { console.log('Uebersprungen, Variable fehlt: ' + missing.join(', ')); pm.execution.skipRequest(); }"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Geloescht oder bereits weg (204/404)', function () { pm.expect([204, 404]).to.include(pm.response.code); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Tempnutzer deaktivieren",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/users/{{tempUserId}}"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const missing = [\"tempUserId\"].filter(function (v) { return !pm.collectionVariables.get(v); });",
+									"if (missing.length) { console.log('Uebersprungen, Variable fehlt: ' + missing.join(', ')); pm.execution.skipRequest(); }"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Deaktiviert (204)', function () { pm.expect([204, 404]).to.include(pm.response.code); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Negativ: deaktiviertes Konto",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tempUserToken}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/auth/me"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const missing = [\"tempUserToken\",\"tempUserId\"].filter(function (v) { return !pm.collectionVariables.get(v); });",
+									"if (missing.length) { console.log('Uebersprungen, Variable fehlt: ' + missing.join(', ')); pm.execution.skipRequest(); }"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 401', function () { pm.response.to.have.status(401); });",
+									"const err = pm.response.json();",
+									"pm.test('Fehlercode ACCOUNT_NOT_ACTIVE', function () { pm.expect(err.errorCode).to.eql('ACCOUNT_NOT_ACTIVE'); });",
+									"pm.test('ApiError-Envelope vollstaendig', function () { pm.expect(err).to.have.keys('timestamp', 'status', 'errorCode', 'message', 'path'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Marker-Sweep Projekte",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects?q=PMTEST&size=100",
+						"description": "Findet PMTEST-Projekte frueherer, abgebrochener Laeufe (Admin sieht alle Status) und loescht sie."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const send = function (options) { return new Promise(function (resolve, reject) { pm.sendRequest(options, function (err, res) { if (err) { reject(err); } else { resolve(res); } }); }); };",
+									"const base = pm.variables.replaceIn('{{baseUrl}}');",
+									"const adminAuth = { Authorization: 'Bearer ' + pm.collectionVariables.get('tokenAdmin') };",
+									"const isMarked = function (text) { return String(text || '').indexOf('PMTEST') === 0; };",
+									"const leftovers = (pm.response.json().content || []).filter(function (p) { return isMarked(p.title); });",
+									"let chain = Promise.resolve();",
+									"leftovers.forEach(function (p) {",
+									"\tchain = chain.then(function () {",
+									"\t\tconst del = function () { return send({ url: base + '/api/projects/' + p.id, method: 'DELETE', header: adminAuth }); };",
+									"\t\tif (p.status !== 'PUBLISHED') { return del(); }",
+									"\t\treturn send({",
+									"\t\t\turl: base + '/api/projects/' + p.id + '/request-revision',",
+									"\t\t\tmethod: 'POST',",
+									"\t\t\theader: Object.assign({ 'Content-Type': 'application/json' }, adminAuth),",
+									"\t\t\tbody: { mode: 'raw', raw: JSON.stringify({ reason: 'PMTEST Sweep' }) },",
+									"\t\t}).then(del);",
+									"\t}).then(function (res) { console.log('Sweep Projekt ' + p.id + ': ' + res.code); });",
+									"});",
+									"return chain;"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Marker-Sweep Stammdaten",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/categories",
+						"description": "Loescht PMTEST-Stammdaten in Referenzreihenfolge: Module, Studiengaenge, Fakultaeten, Kategorien."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const send = function (options) { return new Promise(function (resolve, reject) { pm.sendRequest(options, function (err, res) { if (err) { reject(err); } else { resolve(res); } }); }); };",
+									"const base = pm.variables.replaceIn('{{baseUrl}}');",
+									"const adminAuth = { Authorization: 'Bearer ' + pm.collectionVariables.get('tokenAdmin') };",
+									"const isMarked = function (text) { return String(text || '').indexOf('PMTEST') === 0; };",
+									"const categories = (pm.response.json() || []).filter(function (c) { return isMarked(c.name); });",
+									"send({ url: base + '/api/faculties', method: 'GET' }).then(function (facRes) {",
+									"\tconst faculties = (facRes.json() || []).filter(function (f) { return isMarked(f.name); });",
+									"\tlet chain = Promise.resolve();",
+									"\tfaculties.forEach(function (f) {",
+									"\t\tchain = chain.then(function () {",
+									"\t\t\treturn send({ url: base + '/api/study-programs?faculty=' + f.id, method: 'GET' }).then(function (spRes) {",
+									"\t\t\t\tlet inner = Promise.resolve();",
+									"\t\t\t\t(spRes.json() || []).forEach(function (sp) {",
+									"\t\t\t\t\tinner = inner.then(function () {",
+									"\t\t\t\t\t\treturn send({ url: base + '/api/modules?studyProgram=' + sp.id, method: 'GET' }).then(function (modRes) {",
+									"\t\t\t\t\t\t\tlet mods = Promise.resolve();",
+									"\t\t\t\t\t\t\t(modRes.json() || []).forEach(function (m) {",
+									"\t\t\t\t\t\t\t\tmods = mods.then(function () { return send({ url: base + '/api/admin/modules/' + m.id, method: 'DELETE', header: adminAuth }); });",
+									"\t\t\t\t\t\t\t});",
+									"\t\t\t\t\t\t\treturn mods;",
+									"\t\t\t\t\t\t}).then(function () { return send({ url: base + '/api/admin/study-programs/' + sp.id, method: 'DELETE', header: adminAuth }); });",
+									"\t\t\t\t\t});",
+									"\t\t\t\t});",
+									"\t\t\t\treturn inner;",
+									"\t\t\t}).then(function () { return send({ url: base + '/api/admin/faculties/' + f.id, method: 'DELETE', header: adminAuth }); })",
+									"\t\t\t\t.then(function (res) { console.log('Sweep Fakultaet \"' + f.name + '\": ' + res.code); });",
+									"\t\t});",
+									"\t});",
+									"\treturn chain;",
+									"}).then(function () {",
+									"\tlet chain = Promise.resolve();",
+									"\tcategories.forEach(function (c) {",
+									"\t\tchain = chain.then(function () { return send({ url: base + '/api/admin/categories/' + c.id, method: 'DELETE', header: adminAuth }); })",
+									"\t\t\t.then(function (res) { console.log('Sweep Kategorie \"' + c.name + '\": ' + res.code); });",
+									"\t});",
+									"\treturn chain;",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Marker-Sweep Nutzer",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenAdmin}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/admin/users?q=pmtest&size=100",
+						"description": "Deaktiviert pmtest-Konten frueherer Laeufe (echtes Loeschen gibt es nicht)."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const send = function (options) { return new Promise(function (resolve, reject) { pm.sendRequest(options, function (err, res) { if (err) { reject(err); } else { resolve(res); } }); }); };",
+									"const base = pm.variables.replaceIn('{{baseUrl}}');",
+									"const adminAuth = { Authorization: 'Bearer ' + pm.collectionVariables.get('tokenAdmin') };",
+									"const isMarked = function (text) { return String(text || '').indexOf('PMTEST') === 0; };",
+									"const leftovers = (pm.response.json().content || []).filter(function (u) {",
+									"\treturn String(u.email || '').indexOf('pmtest') === 0 && u.status !== 'DEACTIVATED';",
+									"});",
+									"let chain = Promise.resolve();",
+									"leftovers.forEach(function (u) {",
+									"\tchain = chain.then(function () { return send({ url: base + '/api/admin/users/' + u.id, method: 'DELETE', header: adminAuth }); })",
+									"\t\t.then(function (res) { console.log('Sweep Nutzer ' + u.email + ': ' + res.code); });",
+									"});",
+									"return chain;"
+								]
+							}
+						}
+					]
+				}
+			]
+		}
+	]
+}

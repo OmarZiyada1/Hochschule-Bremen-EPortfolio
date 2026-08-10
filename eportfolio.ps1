@@ -350,6 +350,84 @@ function Invoke-FrontendTests {
 	}
 }
 
+# Fuehrt die Postman-Testsuite aus postman/ mit Newman aus (Anleitung dort im
+# README). Laeuft auf dem Host ueber npx gegen das Backend der aktuellen
+# Betriebsart; das Passwort der Dev-Testnutzer kommt aus der .env, die baseUrl
+# aus dem Backend-Port der Betriebsart. -NurCleanup faehrt nur den Ordner
+# "10 Cleanup", der Reste eines abgebrochenen Laufs wegraeumt.
+function Invoke-ApiTestsuite {
+	param([switch]$NurCleanup)
+
+	$m = Get-Mode
+	if ($NurCleanup) {
+		Write-Head "API-Testsuite: nur Cleanup-Ordner ($($m['Label']))"
+	} else {
+		Write-Head "API-Testsuite mit Newman ($($m['Label']))"
+	}
+
+	if ($m['Profil'] -ne 'dev') {
+		Write-Host 'Nur in DEV und ARTIFACT moeglich: die Suite meldet sich mit den' -ForegroundColor Yellow
+		Write-Host 'Dev-Testnutzern an, und die gibt es im Profil prod absichtlich nicht.' -ForegroundColor Yellow
+		return
+	}
+
+	if ($null -eq (Get-Command npx -ErrorAction SilentlyContinue)) {
+		Write-Host 'npx fehlt. Newman braucht Node.js (https://nodejs.org).' -ForegroundColor Red
+		return
+	}
+
+	$password = Get-EnvValue -Name 'DEV_TEST_PASSWORD' -Default ''
+	if ($password -eq '') {
+		Write-Host 'DEV_TEST_PASSWORD ist in der .env nicht gesetzt. Ohne den Wert gibt es' -ForegroundColor Red
+		Write-Host 'keine Dev-Testnutzer und damit keine Logins fuer die Suite.' -ForegroundColor Red
+		return
+	}
+
+	$backendPort = Get-BackendPort
+	$baseUrl = "http://localhost:$backendPort"
+
+	# Gleiche Pruefung wie Test-Endpoint, nur mit Rueckgabewert: ohne
+	# erreichbares Backend liefe jeder Request der Suite in denselben Fehler.
+	$health = $null
+	if ($null -ne (Get-Command curl.exe -ErrorAction SilentlyContinue)) {
+		$code = & curl.exe -s -o NUL -m 5 -w '%{http_code}' "$baseUrl/actuator/health"
+		if ($LASTEXITCODE -eq 0 -and $code -eq '200') { $health = 200 }
+	} else {
+		try {
+			$health = [int](Invoke-WebRequest -Uri "$baseUrl/actuator/health" -UseBasicParsing -TimeoutSec 5).StatusCode
+		} catch {
+			$health = $null
+		}
+	}
+	if ($health -ne 200) {
+		Write-Host "Das Backend antwortet nicht auf $baseUrl/actuator/health." -ForegroundColor Red
+		Write-Host 'Erst starten (Menuepunkt 1), dann die Suite laufen lassen.' -ForegroundColor Red
+		return
+	}
+
+	if (-not $NurCleanup) {
+		Write-Host 'Hoechstens zwei komplette Laeufe je 15 Minuten: die Mail-Endpoints teilen' -ForegroundColor DarkGray
+		Write-Host 'sich ein Rate-Limit (429). Danach hilft ein Backend-Neustart; Details im' -ForegroundColor DarkGray
+		Write-Host 'postman/README.md.' -ForegroundColor DarkGray
+	}
+
+	$arguments = @('-y', 'newman@6', 'run', 'E-Portfolio-HSB.postman_collection.json',
+		'-e', 'Local-Dev.postman_environment.json',
+		'--env-var', "devTestPassword=$password",
+		'--env-var', "baseUrl=$baseUrl")
+	if ($NurCleanup) { $arguments += @('--folder', '10 Cleanup') }
+
+	Push-Location (Join-Path $PSScriptRoot 'postman')
+	try {
+		Write-Host ''
+		# Das Passwort bleibt aus der Anzeige draussen.
+		Write-Host "> npx newman@6 run ... --env-var devTestPassword=*** --env-var baseUrl=$baseUrl" -ForegroundColor DarkGray
+		& npx @arguments
+	} finally {
+		Pop-Location
+	}
+}
+
 function Get-ProjektImages {
 	$images = & docker images --format '{{.Repository}}:{{.Tag}}' --filter 'reference=eportfolio-*'
 	if ($LASTEXITCODE -ne 0) { return @() }
@@ -460,6 +538,8 @@ function Show-Menu {
 	Write-Host '  16  psql in der Datenbank'
 	Write-Host '  17  Backend-Tests auf dem Host    (.\mvnw.cmd test)'
 	Write-Host '  18  Frontend-Tests auf dem Host   (pnpm test)'
+	Write-Host '   t  API-Testsuite mit Newman      (postman/, alle Endpoints in einem Lauf)'
+	Write-Host '  tc  API-Testsuite: nur Cleanup    (raeumt Reste eines abgebrochenen Laufs weg)'
 	Write-Host ''
 	Write-Host ' Aufraeumen' -ForegroundColor White
 	Write-Host '  19  Stoppen                       (Container und Daten bleiben)'
@@ -520,6 +600,8 @@ while ($running) {
 		'16' { Open-Psql }
 		'17' { Invoke-BackendTests }
 		'18' { Invoke-FrontendTests }
+		't'  { Invoke-ApiTestsuite }
+		'tc' { Invoke-ApiTestsuite -NurCleanup }
 		'19' { Write-Head 'Stoppen'; Invoke-Compose @('stop') }
 		'20' { Write-Head 'Container entfernen'; Invoke-Compose @('down', '--remove-orphans') }
 		'21' { Remove-Betriebsart }
