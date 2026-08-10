@@ -407,6 +407,32 @@ class PortfolioIntegrationTest {
 		}
 	}
 
+	@Nested
+	@DisplayName("Abgrenzung: das eigene Profil bleibt jeder Rolle offen")
+	class EveryRoleKeepsItsProfile {
+
+		/**
+		 * Seit v33 verwehrt §5 einem Admin-Konto das Anlegen von Projekten
+		 * (Fussnote 10). Die Zeile „Eigenes Portfolio bearbeiten" ist davon
+		 * ausdruecklich nicht betroffen: Name, Biografie und Avatar pflegt auch
+		 * ein Admin-Konto (§3.2). Der Test haelt die Grenze fest, damit die
+		 * Sperre nicht spaeter auf das Profil ausgeweitet wird.
+		 */
+		@Test
+		@DisplayName("Ein Admin-Konto liest und aendert sein Profil weiterhin: je 200 (§3.2)")
+		void adminKeepsOwnProfile() throws Exception {
+			User admin = save(TestUser.activeWithoutId(Role.ADMIN, "nicht-relevant"));
+
+			mockMvc.perform(as(admin, get(ME)))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.mayEditPortfolio").value(true));
+
+			update(admin, "Verwalte das Portal.", null)
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.biography").value("Verwalte das Portal."));
+		}
+	}
+
 	// ==================================================================
 	// Hilfsmittel
 	// ==================================================================

@@ -138,9 +138,23 @@ public class ProjectPermissionService {
 	// §5: Anlegen und Bearbeiten
 	// ------------------------------------------------------------------
 
-	/** Zeile „Projekt anlegen": alle angemeldeten Rollen ✓. */
+	/**
+	 * Zeile „Projekt anlegen": STUDENT ✓, EDITOR ✓, ADMIN ✗ (Fussnote 10).
+	 *
+	 * <p><strong>Warum ein Admin-Konto aussen vor bleibt:</strong> bis v32 trug
+	 * die Zeile einen Haken fuer alle angemeldeten Rollen und widersprach damit
+	 * der Zeile „Projekt einreichen", die {@code ADMIN} seit jeher ein Kreuz
+	 * gibt. Ein vom Admin angelegtes Projekt haette {@code DRAFT} nie verlassen
+	 * koennen und waere dauerhaft liegen geblieben. Die Administrationsseite
+	 * verwaltet fremde Projekte, sie verfasst keine eigenen; wer beides tut, hat
+	 * dafuer ein Konto mit {@code STUDENT} oder {@code EDITOR}.
+	 *
+	 * <p>Unberuehrt bleibt die Zeile „Eigenes Portfolio bearbeiten": Name,
+	 * Biografie und Avatar pflegt auch ein Admin-Konto (§3.2). Gesperrt ist
+	 * allein das Anlegen neuer Projekte, nicht der Zugriff auf bestehende.
+	 */
 	public boolean mayCreateProject(AuthenticatedUser user) {
-		return isLoggedIn(user);
+		return isLoggedIn(user) && !user.hasRole(Role.ADMIN);
 	}
 
 	/**
