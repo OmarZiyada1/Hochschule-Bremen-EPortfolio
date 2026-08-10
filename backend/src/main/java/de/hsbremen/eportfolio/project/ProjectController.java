@@ -196,8 +196,9 @@ public class ProjectController {
 			+ "im Body genannte ID (Kategorie, Fakultaet, Studiengang, Modul, Mitglied, "
 			+ "Redakteur:in) gibt es nicht.")
 	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
-	@ApiResponse(responseCode = "403", description = "Angemeldet, aber ohne Recht zum Anlegen, "
-			+ "oder es wurden editorIds gesetzt, obwohl die Rolle das nicht darf (§5, Fussnote 3).")
+	@ApiResponse(responseCode = "403", description = "Ein Admin-Konto darf grundsaetzlich nicht "
+			+ "anlegen (§5, Fussnote 10); angemeldet, aber sonst ohne Recht zum Anlegen; oder es "
+			+ "wurden editorIds gesetzt, obwohl die Rolle das nicht darf (§5, Fussnote 3).")
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	public ProjectDetailResponse create(

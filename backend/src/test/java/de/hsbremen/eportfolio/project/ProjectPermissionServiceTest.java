@@ -149,12 +149,20 @@ class ProjectPermissionServiceTest {
 	class Creating {
 
 		@Test
-		@DisplayName("PUBLIC nein, alle angemeldeten Rollen ja")
+		@DisplayName("PUBLIC nein, STUDENT und EDITOR ja")
 		void create() {
 			assertThat(service.mayCreateProject(PUBLIC)).isFalse();
 			assertThat(service.mayCreateProject(otherStudent)).isTrue();
 			assertThat(service.mayCreateProject(editor)).isTrue();
-			assertThat(service.mayCreateProject(admin)).isTrue();
+		}
+
+		@Test
+		@DisplayName("Fussnote ¹⁰: ein Admin-Konto legt keine Projekte an")
+		void adminMayNot() {
+			// Nicht der Status sperrt hier, sondern die Rolle: das Konto ist
+			// aktiv und darf verwalten, nur eben nicht selbst verfassen.
+			assertThat(service.mayCreateProject(admin)).isFalse();
+			assertThat(service.mayManageUsers(admin)).isTrue();
 		}
 	}
 
@@ -682,6 +690,13 @@ class ProjectPermissionServiceTest {
 					"gesperrt@hs-bremen.de", Role.ADMIN, status, "hash");
 			AuthenticatedUser user = AuthenticatedUser.from(blockedAdmin);
 			Project p = project(ProjectStatus.SUBMITTED);
+
+			// Fuer das Anlegen wird eine zweite Rolle geprueft: einem
+			// Admin-Konto ist es nach Fussnote 10 ohnehin verwehrt, der Status
+			// waere an dieser Zeile also nicht mehr abzulesen.
+			User blockedStudent = TestUser.create(UUID.randomUUID(), "gesperrt2@example.org",
+					"gesperrt2@hs-bremen.de", Role.STUDENT, status, "hash");
+			assertThat(service.mayCreateProject(AuthenticatedUser.from(blockedStudent))).isFalse();
 
 			assertThat(service.mayCreateProject(user)).isFalse();
 			assertThat(service.mayApprove(user, p)).isFalse();

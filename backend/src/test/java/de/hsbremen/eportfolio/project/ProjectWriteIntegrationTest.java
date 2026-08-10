@@ -307,6 +307,31 @@ class ProjectWriteIntegrationTest {
 		}
 
 		@Test
+		@DisplayName("Ein Admin-Konto darf nicht anlegen: 403 NO_PERMISSION "
+				+ "(§5, Fussnote 10)")
+		void adminMayNotCreate() throws Exception {
+			mockMvc.perform(asUser(postRequest(json("title", "Projekt der Verwaltung")), admin))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+		}
+
+		@Test
+		@DisplayName("Derselbe Koerper mit STUDENT- und mit EDITOR-Token: je 201 (§5)")
+		void studentAndEditorMayCreate() throws Exception {
+			// Bewusst derselbe Body wie in adminMayNotCreate: der Unterschied
+			// liegt allein an der Rolle, nicht am Inhalt der Anfrage.
+			String body = json("title", "Projekt der Verwaltung");
+
+			mockMvc.perform(asUser(postRequest(body), author))
+					.andExpect(status().isCreated())
+					.andExpect(jsonPath("$.status").value("DRAFT"));
+
+			mockMvc.perform(asUser(postRequest(body), assignedEditor))
+					.andExpect(status().isCreated())
+					.andExpect(jsonPath("$.status").value("DRAFT"));
+		}
+
+		@Test
 		@DisplayName("Ohne Token: 401 NOT_AUTHENTICATED")
 		void anonymous() throws Exception {
 			mockMvc.perform(postRequest(json("title", "Anonym")))
