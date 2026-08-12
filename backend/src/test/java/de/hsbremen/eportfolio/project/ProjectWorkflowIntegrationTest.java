@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -305,6 +306,84 @@ class ProjectWorkflowIntegrationTest {
 					.andExpect(status().isUnauthorized())
 					.andExpect(jsonPath("$.errorCode").value("NOT_AUTHENTICATED"));
 		}
+
+		@Test
+		@DisplayName("Ein offener Aenderungswunsch sperrt das erneute Einreichen: 409 "
+				+ "CHANGE_REQUESTS_OPEN; nach RESOLVED geht derselbe Aufruf durch (§2.4)")
+		void openChangeRequestBlocksResubmit() throws Exception {
+			Project returned = submitted();
+			revision(assignedEditor, returned, "Bitte die Quellenangaben ergaenzen.");
+
+			mockMvc.perform(as(author, action(returned, "submit")))
+					.andExpect(status().isConflict())
+					.andExpect(jsonPath("$.errorCode").value("CHANGE_REQUESTS_OPEN"))
+					.andExpect(jsonPath("$.message")
+							.value(containsString("1 offener Aenderungswunsch")));
+
+			// Der Status bleibt, wo er war, und die Historie bekommt keinen
+			// Eintrag: die Pruefung greift vor dem Schreiben.
+			assertThat(reload(returned).getStatus()).isEqualTo(ProjectStatus.REVISION);
+			assertThat(history(returned)).hasSize(2);
+
+			// Die Projektseite hakt den Punkt ab (§2.4), dann geht es durch.
+			Comment changeRequest = commentRepository
+					.findByProjectId(returned.getId()).getFirst();
+			mockMvc.perform(as(author,
+							patch("/api/comments/" + changeRequest.getId() + "/status")
+									.contentType(MediaType.APPLICATION_JSON)
+									.content(json("status", "RESOLVED"))))
+					.andExpect(status().isOk());
+
+			assertThat(ok(author, returned, "submit").get("status").asText())
+					.isEqualTo("SUBMITTED");
+		}
+
+		@Test
+		@DisplayName("Die Meldung nennt die Anzahl der offenen Punkte; erledigte zaehlen "
+				+ "nicht mit")
+		void messageNamesTheNumberOfOpenChangeRequests() throws Exception {
+			Project returned = submitted();
+			revision(assignedEditor, returned, "Erster Punkt.");
+			commentRepository.saveAndFlush(
+					Comment.changeRequest(returned, assignedEditor, "Zweiter Punkt."));
+			Comment resolved = Comment.changeRequest(returned, assignedEditor, "Schon erledigt.");
+			resolved.setStatus(CommentStatus.RESOLVED);
+			commentRepository.saveAndFlush(resolved);
+
+			mockMvc.perform(as(author, action(returned, "submit")))
+					.andExpect(status().isConflict())
+					.andExpect(jsonPath("$.errorCode").value("CHANGE_REQUESTS_OPEN"))
+					.andExpect(jsonPath("$.message")
+							.value(containsString("2 offene Aenderungswuensche")));
+		}
+
+		@Test
+		@DisplayName("NOTE und REPLY blockieren nie: sie tragen keinen Erledigungsstatus "
+				+ "(§2.3)")
+		void notesAndRepliesDoNotBlock() throws Exception {
+			commentRepository.saveAndFlush(
+					Comment.of(draft, assignedEditor, CommentType.NOTE, "Interne Notiz."));
+			commentRepository.saveAndFlush(
+					Comment.of(draft, member, CommentType.REPLY, "Eine Antwort."));
+
+			assertThat(ok(author, draft, "submit").get("status").asText())
+					.isEqualTo("SUBMITTED");
+		}
+
+		@Test
+		@DisplayName("Zustandskonflikt vor Formvollstaendigkeit: mit offenem "
+				+ "Aenderungswunsch und fehlendem Pflichtfeld antwortet 409, nicht 400")
+		void conflictComesBeforeCompleteness() throws Exception {
+			Project returned = submitted();
+			revision(assignedEditor, returned, "Bitte nachbessern.");
+			Project reloaded = reload(returned);
+			reloaded.setSemester(null);
+			projectRepository.saveAndFlush(reloaded);
+
+			mockMvc.perform(as(author, action(returned, "submit")))
+					.andExpect(status().isConflict())
+					.andExpect(jsonPath("$.errorCode").value("CHANGE_REQUESTS_OPEN"));
+		}
 	}
 
 	// ==================================================================
@@ -472,6 +551,7 @@ class ProjectWorkflowIntegrationTest {
 			mockMvc.perform(get("/api/projects/" + approved.getId()))
 					.andExpect(status().isUnauthorized());
 
+			resolveChangeRequests(approved);
 			ok(author, approved, "submit");
 			ok(assignedEditor, approved, "approve");
 			ok(assignedEditor, approved, "publish");
@@ -689,6 +769,9 @@ class ProjectWorkflowIntegrationTest {
 
 			ok(author, project, "submit");
 			revision(assignedEditor, project, "Bitte die Gliederung ueberarbeiten.");
+			// Erst abhaken, dann erneut einreichen: seit KAN-59 sperrt ein
+			// offener Aenderungswunsch das Einreichen (§2.4).
+			resolveChangeRequests(project);
 			ok(author, project, "submit");
 			ok(assignedEditor, project, "approve");
 			ok(assignedEditor, project, "publish");
@@ -840,6 +923,20 @@ class ProjectWorkflowIntegrationTest {
 			fields.put((String) pairs[i], pairs[i + 1]);
 		}
 		return objectMapper.writeValueAsString(fields);
+	}
+
+	/**
+	 * Hakt alle Aenderungswuensche des Projekts ab, damit das erneute Einreichen
+	 * nicht an der Sperre aus KAN-59 scheitert (§2.4). Direkt ueber das
+	 * Repository; der Weg ueber {@code PATCH /comments/{id}/status} steht in
+	 * {@code Submitting.openChangeRequestBlocksResubmit}.
+	 */
+	private void resolveChangeRequests(Project project) {
+		commentRepository.findByProjectIdAndType(project.getId(), CommentType.CHANGE_REQUEST)
+				.forEach(comment -> {
+					comment.setStatus(CommentStatus.RESOLVED);
+					commentRepository.saveAndFlush(comment);
+				});
 	}
 
 	private Project reload(Project project) {

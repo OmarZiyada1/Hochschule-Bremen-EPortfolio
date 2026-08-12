@@ -1338,6 +1338,74 @@
 					]
 				},
 				{
+					"name": "Negativ: Einreichen mit offenem Aenderungswunsch",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							}
+						],
+						"url": "{{baseUrl}}/api/projects/{{projectId}}/submit"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 409', function () { pm.response.to.have.status(409); });",
+									"const err = pm.response.json();",
+									"pm.test('Fehlercode CHANGE_REQUESTS_OPEN', function () { pm.expect(err.errorCode).to.eql('CHANGE_REQUESTS_OPEN'); });",
+									"pm.test('Meldung nennt die Anzahl', function () { pm.expect(err.message).to.include('1 offener Aenderungswunsch'); });",
+									"pm.test('ApiError-Envelope vollstaendig', function () { pm.expect(err).to.have.keys('timestamp', 'status', 'errorCode', 'message', 'path'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Aenderungswunsch abhaken (RESOLVED)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{tokenStudent}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": "{{baseUrl}}/api/comments/{{changeRequestId}}/status",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"status\": \"RESOLVED\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Status RESOLVED', function () { pm.expect(pm.response.json().status).to.eql('RESOLVED'); });"
+								]
+							}
+						}
+					]
+				},
+				{
 					"name": "Erneut einreichen (REVISION zu SUBMITTED)",
 					"request": {
 						"method": "POST",

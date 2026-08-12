@@ -3,7 +3,7 @@ package de.hsbremen.eportfolio.common.error;
 /**
  * Fehlercodes fuer das Envelope aus API-Contract §6.2.
  *
- * <p>Stand Contract v37 steht jede Konstante dieser Klasse auch in §6.2.
+ * <p>Stand Contract v38 steht jede Konstante dieser Klasse auch in §6.2.
  * {@link #VALIDATION_FAILED} war bis v14 nur hier gefuehrt und wurde mit v15
  * nachgetragen (Tabelle „Fehlercodes Anfrageformat", Historieneintrag in §10).
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
@@ -40,7 +40,9 @@ package de.hsbremen.eportfolio.common.error;
  *
  * <p>Ebenso neu entstanden ist {@link #INTERNAL_ERROR} mit KAN-55 (Contract
  * v31): bis dahin fuehrte §6.2 ueberhaupt keinen Code fuer den unerwarteten
- * Serverfehler, und ein 500 lief an dem einen Fehlerformat vorbei.
+ * Serverfehler, und ein 500 lief an dem einen Fehlerformat vorbei. Zuletzt kam
+ * {@link #CHANGE_REQUESTS_OPEN} mit KAN-59 dazu (Contract v38): §2.4 verlangte
+ * den Review-Kreislauf, ohne dass ein Code die Sperre beim Einreichen trug.
  */
 public final class ErrorCodes {
 
@@ -298,6 +300,32 @@ public final class ErrorCodes {
 	 */
 	public static final String PROJECT_STATUS_TRANSITION_INVALID =
 			"PROJECT_STATUS_TRANSITION_INVALID";
+
+	/**
+	 * 409: das Projekt laesst sich nicht einreichen, weil daran noch
+	 * Aenderungswuensche ({@code CHANGE_REQUEST}) im Status {@code OPEN} haengen
+	 * (§2.4). Der Server erzwingt damit den Review-Kreislauf, der bis dahin
+	 * reine Konvention der Oberflaeche war: erst wenn die Projektseite jeden
+	 * offenen Punkt ueber {@code PATCH /comments/{id}/status} auf
+	 * {@code RESOLVED} gestellt hat, geht das erneute Einreichen durch.
+	 *
+	 * <p><strong>Nicht zu verwechseln mit</strong>
+	 * {@link #PROJECT_STATUS_TRANSITION_INVALID}: dort ist der Uebergang selbst
+	 * nach §4.1 unzulaessig. Hier ist er erlaubt ({@code REVISION} nach
+	 * {@code SUBMITTED} steht in der Tabelle), es fehlt nur die Erledigung der
+	 * offenen Punkte. Und <strong>nicht zu verwechseln mit</strong>
+	 * {@link #PROJECT_INCOMPLETE}: dort fehlen Felder, hier steht Arbeit aus.
+	 * Die drei verlangen vom Frontend drei verschiedene Meldungen, deshalb drei
+	 * Codes.
+	 *
+	 * <p>{@code NOTE} und {@code REPLY} blockieren nie: sie tragen keinen
+	 * Erledigungsstatus (§2.3, {@code Comment.of}). Die Meldung nennt die
+	 * Anzahl der offenen Aenderungswuensche, damit die Projektseite weiss, wie
+	 * viel noch vor ihr liegt.
+	 *
+	 * <p>Vergeben mit KAN-59, nachgetragen in §6.2 mit Contract v38.
+	 */
+	public static final String CHANGE_REQUESTS_OPEN = "CHANGE_REQUESTS_OPEN";
 
 	/**
 	 * 409: die Aktion setzt ein veroeffentlichtes Projekt voraus, das Projekt

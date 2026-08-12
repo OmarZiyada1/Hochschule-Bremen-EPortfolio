@@ -5,13 +5,14 @@ package de.hsbremen.eportfolio.common.error;
  * Ressource. Wird vom {@link GlobalExceptionHandler} auf HTTP 409 mit dem
  * Envelope aus API-Contract §6.2 abgebildet.
  *
- * <p>Der Fehlercode ist ein Feld und nicht fest verdrahtet, weil §6.2 sechs
+ * <p>Der Fehlercode ist ein Feld und nicht fest verdrahtet, weil §6.2 sieben
  * verschiedene 409er kennt: {@code PROJECT_VERSION_CONFLICT},
  * {@code PROJECT_STATUS_NOT_EDITABLE}, {@code PROJECT_STATUS_TRANSITION_INVALID},
- * {@code RESOURCE_IN_USE} sowie seit v23 {@code PROJECT_NOT_PUBLISHED} und
- * {@code NOMINATION_ALREADY_DECIDED}. Dieselbe Ueberlegung wie bei
+ * {@code RESOURCE_IN_USE}, seit v23 {@code PROJECT_NOT_PUBLISHED} und
+ * {@code NOMINATION_ALREADY_DECIDED}, seit v38 {@code CHANGE_REQUESTS_OPEN}.
+ * Dieselbe Ueberlegung wie bei
  * {@link ResourceNotFoundException}: eine Ausnahmeklasse je Code waere derselbe
- * Ablauf in sechs Klassen.
+ * Ablauf in sieben Klassen.
  *
  * <p><strong>Abgrenzung zu 400:</strong> {@link ValidationException} meint „die
  * Anfrage selbst ist unbrauchbar" (fehlendes Pflichtfeld, unbekannte ID im
@@ -129,6 +130,28 @@ public class ConflictException extends RuntimeException {
 	 */
 	public static ConflictException addressInUse(String field) {
 		return resourceInUse(field + ": Diese E-Mail-Adresse ist bereits registriert.");
+	}
+
+	/**
+	 * Das Projekt laesst sich nicht einreichen, solange daran Aenderungswuensche
+	 * im Status {@code OPEN} haengen (§2.4, {@code CHANGE_REQUESTS_OPEN}).
+	 *
+	 * <p><strong>Die Meldung nennt die Anzahl</strong> der offenen Punkte und
+	 * nicht deren Inhalt: was zu tun ist, steht in den Kommentaren selbst, und
+	 * die hat die Projektseite ohnehin vor sich. Die Zahl sagt ihr, ob sie einen
+	 * Punkt uebersehen hat oder ob die Liste veraltet angezeigt wird.
+	 *
+	 * @param openCount Anzahl der Kommentare {@code CHANGE_REQUEST} im Status
+	 *                  {@code OPEN} an diesem Projekt, groesser null
+	 */
+	public static ConflictException changeRequestsOpen(long openCount) {
+		String countPhrase = openCount == 1
+				? "haengt noch 1 offener Aenderungswunsch"
+				: "haengen noch " + openCount + " offene Aenderungswuensche";
+		return new ConflictException(ErrorCodes.CHANGE_REQUESTS_OPEN,
+				"An diesem Projekt " + countPhrase + " (§2.4). "
+						+ "Bitte erst alle Aenderungswuensche als erledigt markieren, "
+						+ "dann erneut einreichen.");
 	}
 
 	/**
