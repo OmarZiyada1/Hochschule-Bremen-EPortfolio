@@ -1,5 +1,6 @@
 package de.hsbremen.eportfolio.comment;
 
+import de.hsbremen.eportfolio.common.enums.CommentStatus;
 import de.hsbremen.eportfolio.common.enums.CommentType;
 import java.util.Collection;
 import java.util.List;
@@ -24,6 +25,19 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
 	List<Comment> findByProjectId(UUID projectId);
 
 	List<Comment> findByProjectIdAndType(UUID projectId, CommentType type);
+
+	/**
+	 * Wie viele Kommentare eines Typs in einem Status an einem Projekt haengen.
+	 *
+	 * <p>Gebraucht von {@code ProjectWorkflowService.submit} (KAN-59): haengen
+	 * am Projekt noch {@code CHANGE_REQUEST}-Kommentare im Status {@code OPEN},
+	 * wird das Einreichen mit 409 {@code CHANGE_REQUESTS_OPEN} abgewiesen, und
+	 * die Meldung nennt diese Anzahl (§2.4). Ein {@code COUNT} statt eines
+	 * {@code exists…}, weil die Meldung die Zahl braucht und die Abfrage sonst
+	 * doppelt liefe.
+	 */
+	long countByProjectIdAndTypeAndStatus(UUID projectId, CommentType type,
+			CommentStatus status);
 
 	/**
 	 * Die Kommentare eines Projekts, auf die sichtbaren Typen eingegrenzt und

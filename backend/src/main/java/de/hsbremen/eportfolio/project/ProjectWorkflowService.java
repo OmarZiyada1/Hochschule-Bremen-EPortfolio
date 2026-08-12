@@ -3,6 +3,8 @@ package de.hsbremen.eportfolio.project;
 import de.hsbremen.eportfolio.auth.AuthenticatedUser;
 import de.hsbremen.eportfolio.comment.Comment;
 import de.hsbremen.eportfolio.comment.CommentRepository;
+import de.hsbremen.eportfolio.common.enums.CommentStatus;
+import de.hsbremen.eportfolio.common.enums.CommentType;
 import de.hsbremen.eportfolio.common.enums.ProjectStatus;
 import de.hsbremen.eportfolio.common.error.ConflictException;
 import de.hsbremen.eportfolio.common.error.ErrorCodes;
@@ -43,10 +45,12 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p><strong>Reihenfolge der Pruefungen</strong> wie im
  * {@link ProjectWriteService}, nach §6.3.1: laden (fehlt → 404) → Berechtigung
- * (nein → 403) → Uebergang laut §4.1 (nein → 409) → fachliche Vollstaendigkeit
- * (nein → 400) → schreiben. Dass das Recht vor dem Status geprueft wird, ist
- * Absicht: sonst verraet ein 409 einer unbeteiligten Person den Status eines
- * fremden Entwurfs.
+ * (nein → 403) → Uebergang laut §4.1 (nein → 409) → offene Aenderungswuensche
+ * beim Einreichen (409, KAN-59) → fachliche Vollstaendigkeit (nein → 400) →
+ * schreiben. Dass das Recht vor dem Status geprueft wird, ist Absicht: sonst
+ * verraet ein 409 einer unbeteiligten Person den Status eines fremden
+ * Entwurfs. Und der Zustandskonflikt steht vor der Formvollstaendigkeit, damit
+ * niemand erst Felder nachtraegt und dann am Konflikt scheitert.
  *
  * <p><strong>Kein {@code version}-Feld</strong> in den Bodies. Begruendung in
  * {@link RevisionRequest}: ein Uebergang schreibt nur {@code status} und
@@ -122,6 +126,11 @@ public class ProjectWorkflowService {
 	 * Entwurf darf unfertig sein; wer ihn zur Begutachtung gibt, gibt ihn mit
 	 * seinen Rahmendaten.
 	 *
+	 * <p><strong>Und hier und nur hier greift der Review-Kreislauf aus §2.4</strong>
+	 * (KAN-59): solange am Projekt Aenderungswuensche im Status {@code OPEN}
+	 * haengen, wird nicht eingereicht. Bis dahin war das reine Konvention der
+	 * Oberflaeche; jetzt erzwingt es der Server, denn nur er kann es garantieren.
+	 *
 	 * @param user      angemeldete Person; ohne Anmeldung kommt die Anfrage hier
 	 *                  nicht an, weil {@code SecurityConfig} nur {@code GET} auf
 	 *                  die Projektpfade freigibt (401)
@@ -130,12 +139,14 @@ public class ProjectWorkflowService {
 	 * @throws AccessDeniedException     wenn die Person nicht die Autor:in ist
 	 *                                   (403)
 	 * @throws ConflictException         wenn der Status den Uebergang nicht
-	 *                                   zulaesst (409)
+	 *                                   zulaesst oder Aenderungswuensche offen
+	 *                                   sind (409)
 	 * @throws ValidationException       wenn Pflichtfelder aus §3.3 fehlen (400)
 	 */
 	public ProjectDetailResponse submit(AuthenticatedUser user, UUID projectId) {
 		Project project = load(projectId);
 		requireAllowed(user, project, ProjectTransition.SUBMIT);
+		requireNoOpenChangeRequests(project);
 		requireCompleteForSubmit(project);
 
 		return perform(user, project, ProjectTransition.SUBMIT);
@@ -262,6 +273,31 @@ public class ProjectWorkflowService {
 					transition.allowedSources().stream()
 							.map(ProjectStatus::name)
 							.collect(Collectors.joining(", ")));
+		}
+	}
+
+	/**
+	 * Der Review-Kreislauf aus §2.4 beim Einreichen: haengen am Projekt noch
+	 * Kommentare vom Typ {@code CHANGE_REQUEST} im Status {@code OPEN}, folgt
+	 * <strong>409</strong> {@code CHANGE_REQUESTS_OPEN} mit der Anzahl der
+	 * offenen Punkte in der Meldung.
+	 *
+	 * <p>{@code NOTE} und {@code REPLY} blockieren nie: sie tragen keinen
+	 * Erledigungsstatus ({@code Comment.of} setzt {@code status} nur bei
+	 * {@code CHANGE_REQUEST}). Beim Erst-Einreichen aus {@code DRAFT} laeuft
+	 * die Abfrage ins Leere, denn Aenderungswuensche entstehen erst mit der
+	 * ersten Ruecknahme; die Pruefung unterscheidet die beiden Wege trotzdem
+	 * nicht, weil die Bedingung am Bestand haengt und nicht am Ausgangsstatus.
+	 *
+	 * <p><strong>Vor der Pflichtfeldpruefung</strong>, nicht danach: der
+	 * Zustandskonflikt soll zuerst gemeldet werden, damit niemand erst Felder
+	 * nachtraegt und dann am Konflikt scheitert (§6.3.1, Ticket KAN-59).
+	 */
+	private void requireNoOpenChangeRequests(Project project) {
+		long open = commentRepository.countByProjectIdAndTypeAndStatus(project.getId(),
+				CommentType.CHANGE_REQUEST, CommentStatus.OPEN);
+		if (open > 0) {
+			throw ConflictException.changeRequestsOpen(open);
 		}
 	}
 
