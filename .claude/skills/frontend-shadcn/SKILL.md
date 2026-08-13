@@ -162,6 +162,28 @@ Alle mit `pnpm dlx shadcn@latest` davor, ausgeführt in `frontend/`.
 Mehrere Komponenten in **einem** `add` erzeugen, nicht nacheinander: die CLI
 löst gemeinsame Abhängigkeiten dann einmal auf.
 
+### Erst nachschlagen, dann verwenden: auch beim Import
+
+Dieselbe Regel wie vor dem `add` gilt vor jeder **Verwendung** einer
+Primitive im eigenen Code: Import, Exportnamen und Props werden in der
+Registry nachgeschlagen und nicht aus dem Gedächtnis geschrieben.
+`shadcn view <item>` zeigt den Quelltext samt Exporten, `shadcn docs
+<item> -b radix` die Anwendungsbeispiele in der Radix-Fassung. Die Fassungen
+unterscheiden sich je Basis und je CLI-Version; ein aus einem Blogpost
+übernommenes Beispiel importiert zuverlässig die falschen Namen.
+
+Daraus folgen drei feste Regeln:
+
+1. Importiert wird ausschließlich über die Aliase aus `components.json`,
+   also `@/components/ui/<name>`; es gibt kein Paket `shadcn/ui`, aus dem
+   sich etwas importieren ließe (Abschnitt 2).
+2. Ein direkter Import aus `radix-ui` oder `@radix-ui/react-*` außerhalb
+   von `components/ui/` ist ein Befund: er umgeht die generierte Hülle und
+   damit Tokenanbindung, Varianten und i18n-Anpassungen.
+3. Zusammengesetzte Primitiven (`dialog`, `select`, `field`) exportieren
+   mehrere Bausteine; welche es sind und wie sie verschachtelt werden,
+   sagt `view`/`docs`, nicht die Erinnerung an eine andere Version.
+
 **Einen eigenständigen Befehl `shadcn diff` gibt es nicht.** Der Abgleich
 hängt als Option an `add`, zusammen mit `--view` und `--dry-run`. Wer aus
 älteren Anleitungen `shadcn diff` übernimmt, bekommt keinen leeren Bericht,
@@ -325,6 +347,10 @@ nach `CLAUDE.md`, Frontend-Regel 9: vorher fragen, nicht nebenbei eintragen.
 
 - [ ] Vor dem ersten `add` geprüft, ob es die Komponente in der Registry gibt
       (`shadcn search`), statt sie von Hand zu bauen
+- [ ] Vor jeder Verwendung Import und API per `shadcn view <item>` bzw.
+      `shadcn docs <item> -b radix` nachgeschlagen; Importe nur aus
+      `@/components/ui/…`, kein direkter `radix-ui`-Import außerhalb von
+      `components/ui/`
 - [ ] Jede Datei unter `components/ui/` per CLI erzeugt, keine von Hand
 - [ ] Dateinamen und Exportnamen der Primitiven unverändert
 - [ ] Kein englisches Literal aus einer generierten Datei sichtbar; jeder

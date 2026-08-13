@@ -74,6 +74,19 @@ Zustand, den die Person selbst auflösen kann, `NO_PERMISSION` nicht.
 Der Contract hat dafür bewusst zwei Codes vergeben, damit der Client nicht
 aus dem Meldungstext raten muss.
 
+**Feldfehler landen im Formularzustand, nicht in einer Leiste.** Formulare
+laufen über `react-hook-form` mit zod-Schema (Skill `frontend-modul`,
+Abschnitt 3b). Ein 400 `VALIDATION_FAILED` wird über `setError` dem
+betroffenen Feld zugeordnet; der Server nennt es im Meldungsformat
+`feld: Text` (§6.2). Was keinem Feld zuzuordnen ist, erscheint als Meldung
+am Formular. Das clientseitige zod-Schema macht denselben Fehler schon vor
+dem Absenden sichtbar, ersetzt die Serverprüfung aber nicht.
+
+**zod prüft nur Eingaben.** Serverantworten laufen nie durch ein zod-Schema:
+ihre Typen kommen aus der generierten `schema.d.ts` (Abschnitt 1), und ein
+nachgebautes Antwort-Schema wäre genau der handgeschriebene Response-Typ,
+den Abschnitt 1 verbietet.
+
 ## 4. Anmeldung: vorausschauend, nicht reaktiv
 
 - `ablaufZeitpunkt` aus der Login-Antwort auswerten und **vor** Ablauf
@@ -181,3 +194,5 @@ Jeder schreibende Projekt-Request trägt `version` im Body (§6.4). Bei
       `first`, `last` oder `numberOfElements`
 - [ ] Keine Mutation mit `retry` auf 409
 - [ ] Autosave übernimmt IDs und `version` aus der Antwort
+- [ ] 400 `VALIDATION_FAILED` erscheint am betroffenen Feld (`setError`),
+      kein zod-Schema über einer Serverantwort

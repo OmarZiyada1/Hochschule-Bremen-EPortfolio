@@ -225,6 +225,10 @@ Vor der Bewertung eines Frontend-Tickets diese Bestandsfragen gegen
   (Controller oder `/v3/api-docs`), oder nur als Contract-Zeile?
 - Nennt das Ticket seine Template-Seite, und deckt der Umfang deren
   „Layout-Bereiche" ab?
+- Hat das Ticket einen Formularanteil, und nennt es dann ausdrücklich die
+  Validierung über ein zod-Schema mit `react-hook-form` samt den fachlichen
+  Regeln (Längen, Muster, Pflichtfelder)? Ein Formular-Ticket ohne diese
+  Nennung ist ein Befund (Frontend-Regel 12, Skill `frontend-modul` 3b).
 
 ### Backend
 

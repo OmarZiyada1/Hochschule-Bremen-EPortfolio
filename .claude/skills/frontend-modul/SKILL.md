@@ -122,6 +122,14 @@ komponiert die Primitiven. Ein selbst gebautes Auswahlmenü sieht im Browser
 richtig aus und ist mit der Tastatur fast immer unbrauchbar. Regeln dazu im
 Skill `frontend-shadcn`.
 
+**Bevor eine Primitive verwendet wird: Import und API nachschlagen, nicht
+raten.** `pnpm dlx shadcn@latest view <item>` zeigt den Quelltext samt
+Exporten, `docs <item> -b radix` die Anwendungshinweise. Importiert wird
+ausschließlich aus `@/components/ui/<name>` (Aliase aus `components.json`);
+ein direkter Import aus `radix-ui` außerhalb von `components/ui/` ist ein
+Befund. Geratene Prop- oder Exportnamen fallen erst im Typecheck oder gar
+nicht auf; die Registry ist die Quelle, nicht die Erinnerung.
+
 **Namensregel:** Bezeichner sind englisch (`ProjectCard`, `useProjectList`,
 `projectId`); die verbindliche Zuordnung steht in `docs/NAMENSSCHEMA.md`.
 Enum-Werte aus dem Contract erscheinen unverändert (`PUBLISHED`, `EDITOR`)
@@ -138,6 +146,39 @@ Rolle `EDITOR` und das Eingabewerkzeug.
 - Filter, Suche, Sortierung und Seite gehören **in die URL**, nicht in
   `useState`. Sonst ist ein Ergebnis weder teilbar noch überlebt es den
   Zurück-Knopf.
+
+## 3b. Formulare: react-hook-form mit zod, ohne Ausnahme
+
+Jedes Formular läuft über `react-hook-form` mit einem `zod`-Schema, verbunden
+über `zodResolver` aus `@hookform/resolvers/zod`. Handgeschriebene
+Validierungslogik neben dem Schema (ein `if` auf den Feldwert, ein eigener
+`onBlur`-Prüfer) ist ein Befund: sie driftet vom Schema weg und wird nie
+mitgetestet.
+
+- **Ein Schema je Formular**, abgelegt neben der Formularkomponente
+  (`<Feature>Form.schema.ts`). Die Regeln kommen aus dem Contract und werden
+  im Ticket genannt: Längen (Titel 100, Kurzbeschreibung 200), Muster
+  (sechsstelliger Code), Passwortregel (12 bis 72 Zeichen, §3.1.1), Pflicht-
+  und Bedingungsfelder.
+- **Fehlertexte sind i18n-Schlüssel**, keine Literale im Schema. Das Schema
+  hinterlegt den Schlüssel (`validation.password.tooShort`), die Anzeige
+  übersetzt ihn; jeder Schlüssel steht in `de.json` **und** `en.json`.
+- **zod prüft Eingaben, nie Serverantworten.** Response-Typen kommen aus der
+  generierten `schema.d.ts` (Abschnitt 1); ein zod-Schema über eine
+  Serverantwort ist ein handgeschriebener Response-Typ in Verkleidung und
+  damit derselbe Befund.
+- **Der Server bleibt verbindlich.** Das Schema macht Fehler vor dem Absenden
+  sichtbar, ersetzt aber keine Serverprüfung. Ein 400 `VALIDATION_FAILED`
+  aus dem Envelope wird über `setError` auf das betroffene Feld gelegt
+  (Skill `frontend-api`, Abschnitt 3); Codes wie 409 `RESOURCE_IN_USE`
+  erscheinen als eigene Meldung am Feld, nicht als Formatfehler.
+- **Markup über die Primitiven** `field`, `input`, `label` aus der CLI
+  (Skill `frontend-shadcn`); Fehlerzustand über deren vorgesehene Props,
+  keine eigene Fehlerdarstellung daneben.
+
+Die Pakete `react-hook-form`, `zod` und `@hookform/resolvers` sind
+freigegeben (Frontend-Regel 12 in `CLAUDE.md`) und werden mit dem ersten
+Formular-Ticket aufgenommen, das gebaut wird.
 
 ## 4. Route (`frontend/src/routes/`)
 
@@ -209,8 +250,14 @@ jeder Umbenennung und belegt nichts.
       begründet
 - [ ] Kein handgeschriebener Response-Typ, alles aus `schema.d.ts`
 - [ ] Keine Primitive von Hand nachgebaut, für die es einen Registry-Eintrag
-      gibt; Dateien unter `components/ui/` nur per CLI erzeugt
+      gibt; Dateien unter `components/ui/` nur per CLI erzeugt; Import und
+      API jeder verwendeten Primitive per `view`/`docs -b radix`
+      nachgeschlagen, Importe nur aus `@/components/ui/…`
       (Skill `frontend-shadcn`)
+- [ ] Jedes Formular validiert über ein zod-Schema mit `react-hook-form`
+      (Abschnitt 3b); keine Validierungslogik daneben, kein zod-Schema über
+      einer Serverantwort; Server-Feldfehler (400 `VALIDATION_FAILED`)
+      erscheinen am Feld
 - [ ] Kein sichtbarer Text als Literal im JSX, jeder Schlüssel in `de.json`
       **und** `en.json`, auch die aus generierten Komponenten
 - [ ] Laden, Leere und Fehler sind je Ansicht behandelt

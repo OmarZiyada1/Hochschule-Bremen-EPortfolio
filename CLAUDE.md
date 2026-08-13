@@ -101,9 +101,9 @@ Jira-Kommentare**, das Werkzeug kann sie nur anlegen und ändern.
 - Backend: Spring Boot 3.5.x, Java 21, PostgreSQL 16 (Container), Flyway,
   springdoc-openapi. Basis-Paket `de.hsbremen.eportfolio`, Ordner `backend/`.
 - Frontend: Vite + React 19 + TypeScript + Tailwind 4 + shadcn/ui auf
-  **Radix UI** (`frontend/`, aktuell auf Branch `KAN-6`, noch nicht auf
-  `main`). Primitiven entstehen ausschließlich über die shadcn-CLI, nie von
-  Hand (Skill `frontend-shadcn`).
+  **Radix UI** (`frontend/`, seit KAN-6 auf `main`). Primitiven entstehen
+  ausschließlich über die shadcn-CLI, nie von Hand (Skill `frontend-shadcn`).
+  Formulare validieren über `react-hook-form` mit `zod` (Frontend-Regel 12).
 - Referenzplattform: Portfolio-Portal der HfG Schwäbisch Gmünd.
 
 ## Nicht verhandelbare Regeln (Backend)
@@ -215,7 +215,7 @@ derselben Nachricht, und dann exakt dieser eine Befehl.
 
 ## Nicht verhandelbare Regeln (Frontend)
 
-Ausführlich in den drei Frontend-Skills; hier nur, was überall gilt.
+Ausführlich in den vier Frontend-Skills; hier nur, was überall gilt.
 
 1. **Zwei Vorlagen je Ticket.** Die Confluence-Template-Seite unter
    „Figma-Prototype (Embed)" sagt, *was* auf der Seite steht; der
@@ -250,4 +250,15 @@ Ausführlich in den drei Frontend-Skills; hier nur, was überall gilt.
     `pnpm dlx shadcn@latest add <name>`; eine dort von Hand angelegte oder
     inhaltlich geänderte Datei ist ein Befund. Von Hand entsteht nur, was
     Domänenwissen trägt, und das komponiert die Primitiven, statt sie
-    nachzubauen. Einzelheiten im Skill `frontend-shadcn`.
+    nachzubauen. Vor jeder Verwendung werden Import und API in der Registry
+    nachgeschlagen (`pnpm dlx shadcn@latest view <item>` bzw.
+    `docs <item> -b radix`), nicht geraten; importiert wird ausschließlich
+    aus `@/components/ui/…`, nie direkt aus `radix-ui` außerhalb dieses
+    Ordners. Einzelheiten im Skill `frontend-shadcn`.
+12. **Formulare validieren über `zod`.** Jedes Formular nutzt
+    `react-hook-form` mit einem `zod`-Schema (`@hookform/resolvers`);
+    handgeschriebene Validierungslogik daneben ist ein Befund. Das Schema
+    prüft Eingaben, nie Serverantworten (die Typen kommen aus Regel 2);
+    verbindlich bleibt der Server, sein 400 `VALIDATION_FAILED` erscheint am
+    betroffenen Feld. Tickets mit Formularanteil nennen die Zod-Validierung
+    ausdrücklich (Details im Skill `frontend-modul`).

@@ -17,6 +17,13 @@ Backend-Handwerk der `code-reviewer`; du prüfst das Frontend.
    `schema.d.ts`; Lesen über `useQuery`, Schreiben über `useMutation`, kein
    Laden im `useEffect`. Query-Keys enthalten alle ergebnisrelevanten
    Parameter.
+1a. **Formulare:** jedes Formular läuft über `react-hook-form` mit
+    zod-Schema (`zodResolver`); handgeschriebene Validierungslogik neben dem
+    Schema ist ein Befund, ebenso ein Formular ganz ohne Schema. Ein
+    zod-Schema über einer **Serverantwort** ist ein **[MUSS]**-Befund: das
+    ist ein handgeschriebener Response-Typ in Verkleidung (Frontend-Regeln
+    2 und 12). Fehlertexte im Schema sind i18n-Schlüssel, keine Literale;
+    400 `VALIDATION_FAILED` landet per `setError` am Feld.
 2. **Seitenformat:** Listen lesen `content`, `page`, `size`,
    `totalElements`, `totalPages` aus `PageResponse<T>` (§6.6). Ein Zugriff
    auf `pageable`, `first`, `last` oder `numberOfElements` ist ein
@@ -54,7 +61,11 @@ Backend-Handwerk der `code-reviewer`; du prüfst das Frontend.
     die Domänenkomponente. Prüfe außerdem, ob eine von Hand gebaute
     Komponente eine Registry-Entsprechung hat (`select`, `dialog`,
     `dropdown-menu`, `pagination`, `tabs`, `tooltip`); dann ist der Nachbau
-    der Befund.
+    der Befund. Ein direkter Import aus `radix-ui` oder
+    `@radix-ui/react-*` außerhalb von `components/ui/` ist ebenfalls ein
+    Befund: er umgeht die generierte Hülle samt Tokenanbindung und i18n.
+    Importe von Primitiven kommen ausschließlich aus
+    `@/components/ui/<name>`.
 8b. **Oberflächentexte:** kein sichtbares Literal im JSX, alles über i18n.
     Jeder neue Schlüssel steht in `de.json` **und** `en.json`; ein Schlüssel
     nur in einer Datei ist ein Befund. Enum-Anzeige über

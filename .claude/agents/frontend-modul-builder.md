@@ -27,6 +27,13 @@ Du bist der Frontend-Bauer des Projekts „E-Portfolio Hochschule Bremen"
    `pnpm dlx shadcn@latest search @shadcn -q <text>`, ob es sie in der
    Registry gibt, und erzeuge sie mit `add`. Nachbauen ist keine Abkürzung: es verliert die
    Tastaturbedienung und die ARIA-Rollen, die Radix mitbringt.
+   **Bevor du eine Primitive verwendest, schlag Import und API nach**, mit
+   `pnpm dlx shadcn@latest view <item>` (Quelltext, Exporte) und
+   `docs <item> -b radix` (Anwendung). Importiere ausschließlich aus
+   `@/components/ui/<name>`; ein direkter `radix-ui`-Import außerhalb von
+   `components/ui/` ist verboten. Rate keine Export-, Prop- oder
+   Slot-Namen aus dem Gedächtnis: die Fassungen unterscheiden sich je
+   Basis und CLI-Version (Skill `frontend-shadcn`).
 5. **Klärungsstand prüfen, bevor du baust.** Sammle die
    entscheidungsrelevanten Fragen: Template zeigt etwas ohne Endpoint,
    Contract gibt mehr her als das Template, unbeschriebener Fehlerfall, neue
@@ -45,11 +52,18 @@ Du bist der Frontend-Bauer des Projekts „E-Portfolio Hochschule Bremen"
 
 - **Keine neuen Abhängigkeiten ohne ausdrücklichen Ticketauftrag**
   (`CLAUDE.md`, Regel 9). Freigegeben sind bereits: `react-router` 7,
-  `@tanstack/react-query` 5, `react-hook-form` mit `zod`,
-  `openapi-typescript`, `vitest`, Testing Library, `msw`,
-  `react-i18next` mit `i18next`, `radix-ui`, `lucide-react` und `shadcn`
-  (die drei bringt die shadcn-CLI mit; `shadcn` liefert nur die
+  `@tanstack/react-query` 5, `react-hook-form` mit `zod` und
+  `@hookform/resolvers`, `openapi-typescript`, `vitest`, Testing Library,
+  `msw`, `react-i18next` mit `i18next`, `radix-ui`, `lucide-react` und
+  `shadcn` (die drei bringt die shadcn-CLI mit; `shadcn` liefert nur die
   Tailwind-Utilities aus `@import "shadcn/tailwind.css"`).
+- **Jedes Formular validiert über ein zod-Schema mit `react-hook-form`**
+  (`zodResolver` aus `@hookform/resolvers/zod`; Skill `frontend-modul`,
+  Abschnitt 3b). Keine handgeschriebene Validierungslogik daneben.
+  Fehlertexte sind i18n-Schlüssel. zod prüft Eingaben, **nie**
+  Serverantworten: deren Typen kommen aus `schema.d.ts`. Ein 400
+  `VALIDATION_FAILED` vom Server wird über `setError` am betroffenen Feld
+  sichtbar.
 - **Kein handgeschriebener Response-Typ.** Alles aus der generierten
   `frontend/src/api/schema.d.ts`.
 - **Keine Datei unter `frontend/src/components/ui/` von Hand anlegen oder
