@@ -1,6 +1,6 @@
 ---
 name: frontend-shadcn
-description: Regeln für shadcn/ui im Frontend des E-Portfolio Hochschule Bremen (Primitiven per CLI statt von Hand, Basis Radix UI, components.json, Tokenbrücke, erlaubte Eingriffe an generierten Dateien). Immer verwenden, bevor eine Datei unter frontend/src/components/ui/ entsteht oder angefasst wird, und bevor eine Komponente von Hand gebaut wird, für die es eine Registry-Entsprechung gibt.
+description: Regeln für shadcn/ui im Frontend des E-Portfolio Hochschule Bremen (Primitiven per CLI statt von Hand, Basis Base UI, components.json, Tokenbrücke, erlaubte Eingriffe an generierten Dateien). Immer verwenden, bevor eine Datei unter frontend/src/components/ui/ entsteht oder angefasst wird, und bevor eine Komponente von Hand gebaut wird, für die es eine Registry-Entsprechung gibt.
 ---
 
 # shadcn/ui im Projekt
@@ -26,7 +26,7 @@ Drei Gründe, und der dritte wiegt am schwersten:
 2. Sie erfindet eine zweite Bauart neben der generierten. Nach fünf
    Komponenten gibt es zwei Konventionen und niemand weiß, welche gilt.
 3. Sie baut Tastaturbedienung, Fokusfallen, ARIA-Rollen und
-   Bildschirmleser-Ankündigungen nach, die Radix bereits mitbringt. Das
+   Bildschirmleser-Ankündigungen nach, die Base UI bereits mitbringt. Das
    sieht im Browser richtig aus und ist es fast nie. Ein selbst gebautes
    Auswahlmenü bedient sich mit der Maus einwandfrei und ist mit der
    Tastatur unbrauchbar, und genau dieser Fehler fällt in keinem Test auf,
@@ -49,7 +49,7 @@ Daraus folgt praktisch:
 
 - Ein `pnpm update` aktualisiert die Komponenten **nicht**. Aktualisiert wird
   bewusst über `add --diff` (Abschnitt 5) und ein eigenes Ticket.
-- Was die CLI installiert, sind die Basis-Pakete darunter (`radix-ui`),
+- Was die CLI installiert, sind die Basis-Pakete darunter (`@base-ui/react`),
   Hilfsbibliotheken und `shadcn` selbst (siehe unten). Nur die stehen in
   `package.json`, nie eine einzelne Komponente.
 - Ein Review liest die generierten Dateien wie eigenen Code. „Kommt von
@@ -82,43 +82,49 @@ gebauten CSS.
 CSS-Datei. Das ist unumkehrbar und steht deshalb in der Tabelle in
 Abschnitt 5.
 
-## 3. Basis ist Radix UI
+## 3. Basis ist Base UI
 
 shadcn setzt auf einer von drei Basisbibliotheken auf, wählbar beim `init`
 über `--base`: `base` (Base UI), `radix` (Radix UI), `aria` (React Aria).
 
-**Dieses Projekt nutzt Radix UI** (`shadcn init --base radix`, festgelegt in
-KAN-6 Abschnitt 3.1). Begründung: reifste der drei Basen, breiteste Doku,
-längste Historie in Sachen Barrierefreiheit, und damit in der Thesis am
-leichtesten zu belegen.
+**Dieses Projekt nutzt Base UI** (Style `base-nova`, Laufzeitpaket
+`@base-ui/react`; umgestellt mit KAN-61). Die ursprüngliche Wahl von Radix
+aus KAN-6 Abschnitt 3.1 ist damit revidiert. Begründung: Seit Juli 2026 ist
+Base UI Default und Empfehlung von shadcn, Doku und Registry führen die
+Base-Fassung zuerst, und erste neue Komponenten (etwa Toast) erscheinen nur
+noch für Base UI. Radix wird laut Changelog weiter unterstützt; der Wechsel
+war eine Kurskorrektur zum günstigsten Zeitpunkt, als erst eine einzige
+Primitive existierte.
 
-**Radix ist nicht die Voreinstellung.** Ohne `--base radix` richtet die CLI
-das Projekt auf Base UI ein. Die Angabe ist beim `init` also Pflicht und
-nicht bloß Bestätigung.
+Base UI ist zugleich die Voreinstellung der CLI. Die Wahl steckt trotzdem im
+Code jeder erzeugten Komponente und in `components.json`; sie wird nicht je
+Ticket neu getroffen und nicht nebenbei geändert. Ein Wechsel der Basis
+heißt: sämtliche Primitiven neu erzeugen und vollständig nachprüfen, also
+ein eigenes Ticket (so geschehen in KAN-61).
 
-Die Wahl steckt im Code jeder erzeugten Komponente. Sie wird nicht je Ticket
-neu getroffen und nicht nebenbei geändert. Ein Wechsel der Basis heißt:
-sämtliche Primitiven neu erzeugen und vollständig nachprüfen, also ein
-eigenes Ticket.
+**Ein `init` über ein bestehendes Projekt hängt sein Preset-Theme an die
+CSS-Datei aus `components.json` an**: Standardpalette in oklch, Geist-Schrift,
+eigene Radius-Skala aus einem einzelnen `--radius`. Diese Anhänge kollidieren
+mit der Tokenschicht und werden nicht übernommen; die vier Imports aus
+Abschnitt 2 bleiben der gesamte Inhalt von `src/index.css`. Genau deshalb
+steht ein zweites `init` auf der Rücksprache-Liste in Abschnitt 5.
 
-**`migrate radix` tut das nicht.** Der Befehl wechselt keine Basis, sondern
-schreibt Imports aus den Einzelpaketen `@radix-ui/react-*` auf das
-Sammelpaket `radix-ui` um. Für ein Projekt, das von Anfang an mit
-`--base radix` erzeugt wurde, ist er gegenstandslos.
+**`migrate radix` wechselt keine Basis.** Der Befehl schreibt Imports aus
+den Einzelpaketen `@radix-ui/react-*` auf das Sammelpaket `radix-ui` um und
+ist in diesem Projekt gegenstandslos.
 
-### Die Radix-Fassung nachschlagen
+### Die Doku passt ohne Umweg
 
-Die Beispiele in der Doku unterscheiden sich je Basis, und die Web-Doku zeigt
-die Base-UI-Fassung als Voreinstellung. Deshalb nicht im Browser raten,
-sondern die Basis am Befehl mitgeben:
+Die Beispiele in der Doku unterscheiden sich je Basis; die Web-Doku zeigt
+die Base-UI-Fassung als Voreinstellung und passt damit zu diesem Projekt.
+Im Projektordner gilt ohnehin die Basis aus `components.json`:
 
 ```bash
-pnpm dlx shadcn@latest docs <item> -b radix
+pnpm dlx shadcn@latest docs <item>
 ```
 
-Ohne `-b` gilt die Basis aus `components.json`. Das ist im Projektordner das
-Richtige; sobald aber außerhalb von `frontend/` oder gegen die Web-Doku
-gearbeitet wird, ist das Ergebnis eine andere Bibliothek mit ähnlichem Code.
+Nur für den bewussten Vergleich mit einer anderen Basis wird sie per
+`-b radix` oder `-b aria` mitgegeben.
 
 ## 4. `components.json`
 
@@ -152,7 +158,7 @@ Vor jedem `add` gilt: erst sehen, dann erzeugen.
 | `shadcn info` | Was die CLI im Projekt sieht: Framework, Tailwind-Version, Aliase, Basis, installierte Komponenten. Erster Befehl bei jedem Zweifel, statt `components.json` zu interpretieren |
 | `shadcn search @shadcn -q <text>` | In der Registry suchen (`list` ist ein Alias). Klärt, ob es die Komponente schon gibt, bevor sie von Hand entsteht. Die Quelle ist ein Pflichtargument und trägt ein `@` |
 | `shadcn view <item...>` | Quelltext ansehen, **bevor** er im Repository landet |
-| `shadcn docs <item> -b radix` | API-Referenz und Anwendungshinweise, siehe Abschnitt 3 |
+| `shadcn docs <item>` | API-Referenz und Anwendungshinweise, siehe Abschnitt 3 |
 | `shadcn add <item...>` | Erzeugt die Komponenten samt ihrer Abhängigkeiten |
 | `shadcn add --dry-run <item...>` | Zeigt, welche Dateien entstünden, ohne zu schreiben |
 | `shadcn add --diff [pfad]` | Abweichungen zwischen lokaler Fassung und Registry |
@@ -168,17 +174,17 @@ Dieselbe Regel wie vor dem `add` gilt vor jeder **Verwendung** einer
 Primitive im eigenen Code: Import, Exportnamen und Props werden in der
 Registry nachgeschlagen und nicht aus dem Gedächtnis geschrieben.
 `shadcn view <item>` zeigt den Quelltext samt Exporten, `shadcn docs
-<item> -b radix` die Anwendungsbeispiele in der Radix-Fassung. Die Fassungen
-unterscheiden sich je Basis und je CLI-Version; ein aus einem Blogpost
-übernommenes Beispiel importiert zuverlässig die falschen Namen.
+<item>` die Anwendungsbeispiele in der Base-UI-Fassung des Projekts. Die
+Fassungen unterscheiden sich je Basis und je CLI-Version; ein aus einem
+Blogpost übernommenes Beispiel importiert zuverlässig die falschen Namen.
 
 Daraus folgen drei feste Regeln:
 
 1. Importiert wird ausschließlich über die Aliase aus `components.json`,
    also `@/components/ui/<name>`; es gibt kein Paket `shadcn/ui`, aus dem
    sich etwas importieren ließe (Abschnitt 2).
-2. Ein direkter Import aus `radix-ui` oder `@radix-ui/react-*` außerhalb
-   von `components/ui/` ist ein Befund: er umgeht die generierte Hülle und
+2. Ein direkter Import aus `@base-ui/react` außerhalb von
+   `components/ui/` ist ein Befund: er umgeht die generierte Hülle und
    damit Tokenanbindung, Varianten und i18n-Anpassungen.
 3. Zusammengesetzte Primitiven (`dialog`, `select`, `field`) exportieren
    mehrere Bausteine; welche es sind und wie sie verschachtelt werden,
@@ -348,9 +354,9 @@ nach `CLAUDE.md`, Frontend-Regel 9: vorher fragen, nicht nebenbei eintragen.
 - [ ] Vor dem ersten `add` geprüft, ob es die Komponente in der Registry gibt
       (`shadcn search`), statt sie von Hand zu bauen
 - [ ] Vor jeder Verwendung Import und API per `shadcn view <item>` bzw.
-      `shadcn docs <item> -b radix` nachgeschlagen; Importe nur aus
-      `@/components/ui/…`, kein direkter `radix-ui`-Import außerhalb von
-      `components/ui/`
+      `shadcn docs <item>` nachgeschlagen; Importe nur aus
+      `@/components/ui/…`, kein direkter `@base-ui/react`-Import außerhalb
+      von `components/ui/`
 - [ ] Jede Datei unter `components/ui/` per CLI erzeugt, keine von Hand
 - [ ] Dateinamen und Exportnamen der Primitiven unverändert
 - [ ] Kein englisches Literal aus einer generierten Datei sichtbar; jeder

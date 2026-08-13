@@ -1,7 +1,8 @@
 # Frontend: E-Portfolio Hochschule Bremen
 
-React 19, TypeScript, Vite, Tailwind 4 und shadcn/ui auf Radix UI.
-Aufgesetzt mit KAN-6.
+React 19, TypeScript, Vite, Tailwind 4 und shadcn/ui auf Base UI.
+Aufgesetzt mit KAN-6, shadcn-Basis mit KAN-61 von Radix UI auf Base UI
+umgestellt.
 
 ## Befehle
 

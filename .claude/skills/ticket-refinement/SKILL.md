@@ -77,11 +77,16 @@ Zwei Fälle bleiben ausdrücklich stehen:
 Ein Ticket kann nur gegen einen bekannten Stand geprüft werden. Diese Reihenfolge,
 nie abgekürzt:
 
-1. **Repo-Stand verifizieren, nicht aus der Doku übernehmen.** Nachsehen, was
-   wirklich da ist: Ordner, Dateien, Exporte, `package.json`, Controller.
-   `docs/STAND.md` ist ausdrücklich eine veraltende Momentaufnahme und taugt
-   nicht als Beleg (`CLAUDE.md`). Auch ein gemergter Branch belegt nur, was im
-   Diff steht, nicht was das Ticket versprochen hat.
+1. **Repo-Stand verifizieren, nicht aus der Doku übernehmen.** Zuerst die
+   Aktualität: `git fetch` und `git status -sb`; liegt der ausgecheckte
+   Branch hinter seinem Remote, wird nicht bewertet, sondern das
+   Aktualisieren erbeten (`git pull` bleibt bei Omar, `CLAUDE.md`,
+   Arbeitsablauf Schritt 1). Ein veralteter Stand erzeugt Befunde, die
+   keine sind. Dann nachsehen, was wirklich da ist: Ordner, Dateien,
+   Exporte, `package.json`, Controller. `docs/STAND.md` ist ausdrücklich
+   eine veraltende Momentaufnahme und taugt nicht als Beleg (`CLAUDE.md`).
+   Auch ein gemergter Branch belegt nur, was im Diff steht, nicht was das
+   Ticket versprochen hat.
 2. **Contract-§§ nachschlagen** (Confluence 36732929): mindestens §5
    (Rechtematrix), §6.1 (Endpoint-Zeilen), §6.2 (Fehlercodes), dazu die im
    Ticket genannten. Eine Endpoint-Zeile im Contract ist **kein** Beleg für

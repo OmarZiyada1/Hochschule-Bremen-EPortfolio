@@ -101,7 +101,8 @@ Jira-Kommentare**, das Werkzeug kann sie nur anlegen und ändern.
 - Backend: Spring Boot 3.5.x, Java 21, PostgreSQL 16 (Container), Flyway,
   springdoc-openapi. Basis-Paket `de.hsbremen.eportfolio`, Ordner `backend/`.
 - Frontend: Vite + React 19 + TypeScript + Tailwind 4 + shadcn/ui auf
-  **Radix UI** (`frontend/`, seit KAN-6 auf `main`). Primitiven entstehen
+  **Base UI** (`frontend/`, seit KAN-6 auf `main`; Basiswechsel von Radix
+  auf Base UI mit KAN-61). Primitiven entstehen
   ausschließlich über die shadcn-CLI, nie von Hand (Skill `frontend-shadcn`).
   Formulare validieren über `react-hook-form` mit `zod` (Frontend-Regel 12).
 - Referenzplattform: Portfolio-Portal der HfG Schwäbisch Gmünd.
@@ -155,20 +156,31 @@ cd backend && ./mvnw spring-boot:run   # Start im Profil dev
 
 ## Arbeitsablauf je Ticket
 
-1. Jira-Ticket (KAN-…) vollständig lesen; genannte Contract-§§ nachschlagen.
-2. Klärungsrunde nach dem Abschnitt „Fragen vor der Umsetzung": offene Punkte
+1. **Arbeitsstand prüfen, bevor irgendetwas entsteht.** `git fetch` und
+   `git status -sb` zeigen, ob der ausgecheckte Branch hinter seinem Remote
+   liegt: auf `main` gegen `origin/main`, auf einem Feature-Branch gegen
+   dessen Upstream (und gegen `origin/main`, falls der Branch dahinter
+   zurückbleibt). Liegt er zurück, wird nicht gebaut, sondern das
+   Aktualisieren erbeten: `git pull` ist ein schreibender Befehl und bleibt
+   bei Omar. `git fetch` zählt zu den erlaubten lesenden Befehlen, es
+   verändert weder Arbeitsverzeichnis noch Historie. Diese Prüfung gilt für
+   **jede** Änderung im Repository, auch für Doku und Skills, nicht nur für
+   Tickets; sonst entsteht Arbeit auf einem Stand, den der nächste Pull
+   wieder wegwirft.
+2. Jira-Ticket (KAN-…) vollständig lesen; genannte Contract-§§ nachschlagen.
+3. Klärungsrunde nach dem Abschnitt „Fragen vor der Umsetzung": offene Punkte
    gebündelt fragen, Antworten abwarten, erst dann bauen.
-3. Skill `backend-modul` befolgen (Reihenfolge, Checklisten, DoD).
-4. Branch `KAN-<nr>-<kurzbeschreibung>`; kleine, nachvollziehbare Commits mit
+4. Skill `backend-modul` befolgen (Reihenfolge, Checklisten, DoD).
+5. Branch `KAN-<nr>-<kurzbeschreibung>`; kleine, nachvollziehbare Commits mit
    Ticket-Key im Text. **Angelegt und gesetzt wird von Hand, nicht von
    Claude** (siehe Skill `uebergabe`).
-5. Vor Abschluss: kompletter Testlauf, `ddl-auto: validate` grün, Abgleich mit
+6. Vor Abschluss: kompletter Testlauf, `ddl-auto: validate` grün, Abgleich mit
    dem Agent `contract-pruefer`.
-6. Abschluss heißt Übergabe, nicht Push: Skill `uebergabe` befolgen und
+7. Abschluss heißt Übergabe, nicht Push: Skill `uebergabe` befolgen und
    Commit-Text, PR-Titel und PR-Beschreibung ausgeben.
-7. Abweichungen und getroffene Entscheidungen ins Jira-Ticket kommentieren,
+8. Abweichungen und getroffene Entscheidungen ins Jira-Ticket kommentieren,
    nichts stillschweigend entscheiden; offene Fragen sind zu diesem Zeitpunkt
-   bereits aus Schritt 2 geklärt. Was den **Sollzustand** eines noch offenen
+   bereits aus Schritt 3 geklärt. Was den **Sollzustand** eines noch offenen
    Tickets verändert, gehört dagegen in dessen Beschreibung und nicht in den
    Kommentar (Abschnitt „Ein Ticket hat genau einen Sollzustand").
    `docs/STAND.md` nicht pflegen (veraltet bewusst; Jira ist verbindlich).
@@ -177,7 +189,8 @@ cd backend && ./mvnw spring-boot:run   # Start im Profil dev
 
 Keine schreibenden Git-/GitHub-Befehle: kein `git add`, `commit`, `push`,
 `merge`, `rebase`, `reset`, kein Branch-Anlegen, kein `gh pr create`/`merge`.
-Lesende Befehle (`status`, `diff`, `log`) sind erlaubt. Statt zu committen
+Lesende Befehle (`status`, `diff`, `log`, `fetch`) sind erlaubt. Statt zu
+committen
 liefert Claude am Ende den Übergabeblock aus dem Skill `uebergabe`; Omar
 übernimmt ihn manuell. Ausnahme nur auf ausdrückliche Einzelaufforderung in
 derselben Nachricht, und dann exakt dieser eine Befehl.
@@ -203,7 +216,7 @@ derselben Nachricht, und dann exakt dieser eine Befehl.
   Fehler-Envelope, 401/403, Seitenformat, Optimistic Locking, Autosave.
 - `.claude/skills/frontend-design`: Design-Tokens, Komponentenbibliothek,
   Beschriftungen, Barrierefreiheit nach WCAG 2.2.
-- `.claude/skills/frontend-shadcn`: shadcn/ui auf Radix, also Primitiven per
+- `.claude/skills/frontend-shadcn`: shadcn/ui auf Base UI, also Primitiven per
   CLI statt von Hand, `components.json`, Tokenbrücke und was an einer
   generierten Datei geändert werden darf.
 - `.claude/agents/backend-modul-builder`: setzt ein Modul-Ticket komplett um.
@@ -252,8 +265,8 @@ Ausführlich in den vier Frontend-Skills; hier nur, was überall gilt.
     Domänenwissen trägt, und das komponiert die Primitiven, statt sie
     nachzubauen. Vor jeder Verwendung werden Import und API in der Registry
     nachgeschlagen (`pnpm dlx shadcn@latest view <item>` bzw.
-    `docs <item> -b radix`), nicht geraten; importiert wird ausschließlich
-    aus `@/components/ui/…`, nie direkt aus `radix-ui` außerhalb dieses
+    `docs <item>`), nicht geraten; importiert wird ausschließlich
+    aus `@/components/ui/…`, nie direkt aus `@base-ui/react` außerhalb dieses
     Ordners. Einzelheiten im Skill `frontend-shadcn`.
 12. **Formulare validieren über `zod`.** Jedes Formular nutzt
     `react-hook-form` mit einem `zod`-Schema (`@hookform/resolvers`);

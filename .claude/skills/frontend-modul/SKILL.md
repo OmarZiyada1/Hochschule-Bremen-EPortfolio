@@ -22,13 +22,19 @@ Entscheidung. Siehe Schritt 0b.
 
 ## 0. Vorbereitung (nie überspringen)
 
-1. Jira-Ticket lesen; die genannte Template-Seite in Confluence lesen
+1. Arbeitsstand prüfen: `git fetch` und `git status -sb`. Liegt der
+   ausgecheckte Branch hinter seinem Remote (auf `main` gegen
+   `origin/main`), wird nicht gebaut, sondern das Aktualisieren erbeten;
+   `git pull` ist ein schreibender Befehl und bleibt bei Omar (Skill
+   `uebergabe`). Ein veralteter Stand erzeugt Arbeit, die der nächste Pull
+   wegwirft (`CLAUDE.md`, Arbeitsablauf Schritt 1).
+2. Jira-Ticket lesen; die genannte Template-Seite in Confluence lesen
    (Abschnitte „Layout-Bereiche", „Verknüpfte Komponenten", „Verweist auf").
-2. Die genannten Contract-§§ nachschlagen, mindestens §5 (Rechtematrix),
+3. Die genannten Contract-§§ nachschlagen, mindestens §5 (Rechtematrix),
    §6.1 (Endpoint-Zeilen), §6.2 (Fehlercodes). Ohne die Endpoint-Zeile wird
    keine Ansicht gebaut, sonst entsteht eine Oberfläche für Daten, die es
    nicht gibt.
-3. Prüfen, was schon existiert: `frontend/src/components/`,
+4. Prüfen, was schon existiert: `frontend/src/components/`,
    `frontend/src/api/`, `frontend/src/styles/tokens/`. Komponenten werden
    wiederverwendet, nicht je Seite neu gebaut. Fehlt eine Komponente, die
    mehrere Seiten brauchen, gehört sie in die Bibliothek (Skill
@@ -36,7 +42,7 @@ Entscheidung. Siehe Schritt 0b.
    wird sie per `pnpm dlx shadcn@latest add` erzeugt und nicht geschrieben
    (Skill `frontend-shadcn`); `pnpm dlx shadcn@latest info` zeigt, was
    bereits installiert ist.
-4. Prüfen, ob der benötigte Endpoint im Backend **wirklich existiert**:
+5. Prüfen, ob der benötigte Endpoint im Backend **wirklich existiert**:
    die Controller unter `backend/src/main/java/de/hsbremen/eportfolio/` oder
    `/v3/api-docs` im laufenden Dev-Profil. Eine Contract-Zeile ist kein
    Beleg für einen umgesetzten Endpoint; §8 nennt den Umsetzungsstand.
@@ -101,7 +107,7 @@ frontend/src/
   index.css               CSS-Einstiegspunkt: Tailwind, Tokendateien
   api/                    client.ts, errors.ts, schema.d.ts, page.ts
   components/
-    ui/                   shadcn-Primitiven auf Radix (nur per CLI erzeugt)
+    ui/                   shadcn-Primitiven auf Base UI (nur per CLI erzeugt)
     layout/               NavBar, Footer, Breadcrumb
     common/               ProjectCard, StatusBadge, RoleBadge, EmptyState
   features/<feature>/
@@ -124,10 +130,10 @@ Skill `frontend-shadcn`.
 
 **Bevor eine Primitive verwendet wird: Import und API nachschlagen, nicht
 raten.** `pnpm dlx shadcn@latest view <item>` zeigt den Quelltext samt
-Exporten, `docs <item> -b radix` die Anwendungshinweise. Importiert wird
+Exporten, `docs <item>` die Anwendungshinweise. Importiert wird
 ausschließlich aus `@/components/ui/<name>` (Aliase aus `components.json`);
-ein direkter Import aus `radix-ui` außerhalb von `components/ui/` ist ein
-Befund. Geratene Prop- oder Exportnamen fallen erst im Typecheck oder gar
+ein direkter Import aus `@base-ui/react` außerhalb von `components/ui/` ist
+ein Befund. Geratene Prop- oder Exportnamen fallen erst im Typecheck oder gar
 nicht auf; die Registry ist die Quelle, nicht die Erinnerung.
 
 **Namensregel:** Bezeichner sind englisch (`ProjectCard`, `useProjectList`,
@@ -251,7 +257,7 @@ jeder Umbenennung und belegt nichts.
 - [ ] Kein handgeschriebener Response-Typ, alles aus `schema.d.ts`
 - [ ] Keine Primitive von Hand nachgebaut, für die es einen Registry-Eintrag
       gibt; Dateien unter `components/ui/` nur per CLI erzeugt; Import und
-      API jeder verwendeten Primitive per `view`/`docs -b radix`
+      API jeder verwendeten Primitive per `view`/`docs`
       nachgeschlagen, Importe nur aus `@/components/ui/…`
       (Skill `frontend-shadcn`)
 - [ ] Jedes Formular validiert über ein zod-Schema mit `react-hook-form`

@@ -97,7 +97,7 @@ Befund in der Tokenschicht und wird dort aufgelöst, nicht im Komponentencode.
 
 | Ort | Was dort hingehört |
 | --- | --- |
-| `components/ui/` | shadcn-Primitiven auf Radix UI, **ausschließlich per CLI erzeugt**, Bibliotheksnamen unverändert |
+| `components/ui/` | shadcn-Primitiven auf Base UI, **ausschließlich per CLI erzeugt**, Bibliotheksnamen unverändert |
 | `components/layout/` | NavBar, Footer, Breadcrumb |
 | `components/common/` | alles mit Domänenbezug: `ProjectCard`, `StatusBadge`, `RoleBadge`, `EmptyState`, `KpiTile` |
 | `features/<feature>/components/` | nur in diesem Feature verwendet |
