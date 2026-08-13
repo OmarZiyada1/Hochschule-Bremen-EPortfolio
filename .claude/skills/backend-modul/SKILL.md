@@ -15,15 +15,21 @@ aus KAN-14.
 
 ## 0. Vorbereitung (nie überspringen)
 
-1. Jira-Ticket lesen; alle genannten Contract-§§ der Seite
+1. Arbeitsstand prüfen: `git fetch` und `git status -sb`. Liegt der
+   ausgecheckte Branch hinter seinem Remote (auf `main` gegen
+   `origin/main`), wird nicht gebaut, sondern das Aktualisieren erbeten;
+   `git pull` ist ein schreibender Befehl und bleibt bei Omar (Skill
+   `uebergabe`). Ein veralteter Stand erzeugt Arbeit, die der nächste Pull
+   wegwirft (`CLAUDE.md`, Arbeitsablauf Schritt 1).
+2. Jira-Ticket lesen; alle genannten Contract-§§ der Seite
    „Datenmodell & API-Contract" (ID 36732929) nachschlagen, mindestens §5
    (Rechtematrix), §6.1 (Endpoint-Zeilen), §6.2/§6.3 (Fehler).
-2. `docs/ARCHITEKTUR.md` §6 („Wo kommt was hin") und das Zielpaket ansehen:
+3. `docs/ARCHITEKTUR.md` §6 („Wo kommt was hin") und das Zielpaket ansehen:
    Welche Entities, Repositories und `may…`-Methoden existieren schon?
    `ProjectPermissionService` deckt die komplette Rechtematrix bereits ab,
    also fast nie neue Berechtigungslogik schreiben, sondern vorhandene
    aufrufen.
-3. Prüfen, ob `config/SecurityConfig` den neuen Pfad schon kennt (viele
+4. Prüfen, ob `config/SecurityConfig` den neuen Pfad schon kennt (viele
    PUBLIC-GET-Regeln stehen vorab da). Fehlt eine Regel: ergänzen und im
    Code-Kommentar begründen, wie dort üblich.
 

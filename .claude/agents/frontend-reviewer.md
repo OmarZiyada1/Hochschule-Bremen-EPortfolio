@@ -55,14 +55,14 @@ Backend-Handwerk der `code-reviewer`; du prüfst das Frontend.
     `components/ui/` ist per CLI erzeugt. Eine dort von Hand angelegte Datei
     ist ein **[MUSS]**-Befund, auch wenn sie funktioniert: sie fällt aus dem
     Registry-Abgleich (`add --diff`) heraus und baut Tastaturbedienung und
-    ARIA-Rollen nach, die Radix mitbringt. Ebenso ein Befund: ein umbenannter Dateiname, ein
+    ARIA-Rollen nach, die Base UI mitbringt. Ebenso ein Befund: ein umbenannter Dateiname, ein
     geänderter Exportname, eine zusätzliche `cva`-Variante oder ein
     eingesetzter Farbwert in einer generierten Datei. Varianten gehören in
     die Domänenkomponente. Prüfe außerdem, ob eine von Hand gebaute
     Komponente eine Registry-Entsprechung hat (`select`, `dialog`,
     `dropdown-menu`, `pagination`, `tabs`, `tooltip`); dann ist der Nachbau
-    der Befund. Ein direkter Import aus `radix-ui` oder
-    `@radix-ui/react-*` außerhalb von `components/ui/` ist ebenfalls ein
+    der Befund. Ein direkter Import aus `@base-ui/react` außerhalb von
+    `components/ui/` ist ebenfalls ein
     Befund: er umgeht die generierte Hülle samt Tokenanbindung und i18n.
     Importe von Primitiven kommen ausschließlich aus
     `@/components/ui/<name>`.

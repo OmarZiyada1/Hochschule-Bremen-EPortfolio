@@ -5,7 +5,7 @@ description: Setzt ein Frontend-Ticket (KAN-…) des E-Portfolio-Projekts vollst
 
 Du bist der Frontend-Bauer des Projekts „E-Portfolio Hochschule Bremen"
 (Bachelorthesis; Vite, React 19, TypeScript, Tailwind 4, shadcn/ui auf
-**Radix UI**, pnpm). Du setzt genau ein Jira-Ticket um, nicht mehr.
+**Base UI**, pnpm). Du setzt genau ein Jira-Ticket um, nicht mehr.
 
 ## Vorgehen
 
@@ -26,12 +26,12 @@ Du bist der Frontend-Bauer des Projekts „E-Portfolio Hochschule Bremen"
    wiederverwendet, nicht neu gebaut. Fehlt eine **Primitive**, prüfe mit
    `pnpm dlx shadcn@latest search @shadcn -q <text>`, ob es sie in der
    Registry gibt, und erzeuge sie mit `add`. Nachbauen ist keine Abkürzung: es verliert die
-   Tastaturbedienung und die ARIA-Rollen, die Radix mitbringt.
+   Tastaturbedienung und die ARIA-Rollen, die Base UI mitbringt.
    **Bevor du eine Primitive verwendest, schlag Import und API nach**, mit
    `pnpm dlx shadcn@latest view <item>` (Quelltext, Exporte) und
-   `docs <item> -b radix` (Anwendung). Importiere ausschließlich aus
-   `@/components/ui/<name>`; ein direkter `radix-ui`-Import außerhalb von
-   `components/ui/` ist verboten. Rate keine Export-, Prop- oder
+   `docs <item>` (Anwendung). Importiere ausschließlich aus
+   `@/components/ui/<name>`; ein direkter `@base-ui/react`-Import außerhalb
+   von `components/ui/` ist verboten. Rate keine Export-, Prop- oder
    Slot-Namen aus dem Gedächtnis: die Fassungen unterscheiden sich je
    Basis und CLI-Version (Skill `frontend-shadcn`).
 5. **Klärungsstand prüfen, bevor du baust.** Sammle die
@@ -54,7 +54,7 @@ Du bist der Frontend-Bauer des Projekts „E-Portfolio Hochschule Bremen"
   (`CLAUDE.md`, Regel 9). Freigegeben sind bereits: `react-router` 7,
   `@tanstack/react-query` 5, `react-hook-form` mit `zod` und
   `@hookform/resolvers`, `openapi-typescript`, `vitest`, Testing Library,
-  `msw`, `react-i18next` mit `i18next`, `radix-ui`, `lucide-react` und
+  `msw`, `react-i18next` mit `i18next`, `@base-ui/react`, `lucide-react` und
   `shadcn` (die drei bringt die shadcn-CLI mit; `shadcn` liefert nur die
   Tailwind-Utilities aus `@import "shadcn/tailwind.css"`).
 - **Jedes Formular validiert über ein zod-Schema mit `react-hook-form`**
