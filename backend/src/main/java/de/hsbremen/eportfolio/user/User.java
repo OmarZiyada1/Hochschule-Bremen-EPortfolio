@@ -27,6 +27,16 @@ public class User extends AuditableEntity {
 	@Column(nullable = false, unique = true, length = 255)
 	private String hsbEmail;
 
+	/**
+	 * Gewuenschte neue private Adresse waehrend eines laufenden E-Mail-Wechsels
+	 * (§3.1, KAN-60). Gesetzt von {@code PUT /auth/me}, geleert vom Einloesen
+	 * des Codes mit Zweck {@code EMAIL_CHANGE}; bis dahin bleibt {@code email}
+	 * die gueltige Login-Kennung. Bewusst ohne Unique-Constraint: den Wettlauf
+	 * zweier Konten auf dieselbe Wunschadresse entscheidet die Bestaetigung.
+	 */
+	@Column(length = 255)
+	private String pendingEmail;
+
 	@Column(nullable = false)
 	private boolean emailVerified;
 
@@ -111,6 +121,14 @@ public class User extends AuditableEntity {
 
 	public void setHsbEmail(String hsbEmail) {
 		this.hsbEmail = hsbEmail;
+	}
+
+	public String getPendingEmail() {
+		return pendingEmail;
+	}
+
+	public void setPendingEmail(String pendingEmail) {
+		this.pendingEmail = pendingEmail;
 	}
 
 	public boolean isEmailVerified() {

@@ -48,6 +48,9 @@ class AuthServiceTest {
 	@Mock
 	private UserRepository userRepository;
 
+	@Mock
+	private EmailChangeService emailChangeService;
+
 	private PasswordEncoder passwordEncoder;
 
 	private AuthService authService;
@@ -66,7 +69,7 @@ class AuthServiceTest {
 		loginAttemptService = new LoginAttemptService(
 				new LoginAttemptProperties(5, Duration.ofMinutes(15)));
 		authService = new AuthService(userRepository, passwordEncoder, new JwtService(properties),
-				loginAttemptService);
+				loginAttemptService, emailChangeService);
 	}
 
 	private User account(UserStatus status) {

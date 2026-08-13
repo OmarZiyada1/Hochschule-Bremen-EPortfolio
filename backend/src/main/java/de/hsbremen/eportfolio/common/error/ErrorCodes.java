@@ -3,7 +3,7 @@ package de.hsbremen.eportfolio.common.error;
 /**
  * Fehlercodes fuer das Envelope aus API-Contract §6.2.
  *
- * <p>Stand Contract v38 steht jede Konstante dieser Klasse auch in §6.2.
+ * <p>Stand Contract v40 steht jede Konstante dieser Klasse auch in §6.2.
  * {@link #VALIDATION_FAILED} war bis v14 nur hier gefuehrt und wurde mit v15
  * nachgetragen (Tabelle „Fehlercodes Anfrageformat", Historieneintrag in §10).
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
@@ -244,6 +244,13 @@ public final class ErrorCodes {
 	 * weil er dieselbe Aussage macht wie die vergebene Adresse bei der
 	 * Registrierung: der Wert ist in Ordnung, nur schon in Gebrauch
 	 * (Contract v26).
+	 *
+	 * <p>Der vierte Ausloeser ist der <strong>selbstaendige E-Mail-Wechsel</strong>
+	 * (§6.1, KAN-60): die gewuenschte neue Adresse ist bereits als private oder
+	 * als Hochschuladresse vergeben, geprueft beim Anstossen ueber
+	 * {@code PUT /auth/me} und erneut beim Bestaetigen ueber
+	 * {@code POST /auth/verify}, weil zwischen beidem Tage liegen koennen.
+	 * Dieselbe Aussage wie bei der Registrierung, derselbe Code.
 	 *
 	 * <p><strong>Nicht zu verwechseln mit</strong>
 	 * {@link #NOMINATION_ALREADY_DECIDED}: dort ist nicht der Platz belegt,

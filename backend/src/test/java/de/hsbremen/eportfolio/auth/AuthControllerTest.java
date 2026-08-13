@@ -134,6 +134,14 @@ class AuthControllerTest {
 	private PasswordResetService passwordResetService;
 
 	/**
+	 * Ebenfalls gemockt, weil {@code AuthService} ihn seit KAN-60 braucht: der
+	 * E-Mail-Wechselflow haengt an Konto, Codes und Mailversand und wird im
+	 * {@code EmailChangeIntegrationTest} gegen die echte Datenbank geprueft.
+	 */
+	@MockitoBean
+	private EmailChangeService emailChangeService;
+
+	/**
 	 * Der Zaehler ist ein Singleton im Testkontext. Ohne Ruecksetzen wuerden
 	 * sich die Fehlversuche der einzelnen Testmethoden addieren und die
 	 * Reihenfolge der Tests waere plotzlich relevant.

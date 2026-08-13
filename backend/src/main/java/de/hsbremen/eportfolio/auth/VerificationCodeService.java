@@ -210,6 +210,21 @@ public class VerificationCodeService {
 						+ "Bitte einen neuen Code anfordern.");
 	}
 
+	/**
+	 * Entwertet alle offenen Codes eines Kontos zu einem Zweck, ohne einen
+	 * neuen auszustellen.
+	 *
+	 * <p>Gebraucht beim Abbruch eines E-Mail-Wechsels (KAN-60): die
+	 * Wunschadresse wird geleert, und ein noch im Postfach liegender Code darf
+	 * danach nichts mehr bestaetigen koennen. {@link #issue} entwertet zwar
+	 * ebenfalls, stellt aber immer einen neuen Code aus, und genau den soll es
+	 * beim Abbruch nicht geben.
+	 */
+	@Transactional
+	public void invalidateOpen(User user, VerificationPurpose purpose) {
+		invalidateOpenCodes(user, purpose);
+	}
+
 	/** Entwertet alle offenen Codes eines Kontos zu einem Zweck. */
 	private void invalidateOpenCodes(User user, VerificationPurpose purpose) {
 		List<VerificationCode> open = openCodes(user, purpose);

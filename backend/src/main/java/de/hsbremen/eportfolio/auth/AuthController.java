@@ -127,8 +127,11 @@ public class AuthController {
 			description = "Setzt das Flag zur angegebenen Adresse. Sobald beide gesetzt sind, "
 					+ "wechselt das Konto nach ACTIVE und die Anmeldung ist moeglich. Die "
 					+ "Antwort gibt beide Flags und den Status zurueck, damit der Client den "
-					+ "Abschluss erkennt. Im Feld email steht immer die private Adresse, auch "
-					+ "beim Zweck HSB_EMAIL: sie ist die Kennung des Kontos.")
+					+ "Abschluss erkennt. Im Feld email steht die private Adresse, auch beim "
+					+ "Zweck HSB_EMAIL: sie ist die Kennung des Kontos. Einzige Ausnahme ist "
+					+ "der Zweck EMAIL_CHANGE (KAN-60): dort steht die neue Adresse, und das "
+					+ "Einloesen macht sie zur Login-Kennung; ist sie inzwischen vergeben, "
+					+ "antwortet der Endpoint mit 409.")
 	@ApiResponse(responseCode = "200", description = "Code angenommen, Verifizierungsstand der Antwort.")
 	// Bewusst dieselbe Antwort fuer unbekannte Adresse, falschen, abgelaufenen
 	// und bereits verbrauchten Code (§6.1, §6.2).
@@ -288,26 +291,38 @@ public class AuthController {
 	}
 
 	/**
-	 * Eigene Profildaten aendern (§6.1, KAN-44).
+	 * Eigene Profildaten aendern (§6.1, KAN-44, KAN-60).
 	 *
-	 * <p>Nur Vor- und Nachname. Die private E-Mail ist die Login-Identitaet
-	 * und hier bewusst nicht aenderbar (§3.1.1, offener Punkt in §7); Rolle
-	 * und Status vergibt die Administration. Vom Gate der erzwungenen
-	 * Passwortaenderung (§6.7) ist dieser Pfad <em>nicht</em> ausgenommen:
-	 * die Ausnahmeliste im {@link JwtAuthenticationFilter} unterscheidet nach
-	 * Methode und laesst nur {@code GET /auth/me} durch.
+	 * <p>Vor- und Nachname wirken sofort. Eine abweichende private Adresse im
+	 * Feld {@code email} stoesst den Wechselflow an: aktuelles Passwort
+	 * verpflichtend, Code an die neue Adresse, gueltig erst nach
+	 * {@code POST /auth/verify} mit Zweck {@code EMAIL_CHANGE}
+	 * ({@link EmailChangeService}). Rolle und Status vergibt die
+	 * Administration, {@code hsbEmail} bleibt unveraenderlich. Vom Gate der
+	 * erzwungenen Passwortaenderung (§6.7) ist dieser Pfad <em>nicht</em>
+	 * ausgenommen: die Ausnahmeliste im {@link JwtAuthenticationFilter}
+	 * unterscheidet nach Methode und laesst nur {@code GET /auth/me} durch.
 	 */
 	@Operation(summary = "Eigene Profildaten aendern",
 			description = "Aendert Vor- und Nachnamen der angemeldeten Person und antwortet "
-					+ "wie GET /auth/me. Die private E-Mail ist die Login-Kennung und hier "
-					+ "nicht aenderbar; unbekannte Felder im Body werden ignoriert (§6.1).")
+					+ "wie GET /auth/me. Eine abweichende Adresse im Feld email stoesst den "
+					+ "E-Mail-Wechsel an: currentPassword ist dann Pflicht, ein Code geht an "
+					+ "die neue Adresse, und gueltig wird sie erst nach POST /auth/verify mit "
+					+ "Zweck EMAIL_CHANGE; bis dahin nennt pendingEmail den laufenden Wechsel. "
+					+ "Die aktuelle Adresse im Feld email bricht einen laufenden Wechsel ab. "
+					+ "Unbekannte Felder im Body werden ignoriert (§6.1).")
 	@ApiResponse(responseCode = "200", description = "Aktualisierte Benutzerdaten.")
-	@ApiResponse(responseCode = "400", description = "Vor- oder Nachname fehlt oder ist zu lang.")
-	@ApiResponse(responseCode = "401", description = "Kein, abgelaufenes oder ungueltiges Token.")
+	@ApiResponse(responseCode = "400", description = "Vor- oder Nachname fehlt oder ist zu lang, "
+			+ "oder email ist keine gueltige Adresse.")
+	@ApiResponse(responseCode = "401", description = "Kein brauchbares Token, oder beim "
+			+ "Adresswechsel fehlt das aktuelle Passwort bzw. ist falsch.")
+	@ApiResponse(responseCode = "409", description = "Die gewuenschte Adresse ist bereits vergeben.")
+	@ApiResponse(responseCode = "429", description = "Zu viele Wechselversuche, voruebergehend gesperrt.")
 	@PutMapping("/me")
 	public UserResponse updateMe(@AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-			@Valid @RequestBody ProfileUpdateRequest profileUpdateRequest) {
-		return authService.updateProfile(authenticatedUser.getId(), profileUpdateRequest);
+			@Valid @RequestBody ProfileUpdateRequest profileUpdateRequest, HttpServletRequest request) {
+		return authService.updateProfile(authenticatedUser.getId(), profileUpdateRequest,
+				clientIp(request));
 	}
 
 	/**

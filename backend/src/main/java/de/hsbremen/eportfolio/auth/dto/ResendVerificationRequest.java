@@ -15,8 +15,9 @@ import jakarta.validation.constraints.Size;
  * unbekannte Adressen gleich und unterliegt einem Rate-Limit.
  *
  * @param email   Private Adresse, also die Kennung des Kontos, wie bei
- *                {@link VerifyRequest}.
- * @param purpose Welcher der beiden Codes neu geschickt werden soll (§2.11).
+ *                {@link VerifyRequest}; beim Zweck {@code EMAIL_CHANGE}
+ *                (KAN-60) dagegen die neue Wunschadresse.
+ * @param purpose Welcher Code neu geschickt werden soll (§2.11).
  */
 public record ResendVerificationRequest(
 
@@ -27,7 +28,8 @@ public record ResendVerificationRequest(
 		@Size(max = 255, message = "E-Mail-Adresse ist zu lang.")
 		String email,
 
-		@Schema(description = "PRIVATE_EMAIL oder HSB_EMAIL.", example = "HSB_EMAIL")
+		@Schema(description = "PRIVATE_EMAIL, HSB_EMAIL oder EMAIL_CHANGE.",
+				example = "HSB_EMAIL")
 		@NotNull(message = "Zweck fehlt.")
 		VerificationPurpose purpose) {
 }

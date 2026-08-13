@@ -24,5 +24,13 @@ public enum VerificationPurpose {
 	HSB_EMAIL,
 
 	/** Zuruecksetzen eines vergessenen Passworts (§6.1, Umsetzung in KAN-43). */
-	PASSWORD_RESET
+	PASSWORD_RESET,
+
+	/**
+	 * Bestaetigung einer <em>neuen</em> privaten Adresse beim selbstaendigen
+	 * Wechsel der Login-Kennung (§3.1, KAN-60). Der Code geht an die neue
+	 * Adresse; erst sein Einloesen macht sie zur gueltigen Kennung. Bis dahin
+	 * steht sie in {@code User.pendingEmail}.
+	 */
+	EMAIL_CHANGE
 }

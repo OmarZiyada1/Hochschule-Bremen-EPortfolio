@@ -67,10 +67,12 @@ public class RegistrationService {
 
 	private final RegistrationProperties properties;
 
+	private final EmailChangeService emailChangeService;
+
 	public RegistrationService(UserRepository userRepository, PortfolioService portfolioService,
 			VerificationCodeService codeService, VerificationAttemptService attempts,
 			MailTemplateService mailTemplateService, PasswordEncoder passwordEncoder,
-			RegistrationProperties properties) {
+			RegistrationProperties properties, EmailChangeService emailChangeService) {
 		this.userRepository = userRepository;
 		this.portfolioService = portfolioService;
 		this.codeService = codeService;
@@ -78,6 +80,7 @@ public class RegistrationService {
 		this.mailTemplateService = mailTemplateService;
 		this.passwordEncoder = passwordEncoder;
 		this.properties = properties;
+		this.emailChangeService = emailChangeService;
 	}
 
 	// ------------------------------------------------------------------
@@ -174,6 +177,13 @@ public class RegistrationService {
 		String email = EmailAddresses.normalize(request.email());
 		guardAttempt(email, clientIp);
 
+		// Der Wechselflow (KAN-60) teilt Endpoint, Bremse und Antwortform mit
+		// der Registrierung, aber nicht deren Lookup: die Adresse im Request ist
+		// dort die neue, gesucht wird ueber pendingEmail.
+		if (purpose == VerificationPurpose.EMAIL_CHANGE) {
+			return emailChangeService.confirm(email, request.code(), clientIp);
+		}
+
 		Optional<User> found = userRepository.findByEmail(email);
 		if (found.isEmpty()) {
 			codeService.matchPlaceholder(request.code());
@@ -217,6 +227,12 @@ public class RegistrationService {
 		VerificationPurpose purpose = requireEmailPurpose(request.purpose());
 		String email = EmailAddresses.normalize(request.email());
 		guardAttempt(email, clientIp);
+
+		// Wie bei verify: der Wechselflow sucht ueber pendingEmail (KAN-60).
+		if (purpose == VerificationPurpose.EMAIL_CHANGE) {
+			emailChangeService.resend(email);
+			return;
+		}
 
 		Optional<User> found = userRepository.findByEmail(email);
 		if (found.isEmpty()) {
@@ -367,7 +383,8 @@ public class RegistrationService {
 	}
 
 	/**
-	 * Nur die beiden E-Mail-Zwecke gehoeren an diese Endpoints.
+	 * Nur die E-Mail-Zwecke gehoeren an diese Endpoints; seit KAN-60 zaehlt der
+	 * Adresswechsel dazu.
 	 *
 	 * <p>{@code PASSWORD_RESET} ist ein gueltiger Wert aus §2.11, aber der eines
 	 * anderen Flusses ({@code POST /auth/reset-password}, KAN-43). Ihn hier
@@ -375,12 +392,14 @@ public class RegistrationService {
 	 * bestaetigen koennte.
 	 */
 	private static VerificationPurpose requireEmailPurpose(VerificationPurpose purpose) {
-		if (purpose == VerificationPurpose.PRIVATE_EMAIL || purpose == VerificationPurpose.HSB_EMAIL) {
+		if (purpose == VerificationPurpose.PRIVATE_EMAIL || purpose == VerificationPurpose.HSB_EMAIL
+				|| purpose == VerificationPurpose.EMAIL_CHANGE) {
 			return purpose;
 		}
 
 		throw new ValidationException(ErrorCodes.VALIDATION_FAILED,
-				"purpose: An diesem Endpoint sind nur PRIVATE_EMAIL und HSB_EMAIL zulaessig.");
+				"purpose: An diesem Endpoint sind nur PRIVATE_EMAIL, HSB_EMAIL und "
+						+ "EMAIL_CHANGE zulaessig.");
 	}
 
 	private static boolean isAlreadyVerified(User user, VerificationPurpose purpose) {
