@@ -25,8 +25,10 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * {@code PUT /api/auth/me} aus API-Contract §6.1 gegen die echte Datenbank
  * (KAN-44), einschliesslich der Zusage aus der Definition of Done: der
- * Endpoint aendert weder Rolle noch Status noch eine der beiden Adressen,
- * auch wenn der Body sie mitschickt.
+ * Endpoint aendert weder Rolle noch Status noch die Hochschuladresse, auch
+ * wenn der Body sie mitschickt. Das Feld {@code email} ist seit KAN-60 kein
+ * ignoriertes Feld mehr, sondern stoesst den Wechselflow an; seine Faelle
+ * prueft {@link EmailChangeIntegrationTest}.
  *
  * <p>Der Test laeuft ueber die volle Filterkette mit echten Tokens, weil das
  * Gate der erzwungenen Passwortaenderung (§6.7) im
@@ -86,7 +88,7 @@ class ProfileUpdateIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("Extra-Felder im Body aendern weder Rolle noch Status noch Adressen (DoD)")
+	@DisplayName("Extra-Felder im Body aendern weder Rolle noch Status noch die HSB-Adresse (DoD)")
 	void ignoresFieldsBeyondTheName() throws Exception {
 		User user = activeStudent();
 		String emailBefore = user.getEmail();
@@ -94,11 +96,13 @@ class ProfileUpdateIntegrationTest {
 
 		// Bewusst rohes JSON statt des Records: das Record kennt diese Felder
 		// gar nicht, und genau dieser Angriffsversuch soll wirkungslos bleiben.
+		// email steht nicht mehr in dieser Liste: seit KAN-60 ist es ein aktives
+		// Feld mit eigenem Flow samt Passwortpflicht, siehe
+		// EmailChangeIntegrationTest.
 		String body = """
 				{
 					"firstName": "Neuer",
 					"lastName": "Name",
-					"email": "angreifer@example.org",
 					"hsbEmail": "angreifer@hs-bremen.de",
 					"role": "ADMIN",
 					"status": "DEACTIVATED",
@@ -121,6 +125,7 @@ class ProfileUpdateIntegrationTest {
 		assertThat(reloaded.getStatus()).isEqualTo(UserStatus.ACTIVE);
 		assertThat(reloaded.getEmail()).isEqualTo(emailBefore);
 		assertThat(reloaded.getHsbEmail()).isEqualTo(hsbEmailBefore);
+		assertThat(reloaded.getPendingEmail()).isNull();
 		assertThat(reloaded.isPasswordChangeRequired()).isFalse();
 	}
 

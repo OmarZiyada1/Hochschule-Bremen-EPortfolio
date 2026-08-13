@@ -13,10 +13,16 @@ import java.util.UUID;
  * Nachweismerkmal, das ebenfalls nicht ausgeliefert wird. Ein DTO stellt das
  * strukturell sicher; bei einer serialisierten Entity haengt es an
  * Annotationen, die man beim naechsten Feld vergisst.
+ *
+ * <p>{@code pendingEmail} (KAN-60) ist dagegen unbedenklich und noetig: die
+ * Antwort geht immer an die Person selbst, und ohne das Feld koennte die
+ * Oberflaeche einen laufenden E-Mail-Wechsel nicht als „Bestaetigung
+ * ausstehend" anzeigen. {@code null}, wenn kein Wechsel laeuft.
  */
 public record UserResponse(
 		UUID id,
 		String email,
+		String pendingEmail,
 		String firstName,
 		String lastName,
 		Role role,
@@ -26,6 +32,7 @@ public record UserResponse(
 		return new UserResponse(
 				user.getId(),
 				user.getEmail(),
+				user.getPendingEmail(),
 				user.getFirstName(),
 				user.getLastName(),
 				user.getRole(),

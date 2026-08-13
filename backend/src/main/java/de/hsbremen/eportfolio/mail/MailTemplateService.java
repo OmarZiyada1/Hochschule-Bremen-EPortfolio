@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
  * erscheinen in Benachrichtigungen auf Sperrbildschirmen und in
  * Vorschaufenstern, also dort, wo niemand angemeldet sein muss. Ein
  * Einmalgeheimnis gehoert nicht an eine Stelle, die ohne Entsperren lesbar ist.
- * {@code MailTemplateServiceTest} haelt das fuer alle drei Vorlagen fest.
+ * {@code MailTemplateServiceTest} haelt das fuer alle Vorlagen fest.
  *
  * <p><strong>Die Vorlagen liegen im Code und nicht in der Datenbank.</strong>
  * Sie aendern sich nur mit dem Code; eine Verwaltungsoberflaeche dafuer waere
@@ -49,6 +49,8 @@ public class MailTemplateService {
 	private static final String SUBJECT_HSB_EMAIL = "Bestätigung Ihrer Hochschuladresse";
 
 	private static final String SUBJECT_PASSWORD_RESET = "Passwort zurücksetzen";
+
+	private static final String SUBJECT_EMAIL_CHANGE = "Bestätigung Ihrer neuen E-Mail-Adresse";
 
 	private final MailSender mailSender;
 
@@ -142,6 +144,36 @@ public class MailTemplateService {
 				Falls Sie das nicht waren, müssen Sie nichts tun: Ihr bisheriges
 				Passwort bleibt gültig, solange dieser Code nicht verwendet wird.
 				Geben Sie ihn an niemanden weiter.
+
+				%s"""
+				.formatted(code, formatValidity(validity), properties.baseUrl(), properties.fromName())));
+	}
+
+	/**
+	 * Bestaetigung einer neuen privaten Adresse beim selbstaendigen
+	 * E-Mail-Wechsel (§3.1, Zweck {@code EMAIL_CHANGE} aus §2.11, KAN-60).
+	 *
+	 * <p>Der Empfaenger ist die <em>neue</em> Adresse, und die kann einer
+	 * unbeteiligten Person gehoeren, wenn sich jemand vertippt hat. Deshalb
+	 * sagt der Text ausdruecklich, dass ohne den Code nichts geschieht und die
+	 * bisherige Anmeldeadresse gueltig bleibt.
+	 */
+	@Async(AsyncConfig.MAIL_EXECUTOR)
+	public void sendEmailChangeVerification(String to, String code, Duration validity) {
+		send(new MailMessage(to, SUBJECT_EMAIL_CHANGE, """
+				Guten Tag,
+
+				mit diesem Code bestätigen Sie Ihre neue private E-Mail-Adresse für
+				das E-Portfolio der Hochschule Bremen. Erst nach der Bestätigung wird
+				sie zur Anmeldeadresse; bis dahin gilt die bisherige Adresse.
+
+				Ihr Code: %s
+
+				Der Code ist %s gültig. Geben Sie ihn unter %s ein.
+
+				Falls Sie diesen Wechsel nicht angestoßen haben, können Sie diese
+				Nachricht ignorieren. Die bisherige Anmeldeadresse bleibt dann
+				unverändert gültig.
 
 				%s"""
 				.formatted(code, formatValidity(validity), properties.baseUrl(), properties.fromName())));

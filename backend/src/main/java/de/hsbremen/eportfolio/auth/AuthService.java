@@ -35,12 +35,15 @@ public class AuthService {
 
 	private final LoginAttemptService loginAttemptService;
 
+	private final EmailChangeService emailChangeService;
+
 	public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService,
-			LoginAttemptService loginAttemptService) {
+			LoginAttemptService loginAttemptService, EmailChangeService emailChangeService) {
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.jwtService = jwtService;
 		this.loginAttemptService = loginAttemptService;
+		this.emailChangeService = emailChangeService;
 	}
 
 	/**
@@ -152,22 +155,34 @@ public class AuthService {
 	}
 
 	/**
-	 * Aendert Vor- und Nachnamen der angemeldeten Person (§6.1, KAN-44).
+	 * Aendert Vor- und Nachnamen der angemeldeten Person und nimmt seit KAN-60
+	 * auch den Wunsch nach einer neuen privaten Adresse entgegen (§6.1, KAN-44).
 	 *
-	 * <p>Mehr als die beiden Namensfelder aendert die Methode nicht, und zwar
-	 * strukturell: {@link ProfileUpdateRequest} kennt keine weiteren Felder.
-	 * Die private E-Mail ist die Login-Identitaet und bleibt hier unantastbar
-	 * (§3.1.1, offener Punkt in §7); Rolle und Status vergibt die
-	 * Administration (§5).
+	 * <p>Die Namensfelder wirken sofort. Das Feld {@code email} stoesst dagegen
+	 * nur den Wechselflow an: die neue Adresse wird erst mit dem Einloesen des
+	 * Codes zur Login-Kennung, siehe {@link EmailChangeService#requestChange}.
+	 * Rolle, Status und {@code hsbEmail} kennt das Record gar nicht und bleiben
+	 * damit strukturell unantastbar (§5).
 	 *
-	 * @param userId ID aus dem SecurityContext, nie aus dem Request-Body
+	 * <p>Beides laeuft in <em>einer</em> Transaktion: scheitert der
+	 * Adresswechsel (falsches Passwort, vergebene Adresse, Bremse), bleibt auch
+	 * die Namensaenderung aus demselben Request aus. Ein Formular mit einem
+	 * Speichern-Knopf erwartet alles oder nichts.
+	 *
+	 * @param userId   ID aus dem SecurityContext, nie aus dem Request-Body
+	 * @param clientIp Absender-Adresse fuer die Versandbremse des Wechselflows
 	 * @return der aktualisierte Stand in der Form von {@code GET /auth/me}
 	 */
 	@Transactional
-	public UserResponse updateProfile(UUID userId, ProfileUpdateRequest request) {
+	public UserResponse updateProfile(UUID userId, ProfileUpdateRequest request, String clientIp) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(LoginFailedException::new);
 
+		// Der Wechselwunsch zuerst: seine Pruefungen (Passwort, Bremse,
+		// Eindeutigkeit) liegen vor der ersten Mutation, ein Fehlschlag laesst
+		// die Entity also unangetastet und verlaesst sich nicht allein auf den
+		// Rollback.
+		emailChangeService.requestChange(user, request, clientIp);
 		user.setFirstName(request.firstName());
 		user.setLastName(request.lastName());
 		return UserResponse.from(userRepository.save(user));

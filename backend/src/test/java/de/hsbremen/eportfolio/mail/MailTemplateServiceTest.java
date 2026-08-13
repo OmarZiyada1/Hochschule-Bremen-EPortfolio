@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests der drei Vorlagen aus KAN-51 (§3.1.1, §6.1).
+ * Tests der Vorlagen aus KAN-51 und des Wechselcodes aus KAN-60 (§3.1.1, §6.1).
  *
  * <p>Bewusst ohne Spring-Kontext und damit ohne {@code @Async}: geprueft wird,
  * was in der Nachricht steht und dass ein Fehler des Adapters den Aufrufer nicht
@@ -39,15 +39,16 @@ class MailTemplateServiceTest {
 	private final MailTemplateService service = new MailTemplateService(sender, PROPERTIES);
 
 	/**
-	 * Die drei Anlaesse als aufrufbare Einheit, damit die Zusicherungen, die fuer
-	 * alle gelten (kein Code im Betreff, Code im Text), nicht dreimal
-	 * dastehen und beim vierten Anlass vergessen werden.
+	 * Alle Anlaesse als aufrufbare Einheit, damit die Zusicherungen, die fuer
+	 * alle gelten (kein Code im Betreff, Code im Text), nur einmal dastehen und
+	 * beim naechsten Anlass nicht vergessen werden.
 	 */
 	private static List<Consumer<MailTemplateService>> allTemplates() {
 		return List.of(
 				service -> service.sendPrivateEmailVerification("person@example.org", CODE, VALIDITY),
 				service -> service.sendHsbEmailVerification("person@hs-bremen.de", CODE, VALIDITY),
-				service -> service.sendPasswordReset("person@example.org", CODE, VALIDITY));
+				service -> service.sendPasswordReset("person@example.org", CODE, VALIDITY),
+				service -> service.sendEmailChangeVerification("neu@example.org", CODE, VALIDITY));
 	}
 
 	@Test
@@ -59,7 +60,7 @@ class MailTemplateServiceTest {
 
 		assertThat(sender.sent)
 				.as("Betreffzeilen erscheinen auf Sperrbildschirmen; ein Einmalgeheimnis gehoert nicht dorthin")
-				.hasSize(3)
+				.hasSize(4)
 				.allSatisfy(message -> assertThat(message.subject()).doesNotContain(CODE));
 	}
 
@@ -70,7 +71,7 @@ class MailTemplateServiceTest {
 			template.accept(service);
 		}
 
-		assertThat(sender.sent).hasSize(3).allSatisfy(message -> {
+		assertThat(sender.sent).hasSize(4).allSatisfy(message -> {
 			assertThat(message.bodyText()).contains(CODE);
 			// Ohne Gueltigkeitsdauer weiss die Person nicht, ob sie den Code
 			// jetzt gleich braucht oder spaeter noch benutzen kann.
@@ -118,6 +119,21 @@ class MailTemplateServiceTest {
 		}
 
 		@Test
+		@DisplayName("E-Mail-Wechsel: geht an die neue Adresse und beruhigt Unbeteiligte")
+		void emailChange() {
+			service.sendEmailChangeVerification("neu@example.org", CODE, VALIDITY);
+
+			MailMessage message = sender.only();
+			assertThat(message.to()).isEqualTo("neu@example.org");
+			assertThat(message.subject()).isEqualTo("Bestätigung Ihrer neuen E-Mail-Adresse");
+			// Die neue Adresse kann einer unbeteiligten Person gehoeren, wenn
+			// sich jemand vertippt hat (KAN-60).
+			assertThat(unwrapped(message))
+					.contains("Erst nach der Bestätigung wird sie zur Anmeldeadresse")
+					.contains("Die bisherige Anmeldeadresse bleibt dann unverändert gültig");
+		}
+
+		@Test
 		@DisplayName("Passwort zuruecksetzen: enthaelt den Hinweis fuer Unbeteiligte")
 		void passwordReset() {
 			service.sendPasswordReset("person@example.org", CODE, VALIDITY);
@@ -154,6 +170,7 @@ class MailTemplateServiceTest {
 				failing.sendPrivateEmailVerification("person@example.org", CODE, VALIDITY);
 				failing.sendHsbEmailVerification("person@hs-bremen.de", CODE, VALIDITY);
 				failing.sendPasswordReset("person@example.org", CODE, VALIDITY);
+				failing.sendEmailChangeVerification("neu@example.org", CODE, VALIDITY);
 			}).doesNotThrowAnyException();
 		}
 	}

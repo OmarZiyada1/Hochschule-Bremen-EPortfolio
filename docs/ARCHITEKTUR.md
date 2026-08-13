@@ -158,8 +158,9 @@ Liegen unter `backend/src/main/resources/db/migration`, Namensschema
 | 11 | `V202608081524__user_password_change_required.sql` | KAN-28: Spalte `app_user.password_change_required` (`boolean not null default false`) für die erzwungene Passwortänderung (§3.1, §6.7). Der Default bleibt wie bei den Verifizierungs-Flags dauerhaft stehen: `false` ist der Regelzustand jedes selbst registrierten Kontos. |
 | 12 | `V202608081745__stored_file.sql` | KAN-23: `stored_file` für hochgeladene Medien (§3.15). Die Bytes liegen im Objektspeicher (§3.15.1), die Spalte `path` hält nur den anbieterneutralen Schlüssel ohne Container und Endpoint. `project_id` nullable (`null` = Avatar) mit `on delete cascade`; `uploaded_by` kaskadiert bewusst nicht, weil die Person Teil der Rechteprüfung beim Löschen ist (§6.1). Index auf `project_id`. |
 | 13 | `V202608091930__top10_audit_entry.sql` | KAN-45: `top10_audit_entry` für das unveränderliche Änderungsprotokoll der Top-10 (§3.17). Check-Constraint `ck_top10_audit_action` über die drei Werte aus §2.12. `project_id` nullable mit **`on delete set null`**: ein Projekt wird über `DELETE /projects/{id}` wirklich gelöscht, und mit `cascade` verschwänden genau die Zeilen, die festhalten, dass es einmal einen Platz belegt hat. `admin_id` kaskadiert nicht, weil Konten deaktiviert und nicht gelöscht werden (§6.1). Indizes auf beiden Fremdschlüsseln sowie ein zusammengesetzter Index `(timestamp desc, id asc)` für die Standardsortierung des Endpoints (§6.6). |
+| 14 | `V202608130640__user_pending_email_and_email_change.sql` | KAN-60: Spalte `app_user.pending_email` (`varchar(255)`, nullable) für den selbständigen Wechsel der privaten E-Mail-Adresse (§3.1); bewusst ohne Unique-Constraint, den Wettlauf entscheidet die Bestätigung. Der Check-Constraint `ck_verification_code_purpose` wird gelöst und mit dem vierten Wert `EMAIL_CHANGE` aus §2.11 neu gesetzt. |
 
-Aktueller Schemastand laut Flyway: `202608081745`, 12 Migrationen.
+Aktueller Schemastand laut Flyway: `202608130640`, 14 Migrationen.
 
 Die Dateinamen 1 bis 8 tragen weiterhin deutsche Beschreibungen
 (`__projekt_und_zuordnungen.sql`). Das bleibt so: eingespielte Migrationen
@@ -250,7 +251,7 @@ Seit KAN-26 gibt es davon **zwei Ausprägungen**. Die Zählmechanik steht in
 | Dienst | Zählt | Setzt zurück bei |
 |--------|-------|------------------|
 | `LoginAttemptService` | fehlgeschlagene Anmeldungen | erfolgreicher Anmeldung |
-| `VerificationAttemptService` | **jeden** Aufruf von `POST /auth/verify`, `POST /auth/verify/resend`, `POST /auth/forgot-password` und `POST /auth/reset-password` (KAN-43, Contract v34) | erfolgreich eingelöstem Code |
+| `VerificationAttemptService` | **jeden** Aufruf von `POST /auth/verify`, `POST /auth/verify/resend`, `POST /auth/forgot-password` und `POST /auth/reset-password` (KAN-43, Contract v34); seit KAN-60 auch jeden E-Mail-Wechselversuch über `PUT /auth/me` (Schlüssel Wunschadresse + IP, gezählt vor der Passwortprüfung) | erfolgreich eingelöstem Code |
 
 Beide lesen dieselben Grenzwerte, führen aber **getrennte Zähler**. Ein erneut
 angeforderter Verifizierungscode darf niemanden aus der Anmeldung aussperren:

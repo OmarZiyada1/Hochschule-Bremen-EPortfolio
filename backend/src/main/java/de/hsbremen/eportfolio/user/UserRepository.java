@@ -24,6 +24,16 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
 	Optional<User> findByHsbEmail(String hsbEmail);
 
 	/**
+	 * Alle Konten mit dieser Wunschadresse eines laufenden E-Mail-Wechsels
+	 * (§3.1, KAN-60).
+	 *
+	 * <p>Eine Liste und kein {@code Optional}: {@code pending_email} ist bewusst
+	 * nicht eindeutig, zwei Konten duerfen dieselbe Adresse gleichzeitig
+	 * anstreben. Wer von ihnen gemeint ist, entscheidet der eingeloeste Code.
+	 */
+	List<User> findByPendingEmail(String pendingEmail);
+
+	/**
 	 * Kennzahl {@code usersByRole} des Admin-Dashboards (§6.1).
 	 *
 	 * <p>Eine Abfrage mit {@code group by} statt eines {@code countByRole} je

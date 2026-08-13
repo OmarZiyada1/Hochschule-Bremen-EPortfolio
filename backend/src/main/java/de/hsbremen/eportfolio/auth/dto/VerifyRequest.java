@@ -11,10 +11,13 @@ import jakarta.validation.constraints.Size;
  * Eingabe der Schritte 3 und 4 der Registrierung,
  * {@code POST /api/auth/verify} (§3.1.1, §6.1).
  *
- * @param email   Immer die <strong>private</strong> Adresse, auch wenn der
- *                Zweck {@code HSB_EMAIL} lautet. Sie ist die Kennung des Kontos
+ * @param email   Die <strong>private</strong> Adresse, auch wenn der Zweck
+ *                {@code HSB_EMAIL} lautet. Sie ist die Kennung des Kontos
  *                (§3.1); der Zweck sagt, welche der beiden Adressen der Code
- *                bestaetigt, nicht wohin er geschickt wurde.
+ *                bestaetigt, nicht wohin er geschickt wurde. Einzige Ausnahme
+ *                ist {@code EMAIL_CHANGE} (KAN-60): dort steht die
+ *                <strong>neue</strong> Adresse, denn nur sie kennt die Person
+ *                in diesem Moment sicher.
  * @param purpose Welche Adresse bestaetigt wird (§2.11). {@code PASSWORD_RESET}
  *                gehoert nicht hierher, sondern zu
  *                {@code POST /auth/reset-password} (KAN-43), und ergibt an
@@ -35,7 +38,8 @@ public record VerifyRequest(
 		@Size(max = 255, message = "E-Mail-Adresse ist zu lang.")
 		String email,
 
-		@Schema(description = "PRIVATE_EMAIL oder HSB_EMAIL.", example = "PRIVATE_EMAIL")
+		@Schema(description = "PRIVATE_EMAIL, HSB_EMAIL oder EMAIL_CHANGE.",
+				example = "PRIVATE_EMAIL")
 		@NotNull(message = "Zweck fehlt.")
 		VerificationPurpose purpose,
 
