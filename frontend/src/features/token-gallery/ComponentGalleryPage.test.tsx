@@ -9,9 +9,7 @@ describe("ComponentGalleryPage", () => {
   it("zeigt den Seitentitel als einzige Ueberschrift erster Ebene", () => {
     renderWithProviders(<ComponentGalleryPage />)
 
-    expect(
-      screen.getAllByRole("heading", { level: 1 })
-    ).toHaveLength(1)
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1)
     expect(
       screen.getByRole("heading", { level: 1, name: "Komponentenbibliothek" })
     ).toBeInTheDocument()
@@ -27,6 +25,7 @@ describe("ComponentGalleryPage", () => {
       "Navigation",
       "Datenanzeige",
       "Domänenkomponenten",
+      "Administrationsseite",
     ]) {
       expect(
         screen.getByRole("heading", { level: 2, name: group })
@@ -45,7 +44,13 @@ describe("ComponentGalleryPage", () => {
   it("laesst die uebersetzten sr-only-Texte auch ankuendigen", () => {
     renderWithProviders(<ComponentGalleryPage />)
 
-    for (const text of ["Weitere Seiten", "Weitere Ebenen"]) {
+    for (const text of [
+      "Weitere Seiten",
+      "Weitere Ebenen",
+      "142 Reaktionen",
+      "Platz 1",
+      "Platz 6",
+    ]) {
       expect(screen.getByText(text).closest("[aria-hidden]")).toBeNull()
     }
   })

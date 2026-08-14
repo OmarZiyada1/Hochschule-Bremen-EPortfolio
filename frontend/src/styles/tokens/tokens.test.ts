@@ -130,10 +130,20 @@ describe("Primitives (Foundation, Abschnitt 2)", () => {
   })
 })
 
+/*
+ * Zwei Rollen sind Verlaeufe und keine Farbe: cover traegt die Kachelflaeche
+ * der Projekt- und Top-10-Karten, nav die Kopfleiste (KAN-29). Sie bestehen
+ * wie jede andere Rolle ausschliesslich aus Aliasen auf Primitives, tragen
+ * daneben aber Winkel und Haltepunkte, und sie werden bewusst nicht als
+ * --color-* angebunden: Tailwind erzeugte daraus ein bg-cover, das dort
+ * bereits eine Groessen-Utility ist.
+ */
+const gradientRoles = ["cover", "nav"]
+
 describe("Semantic-Rollen (Foundation, Abschnitt 3)", () => {
-  it("fuehrt 55 Rollen je Modus", () => {
-    expect(semanticLight.size).toBe(55)
-    expect(semanticDark.size).toBe(55)
+  it("fuehrt 70 Rollen je Modus", () => {
+    expect(semanticLight.size).toBe(70)
+    expect(semanticDark.size).toBe(70)
   })
 
   it("nutzt in beiden Modi dieselben Rollennamen", () => {
@@ -144,13 +154,49 @@ describe("Semantic-Rollen (Foundation, Abschnitt 3)", () => {
 
   it("besteht ausschliesslich aus Aliasen auf Primitives", () => {
     for (const [name, value] of [...semanticLight, ...semanticDark]) {
+      if (gradientRoles.includes(name)) continue
+
       expect(value, `${name} ist kein Alias`).toMatch(/^var\(--[\w-]+\)$/)
       expect(primitives.has(value.slice(6, -1))).toBe(true)
     }
   })
 
+  it("baut auch die Verlaufsrollen nur aus Primitives", () => {
+    for (const name of gradientRoles) {
+      for (const value of [semanticLight.get(name)!, semanticDark.get(name)!]) {
+        expect(value, `${name} ist kein Verlauf`).toMatch(/^linear-gradient\(/)
+
+        /* Kein Rohwert zwischen den Haltepunkten: was hier steht, muss ein
+           Primitive sein, sonst waere der Verlauf die einzige Stelle im
+           Frontend mit einer Farbe ausserhalb der Ebenentrennung. */
+        const referenced = [...value.matchAll(/var\(--([\w-]+)\)/g)].map(
+          (match) => match[1]
+        )
+
+        expect(referenced.length).toBeGreaterThanOrEqual(2)
+        for (const primitive of referenced) {
+          expect(
+            primitives.has(primitive),
+            `${name} verweist auf ${primitive}, das kein Primitive ist`
+          ).toBe(true)
+        }
+      }
+    }
+  })
+
   it("bindet jede Rolle ueber @theme inline an Tailwind an", () => {
     for (const name of semanticLight.keys()) {
+      if (gradientRoles.includes(name)) {
+        /* Ein Verlauf darf gerade nicht als Farbe erscheinen. Die Flaeche
+           kommt stattdessen ueber die Klassen surface-cover und
+           surface-nav aus dem Komponentenlayer von tokens.css. */
+        expect(themeInline.has(`color-${name}`)).toBe(false)
+        expect(tokensCss).toMatch(
+          new RegExp(`background-image:\\s*var\\(--${name}\\);`)
+        )
+        continue
+      }
+
       expect(themeInline.get(`color-${name}`)).toBe(`var(--${name})`)
     }
   })

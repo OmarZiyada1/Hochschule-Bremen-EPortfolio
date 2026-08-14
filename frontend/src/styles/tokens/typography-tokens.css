@@ -144,6 +144,39 @@
     line-height: var(--lh-body);
   }
 
+  /* Die vier folgenden Rollen sind mit KAN-29 dazugekommen. Ihre Groessen
+     standen seit KAN-6 in dieser Datei, hatten aber keine Klasse; ohne sie
+     muessten Kopfleiste, Fusszeile und die Pillen ihre Groesse inline
+     setzen und der Wert stuende zweimal. Sie tragen bewusst keinen
+     Schnitt: den setzt die Komponente wie ueberall ueber font-medium oder
+     font-semibold. */
+  .type-nav-brand-lg {
+    font-family: var(--font-body);
+    font-size: var(--fs-nav-brand-lg);
+    line-height: var(--lh-body);
+  }
+
+  .type-nav-brand {
+    font-family: var(--font-body);
+    font-size: var(--fs-nav-brand);
+    line-height: var(--lh-body);
+  }
+
+  .type-nav-item {
+    font-family: var(--font-body);
+    font-size: var(--fs-nav-item);
+    line-height: var(--lh-body);
+  }
+
+  /* Getrennt von type-overline, obwohl beide auf 11px liegen: die Overline
+     bringt Versalien und 4px Laufweite mit, das Label nicht. Figma fuehrt
+     label/xs und label/badge mit Laufweite 0. */
+  .type-label-xs {
+    font-family: var(--font-body);
+    font-size: var(--fs-label-xs);
+    line-height: var(--lh-body);
+  }
+
   .type-num-rank {
     font-family: var(--font-body);
     font-size: var(--fs-num-rank);

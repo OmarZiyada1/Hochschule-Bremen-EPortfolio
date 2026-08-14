@@ -10,11 +10,7 @@ import { cn } from "@/lib/utils"
  * und diese Definition entfaellt.
  */
 export type ProjectStatus =
-  | "DRAFT"
-  | "SUBMITTED"
-  | "APPROVED"
-  | "PUBLISHED"
-  | "REVISION"
+  "DRAFT" | "SUBMITTED" | "APPROVED" | "PUBLISHED" | "REVISION"
 
 /*
  * Record ueber den Enum-Typ, bewusst ohne Standardzweig: ein sechster Status
@@ -45,6 +41,10 @@ export function StatusBadge({
   const { t } = useTranslation()
   return (
     <Badge className={cn(statusClasses[status], className)}>
+      {/* Der Punkt aus dem Design ist Zierat und wird nicht vorgelesen. Er
+          traegt ueber bg-current die Farbe des Labels, damit die Zuordnung
+          von Status zu Farbe nur einmal aufgeschrieben ist. */}
+      <span aria-hidden="true" className="size-1.5 rounded-pill bg-current" />
       {t(`project.status.${status}`)}
     </Badge>
   )

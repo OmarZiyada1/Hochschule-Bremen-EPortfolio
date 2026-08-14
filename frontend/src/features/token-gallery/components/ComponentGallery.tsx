@@ -2,11 +2,18 @@ import {
   AlertCircleIcon,
   BoldIcon,
   ChevronDownIcon,
+  FolderKanbanIcon,
+  GraduationCapIcon,
   InfoIcon,
   ItalicIcon,
+  LayoutDashboardIcon,
+  MoreVerticalIcon,
   SearchIcon,
+  TagsIcon,
   Trash2Icon,
+  TrophyIcon,
   UnderlineIcon,
+  UsersIcon,
 } from "lucide-react"
 import { useState, type ReactNode } from "react"
 import { de, enUS } from "react-day-picker/locale"
@@ -16,13 +23,23 @@ import { CharacterCounter } from "@/components/common/CharacterCounter"
 import { EmptyState } from "@/components/common/EmptyState"
 import { FilterSelect } from "@/components/common/FilterSelect"
 import { KpiTile } from "@/components/common/KpiTile"
+import { LanguageToggle } from "@/components/common/LanguageToggle"
+import { Pill, type PillTone } from "@/components/common/Pill"
 import { ProjectCard } from "@/components/common/ProjectCard"
+import { ProjectTableRow } from "@/components/common/ProjectTableRow"
 import { RoleBadge, type Role } from "@/components/common/RoleBadge"
 import { SearchInput } from "@/components/common/SearchInput"
-import { StatusBadge, type ProjectStatus } from "@/components/common/StatusBadge"
+import {
+  StatusBadge,
+  type ProjectStatus,
+} from "@/components/common/StatusBadge"
 import { Tag } from "@/components/common/Tag"
+import { Top10Card } from "@/components/common/Top10Card"
+import { UserAvatar } from "@/components/common/UserAvatar"
+import { UserTableRow } from "@/components/common/UserTableRow"
 import { Footer } from "@/components/layout/Footer"
 import { NavBar } from "@/components/layout/NavBar"
+import { Sidebar, SidebarItem } from "@/components/layout/Sidebar"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -169,6 +186,26 @@ const projectStatuses: ProjectStatus[] = [
 
 const roles: Role[] = ["STUDENT", "EDITOR", "ADMIN"]
 
+const pillTones: PillTone[] = [
+  "neutral",
+  "info",
+  "success",
+  "warning",
+  "danger",
+]
+
+/*
+ * Die Beispielperson steht einmal hier statt in jedem Demoblock erneut.
+ * Die Namensteile kommen aus i18n, weil sie sichtbarer Text sind.
+ */
+function useDemoPerson() {
+  const { t } = useTranslation()
+  return {
+    firstName: t("tokens.components.demo.userFirstName"),
+    lastName: t("tokens.components.demo.userLastName"),
+  }
+}
+
 /**
  * Ein Demoblock je Komponente. Der Name ist der technische Bezeichner der
  * Datei bzw. Komponente und wird wie die Tokennamen bewusst nicht
@@ -189,7 +226,9 @@ function FormDemos() {
     <>
       <DemoBlock name="input · label">
         <div className="flex w-full max-w-sm flex-col gap-2">
-          <Label htmlFor="demo-input">{t("tokens.components.demo.titleLabel")}</Label>
+          <Label htmlFor="demo-input">
+            {t("tokens.components.demo.titleLabel")}
+          </Label>
           <Input
             id="demo-input"
             placeholder={t("tokens.components.demo.titlePlaceholder")}
@@ -400,7 +439,9 @@ function OverlayDemos() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{t("tokens.components.demo.dialogTitle")}</DialogTitle>
+              <DialogTitle>
+                {t("tokens.components.demo.dialogTitle")}
+              </DialogTitle>
               <DialogDescription>
                 {t("tokens.components.demo.dialogDescription")}
               </DialogDescription>
@@ -630,7 +671,9 @@ function DataDemos() {
     <>
       <DemoBlock name="table">
         <Table>
-          <TableCaption>{t("tokens.components.demo.tableCaption")}</TableCaption>
+          <TableCaption>
+            {t("tokens.components.demo.tableCaption")}
+          </TableCaption>
           <TableHeader>
             <TableRow>
               <TableHead>{t("tokens.components.demo.tableTitle")}</TableHead>
@@ -795,6 +838,7 @@ function CharacterCounterDemo() {
 
 function DomainDemos() {
   const { t } = useTranslation()
+  const demoPerson = useDemoPerson()
   return (
     <>
       <DemoBlock name="NavBar">
@@ -803,17 +847,15 @@ function DomainDemos() {
             <p className="type-caption text-muted-foreground">
               {t("tokens.components.demo.navbarSignedOut")}
             </p>
-            <NavBar />
+            <NavBar activeHref="/" />
           </div>
           <div className="flex flex-col gap-2">
             <p className="type-caption text-muted-foreground">
               {t("tokens.components.demo.navbarSignedIn")}
             </p>
             <NavBar
-              user={{
-                firstName: t("tokens.components.demo.userFirstName"),
-                lastName: t("tokens.components.demo.userLastName"),
-              }}
+              user={demoPerson}
+              activeHref="/projects"
               onLogout={() => {}}
             />
           </div>
@@ -838,17 +880,18 @@ function DomainDemos() {
         <ProjectCardDemos />
       </DemoBlock>
 
-      <DemoBlock name="KpiTile">
-        <KpiTile
-          value={128}
-          label={t("tokens.components.demo.kpiPublished")}
-          className="w-44"
-        />
-        <KpiTile
-          value={5}
-          label={t("tokens.components.demo.kpiFaculties")}
-          className="w-44"
-        />
+      <DemoBlock name="Top10Card">
+        <Top10CardDemos />
+      </DemoBlock>
+
+      <DemoBlock name="UserAvatar">
+        <UserAvatar person={demoPerson} size="sm" labelled />
+        <UserAvatar person={demoPerson} labelled />
+        <UserAvatar person={demoPerson} size="lg" labelled />
+      </DemoBlock>
+
+      <DemoBlock name="LanguageToggle">
+        <LanguageToggle />
       </DemoBlock>
 
       <DemoBlock name="StatusBadge">
@@ -868,6 +911,16 @@ function DomainDemos() {
         <Tag>{t("tokens.components.demo.module")}</Tag>
         <Tag>{t("tokens.components.demo.program")}</Tag>
         <Tag>{t("tokens.components.demo.faculty")}</Tag>
+      </DemoBlock>
+
+      {/* Die Tonnamen sind technische Bezeichner wie die Badge-Varianten
+          und werden deshalb wie diese nicht uebersetzt. */}
+      <DemoBlock name="Pill">
+        {pillTones.map((tone) => (
+          <Pill key={tone} tone={tone}>
+            {tone}
+          </Pill>
+        ))}
       </DemoBlock>
 
       <DemoBlock name="EmptyState">
@@ -896,24 +949,204 @@ function DomainDemos() {
 
 function ProjectCardDemos() {
   const { t } = useTranslation()
+  const person = useDemoPerson()
+  const faculty = {
+    name: t("tokens.components.demo.faculty"),
+    abbreviation: t("tokens.components.demo.facultyAbbreviation"),
+  }
+
+  /* Beide Kacheln ohne coverImageUrl: die Pruefflaeche laedt keine Bilder
+     von aussen, und der Platzhalter ist genau der Zustand, den eine frisch
+     angelegte Kachel zeigt. Wie die Flaeche mit Bild aussieht, entscheidet
+     das Bild und nicht die Komponente. */
   return (
     <>
       <ProjectCard
-        className="w-full max-w-sm"
+        className="w-full max-w-xs"
         title={t("tokens.components.demo.projectTitle")}
         summary={t("tokens.components.demo.projectSummary")}
-        status="PUBLISHED"
-        faculty={t("tokens.components.demo.faculty")}
+        projectType="THESIS"
+        faculty={faculty}
+        author={person}
         semester={t("tokens.components.demo.semester")}
+        reactionCount={142}
         href="#"
       />
       <ProjectCard
-        className="w-full max-w-sm"
+        className="w-full max-w-xs"
         title={t("tokens.components.demo.projectTitle")}
         summary={t("tokens.components.demo.projectSummary")}
-        faculty={t("tokens.components.demo.faculty")}
+        projectType="REGULAR"
+        faculty={faculty}
+        author={person}
         semester={t("tokens.components.demo.semester")}
+        reactionCount={7}
+        status="PUBLISHED"
       />
+    </>
+  )
+}
+
+function Top10CardDemos() {
+  const { t } = useTranslation()
+  const person = useDemoPerson()
+  const studyProgram = {
+    name: t("tokens.components.demo.program"),
+    abbreviation: null,
+  }
+
+  return (
+    <>
+      <Top10Card
+        className="w-full max-w-xs"
+        position={1}
+        title={t("tokens.components.demo.projectTitle")}
+        author={person}
+        studyProgram={studyProgram}
+        href="#"
+      />
+      <Top10Card
+        className="w-60"
+        variant="compact"
+        position={6}
+        title={t("tokens.components.demo.projectTitle")}
+        author={person}
+        href="#"
+      />
+    </>
+  )
+}
+
+function AdminDemos() {
+  const { t } = useTranslation()
+  const person = useDemoPerson()
+  const rowActions = (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      aria-label={t("tokens.components.demo.rowActions")}
+    >
+      <MoreVerticalIcon aria-hidden="true" />
+    </Button>
+  )
+
+  return (
+    <>
+      <DemoBlock name="Sidebar · SidebarItem">
+        <Sidebar label={t("tokens.components.group.admin")} className="w-60">
+          <SidebarItem
+            href="#"
+            active
+            icon={<LayoutDashboardIcon aria-hidden="true" className="size-4" />}
+          >
+            {t("tokens.components.demo.sidebarDashboard")}
+          </SidebarItem>
+          <SidebarItem
+            href="#"
+            icon={<FolderKanbanIcon aria-hidden="true" className="size-4" />}
+          >
+            {t("tokens.components.demo.sidebarProjects")}
+          </SidebarItem>
+          <SidebarItem
+            href="#"
+            icon={<TrophyIcon aria-hidden="true" className="size-4" />}
+          >
+            {t("tokens.components.demo.sidebarTop10")}
+          </SidebarItem>
+          <SidebarItem
+            href="#"
+            icon={<UsersIcon aria-hidden="true" className="size-4" />}
+          >
+            {t("tokens.components.demo.sidebarUsers")}
+          </SidebarItem>
+          <SidebarItem
+            href="#"
+            icon={<TagsIcon aria-hidden="true" className="size-4" />}
+          >
+            {t("tokens.components.demo.sidebarCategories")}
+          </SidebarItem>
+          <SidebarItem
+            href="#"
+            icon={<GraduationCapIcon aria-hidden="true" className="size-4" />}
+          >
+            {t("tokens.components.demo.sidebarStudyStructure")}
+          </SidebarItem>
+        </Sidebar>
+      </DemoBlock>
+
+      <DemoBlock name="ProjectTableRow">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t("tokens.components.demo.tableTitle")}</TableHead>
+              <TableHead>{t("tokens.components.demo.userFirstName")}</TableHead>
+              <TableHead>{t("tokens.components.demo.selectLabel")}</TableHead>
+              <TableHead>{t("tokens.components.demo.tableSemester")}</TableHead>
+              <TableHead>{t("tokens.components.demo.tableStatus")}</TableHead>
+              <TableHead className="sr-only">
+                {t("tokens.components.demo.rowActions")}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {(["PUBLISHED", "SUBMITTED"] as ProjectStatus[]).map((status) => (
+              <ProjectTableRow
+                key={status}
+                title={t("tokens.components.demo.projectTitle")}
+                author={person}
+                studyProgram={{
+                  name: t("tokens.components.demo.program"),
+                  abbreviation: null,
+                }}
+                semester={t("tokens.components.demo.semester")}
+                status={status}
+                href="#"
+                actions={rowActions}
+              />
+            ))}
+          </TableBody>
+        </Table>
+      </DemoBlock>
+
+      <DemoBlock name="UserTableRow">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t("tokens.components.demo.userFirstName")}</TableHead>
+              <TableHead>{t("tokens.components.demo.selectLabel")}</TableHead>
+              <TableHead className="sr-only">
+                {t("tokens.components.demo.rowActions")}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {roles.map((role) => (
+              <UserTableRow
+                key={role}
+                person={person}
+                email={t("tokens.components.demo.userEmail")}
+                role={role}
+                actions={rowActions}
+              />
+            ))}
+          </TableBody>
+        </Table>
+      </DemoBlock>
+
+      <DemoBlock name="KpiTile">
+        <KpiTile
+          className="w-60"
+          icon={<FolderKanbanIcon aria-hidden="true" />}
+          value={128}
+          label={t("tokens.components.demo.kpiTotal")}
+          trend={t("tokens.components.demo.kpiTrend")}
+        />
+        <KpiTile
+          className="w-60"
+          value={5}
+          label={t("tokens.components.demo.kpiFaculties")}
+        />
+      </DemoBlock>
     </>
   )
 }
@@ -934,12 +1167,15 @@ export function ComponentGallery() {
     { id: "navigation", content: <NavigationDemos /> },
     { id: "data", content: <DataDemos /> },
     { id: "domain", content: <DomainDemos /> },
+    { id: "admin", content: <AdminDemos /> },
   ]
   return (
     <section className="flex flex-col gap-6">
       {groups.map((group) => (
         <div key={group.id} className="flex flex-col gap-3">
-          <h2 className="type-h1">{t(`tokens.components.group.${group.id}`)}</h2>
+          <h2 className="type-h1">
+            {t(`tokens.components.group.${group.id}`)}
+          </h2>
           <div className="flex flex-col gap-4">{group.content}</div>
         </div>
       ))}

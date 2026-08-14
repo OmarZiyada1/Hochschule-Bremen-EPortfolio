@@ -3,7 +3,7 @@
  *
  * Die Liste ist Daten, keine Darstellung: sie ist ohne Rendern pruefbar und
  * haelt die Zusage aus der Definition of Done fest, dass die Pruefflaeche
- * alle 55 Semantic-Rollen zeigt. Kommt eine Rolle in tokens.css dazu und
+ * alle 70 Semantic-Rollen zeigt. Kommt eine Rolle in tokens.css dazu und
  * hier nicht, faellt das im Test auf und nicht erst im Entwurf.
  *
  * Die Namen sind die CSS-Variablen ohne die beiden fuehrenden Bindestriche
@@ -18,6 +18,8 @@ export type TokenGroupId =
   | "role"
   | "badge"
   | "brand"
+  | "cover"
+  | "nav"
   | "feedback"
 
 export type TokenGroup = {
@@ -97,7 +99,21 @@ export const colorGroups: readonly TokenGroup[] = [
       "role-admin-fg",
     ],
   },
-  { id: "badge", tokens: ["badge-neutral-bg", "badge-neutral-fg"] },
+  {
+    id: "badge",
+    tokens: [
+      "badge-neutral-bg",
+      "badge-neutral-fg",
+      "pill-info-bg",
+      "pill-info-fg",
+      "pill-success-bg",
+      "pill-success-fg",
+      "pill-warning-bg",
+      "pill-warning-fg",
+      "pill-danger-bg",
+      "pill-danger-fg",
+    ],
+  },
   {
     id: "brand",
     tokens: [
@@ -108,10 +124,30 @@ export const colorGroups: readonly TokenGroup[] = [
     ],
   },
   {
+    id: "cover",
+    tokens: [
+      "cover",
+      "cover-foreground",
+      "cover-muted",
+      "cover-badge",
+      "cover-scrim",
+    ],
+  },
+  { id: "nav", tokens: ["nav", "nav-foreground"] },
+  {
     id: "feedback",
     tokens: ["warning", "warning-foreground", "success", "success-foreground"],
   },
 ]
+
+/**
+ * Die beiden Rollen, die einen Verlauf tragen und keine Farbe (KAN-29).
+ *
+ * Die Pruefflaeche braucht die Unterscheidung, weil eine Musterflaeche den
+ * Wert sonst als background-color setzt und ein Verlauf dort nichts ergibt:
+ * das Feld bliebe leer, ohne dass etwas es meldet.
+ */
+export const gradientTokens: readonly string[] = ["cover", "nav"]
 
 /**
  * Alle Semantic-Rollen in einer Liste, in der Reihenfolge der Gruppen.
@@ -157,6 +193,10 @@ export const typographyRoles: readonly string[] = [
   "type-body-sm",
   "type-caption",
   "type-overline",
+  "type-nav-brand-lg",
+  "type-nav-brand",
+  "type-nav-item",
+  "type-label-xs",
 ]
 
 /** Varianten und Groessen der per CLI erzeugten Primitive components/ui/button.tsx. */

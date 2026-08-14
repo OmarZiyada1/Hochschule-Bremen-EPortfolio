@@ -16,9 +16,9 @@ import {
 const colorTokens = flattenColorTokens()
 
 describe("Katalog der Tokenschicht", () => {
-  it("fuehrt die 55 Semantic-Rollen (54 aus dem Abgleich vom 07.08.2026, dazu overlay)", () => {
-    expect(colorTokens).toHaveLength(55)
-    expect(new Set(colorTokens).size).toBe(55)
+  it("fuehrt die 70 Semantic-Rollen (55 vor dem Figma-Abgleich, dazu sieben fuer Cover und Kopfleiste und acht fuer die Pillentoene)", () => {
+    expect(colorTokens).toHaveLength(70)
+    expect(new Set(colorTokens).size).toBe(70)
   })
 
   it("fuehrt die sechs Radius-Stufen", () => {

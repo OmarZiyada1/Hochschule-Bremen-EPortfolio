@@ -1,6 +1,8 @@
 {
   "app": {
-    "name": "E-Portfolio Hochschule Bremen"
+    "name": "E-Portfolio Hochschule Bremen",
+    "institution": "Hochschule Bremen",
+    "productLabel": "E-Portfolio"
   },
   "common": {
     "theme": {
@@ -50,14 +52,28 @@
       "login": "Anmelden",
       "logout": "Abmelden",
       "profile": "Profil",
-      "openMenu": "Menü öffnen",
-      "userMenu": "Nutzermenü"
+      "openMenu": "Menü öffnen"
     },
     "footer": {
-      "label": "Fußzeile",
       "imprint": "Impressum",
       "privacy": "Datenschutz",
-      "contact": "Kontakt"
+      "description": "E-Portfolio-Portal für studentische Projekte und akademische Arbeiten der Hochschule Bremen.",
+      "projects": "Projektbibliothek",
+      "studyPrograms": "Studiengänge",
+      "faq": "Häufige Fragen",
+      "accessibility": "Barrierefreiheit",
+      "copyright": "© {{year}} Hochschule Bremen, Fakultät 4 Elektrotechnik und Informatik",
+      "tagline": "Mit Sorgfalt für die HSB-Gemeinschaft gebaut",
+      "group": {
+        "platform": "Plattform",
+        "legal": "Rechtliches"
+      }
+    },
+    "language": {
+      "switchTo": {
+        "de": "Auf Deutsch umschalten",
+        "en": "Auf Englisch umschalten"
+      }
     }
   },
   "home": {
@@ -80,7 +96,9 @@
         "role": "Rollen",
         "badge": "Neutrales Badge",
         "brand": "Markenflächen",
-        "feedback": "UI-Feedback"
+        "feedback": "UI-Feedback",
+        "cover": "Coverflächen",
+        "nav": "Kopfleiste"
       }
     },
     "radius": {
@@ -108,7 +126,8 @@
         "overlay": "Überlagerungen",
         "navigation": "Navigation",
         "data": "Datenanzeige",
-        "domain": "Domänenkomponenten"
+        "domain": "Domänenkomponenten",
+        "admin": "Administrationsseite"
       },
       "demo": {
         "titleLabel": "Titel",
@@ -174,7 +193,22 @@
         "userLastName": "Beispiel",
         "navbarSignedOut": "Nicht angemeldet",
         "navbarSignedIn": "Angemeldet",
-        "searchPlaceholder": "Titel oder Stichwort"
+        "searchPlaceholder": "Titel oder Stichwort",
+        "facultyAbbreviation": "FK4",
+        "userEmail": "mira.beispiel@stud.hs-bremen.de",
+        "kpiTotal": "Projekte gesamt",
+        "kpiTrend": "+12 diesen Monat",
+        "rowActions": "Aktionen zur Zeile",
+        "sidebarDashboard": "Dashboard",
+        "sidebarProjects": "Projekte",
+        "sidebarTop10": "Top 10",
+        "sidebarUsers": "Nutzer:innen",
+        "sidebarCategories": "Kategorien",
+        "sidebarStudyStructure": "Studienstruktur",
+        "top10Feature": "Vordere Plätze",
+        "top10Compact": "Hintere Plätze",
+        "cardWithCover": "Mit Coverbild",
+        "cardWithoutCover": "Ohne Coverbild"
       }
     }
   },
@@ -185,6 +219,15 @@
       "APPROVED": "Genehmigt",
       "PUBLISHED": "Veröffentlicht",
       "REVISION": "Überarbeitung"
+    },
+    "type": {
+      "REGULAR": "Reguläres Projekt",
+      "PAPER": "Paper",
+      "THESIS": "Thesis"
+    },
+    "card": {
+      "reactions_one": "{{count}} Reaktion",
+      "reactions_other": "{{count}} Reaktionen"
     }
   },
   "user": {
@@ -193,5 +236,8 @@
       "EDITOR": "Redakteur:in",
       "ADMIN": "Admin"
     }
+  },
+  "top10": {
+    "position": "Platz {{position}}"
   }
 }
