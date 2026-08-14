@@ -21,9 +21,17 @@ export default function HomePage() {
       <p className="type-body text-muted-foreground">{t("home.intro")}</p>
 
       {import.meta.env.DEV ? (
-        <Link className="type-body text-primary underline" to="/dev/tokens">
-          {t("home.tokenGallery")}
-        </Link>
+        <nav className="flex flex-col gap-2">
+          <Link className="type-body text-primary underline" to="/dev/tokens">
+            {t("home.tokenGallery")}
+          </Link>
+          <Link
+            className="type-body text-primary underline"
+            to="/dev/components"
+          >
+            {t("home.componentGallery")}
+          </Link>
+        </nav>
       ) : null}
     </main>
   )

@@ -77,19 +77,21 @@ Kommentare direkt in `tokens.css`). Das Figma-Design ist nur hell angelegt;
 neue dunkle Werte werden abgeleitet und auf Kontrast geprüft, nicht
 geschätzt (Confluence „Designentscheidungen", Abschnitt 2.8).
 
-**Die vier Brückenzeilen sind kein Fremdkörper.** Im `@theme inline`-Block
+**Die fünf Brückenzeilen sind kein Fremdkörper.** Im `@theme static`-Block
 stehen zusätzlich `--radius-sm`, `--radius-md`, `--radius-lg` und
-`--radius-xl` als Aliase auf `selection`, `control`, `card` und `modal`.
-Sie tragen keinen eigenen Wert und stehen nicht in Figma: sie sind die
-zweite Adresse der sechs Stufen, unter der die per CLI erzeugten Komponenten
-sie finden. Wer sie beim Abgleich gegen die Figma-Collection als
-überzähligen Token löscht, macht jede shadcn-Primitive still eckig, ohne
-dass ein Test, ein Lint oder ein Typecheck darauf anspringt
+`--radius-xl` als Aliase auf `selection`, `control`, `card` und `modal`,
+seit KAN-29 dazu `--radius-4xl` als Alias auf `pill` (das Badge der
+Registry nutzt `rounded-4xl` und ist in Figma eine Pille). Sie tragen
+keinen eigenen Wert und stehen nicht in Figma: sie sind die zweite Adresse
+der sechs Stufen, unter der die per CLI erzeugten Komponenten sie finden.
+Wer sie beim Abgleich gegen die Figma-Collection als überzähligen Token
+löscht, macht jede shadcn-Primitive still eckig, ohne dass ein Test, ein
+Lint oder ein Typecheck darauf anspringt
 (Skill `frontend-shadcn`, Abschnitt 7).
 
-**Vier Zeilen, aber sieben Stufen auf der Gegenseite.** shadcns Skala führt
-zusätzlich `2xl`, `3xl` und `4xl`. Die bleiben bewusst ohne Brückenzeile,
-weil die Figma-Collection dort endet und kein Token auf Vorrat entsteht.
+**Fünf Zeilen, aber sieben Stufen auf der Gegenseite.** shadcns Skala führt
+zusätzlich `2xl` und `3xl`. Die bleiben bewusst ohne Brückenzeile, weil
+keine erzeugte Komponente sie nutzt und kein Token auf Vorrat entsteht.
 Taucht eine solche Klasse in einer erzeugten Komponente auf, ist das ein
 Befund in der Tokenschicht und wird dort aufgelöst, nicht im Komponentencode.
 

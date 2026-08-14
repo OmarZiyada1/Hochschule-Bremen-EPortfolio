@@ -275,25 +275,28 @@ die Tailwind-Standardskalen ab, damit jede Farbe über eine Semantic-Rolle
 läuft. Generierte Komponenten benutzen aber `rounded-sm`, `rounded-md`,
 `rounded-lg` und `rounded-xl`.
 
-Die Brücke im `@theme inline`-Block hängt shadcns Namen auf die sechs
-Figma-Stufen (KAN-6, Abschnitt 3.3):
+Die Brücke im `@theme static`-Block hängt shadcns Namen auf die sechs
+Figma-Stufen (KAN-6, Abschnitt 3.3; `--radius-4xl` seit KAN-29):
 
 ```css
 --radius-sm: var(--radius-selection);   /*  4px */
 --radius-md: var(--radius-control);     /*  8px */
 --radius-lg: var(--radius-card);        /* 12px */
 --radius-xl: var(--radius-modal);       /* 16px */
+--radius-4xl: var(--radius-pill);       /* 9999px */
 ```
 
 ### Die Skala reicht weiter als die Brücke
 
 shadcn leitet seine Radien aus einem einzelnen `--radius` ab und kommt dabei
 auf **sieben** Stufen: `sm`, `md`, `lg`, `xl`, `2xl`, `3xl` und `4xl`. Unsere
-Brücke deckt die ersten vier, weil die Figma-Collection dort endet. Für
-`rounded-2xl` bis `rounded-4xl` gibt es also keine Adresse, und wegen
-`--radius-*: initial` verschwinden diese Klassen ersatzlos.
+Brücke deckt die ersten vier, dazu seit KAN-29 `4xl` als Alias auf
+`--radius-pill` (das Badge der Registry nutzt `rounded-4xl` und ist in
+Figma eine Pille). Für `rounded-2xl` und `rounded-3xl` gibt es weiterhin
+keine Adresse, und wegen `--radius-*: initial` verschwinden diese Klassen
+ersatzlos.
 
-**Das ist kein Grund, drei Stufen auf Vorrat anzulegen** (Abschnitt 8: keine
+**Das ist kein Grund, Stufen auf Vorrat anzulegen** (Abschnitt 8: keine
 Rolle ohne Verwendung). Es ist ein Grund, sie zu bemerken. Deshalb nach jedem
 `add` einmal über die neuen Dateien nach `rounded-` suchen. Taucht eine Stufe
 oberhalb von `xl` auf, ist das ein Befund in der Tokenschicht und wird wie in

@@ -319,6 +319,14 @@
   --radius-md: var(--radius-control); /*  8px */
   --radius-lg: var(--radius-card); /* 12px */
   --radius-xl: var(--radius-modal); /* 16px */
+
+  /* Befund aus KAN-29: badge.tsx nutzt rounded-4xl, und die Bruecke endete
+     bei xl. Das Badge ist in Figma eine Pille, deshalb zeigt die Stufe auf
+     radius-pill und nicht auf einen neuen freien Wert. 2xl und 3xl bleiben
+     bewusst ohne Zeile: keine erzeugte Komponente nutzt sie, und ein Alias
+     ohne Verwendung fliegt nach derselben Regel raus wie eine Primitive
+     ohne Semantic-Referenz. */
+  --radius-4xl: var(--radius-pill); /* 9999px */
 }
 
 @theme inline {
@@ -394,6 +402,15 @@
      Nachweis-Komponente wirklich braucht, nicht die halbe Standardpalette
      auf Verdacht (KAN-6, Abschnitt 3.3). */
   --color-transparent: transparent;
+
+  /* Befund aus KAN-29, gleiches Muster: die Overlays der erzeugten
+     dialog.tsx, alert-dialog.tsx und sheet.tsx setzen bg-black/10 samt
+     Backdrop-Blur. black ist ein Schluesselwert wie transparent und keine
+     Figma-Farbe; ohne die Zeile griffe die Klasse ins Leere und der
+     Hintergrund eines offenen Dialogs bliebe voellig unveraendert. Die
+     Semantic-Rolle overlay aus Foundation 3.1 bleibt daneben bestehen und
+     ist die Adresse fuer eigene, von Hand komponierte Flaechen. */
+  --color-black: #000000;
 }
 
 /* ============================================================
@@ -431,6 +448,15 @@
   input[type="radio"] {
     min-block-size: 24px;
     min-inline-size: 24px;
+  }
+
+  /* Tailwind v4 stellt Buttons auf cursor: default um (shadcn-Doku,
+     Abschnitt Cursor). Diese Regel stellt den Zeiger wieder her; inaktive
+     Schaltflaechen bleiben beim Standardcursor, damit der Zeiger nicht
+     Bedienbarkeit verspricht, die es gerade nicht gibt. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
   }
 
   @media (prefers-reduced-motion: reduce) {

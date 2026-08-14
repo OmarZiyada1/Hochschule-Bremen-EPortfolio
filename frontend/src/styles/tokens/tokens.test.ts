@@ -192,7 +192,13 @@ describe("Radien (Foundation, Abschnitt 7)", () => {
     )
     const steps = named.filter(
       (name) =>
-        !["radius-sm", "radius-md", "radius-lg", "radius-xl"].includes(name)
+        ![
+          "radius-sm",
+          "radius-md",
+          "radius-lg",
+          "radius-xl",
+          "radius-4xl",
+        ].includes(name)
     )
 
     expect(steps).toEqual([
@@ -210,6 +216,11 @@ describe("Radien (Foundation, Abschnitt 7)", () => {
     expect(radius.get("radius-md")).toBe("var(--radius-control)")
     expect(radius.get("radius-lg")).toBe("var(--radius-card)")
     expect(radius.get("radius-xl")).toBe("var(--radius-modal)")
+    /* Befund aus KAN-29: badge.tsx nutzt rounded-4xl, das Badge ist in
+       Figma eine Pille. 2xl und 3xl bleiben bewusst ohne Bruecke. */
+    expect(radius.get("radius-4xl")).toBe("var(--radius-pill)")
+    expect(radius.has("radius-2xl")).toBe(false)
+    expect(radius.has("radius-3xl")).toBe(false)
   })
 
   it("fuehrt keinen Radius als Verweis auf sich selbst", () => {

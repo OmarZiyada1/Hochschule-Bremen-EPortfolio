@@ -24,6 +24,26 @@ if (!window.matchMedia) {
     }) as unknown as MediaQueryList
 }
 
+/*
+ * jsdom kennt auch ResizeObserver nicht. cmdk (die Basis der mit KAN-29
+ * erzeugten command-Primitive) beobachtet damit die Groesse seiner Liste;
+ * ohne diesen Ersatz bricht jeder Test, der die Pruefflaeche rendert.
+ * Der Ersatz beobachtet nichts: Layoutmasse liefert jsdom ohnehin nicht.
+ */
+if (!window.ResizeObserver) {
+  window.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver
+}
+
+/* cmdk rollt das jeweils markierte Element in Sicht; jsdom kennt auch
+   scrollIntoView nicht, und scrollen laesst sich dort ohnehin nichts. */
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {}
+}
+
 /* Testing Library raeumt nur automatisch auf, wenn die globalen Hooks
    aktiv sind. Dieses Projekt importiert die Testfunktionen ausdruecklich,
    also wird auch das Aufraeumen ausdruecklich angemeldet. */

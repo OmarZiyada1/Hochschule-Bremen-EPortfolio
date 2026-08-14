@@ -6,12 +6,65 @@
     "theme": {
       "toDark": "Switch to dark mode",
       "toLight": "Switch to light mode"
+    },
+    "action": {
+      "close": "Close"
+    },
+    "breadcrumb": {
+      "label": "Breadcrumb",
+      "more": "More levels"
+    },
+    "pagination": {
+      "label": "Pagination",
+      "previous": "Previous",
+      "next": "Next",
+      "previousPage": "Go to previous page",
+      "nextPage": "Go to next page",
+      "morePages": "More pages"
+    },
+    "command": {
+      "title": "Search",
+      "description": "Type a search term; results are filtered as you type."
+    },
+    "calendar": {
+      "previousMonth": "Go to the previous month",
+      "nextMonth": "Go to the next month"
+    },
+    "search": {
+      "label": "Search"
+    },
+    "filter": {
+      "all": "All"
+    },
+    "characterCounter": {
+      "remaining_one": "{{count}} character remaining",
+      "remaining_other": "{{count}} characters remaining",
+      "tooMany_one": "{{count}} character too many",
+      "tooMany_other": "{{count}} characters too many"
+    },
+    "nav": {
+      "label": "Main navigation",
+      "home": "Home",
+      "projects": "Project library",
+      "myPortfolio": "My portfolio",
+      "login": "Log in",
+      "logout": "Log out",
+      "profile": "Profile",
+      "openMenu": "Open menu",
+      "userMenu": "User menu"
+    },
+    "footer": {
+      "label": "Footer",
+      "imprint": "Legal notice",
+      "privacy": "Privacy",
+      "contact": "Contact"
     }
   },
   "home": {
     "title": "E-Portfolio Hochschule Bremen",
     "intro": "The application is set up. The actual views are built with their own tickets.",
-    "tokenGallery": "Open the token layer"
+    "tokenGallery": "Open the token layer",
+    "componentGallery": "Open the component library"
   },
   "tokens": {
     "title": "Token layer",
@@ -45,6 +98,84 @@
       "variants": "Variants",
       "sizes": "Sizes",
       "label": "Button"
+    },
+    "components": {
+      "title": "Component library",
+      "intro": "All primitives generated with KAN-29 and the hand-composed domain components. Hover and focus states show while interacting; disabled, error and loading states are shown alongside. Check everything in light and dark mode.",
+      "group": {
+        "form": "Form elements",
+        "actions": "Buttons and toggles",
+        "overlay": "Overlays",
+        "navigation": "Navigation",
+        "data": "Data display",
+        "domain": "Domain components"
+      },
+      "demo": {
+        "titleLabel": "Title",
+        "titlePlaceholder": "Project title",
+        "summaryLabel": "Summary",
+        "disabledLabel": "Disabled field",
+        "invalidLabel": "Field with error",
+        "fieldDescription": "The title appears in lists and on the detail page.",
+        "fieldError": "The title must not exceed 100 characters.",
+        "checkboxLabel": "Select row",
+        "checkboxCheckedLabel": "Selected row",
+        "checkboxDisabledLabel": "Disabled row",
+        "selectLabel": "Faculty",
+        "bold": "Bold",
+        "italic": "Italic",
+        "underline": "Underline",
+        "tooltipTrigger": "Delete project",
+        "dialogTrigger": "Open dialog",
+        "dialogTitle": "Example dialog",
+        "dialogDescription": "This is what a modal dialog with title and description looks like.",
+        "cancel": "Cancel",
+        "confirm": "Apply",
+        "delete": "Delete",
+        "alertDialogTitle": "Delete project?",
+        "alertDialogDescription": "This action cannot be undone.",
+        "sheetTrigger": "Open sheet",
+        "sheetTitle": "Sheet",
+        "sheetDescription": "Content next to the page, such as the navigation on narrow screens.",
+        "popoverTrigger": "Open popover",
+        "popoverTitle": "Note",
+        "popoverBody": "A popover carries short additional information or small forms, such as the calendar of the date range filter.",
+        "menuTrigger": "Open menu",
+        "commandPlaceholder": "Search …",
+        "commandEmpty": "No results.",
+        "commandGroup": "Pages",
+        "tabEdit": "Edit",
+        "tabPreview": "Preview",
+        "tabHistory": "History",
+        "tabBody": "Placeholder content for “{{tab}}”.",
+        "collapsibleTrigger": "Faculty 4",
+        "collapsibleBody": "International Degree Programme in Media Informatics",
+        "tableCaption": "Example: project list of the administration page",
+        "tableTitle": "Title",
+        "tableStatus": "Status",
+        "tableSemester": "Semester",
+        "alertTitle": "Note",
+        "alertBody": "The editorial team has left remarks.",
+        "alertDestructiveTitle": "Error",
+        "alertDestructiveBody": "The change could not be saved.",
+        "projectTitle": "Campus garden at Werderstraße",
+        "projectSummary": "Students turn the open space behind the AB building into an open learning place with raised beds, seating steps and a weather station.",
+        "faculty": "Faculty 4",
+        "program": "Media informatics",
+        "module": "Digital media",
+        "category": "Semester project",
+        "semester": "Summer 2026",
+        "kpiPublished": "Published projects",
+        "kpiFaculties": "Faculties involved",
+        "emptyTitle": "No projects found",
+        "emptyDescription": "There are no results for the selected filters.",
+        "emptyAction": "Reset filters",
+        "userFirstName": "Mira",
+        "userLastName": "Example",
+        "navbarSignedOut": "Signed out",
+        "navbarSignedIn": "Signed in",
+        "searchPlaceholder": "Title or keyword"
+      }
     }
   },
   "project": {
