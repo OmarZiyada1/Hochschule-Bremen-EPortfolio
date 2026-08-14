@@ -58,11 +58,12 @@ Backend-Handwerk der `code-reviewer`; du prüfst das Frontend.
     ARIA-Rollen nach, die Base UI mitbringt. Ebenso ein Befund: ein umbenannter Dateiname, ein
     geänderter Exportname, eine zusätzliche `cva`-Variante oder ein
     **eigener** Farbwert in einer generierten Datei. Varianten gehören in
-    die Domänenkomponente. Erlaubt sind genau drei Eingriffe (i18n-Literale,
+    die Domänenkomponente. Erlaubt sind genau vier Eingriffe (i18n-Literale,
     hartkodierter Wert auf eine **vorhandene** Rolle gezogen, nachweisbarer
-    Barrierefreiheitsfehler); jeder davon muss im Übergabekommentar je Datei
-    benannt sein. Ein Eingriff, den `add --diff` zeigt und der dort nicht
-    steht, ist ein Befund. Prüfe außerdem, ob eine von Hand gebaute
+    Barrierefreiheitsfehler, minimale Korrektur eines Build-Brechers wie ein
+    ungenutzter Import unter `noUnusedLocals`); jeder davon muss im
+    Übergabekommentar je Datei benannt sein. Ein Eingriff, den `add --diff`
+    zeigt und der dort nicht steht, ist ein Befund. Prüfe außerdem, ob eine von Hand gebaute
     Komponente eine Registry-Entsprechung hat (`select`, `dialog`,
     `dropdown-menu`, `pagination`, `tabs`, `tooltip`); dann ist der Nachbau
     der Befund. Ein direkter Import aus `@base-ui/react` außerhalb von

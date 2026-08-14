@@ -218,8 +218,8 @@ Dieses tut das nicht.
 
 ## 6. Was an einer generierten Datei geändert werden darf
 
-Erlaubt sind **drei** Eingriffe, und alle drei haben denselben Grund: die
-Registry hat etwas hartkodiert, das in diesem Projekt zentral geführt wird.
+Erlaubt sind **vier** Eingriffe, und alle vier haben denselben Grund: die
+Registry setzt etwas voraus, das in diesem Projekt anders geregelt ist.
 Alles andere bleibt, wie die CLI es geschrieben hat.
 
 | Eingriff | Erlaubt |
@@ -227,6 +227,7 @@ Alles andere bleibt, wie die CLI es geschrieben hat.
 | Englisches Literal durch i18n ersetzen | **ja**, und zwar sofort beim Erzeugen |
 | Hartkodierten Wert auf die **vorhandene** Rolle ziehen (`bg-black/10` nach `bg-overlay`) | **ja**, siehe unten |
 | Nachweisbaren Barrierefreiheitsfehler beheben (fehlender zugänglicher Name, `aria-hidden` über einem `sr-only`-Text) | **ja** |
+| Was den Build unter unseren Compileroptionen bricht, minimal geradeziehen (ungenutzter Import gegen `noUnusedLocals`) | **ja**, so klein wie möglich |
 | Dateiname ändern (`button.tsx` nach `Button.tsx`) | nein |
 | Export- oder Komponentennamen ändern | nein |
 | Eine Klasse durch einen **eigenen** Farbwert ersetzen | nein, stattdessen fehlende Rolle ergänzen (Abschnitt 8) |
