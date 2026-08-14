@@ -105,9 +105,14 @@ ein eigenes Ticket (so geschehen in KAN-61).
 **Ein `init` über ein bestehendes Projekt hängt sein Preset-Theme an die
 CSS-Datei aus `components.json` an**: Standardpalette in oklch, Geist-Schrift,
 eigene Radius-Skala aus einem einzelnen `--radius`. Diese Anhänge kollidieren
-mit der Tokenschicht und werden nicht übernommen; die vier Imports aus
-Abschnitt 2 bleiben der gesamte Inhalt von `src/index.css`. Genau deshalb
+mit der Tokenschicht und werden **nicht als Block übernommen**. Genau deshalb
 steht ein zweites `init` auf der Rücksprache-Liste in Abschnitt 5.
+
+Das Preset pauschal zu verwerfen, hat in KAN-29 allerdings eine Lücke
+hinterlassen: `--radius` fiel mit weg, und `input-group.tsx` rechnet damit.
+`src/index.css` enthält deshalb die vier Imports **und** die wenigen
+shadcn-Basisvariablen, die eine erzeugte Komponente nachweislich braucht,
+einzeln nachgetragen statt pauschal übernommen (Abschnitt 6).
 
 **`migrate radix` wechselt keine Basis.** Der Befehl schreibt Imports aus
 den Einzelpaketen `@radix-ui/react-*` auf das Sammelpaket `radix-ui` um und
@@ -213,15 +218,81 @@ Dieses tut das nicht.
 
 ## 6. Was an einer generierten Datei geändert werden darf
 
+Erlaubt sind **drei** Eingriffe, und alle drei haben denselben Grund: die
+Registry hat etwas hartkodiert, das in diesem Projekt zentral geführt wird.
+Alles andere bleibt, wie die CLI es geschrieben hat.
+
 | Eingriff | Erlaubt |
 | --- | --- |
 | Englisches Literal durch i18n ersetzen | **ja**, und zwar sofort beim Erzeugen |
-| Fehlenden zugänglichen Namen ergänzen (`aria-label`, `sr-only`) | ja |
+| Hartkodierten Wert auf die **vorhandene** Rolle ziehen (`bg-black/10` nach `bg-overlay`) | **ja**, siehe unten |
+| Nachweisbaren Barrierefreiheitsfehler beheben (fehlender zugänglicher Name, `aria-hidden` über einem `sr-only`-Text) | **ja** |
 | Dateiname ändern (`button.tsx` nach `Button.tsx`) | nein |
 | Export- oder Komponentennamen ändern | nein |
-| Eine Klasse durch einen eigenen Farbwert ersetzen | nein, stattdessen fehlende Rolle ergänzen (Abschnitt 8) |
+| Eine Klasse durch einen **eigenen** Farbwert ersetzen | nein, stattdessen fehlende Rolle ergänzen (Abschnitt 8) |
 | Eine neue `cva`-Variante hinzufügen | nein in `components/ui/`, ja in der Domänenkomponente daneben |
 | Logik oder Props umbauen | nein, dann ist es eine eigene Komponente an eigener Stelle |
+
+Jeder tatsächlich vorgenommene Eingriff wird im Übergabekommentar des Tickets
+je Datei benannt. Nur so lässt sich der Bericht aus `add --diff` später lesen:
+er meldet dann nicht mehr „No changes", sondern **genau die aufgeschriebenen**
+Abweichungen. Eine Abweichung, die dort auftaucht und nirgends benannt ist,
+ist ein Befund.
+
+### Rolle fehlt oder Rolle wird umgangen: zwei Fälle, zwei Richtungen
+
+Diese beiden sehen sich ähnlich und werden gegenläufig aufgelöst. Wer sie
+verwechselt, macht aus einer Zeile Arbeit einen Konflikt beim nächsten `add`.
+
+| Fall | Was die Komponente tut | Auflösung |
+| --- | --- | --- |
+| Die Rolle **fehlt** | `bg-sidebar-primary`, und `--sidebar-primary` gibt es nicht | Rolle in `tokens.css` ergänzen. **Komponentencode bleibt** (Abschnitt 8) |
+| Die Rolle **existiert und wird umgangen** | `bg-black/10`, obwohl `--overlay` mit geprüften Werten dasteht | Klasse auf die Rolle ziehen. **Tokenschicht bleibt** |
+
+Der Unterschied ist nicht Geschmack. Im ersten Fall zeigt die Komponente auf
+eine Adresse, die es geben soll; dann wird die Adresse angelegt. Im zweiten
+Fall zeigt sie an einer vorhandenen Adresse vorbei auf einen Rohwert, und den
+kann die Tokenschicht nicht einholen: ein `--color-black` nachzutragen, damit
+`bg-black/10` etwas trifft, macht die Klasse wirksam und den Entwurf trotzdem
+falsch. Genau das ist in KAN-29 passiert. Im dunklen Modus liegt die Rolle
+`overlay` bei 70 Prozent, `bg-black/10` bei 10 Prozent über ohnehin dunklem
+Grund: der Dialog stand praktisch ohne Abdunkelung da, und die eigens dafür
+entworfene Rolle war tot. `tokens.test.ts` verbietet seitdem `bg-black` und
+`bg-white` unter `components/ui/`.
+
+### Die Registry rechnet mit Variablen, die es hier nicht gibt
+
+shadcn leitet Maße aus eigenen Basisvariablen ab, allen voran `--radius`. In
+`input-group.tsx` steht `rounded-[calc(var(--radius)-3px)]`. Ist `--radius`
+nirgends definiert, ist das `calc()` ungültig, die Deklaration fällt heraus,
+und die Ecken bleiben eckig. **Kein Compilerfehler, keine Lint-Warnung, kein
+roter Test**, derselbe stille Fehlermodus wie bei der fehlenden Brückenzeile
+in Abschnitt 7.
+
+Solche Variablen gehören nach `src/index.css` und nicht in `tokens.css`: dort
+stehen ausschließlich Werte aus der Figma-Collection (Abschnitt 4). `index.css`
+ist die in `components.json` hinterlegte Adresse und damit die Stelle, an der
+ein fremder Wert als fremder Wert erkennbar bleibt.
+
+```css
+/* src/index.css, nach den Imports */
+:root {
+  --radius: var(--radius-control); /* 8px */
+}
+```
+
+Dass die Ableitungen daraus (5px, 3px) neben der Sechserskala liegen, ist
+hinzunehmen: es gibt keinen Startwert, der beide auf eine Figma-Stufe legt.
+Die Skala bindet die Flächen, die wir selbst setzen, nicht die Innenteile
+einer Registry-Datei. Die Alternative wäre, `input-group.tsx` umzuschreiben,
+und das ist der teurere Verstoß.
+
+Geprüft wird das nicht mehr von Hand: `tokens.test.ts` liest jede
+`var(--…)`-Verwendung unter `components/ui/` und verlangt eine Definition in
+der Tokenschicht oder in `index.css`. Ausgenommen sind nur Variablen, die die
+Datei selbst setzt, und zwar in beiden Schreibweisen, als CSS-Deklaration
+(`--cell-radius:` in `calendar.tsx`) und als `style`-Prop im JSX
+(`"--gap": spacing` in `toggle-group.tsx`).
 
 ### Die i18n-Falle
 
@@ -234,6 +305,22 @@ und `sheet` („Close"). **Verlass dich nicht auf diese Liste.** Nach jedem
 `add` einmal über die neuen Dateien suchen, etwa nach `sr-only` und nach
 Textknoten in Großschreibung, und jeden Fund auf einen i18n-Schlüssel legen.
 Die neuen Schlüssel kommen in `de.json` **und** `en.json`.
+
+**Übersetzt ist nicht dasselbe wie hörbar.** `pagination` und `breadcrumb`
+liefern ihren `sr-only`-Text in einem Element, das selbst `aria-hidden`
+trägt; das nimmt den ganzen Teilbaum aus dem Accessibility-Baum. In KAN-29
+sind so zwei sauber gepflegte Schlüssel entstanden, die kein Screenreader je
+vorliest. Der Fehler überlebt jeden naheliegenden Test, weil der Text im DOM
+steht und `getByText` ihn findet.
+
+Deshalb gilt zu jedem neuen `sr-only`-Text zweierlei:
+
+1. `aria-hidden` gehört an das Symbol, nicht an die Hülle darum.
+2. Der Test prüft die **Erreichbarkeit**, nicht die Existenz:
+
+```ts
+expect(screen.getByText("Weitere Seiten").closest("[aria-hidden]")).toBeNull()
+```
 
 ### Varianten gehören in die Domänenkomponente
 
@@ -261,10 +348,14 @@ export function StatusBadge({ status }: { status: ProjectStatus }) {
 
 Zwei Dinge daran sind Absicht:
 
-- **`Record` über den Enum-Typ, keine Funktion mit Standardzweig.** Kommt ein
-  sechster Status in den Contract, bricht der Typecheck. Ein
+- **`Record` über den Enum-Typ, keine Funktion mit Standardzweig.** Ein
+  sechster Status bricht den Typecheck, sobald er **im Typ** steht. Ein
   `default: "bg-muted"` fiele dagegen still auf Grau zurück, und niemand
-  merkt es.
+  merkt es. Wichtig ist der Zusatz „im Typ": Solange `ProjectStatus` von Hand
+  im Frontend geführt wird, trägt die Zusage nur so weit, wie jemand den Wert
+  nachträgt. Erst wenn der Typ aus der generierten `schema.d.ts` kommt
+  (Frontend-Regel 2), greift sie gegen den Contract selbst. Wer sie vorher in
+  einen Kommentar schreibt, verspricht mehr, als der Code hält.
 - **Das Badge trägt sein eigenes `-fg`**, nie `muted-foreground`. Das sieht
   fast gleich aus, verliert aber die geprüfte Kontrastzusage.
 
@@ -364,8 +455,16 @@ nach `CLAUDE.md`, Frontend-Regel 9: vorher fragen, nicht nebenbei eintragen.
 - [ ] Dateinamen und Exportnamen der Primitiven unverändert
 - [ ] Kein englisches Literal aus einer generierten Datei sichtbar; jeder
       neue Schlüssel in `de.json` **und** `en.json`
-- [ ] Keine Farbe, keine Variante und keine Logik in einer generierten Datei
-      geändert; Varianten liegen in der Domänenkomponente
+- [ ] Jeder neue `sr-only`-Text nachweislich **erreichbar**, nicht nur
+      vorhanden: `closest("[aria-hidden]")` ist `null` (Abschnitt 6)
+- [ ] Keine Variante und keine Logik in einer generierten Datei geändert;
+      Varianten liegen in der Domänenkomponente. Ein hartkodierter Wert wird
+      auf die **vorhandene** Rolle gezogen, eine **fehlende** Rolle dagegen
+      in `tokens.css` ergänzt (Abschnitt 6, Tabelle „zwei Fälle")
+- [ ] Jeder vorgenommene Eingriff je Datei im Übergabekommentar benannt, damit
+      `add --diff` gegen eine erwartete Liste gelesen werden kann
+- [ ] `pnpm test` grün, insbesondere `tokens.test.ts`: keine undefinierte
+      Variable unter `components/ui/`, kein `bg-black`/`bg-white`
 - [ ] Enum-Zuordnungen als `Record` über den Enum-Typ, ohne Standardzweig
 - [ ] Fehlende Semantic-Rollen ergänzt statt Komponentencode umgeschrieben,
       Nachtrag in Figma und Foundation benannt

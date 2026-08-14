@@ -266,6 +266,13 @@ jeder Umbenennung und belegt nichts.
       erscheinen am Feld
 - [ ] Kein sichtbarer Text als Literal im JSX, jeder Schlüssel in `de.json`
       **und** `en.json`, auch die aus generierten Komponenten
+- [ ] Jeder `sr-only`-Text ist **erreichbar**, nicht nur vorhanden:
+      `expect(screen.getByText(t).closest("[aria-hidden]")).toBeNull()`.
+      Ein Text im DOM, den `aria-hidden` verdeckt, besteht `getByText`
+      anstandslos und wird trotzdem nie vorgelesen (Befund aus KAN-29)
+- [ ] Überschriften über `getByRole("heading", { level })` nachgewiesen, nicht
+      über `getByText`. Registry-Primitiven rendern ihren Titel als `div`; die
+      Ebene setzt die Domänenhülle (Skill `frontend-design`)
 - [ ] Laden, Leere und Fehler sind je Ansicht behandelt
 - [ ] Filter- und Seitenzustand steht in der URL und übersteht einen Reload
 - [ ] Keine Hex-Farbe außerhalb von `frontend/src/styles/tokens/`

@@ -57,8 +57,12 @@ Backend-Handwerk der `code-reviewer`; du prüfst das Frontend.
     Registry-Abgleich (`add --diff`) heraus und baut Tastaturbedienung und
     ARIA-Rollen nach, die Base UI mitbringt. Ebenso ein Befund: ein umbenannter Dateiname, ein
     geänderter Exportname, eine zusätzliche `cva`-Variante oder ein
-    eingesetzter Farbwert in einer generierten Datei. Varianten gehören in
-    die Domänenkomponente. Prüfe außerdem, ob eine von Hand gebaute
+    **eigener** Farbwert in einer generierten Datei. Varianten gehören in
+    die Domänenkomponente. Erlaubt sind genau drei Eingriffe (i18n-Literale,
+    hartkodierter Wert auf eine **vorhandene** Rolle gezogen, nachweisbarer
+    Barrierefreiheitsfehler); jeder davon muss im Übergabekommentar je Datei
+    benannt sein. Ein Eingriff, den `add --diff` zeigt und der dort nicht
+    steht, ist ein Befund. Prüfe außerdem, ob eine von Hand gebaute
     Komponente eine Registry-Entsprechung hat (`select`, `dialog`,
     `dropdown-menu`, `pagination`, `tabs`, `tooltip`); dann ist der Nachbau
     der Befund. Ein direkter Import aus `@base-ui/react` außerhalb von
@@ -74,22 +78,50 @@ Backend-Handwerk der `code-reviewer`; du prüfst das Frontend.
     „Previous" und „Next" mit, `sheet` bringt „Close". Ein durchgerutschtes
     englisches Literal aus `components/ui/` ist derselbe Befund wie ein
     selbst geschriebenes.
-8c. **Wirkungslose Utility-Klassen:** `tokens.css` schaltet die
-    Tailwind-Standardskalen ab (`--color-*: initial`, `--radius-*: initial`).
-    Eine Klasse wie `rounded-md` ohne Brückenzeile erzeugt keinen Fehler,
-    keine Lint-Warnung und keinen roten Test, sondern nur falsches Aussehen.
-    Fällt eine ungewöhnliche Farb- oder Radiusklasse auf, gegen den
-    `@theme inline`-Block halten. Ein Befund hier gehört in die
-    Tokenschicht, nicht in den Komponentencode. Zwei Stellen sind bekannt
+8c. **Wirkungslose Utility-Klassen und tote Variablen:** `tokens.css`
+    schaltet die Tailwind-Standardskalen ab (`--color-*: initial`,
+    `--radius-*: initial`). Eine Klasse wie `rounded-md` ohne Brückenzeile
+    erzeugt keinen Fehler, keine Lint-Warnung und keinen roten Test, sondern
+    nur falsches Aussehen. Fällt eine ungewöhnliche Farb- oder Radiusklasse
+    auf, gegen den `@theme inline`-Block halten. Ein Befund hier gehört in die
+    Tokenschicht, nicht in den Komponentencode. Drei Stellen sind bekannt
     und werden ausdrücklich geprüft: die Brücke deckt `rounded-sm` bis
-    `rounded-xl`, shadcns Skala reicht bis `rounded-4xl`; und die
+    `rounded-xl`, shadcns Skala reicht bis `rounded-4xl`; die
     Zustandsvarianten `data-open:` und `data-closed:` gibt es nur, solange
-    `@import "shadcn/tailwind.css"` in `src/index.css` steht.
+    `@import "shadcn/tailwind.css"` in `src/index.css` steht; und
+    `calc(var(--x) - 3px)` mit undefiniertem `--x` fällt ersatzlos heraus
+    (Befund aus KAN-29 an `input-group.tsx`). `tokens.test.ts` prüft die
+    letzten beiden Klassen automatisch, ein roter Test dort ist nie „nur ein
+    Testproblem".
+8d. **Umgangene Rollen:** ein hartkodierter Farbwert in einer generierten
+    Datei, für den eine Semantic-Rolle existiert, ist ein **[SOLL]**-Befund,
+    auch wenn die Klasse wirkt. In KAN-29 malten die Overlays `bg-black/10`,
+    während `--overlay` mit geprüften 50 und 70 Prozent daneben ungenutzt
+    lag; im dunklen Modus stand der Dialog damit praktisch ohne Abdunkelung
+    da. Unterscheide sauber: **fehlt** die Rolle, wird sie in `tokens.css`
+    ergänzt und der Komponentencode bleibt; **existiert** sie und wird
+    umgangen, wird die Klasse auf die Rolle gezogen. Eine Rolle, die nirgends
+    verwendet wird, ist ebenfalls ein Befund.
 9. **Barrierefreiheit** (Skill `frontend-design`): Tastaturbedienung,
    sichtbarer Fokus, verbundene Labels, benannte Symbolschaltflächen,
    Überschriftenhierarchie ohne Sprung, Live-Region für Statusmeldungen,
    `alt` an Bildblöcken, Kontrast in beiden Themen, Farbe trägt keine
    Information allein.
+   Drei Fehler dieser Art überleben jeden naheliegenden Test und werden
+   deshalb einzeln geprüft (alle drei sind Befunde aus KAN-29):
+   - **`sr-only` unter `aria-hidden`.** Der Text steht im DOM, `getByText`
+     findet ihn, vorgelesen wird er nie. Prüfung:
+     `getByText(t).closest("[aria-hidden]")` muss `null` sein.
+   - **Titel ohne Überschriftenrolle.** `CardTitle`, `EmptyTitle` und
+     `DialogTitle` rendern ein `div`; setzt die Domänenhülle keine Ebene,
+     hat die Ansicht keinen Sprungpunkt. Prüfung über
+     `getByRole("heading", { level })`.
+   - **Zustandsregel nur auf `:disabled`.** Base UI meldet inaktiv über
+     `aria-disabled`; `:disabled` gibt es nur an Formularelementen.
+   Eine Live-Region, die bei **jedem Tastendruck** neu schreibt, ist
+   ebenfalls ein Befund: sie erzeugt eine Ansage je Zeichen und übertönt die
+   Eingabe. SC 4.1.3 verlangt Wahrnehmbarkeit, nicht Dauerfeuer; angesagt
+   wird an Schwellen.
 10. **Sicherheit und Datensparsamkeit:** keine Berechtigungslogik
     nachgebaut; `hsbEmail` nur in der Admin-Nutzerverwaltung; kein Token,
     kein Verifizierungscode in einer Konsolenausgabe; keine Base64-Datei im
