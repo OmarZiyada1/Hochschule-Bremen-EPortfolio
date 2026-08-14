@@ -23,4 +23,28 @@ describe("EmptyState", () => {
       screen.getByRole("button", { name: "Filter zurücksetzen" })
     ).toBeVisible()
   })
+
+  /*
+   * Ueber die Rolle geprueft, nicht ueber den Text: EmptyTitle rendert wie
+   * jede Title-Primitive ein div. Vor dem Review zu KAN-29 war der Titel
+   * damit fuer die Sprungnavigation unsichtbar, und getByText hat das
+   * anstandslos durchgewinkt.
+   */
+  it("fuehrt den Titel als Ueberschrift, voreingestellt auf Ebene 2", () => {
+    renderWithProviders(<EmptyState title="Keine Projekte gefunden" />)
+
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Keine Projekte gefunden" })
+    ).toBeVisible()
+  })
+
+  it("nimmt die Ebene der Seite darum herum an", () => {
+    renderWithProviders(
+      <EmptyState title="Keine Projekte gefunden" headingLevel={3} />
+    )
+
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Keine Projekte gefunden" })
+    ).toBeVisible()
+  })
 })

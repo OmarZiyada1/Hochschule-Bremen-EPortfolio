@@ -402,15 +402,6 @@
      Nachweis-Komponente wirklich braucht, nicht die halbe Standardpalette
      auf Verdacht (KAN-6, Abschnitt 3.3). */
   --color-transparent: transparent;
-
-  /* Befund aus KAN-29, gleiches Muster: die Overlays der erzeugten
-     dialog.tsx, alert-dialog.tsx und sheet.tsx setzen bg-black/10 samt
-     Backdrop-Blur. black ist ein Schluesselwert wie transparent und keine
-     Figma-Farbe; ohne die Zeile griffe die Klasse ins Leere und der
-     Hintergrund eines offenen Dialogs bliebe voellig unveraendert. Die
-     Semantic-Rolle overlay aus Foundation 3.1 bleibt daneben bestehen und
-     ist die Adresse fuer eigene, von Hand komponierte Flaechen. */
-  --color-black: #000000;
 }
 
 /* ============================================================
@@ -453,9 +444,15 @@
   /* Tailwind v4 stellt Buttons auf cursor: default um (shadcn-Doku,
      Abschnitt Cursor). Diese Regel stellt den Zeiger wieder her; inaktive
      Schaltflaechen bleiben beim Standardcursor, damit der Zeiger nicht
-     Bedienbarkeit verspricht, die es gerade nicht gibt. */
-  button:not(:disabled),
-  [role="button"]:not(:disabled) {
+     Bedienbarkeit verspricht, die es gerade nicht gibt.
+
+     Beide Schreibweisen sind noetig, und das ist keine Vorsicht auf Verdacht:
+     :disabled gibt es nur an Formularelementen. Base UI meldet den inaktiven
+     Zustand ueberall sonst ueber aria-disabled, etwa an der Monatsnavigation
+     von calendar.tsx. Stuende hier nur :disabled, zeigte eine abgeblendete
+     Schaltflaeche weiter den Zeigefinger (Befund aus dem Review zu KAN-29). */
+  button:not(:disabled):not([aria-disabled="true"]),
+  [role="button"]:not(:disabled):not([aria-disabled="true"]) {
     cursor: pointer;
   }
 

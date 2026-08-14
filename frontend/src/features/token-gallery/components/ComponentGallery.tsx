@@ -208,11 +208,18 @@ function FormDemos() {
           <FieldLabel htmlFor="demo-field">
             {t("tokens.components.demo.titleLabel")}
           </FieldLabel>
+          {/* aria-describedby ist hier kein Beiwerk: field.tsx verbindet
+              Hilfe- und Fehlertext nicht von selbst mit dem Feld. Ohne die
+              Verweise hoert ein Screenreader "ungueltige Eingabe" und
+              erfaehrt den Grund nie. Diese Flaeche ist die Vorlage, die die
+              Formular-Tickets kopieren, deshalb steht sie hier vollstaendig
+              (Frontend-Regel 12: der Serverfehler erscheint am Feld). */}
           <Input
             id="demo-field"
+            aria-describedby="demo-field-description"
             placeholder={t("tokens.components.demo.titlePlaceholder")}
           />
-          <FieldDescription>
+          <FieldDescription id="demo-field-description">
             {t("tokens.components.demo.fieldDescription")}
           </FieldDescription>
         </Field>
@@ -220,8 +227,14 @@ function FormDemos() {
           <FieldLabel htmlFor="demo-field-invalid">
             {t("tokens.components.demo.invalidLabel")}
           </FieldLabel>
-          <Input id="demo-field-invalid" aria-invalid />
-          <FieldError>{t("tokens.components.demo.fieldError")}</FieldError>
+          <Input
+            id="demo-field-invalid"
+            aria-invalid
+            aria-describedby="demo-field-invalid-error"
+          />
+          <FieldError id="demo-field-invalid-error">
+            {t("tokens.components.demo.fieldError")}
+          </FieldError>
         </Field>
       </DemoBlock>
 
@@ -858,9 +871,12 @@ function DomainDemos() {
       </DemoBlock>
 
       <DemoBlock name="EmptyState">
+        {/* Die Gruppe darueber ist ein h2, also sitzt der Leerzustand auf 3
+            und ueberspringt keine Ebene (SC 1.3.1). */}
         <EmptyState
           className="w-full"
           icon={<SearchIcon aria-hidden="true" />}
+          headingLevel={3}
           title={t("tokens.components.demo.emptyTitle")}
           description={t("tokens.components.demo.emptyDescription")}
           action={

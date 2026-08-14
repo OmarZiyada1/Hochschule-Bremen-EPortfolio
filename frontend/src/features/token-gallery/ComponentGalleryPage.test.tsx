@@ -34,6 +34,22 @@ describe("ComponentGalleryPage", () => {
     }
   })
 
+  /*
+   * Befund aus dem Review zu KAN-29: beide Auslassungszeichen trugen ihren
+   * uebersetzten sr-only-Text in einem Element mit aria-hidden. Das nimmt den
+   * ganzen Teilbaum aus dem Accessibility-Baum, die Uebersetzung lief ins
+   * Leere, und getByText hat sie trotzdem gefunden: im DOM stand sie ja.
+   * Deshalb wird hier nicht die Existenz geprueft, sondern die Erreichbarkeit.
+   * Dieselbe Zeile gehoert an jeden neuen sr-only-Text.
+   */
+  it("laesst die uebersetzten sr-only-Texte auch ankuendigen", () => {
+    renderWithProviders(<ComponentGalleryPage />)
+
+    for (const text of ["Weitere Seiten", "Weitere Ebenen"]) {
+      expect(screen.getByText(text).closest("[aria-hidden]")).toBeNull()
+    }
+  })
+
   it("zeigt Primitiven und Domaenenkomponenten auf derselben Flaeche", () => {
     renderWithProviders(<ComponentGalleryPage />)
 

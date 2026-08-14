@@ -17,9 +17,12 @@ export type ProjectStatus =
   | "REVISION"
 
 /*
- * Record ueber den Enum-Typ, bewusst ohne Standardzweig: ein sechster
- * Status im Contract bricht den Typecheck, statt still auf Grau
- * zurueckzufallen. Die Tokennamen tragen woertlich die Enum-Werte in
+ * Record ueber den Enum-Typ, bewusst ohne Standardzweig: ein sechster Status
+ * bricht den Typecheck, sobald er im Typ steht, statt still auf Grau
+ * zurueckzufallen. Solange ProjectStatus oben von Hand gefuehrt wird, greift
+ * das erst beim Nachtragen; ab KAN-30 kommt der Typ aus der generierten
+ * schema.d.ts und die Zusage traegt gegen den Contract selbst.
+ * Die Tokennamen tragen woertlich die Enum-Werte in
  * Kleinschreibung, deshalb braucht die Zuordnung keine Uebersetzungstabelle.
  * Jedes Paar nutzt sein eigenes -fg, nie muted-foreground: das sieht fast
  * gleich aus, verliert aber die geprüfte Kontrastzusage von 6,4 bis 7,2:1.

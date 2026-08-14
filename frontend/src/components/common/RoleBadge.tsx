@@ -13,7 +13,9 @@ export type Role = "STUDENT" | "EDITOR" | "ADMIN"
 
 /*
  * Record ueber den Enum-Typ ohne Standardzweig, aus demselben Grund wie im
- * StatusBadge: eine vierte Rolle im Contract bricht den Typecheck.
+ * StatusBadge: eine vierte Rolle bricht den Typecheck, sobald sie im Typ
+ * steht. Solange Role oben von Hand gefuehrt wird, greift das erst beim
+ * Nachtragen; ab KAN-30 kommt der Typ aus der generierten schema.d.ts.
  */
 const roleClasses: Record<Role, string> = {
   STUDENT: "bg-role-student-bg text-role-student-fg",

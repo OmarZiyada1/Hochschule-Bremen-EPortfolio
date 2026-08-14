@@ -296,6 +296,82 @@ describe("Grenzen der Tokenschicht", () => {
     }
   })
 
+  /*
+   * Die drei folgenden Zusicherungen stammen aus dem Review zu KAN-29. Alle
+   * drei Befunde hatten denselben Fehlermodus: eine Klasse oder eine Variable
+   * greift ins Leere, und weder Typecheck noch Lint noch ein Test sagen etwas.
+   * Sichtbar wird das erst im Browser, und dort nur, wenn jemand gezielt
+   * hinsieht. Deshalb stehen sie hier und nicht auf einer Merkliste.
+   */
+  const uiFiles = filesUnder(join(srcDir, "components", "ui"))
+
+  it("laesst keine Registry-Datei auf eine undefinierte Variable zeigen", () => {
+    const indexCss = withoutComments(
+      readFileSync(join(srcDir, "index.css"), "utf8")
+    )
+    const defined = new Set([
+      ...primitives.keys(),
+      ...semanticLight.keys(),
+      ...radius.keys(),
+      ...themeInline.keys(),
+      ...declarationsOf(indexCss).keys(),
+    ])
+
+    for (const file of uiFiles) {
+      const content = readFileSync(file, "utf8")
+
+      for (const [, name] of content.matchAll(/var\(--([\w-]+)/g)) {
+        /* In der Datei selbst gesetzte Variablen und Tailwinds eigene sind
+           nicht unsere Adresse; alles andere muss die Tokenschicht oder
+           index.css definieren. Befund aus KAN-29: input-group.tsx leitete
+           seine Innenradien aus --radius ab, das nirgends stand.
+
+           Zwei Schreibweisen zaehlen als "gesetzt": die CSS-Deklaration
+           (--cell-radius: … in calendar.tsx) und die style-Prop in JSX
+           ("--gap": spacing in toggle-group.tsx). Wer nur die erste prueft,
+           meldet die zweite faelschlich als Befund. */
+        const setInFile = new RegExp(`["']?--${name}["']?\\s*:`).test(content)
+        if (setInFile || name.startsWith("tw-")) continue
+
+        expect(
+          defined.has(name),
+          `${file}: --${name} ist nirgends definiert`
+        ).toBe(true)
+      }
+    }
+  })
+
+  it("laesst keine Registry-Datei eine Farbe an der Rolle vorbei setzen", () => {
+    for (const file of uiFiles) {
+      /* Befund aus KAN-29: die Overlays von dialog, alert-dialog und sheet
+         setzten bg-black/10, waehrend die Rolle overlay mit ihren geprueften
+         50 bzw. 70 Prozent daneben ungenutzt lag. Im dunklen Modus ist ein
+         Film aus 10 Prozent Schwarz ueber dunklem Grund praktisch keiner. */
+      const hits = readFileSync(file, "utf8").match(
+        /\b(bg|text|border|ring|fill|stroke)-(black|white)(\/\d+)?\b/g
+      )
+
+      expect(
+        hits,
+        `${file} setzt eine Farbe an der Tokenschicht vorbei`
+      ).toBeNull()
+    }
+  })
+
+  it("deckt jede Zustandsregel auch in der ARIA-Schreibweise ab", () => {
+    /* Base UI meldet inaktive Zustaende ueber aria-disabled, nicht ueber
+       :disabled: das gibt es nur an Formularelementen. Eine Regel, die nur
+       auf :disabled hoert, laesst abgeblendete Schaltflaechen den
+       Zeigefinger behalten (Befund aus KAN-29 an calendar.tsx). */
+    for (const rule of tokensCss.split("}")) {
+      if (!rule.includes(":disabled")) continue
+
+      expect(rule, `Regel hoert nur auf :disabled: ${rule.trim()}`).toMatch(
+        /aria-disabled/
+      )
+    }
+  })
+
   it("verwendet kein Primitive in einer Komponente", () => {
     for (const file of sourceFiles) {
       if (file.startsWith(tokensDir)) continue

@@ -1,4 +1,4 @@
-import { useId } from "react"
+import { useId, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Label } from "@/components/ui/label"
@@ -42,10 +42,10 @@ export function FilterSelect({
   const { t } = useTranslation()
   const generatedId = useId()
   const triggerId = id ?? generatedId
-  const items = [
-    { label: allLabel ?? t("common.filter.all"), value: null },
-    ...options,
-  ]
+  const items = useMemo(
+    () => [{ label: allLabel ?? t("common.filter.all"), value: null }, ...options],
+    [allLabel, options, t]
+  )
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       <Label htmlFor={triggerId}>{label}</Label>
@@ -58,8 +58,14 @@ export function FilterSelect({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
+          {/* Der Praefix trennt Aufrufer-Werte vom Sammeleintrag: ohne ihn
+              faellt eine Option mit dem Wert "all" (bei einem Statusfilter
+              naheliegend) mit ihm zusammen und React reconciled falsch. */}
           {items.map((item) => (
-            <SelectItem key={item.value ?? "all"} value={item.value}>
+            <SelectItem
+              key={item.value === null ? "all" : `value:${item.value}`}
+              value={item.value}
+            >
               {item.label}
             </SelectItem>
           ))}
