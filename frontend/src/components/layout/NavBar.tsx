@@ -38,10 +38,21 @@ export interface NavBarUser extends PersonName {
 /*
  * Der Fokusring der Grundregel zeigt auf --ring, also blau/600. Auf der
  * Verlaufsleiste liegt derselbe Blauton auf blauem Grund und erreicht die
- * 3:1 aus SC 1.4.11 nicht. Innerhalb der Leiste ring der Ring deshalb in
+ * 3:1 aus SC 1.4.11 nicht. Innerhalb der Leiste zeichnet der Ring deshalb in
  * nav-foreground; ausserhalb bleibt alles wie gehabt.
+ *
+ * outline-solid ist der Kern und keine Zugabe. Fast alle Ziele hier tragen
+ * ueber buttonVariants oder navigationMenuTriggerStyle ein unbedingtes
+ * outline-none, und das setzt --tw-outline-style auf none. Eine Klasse, die
+ * nur die Farbe (oder nur die Breite) setzt, zeichnet dann gar nichts: die
+ * Utility-Ebene schlaegt die Grundregel aus @layer base, und uebrig bliebe
+ * allein der ring in --ring, also genau der Blauton, dessen Kontrast auf der
+ * Leiste nicht reicht. outline-solid stellt den Stil wieder her.
+ * Nachgeprueft wird das im gebauten CSS, nicht im Kopf: eine wirkungslose
+ * Fokusregel erzeugt weder Fehler noch Warnung noch roten Test.
  */
-const navFocus = "focus-visible:outline-nav-foreground"
+const navFocus =
+  "focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nav-foreground"
 
 /**
  * Kopfleiste der Anwendung (Figma "Nav Bar").
@@ -157,11 +168,10 @@ export function NavBar({
                   />
                 }
               >
-                <UserAvatar
-                  person={user}
-                  imageUrl={user.avatarUrl}
-                  className="bg-card"
-                />
+                {/* Ohne bg-card: die Wurzel des Avatars ist immer
+                    vollstaendig von Bild oder Initialenflaeche verdeckt, eine
+                    Hintergrundfarbe dort ist nie zu sehen. */}
+                <UserAvatar person={user} imageUrl={user.avatarUrl} />
                 {/* sr-only statt hidden: auf schmalen Bildschirmen bleibt
                     sichtbar nur das Kuerzel, aber der Name muss im
                     zugaenglichen Namen der Schaltflaeche stehen. Sonst

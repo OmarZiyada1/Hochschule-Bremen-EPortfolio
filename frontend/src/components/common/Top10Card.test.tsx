@@ -8,6 +8,23 @@ import { Top10Card } from "./Top10Card"
 const author = { firstName: "Mira", lastName: "Beispiel" }
 
 describe("Top10Card", () => {
+  /*
+   * Beide Varianten komponieren die Card-Primitive, statt ihre Flaeche
+   * nachzubauen (Frontend-Regel 11). Vor dem Review zu KAN-29 schrieb die
+   * Kachel "rounded-card border bg-card" von Hand und stand damit neben
+   * einer ProjectCard mit anderem Eckradius und anderer Kante.
+   */
+  it.each(["feature", "compact"] as const)(
+    "baut die Flaeche der Variante %s aus der Card-Primitive",
+    (variant) => {
+      const { container } = renderWithProviders(
+        <Top10Card position={1} title="Campus-Garten" variant={variant} />
+      )
+
+      expect(container.querySelector("[data-slot=card]")).not.toBeNull()
+    }
+  )
+
   it("zeigt den Platz sichtbar zweistellig und vorgelesen als Satz", () => {
     renderWithProviders(
       <Top10Card position={6} title="Campus-Garten" author={author} />

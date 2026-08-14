@@ -43,8 +43,14 @@ export function StatusBadge({
     <Badge className={cn(statusClasses[status], className)}>
       {/* Der Punkt aus dem Design ist Zierat und wird nicht vorgelesen. Er
           traegt ueber bg-current die Farbe des Labels, damit die Zuordnung
-          von Status zu Farbe nur einmal aufgeschrieben ist. */}
-      <span aria-hidden="true" className="size-1.5 rounded-pill bg-current" />
+          von Status zu Farbe nur einmal aufgeschrieben ist. shrink-0, weil
+          das Badge eine Flex-Zeile mit whitespace-nowrap ist: in einer engen
+          Tabellenspalte ist der Punkt sonst das einzige nachgebende Element
+          und verschwindet, waehrend der Text stehen bleibt. */}
+      <span
+        aria-hidden="true"
+        className="size-1.5 shrink-0 rounded-pill bg-current"
+      />
       {t(`project.status.${status}`)}
     </Badge>
   )

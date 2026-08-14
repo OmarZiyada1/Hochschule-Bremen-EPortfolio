@@ -16,6 +16,13 @@ import { cn } from "@/lib/utils"
  * fast immer neben dem ausgeschriebenen Namen, und ein zweiter Name daneben
  * wuerde doppelt vorgelesen. Steht sie einmal allein, setzt der Aufrufer
  * labelled auf true.
+ *
+ * Mit labelled traegt die Flaeche den Namen als sr-only-Text, und die
+ * Initialen werden versteckt. Ein aria-hidden am Wurzelelement zu entfernen
+ * genuegt dafuer nicht: ohne Bild besteht der Inhalt nur aus den Initialen,
+ * und ein Screenreader sagt dann "MB" statt "Mira Beispiel". Das alt des
+ * Bildes hilft ebenfalls nur, wenn ueberhaupt eines da ist, und das ist der
+ * Ausnahmefall.
  */
 export function UserAvatar({
   person,
@@ -38,14 +45,14 @@ export function UserAvatar({
       aria-hidden={labelled ? undefined : true}
       className={cn("rounded-card after:rounded-card", className)}
     >
+      {labelled && <span className="sr-only">{name}</span>}
       {imageUrl && (
-        <AvatarImage
-          className="rounded-card"
-          src={imageUrl}
-          alt={labelled ? name : ""}
-        />
+        <AvatarImage className="rounded-card" src={imageUrl} alt="" />
       )}
-      <AvatarFallback className="rounded-card bg-surface-brand font-bold text-surface-brand-foreground">
+      <AvatarFallback
+        aria-hidden={labelled ? true : undefined}
+        className="rounded-card bg-surface-brand font-bold text-surface-brand-foreground"
+      >
         {initialsOf(person)}
       </AvatarFallback>
     </Avatar>

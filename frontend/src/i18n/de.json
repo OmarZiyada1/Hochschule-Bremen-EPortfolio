@@ -184,7 +184,6 @@
         "module": "Digitale Medien",
         "category": "Semesterprojekt",
         "semester": "SoSe 2026",
-        "kpiPublished": "Veröffentlichte Projekte",
         "kpiFaculties": "Beteiligte Fakultäten",
         "emptyTitle": "Keine Projekte gefunden",
         "emptyDescription": "Für die gewählten Filter gibt es keine Treffer.",
@@ -206,9 +205,7 @@
         "sidebarCategories": "Kategorien",
         "sidebarStudyStructure": "Studienstruktur",
         "top10Feature": "Vordere Plätze",
-        "top10Compact": "Hintere Plätze",
-        "cardWithCover": "Mit Coverbild",
-        "cardWithoutCover": "Ohne Coverbild"
+        "top10Compact": "Hintere Plätze"
       }
     }
   },

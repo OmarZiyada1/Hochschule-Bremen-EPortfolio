@@ -1,7 +1,6 @@
 import type { ReactNode } from "react"
 
-import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
+import { Pill } from "@/components/common/Pill"
 
 /**
  * Badge fuer Kategorie, Modul, Studiengang und Fakultaet. Bewusst
@@ -9,6 +8,11 @@ import { cn } from "@/lib/utils"
  * codiert, unterschieden wird allein ueber die Beschriftung (Confluence
  * "Designentscheidungen", Abschnitt 2.4). Es gibt deshalb auch keine
  * Stelle, die facultyId auf eine Farbe abbildet.
+ *
+ * Fachlich ist das die neutrale Pille, und genau die ist Pill mit seinem
+ * Standardton. Deshalb steht hier keine zweite Klassenliste: das neutrale
+ * Badge hat eine Adresse, und Tag ist der sprechende Name dafuer an
+ * Taxonomien. Wer die Toenung frei waehlen will, nimmt Pill direkt.
  */
 export function Tag({
   className,
@@ -18,8 +22,8 @@ export function Tag({
   children: ReactNode
 }) {
   return (
-    <Badge className={cn("bg-badge-neutral-bg text-badge-neutral-fg", className)}>
+    <Pill tone="neutral" className={className}>
       {children}
-    </Badge>
+    </Pill>
   )
 }

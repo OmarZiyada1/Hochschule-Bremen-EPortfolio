@@ -8,13 +8,30 @@ import { UserAvatar } from "./UserAvatar"
 describe("UserAvatar", () => {
   it("bildet die Initialen aus beiden Namensteilen", () => {
     renderWithProviders(
+      <UserAvatar person={{ firstName: "Mira", lastName: "Beispiel" }} />
+    )
+
+    expect(screen.getByText("MB")).toBeVisible()
+  })
+
+  /*
+   * Ueber die Erreichbarkeit geprueft, nicht ueber den Text: die Initialen
+   * stehen im DOM und getByText findet sie auch dann, wenn ein aria-hidden
+   * darueber liegt. Vor dem Review zu KAN-29 sagte labelled deshalb "MB"
+   * statt "Mira Beispiel", ohne dass ein Test es bemerkte.
+   */
+  it("sagt mit labelled den Namen an, nicht die Initialen", () => {
+    renderWithProviders(
       <UserAvatar
         person={{ firstName: "Mira", lastName: "Beispiel" }}
         labelled
       />
     )
 
-    expect(screen.getByText("MB")).toBeVisible()
+    const name = screen.getByText("Mira Beispiel")
+    expect(name).toHaveClass("sr-only")
+    expect(name.closest("[aria-hidden]")).toBeNull()
+    expect(screen.getByText("MB").closest("[aria-hidden]")).not.toBeNull()
   })
 
   it("bleibt ohne labelled aus dem Vorlesen heraus", () => {

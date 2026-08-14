@@ -1,8 +1,9 @@
 import { ImageIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import type { ProjectReference } from "@/components/common/ProjectCard"
+import { Card, CardContent } from "@/components/ui/card"
 import { fullNameOf, type PersonName } from "@/lib/name"
+import type { ProjectReference } from "@/lib/project"
 import { cn } from "@/lib/utils"
 
 /**
@@ -88,30 +89,31 @@ export function Top10Card({
 
   if (variant === "compact") {
     return (
-      <article
-        className={cn(
-          "relative flex flex-col gap-2.5 rounded-card border bg-card p-3 text-card-foreground",
-          className
-        )}
-      >
+      <Card size="sm" className={cn("relative", className)}>
         {rank}
-        <div className="surface-cover h-28 overflow-hidden rounded-card">
-          {cover}
-        </div>
-        {heading}
-        {author && (
-          <p className="type-body-sm font-medium text-muted-foreground">
-            {fullNameOf(author)}
-          </p>
-        )}
-      </article>
+        <CardContent className="flex flex-col gap-2.5">
+          <div className="surface-cover h-28 overflow-hidden rounded-card">
+            {cover}
+          </div>
+          {heading}
+          {author && (
+            <p className="type-body-sm font-medium text-muted-foreground">
+              {fullNameOf(author)}
+            </p>
+          )}
+        </CardContent>
+      </Card>
     )
   }
 
   return (
-    <article
+    /* Randabstand und Abstand der Kinder laufen ueber die kartei-eigene
+       Variable auf null, statt py und gap zu ueberschreiben: die Kachel ist
+       hier randlos, bleibt aber dieselbe Flaeche wie jede andere Karte
+       (Ecken, Ring, overflow-hidden kommen aus der Primitive). */
+    <Card
       className={cn(
-        "surface-cover relative isolate flex min-h-79 flex-col justify-end overflow-hidden rounded-card border",
+        "surface-cover relative isolate min-h-79 justify-end [--card-spacing:--spacing(0)]",
         className
       )}
     >
@@ -124,7 +126,7 @@ export function Top10Card({
         className="absolute inset-x-0 bottom-0 -z-10 h-2/3 bg-linear-to-t from-cover-scrim to-transparent"
       />
       {rank}
-      <div className="flex flex-col gap-2 p-5 text-cover-foreground">
+      <CardContent className="flex flex-col gap-2 px-5 py-5 text-cover-foreground">
         {studyProgram && (
           <p className="type-label-xs text-cover-muted uppercase">
             {studyProgram.name}
@@ -136,7 +138,7 @@ export function Top10Card({
             {fullNameOf(author)}
           </p>
         )}
-      </div>
-    </article>
+      </CardContent>
+    </Card>
   )
 }

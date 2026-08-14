@@ -220,6 +220,26 @@ function DemoBlock({ name, children }: { name: string; children: ReactNode }) {
   )
 }
 
+/* Beschriftete Variante innerhalb eines Demoblocks. Stehen zwei Fassungen
+   derselben Komponente nebeneinander, ist ihnen nicht anzusehen, welche
+   welche ist; der Demoblock nennt nur den Komponentennamen. */
+function DemoVariant({
+  label,
+  children,
+}: {
+  label: string
+  children: ReactNode
+}) {
+  return (
+    <figure className="flex flex-col gap-2">
+      <figcaption className="type-caption text-muted-foreground">
+        {label}
+      </figcaption>
+      {children}
+    </figure>
+  )
+}
+
 function FormDemos() {
   const { t } = useTranslation()
   return (
@@ -997,22 +1017,26 @@ function Top10CardDemos() {
 
   return (
     <>
-      <Top10Card
-        className="w-full max-w-xs"
-        position={1}
-        title={t("tokens.components.demo.projectTitle")}
-        author={person}
-        studyProgram={studyProgram}
-        href="#"
-      />
-      <Top10Card
-        className="w-60"
-        variant="compact"
-        position={6}
-        title={t("tokens.components.demo.projectTitle")}
-        author={person}
-        href="#"
-      />
+      <DemoVariant label={t("tokens.components.demo.top10Feature")}>
+        <Top10Card
+          className="w-full max-w-xs"
+          position={1}
+          title={t("tokens.components.demo.projectTitle")}
+          author={person}
+          studyProgram={studyProgram}
+          href="#"
+        />
+      </DemoVariant>
+      <DemoVariant label={t("tokens.components.demo.top10Compact")}>
+        <Top10Card
+          className="w-60"
+          variant="compact"
+          position={6}
+          title={t("tokens.components.demo.projectTitle")}
+          author={person}
+          href="#"
+        />
+      </DemoVariant>
     </>
   )
 }
@@ -1083,8 +1107,14 @@ function AdminDemos() {
               <TableHead>{t("tokens.components.demo.selectLabel")}</TableHead>
               <TableHead>{t("tokens.components.demo.tableSemester")}</TableHead>
               <TableHead>{t("tokens.components.demo.tableStatus")}</TableHead>
-              <TableHead className="sr-only">
-                {t("tokens.components.demo.rowActions")}
+              {/* sr-only gehoert an den Text, nicht an die Zelle: die Klasse
+                  setzt position:absolute und nimmt die Kopfzelle damit aus
+                  der Zeile. Die Kopfzeile haette dann eine Spalte weniger als
+                  jede Datenzeile. */}
+              <TableHead>
+                <span className="sr-only">
+                  {t("tokens.components.demo.rowActions")}
+                </span>
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -1114,8 +1144,14 @@ function AdminDemos() {
             <TableRow>
               <TableHead>{t("tokens.components.demo.userFirstName")}</TableHead>
               <TableHead>{t("tokens.components.demo.selectLabel")}</TableHead>
-              <TableHead className="sr-only">
-                {t("tokens.components.demo.rowActions")}
+              {/* sr-only gehoert an den Text, nicht an die Zelle: die Klasse
+                  setzt position:absolute und nimmt die Kopfzelle damit aus
+                  der Zeile. Die Kopfzeile haette dann eine Spalte weniger als
+                  jede Datenzeile. */}
+              <TableHead>
+                <span className="sr-only">
+                  {t("tokens.components.demo.rowActions")}
+                </span>
               </TableHead>
             </TableRow>
           </TableHeader>

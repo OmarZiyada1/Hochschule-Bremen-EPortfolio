@@ -184,7 +184,6 @@
         "module": "Digital media",
         "category": "Semester project",
         "semester": "Summer 2026",
-        "kpiPublished": "Published projects",
         "kpiFaculties": "Faculties involved",
         "emptyTitle": "No projects found",
         "emptyDescription": "There are no results for the selected filters.",
@@ -206,9 +205,7 @@
         "sidebarCategories": "Categories",
         "sidebarStudyStructure": "Study structure",
         "top10Feature": "Leading ranks",
-        "top10Compact": "Following ranks",
-        "cardWithCover": "With cover image",
-        "cardWithoutCover": "Without cover image"
+        "top10Compact": "Following ranks"
       }
     }
   },

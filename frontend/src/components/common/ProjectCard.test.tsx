@@ -43,10 +43,18 @@ describe("ProjectCard", () => {
     expect(screen.getByText("142 Reaktionen")).toBeInTheDocument()
   })
 
-  it("zeigt das Fakultaetskuerzel mit dem vollen Namen als Erklaerung", () => {
+  it("zeigt das Fakultaetskuerzel und sagt den vollen Namen an", () => {
     renderWithProviders(<ProjectCard title="Campus-Garten" faculty={faculty} />)
 
-    expect(screen.getByText("FK4")).toHaveAttribute("title", "Fakultät 4")
+    /* Sichtbar das Kuerzel, vorgelesen der volle Name. Beides ueber die
+       Erreichbarkeit geprueft und nicht ueber ein title-Attribut: das
+       erreicht weder Tastatur noch Touch und wird an einem span meist gar
+       nicht vorgelesen. */
+    expect(screen.getByText("FK4")).toHaveAttribute("aria-hidden", "true")
+
+    const full = screen.getByText("Fakultät 4")
+    expect(full).toHaveClass("sr-only")
+    expect(full.closest("[aria-hidden]")).toBeNull()
   })
 
   it("faellt ohne Kuerzel auf den ausgeschriebenen Namen zurueck", () => {

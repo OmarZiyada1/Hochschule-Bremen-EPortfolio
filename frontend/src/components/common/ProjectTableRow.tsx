@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 
-import type { ProjectReference } from "@/components/common/ProjectCard"
+import type { ProjectReference } from "@/lib/project"
 import {
   StatusBadge,
   type ProjectStatus,

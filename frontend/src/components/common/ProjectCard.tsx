@@ -8,21 +8,8 @@ import {
 import { UserAvatar } from "@/components/common/UserAvatar"
 import { Card, CardContent } from "@/components/ui/card"
 import { fullNameOf, type PersonName } from "@/lib/name"
+import type { ProjectReference, ProjectType } from "@/lib/project"
 import { cn } from "@/lib/utils"
-
-/**
- * Projektart nach API-Contract 2.6. Wie bei ProjectStatus laeuft der Wert
- * unveraendert durch den Code, uebersetzt wird nur die Anzeige ueber
- * project.type.<WERT>. Ab KAN-30 kommt der Typ aus der generierten
- * schema.d.ts und diese Definition entfaellt.
- */
-export type ProjectType = "REGULAR" | "PAPER" | "THESIS"
-
-/** Stammdatenbezug, wie ihn ReferenceResponse liefert (§3.6 bis §3.9). */
-export interface ProjectReference {
-  name: string
-  abbreviation?: string | null
-}
 
 /**
  * Projektkachel der Listenansichten (Figma "Project Card").
@@ -106,14 +93,22 @@ export function ProjectCard({
 
         <div className="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
           {faculty && (
-            /* Das Kuerzel ist kurz genug, um allein unverstaendlich zu sein.
-               Der ausgeschriebene Name steht deshalb im title-Attribut und
-               als einzige Beschriftung, wenn es kein Kuerzel gibt. */
-            <span
-              className="type-label-xs rounded-pill bg-cover-badge px-2.5 py-1 font-bold text-cover-muted"
-              title={faculty.name}
-            >
-              {faculty.abbreviation ?? faculty.name}
+            /* Das Kuerzel ist kurz genug, um allein unverstaendlich zu sein,
+               deshalb laeuft es zweispurig: sichtbar das Kuerzel, vorgelesen
+               der volle Name. Ueber title allein geht das nicht, den erreicht
+               weder Tastatur noch Touch, und die meisten Screenreader lesen
+               ihn an einem span gar nicht vor. Ohne Kuerzel steht der Name
+               einfach da; ihn dann zweimal einzusetzen, sichtbar und
+               sr-only, waere derselbe Text an zwei Stellen. */
+            <span className="type-label-xs rounded-pill bg-cover-badge px-2.5 py-1 font-bold text-cover-muted">
+              {faculty.abbreviation ? (
+                <>
+                  <span className="sr-only">{faculty.name}</span>
+                  <span aria-hidden="true">{faculty.abbreviation}</span>
+                </>
+              ) : (
+                faculty.name
+              )}
             </span>
           )}
           {projectType && (
@@ -123,7 +118,11 @@ export function ProjectCard({
           )}
         </div>
 
-        <h3 className="type-h3 absolute inset-x-3 bottom-3 font-semibold text-cover-foreground">
+        {/* line-clamp ist hier keine Kosmetik: der Titel haengt am unteren
+            Rand einer Flaeche fester Hoehe und waechst nach oben. Ohne
+            Begrenzung laeuft ein langer Titel in die Badges am oberen Rand.
+            Drei Zeilen wie beim Teaser. */}
+        <h3 className="type-h3 absolute inset-x-3 bottom-3 line-clamp-3 font-semibold text-cover-foreground">
           {href ? (
             <a href={href} className="hover:underline focus-visible:underline">
               {title}
@@ -154,7 +153,11 @@ export function ProjectCard({
 
         {(semester || reactionCount !== undefined) && (
           <>
-            <hr className="border-t-muted" />
+            {/* Ohne Klasse: die Grundregel in tokens.css gibt jedem Element
+                border-color: var(--border), und genau das ist die Rolle fuer
+                eine Linie. muted ist eine Flaechenrolle und hier falsch
+                (Skill frontend-design, Abschnitt 1). */}
+            <hr />
             <div className="flex items-center justify-between gap-2">
               <span className="type-label-xs text-muted-foreground">
                 {semester}

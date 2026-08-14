@@ -71,9 +71,14 @@ export function SidebarItem({
         className
       )}
     >
-      <span aria-hidden="true" className="flex size-4 shrink-0 items-center">
-        {icon}
-      </span>
+      {/* Nur wenn es ein Symbol gibt: der Wrapper belegt sonst 16px plus die
+          12px des gap, und ein Eintrag ohne Symbol saesse um 28px eingerueckt
+          neben nichts. */}
+      {icon && (
+        <span aria-hidden="true" className="flex size-4 shrink-0 items-center">
+          {icon}
+        </span>
+      )}
       {children}
     </a>
   )
