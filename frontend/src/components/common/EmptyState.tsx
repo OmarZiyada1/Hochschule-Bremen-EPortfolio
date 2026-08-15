@@ -20,6 +20,10 @@ import {
  * fuer CardTitle setzt: sonst findet die Sprungnavigation eines Screenreaders
  * auf einer gefilterten Liste ohne Treffer ueberhaupt nichts (SC 1.3.1,
  * Contract 2.5 beschraenkt die Ebenen auf 1 bis 3).
+ *
+ * Ebene 1 ist fuer Seiten gedacht, deren gesamter Inhalt der Leerzustand
+ * ist, etwa die Kein-Zugriff-Seite aus KAN-7; in Listen und Abschnitten
+ * bleibt es bei 2 oder 3.
  */
 export function EmptyState({
   title,
@@ -34,10 +38,10 @@ export function EmptyState({
   icon?: ReactNode
   action?: ReactNode
   /** Ebene der Ueberschrift, passend zur Seite darum herum. */
-  headingLevel?: 2 | 3
+  headingLevel?: 1 | 2 | 3
   className?: string
 }) {
-  const Heading = `h${headingLevel}` as "h2" | "h3"
+  const Heading = `h${headingLevel}` as "h1" | "h2" | "h3"
   return (
     <Empty className={className}>
       <EmptyHeader>

@@ -46,10 +46,15 @@
     },
     "nav": {
       "label": "Main navigation",
+      "skipToContent": "Skip to content",
       "home": "Home",
       "projects": "Project library",
       "myPortfolio": "My portfolio",
+      "reviews": "My reviews",
+      "newProject": "New project",
+      "administration": "Administration",
       "login": "Log in",
+      "register": "Register",
       "logout": "Log out",
       "profile": "Profile",
       "openMenu": "Open menu"
@@ -59,8 +64,6 @@
       "privacy": "Privacy",
       "description": "E-portfolio platform for student projects and academic work at Hochschule Bremen.",
       "projects": "Project library",
-      "studyPrograms": "Study programmes",
-      "faq": "FAQ",
       "accessibility": "Accessibility",
       "copyright": "© {{year}} Hochschule Bremen, Faculty 4 Electrical Engineering and Computer Science",
       "tagline": "Built with care for the HSB community",
@@ -78,9 +81,56 @@
   },
   "home": {
     "title": "E-Portfolio Hochschule Bremen",
-    "intro": "The application is set up. The actual views are built with their own tickets.",
+    "intro": "The application is set up. The actual views are built with their own tickets; this home page will be built with KAN-31.",
     "tokenGallery": "Open the token layer",
     "componentGallery": "Open the component library"
+  },
+  "placeholder": {
+    "hint": "This page is a placeholder. It will be built with ticket {{ticket}}.",
+    "hintStatic": "The content of this page is still to come.",
+    "title": {
+      "projects": "Project library",
+      "projectDetail": "Project detail",
+      "portfolio": "Portfolio",
+      "login": "Log in",
+      "registerRole": "Registration: choose your role",
+      "registerDetails": "Registration: personal details",
+      "registerVerifyEmail": "Registration: confirm your private email",
+      "registerVerifyHsbEmail": "Registration: confirm your HSB email",
+      "registerDone": "Registration: account activated",
+      "forgotPassword": "Forgot password",
+      "resetPassword": "Reset password",
+      "changePassword": "Change password",
+      "projectNew": "New project",
+      "projectMetadata": "Project metadata",
+      "projectEditor": "Editor",
+      "myPortfolio": "My portfolio",
+      "profile": "Edit profile",
+      "reviews": "My reviews",
+      "projectReview": "Review",
+      "administration": "Administration",
+      "adminProjects": "Project management",
+      "adminUsers": "Users",
+      "adminCategories": "Categories",
+      "adminStudyStructure": "Study structure",
+      "adminTop10": "Top 10 management",
+      "adminTop10Audit": "Top 10 audit log",
+      "imprint": "Legal notice",
+      "privacy": "Privacy",
+      "accessibility": "Accessibility"
+    }
+  },
+  "accessDenied": {
+    "title": "No access",
+    "message": "Your account does not have permission to view this page.",
+    "backHome": "Go to the home page"
+  },
+  "notFound": {
+    "code": "404",
+    "title": "Page not found",
+    "message": "The requested page does not exist or has been moved.",
+    "backHome": "Back to the home page",
+    "footer": "Hochschule Bremen · E-Portfolio"
   },
   "tokens": {
     "title": "Token layer",

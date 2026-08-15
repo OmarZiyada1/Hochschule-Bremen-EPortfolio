@@ -6,7 +6,7 @@
  * in der Anwendung ausgeschlossen, weil main.tsx die Bruecke immer setzt.
  */
 
-/** Ziel der 401-Reaktion; die Seite entsteht mit KAN-31. */
+/** Ziel der 401-Reaktion; die Route steht seit KAN-7, die Seite entsteht mit KAN-33. */
 export const LOGIN_PATH = "/login"
 
 /** Ziel bei PASSWORD_CHANGE_REQUIRED (Contract 6.7); die Seite entsteht mit KAN-33. */

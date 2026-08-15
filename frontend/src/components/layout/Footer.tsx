@@ -1,20 +1,20 @@
 import { useTranslation } from "react-i18next"
+import { Link } from "react-router-dom"
 
 import { HsbKeyLogo } from "@/components/common/HsbKeyLogo"
 
 /*
- * Statische Links ohne Serverdaten, in den zwei Spalten des Designs. Die
- * Ziele existieren als Routen erst mit ihren Tickets; die Pfade sind hier
- * trotzdem fest, damit nicht jede Seite eigene erfindet.
+ * Statische Links ohne Serverdaten, in den zwei Spalten des Designs. Jedes
+ * Ziel steht im Routenbaum aus KAN-7: /study-programs und /faq sind mit
+ * der Klaerungsrunde zu KAN-7 entfallen, weil dahinter weder Template noch
+ * Ticket steht; ein Link auf die 404-Seite waere eine Attrappe. Kommen die
+ * Seiten zurueck, ist das ein eigener Punkt und keine stille
+ * Wiedereinfuehrung.
  */
 const footerGroups = [
   {
     key: "platform",
-    links: [
-      { key: "projects", href: "/projects" },
-      { key: "studyPrograms", href: "/study-programs" },
-      { key: "faq", href: "/faq" },
-    ],
+    links: [{ key: "projects", href: "/projects" }],
   },
   {
     key: "legal",
@@ -80,12 +80,12 @@ export function Footer() {
                 <ul className="flex flex-col gap-2.5">
                   {group.links.map((link) => (
                     <li key={link.key}>
-                      <a
-                        href={link.href}
+                      <Link
+                        to={link.href}
                         className="type-body-sm text-muted-foreground hover:text-foreground hover:underline"
                       >
                         {t(`common.footer.${link.key}`)}
-                      </a>
+                      </Link>
                     </li>
                   ))}
                 </ul>

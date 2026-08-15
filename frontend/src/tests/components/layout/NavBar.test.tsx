@@ -5,7 +5,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import i18n from "@/i18n"
 import { renderWithProviders } from "@/tests/render"
 
-import { NavBar } from "@/components/layout/NavBar"
+import { NavBar, type NavBarLink } from "@/components/layout/NavBar"
+
+/* Die Eintraege entscheidet seit KAN-7 der Anwendungsrahmen und gibt sie
+   als Props herein; die Tests stellen die Ebenen deshalb selbst nach. */
+const publicLinks: NavBarLink[] = [
+  { key: "home", href: "/" },
+  { key: "projects", href: "/projects" },
+]
+
+const studentLinks: NavBarLink[] = [
+  ...publicLinks,
+  { key: "myPortfolio", href: "/my-portfolio" },
+  { key: "newProject", href: "/projects/new" },
+]
 
 describe("NavBar", () => {
   /* Die i18n-Instanz ist ein Modul-Singleton; der Sprachtest unten wuerde
@@ -14,8 +27,8 @@ describe("NavBar", () => {
     await i18n.changeLanguage("de")
   })
 
-  it("zeigt nicht angemeldet die oeffentlichen Eintraege und die Anmeldung", () => {
-    renderWithProviders(<NavBar />)
+  it("zeigt nicht angemeldet die Eintraege, Anmeldung und Registrierung", () => {
+    renderWithProviders(<NavBar links={publicLinks} />)
 
     expect(
       screen.getByRole("navigation", { name: "Hauptnavigation" })
@@ -26,10 +39,14 @@ describe("NavBar", () => {
     ).toBeInTheDocument()
     expect(screen.queryByText("Mein Portfolio")).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Anmelden" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Registrieren" })).toHaveAttribute(
+      "href",
+      "/register/role"
+    )
   })
 
   it("nennt die Marke einmal, obwohl sie zweizeilig steht", () => {
-    renderWithProviders(<NavBar />)
+    renderWithProviders(<NavBar links={publicLinks} />)
 
     /* Sichtbar zwei Zeilen, vorgelesen der Projektname: sonst hoerte man
        "Hochschule Bremen E-Portfolio" als zwei zusammenhanglose Teile. */
@@ -39,7 +56,7 @@ describe("NavBar", () => {
   })
 
   it("markiert den aktiven Eintrag nicht nur mit dem Unterstrich", () => {
-    renderWithProviders(<NavBar activeHref="/projects" />)
+    renderWithProviders(<NavBar links={publicLinks} activeHref="/projects" />)
 
     expect(
       screen.getByRole("link", { name: "Projektbibliothek" })
@@ -49,12 +66,13 @@ describe("NavBar", () => {
     ).not.toHaveAttribute("aria-current")
   })
 
-  it("zeigt angemeldet das Portfolio und das Nutzermenue mit Abmeldung", async () => {
+  it("zeigt angemeldet die hereingereichten Eintraege und das Nutzermenue", async () => {
     const user = userEvent.setup()
     const onLogout = vi.fn()
     renderWithProviders(
       <NavBar
         user={{ firstName: "Mira", lastName: "Beispiel" }}
+        links={studentLinks}
         onLogout={onLogout}
       />
     )
@@ -62,8 +80,15 @@ describe("NavBar", () => {
     expect(
       screen.getByRole("link", { name: "Mein Portfolio" })
     ).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Neues Projekt" })).toHaveAttribute(
+      "href",
+      "/projects/new"
+    )
     expect(
       screen.queryByRole("link", { name: "Anmelden" })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("link", { name: "Registrieren" })
     ).not.toBeInTheDocument()
 
     /* Der zugaengliche Name ist der Name der Person, nicht mehr eine
@@ -80,7 +105,7 @@ describe("NavBar", () => {
 
   it("bietet den Sprachwechsel mit dem Ziel als Beschriftung an", async () => {
     const user = userEvent.setup()
-    renderWithProviders(<NavBar />)
+    renderWithProviders(<NavBar links={publicLinks} />)
 
     const toggle = screen.getAllByRole("button", {
       name: "Auf Englisch umschalten",
@@ -89,6 +114,20 @@ describe("NavBar", () => {
 
     expect(
       await screen.findByRole("button", { name: "Switch to German" })
+    ).toBeInTheDocument()
+  })
+
+  it("traegt den Moduswechsel in der Leiste", async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<NavBar links={publicLinks} />)
+
+    await user.click(
+      screen.getByRole("button", { name: "Dunklen Modus einschalten" })
+    )
+
+    expect(document.documentElement).toHaveClass("dark")
+    expect(
+      screen.getByRole("button", { name: "Hellen Modus einschalten" })
     ).toBeInTheDocument()
   })
 })

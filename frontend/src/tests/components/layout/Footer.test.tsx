@@ -19,14 +19,22 @@ describe("Footer", () => {
 
     for (const label of [
       "Projektbibliothek",
-      "Studiengänge",
-      "Häufige Fragen",
       "Impressum",
       "Datenschutz",
       "Barrierefreiheit",
     ]) {
       expect(screen.getByRole("link", { name: label })).toBeVisible()
     }
+
+    /* /study-programs und /faq sind mit der Klaerungsrunde zu KAN-7
+       entfallen: hinter ihnen steht weder Template noch Ticket, und ein
+       Link auf die 404-Seite waere eine Attrappe. */
+    expect(
+      screen.queryByRole("link", { name: "Studiengänge" })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("link", { name: "Häufige Fragen" })
+    ).not.toBeInTheDocument()
   })
 
   it("setzt das Jahr zur Laufzeit und nicht als festen Text", () => {

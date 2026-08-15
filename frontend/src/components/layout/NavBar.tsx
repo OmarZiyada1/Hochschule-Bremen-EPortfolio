@@ -1,8 +1,11 @@
 import { ChevronDownIcon, MenuIcon } from "lucide-react"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
+import { Link } from "react-router-dom"
 
 import { HsbKeyLogo } from "@/components/common/HsbKeyLogo"
 import { LanguageToggle } from "@/components/common/LanguageToggle"
+import { ThemeToggle } from "@/components/common/ThemeToggle"
 import { UserAvatar } from "@/components/common/UserAvatar"
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
@@ -35,6 +38,15 @@ export interface NavBarUser extends PersonName {
   avatarUrl?: string
 }
 
+/**
+ * Ein Navigationseintrag: der key adressiert die Beschriftung unter
+ * common.nav.*, der href den Routenbaum aus KAN-7.
+ */
+export interface NavBarLink {
+  key: string
+  href: string
+}
+
 /*
  * Der Fokusring der Grundregel zeigt auf --ring, also blau/600. Auf der
  * Verlaufsleiste liegt derselbe Blauton auf blauem Grund und erreicht die
@@ -54,46 +66,47 @@ export interface NavBarUser extends PersonName {
 const navFocus =
   "focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nav-foreground"
 
+const navGhost =
+  "text-nav-foreground hover:bg-nav-foreground/10 hover:text-nav-foreground"
+
 /**
  * Kopfleiste der Anwendung (Figma "Nav Bar").
  *
  * Sie unterscheidet angemeldet und nicht angemeldet (API-Contract 2.1):
- * ohne Nutzer erscheinen die oeffentlichen Eintraege und die Anmeldung, mit
- * Nutzer zusaetzlich das Portfolio und das Nutzermenue. PUBLIC ist dabei
- * keine Rolle, sondern genau dieser Zustand; welche Rolle der Nutzer hat,
- * entscheidet hier nichts, das ist Sache der Seiten und der Rechtematrix.
+ * ohne Nutzer erscheinen Anmeldung und Registrierung, mit Nutzer das
+ * Nutzermenue mit Profil und Abmeldung. PUBLIC ist dabei keine Rolle,
+ * sondern genau dieser Zustand.
  *
- * Reine Darstellung: wer angemeldet ist und welcher Eintrag der aktuelle
- * ist, sagt der Aufrufer ueber Props (KAN-7 bindet die Leiste an den
- * Anwendungsrahmen an und kennt dort die Route). Auf schmalen Bildschirmen
- * uebernimmt das Sheet die Navigation; die Menueschaltflaeche traegt einen
- * zugaenglichen Namen, weil sie nur ein Symbol zeigt.
+ * Reine Darstellung: welche Eintraege zur Rolle passen, entscheidet der
+ * Anwendungsrahmen (KAN-7, Umfang 5) und gibt sie als links herein; die
+ * Leiste waehlt nicht selbst. Navigiert wird ueber react-router, die
+ * Primitiven nehmen den Link ueber ihre render-Prop auf. Auf schmalen
+ * Bildschirmen uebernimmt das Sheet die Navigation; es ist kontrolliert,
+ * weil ein SPA-Link die Seite nicht neu laedt und das Sheet sonst offen
+ * stehen bliebe. Die Menueschaltflaeche traegt einen zugaenglichen Namen,
+ * weil sie nur ein Symbol zeigt.
  */
 export function NavBar({
   user = null,
+  links,
   activeHref,
   onLogout,
 }: {
   user?: NavBarUser | null
+  links: NavBarLink[]
   activeHref?: string
   onLogout?: () => void
 }) {
   const { t } = useTranslation()
-  /* Die Pfade folgen dem Routenbaum aus KAN-7 (englisch, dort verbindlich
-     festgelegt); die Routen selbst entstehen erst mit KAN-7. */
-  const links = [
-    { key: "home", href: "/" },
-    { key: "projects", href: "/projects" },
-    ...(user ? [{ key: "myPortfolio", href: "/my-portfolio" }] : []),
-  ]
+  const [menuOpen, setMenuOpen] = useState(false)
 
   return (
     <header className="surface-nav">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
         {/* Ein Link mit zwei Zeilen, aber einem Namen: vorgelesen wird der
             Projektname, sichtbar bleibt die Zweiteilung aus dem Design. */}
-        <a
-          href="/"
+        <Link
+          to="/"
           aria-label={t("app.name")}
           className={cn("flex items-center gap-3", navFocus)}
         >
@@ -106,7 +119,7 @@ export function NavBar({
               {t("app.productLabel")}
             </span>
           </span>
-        </a>
+        </Link>
 
         <NavigationMenu
           aria-label={t("common.nav.label")}
@@ -118,7 +131,7 @@ export function NavBar({
               return (
                 <NavigationMenuItem key={link.key}>
                   <NavigationMenuLink
-                    href={link.href}
+                    render={<Link to={link.href} />}
                     /* aria-current traegt die Markierung fuer alle, die die
                        Unterstreichung nicht sehen (SC 1.4.1). */
                     aria-current={active ? "page" : undefined}
@@ -144,12 +157,8 @@ export function NavBar({
         </NavigationMenu>
 
         <div className="flex items-center gap-2">
-          <LanguageToggle
-            className={cn(
-              "text-nav-foreground hover:bg-nav-foreground/10 hover:text-nav-foreground max-md:hidden",
-              navFocus
-            )}
-          />
+          <LanguageToggle className={cn(navGhost, "max-md:hidden", navFocus)} />
+          <ThemeToggle className={cn(navGhost, "max-md:hidden", navFocus)} />
           <Separator
             orientation="vertical"
             className="h-5 bg-nav-foreground/40 max-md:hidden"
@@ -161,10 +170,7 @@ export function NavBar({
                 render={
                   <Button
                     variant="ghost"
-                    className={cn(
-                      "gap-2.5 text-nav-foreground hover:bg-nav-foreground/10 hover:text-nav-foreground",
-                      navFocus
-                    )}
+                    className={cn("gap-2.5", navGhost, navFocus)}
                   />
                 }
               >
@@ -183,7 +189,9 @@ export function NavBar({
                 <DropdownMenuGroup>
                   <DropdownMenuLabel>{fullNameOf(user)}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem render={<a href="/my-portfolio/profile" />}>
+                  <DropdownMenuItem
+                    render={<Link to="/my-portfolio/profile" />}
+                  >
                     {t("common.nav.profile")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onLogout}>
@@ -193,33 +201,45 @@ export function NavBar({
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            /* Ein Link, der wie ein Button aussieht, bleibt ein Link: die
-               Anmeldung fuehrt auf eine Seite und faellt fuer Screenreader
-               in die Linkliste. secondary statt default, weil die blaue
-               Primaerfarbe auf der blauen Leiste kaum absteht. */
-            <a
-              href="/login"
-              className={cn(
-                buttonVariants({ variant: "secondary" }),
-                "max-md:hidden",
-                navFocus
-              )}
-            >
-              {t("common.nav.login")}
-            </a>
+            /* Links, die wie Buttons aussehen, bleiben Links: Anmeldung und
+               Registrierung fuehren auf Seiten und fallen fuer Screenreader
+               in die Linkliste. secondary statt default fuer die Anmeldung,
+               weil die blaue Primaerfarbe auf der blauen Leiste kaum
+               absteht; die Registrierung daneben als ghost, damit die
+               Leiste einen klaren Hauptweg behaelt. */
+            <>
+              <Link
+                to="/register/role"
+                className={cn(
+                  buttonVariants({ variant: "ghost" }),
+                  navGhost,
+                  "max-md:hidden",
+                  navFocus
+                )}
+              >
+                {t("common.nav.register")}
+              </Link>
+              <Link
+                to="/login"
+                className={cn(
+                  buttonVariants({ variant: "secondary" }),
+                  "max-md:hidden",
+                  navFocus
+                )}
+              >
+                {t("common.nav.login")}
+              </Link>
+            </>
           )}
 
-          <Sheet>
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger
               render={
                 <Button
                   variant="ghost"
                   size="icon"
                   aria-label={t("common.nav.openMenu")}
-                  className={cn(
-                    "text-nav-foreground hover:bg-nav-foreground/10 hover:text-nav-foreground md:hidden",
-                    navFocus
-                  )}
+                  className={cn(navGhost, "md:hidden", navFocus)}
                 />
               }
             >
@@ -234,23 +254,43 @@ export function NavBar({
                 className="flex flex-col gap-1 px-4"
               >
                 {links.map((link) => (
-                  <a
+                  <Link
                     key={link.key}
-                    href={link.href}
+                    to={link.href}
+                    onClick={() => setMenuOpen(false)}
                     aria-current={link.href === activeHref ? "page" : undefined}
                     className="rounded-control px-2 py-2 hover:bg-muted aria-[current=page]:bg-accent aria-[current=page]:text-accent-foreground"
                   >
                     {t(`common.nav.${link.key}`)}
-                  </a>
+                  </Link>
                 ))}
               </nav>
               <Separator />
-              <div className="flex items-center justify-between gap-2 px-4">
-                <LanguageToggle />
+              <div className="flex flex-col gap-3 px-4">
+                <div className="flex items-center gap-2">
+                  <LanguageToggle />
+                  <ThemeToggle />
+                </div>
                 {!user && (
-                  <a href="/login" className={cn(buttonVariants(), "flex-1")}>
-                    {t("common.nav.login")}
-                  </a>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to="/register/role"
+                      onClick={() => setMenuOpen(false)}
+                      className={cn(
+                        buttonVariants({ variant: "outline" }),
+                        "flex-1"
+                      )}
+                    >
+                      {t("common.nav.register")}
+                    </Link>
+                    <Link
+                      to="/login"
+                      onClick={() => setMenuOpen(false)}
+                      className={cn(buttonVariants(), "flex-1")}
+                    >
+                      {t("common.nav.login")}
+                    </Link>
+                  </div>
                 )}
               </div>
             </SheetContent>
