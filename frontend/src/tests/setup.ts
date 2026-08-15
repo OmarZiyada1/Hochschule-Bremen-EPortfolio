@@ -1,7 +1,20 @@
 import "@testing-library/jest-dom/vitest"
 
 import { cleanup } from "@testing-library/react"
-import { afterEach } from "vitest"
+import { afterAll, afterEach, beforeAll } from "vitest"
+
+import { resetAuthStoreForTests } from "@/api/auth/authStore"
+import { setAuthNavigate } from "@/api/auth/redirect"
+import { server } from "@/tests/msw/server"
+
+/*
+ * MSW faengt jeden Request des Testlaufs ab (KAN-30, Umfang 7). Ein Request
+ * ohne angemeldeten Handler ist ein Testfehler und kein stiller Durchlauf
+ * ins Netz: Tests, die keine Antwort vorbereitet haben, sollen scheitern,
+ * nicht haengen.
+ */
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }))
+afterAll(() => server.close())
 
 /*
  * jsdom kennt matchMedia nicht. Sowohl der ThemeProvider aus der
@@ -49,6 +62,11 @@ if (!Element.prototype.scrollIntoView) {
    also wird auch das Aufraeumen ausdruecklich angemeldet. */
 afterEach(() => {
   cleanup()
+  server.resetHandlers()
+  // Sitzung und Navigationsbruecke zuruecksetzen, damit kein Test den
+  // Anmeldezustand oder einen navigate-Spy des vorigen Tests erbt.
+  resetAuthStoreForTests()
+  setAuthNavigate(() => {})
   document.documentElement.className = ""
   window.localStorage.clear()
 })

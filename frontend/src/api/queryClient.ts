@@ -1,0 +1,100 @@
+import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query"
+
+import {
+  endSession,
+  getAuthState,
+  setPasswordChangeRequired,
+  subscribe,
+} from "@/api/auth/authStore"
+import {
+  CHANGE_PASSWORD_PATH,
+  LOGIN_PATH,
+  navigateForAuth,
+} from "@/api/auth/redirect"
+import { isApiError } from "@/api/errors"
+
+/**
+ * Zentrale Reaktion auf die Fehlercodes aus Contract 6.2: einmal hier,
+ * nicht je Seite (Ticket KAN-30, Umfang 4).
+ *
+ * - 401 NOT_AUTHENTICATED, TOKEN_INVALID, TOKEN_EXPIRED: Token verwerfen,
+ *   Hinweis im Auth-Store hinterlassen, zum Login. Nie eine leere Seite.
+ * - 403 PASSWORD_CHANGE_REQUIRED: zur Passwortseite umleiten statt einer
+ *   Meldung; das Gate laesst nur die fuenf Ausnahmen aus Contract 6.7
+ *   durch, ohne Weiterleitung saehe die Person nur eine Sperre ohne Ausweg.
+ *   Die Sitzung bleibt bestehen, der Zustand wandert in den Store.
+ *
+ * Alles andere laeuft unveraendert an die aufrufende Stelle durch: 403
+ * NO_PERMISSION wird dort als Meldung sichtbar (ohne Weiterleitung), 400
+ * VALIDATION_FAILED gehoert ans Formularfeld, 409 PROJECT_VERSION_CONFLICT
+ * entscheidet die aufrufende Stelle selbst und wird nie automatisch
+ * wiederholt (Contract 6.4). 401 ACCOUNT_NOT_ACTIVE bleibt ebenfalls bei
+ * der aufrufenden Stelle: beim Login gehoert die Meldung ans Formular
+ * (KAN-31), und das Ticket nennt fuer das zentrale Sitzungsende bewusst nur
+ * die drei Token-Codes.
+ */
+export function reactToSessionError(error: unknown): void {
+  if (!isApiError(error)) {
+    return
+  }
+  switch (error.errorCode) {
+    case "NOT_AUTHENTICATED":
+    case "TOKEN_INVALID":
+    case "TOKEN_EXPIRED":
+      endSession(error.errorCode)
+      navigateForAuth(LOGIN_PATH)
+      break
+    case "PASSWORD_CHANGE_REQUIRED":
+      setPasswordChangeRequired(true)
+      navigateForAuth(CHANGE_PASSWORD_PATH)
+      break
+    default:
+      break
+  }
+}
+
+/**
+ * Ein QueryClient je Anwendung (main.tsx) und je Test (tests/render.tsx),
+ * immer ueber diese Fabrik, damit die zentrale Fehlerreaktion nirgends
+ * fehlt.
+ *
+ * retry: false fuer Queries wie Mutationen: die Fehlertabelle des Tickets
+ * kennt keinen Code, bei dem ein automatischer neuer Versuch richtig waere.
+ * Bei 409 PROJECT_VERSION_CONFLICT wuerde er genau die fremde Aenderung
+ * ueberschreiben, vor der das Optimistic Locking schuetzt (Contract 6.4),
+ * bei 429 die Sperre verlaengern, bei 500 den Fehler nur verzoegern.
+ */
+export function createQueryClient(): QueryClient {
+  const client = new QueryClient({
+    queryCache: new QueryCache({
+      onError: reactToSessionError,
+    }),
+    mutationCache: new MutationCache({
+      onError: reactToSessionError,
+    }),
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  })
+
+  /*
+   * Endet die Sitzung, wird der Cache geleert, sonst blieben
+   * personenbezogene Antworten der alten Sitzung darin: nach einer
+   * Abmeldung am geteilten Rechner abrufbar, und nach einem Rollenwechsel
+   * lieferte derselbe Query-Key die Sichtbarkeit der vorigen Person. Der
+   * Weg ueber den Store deckt alle Ausloeser ab: zentrale 401-Reaktion,
+   * Ablauf-Timer und Logout. Das Abo lebt so lange wie der Client, also so
+   * lange wie die Anwendung beziehungsweise der einzelne Test.
+   */
+  let hadSession = getAuthState().session !== null
+  subscribe(() => {
+    const hasSession = getAuthState().session !== null
+    if (hadSession && !hasSession) {
+      client.clear()
+    }
+    hadSession = hasSession
+  })
+
+  return client
+}

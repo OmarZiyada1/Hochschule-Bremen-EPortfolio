@@ -16,22 +16,34 @@ import "./index.css"
 
 import "./i18n"
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { QueryClientProvider } from "@tanstack/react-query"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { RouterProvider } from "react-router-dom"
 
+import { AuthProvider } from "@/api/auth/AuthContext"
+import { setAuthNavigate } from "@/api/auth/redirect"
+import { createQueryClient } from "@/api/queryClient"
 import { ThemeProvider } from "@/components/theme-provider"
 import { router } from "@/routes"
 
-const queryClient = new QueryClient()
+/*
+ * Die zentrale Fehlerreaktion (401, Passwortzwang, Tokenablauf) laeuft
+ * ausserhalb von Komponenten und leitet ueber diese Bruecke um; der
+ * Router-Singleton ist die navigate-Funktion der Anwendung.
+ */
+setAuthNavigate((to) => void router.navigate(to))
+
+const queryClient = createQueryClient()
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </AuthProvider>
     </ThemeProvider>
   </StrictMode>
 )

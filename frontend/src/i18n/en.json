@@ -236,5 +236,33 @@
   },
   "top10": {
     "position": "Rank {{position}}"
+  },
+  "apiError": {
+    "VALIDATION_FAILED": "The input is incomplete or invalid. Please check the highlighted fields.",
+    "LOGIN_FAILED": "Login failed. The email address or password is incorrect.",
+    "NOT_AUTHENTICATED": "Please sign in to continue.",
+    "TOKEN_INVALID": "The session is invalid. Please sign in again.",
+    "TOKEN_EXPIRED": "The session has expired. Please sign in again.",
+    "ACCOUNT_NOT_ACTIVE": "This account is not active. Please confirm your registration or contact the administration.",
+    "NO_PERMISSION": "You do not have permission to do this.",
+    "PASSWORD_CHANGE_REQUIRED": "Please set a new password first.",
+    "TOO_MANY_LOGIN_ATTEMPTS": "Too many failed attempts. Please wait a few minutes and try again.",
+    "VERIFICATION_CODE_INVALID": "The code is invalid or has expired. Please request a new code.",
+    "BLOCK_TYPE_UNKNOWN": "This block type is not supported.",
+    "BLOCK_CONTENT_INVALID": "The block content is invalid.",
+    "EMBED_PROVIDER_NOT_ALLOWED": "This provider is not allowed for embeds.",
+    "FILE_TYPE_NOT_ALLOWED": "This file type is not allowed.",
+    "FILE_TOO_LARGE": "The file is too large.",
+    "PROJECT_INCOMPLETE": "The project is still incomplete. Please fill in the required fields before submitting.",
+    "PROJECT_NOT_FOUND": "This project does not exist or has been removed.",
+    "RESOURCE_NOT_FOUND": "The requested entry does not exist or has been removed.",
+    "PROJECT_VERSION_CONFLICT": "The project has been changed elsewhere in the meantime. Please reload or review your version.",
+    "PROJECT_STATUS_NOT_EDITABLE": "The project cannot be edited in its current status.",
+    "PROJECT_STATUS_TRANSITION_INVALID": "This status transition is not allowed.",
+    "CHANGE_REQUESTS_OPEN": "There are still open change requests. Please resolve them before submitting again.",
+    "RESOURCE_IN_USE": "The entry is still in use and cannot be applied like this.",
+    "PROJECT_NOT_PUBLISHED": "This action requires a published project.",
+    "NOMINATION_ALREADY_DECIDED": "This nomination has already been decided.",
+    "INTERNAL_ERROR": "Something went wrong. Please try again later."
   }
 }

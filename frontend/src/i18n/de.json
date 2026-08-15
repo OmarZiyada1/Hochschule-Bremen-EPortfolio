@@ -236,5 +236,33 @@
   },
   "top10": {
     "position": "Platz {{position}}"
+  },
+  "apiError": {
+    "VALIDATION_FAILED": "Die Eingaben sind unvollständig oder ungültig. Bitte prüfen Sie die markierten Felder.",
+    "LOGIN_FAILED": "Anmeldung fehlgeschlagen. E-Mail-Adresse oder Passwort ist falsch.",
+    "NOT_AUTHENTICATED": "Bitte melden Sie sich an, um fortzufahren.",
+    "TOKEN_INVALID": "Die Sitzung ist ungültig. Bitte melden Sie sich erneut an.",
+    "TOKEN_EXPIRED": "Die Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+    "ACCOUNT_NOT_ACTIVE": "Dieses Konto ist nicht aktiv. Bitte bestätigen Sie Ihre Registrierung oder wenden Sie sich an die Administration.",
+    "NO_PERMISSION": "Dafür fehlt Ihnen die Berechtigung.",
+    "PASSWORD_CHANGE_REQUIRED": "Bitte vergeben Sie zuerst ein neues Passwort.",
+    "TOO_MANY_LOGIN_ATTEMPTS": "Zu viele Fehlversuche. Bitte warten Sie einige Minuten und versuchen Sie es dann erneut.",
+    "VERIFICATION_CODE_INVALID": "Der Code ist ungültig oder abgelaufen. Bitte fordern Sie einen neuen Code an.",
+    "BLOCK_TYPE_UNKNOWN": "Dieser Blocktyp wird nicht unterstützt.",
+    "BLOCK_CONTENT_INVALID": "Der Blockinhalt ist ungültig.",
+    "EMBED_PROVIDER_NOT_ALLOWED": "Dieser Anbieter ist für Einbettungen nicht zugelassen.",
+    "FILE_TYPE_NOT_ALLOWED": "Dieser Dateityp ist nicht zugelassen.",
+    "FILE_TOO_LARGE": "Die Datei ist zu groß.",
+    "PROJECT_INCOMPLETE": "Das Projekt ist noch unvollständig. Bitte füllen Sie die Pflichtfelder aus, bevor Sie einreichen.",
+    "PROJECT_NOT_FOUND": "Dieses Projekt existiert nicht oder wurde entfernt.",
+    "RESOURCE_NOT_FOUND": "Der aufgerufene Eintrag existiert nicht oder wurde entfernt.",
+    "PROJECT_VERSION_CONFLICT": "Das Projekt wurde inzwischen an anderer Stelle geändert. Bitte laden Sie neu oder prüfen Sie Ihre Fassung.",
+    "PROJECT_STATUS_NOT_EDITABLE": "Das Projekt kann in seinem aktuellen Status nicht bearbeitet werden.",
+    "PROJECT_STATUS_TRANSITION_INVALID": "Dieser Statuswechsel ist nicht zulässig.",
+    "CHANGE_REQUESTS_OPEN": "Es sind noch Änderungswünsche offen. Bitte erledigen Sie diese, bevor Sie erneut einreichen.",
+    "RESOURCE_IN_USE": "Der Eintrag wird noch verwendet und kann so nicht übernommen werden.",
+    "PROJECT_NOT_PUBLISHED": "Diese Aktion setzt ein veröffentlichtes Projekt voraus.",
+    "NOMINATION_ALREADY_DECIDED": "Über diese Nominierung wurde bereits entschieden.",
+    "INTERNAL_ERROR": "Etwas ist schiefgelaufen. Bitte versuchen Sie es später erneut."
   }
 }
