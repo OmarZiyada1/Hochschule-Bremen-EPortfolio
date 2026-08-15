@@ -100,8 +100,8 @@ Befund in der Tokenschicht und wird dort aufgelöst, nicht im Komponentencode.
 | Ort | Was dort hingehört |
 | --- | --- |
 | `components/ui/` | shadcn-Primitiven auf Base UI, **ausschließlich per CLI erzeugt**, Bibliotheksnamen unverändert |
-| `components/layout/` | NavBar, Footer, Breadcrumb |
-| `components/common/` | alles mit Domänenbezug: `ProjectCard`, `StatusBadge`, `RoleBadge`, `EmptyState`, `KpiTile` |
+| `components/layout/` | NavBar, Footer, Sidebar |
+| `components/common/` | alles mit Domänenbezug: `ProjectCard`, `StatusBadge`, `Top10Card`, `Pill`, `EmptyState`, `KpiTile` und weitere; Breadcrumb hat bewusst **keine** Hülle, die Primitive reicht |
 | `features/<feature>/components/` | nur in diesem Feature verwendet |
 
 Wird ein Baustein von der zweiten Seite gebraucht, wandert er nach oben,

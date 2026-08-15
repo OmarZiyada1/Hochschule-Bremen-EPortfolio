@@ -108,8 +108,8 @@ frontend/src/
   api/                    client.ts, errors.ts, schema.d.ts, page.ts
   components/
     ui/                   shadcn-Primitiven auf Base UI (nur per CLI erzeugt)
-    layout/               NavBar, Footer, Breadcrumb
-    common/               ProjectCard, StatusBadge, RoleBadge, EmptyState
+    layout/               NavBar, Footer, Sidebar
+    common/               ProjectCard, StatusBadge, Top10Card, EmptyState, …
   features/<feature>/
     <Feature>Page.tsx     die Route-Komponente
     components/           nur hier verwendete Bausteine

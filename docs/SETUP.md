@@ -545,9 +545,10 @@ weiter. Ziel ist `http://localhost:8080`, im Container der Dienstname aus
 `VITE_PROXY_TARGET`. Damit liegt die API immer unter demselben Ursprung wie
 die Oberfläche, und im Anwendungscode steht keine Basis-URL.
 
-Was auf `main` vorhanden ist: Routing, i18n (Deutsch und Englisch),
-Design-Tokens samt Token-Galerie unter `/dev/tokens` und die
-shadcn-Grundlage. Eine Anbindung an die API gibt es noch nicht,
+Was im Frontend vorhanden ist: Routing, i18n (Deutsch und Englisch),
+Design-Tokens samt Token-Galerie unter `/dev/tokens`, die shadcn-Grundlage
+und die Komponentenbibliothek mit eigener Prüffläche unter
+`/dev/components` (KAN-29). Eine Anbindung an die API gibt es noch nicht,
 `frontend/src/api/` ist leer. `pnpm gen:api` erzeugt die Typen aus dem
 laufenden Backend nach `src/api/schema.d.ts`.
 

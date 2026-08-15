@@ -312,14 +312,14 @@ frontend/src/
   api/                    client.ts, errors.ts, schema.d.ts, page.ts
   components/
     ui/                   shadcn-Primitiven (generiert, Namen unverändert)
-    layout/               NavBar, Footer, Breadcrumb
-    common/               ProjectCard, StatusBadge, RoleBadge, EmptyState
+    layout/               NavBar, Footer, Sidebar
+    common/               ProjectCard, StatusBadge, Top10Card, EmptyState, …
   features/<feature>/
     <Feature>Page.tsx     die Route-Komponente
     components/           nur hier verwendete Bausteine
     hooks/                Query- und Mutation-Hooks
   i18n/                   de.json, en.json, index.ts
-  lib/                    utils.ts
+  lib/                    utils.ts, name.ts, project.ts, theme.ts
   routes/
   styles/tokens/          tokens.css, typography-tokens.css
 ```
