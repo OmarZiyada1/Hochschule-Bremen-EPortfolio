@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 
-import { RoleBadge, type Role } from "@/components/common/RoleBadge"
+import type { Role } from "@/api/types"
+import { RoleBadge } from "@/components/common/RoleBadge"
 import { UserAvatar } from "@/components/common/UserAvatar"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { fullNameOf, type PersonName } from "@/lib/name"

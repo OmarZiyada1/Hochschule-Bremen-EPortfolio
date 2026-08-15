@@ -1,9 +1,9 @@
 import { ImageIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import type { ProjectReference } from "@/api/types"
 import { Card, CardContent } from "@/components/ui/card"
 import { fullNameOf, type PersonName } from "@/lib/name"
-import type { ProjectReference } from "@/lib/project"
 import { cn } from "@/lib/utils"
 
 /**

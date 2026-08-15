@@ -1,10 +1,7 @@
 import type { ReactNode } from "react"
 
-import type { ProjectReference } from "@/lib/project"
-import {
-  StatusBadge,
-  type ProjectStatus,
-} from "@/components/common/StatusBadge"
+import type { ProjectReference, ProjectStatus } from "@/api/types"
+import { StatusBadge } from "@/components/common/StatusBadge"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { fullNameOf, type PersonName } from "@/lib/name"
 

@@ -27,12 +27,10 @@ import { LanguageToggle } from "@/components/common/LanguageToggle"
 import { Pill, type PillTone } from "@/components/common/Pill"
 import { ProjectCard } from "@/components/common/ProjectCard"
 import { ProjectTableRow } from "@/components/common/ProjectTableRow"
-import { RoleBadge, type Role } from "@/components/common/RoleBadge"
+import type { ProjectStatus, Role } from "@/api/types"
+import { RoleBadge } from "@/components/common/RoleBadge"
 import { SearchInput } from "@/components/common/SearchInput"
-import {
-  StatusBadge,
-  type ProjectStatus,
-} from "@/components/common/StatusBadge"
+import { StatusBadge } from "@/components/common/StatusBadge"
 import { Tag } from "@/components/common/Tag"
 import { Top10Card } from "@/components/common/Top10Card"
 import { UserAvatar } from "@/components/common/UserAvatar"
@@ -1010,9 +1008,12 @@ function ProjectCardDemos() {
 function Top10CardDemos() {
   const { t } = useTranslation()
   const person = useDemoPerson()
+  /*
+   * Keine Kurzform: das generierte ReferenceResponse kennt abbreviation nur
+   * als optionales Feld, eine fehlende Kurzform heisst also weglassen.
+   */
   const studyProgram = {
     name: t("tokens.components.demo.program"),
-    abbreviation: null,
   }
 
   return (
@@ -1126,7 +1127,6 @@ function AdminDemos() {
                 author={person}
                 studyProgram={{
                   name: t("tokens.components.demo.program"),
-                  abbreviation: null,
                 }}
                 semester={t("tokens.components.demo.semester")}
                 status={status}

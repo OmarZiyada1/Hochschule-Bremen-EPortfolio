@@ -1,21 +1,17 @@
 import { useTranslation } from "react-i18next"
 
+import type { Role } from "@/api/types"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
-/**
- * Rollen nach API-Contract 2.1: genau drei Werte. PUBLIC ist keine Rolle,
- * sondern der Zustand "nicht angemeldet", und hat deshalb weder einen
- * Enum-Wert noch ein Token noch einen Zweig in dieser Komponente.
- * Sobald KAN-30 die generierte schema.d.ts liefert, kommt der Typ von dort.
- */
-export type Role = "STUDENT" | "EDITOR" | "ADMIN"
-
 /*
+ * PUBLIC ist keine Rolle, sondern der Zustand "nicht angemeldet"
+ * (Contract 2.1), und hat deshalb weder einen Enum-Wert noch ein Token noch
+ * einen Zweig in dieser Komponente.
+ *
  * Record ueber den Enum-Typ ohne Standardzweig, aus demselben Grund wie im
  * StatusBadge: eine vierte Rolle bricht den Typecheck, sobald sie im Typ
- * steht. Solange Role oben von Hand gefuehrt wird, greift das erst beim
- * Nachtragen; ab KAN-30 kommt der Typ aus der generierten schema.d.ts.
+ * steht. Der Typ kommt seit KAN-30 aus der generierten schema.d.ts.
  */
 const roleClasses: Record<Role, string> = {
   STUDENT: "bg-role-student-bg text-role-student-fg",

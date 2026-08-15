@@ -1,23 +1,14 @@
 import { useTranslation } from "react-i18next"
 
+import type { ProjectStatus } from "@/api/types"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-
-/**
- * Projektstatus nach API-Contract 2.2. Der Wert laeuft unveraendert durch
- * den Code; uebersetzt wird nur die Anzeige, ueber project.status.<WERT>.
- * Sobald KAN-30 die generierte schema.d.ts liefert, kommt der Typ von dort
- * und diese Definition entfaellt.
- */
-export type ProjectStatus =
-  "DRAFT" | "SUBMITTED" | "APPROVED" | "PUBLISHED" | "REVISION"
 
 /*
  * Record ueber den Enum-Typ, bewusst ohne Standardzweig: ein sechster Status
  * bricht den Typecheck, sobald er im Typ steht, statt still auf Grau
- * zurueckzufallen. Solange ProjectStatus oben von Hand gefuehrt wird, greift
- * das erst beim Nachtragen; ab KAN-30 kommt der Typ aus der generierten
- * schema.d.ts und die Zusage traegt gegen den Contract selbst.
+ * zurueckzufallen. Der Typ kommt seit KAN-30 aus der generierten
+ * schema.d.ts, die Zusage traegt damit gegen den Contract selbst (2.2).
  * Die Tokennamen tragen woertlich die Enum-Werte in
  * Kleinschreibung, deshalb braucht die Zuordnung keine Uebersetzungstabelle.
  * Jedes Paar nutzt sein eigenes -fg, nie muted-foreground: das sieht fast
