@@ -1,9 +1,9 @@
 import { screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { renderWithProviders } from "@/test/render"
+import { renderWithProviders } from "@/tests/render"
 
-import { ProjectCard } from "./ProjectCard"
+import { ProjectCard } from "@/components/common/ProjectCard"
 
 const faculty = { name: "Fakultät 4", abbreviation: "FK4" }
 const author = { firstName: "Mira", lastName: "Beispiel" }

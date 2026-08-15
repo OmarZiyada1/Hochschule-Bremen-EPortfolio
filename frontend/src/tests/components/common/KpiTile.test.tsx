@@ -1,9 +1,9 @@
 import { screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { renderWithProviders } from "@/test/render"
+import { renderWithProviders } from "@/tests/render"
 
-import { KpiTile } from "./KpiTile"
+import { KpiTile } from "@/components/common/KpiTile"
 
 describe("KpiTile", () => {
   it("zeigt Kennzahl und Beschriftung", () => {

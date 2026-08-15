@@ -3,9 +3,9 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import i18n from "@/i18n"
-import { renderWithProviders } from "@/test/render"
+import { renderWithProviders } from "@/tests/render"
 
-import { LanguageToggle } from "./LanguageToggle"
+import { LanguageToggle } from "@/components/common/LanguageToggle"
 
 describe("LanguageToggle", () => {
   /* Die i18n-Instanz ist ein Modul-Singleton: ohne Ruecksetzen startet der

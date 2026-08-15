@@ -1,9 +1,9 @@
 import { screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { renderWithProviders } from "@/test/render"
+import { renderWithProviders } from "@/tests/render"
 
-import { Pill, type PillTone } from "./Pill"
+import { Pill, type PillTone } from "@/components/common/Pill"
 
 const tones: PillTone[] = ["neutral", "info", "success", "warning", "danger"]
 

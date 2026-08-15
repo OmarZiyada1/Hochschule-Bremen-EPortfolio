@@ -1,9 +1,9 @@
 import { screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { renderWithProviders } from "@/test/render"
+import { renderWithProviders } from "@/tests/render"
 
-import { StatusBadge, type ProjectStatus } from "./StatusBadge"
+import { StatusBadge, type ProjectStatus } from "@/components/common/StatusBadge"
 
 /*
  * Getestet wird die sichtbare Oberflaeche: der Enum-Wert laeuft unveraendert

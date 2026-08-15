@@ -1,9 +1,9 @@
 import { screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { renderWithProviders } from "@/test/render"
+import { renderWithProviders } from "@/tests/render"
 
-import { Sidebar, SidebarItem } from "./Sidebar"
+import { Sidebar, SidebarItem } from "@/components/layout/Sidebar"
 
 describe("Sidebar", () => {
   it("traegt einen eigenen Namen und listet ihre Eintraege", () => {

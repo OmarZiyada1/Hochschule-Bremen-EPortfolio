@@ -1,9 +1,9 @@
 import { screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { renderWithProviders } from "@/test/render"
+import { renderWithProviders } from "@/tests/render"
 
-import { Footer } from "./Footer"
+import { Footer } from "@/components/layout/Footer"
 
 describe("Footer", () => {
   it("zeigt Bildmarke, Beschreibung und beide Linkspalten", () => {

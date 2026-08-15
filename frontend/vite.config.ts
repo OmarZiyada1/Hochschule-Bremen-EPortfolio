@@ -60,7 +60,7 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
-    setupFiles: ["./src/test/setup.ts"],
+    setupFiles: ["./src/tests/setup.ts"],
     // Die Tokenschicht wird ueber tokens.test.ts gegen die Quelldatei
     // geprueft, nicht ueber gerendertes CSS. Tailwind im Testlauf zu
     // uebersetzen kostet Zeit und belegt nichts zusaetzlich.

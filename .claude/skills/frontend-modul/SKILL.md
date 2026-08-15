@@ -229,10 +229,15 @@ Deutsch ist die Standardsprache.
 - Ein neuer Schlüssel wird in **beiden** Dateien angelegt. Ein Schlüssel nur
   in `de.json` fällt im englischen Betrieb als roher Schlüsselname auf.
 
-## 6. Tests (`features/<feature>/*.test.tsx`)
+## 6. Tests (`src/tests/`, gespiegelte Quellstruktur)
 
 Tests sind Teil jedes Tickets, wie im Backend. Vitest, Testing Library,
-Serverantworten über MSW.
+Serverantworten über MSW. Testdateien liegen nicht neben dem Prüfling,
+sondern unter `src/tests/` in einem Baum, der die Quellstruktur spiegelt
+(seit KAN-62): `src/features/home/HomePage.tsx` wird durch
+`src/tests/features/home/HomePage.test.tsx` geprüft. Der Prüfling wird über
+den Alias importiert (`@/features/home/HomePage`), nie relativ; die
+Render-Hilfe `renderWithProviders` kommt aus `@/tests/render`.
 
 Pflichtfälle je Ansicht:
 

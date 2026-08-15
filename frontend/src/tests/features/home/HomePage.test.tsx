@@ -2,9 +2,9 @@ import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it } from "vitest"
 
-import { renderWithProviders } from "@/test/render"
+import { renderWithProviders } from "@/tests/render"
 
-import HomePage from "./HomePage"
+import HomePage from "@/features/home/HomePage"
 
 describe("HomePage", () => {
   it("zeigt den Seitentitel als einzige Ueberschrift erster Ebene", () => {

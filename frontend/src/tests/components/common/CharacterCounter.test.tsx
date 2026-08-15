@@ -1,9 +1,9 @@
 import { screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { renderWithProviders } from "@/test/render"
+import { renderWithProviders } from "@/tests/render"
 
-import { CharacterCounter } from "./CharacterCounter"
+import { CharacterCounter } from "@/components/common/CharacterCounter"
 
 /* max=100 ergibt eine Ansageschwelle von 10 Zeichen (ein Zehntel, mindestens
    fuenf); angesagt wird darunter in Schritten von fuenf. */

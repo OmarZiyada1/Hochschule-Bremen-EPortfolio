@@ -3,9 +3,9 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import i18n from "@/i18n"
-import { renderWithProviders } from "@/test/render"
+import { renderWithProviders } from "@/tests/render"
 
-import { NavBar } from "./NavBar"
+import { NavBar } from "@/components/layout/NavBar"
 
 describe("NavBar", () => {
   /* Die i18n-Instanz ist ein Modul-Singleton; der Sprachtest unten wuerde

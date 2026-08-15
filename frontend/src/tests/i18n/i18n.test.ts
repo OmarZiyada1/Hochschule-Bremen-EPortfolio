@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
-import de from "./de.json"
-import en from "./en.json"
+import de from "@/i18n/de.json"
+import en from "@/i18n/en.json"
 
 /*
  * Ein Schluessel, den es nur in de.json gibt, faellt im englischen Betrieb
