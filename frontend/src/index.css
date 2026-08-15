@@ -21,3 +21,27 @@
 @import "shadcn/tailwind.css";
 @import "./styles/tokens/tokens.css";
 @import "./styles/tokens/typography-tokens.css";
+
+/*
+ * shadcn-eigene Basisvariable, kein Wert aus der Figma-Collection. Sie steht
+ * genau hier, weil der Kopfkommentar oben diese Datei als Ablage fuer
+ * CLI-Variablen bestimmt: in tokens.css waere sie spaeter nicht mehr als
+ * Fremdkoerper zu erkennen.
+ *
+ * Gebraucht wird sie von input-group.tsx, das seine Innenradien als
+ * calc(var(--radius) - 3px) bzw. - 5px ableitet (command.tsx baut darauf auf).
+ * Ohne Definition ist das calc() ungueltig, die Deklaration faellt heraus und
+ * die Ecken bleiben eckig, ohne dass ein Test, ein Lint oder der Typecheck
+ * anspringt. Genau dieser Fehlermodus ist im Review zu KAN-29 aufgefallen;
+ * tokens.test.ts prueft seitdem jede Registry-Variable auf ihre Definition.
+ *
+ * Die abgeleiteten 5px und 3px liegen bewusst neben der Sechserskala: es gibt
+ * keinen Startwert, der beide Ableitungen auf eine Figma-Stufe legt (die
+ * Abstaende 3 und 5 passen in 0/4/8/12/16 nicht hinein). Die Skala bindet die
+ * Flaechen, die wir selbst setzen, nicht die Innenteile einer Registry-Datei;
+ * die Alternative waere, input-group.tsx zu editieren, und das waere der
+ * teurere Verstoss (Skill frontend-shadcn, Abschnitt 6).
+ */
+:root {
+  --radius: var(--radius-control); /* 8px */
+}

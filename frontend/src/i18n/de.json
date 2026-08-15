@@ -1,17 +1,86 @@
 {
   "app": {
-    "name": "E-Portfolio Hochschule Bremen"
+    "name": "E-Portfolio Hochschule Bremen",
+    "institution": "Hochschule Bremen",
+    "productLabel": "E-Portfolio"
   },
   "common": {
     "theme": {
       "toDark": "Dunklen Modus einschalten",
       "toLight": "Hellen Modus einschalten"
+    },
+    "action": {
+      "close": "Schließen"
+    },
+    "breadcrumb": {
+      "label": "Seitenpfad",
+      "more": "Weitere Ebenen"
+    },
+    "pagination": {
+      "label": "Seitennummerierung",
+      "previous": "Zurück",
+      "next": "Weiter",
+      "previousPage": "Zur vorigen Seite",
+      "nextPage": "Zur nächsten Seite",
+      "morePages": "Weitere Seiten"
+    },
+    "command": {
+      "title": "Suche",
+      "description": "Suchbegriff eingeben, die Ergebnisse werden beim Tippen gefiltert."
+    },
+    "calendar": {
+      "previousMonth": "Zum vorigen Monat",
+      "nextMonth": "Zum nächsten Monat"
+    },
+    "search": {
+      "label": "Suche"
+    },
+    "filter": {
+      "all": "Alle"
+    },
+    "characterCounter": {
+      "remaining_one": "Noch {{count}} Zeichen",
+      "remaining_other": "Noch {{count}} Zeichen",
+      "tooMany_one": "{{count}} Zeichen zu viel",
+      "tooMany_other": "{{count}} Zeichen zu viel"
+    },
+    "nav": {
+      "label": "Hauptnavigation",
+      "home": "Startseite",
+      "projects": "Projektbibliothek",
+      "myPortfolio": "Mein Portfolio",
+      "login": "Anmelden",
+      "logout": "Abmelden",
+      "profile": "Profil",
+      "openMenu": "Menü öffnen"
+    },
+    "footer": {
+      "imprint": "Impressum",
+      "privacy": "Datenschutz",
+      "description": "E-Portfolio-Portal für studentische Projekte und akademische Arbeiten der Hochschule Bremen.",
+      "projects": "Projektbibliothek",
+      "studyPrograms": "Studiengänge",
+      "faq": "Häufige Fragen",
+      "accessibility": "Barrierefreiheit",
+      "copyright": "© {{year}} Hochschule Bremen, Fakultät 4 Elektrotechnik und Informatik",
+      "tagline": "Mit Sorgfalt für die HSB-Gemeinschaft gebaut",
+      "group": {
+        "platform": "Plattform",
+        "legal": "Rechtliches"
+      }
+    },
+    "language": {
+      "switchTo": {
+        "de": "Auf Deutsch umschalten",
+        "en": "Auf Englisch umschalten"
+      }
     }
   },
   "home": {
     "title": "E-Portfolio Hochschule Bremen",
     "intro": "Die Anwendung ist aufgesetzt. Die fachlichen Ansichten entstehen mit ihren Tickets.",
-    "tokenGallery": "Zur Tokenschicht"
+    "tokenGallery": "Zur Tokenschicht",
+    "componentGallery": "Zur Komponentenbibliothek"
   },
   "tokens": {
     "title": "Tokenschicht",
@@ -27,7 +96,9 @@
         "role": "Rollen",
         "badge": "Neutrales Badge",
         "brand": "Markenflächen",
-        "feedback": "UI-Feedback"
+        "feedback": "UI-Feedback",
+        "cover": "Coverflächen",
+        "nav": "Kopfleiste"
       }
     },
     "radius": {
@@ -45,6 +116,97 @@
       "variants": "Varianten",
       "sizes": "Größen",
       "label": "Schaltfläche"
+    },
+    "components": {
+      "title": "Komponentenbibliothek",
+      "intro": "Alle mit KAN-29 erzeugten Primitiven und die von Hand komponierten Domänenkomponenten. Hover- und Fokuszustände zeigen sich beim Bedienen; Inaktiv-, Fehler- und Ladezustand stehen daneben. Alles in hell und dunkel prüfen.",
+      "group": {
+        "form": "Formularelemente",
+        "actions": "Schaltflächen und Umschalter",
+        "overlay": "Überlagerungen",
+        "navigation": "Navigation",
+        "data": "Datenanzeige",
+        "domain": "Domänenkomponenten",
+        "admin": "Administrationsseite"
+      },
+      "demo": {
+        "titleLabel": "Titel",
+        "titlePlaceholder": "Titel des Projekts",
+        "summaryLabel": "Kurzbeschreibung",
+        "disabledLabel": "Inaktives Feld",
+        "invalidLabel": "Feld mit Fehler",
+        "fieldDescription": "Der Titel erscheint in Listen und auf der Detailseite.",
+        "fieldError": "Der Titel darf höchstens 100 Zeichen lang sein.",
+        "checkboxLabel": "Zeile auswählen",
+        "checkboxCheckedLabel": "Ausgewählte Zeile",
+        "checkboxDisabledLabel": "Inaktive Zeile",
+        "selectLabel": "Fakultät",
+        "bold": "Fett",
+        "italic": "Kursiv",
+        "underline": "Unterstrichen",
+        "tooltipTrigger": "Projekt löschen",
+        "dialogTrigger": "Dialog öffnen",
+        "dialogTitle": "Beispieldialog",
+        "dialogDescription": "So sieht ein modaler Dialog mit Titel und Beschreibung aus.",
+        "cancel": "Abbrechen",
+        "confirm": "Übernehmen",
+        "delete": "Löschen",
+        "alertDialogTitle": "Projekt löschen?",
+        "alertDialogDescription": "Diese Aktion kann nicht rückgängig gemacht werden.",
+        "sheetTrigger": "Sheet öffnen",
+        "sheetTitle": "Seitenblatt",
+        "sheetDescription": "Inhalt neben der Seite, etwa die Navigation auf schmalen Bildschirmen.",
+        "popoverTrigger": "Popover öffnen",
+        "popoverTitle": "Hinweis",
+        "popoverBody": "Ein Popover trägt kurze Zusatzinformationen oder kleine Formulare, etwa den Kalender des Zeitraumfilters.",
+        "menuTrigger": "Menü öffnen",
+        "commandPlaceholder": "Suchen …",
+        "commandEmpty": "Keine Ergebnisse.",
+        "commandGroup": "Seiten",
+        "tabEdit": "Bearbeiten",
+        "tabPreview": "Vorschau",
+        "tabHistory": "Historie",
+        "tabBody": "Platzhalterinhalt für „{{tab}}“.",
+        "collapsibleTrigger": "Fakultät 4",
+        "collapsibleBody": "Internationaler Studiengang Medieninformatik",
+        "tableCaption": "Beispiel: Projektliste der Administrationsseite",
+        "tableTitle": "Titel",
+        "tableStatus": "Status",
+        "tableSemester": "Semester",
+        "alertTitle": "Hinweis",
+        "alertBody": "Die Redaktion hat Anmerkungen hinterlassen.",
+        "alertDestructiveTitle": "Fehler",
+        "alertDestructiveBody": "Die Änderung konnte nicht gespeichert werden.",
+        "projectTitle": "Campus-Garten an der Werderstraße",
+        "projectSummary": "Studierende gestalten die Freifläche hinter dem AB-Gebäude als offenen Lernort mit Hochbeeten, Sitzstufen und einer Wetterstation.",
+        "faculty": "Fakultät 4",
+        "program": "Medieninformatik",
+        "module": "Digitale Medien",
+        "category": "Semesterprojekt",
+        "semester": "SoSe 2026",
+        "kpiFaculties": "Beteiligte Fakultäten",
+        "emptyTitle": "Keine Projekte gefunden",
+        "emptyDescription": "Für die gewählten Filter gibt es keine Treffer.",
+        "emptyAction": "Filter zurücksetzen",
+        "userFirstName": "Mira",
+        "userLastName": "Beispiel",
+        "navbarSignedOut": "Nicht angemeldet",
+        "navbarSignedIn": "Angemeldet",
+        "searchPlaceholder": "Titel oder Stichwort",
+        "facultyAbbreviation": "FK4",
+        "userEmail": "mira.beispiel@stud.hs-bremen.de",
+        "kpiTotal": "Projekte gesamt",
+        "kpiTrend": "+12 diesen Monat",
+        "rowActions": "Aktionen zur Zeile",
+        "sidebarDashboard": "Dashboard",
+        "sidebarProjects": "Projekte",
+        "sidebarTop10": "Top 10",
+        "sidebarUsers": "Nutzer:innen",
+        "sidebarCategories": "Kategorien",
+        "sidebarStudyStructure": "Studienstruktur",
+        "top10Feature": "Vordere Plätze",
+        "top10Compact": "Hintere Plätze"
+      }
     }
   },
   "project": {
@@ -54,6 +216,15 @@
       "APPROVED": "Genehmigt",
       "PUBLISHED": "Veröffentlicht",
       "REVISION": "Überarbeitung"
+    },
+    "type": {
+      "REGULAR": "Reguläres Projekt",
+      "PAPER": "Paper",
+      "THESIS": "Thesis"
+    },
+    "card": {
+      "reactions_one": "{{count}} Reaktion",
+      "reactions_other": "{{count}} Reaktionen"
     }
   },
   "user": {
@@ -62,5 +233,8 @@
       "EDITOR": "Redakteur:in",
       "ADMIN": "Admin"
     }
+  },
+  "top10": {
+    "position": "Platz {{position}}"
   }
 }

@@ -166,12 +166,59 @@
   --badge-neutral-bg: var(--neutral-100);
   --badge-neutral-fg: var(--neutral-600);
 
+  /* Toene der generischen Pille (Foundation 3.6, neu mit KAN-29). Sie
+     zeigen auf dieselben Primitive-Paare wie die Statusfarben, sind aber
+     eigene Rollen: eine Pille "Warnung" in der Administrationsseite hat
+     nichts mit dem Projektstatus SUBMITTED zu tun, und wer die Statusskala
+     nachzieht, soll nicht ungefragt jede Pille mitfaerben. Den Ton neutral
+     bedient badge-neutral-*, dafuer braucht es kein zweites Paar. */
+  --pill-info-bg: var(--blau-100);
+  --pill-info-fg: var(--blau-800);
+  --pill-success-bg: var(--gruen-100);
+  --pill-success-fg: var(--gruen-800);
+  --pill-warning-bg: var(--bernstein-100);
+  --pill-warning-fg: var(--bernstein-800);
+  --pill-danger-bg: var(--rot-100);
+  --pill-danger-fg: var(--rot-800);
+
   /* Markenflaechen (Foundation 3.7). surface-brand-muted ist Zweittext
      ausschliesslich auf einer Markenflaeche, nie auf card. */
   --surface-brand: var(--blau-800);
   --surface-brand-foreground: var(--basis-weiss);
   --surface-highlight: var(--blau-700);
   --surface-brand-muted: var(--blau-200);
+
+  /* Coverflaeche der Projekt- und Top-10-Kacheln (Foundation 3.8, neu mit
+     KAN-29). Sie ist eine eigene Rolle und nicht surface-brand, weil auf ihr
+     zwei Dinge zugleich liegen: der Titel in cover-foreground und die
+     Fakultaetspille in cover-badge. Wuerde die Kachel surface-brand nehmen,
+     faellt die Pille im dunklen Modus mit der Flaeche zusammen, denn dort ist
+     surface-brand bewusst neutral und nicht blau (Kommentar unten).
+
+     Der Verlauf steht als fertige Rolle und nicht als zwei Farbrollen mit
+     einem linear-gradient in der Komponente: sonst stuenden Winkel und
+     Haltepunkte in jeder Kachel erneut. Beide Endpunkte sind Primitives,
+     die Ebenentrennung bleibt also gewahrt.
+     Kontrast auf dem helleren Ende blau/600: cover-foreground 6,8:1,
+     cover-muted 4,6:1; auf blau/800 entsprechend 10,6:1 und 7,2:1. */
+  --cover: linear-gradient(150deg, var(--blau-600) 15%, var(--blau-800) 85%);
+  --cover-foreground: var(--basis-weiss);
+  --cover-muted: var(--blau-200);
+  --cover-badge: var(--blau-800);
+
+  /* Abdunkelnder Film unter dem Kacheltitel, sobald ein echtes Coverbild
+     hinter ihm liegt. Auf dem Verlauf braucht der Titel ihn nicht, dort ist
+     der Kontrast berechenbar; auf einem hochgeladenen Foto ist er es nicht,
+     und ohne Film gibt es fuer weissen Titeltext keine Zusage nach
+     SC 1.4.3. Derselbe Rohwert wie overlay, aber eine eigene Rolle: die
+     beiden werden unabhaengig voneinander nachgezogen. */
+  --cover-scrim: var(--neutral-950-a50);
+
+  /* Kopfleiste (Foundation 3.9, neu mit KAN-29). Eigene Rolle aus demselben
+     Grund: die Leiste traegt weisse Navigation auf blauem Verlauf, waehrend
+     surface-brand im dunklen Modus neutral wird. */
+  --nav: linear-gradient(90deg, var(--blau-800), var(--blau-600));
+  --nav-foreground: var(--basis-weiss);
 
   /* UI-Feedback (Foundation 3.7), nicht zu verwechseln mit status-*. */
   --warning: var(--bernstein-700);
@@ -250,6 +297,15 @@
   --badge-neutral-bg: var(--neutral-800);
   --badge-neutral-fg: var(--neutral-300);
 
+  --pill-info-bg: var(--blau-950);
+  --pill-info-fg: var(--blau-400);
+  --pill-success-bg: var(--gruen-950);
+  --pill-success-fg: var(--gruen-400);
+  --pill-warning-bg: var(--bernstein-950);
+  --pill-warning-fg: var(--bernstein-400);
+  --pill-danger-bg: var(--rot-950);
+  --pill-danger-fg: var(--rot-400);
+
   /* surface-brand ist im dunklen Modus bewusst nicht blau, sonst setzt sich
      die Flaeche nicht vom Seitenhintergrund ab. surface-highlight wird
      dunkler statt heller (Foundation 3.7). */
@@ -257,6 +313,21 @@
   --surface-brand-foreground: var(--neutral-100);
   --surface-highlight: var(--blau-900);
   --surface-brand-muted: var(--blau-300);
+
+  /* Cover und Kopfleiste bleiben im dunklen Modus blau, anders als
+     surface-brand: sie sind grosse, bildhafte Flaechen und setzen sich als
+     neutrale Flaechen nicht mehr vom Seitenhintergrund ab. Verschoben wird
+     stattdessen die Rampe nach unten, damit die Flaeche zur dunklen Seite
+     passt. Kontrast auf blau/950: cover-foreground 14,9:1,
+     cover-muted 8,4:1. */
+  --cover: linear-gradient(150deg, var(--blau-800) 15%, var(--blau-950) 85%);
+  --cover-foreground: var(--neutral-100);
+  --cover-muted: var(--blau-300);
+  --cover-badge: var(--blau-950);
+  --cover-scrim: var(--neutral-950-a70);
+
+  --nav: linear-gradient(90deg, var(--blau-950), var(--blau-900));
+  --nav-foreground: var(--neutral-100);
 
   --warning: var(--bernstein-400);
   --warning-foreground: var(--neutral-950);
@@ -319,6 +390,14 @@
   --radius-md: var(--radius-control); /*  8px */
   --radius-lg: var(--radius-card); /* 12px */
   --radius-xl: var(--radius-modal); /* 16px */
+
+  /* Befund aus KAN-29: badge.tsx nutzt rounded-4xl, und die Bruecke endete
+     bei xl. Das Badge ist in Figma eine Pille, deshalb zeigt die Stufe auf
+     radius-pill und nicht auf einen neuen freien Wert. 2xl und 3xl bleiben
+     bewusst ohne Zeile: keine erzeugte Komponente nutzt sie, und ein Alias
+     ohne Verwendung fliegt nach derselben Regel raus wie eine Primitive
+     ohne Semantic-Referenz. */
+  --radius-4xl: var(--radius-pill); /* 9999px */
 }
 
 @theme inline {
@@ -375,10 +454,29 @@
   --color-badge-neutral-bg: var(--badge-neutral-bg);
   --color-badge-neutral-fg: var(--badge-neutral-fg);
 
+  --color-pill-info-bg: var(--pill-info-bg);
+  --color-pill-info-fg: var(--pill-info-fg);
+  --color-pill-success-bg: var(--pill-success-bg);
+  --color-pill-success-fg: var(--pill-success-fg);
+  --color-pill-warning-bg: var(--pill-warning-bg);
+  --color-pill-warning-fg: var(--pill-warning-fg);
+  --color-pill-danger-bg: var(--pill-danger-bg);
+  --color-pill-danger-fg: var(--pill-danger-fg);
+
   --color-surface-brand: var(--surface-brand);
   --color-surface-brand-foreground: var(--surface-brand-foreground);
   --color-surface-highlight: var(--surface-highlight);
   --color-surface-brand-muted: var(--surface-brand-muted);
+
+  /* Von den Cover- und Kopfleisten-Rollen kommen nur die Farben hierher.
+     --cover und --nav sind Verlaeufe und damit keine Farbe: Tailwind wuerde
+     aus ihnen bg-cover erzeugen, was bereits eine Groessen-Utility ist.
+     Sie haengen deshalb weiter unten als eigene Klassen. */
+  --color-cover-foreground: var(--cover-foreground);
+  --color-cover-muted: var(--cover-muted);
+  --color-cover-badge: var(--cover-badge);
+  --color-cover-scrim: var(--cover-scrim);
+  --color-nav-foreground: var(--nav-foreground);
 
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
@@ -394,6 +492,33 @@
      Nachweis-Komponente wirklich braucht, nicht die halbe Standardpalette
      auf Verdacht (KAN-6, Abschnitt 3.3). */
   --color-transparent: transparent;
+
+  /* Aus demselben Grund wieder angebunden wie transparent, und ebenfalls
+     keine Farbe aus Figma: der Punkt im StatusBadge traegt die Farbe des
+     Labels neben sich. Ohne bg-current muesste die Zuordnung von Status zu
+     Farbe ein zweites Mal aufgeschrieben werden, einmal fuer den Text und
+     einmal fuer den Punkt, und beide koennten auseinanderlaufen. */
+  --color-current: currentColor;
+}
+
+/* ============================================================
+ * Flaechenklassen fuer die beiden Verlaufsrollen (KAN-29).
+ *
+ * Sie stehen hier aus demselben Grund, aus dem die Schriftrollen als
+ * Klassen in typography-tokens.css stehen: eine Komponente soll die Rolle
+ * benennen, nicht ihren Aufbau wiederholen. bg-[image:var(--cover)] in
+ * jeder Kachel waere derselbe Wert an mehreren Orten.
+ * ============================================================ */
+@layer components {
+  .surface-cover {
+    background-image: var(--cover);
+    color: var(--cover-foreground);
+  }
+
+  .surface-nav {
+    background-image: var(--nav);
+    color: var(--nav-foreground);
+  }
 }
 
 /* ============================================================
@@ -431,6 +556,21 @@
   input[type="radio"] {
     min-block-size: 24px;
     min-inline-size: 24px;
+  }
+
+  /* Tailwind v4 stellt Buttons auf cursor: default um (shadcn-Doku,
+     Abschnitt Cursor). Diese Regel stellt den Zeiger wieder her; inaktive
+     Schaltflaechen bleiben beim Standardcursor, damit der Zeiger nicht
+     Bedienbarkeit verspricht, die es gerade nicht gibt.
+
+     Beide Schreibweisen sind noetig, und das ist keine Vorsicht auf Verdacht:
+     :disabled gibt es nur an Formularelementen. Base UI meldet den inaktiven
+     Zustand ueberall sonst ueber aria-disabled, etwa an der Monatsnavigation
+     von calendar.tsx. Stuende hier nur :disabled, zeigte eine abgeblendete
+     Schaltflaeche weiter den Zeigefinger (Befund aus dem Review zu KAN-29). */
+  button:not(:disabled):not([aria-disabled="true"]),
+  [role="button"]:not(:disabled):not([aria-disabled="true"]) {
+    cursor: pointer;
   }
 
   @media (prefers-reduced-motion: reduce) {

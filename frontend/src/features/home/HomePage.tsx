@@ -20,10 +20,22 @@ export default function HomePage() {
 
       <p className="type-body text-muted-foreground">{t("home.intro")}</p>
 
+      {/* Bewusst kein <nav>: ein Navigationsbereich ohne zugaenglichen Namen
+          erscheint in der Landmark-Liste als zweites, unbenanntes
+          "navigation" neben der Hauptnavigation aus KAN-7. Zwei Links, die
+          es nur im Entwicklungs-Build gibt, rechtfertigen keine Landmarke. */}
       {import.meta.env.DEV ? (
-        <Link className="type-body text-primary underline" to="/dev/tokens">
-          {t("home.tokenGallery")}
-        </Link>
+        <div className="flex flex-col gap-2">
+          <Link className="type-body text-primary underline" to="/dev/tokens">
+            {t("home.tokenGallery")}
+          </Link>
+          <Link
+            className="type-body text-primary underline"
+            to="/dev/components"
+          >
+            {t("home.componentGallery")}
+          </Link>
+        </div>
       ) : null}
     </main>
   )

@@ -427,17 +427,20 @@ frontend/src/
   api/                  client.ts, errors.ts, schema.d.ts, page.ts
   components/
     ui/                 shadcn/Base-UI-Primitiven (generiert)
-    layout/             NavBar, Footer, Breadcrumb
-    common/             ProjectCard, StatusBadge, RoleBadge, EmptyState
+    layout/             NavBar, Footer, Sidebar
+    common/             ProjectCard, StatusBadge, Top10Card, EmptyState, …
   features/<feature>/
     <Feature>Page.tsx
     components/
     hooks/              useProjectList, useProjectDetail
   i18n/                 de.json, en.json, index.ts
-  lib/
+  lib/                  utils.ts, name.ts, project.ts, theme.ts
   routes/
   styles/tokens/
 ```
+
+Breadcrumb hat bewusst keine eigene Hülle: die Primitive aus
+`components/ui/` reicht, eine Hülle trüge kein Domänenwissen (KAN-29).
 
 Der blockbasierte Editor liegt unter `features/project-content/`, seine
 Hauptkomponente heißt `BlockEditor`. So bezeichnet „editor" im Code

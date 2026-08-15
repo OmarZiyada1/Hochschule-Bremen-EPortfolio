@@ -53,4 +53,12 @@ describe("HomePage", () => {
       screen.getByRole("link", { name: "Zur Tokenschicht" })
     ).toHaveAttribute("href", "/dev/tokens")
   })
+
+  it("fuehrt im Entwicklungs-Build zur Komponentenbibliothek", () => {
+    renderWithProviders(<HomePage />)
+
+    expect(
+      screen.getByRole("link", { name: "Zur Komponentenbibliothek" })
+    ).toHaveAttribute("href", "/dev/components")
+  })
 })

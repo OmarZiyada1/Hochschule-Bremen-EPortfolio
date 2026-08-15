@@ -4,9 +4,12 @@ Praktischer Teil einer Bachelorthesis an der Hochschule Bremen, Fakultät 4.
 Das System soll Studierenden erlauben, Projektarbeiten als E-Portfolio zu
 veröffentlichen; Redakteur:innen geben Beiträge frei, eine Top-10-Liste hebt
 ausgewählte Projekte hervor. Umgesetzt wird ein Spring-Boot-Backend mit
-PostgreSQL und ein React-Frontend. Der Stand ist ein früher Prototyp: das
-Datenmodell und die Anmeldung stehen, die fachlichen Endpoints größtenteils
-noch nicht (siehe [docs/STAND.md](docs/STAND.md)).
+PostgreSQL und ein React-Frontend. Das Backend deckt den API-Contract
+vollständig ab (Auth, Projekte, Blöcke, Workflow, Kommentare, Dateien,
+Top 10, Administration, Registrierung); im Frontend stehen Tokenschicht und
+Komponentenbibliothek, die Seiten entstehen ticketweise. Verbindlicher
+Arbeitsstand ist Jira (Projekt KAN), nicht
+[docs/STAND.md](docs/STAND.md).
 
 ## Tech-Stack
 
@@ -18,7 +21,7 @@ Alle Versionen aus `backend/pom.xml` bzw. `frontend/package.json`.
 | Auth       | JJWT 0.12.6 (HS512), BCrypt                          |
 | Datenbank  | PostgreSQL 16 (Docker-Image `postgres:16`), Flyway    |
 | Build      | Maven Wrapper (`backend/mvnw`)                        |
-| Frontend   | React 19, TypeScript 6, Vite 8, Tailwind CSS 4, shadcn/ui, pnpm |
+| Frontend   | React 19, TypeScript 6, Vite 8, Tailwind CSS 4, shadcn/ui auf Base UI, pnpm |
 | API-Doku   | springdoc-openapi 2.8.6 (Swagger-UI, nur im Profil `dev`) |
 
 ## Repo-Aufbau

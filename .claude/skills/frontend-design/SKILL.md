@@ -77,19 +77,21 @@ Kommentare direkt in `tokens.css`). Das Figma-Design ist nur hell angelegt;
 neue dunkle Werte werden abgeleitet und auf Kontrast geprüft, nicht
 geschätzt (Confluence „Designentscheidungen", Abschnitt 2.8).
 
-**Die vier Brückenzeilen sind kein Fremdkörper.** Im `@theme inline`-Block
+**Die fünf Brückenzeilen sind kein Fremdkörper.** Im `@theme static`-Block
 stehen zusätzlich `--radius-sm`, `--radius-md`, `--radius-lg` und
-`--radius-xl` als Aliase auf `selection`, `control`, `card` und `modal`.
-Sie tragen keinen eigenen Wert und stehen nicht in Figma: sie sind die
-zweite Adresse der sechs Stufen, unter der die per CLI erzeugten Komponenten
-sie finden. Wer sie beim Abgleich gegen die Figma-Collection als
-überzähligen Token löscht, macht jede shadcn-Primitive still eckig, ohne
-dass ein Test, ein Lint oder ein Typecheck darauf anspringt
+`--radius-xl` als Aliase auf `selection`, `control`, `card` und `modal`,
+seit KAN-29 dazu `--radius-4xl` als Alias auf `pill` (das Badge der
+Registry nutzt `rounded-4xl` und ist in Figma eine Pille). Sie tragen
+keinen eigenen Wert und stehen nicht in Figma: sie sind die zweite Adresse
+der sechs Stufen, unter der die per CLI erzeugten Komponenten sie finden.
+Wer sie beim Abgleich gegen die Figma-Collection als überzähligen Token
+löscht, macht jede shadcn-Primitive still eckig, ohne dass ein Test, ein
+Lint oder ein Typecheck darauf anspringt
 (Skill `frontend-shadcn`, Abschnitt 7).
 
-**Vier Zeilen, aber sieben Stufen auf der Gegenseite.** shadcns Skala führt
-zusätzlich `2xl`, `3xl` und `4xl`. Die bleiben bewusst ohne Brückenzeile,
-weil die Figma-Collection dort endet und kein Token auf Vorrat entsteht.
+**Fünf Zeilen, aber sieben Stufen auf der Gegenseite.** shadcns Skala führt
+zusätzlich `2xl` und `3xl`. Die bleiben bewusst ohne Brückenzeile, weil
+keine erzeugte Komponente sie nutzt und kein Token auf Vorrat entsteht.
 Taucht eine solche Klasse in einer erzeugten Komponente auf, ist das ein
 Befund in der Tokenschicht und wird dort aufgelöst, nicht im Komponentencode.
 
@@ -98,8 +100,8 @@ Befund in der Tokenschicht und wird dort aufgelöst, nicht im Komponentencode.
 | Ort | Was dort hingehört |
 | --- | --- |
 | `components/ui/` | shadcn-Primitiven auf Base UI, **ausschließlich per CLI erzeugt**, Bibliotheksnamen unverändert |
-| `components/layout/` | NavBar, Footer, Breadcrumb |
-| `components/common/` | alles mit Domänenbezug: `ProjectCard`, `StatusBadge`, `RoleBadge`, `EmptyState`, `KpiTile` |
+| `components/layout/` | NavBar, Footer, Sidebar |
+| `components/common/` | alles mit Domänenbezug: `ProjectCard`, `StatusBadge`, `Top10Card`, `Pill`, `EmptyState`, `KpiTile` und weitere; Breadcrumb hat bewusst **keine** Hülle, die Primitive reicht |
 | `features/<feature>/components/` | nur in diesem Feature verwendet |
 
 Wird ein Baustein von der zweiten Seite gebraucht, wandert er nach oben,
@@ -174,6 +176,15 @@ Beim Bauen jeder Komponente:
 - **Schaltflächen mit reinem Symbol** brauchen einen zugänglichen Namen.
 - **Überschriften** bilden eine Hierarchie ohne übersprungene Ebenen
   (Erfolgskriterium 1.3.1). Sie werden nicht für Schriftgrößen missbraucht.
+  **Die Ebene setzt die Domänenhülle, nicht die Primitive.** Jede
+  Title-Komponente der Registry (`CardTitle`, `EmptyTitle`, `DialogTitle`)
+  rendert ein `div`; sie kann die Ebene nicht kennen, weil sie nicht weiß,
+  worunter sie sitzt. Also nimmt die Hülle sie als Prop entgegen und legt ein
+  echtes `h2`/`h3` hinein, wie `ProjectCard` es für `CardTitle` tut. Fehlt
+  das, trägt die Seite keinen einzigen Sprungpunkt: in KAN-29 war der
+  Leerzustand jeder Liste auf diese Weise für die Überschriftennavigation
+  unsichtbar, und der Test hat es nicht gemerkt, weil er über `getByText`
+  statt über `getByRole("heading")` prüfte.
 - **Statusmeldungen** (Autosave, Fehler, Trefferzahl) laufen über eine
   Live-Region, sonst bleiben sie für Screenreader unsichtbar.
 - **Bilder** aus Blöcken tragen den `alt`-Text aus den Node-Attributen
@@ -196,6 +207,31 @@ Beim Bauen jeder Komponente:
 - **Farbe allein trägt keine Information.** Ein Status ist Text plus Farbe.
   Die Fakultätsfarbe ist Schmuck; die Fakultät steht daneben.
 
+### Zustände meldet Base UI über ARIA, nicht über das DOM
+
+Seit KAN-61 liegt die Bibliothek auf Base UI, und das ändert eine Sache, die
+in jeder selbst geschriebenen CSS-Regel wiederkommt: **`:disabled` gibt es nur
+an Formularelementen.** Ein `div` oder `span` mit `role="button"`, wie Base UI
+und `react-day-picker` sie erzeugen, meldet den inaktiven Zustand über
+`aria-disabled`. Dasselbe Muster gilt für `data-checked`, `data-open` und
+`data-selected`.
+
+Eine Regel, die nur auf den DOM-Zustand hört, greift deshalb an genau den
+Stellen nicht, an denen sie gebraucht wird:
+
+```css
+/* falsch: trifft die Monatsnavigation von calendar.tsx nie */
+button:not(:disabled) { cursor: pointer; }
+
+/* richtig */
+button:not(:disabled):not([aria-disabled="true"]) { cursor: pointer; }
+```
+
+Der Befund aus KAN-29 sah harmlos aus: eine abgeblendete Schaltfläche behielt
+den Zeigefinger und versprach damit eine Bedienbarkeit, die es nicht gab.
+`tokens.test.ts` verlangt seitdem, dass jede Regel mit `:disabled` auch
+`aria-disabled` abdeckt.
+
 ## 5. Responsiv
 
 - Tabellen und breite Inhalte scrollen in ihrem eigenen Bereich. Die Seite
@@ -214,7 +250,10 @@ Beim Bauen jeder Komponente:
       `de.json` und `en.json`
 - [ ] Vollständig mit der Tastatur bedienbar, Fokus sichtbar
 - [ ] Jedes Feld beschriftet, jede Symbolschaltfläche benannt
-- [ ] Überschriftenebenen ohne Sprung
+- [ ] Überschriftenebenen ohne Sprung, über `getByRole("heading", { level })`
+      nachgewiesen statt über `getByText`; die Ebene setzt die Domänenhülle
+- [ ] Jede Zustandsregel in CSS deckt neben `:disabled` auch `aria-disabled`
+      ab (Base UI meldet Zustände über ARIA)
 - [ ] Kontrast geprüft, Abweichungen im Token korrigiert
 - [ ] Kein waagerechtes Scrollen der Seite auf 360 Pixel
 - [ ] Verbleibende Einschränkungen benannt, nicht verschwiegen

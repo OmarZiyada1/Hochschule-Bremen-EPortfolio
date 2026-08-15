@@ -11,6 +11,7 @@ import {
   buttonVariantNames,
   colorGroups,
   flattenColorTokens,
+  gradientTokens,
   radiusTokens,
   typographyRoles,
 } from "./tokenCatalog"
@@ -95,10 +96,17 @@ export default function TokenGalleryPage() {
                   key={token}
                   className="flex flex-col gap-2 rounded-card border bg-card p-3 text-card-foreground"
                 >
+                  {/* Verlaufsrollen tragen ihren Wert als background-image.
+                      Als background-color gesetzt bliebe die Musterflaeche
+                      leer, und zwar lautlos. */}
                   <span
                     aria-hidden="true"
                     className="h-10 w-full rounded-selection border"
-                    style={{ backgroundColor: `var(--${token})` }}
+                    style={
+                      gradientTokens.includes(token)
+                        ? { backgroundImage: `var(--${token})` }
+                        : { backgroundColor: `var(--${token})` }
+                    }
                   />
                   <code className="type-caption break-all">--{token}</code>
                   <code className="type-caption text-muted-foreground">

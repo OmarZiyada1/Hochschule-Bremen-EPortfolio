@@ -130,10 +130,20 @@ describe("Primitives (Foundation, Abschnitt 2)", () => {
   })
 })
 
+/*
+ * Zwei Rollen sind Verlaeufe und keine Farbe: cover traegt die Kachelflaeche
+ * der Projekt- und Top-10-Karten, nav die Kopfleiste (KAN-29). Sie bestehen
+ * wie jede andere Rolle ausschliesslich aus Aliasen auf Primitives, tragen
+ * daneben aber Winkel und Haltepunkte, und sie werden bewusst nicht als
+ * --color-* angebunden: Tailwind erzeugte daraus ein bg-cover, das dort
+ * bereits eine Groessen-Utility ist.
+ */
+const gradientRoles = ["cover", "nav"]
+
 describe("Semantic-Rollen (Foundation, Abschnitt 3)", () => {
-  it("fuehrt 55 Rollen je Modus", () => {
-    expect(semanticLight.size).toBe(55)
-    expect(semanticDark.size).toBe(55)
+  it("fuehrt 70 Rollen je Modus", () => {
+    expect(semanticLight.size).toBe(70)
+    expect(semanticDark.size).toBe(70)
   })
 
   it("nutzt in beiden Modi dieselben Rollennamen", () => {
@@ -144,13 +154,49 @@ describe("Semantic-Rollen (Foundation, Abschnitt 3)", () => {
 
   it("besteht ausschliesslich aus Aliasen auf Primitives", () => {
     for (const [name, value] of [...semanticLight, ...semanticDark]) {
+      if (gradientRoles.includes(name)) continue
+
       expect(value, `${name} ist kein Alias`).toMatch(/^var\(--[\w-]+\)$/)
       expect(primitives.has(value.slice(6, -1))).toBe(true)
     }
   })
 
+  it("baut auch die Verlaufsrollen nur aus Primitives", () => {
+    for (const name of gradientRoles) {
+      for (const value of [semanticLight.get(name)!, semanticDark.get(name)!]) {
+        expect(value, `${name} ist kein Verlauf`).toMatch(/^linear-gradient\(/)
+
+        /* Kein Rohwert zwischen den Haltepunkten: was hier steht, muss ein
+           Primitive sein, sonst waere der Verlauf die einzige Stelle im
+           Frontend mit einer Farbe ausserhalb der Ebenentrennung. */
+        const referenced = [...value.matchAll(/var\(--([\w-]+)\)/g)].map(
+          (match) => match[1]
+        )
+
+        expect(referenced.length).toBeGreaterThanOrEqual(2)
+        for (const primitive of referenced) {
+          expect(
+            primitives.has(primitive),
+            `${name} verweist auf ${primitive}, das kein Primitive ist`
+          ).toBe(true)
+        }
+      }
+    }
+  })
+
   it("bindet jede Rolle ueber @theme inline an Tailwind an", () => {
     for (const name of semanticLight.keys()) {
+      if (gradientRoles.includes(name)) {
+        /* Ein Verlauf darf gerade nicht als Farbe erscheinen. Die Flaeche
+           kommt stattdessen ueber die Klassen surface-cover und
+           surface-nav aus dem Komponentenlayer von tokens.css. */
+        expect(themeInline.has(`color-${name}`)).toBe(false)
+        expect(tokensCss).toMatch(
+          new RegExp(`background-image:\\s*var\\(--${name}\\);`)
+        )
+        continue
+      }
+
       expect(themeInline.get(`color-${name}`)).toBe(`var(--${name})`)
     }
   })
@@ -192,7 +238,13 @@ describe("Radien (Foundation, Abschnitt 7)", () => {
     )
     const steps = named.filter(
       (name) =>
-        !["radius-sm", "radius-md", "radius-lg", "radius-xl"].includes(name)
+        ![
+          "radius-sm",
+          "radius-md",
+          "radius-lg",
+          "radius-xl",
+          "radius-4xl",
+        ].includes(name)
     )
 
     expect(steps).toEqual([
@@ -210,6 +262,11 @@ describe("Radien (Foundation, Abschnitt 7)", () => {
     expect(radius.get("radius-md")).toBe("var(--radius-control)")
     expect(radius.get("radius-lg")).toBe("var(--radius-card)")
     expect(radius.get("radius-xl")).toBe("var(--radius-modal)")
+    /* Befund aus KAN-29: badge.tsx nutzt rounded-4xl, das Badge ist in
+       Figma eine Pille. 2xl und 3xl bleiben bewusst ohne Bruecke. */
+    expect(radius.get("radius-4xl")).toBe("var(--radius-pill)")
+    expect(radius.has("radius-2xl")).toBe(false)
+    expect(radius.has("radius-3xl")).toBe(false)
   })
 
   it("fuehrt keinen Radius als Verweis auf sich selbst", () => {
@@ -282,6 +339,82 @@ describe("Grenzen der Tokenschicht", () => {
 
       const hits = readFileSync(file, "utf8").match(/#[0-9a-fA-F]{3,8}\b/g)
       expect(hits, `${file} enthaelt einen Hex-Wert`).toBeNull()
+    }
+  })
+
+  /*
+   * Die drei folgenden Zusicherungen stammen aus dem Review zu KAN-29. Alle
+   * drei Befunde hatten denselben Fehlermodus: eine Klasse oder eine Variable
+   * greift ins Leere, und weder Typecheck noch Lint noch ein Test sagen etwas.
+   * Sichtbar wird das erst im Browser, und dort nur, wenn jemand gezielt
+   * hinsieht. Deshalb stehen sie hier und nicht auf einer Merkliste.
+   */
+  const uiFiles = filesUnder(join(srcDir, "components", "ui"))
+
+  it("laesst keine Registry-Datei auf eine undefinierte Variable zeigen", () => {
+    const indexCss = withoutComments(
+      readFileSync(join(srcDir, "index.css"), "utf8")
+    )
+    const defined = new Set([
+      ...primitives.keys(),
+      ...semanticLight.keys(),
+      ...radius.keys(),
+      ...themeInline.keys(),
+      ...declarationsOf(indexCss).keys(),
+    ])
+
+    for (const file of uiFiles) {
+      const content = readFileSync(file, "utf8")
+
+      for (const [, name] of content.matchAll(/var\(--([\w-]+)/g)) {
+        /* In der Datei selbst gesetzte Variablen und Tailwinds eigene sind
+           nicht unsere Adresse; alles andere muss die Tokenschicht oder
+           index.css definieren. Befund aus KAN-29: input-group.tsx leitete
+           seine Innenradien aus --radius ab, das nirgends stand.
+
+           Zwei Schreibweisen zaehlen als "gesetzt": die CSS-Deklaration
+           (--cell-radius: … in calendar.tsx) und die style-Prop in JSX
+           ("--gap": spacing in toggle-group.tsx). Wer nur die erste prueft,
+           meldet die zweite faelschlich als Befund. */
+        const setInFile = new RegExp(`["']?--${name}["']?\\s*:`).test(content)
+        if (setInFile || name.startsWith("tw-")) continue
+
+        expect(
+          defined.has(name),
+          `${file}: --${name} ist nirgends definiert`
+        ).toBe(true)
+      }
+    }
+  })
+
+  it("laesst keine Registry-Datei eine Farbe an der Rolle vorbei setzen", () => {
+    for (const file of uiFiles) {
+      /* Befund aus KAN-29: die Overlays von dialog, alert-dialog und sheet
+         setzten bg-black/10, waehrend die Rolle overlay mit ihren geprueften
+         50 bzw. 70 Prozent daneben ungenutzt lag. Im dunklen Modus ist ein
+         Film aus 10 Prozent Schwarz ueber dunklem Grund praktisch keiner. */
+      const hits = readFileSync(file, "utf8").match(
+        /\b(bg|text|border|ring|fill|stroke)-(black|white)(\/\d+)?\b/g
+      )
+
+      expect(
+        hits,
+        `${file} setzt eine Farbe an der Tokenschicht vorbei`
+      ).toBeNull()
+    }
+  })
+
+  it("deckt jede Zustandsregel auch in der ARIA-Schreibweise ab", () => {
+    /* Base UI meldet inaktive Zustaende ueber aria-disabled, nicht ueber
+       :disabled: das gibt es nur an Formularelementen. Eine Regel, die nur
+       auf :disabled hoert, laesst abgeblendete Schaltflaechen den
+       Zeigefinger behalten (Befund aus KAN-29 an calendar.tsx). */
+    for (const rule of tokensCss.split("}")) {
+      if (!rule.includes(":disabled")) continue
+
+      expect(rule, `Regel hoert nur auf :disabled: ${rule.trim()}`).toMatch(
+        /aria-disabled/
+      )
     }
   })
 
