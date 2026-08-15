@@ -124,6 +124,25 @@ describe("zentrale Fehlerreaktion", () => {
     expect(queryClient.getQueryData(["projects"])).toBeUndefined()
   })
 
+  it("leert den Query-Cache auch, sobald eine Sitzung beginnt", async () => {
+    server.use(
+      http.get("*/api/projects", () => HttpResponse.json({ content: [] }))
+    )
+
+    const queryClient = createQueryClient()
+    await queryClient.fetchQuery({
+      queryKey: ["projects"],
+      queryFn: () => api.get("/api/projects"),
+    })
+    expect(queryClient.getQueryData(["projects"])).toBeDefined()
+
+    // Der Server antwortet je Rolle verschieden (Contract 5); die anonyme
+    // Antwort darf nach dem Login nicht unter demselben Key weiterleben.
+    seedSession()
+
+    expect(queryClient.getQueryData(["projects"])).toBeUndefined()
+  })
+
   it("reicht 409 PROJECT_VERSION_CONFLICT durch und wiederholt nie automatisch", async () => {
     seedSession()
     let requests = 0

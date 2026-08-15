@@ -14,6 +14,7 @@ export type ApiSchemas = components["schemas"]
 
 export type UserResponse = ApiSchemas["UserResponse"]
 export type LoginResponse = ApiSchemas["LoginResponse"]
+export type ProjectCardResponse = ApiSchemas["ProjectCardResponse"]
 
 /** Rollen nach Contract 2.1: genau drei Werte. PUBLIC ist keine Rolle. */
 export type Role = NonNullable<UserResponse["role"]>

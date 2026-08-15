@@ -79,18 +79,21 @@ export function createQueryClient(): QueryClient {
   })
 
   /*
-   * Endet die Sitzung, wird der Cache geleert, sonst blieben
-   * personenbezogene Antworten der alten Sitzung darin: nach einer
-   * Abmeldung am geteilten Rechner abrufbar, und nach einem Rollenwechsel
-   * lieferte derselbe Query-Key die Sichtbarkeit der vorigen Person. Der
-   * Weg ueber den Store deckt alle Ausloeser ab: zentrale 401-Reaktion,
-   * Ablauf-Timer und Logout. Das Abo lebt so lange wie der Client, also so
-   * lange wie die Anwendung beziehungsweise der einzelne Test.
+   * Bei jedem Sitzungswechsel wird der Cache geleert, in beide Richtungen:
+   * Nach einer Abmeldung blieben sonst personenbezogene Antworten der alten
+   * Sitzung am geteilten Rechner abrufbar. Nach einer Anmeldung lieferte
+   * derselbe Query-Key zunaechst die anonyme Antwort weiter, obwohl der
+   * Server je Rolle verschieden antwortet (Contract 5): wer die Liste
+   * anonym besucht und sich dann anmeldet, saehe bei einem scheiternden
+   * Refetch weiter nur PUBLISHED. Der Weg ueber den Store deckt alle
+   * Ausloeser ab: Login, zentrale 401-Reaktion, Ablauf-Timer und Logout.
+   * Das Abo lebt so lange wie der Client, also so lange wie die Anwendung
+   * beziehungsweise der einzelne Test.
    */
   let hadSession = getAuthState().session !== null
   subscribe(() => {
     const hasSession = getAuthState().session !== null
-    if (hadSession && !hasSession) {
+    if (hadSession !== hasSession) {
       client.clear()
     }
     hadSession = hasSession
