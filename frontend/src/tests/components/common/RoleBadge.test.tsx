@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest"
 
 import { renderWithProviders } from "@/tests/render"
 
-import { RoleBadge, type Role } from "@/components/common/RoleBadge"
+import type { Role } from "@/api/types"
+import { RoleBadge } from "@/components/common/RoleBadge"
 
 const expectedLabels: Record<Role, string> = {
   STUDENT: "Studierende:r",

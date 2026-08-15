@@ -34,6 +34,13 @@ Ein unerwarteter Diff ist ein Contract-Befund und gehört gemeldet
 Alle Requests laufen über den Client in `frontend/src/api/client.ts`. Kein
 `fetch` in einer Komponente, keinem Hook, keinem Utility daneben.
 
+Aufgerufen wird der Client nur aus den `queryOptions`-Fabriken und
+Mutationsfunktionen unter `src/api/queries/<ressource>.ts`: dort stehen
+Pfad, Response-Typ und Query-Key je Serveroperation an genau einer Stelle,
+und Feature-Hooks konsumieren die Fabrik, ohne Pfade oder `api.*` zu
+kennen (Skill `frontend-modul`, Abschnitt 2). Eine Fabrik entsteht erst
+mit ihrem ersten Verwender; Einträge ohne Endpoint in §6.1 sind Befunde.
+
 Jede Fehlerantwort wird in genau einen Typ übersetzt, das Envelope aus §6.2:
 
 ```ts
@@ -188,6 +195,8 @@ Jeder schreibende Projekt-Request trägt `version` im Body (§6.4). Bei
 
 - [ ] `schema.d.ts` aktuell generiert, kein handgeschriebener Response-Typ
 - [ ] Kein `fetch` außerhalb von `frontend/src/api/`
+- [ ] `api.*` wird nur aus `src/api/queries/` gerufen; Hooks konsumieren
+      die `queryOptions`-Fabriken und bauen keine Keys von Hand nach
 - [ ] Jeder Fehler ist ein `ApiError`, Entscheidungen über `errorCode`
 - [ ] 401 und 403 sichtbar behandelt, belegt durch je einen Test
 - [ ] Listen lesen `content`/`totalPages`, kein Zugriff auf `pageable`,

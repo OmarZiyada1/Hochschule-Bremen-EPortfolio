@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest"
 
 import { renderWithProviders } from "@/tests/render"
 
-import { StatusBadge, type ProjectStatus } from "@/components/common/StatusBadge"
+import type { ProjectStatus } from "@/api/types"
+import { StatusBadge } from "@/components/common/StatusBadge"
 
 /*
  * Getestet wird die sichtbare Oberflaeche: der Enum-Wert laeuft unveraendert

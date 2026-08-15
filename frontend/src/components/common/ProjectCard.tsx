@@ -1,14 +1,11 @@
 import { HeartIcon, ImageIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import {
-  StatusBadge,
-  type ProjectStatus,
-} from "@/components/common/StatusBadge"
+import type { ProjectReference, ProjectStatus, ProjectType } from "@/api/types"
+import { StatusBadge } from "@/components/common/StatusBadge"
 import { UserAvatar } from "@/components/common/UserAvatar"
 import { Card, CardContent } from "@/components/ui/card"
 import { fullNameOf, type PersonName } from "@/lib/name"
-import type { ProjectReference, ProjectType } from "@/lib/project"
 import { cn } from "@/lib/utils"
 
 /**
