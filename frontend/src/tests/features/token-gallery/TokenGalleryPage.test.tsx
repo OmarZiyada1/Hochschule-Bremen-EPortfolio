@@ -1,9 +1,9 @@
 import { screen, within } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { renderWithProviders } from "@/test/render"
+import { renderWithProviders } from "@/tests/render"
 
-import TokenGalleryPage from "./TokenGalleryPage"
+import TokenGalleryPage from "@/features/token-gallery/TokenGalleryPage"
 import {
   buttonIconSizeNames,
   buttonSizeNames,
@@ -11,7 +11,7 @@ import {
   flattenColorTokens,
   radiusTokens,
   typographyRoles,
-} from "./tokenCatalog"
+} from "@/features/token-gallery/tokenCatalog"
 
 const colorTokens = flattenColorTokens()
 

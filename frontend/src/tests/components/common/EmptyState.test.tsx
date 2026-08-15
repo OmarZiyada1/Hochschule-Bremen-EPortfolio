@@ -2,9 +2,9 @@ import { screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import { Button } from "@/components/ui/button"
-import { renderWithProviders } from "@/test/render"
+import { renderWithProviders } from "@/tests/render"
 
-import { EmptyState } from "./EmptyState"
+import { EmptyState } from "@/components/common/EmptyState"
 
 describe("EmptyState", () => {
   it("zeigt Erklaerung und Handlung", () => {

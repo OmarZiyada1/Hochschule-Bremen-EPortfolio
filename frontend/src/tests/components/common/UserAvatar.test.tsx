@@ -1,9 +1,9 @@
 import { screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { renderWithProviders } from "@/test/render"
+import { renderWithProviders } from "@/tests/render"
 
-import { UserAvatar } from "./UserAvatar"
+import { UserAvatar } from "@/components/common/UserAvatar"
 
 describe("UserAvatar", () => {
   it("bildet die Initialen aus beiden Namensteilen", () => {

@@ -2,9 +2,9 @@ import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
-import { renderWithProviders } from "@/test/render"
+import { renderWithProviders } from "@/tests/render"
 
-import { FilterSelect } from "./FilterSelect"
+import { FilterSelect } from "@/components/common/FilterSelect"
 
 describe("FilterSelect", () => {
   it("hat ein verbundenes Label und zeigt ohne Wert die Alle-Option", () => {

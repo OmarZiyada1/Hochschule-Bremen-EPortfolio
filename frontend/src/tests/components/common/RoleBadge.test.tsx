@@ -1,9 +1,9 @@
 import { screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { renderWithProviders } from "@/test/render"
+import { renderWithProviders } from "@/tests/render"
 
-import { RoleBadge, type Role } from "./RoleBadge"
+import { RoleBadge, type Role } from "@/components/common/RoleBadge"
 
 const expectedLabels: Record<Role, string> = {
   STUDENT: "Studierende:r",

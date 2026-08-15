@@ -9,8 +9,8 @@ import { describe, expect, it } from "vitest"
  * Browser wuerde nur belegen, dass Tailwind uebersetzen kann.
  */
 
-const tokensDir = import.meta.dirname
-const srcDir = join(tokensDir, "..", "..")
+const srcDir = join(import.meta.dirname, "..", "..")
+const tokensDir = join(srcDir, "styles", "tokens")
 
 /* Kommentare fliegen vor dem Zerlegen raus: sie erklaeren die Schicht mit
    Beispielen wie "--color-card: var(--card)", und die wuerden sonst als
@@ -419,8 +419,14 @@ describe("Grenzen der Tokenschicht", () => {
   })
 
   it("verwendet kein Primitive in einer Komponente", () => {
+    /* Diese Datei nennt Primitiven-Namen in ihren eigenen Pruefungen. Bis
+       zum Umzug nach src/tests/ (KAN-62) lag sie im Tokenordner und war
+       ueber den tokensDir-Ausschluss darunter schon ausgenommen; der
+       Ausschluss bleibt also derselbe, er steht nur jetzt ausdruecklich da. */
+    const selfFile = join(import.meta.dirname, "tokens.test.ts")
+
     for (const file of sourceFiles) {
-      if (file.startsWith(tokensDir)) continue
+      if (file.startsWith(tokensDir) || file === selfFile) continue
 
       const content = readFileSync(file, "utf8")
 

@@ -2,9 +2,9 @@ import { screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import { Table, TableBody } from "@/components/ui/table"
-import { renderWithProviders } from "@/test/render"
+import { renderWithProviders } from "@/tests/render"
 
-import { ProjectTableRow } from "./ProjectTableRow"
+import { ProjectTableRow } from "@/components/common/ProjectTableRow"
 
 function renderRow(row: React.ReactNode) {
   return renderWithProviders(

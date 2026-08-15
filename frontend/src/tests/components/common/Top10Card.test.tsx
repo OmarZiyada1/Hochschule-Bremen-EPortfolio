@@ -1,9 +1,9 @@
 import { screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { renderWithProviders } from "@/test/render"
+import { renderWithProviders } from "@/tests/render"
 
-import { Top10Card } from "./Top10Card"
+import { Top10Card } from "@/components/common/Top10Card"
 
 const author = { firstName: "Mira", lastName: "Beispiel" }
 

@@ -224,7 +224,7 @@ Vor der Bewertung eines Frontend-Tickets diese Bestandsfragen gegen
   keine vorhandene Komponente.
 - Existieren `components/layout/` und die Route-Wrapper je Zugriffsebene? Der
   Skill `frontend-modul` (Schritt 4) setzt sie voraus.
-- Ist MSW nicht nur installiert, sondern in `src/test/setup.ts` gestartet? Jede
+- Ist MSW nicht nur installiert, sondern in `src/tests/setup.ts` gestartet? Jede
   DoD-Zeile „Serverantworten über MSW" hängt daran.
 - Existiert der Endpoint, den die Ansicht braucht, wirklich im Backend
   (Controller oder `/v3/api-docs`), oder nur als Contract-Zeile?

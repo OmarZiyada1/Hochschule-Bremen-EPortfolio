@@ -2,9 +2,9 @@ import { screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import { Table, TableBody } from "@/components/ui/table"
-import { renderWithProviders } from "@/test/render"
+import { renderWithProviders } from "@/tests/render"
 
-import { UserTableRow } from "./UserTableRow"
+import { UserTableRow } from "@/components/common/UserTableRow"
 
 const person = { firstName: "Mira", lastName: "Beispiel" }
 
