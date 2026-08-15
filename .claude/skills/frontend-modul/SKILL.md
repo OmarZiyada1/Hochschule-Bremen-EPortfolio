@@ -84,18 +84,56 @@ Erlaubt sind abgeleitete Typaliase im Feature (`type Projekt =
 components['schemas']['ProjektDetailAntwort']`), damit die Importpfade
 lesbar bleiben.
 
-## 2. Datenzugriff (`features/<feature>/hooks/`)
+## 2. Datenzugriff (`features/<feature>/hooks/` + `src/api/queries/`)
 
 - Ein Hook je Serveroperation, benannt nach der Fachlichkeit:
   `useProjectList`, `useProjectDetail`, `useSaveProject`.
 - Lesen über `useQuery`, Schreiben über `useMutation` (TanStack Query).
   Kein `fetch` im Komponentenkörper, kein `useEffect` zum Laden.
-- Der Aufruf läuft immer über den zentralen Client aus
-  `frontend/src/api/` (Skill `frontend-api`), nie über ein eigenes `fetch`.
+- **Hooks kennen weder Pfade noch `api.*`.** Die Query-Definition kommt als
+  `queryOptions`-Fabrik aus `src/api/queries/<ressource>.ts` (eine Datei je
+  Ressource: `projects.ts`, `comments.ts`, …). Die Fabrik bündelt Pfad,
+  Response-Typ **und** Query-Key an genau einer Stelle; nur sie ruft den
+  zentralen Client (Skill `frontend-api`), nie über ein eigenes `fetch`:
+
+  ```ts
+  // src/api/queries/projects.ts
+  export const projectQueries = {
+    list: (params: ProjectListParams) =>
+      queryOptions({
+        queryKey: ["projects", params],
+        queryFn: () =>
+          api.get<PageResponse<ProjectCard>>("/api/projects", {
+            query: { page: params.page, sort: params.sort },
+          }),
+      }),
+    detail: (id: string) =>
+      queryOptions({
+        queryKey: ["project", id],
+        queryFn: () => api.get<ProjectDetail>(`/api/projects/${id}`),
+      }),
+  }
+
+  // features/projects/hooks/useProjectList.ts
+  export function useProjectList(params: ProjectListParams) {
+    return useQuery(projectQueries.list(params))
+  }
+  ```
+
+  Mutationsfunktionen derselben Ressource (`saveProject`, `submitProject`)
+  liegen als einfache Funktionen in derselben Datei; der Feature-Hook packt
+  sie in `useMutation`. Eine Fabrik entsteht erst mit ihrem ersten
+  Verwender, nie auf Vorrat: ein Eintrag ohne Endpoint in Contract §6.1
+  ist ein Befund. Query-Parameter laufen über die `query`-Option des
+  Clients, nie handgebaut im Pfad-String.
 - Query-Keys tragen alle Parameter, die das Ergebnis beeinflussen. Sonst
   zeigt die Liste nach einem Filterwechsel das Ergebnis des vorigen Filters.
+  Weil Key und Funktion in der Fabrik zusammenstehen, kann der Key nicht
+  vom Request abweichen.
 - Nach einer erfolgreichen Mutation die betroffenen Queries invalidieren,
-  statt den lokalen Zustand von Hand nachzuziehen.
+  statt den lokalen Zustand von Hand nachzuziehen; den Key liefert die
+  Fabrik, er wird nie von Hand nachgebaut:
+  `queryClient.invalidateQueries({ queryKey: projectQueries.detail(id).queryKey })`.
 
 ## 3. Komponenten und Seite (`features/<feature>/`)
 
@@ -105,7 +143,8 @@ Ablage nach Feature, analog zum package-by-feature im Backend
 ```
 frontend/src/
   index.css               CSS-Einstiegspunkt: Tailwind, Tokendateien
-  api/                    client.ts, errors.ts, schema.d.ts, page.ts
+  api/                    client.ts, errors.ts, schema.d.ts, page.ts, auth/
+    queries/              queryOptions-Fabriken + Mutationsfunktionen je Ressource
   components/
     ui/                   shadcn-Primitiven auf Base UI (nur per CLI erzeugt)
     layout/               NavBar, Footer, Sidebar
@@ -260,6 +299,10 @@ jeder Umbenennung und belegt nichts.
 - [ ] Alle „Layout-Bereiche" der Template-Seite umgesetzt oder ihr Entfallen
       begründet
 - [ ] Kein handgeschriebener Response-Typ, alles aus `schema.d.ts`
+- [ ] Jede Query-Definition ist eine `queryOptions`-Fabrik unter
+      `src/api/queries/`; Hooks kennen weder Pfade noch `api.*`, und
+      invalidiert wird über die Keys der Fabrik, nie über nachgebaute
+      Key-Literale (Abschnitt 2)
 - [ ] Keine Primitive von Hand nachgebaut, für die es einen Registry-Eintrag
       gibt; Dateien unter `components/ui/` nur per CLI erzeugt; Import und
       API jeder verwendeten Primitive per `view`/`docs`
