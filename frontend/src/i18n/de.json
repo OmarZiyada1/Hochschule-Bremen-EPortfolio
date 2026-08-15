@@ -46,10 +46,15 @@
     },
     "nav": {
       "label": "Hauptnavigation",
+      "skipToContent": "Zum Inhalt springen",
       "home": "Startseite",
       "projects": "Projektbibliothek",
       "myPortfolio": "Mein Portfolio",
+      "reviews": "Meine Reviews",
+      "newProject": "Neues Projekt",
+      "administration": "Administrationsseite",
       "login": "Anmelden",
+      "register": "Registrieren",
       "logout": "Abmelden",
       "profile": "Profil",
       "openMenu": "Menü öffnen"
@@ -59,8 +64,6 @@
       "privacy": "Datenschutz",
       "description": "E-Portfolio-Portal für studentische Projekte und akademische Arbeiten der Hochschule Bremen.",
       "projects": "Projektbibliothek",
-      "studyPrograms": "Studiengänge",
-      "faq": "Häufige Fragen",
       "accessibility": "Barrierefreiheit",
       "copyright": "© {{year}} Hochschule Bremen, Fakultät 4 Elektrotechnik und Informatik",
       "tagline": "Mit Sorgfalt für die HSB-Gemeinschaft gebaut",
@@ -78,9 +81,56 @@
   },
   "home": {
     "title": "E-Portfolio Hochschule Bremen",
-    "intro": "Die Anwendung ist aufgesetzt. Die fachlichen Ansichten entstehen mit ihren Tickets.",
+    "intro": "Die Anwendung ist aufgesetzt. Die fachlichen Ansichten entstehen mit ihren Tickets; diese Startseite entsteht mit KAN-31.",
     "tokenGallery": "Zur Tokenschicht",
     "componentGallery": "Zur Komponentenbibliothek"
+  },
+  "placeholder": {
+    "hint": "Diese Seite ist ein Platzhalter. Sie entsteht mit dem Ticket {{ticket}}.",
+    "hintStatic": "Der Inhalt dieser Seite wird noch ergänzt.",
+    "title": {
+      "projects": "Projektbibliothek",
+      "projectDetail": "Projektdetail",
+      "portfolio": "Portfolio",
+      "login": "Anmelden",
+      "registerRole": "Registrierung: Rolle wählen",
+      "registerDetails": "Registrierung: Persönliche Angaben",
+      "registerVerifyEmail": "Registrierung: Private E-Mail bestätigen",
+      "registerVerifyHsbEmail": "Registrierung: HSB-E-Mail bestätigen",
+      "registerDone": "Registrierung: Konto aktiviert",
+      "forgotPassword": "Passwort vergessen",
+      "resetPassword": "Passwort zurücksetzen",
+      "changePassword": "Passwort ändern",
+      "projectNew": "Neues Projekt",
+      "projectMetadata": "Projekt-Metadaten",
+      "projectEditor": "Editor",
+      "myPortfolio": "Mein Portfolio",
+      "profile": "Profil bearbeiten",
+      "reviews": "Meine Reviews",
+      "projectReview": "Review",
+      "administration": "Administrationsseite",
+      "adminProjects": "Projektverwaltung",
+      "adminUsers": "Nutzer:innen",
+      "adminCategories": "Kategorien",
+      "adminStudyStructure": "Studienstruktur",
+      "adminTop10": "Top-10-Verwaltung",
+      "adminTop10Audit": "Top-10-Protokoll",
+      "imprint": "Impressum",
+      "privacy": "Datenschutz",
+      "accessibility": "Barrierefreiheit"
+    }
+  },
+  "accessDenied": {
+    "title": "Kein Zugriff",
+    "message": "Für diese Seite fehlt Ihrem Konto die Berechtigung.",
+    "backHome": "Zur Startseite"
+  },
+  "notFound": {
+    "code": "404",
+    "title": "Seite nicht gefunden",
+    "message": "Die angeforderte Seite existiert nicht oder wurde verschoben.",
+    "backHome": "Zurück zur Startseite",
+    "footer": "Hochschule Bremen · E-Portfolio"
   },
   "tokens": {
     "title": "Tokenschicht",

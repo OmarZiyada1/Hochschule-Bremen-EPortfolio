@@ -1,11 +1,12 @@
 import { screen } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
 import { describe, expect, it } from "vitest"
 
 import { renderWithProviders } from "@/tests/render"
 
 import HomePage from "@/features/home/HomePage"
 
+/* Der Moduswechsel sitzt seit KAN-7 in der NavBar des Anwendungsrahmens;
+   seine Tests liegen bei AppLayout und NavBar. */
 describe("HomePage", () => {
   it("zeigt den Seitentitel als einzige Ueberschrift erster Ebene", () => {
     renderWithProviders(<HomePage />)
@@ -16,34 +17,6 @@ describe("HomePage", () => {
         name: "E-Portfolio Hochschule Bremen",
       })
     ).toBeInTheDocument()
-  })
-
-  it("wechselt den Modus ohne Neuladen und benennt die Gegenrichtung", async () => {
-    const user = userEvent.setup()
-    renderWithProviders(<HomePage />)
-
-    const toggle = screen.getByRole("button", {
-      name: "Dunklen Modus einschalten",
-    })
-    expect(document.documentElement).not.toHaveClass("dark")
-
-    await user.click(toggle)
-
-    expect(document.documentElement).toHaveClass("dark")
-    expect(
-      screen.getByRole("button", { name: "Hellen Modus einschalten" })
-    ).toBeInTheDocument()
-  })
-
-  it("merkt sich die Wahl", async () => {
-    const user = userEvent.setup()
-    renderWithProviders(<HomePage />)
-
-    await user.click(
-      screen.getByRole("button", { name: "Dunklen Modus einschalten" })
-    )
-
-    expect(window.localStorage.getItem("theme")).toBe("dark")
   })
 
   it("fuehrt im Entwicklungs-Build zur Pruefflaeche der Tokenschicht", () => {

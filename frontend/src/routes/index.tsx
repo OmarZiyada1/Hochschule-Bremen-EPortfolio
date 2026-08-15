@@ -1,25 +1,342 @@
-import { createBrowserRouter } from "react-router-dom"
+import {
+  createBrowserRouter,
+  Navigate,
+  type RouteObject,
+} from "react-router-dom"
 
 import ComponentGalleryPage from "@/features/token-gallery/ComponentGalleryPage"
 import HomePage from "@/features/home/HomePage"
+import NotFoundPage from "@/features/not-found/NotFoundPage"
 import TokenGalleryPage from "@/features/token-gallery/TokenGalleryPage"
+import { AppLayout } from "@/routes/AppLayout"
+import { PlaceholderPage } from "@/routes/PlaceholderPage"
+import { RequireAuth } from "@/routes/RequireAuth"
+import { RequireRole } from "@/routes/RequireRole"
 
 /**
- * Routenbaum der Anwendung. Die fachlichen Routen entstehen mit ihren
- * Tickets; KAN-6 legt nur das Geruest an.
+ * Routenbaum der Anwendung (Ticket KAN-7, Umfang 2). Die Pfade sind
+ * englisch und dort verbindlich festgelegt; die sichtbaren Beschriftungen
+ * kommen aus i18n. Jede Template-Seite hat eine Route mit erkennbarem
+ * Platzhalter, bis ihr eigenes Ticket sie ersetzt; die Zuordnung Route zu
+ * Ticket steht auf der Confluence-Seite "Template-Abdeckung".
  *
- * /dev/tokens ist die Pruefflaeche der Tokenschicht (KAN-6, Abschnitt 8),
- * /dev/components die der Komponentenbibliothek (KAN-29, Abschnitt 3).
- * Beide bleiben dauerhaft im Repository und sind bei jedem "pnpm dev" da,
- * existieren aber nur im Entwicklungs-Build: import.meta.env.DEV ist im
- * Produktions-Build eine Konstante, der Zweig faellt beim Buendeln weg.
+ * Die Zugriffsebenen (Contract 2.1, 5) liegen als elternlose
+ * Wrapper-Routen im Baum: "angemeldet" fuer das eigene Profil, STUDENT
+ * oder EDITOR fuer eigene Projekte (nicht ADMIN, Fussnote 10), EDITOR oder
+ * ADMIN fuer die Redaktion, ADMIN fuer die Administrationsseite.
+ *
+ * /projects/new steht bewusst vor /projects/:projectId, sonst wuerde "new"
+ * als Projekt-ID gelesen.
+ *
+ * Die 404-Auffangroute steht als letzte Route ausserhalb der Layout-Route
+ * (Template ohne NavBar, eigene Fusszeile); alle uebrigen Seitenrouten
+ * liegen im Anwendungsrahmen.
+ *
+ * /dev/tokens und /dev/components sind die Prueffflaechen aus KAN-6 und
+ * KAN-29. Sie liegen ausserhalb der Layout-Route, damit NavBar und Footer
+ * sie nicht ueberlagern, und existieren nur im Entwicklungs-Build:
+ * import.meta.env.DEV ist im Produktions-Build eine Konstante, der Zweig
+ * faellt beim Buendeln weg.
  */
-export const router = createBrowserRouter([
-  { path: "/", element: <HomePage /> },
+export const routes: RouteObject[] = [
+  {
+    element: <AppLayout />,
+    children: [
+      { path: "/", element: <HomePage /> },
+      {
+        path: "/projects",
+        element: (
+          <PlaceholderPage
+            titleKey="placeholder.title.projects"
+            ticket="KAN-31"
+          />
+        ),
+      },
+      {
+        element: <RequireRole roles={["STUDENT", "EDITOR"]} />,
+        children: [
+          {
+            path: "/projects/new",
+            element: (
+              <PlaceholderPage
+                titleKey="placeholder.title.projectNew"
+                ticket="KAN-35"
+              />
+            ),
+          },
+          {
+            path: "/projects/:projectId/metadata",
+            element: (
+              <PlaceholderPage
+                titleKey="placeholder.title.projectMetadata"
+                ticket="KAN-35"
+              />
+            ),
+          },
+          {
+            path: "/projects/:projectId/editor",
+            element: (
+              <PlaceholderPage
+                titleKey="placeholder.title.projectEditor"
+                ticket="KAN-36"
+              />
+            ),
+          },
+        ],
+      },
+      {
+        path: "/projects/:projectId",
+        element: (
+          <PlaceholderPage
+            titleKey="placeholder.title.projectDetail"
+            ticket="KAN-32"
+          />
+        ),
+      },
+      {
+        path: "/portfolios/:userId",
+        element: (
+          <PlaceholderPage
+            titleKey="placeholder.title.portfolio"
+            ticket="KAN-34"
+          />
+        ),
+      },
+      {
+        path: "/login",
+        element: (
+          <PlaceholderPage titleKey="placeholder.title.login" ticket="KAN-33" />
+        ),
+      },
+      {
+        /* Die kurze, von Hand eingetippte Adresse laeuft nicht ins Leere;
+           verbindlich ist die lange Form (Ticket KAN-7, Umfang 2). */
+        path: "/register",
+        element: <Navigate to="/register/role" replace />,
+      },
+      {
+        path: "/register/role",
+        element: (
+          <PlaceholderPage
+            titleKey="placeholder.title.registerRole"
+            ticket="KAN-33"
+          />
+        ),
+      },
+      {
+        path: "/register/details",
+        element: (
+          <PlaceholderPage
+            titleKey="placeholder.title.registerDetails"
+            ticket="KAN-33"
+          />
+        ),
+      },
+      {
+        path: "/register/verify-email",
+        element: (
+          <PlaceholderPage
+            titleKey="placeholder.title.registerVerifyEmail"
+            ticket="KAN-33"
+          />
+        ),
+      },
+      {
+        path: "/register/verify-hsb-email",
+        element: (
+          <PlaceholderPage
+            titleKey="placeholder.title.registerVerifyHsbEmail"
+            ticket="KAN-33"
+          />
+        ),
+      },
+      {
+        path: "/register/done",
+        element: (
+          <PlaceholderPage
+            titleKey="placeholder.title.registerDone"
+            ticket="KAN-33"
+          />
+        ),
+      },
+      {
+        path: "/forgot-password",
+        element: (
+          <PlaceholderPage
+            titleKey="placeholder.title.forgotPassword"
+            ticket="KAN-33"
+          />
+        ),
+      },
+      {
+        path: "/reset-password",
+        element: (
+          <PlaceholderPage
+            titleKey="placeholder.title.resetPassword"
+            ticket="KAN-33"
+          />
+        ),
+      },
+      {
+        path: "/change-password",
+        element: (
+          <PlaceholderPage
+            titleKey="placeholder.title.changePassword"
+            ticket="KAN-33"
+          />
+        ),
+      },
+      {
+        element: <RequireAuth />,
+        children: [
+          {
+            path: "/my-portfolio",
+            element: (
+              <PlaceholderPage
+                titleKey="placeholder.title.myPortfolio"
+                ticket="KAN-34"
+              />
+            ),
+          },
+          {
+            path: "/my-portfolio/profile",
+            element: (
+              <PlaceholderPage
+                titleKey="placeholder.title.profile"
+                ticket="KAN-34"
+              />
+            ),
+          },
+        ],
+      },
+      {
+        element: <RequireRole roles={["EDITOR", "ADMIN"]} />,
+        children: [
+          {
+            path: "/reviews",
+            element: (
+              <PlaceholderPage
+                titleKey="placeholder.title.reviews"
+                ticket="KAN-37"
+              />
+            ),
+          },
+          {
+            path: "/projects/:projectId/review",
+            element: (
+              <PlaceholderPage
+                titleKey="placeholder.title.projectReview"
+                ticket="KAN-37"
+              />
+            ),
+          },
+        ],
+      },
+      {
+        element: <RequireRole roles={["ADMIN"]} />,
+        children: [
+          {
+            path: "/administration",
+            element: (
+              <PlaceholderPage
+                titleKey="placeholder.title.administration"
+                ticket="KAN-38"
+              />
+            ),
+          },
+          {
+            path: "/administration/projects",
+            element: (
+              <PlaceholderPage
+                titleKey="placeholder.title.adminProjects"
+                ticket="KAN-38"
+              />
+            ),
+          },
+          {
+            path: "/administration/users",
+            element: (
+              <PlaceholderPage
+                titleKey="placeholder.title.adminUsers"
+                ticket="KAN-39"
+              />
+            ),
+          },
+          {
+            path: "/administration/categories",
+            element: (
+              <PlaceholderPage
+                titleKey="placeholder.title.adminCategories"
+                ticket="KAN-39"
+              />
+            ),
+          },
+          {
+            path: "/administration/study-structure",
+            element: (
+              <PlaceholderPage
+                titleKey="placeholder.title.adminStudyStructure"
+                ticket="KAN-39"
+              />
+            ),
+          },
+          {
+            /* Das Protokoll liegt unter der Top-10-Verwaltung, weil es
+               deren Verlauf zeigt; die Verwaltung selbst ist die
+               Index-Route (Ticket KAN-7, Umfang 2). */
+            path: "/administration/top10",
+            children: [
+              {
+                index: true,
+                element: (
+                  <PlaceholderPage
+                    titleKey="placeholder.title.adminTop10"
+                    ticket="KAN-40"
+                  />
+                ),
+              },
+              {
+                path: "audit",
+                element: (
+                  <PlaceholderPage
+                    titleKey="placeholder.title.adminTop10Audit"
+                    ticket="KAN-40"
+                  />
+                ),
+              },
+            ],
+          },
+        ],
+      },
+      {
+        /* Statische Fussbereich-Seiten ohne eigenes Ticket (Klaerungsrunde
+           KAN-7): der Footer verlinkt sie, also fuehren sie nicht auf die
+           404-Seite. */
+        path: "/imprint",
+        element: <PlaceholderPage titleKey="placeholder.title.imprint" />,
+      },
+      {
+        path: "/privacy",
+        element: <PlaceholderPage titleKey="placeholder.title.privacy" />,
+      },
+      {
+        path: "/accessibility",
+        element: <PlaceholderPage titleKey="placeholder.title.accessibility" />,
+      },
+    ],
+  },
   ...(import.meta.env.DEV
     ? [
         { path: "/dev/tokens", element: <TokenGalleryPage /> },
         { path: "/dev/components", element: <ComponentGalleryPage /> },
       ]
     : []),
-])
+  /* Die Auffangroute liegt ausserhalb der Layout-Route: ihr Template
+     fuehrt keine NavBar, nur den zentrierten Inhalt mit dem Weg zurueck
+     und eine eigene einzeilige Fusszeile. Die Auth-Seiten bleiben dagegen
+     im Rahmen, ihre Templates nennen NavBar und Footer ausdruecklich
+     (Klaerungsrunde KAN-7). */
+  { path: "*", element: <NotFoundPage /> },
+]
+
+export const router = createBrowserRouter(routes)

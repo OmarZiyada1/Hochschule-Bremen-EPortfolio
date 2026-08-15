@@ -857,6 +857,17 @@ function CharacterCounterDemo() {
 function DomainDemos() {
   const { t } = useTranslation()
   const demoPerson = useDemoPerson()
+  /* Seit KAN-7 entscheidet der Anwendungsrahmen die Eintraege und gibt sie
+     als Props herein; die Prueffflaeche stellt beide Zustaende nach. */
+  const publicLinks = [
+    { key: "home", href: "/" },
+    { key: "projects", href: "/projects" },
+  ]
+  const signedInLinks = [
+    ...publicLinks,
+    { key: "myPortfolio", href: "/my-portfolio" },
+    { key: "newProject", href: "/projects/new" },
+  ]
   return (
     <>
       <DemoBlock name="NavBar">
@@ -865,7 +876,7 @@ function DomainDemos() {
             <p className="type-caption text-muted-foreground">
               {t("tokens.components.demo.navbarSignedOut")}
             </p>
-            <NavBar activeHref="/" />
+            <NavBar links={publicLinks} activeHref="/" />
           </div>
           <div className="flex flex-col gap-2">
             <p className="type-caption text-muted-foreground">
@@ -873,6 +884,7 @@ function DomainDemos() {
             </p>
             <NavBar
               user={demoPerson}
+              links={signedInLinks}
               activeHref="/projects"
               onLogout={() => {}}
             />

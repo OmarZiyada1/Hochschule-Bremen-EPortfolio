@@ -1,22 +1,18 @@
 import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
 
-import { ThemeToggle } from "@/components/common/ThemeToggle"
-
 /**
- * Startseite. KAN-6 baut keine fachliche Ansicht; diese Seite belegt nur,
- * dass Routing, i18n, Tokenschicht und Moduswechsel zusammen laufen. Die
- * eigentliche Startseite entsteht mit ihrem eigenen Ticket.
+ * Startseite, weiterhin als erkennbarer Platzhalter: die fachliche
+ * Startseite entsteht mit KAN-31. Seit KAN-7 liegt die Seite unter der
+ * Layout-Route; das main-Element und der ThemeToggle gehoeren jetzt dem
+ * Anwendungsrahmen beziehungsweise der NavBar.
  */
 export default function HomePage() {
   const { t } = useTranslation()
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-3xl flex-col gap-6 p-6">
-      <div className="flex items-start justify-between gap-4">
-        <h1 className="type-h1">{t("home.title")}</h1>
-        <ThemeToggle />
-      </div>
+    <div className="mx-auto flex max-w-3xl flex-col gap-6 p-6">
+      <h1 className="type-h1">{t("home.title")}</h1>
 
       <p className="type-body text-muted-foreground">{t("home.intro")}</p>
 
@@ -37,6 +33,6 @@ export default function HomePage() {
           </Link>
         </div>
       ) : null}
-    </main>
+    </div>
   )
 }

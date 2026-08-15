@@ -10,9 +10,11 @@ import { useIsDarkMode } from "@/lib/theme"
  *
  * Den Zustand haelt der ThemeProvider aus der shadcn-CLI: er speichert die
  * Wahl und setzt die Klasse an <html>, ohne Neuladen. Diese Komponente
- * traegt nur die Beschriftung und die Richtung des naechsten Klicks.
+ * traegt nur die Beschriftung und die Richtung des naechsten Klicks; die
+ * className kommt vom Einbauort, weil die NavBar (KAN-7) eigene Farben und
+ * einen eigenen Fokusring braucht, wie beim LanguageToggle.
  */
-export function ThemeToggle() {
+export function ThemeToggle({ className }: { className?: string }) {
   const { t } = useTranslation()
   const { setTheme } = useTheme()
   const isDark = useIsDarkMode()
@@ -21,6 +23,7 @@ export function ThemeToggle() {
     <Button
       variant="ghost"
       size="icon"
+      className={className}
       aria-label={isDark ? t("common.theme.toLight") : t("common.theme.toDark")}
       onClick={() => setTheme(isDark ? "light" : "dark")}
     >
