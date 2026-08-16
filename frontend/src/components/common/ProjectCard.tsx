@@ -1,7 +1,8 @@
-import { HeartIcon, ImageIcon } from "lucide-react"
+import { ImageIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import type { ProjectCardResponse } from "@/api/types"
+import { ClapIcon } from "@/components/common/ClapIcon"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { UserAvatar } from "@/components/common/UserAvatar"
 import { Card, CardContent } from "@/components/ui/card"
@@ -168,7 +169,10 @@ export function ProjectCard({
               </span>
               {project.reactionCount !== undefined && (
                 <span className="type-caption flex items-center gap-1 text-muted-foreground">
-                  <HeartIcon aria-hidden="true" className="size-3.5" />
+                  {/* Klatschen, nicht Herz: die Reaktion ist ein Applaus
+                      wie im Figma-Template und auf der Referenzplattform,
+                      keine Gefaellt-mir-Angabe. */}
+                  <ClapIcon className="size-3.5" />
                   {/* Die Zahl allein sagt nicht, was sie zaehlt. Sichtbar
                       bleibt sie knapp, vorgelesen wird der ganze Satz. */}
                   <span className="sr-only">

@@ -2,7 +2,8 @@
   "app": {
     "name": "E-Portfolio Hochschule Bremen",
     "institution": "Hochschule Bremen",
-    "productLabel": "E-Portfolio"
+    "productLabel": "E-Portfolio",
+    "initials": "HB"
   },
   "common": {
     "theme": {
@@ -86,13 +87,17 @@
   },
   "login": {
     "title": "Anmelden",
-    "email": "E-Mail-Adresse",
+    "email": "E-Mail",
     "emailHint": "Anmeldung mit der privaten E-Mail-Adresse, nicht mit der HSB-Adresse.",
     "password": "Passwort",
     "submit": "Anmelden",
     "pending": "Anmeldung läuft …",
     "registerPrompt": "Noch kein Konto?",
-    "registerLink": "Registrieren"
+    "registerLink": "Jetzt registrieren",
+    "breadcrumb": "Login",
+    "subtitle": "Hochschule Bremen E-Portfolio",
+    "publicHint": "Externe Besucher können Projekte ohne Anmeldung einsehen.",
+    "publicLink": "Projekte"
   },
   "validation": {
     "email": {

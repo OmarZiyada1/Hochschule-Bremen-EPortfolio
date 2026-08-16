@@ -529,6 +529,27 @@
   }
 }
 
+/*
+ * Keine Farbregel auf den Ueberschriftenrollen, und das ist geprueft und
+ * nicht vergessen. Naheliegend waere gewesen, alle Ueberschriften auf
+ * primary zu setzen, nachdem der Seitentitel der Projektbibliothek in Figma
+ * blau ist. Die uebrigen Vorlagen widerlegen das:
+ *
+ *   Projekte, "Studentische Projekte"     primary
+ *   Projekte, Kickerzeile darueber        primary
+ *   Login, "Anmelden"                     foreground
+ *   404, "Seite nicht gefunden"           foreground
+ *   404, die Zahl                         accent-foreground
+ *   Startseite, "Top 10 . 2026"           accent-foreground
+ *   Startseite, "Das war nur der Anfang." accent-foreground
+ *
+ * Drei Behandlungen, keine Regel. Die Farbe setzt deshalb die Seite an
+ * ihrer Ueberschrift, genau wie die Vorlage sie setzt; eine Regel hier
+ * traefe vier von sieben Faellen falsch und liesse sich an der Vorlage
+ * nicht belegen. Ob die drei Behandlungen Absicht oder Drift sind, klaert
+ * das Design (Notiz an KAN-31, das Startseite und Bibliothek ausbaut).
+ */
+
 /* ============================================================
  * Grundregeln (KAN-6, Abschnitt 4.3). Funktional, keine Kosmetik.
  * ============================================================ */

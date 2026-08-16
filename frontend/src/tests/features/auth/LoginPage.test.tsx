@@ -1,5 +1,5 @@
 import { HttpResponse, http } from "msw"
-import { screen } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it } from "vitest"
 
@@ -24,13 +24,55 @@ describe("LoginPage", () => {
   async function fillAndSubmit(email: string, password: string) {
     const user = userEvent.setup()
     if (email !== "") {
-      await user.type(screen.getByLabelText("E-Mail-Adresse"), email)
+      await user.type(screen.getByLabelText("E-Mail"), email)
     }
     if (password !== "") {
       await user.type(screen.getByLabelText("Passwort"), password)
     }
     await user.click(screen.getByRole("button", { name: "Anmelden" }))
   }
+
+  /*
+   * Der Aufbau nach der Vorlage "Login (Auth)". Geprueft werden die Teile,
+   * die eine Bedeutung tragen und beim Umbauen verlorengehen koennen, nicht
+   * das Aussehen: der Weg zurueck, der Weg fuer Externe, und dass das
+   * Auswahlfeld "ROLLE (DEMO)" der Vorlage bewusst fehlt.
+   */
+  it("folgt dem Template mit Brotkrumen, Untertitel und dem Weg fuer Externe", () => {
+    renderWithProviders(<LoginPage />)
+
+    const crumbs = screen.getByRole("navigation", { name: "Seitenpfad" })
+    expect(
+      within(crumbs).getByRole("link", { name: "Startseite" })
+    ).toHaveAttribute("href", "/")
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Anmelden" })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("Hochschule Bremen E-Portfolio")
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByRole("link", { name: "Jetzt registrieren" })
+    ).toHaveAttribute("href", "/register")
+    /* Ohne Konto geht es weiter: die Bibliothek ist nach Contract 5 fuer
+       PUBLIC lesbar, die Seite darf fuer Externe keine Sackgasse sein. */
+    expect(screen.getByRole("link", { name: "Projekte" })).toHaveAttribute(
+      "href",
+      "/projects"
+    )
+  })
+
+  it("fuehrt kein Rollenfeld, die Rolle haengt am Konto", () => {
+    renderWithProviders(<LoginPage />)
+
+    /* Die Vorlage zeigt ein Auswahlfeld "ROLLE (DEMO)". Es entsteht nicht:
+       POST /auth/login kennt nur E-Mail und Passwort (Contract 2.1), ein
+       Feld ohne Wirkung waere eine Attrappe (Frontend-Regel 10). */
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Rolle/i)).not.toBeInTheDocument()
+  })
 
   it("validiert Pflichtfelder vor dem Absenden, ohne Request", async () => {
     /* Kein MSW-Handler angemeldet: erreichte ein Request den Server,
@@ -53,7 +95,9 @@ describe("LoginPage", () => {
     await fillAndSubmit("keine-adresse", "geheim")
 
     expect(
-      await screen.findByText("Bitte geben Sie eine gültige E-Mail-Adresse ein.")
+      await screen.findByText(
+        "Bitte geben Sie eine gültige E-Mail-Adresse ein."
+      )
     ).toBeInTheDocument()
   })
 
@@ -101,7 +145,10 @@ describe("LoginPage", () => {
     await fillAndSubmit("mira.beispiel@example.org", "test1234")
 
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Projektbibliothek" })
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "Projektbibliothek",
+      })
     ).toBeInTheDocument()
     expect(screen.getByTestId("pathname")).toHaveTextContent("/projects")
     expect(

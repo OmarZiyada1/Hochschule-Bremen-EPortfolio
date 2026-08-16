@@ -36,24 +36,47 @@ export default function NotFoundPage() {
     <div className="flex min-h-svh flex-col">
       <main className="flex flex-1 items-center justify-center px-4 py-24">
         <Empty className="max-w-3xl">
-          <EmptyHeader>
+          {/* max-w-lg statt des max-w-sm der Primitive: die Erlaeuterung
+              steht im Entwurf auf einer Zeile, in 384px braeche sie um. */}
+          <EmptyHeader className="max-w-lg">
             {/* Markenzeichen-Kachel aus dem Figma-Template; das Medium des
-                Leerzustands (EmptyMedia, Variante icon). Die size-Klasse am
-                Logo ist noetig, sonst zwingt die Primitive jedes svg ohne
-                size-Klasse auf size-4. */}
+                Leerzustands (EmptyMedia, Variante icon).
+
+                Am Logo muss eine size-Klasse stehen, und zwar woertlich:
+                die Primitive traegt [&_svg:not([class*='size-'])]:size-4 und
+                zwingt jedes svg, dessen Klassenzeichenkette die Zeichenfolge
+                "size-" nicht enthaelt, auf 16px. Ein h-11.5 w-auto sieht
+                gleichwertig aus, faellt aber genau in diese Luecke, und weil
+                der Selektor der Primitive spezifischer ist als eine
+                Utility-Klasse, gewinnt er (Befund aus dem Review: der
+                Schluessel schrumpfte auf ein Viertel).
+
+                Quadratisch und trotzdem im richtigen Verhaeltnis: die
+                viewBox ist hochkant, preserveAspectRatio steht auf dem
+                Standard, das svg fuellt also die Hoehe von 46px und bleibt
+                bei rund 39px Breite. Genau die Masse des Templates. */}
             <EmptyMedia
               variant="icon"
-              className="size-16 rounded-card bg-surface-brand text-surface-brand-foreground"
+              className="size-23 rounded-modal bg-surface-brand text-surface-brand-foreground"
             >
-              <HsbKeyLogo className="size-8" />
+              <HsbKeyLogo className="size-11.5" />
             </EmptyMedia>
-            <p aria-hidden="true" className="type-display text-primary">
+            {/* Die Zahl ist eine Ziffernflaeche und keine Ueberschrift,
+                deshalb type-num-rank (Source Sans ExtraBold) und nicht
+                type-display (Zilla Slab): die Vorlage setzt hier einen
+                schweren Grotesk. Ihre Farbe ist accent-foreground, waehrend
+                der Titel darunter foreground traegt; beides steht so im
+                Entwurf und ist am Knoten nachgesehen. */}
+            <p
+              aria-hidden="true"
+              className="type-num-rank text-accent-foreground"
+            >
               {t("notFound.code")}
             </p>
             <EmptyTitle className="type-h1">
               <h1>{t("notFound.title")}</h1>
             </EmptyTitle>
-            <EmptyDescription className="type-body">
+            <EmptyDescription className="type-body-lg">
               {t("notFound.message")}
             </EmptyDescription>
           </EmptyHeader>

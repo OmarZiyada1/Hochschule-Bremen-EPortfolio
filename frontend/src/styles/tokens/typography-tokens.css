@@ -38,6 +38,12 @@
    * kontrollierte Vergroesserung nach SC 1.4.4 untergraben.
    * ---------------------------------------------------------- */
   --fs-nav-brand-lg: 1.375rem; /* 22 */
+  /* Figma "Avatar Initials/lg". Nachgetragen mit dem Login-Template: die
+     Markenkachel ueber dem Formular traegt die Initialen in dieser Groesse,
+     und Foundation 5.2 fuehrte bis dahin nur md und sm. Ergaenzt statt
+     ersetzt (Token-Verwendung, Abschnitt 8: fehlt eine Rolle, wird die
+     Rolle ergaenzt); die Foundation-Seite ist nachgezogen. */
+  --fs-avatar-lg: 1.25rem; /* 20 */
   --fs-nav-brand: 1.0625rem; /* 17 */
   --fs-h3: 1rem; /* 16 */
   --fs-body-lg: 1rem; /* 16 */
@@ -166,6 +172,19 @@
     font-family: var(--font-body);
     font-size: var(--fs-nav-item);
     line-height: var(--lh-body);
+  }
+
+  /* Einzige der drei Avatar-Groessen mit eigener Klasse, und das hat einen
+     Grund: md und sm setzt die Avatar-Primitive selbst, lg dagegen traegt
+     die Markenkachel der Login-Seite, also eine Stelle ausserhalb. Die
+     Zeilenhoehe steht in Figma auf 1, damit die Initialen in einem
+     quadratischen Feld optisch mittig sitzen; jeder groessere Wert schoebe
+     sie nach unten. */
+  .type-avatar-lg {
+    font-family: var(--font-body);
+    font-size: var(--fs-avatar-lg);
+    font-weight: 700;
+    line-height: 1;
   }
 
   /* Getrennt von type-overline, obwohl beide auf 11px liegen: die Overline

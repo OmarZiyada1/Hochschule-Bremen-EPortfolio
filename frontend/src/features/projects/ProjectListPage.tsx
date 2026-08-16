@@ -25,7 +25,11 @@ export default function ProjectListPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10">
-      <h1 className="type-h1">{t("project.list.title")}</h1>
+      {/* Blau, weil die Vorlage "Projekte (Oeffentlich)" den Seitentitel in
+          primary fuehrt. Die Farbe steht hier und nicht an der Schriftrolle:
+          Login und 404 fuehren dieselbe Rolle in foreground (Kommentar in
+          tokens.css). */}
+      <h1 className="type-h1 text-primary">{t("project.list.title")}</h1>
 
       {isPending && (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

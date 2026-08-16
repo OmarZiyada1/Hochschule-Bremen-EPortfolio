@@ -331,6 +331,30 @@ describe("Schrift (Foundation, Abschnitt 5)", () => {
       expect(mobileRem(role), role).toBeGreaterThanOrEqual(1)
     }
   })
+
+  /*
+   * Die Schriftrollen setzen Familie, Groesse und Zeilenhoehe, keine Farbe.
+   * Der Test steht hier, weil genau das schon einmal danebenging: aus dem
+   * blauen Seitentitel der Projektbibliothek wurde eine Regel fuer alle
+   * Ueberschriften, und Login, 404 und Startseite fuehren in Figma andere
+   * Rollen (foreground beziehungsweise accent-foreground). Die Farbe gehoert
+   * an die Seite, nicht an die Rolle; siehe den Kommentar in tokens.css.
+   */
+  it("laesst die Schriftrollen ohne Farbe", () => {
+    for (const role of [
+      "type-display",
+      "type-title",
+      "type-h1",
+      "type-h2",
+      "type-h3",
+      "type-overline",
+    ]) {
+      for (const block of blocksOf(typographyCss, `.${role}`)) {
+        expect(block, role).not.toMatch(/(^|;)\s*color\s*:/)
+      }
+      expect(tokensCss, role).not.toContain(`.${role}`)
+    }
+  })
 })
 
 describe("Grenzen der Tokenschicht", () => {
