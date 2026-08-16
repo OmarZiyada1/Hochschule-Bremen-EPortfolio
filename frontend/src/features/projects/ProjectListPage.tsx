@@ -62,11 +62,6 @@ const SEARCH_DEBOUNCE_MS = 300
  * Query-Fabrik verdrahtet status=PUBLISHED fest (Klaerungsrunde im Review
  * zu KAN-8, Contract v42). Ein Status-Badge erscheint deshalb nicht; wo
  * alles PUBLISHED ist, unterschiede es nichts.
- *
- * Der Such-Platzhalter weicht vom Template-Wortlaut ab ("Projekte
- * durchsuchen" statt "Projekt oder Studierende/n suchen"): q durchsucht nur
- * Titel und Kurzbeschreibung (§6.1), eine Personensuche verspraeche die
- * Seite sonst zu Unrecht (Klaerungsrunde zu KAN-31).
  */
 export default function ProjectListPage() {
   const { t } = useTranslation()

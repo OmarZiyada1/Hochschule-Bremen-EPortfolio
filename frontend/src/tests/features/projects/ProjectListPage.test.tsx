@@ -288,6 +288,51 @@ describe("ProjectListPage", () => {
       .toHaveLength(0)
   })
 
+  it("findet Projekte ueber den Namen der Autor:in, Platzhalter im Template-Wortlaut", async () => {
+    /* Der Handler beantwortet q wie der Server seit Contract v47 (KAN-66):
+       der Suchbegriff trifft auch den vollen Namen der Autor:in. */
+    server.use(
+      http.get("*/api/projects", ({ request }) => {
+        const q = new URL(request.url).searchParams.get("q") ?? ""
+        const matchesAuthor =
+          q !== "" && "mira beispiel".includes(q.toLowerCase())
+        return HttpResponse.json(
+          pageOf(
+            matchesAuthor
+              ? [
+                  {
+                    id: "10000000-0000-0000-0000-000000000007",
+                    title: "Campus-Garten an der Werderstraße",
+                    status: "PUBLISHED",
+                    author: { firstName: "Mira", lastName: "Beispiel" },
+                  },
+                ]
+              : []
+          )
+        )
+      })
+    )
+    renderWithProviders(<ProjectListPage />)
+
+    /* Der Platzhalter traegt wieder den Template-Wortlaut aus "Projekte
+       (Oeffentlich)"; KAN-31 hatte ihn verkuerzt, weil der Server die
+       Personensuche noch nicht einloeste. */
+    const searchbox = await screen.findByRole("searchbox")
+    expect(searchbox).toHaveAttribute(
+      "placeholder",
+      "Projekt oder Studierende/n suchen …"
+    )
+
+    await userEvent.type(searchbox, "Mira Beispiel")
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 2,
+        name: "Campus-Garten an der Werderstraße",
+      })
+    ).toBeInTheDocument()
+  })
+
   it("blaettert ueber die Paginierung und fragt die naechste Seite an", async () => {
     const requestedPages: (string | null)[] = []
     server.use(

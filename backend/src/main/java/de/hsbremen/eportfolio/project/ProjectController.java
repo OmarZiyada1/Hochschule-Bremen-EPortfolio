@@ -133,7 +133,8 @@ public class ProjectController {
 					+ "Wiederholbar, mehrere Werte ODER-verknuepft.")
 			@RequestParam(name = "semester", required = false) List<UUID> semester,
 
-			@Parameter(description = "Suchbegriff fuer Titel und Kurzbeschreibung, unabhaengig "
+			@Parameter(description = "Suchbegriff fuer Titel, Kurzbeschreibung und die Namen "
+					+ "der Autor:in (seit Contract v47 auch der volle Name), unabhaengig "
 					+ "von Gross- und Kleinschreibung.")
 			@RequestParam(name = "q", required = false) String q,
 

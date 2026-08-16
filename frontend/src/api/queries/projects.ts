@@ -20,7 +20,7 @@ import type { Degree, ProjectCardResponse, ProjectType } from "@/api/types"
  * wiederholte Parameter an, genau die Form, die der Contract festschreibt.
  */
 export interface ProjectListParams {
-  /** Suchbegriff q, durchsucht Titel und Kurzbeschreibung (§6.1). */
+  /** Suchbegriff q, durchsucht Titel, Kurzbeschreibung und die Namen der Autor:in (§6.1, seit v47). */
   q?: string
   /** Seite, 0-basiert (§6.6). */
   page?: number

@@ -329,7 +329,7 @@
       "description": "Durchsuchen Sie alle veröffentlichten studentischen Arbeiten",
       "count_one": "{{count}} studentisches Projekt gefunden",
       "count_other": "{{count}} studentische Projekte gefunden",
-      "searchPlaceholder": "Projekte durchsuchen …",
+      "searchPlaceholder": "Projekt oder Studierende/n suchen …",
       "filter": {
         "title": "Filter",
         "noOptions": "Keine Optionen verfügbar.",
