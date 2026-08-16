@@ -97,6 +97,12 @@ class Top10AdminIntegrationTest {
 		// Siehe Top10IntegrationTest: die Top-10 ist eine globale Liste, ein
 		// Restbestand der Entwicklungsdatenbank wuerde jede Positionspruefung
 		// verfaelschen. Der Rollback nimmt das Leeren wieder zurueck.
+		// Dasselbe gilt fuer die Nominierungen: das Protokoll unter
+		// GET /api/admin/top10-nominations ist ebenso global, Altbestaende
+		// aus der Entwicklungsdatenbank wuerden jede Zaehlung verfaelschen
+		// (aufgefallen beim Testlauf zu KAN-66).
+		nominationRepository.deleteAll();
+		nominationRepository.flush();
 		entryRepository.deleteAll();
 		entryRepository.flush();
 
