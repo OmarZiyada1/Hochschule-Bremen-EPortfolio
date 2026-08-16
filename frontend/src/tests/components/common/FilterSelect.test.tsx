@@ -37,4 +37,5 @@ describe("FilterSelect", () => {
     await user.click(await screen.findByRole("option", { name: "Fakultät 4" }))
     expect(onValueChange).toHaveBeenCalledWith("4")
   })
+
 })

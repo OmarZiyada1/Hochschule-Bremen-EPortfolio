@@ -1,9 +1,27 @@
-import { queryOptions } from "@tanstack/react-query"
+import { keepPreviousData, queryOptions } from "@tanstack/react-query"
 
 import { api } from "@/api/client"
 import { apiPaths } from "@/api/endpoints"
 import type { PageResponse } from "@/api/page"
 import type { ProjectCardResponse } from "@/api/types"
+
+/**
+ * Parameter der Projektliste (KAN-31). Alles optional: ohne Angaben gilt
+ * serverseitig Seite 0, Groesse 20 und die Sortierung updatedAt,desc
+ * (§6.6). Es gibt bewusst keinen sort-Parameter: die Bibliothek bietet
+ * kein Sortier-Element an (Entscheidung zu KAN-31, wie im Template), und
+ * ein Eintrag ohne Verwender entstuende auf Vorrat. Die Filterparameter
+ * aus §6.1 (faculty, category, ...) folgen mit KAN-64, wenn sie
+ * mehrwertig sind.
+ */
+export interface ProjectListParams {
+  /** Suchbegriff q, durchsucht Titel und Kurzbeschreibung (§6.1). */
+  q?: string
+  /** Seite, 0-basiert (§6.6). */
+  page?: number
+  /** Seitengroesse; serverseitig auf 100 gedeckelt und still gekappt (§6.6). */
+  size?: number
+}
 
 /**
  * queryOptions-Fabrik der Ressource Projekte (Skill frontend-modul,
@@ -21,16 +39,20 @@ import type { ProjectCardResponse } from "@/api/types"
  * Sichtbarkeitsschranke selbst liegt im Server (§5); der Filter engt nur
  * weiter ein, aufweichen kann er nichts.
  *
- * Filter, Suche und Paginierung kommen mit KAN-31; ihre Parameter wandern
- * dann in Signatur und Query-Key von list, der Statusfilter bleibt fest.
+ * Suche und Seite stehen seit KAN-31 in der Signatur und damit im
+ * Query-Key: ein Wechsel zeigt nie das Ergebnis des vorigen Aufrufs.
+ * placeholderData laesst beim Blaettern die vorige Seite stehen, statt das
+ * Grid auf Skelette zurueckzuwerfen; beim ersten Laden greift weiterhin
+ * isPending.
  */
 export const projectQueries = {
-  list: () =>
+  list: (params: ProjectListParams = {}) =>
     queryOptions({
-      queryKey: ["projects", { status: "PUBLISHED" }] as const,
+      queryKey: ["projects", { status: "PUBLISHED", ...params }] as const,
       queryFn: () =>
         api.get<PageResponse<ProjectCardResponse>>(apiPaths.projects.list, {
-          query: { status: "PUBLISHED" },
+          query: { status: "PUBLISHED", ...params },
         }),
+      placeholderData: keepPreviousData,
     }),
 }

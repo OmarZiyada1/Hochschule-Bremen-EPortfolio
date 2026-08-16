@@ -16,20 +16,46 @@ import { cn } from "@/lib/utils"
  *
  * Symbol und Veraenderung sind beide optional, weil nicht jede Kennzahl
  * eine Vergleichsperiode hat.
+ *
+ * Die Variante plain zeigt dieselbe Kennzahl ohne Kartenflaeche, zentriert
+ * und mit Versalbeschriftung: so fuehrt die CTA-Sektion der Startseite ihre
+ * drei Zahlen (Template "Startseite (Oeffentlich)", KAN-31). Gleiche
+ * Domaene, andere Flaeche; deshalb eine Variante dieser Huelle und keine
+ * zweite Komponente daneben (Skill frontend-shadcn, Abschnitt 1).
  */
 export function KpiTile({
   value,
   label,
   icon,
   trend,
+  variant = "card",
   className,
 }: {
   value: ReactNode
   label: string
   icon?: ReactNode
   trend?: string
+  variant?: "card" | "plain"
   className?: string
 }) {
+  if (variant === "plain") {
+    return (
+      <div
+        className={cn("flex flex-col items-center gap-1 text-center", className)}
+      >
+        <p className="type-num-stat font-extrabold text-accent-foreground tabular-nums">
+          {value}
+        </p>
+        <p className="type-label-xs font-medium tracking-widest text-muted-foreground uppercase">
+          {label}
+        </p>
+        {trend && (
+          <p className="type-label-xs text-muted-foreground">{trend}</p>
+        )}
+      </div>
+    )
+  }
+
   return (
     <Card className={cn("rounded-modal", className)}>
       <CardContent className="flex flex-col gap-1.5">
