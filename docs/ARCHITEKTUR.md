@@ -34,8 +34,8 @@ de.hsbremen.eportfolio
 │   └── error/                     zentrale Fehlerbehandlung, Exceptions, globaler Handler
 ├── config/                        anwendungsweite Spring-Konfiguration (Security, JPA, Properties)
 ├── mail/                          Zustellung der Verifizierungs- und Rücksetzcodes (Port + zwei Adapter)
-├── masterdata/                    Referenzdaten: Fakultät, Studiengang, Modul, Kategorie
-│   └── dto/                       DTOs der vier Stammdaten-Endpoints
+├── masterdata/                    Referenzdaten: Fakultät, Studiengang, Modul, Kategorie, Semester
+│   └── dto/                       DTOs der fünf Stammdaten-Endpoints
 ├── portfolio/                     das E-Portfolio eines Benutzers als Sammlung seiner Projekte
 ├── project/                       einzelne Projektbeiträge inkl. Inhaltsblöcken
 │   └── dto/                       DTOs des Projekt-Features (Kachel, Detail, Filter, Teil-DTOs)
@@ -62,7 +62,7 @@ Was in welchem Paket steckt:
 | `common.error`  | `ApiError`, `ApiErrorWriter`, `ErrorCodes`, `GlobalExceptionHandler`, `ValidationException`, `ResourceNotFoundException` |
 | `config`     | `SecurityConfig`, `JpaConfig`, `OpenApiConfig`, `AsyncConfig`, `SchedulingConfig`, `ConfigurationStartupLogger`, `ConfigurationValues` + **alle** Properties-Records (`CorsProperties`, `JwtProperties`, `LoginAttemptProperties`, `PermissionProperties`, `RegistrationProperties`, `StorageProperties`, `MailProperties`) und die Auswahl-Enums `StorageProvider`, `MailProvider` |
 | `mail`       | `MailSender` (Port), `MailMessage`, `LogMailSender`, `SmtpMailSender`, `MailTemplateService`. Seit KAN-51, siehe Kapitel 10 |
-| `masterdata` | `Category`, `Faculty`, `Module`, `StudyProgram` + je ein Repository, `MasterDataController`, `MasterDataService`, `DevMasterDataSeeder`, `dto/{CategoryResponse, FacultyResponse, StudyProgramResponse, ModuleResponse}`. Seit KAN-25 zusätzlich das Admin-CRUD: `MasterDataAdminController`, `MasterDataAdminService`, `dto/{Category, Faculty, StudyProgram, Module}{Create, Update}Request` |
+| `masterdata` | `Category`, `Faculty`, `Module`, `StudyProgram`, seit KAN-65 `Semester` + je ein Repository, `MasterDataController`, `MasterDataService`, `DevMasterDataSeeder`, `dto/{CategoryResponse, FacultyResponse, StudyProgramResponse, ModuleResponse, SemesterResponse}`. Seit KAN-25 zusätzlich das Admin-CRUD: `MasterDataAdminController`, `MasterDataAdminService`, `dto/{Category, Faculty, StudyProgram, Module, Semester}{Create, Update}Request`, dazu `SemesterMoveRequest` für die Reihenfolge |
 | `portfolio`  | `Portfolio`, `PortfolioRepository` |
 | `project`    | `Project`, `Block`, `ProjectMember`, `ProjectStatusHistory` + je ein Repository, `BlockValidationService`, `ProjectPermissionService`, `ProjectController`, `ProjectReadService`, `ProjectSpecifications`, `dto/{ProjectCardResponse, ProjectDetailResponse, ProjectFilterRequest, PersonResponse, MemberResponse, ReferenceResponse, BlockResponse, StatusHistoryResponse}`. Seit KAN-45 zusätzlich `dto/ProjectReferenceResponse` (nur ID und Titel, für Antworten, die ein Projekt bloß nennen). `PermissionProperties` liegt seit KAN-50 in `config` |
 | `reaction`   | `Reaction`, `ReactionRepository`, `ReactionCount` (Abfrageergebnis für die Kachelzählung) |
@@ -159,8 +159,9 @@ Liegen unter `backend/src/main/resources/db/migration`, Namensschema
 | 12 | `V202608081745__stored_file.sql` | KAN-23: `stored_file` für hochgeladene Medien (§3.15). Die Bytes liegen im Objektspeicher (§3.15.1), die Spalte `path` hält nur den anbieterneutralen Schlüssel ohne Container und Endpoint. `project_id` nullable (`null` = Avatar) mit `on delete cascade`; `uploaded_by` kaskadiert bewusst nicht, weil die Person Teil der Rechteprüfung beim Löschen ist (§6.1). Index auf `project_id`. |
 | 13 | `V202608091930__top10_audit_entry.sql` | KAN-45: `top10_audit_entry` für das unveränderliche Änderungsprotokoll der Top-10 (§3.17). Check-Constraint `ck_top10_audit_action` über die drei Werte aus §2.12. `project_id` nullable mit **`on delete set null`**: ein Projekt wird über `DELETE /projects/{id}` wirklich gelöscht, und mit `cascade` verschwänden genau die Zeilen, die festhalten, dass es einmal einen Platz belegt hat. `admin_id` kaskadiert nicht, weil Konten deaktiviert und nicht gelöscht werden (§6.1). Indizes auf beiden Fremdschlüsseln sowie ein zusammengesetzter Index `(timestamp desc, id asc)` für die Standardsortierung des Endpoints (§6.6). |
 | 14 | `V202608130640__user_pending_email_and_email_change.sql` | KAN-60: Spalte `app_user.pending_email` (`varchar(255)`, nullable) für den selbständigen Wechsel der privaten E-Mail-Adresse (§3.1); bewusst ohne Unique-Constraint, den Wettlauf entscheidet die Bestätigung. Der Check-Constraint `ck_verification_code_purpose` wird gelöst und mit dem vierten Wert `EMAIL_CHANGE` aus §2.11 neu gesetzt. |
+| 15 | `V202608161915__semester.sql` | KAN-65: Tabelle `semester` (§3.18) mit `name` (unique, 64 Zeichen), `active` und `sort_order`, dazu die Spalte `project.semester_id` mit Fremdschlüssel und Index. Die Migration überführt jeden vorhandenen, nicht leeren Freitext aus `project.semester` in eine Zeile, setzt den Verweis und löscht danach die alte Spalte. Kein Default auf `active` und `sort_order`: JPA schreibt beide Spalten bei jedem Insert mit. Die übernommene Reihenfolge ist die alphabetische des Textes und wird auf der Administrationsseite zurechtgerückt, weil sie sich aus dem Namen nicht verlässlich berechnen lässt. |
 
-Aktueller Schemastand laut Flyway: `202608130640`, 14 Migrationen.
+Aktueller Schemastand laut Flyway: `202608161915`, 15 Migrationen.
 
 Die Dateinamen 1 bis 8 tragen weiterhin deutsche Beschreibungen
 (`__projekt_und_zuordnungen.sql`). Das bleibt so: eingespielte Migrationen
@@ -227,7 +228,7 @@ Prüfsumme.
 | `POST` auf `/api/auth/register`, `/api/auth/verify`, `/api/auth/verify/resend` | Zwangsläufig offen (KAN-26): wer sich registriert, hat noch kein Token, und ein Konto in `REGISTRATION_PENDING` bekäme selbst mit Token ein 401 `ACCOUNT_NOT_ACTIVE`. An die Stelle der Anmeldung treten das Einmalgeheimnis im Postfach und das Rate-Limit aus `VerificationAttemptService`. Einzeln aufgeführt und nicht als `/api/auth/**`, weil unter demselben Präfix mit `/auth/me` und `/auth/logout` Pfade liegen, die ein Token brauchen. |
 | `POST` auf `/api/auth/forgot-password`, `/api/auth/reset-password` | Aus demselben Grund offen (KAN-43): wer sein Passwort vergessen hat, kann sich nicht anmelden. An die Stelle der Anmeldung treten der Rücksetzcode im Postfach und das Rate-Limit aus `VerificationAttemptService` (§6.5, seit Contract v34 auch an `reset-password`). |
 | `GET /actuator/health` | Health-Check ohne Anmeldung; es ist der einzige freigeschaltete Actuator-Endpoint (`management.endpoints.web.exposure.include: health`). |
-| `GET` auf `/api/categories`, `/api/faculties`, `/api/study-programs`, `/api/modules` | PUBLIC-Lesezugriff auf die Stammdaten (§5). Umgesetzt im `MasterDataController`. Hier entscheidet **kein** Berechtigungsservice mit: die Listen hängen an keiner Ressource mit Eigentümer und enthalten nichts Schützenswertes. |
+| `GET` auf `/api/categories`, `/api/faculties`, `/api/study-programs`, `/api/modules`, `/api/semesters` | PUBLIC-Lesezugriff auf die Stammdaten (§5). Umgesetzt im `MasterDataController`. Hier entscheidet **kein** Berechtigungsservice mit: die Listen hängen an keiner Ressource mit Eigentümer und enthalten nichts Schützenswertes. |
 | `GET` auf `/api/projects`, `/api/projects/*` | PUBLIC-Lesezugriff auf veröffentlichte Inhalte, umgesetzt im `ProjectController` (KAN-16). Was ein nicht angemeldeter Aufrufer tatsächlich sieht, entscheidet der `ProjectPermissionService`. |
 | `GET` auf `/api/projects/*/blocks`, `/api/portfolios/*`, `/api/top10` | Ebenfalls PUBLIC, **diese Endpoints existieren aber noch nicht.** Die Regeln stehen vorab da, damit die späteren Controller nicht versehentlich hinter `authenticated()` verschwinden. |
 | `/api/admin/**` | Nicht offen, sondern `hasRole("ADMIN")`. |
@@ -686,7 +687,7 @@ Die Endpoints unter `/api/admin` liegen bewusst **nicht** alle in einem Paket:
 | Endpoint-Gruppe | Paket | Warum dort |
 |-----------------|-------|------------|
 | `GET /admin/dashboard`, `/admin/users/**` | `admin` | siehe unten |
-| `POST`/`PATCH`/`DELETE` auf `/admin/categories`, `/admin/faculties`, `/admin/study-programs`, `/admin/modules`, dazu `POST /admin/categories/{id}/merge` | `masterdata` | arbeitet auf den Entities dieses Features, wie der Lesedienst daneben |
+| `POST`/`PATCH`/`DELETE` auf `/admin/categories`, `/admin/faculties`, `/admin/study-programs`, `/admin/modules`, `/admin/semesters`, dazu `POST /admin/categories/{id}/merge` und `POST /admin/semesters/{id}/move` | `masterdata` | arbeitet auf den Entities dieses Features, wie der Lesedienst daneben |
 | `/admin/top10-nominations/**`, `PUT /admin/top10` | `top10` | dasselbe, seit KAN-24 |
 | `POST /admin/projects/status` | `project` | dasselbe, seit KAN-46: der Endpoint bewegt Projekte durch den Zustandsautomaten und ruft dafür den `ProjectWorkflowService` |
 

@@ -135,17 +135,17 @@ public final class ProjectSpecifications {
 	}
 
 	/**
-	 * Filter {@code semester}, exakter Vergleich auf die gespeicherte
-	 * Schreibweise (z. B. „WS 2025/26").
+	 * Filter {@code semester} (§3.18).
 	 *
-	 * <p>Bewusst kein unscharfer Vergleich: das Feld ist eine freie
-	 * Zeichenkette, die im Frontend aus einer Auswahlliste kommt. Ein
-	 * {@code like} wuerde „WS 2025/26" auch bei der Eingabe „2025" treffen und
-	 * damit stillschweigend ein zweites, undokumentiertes Filterverhalten
-	 * einfuehren.
+	 * <p>Seit Contract v45 die ID der Stammdatenzeile und nicht mehr die
+	 * getippte Schreibweise: der Vergleich lief zuvor exakt gegen ein
+	 * Freitextfeld, sodass „WiSe 2025/26" und „WS 25/26" zwei verschiedene
+	 * Semester waren und eine verlaessliche Optionsliste nicht zu bilden war.
+	 * Damit verhaelt sich der Parameter wie {@code category}, {@code faculty},
+	 * {@code studyProgram} und {@code module}.
 	 */
-	public static Specification<Project> semester(String semester) {
-		return (root, query, cb) -> cb.equal(root.get("semester"), semester);
+	public static Specification<Project> semester(UUID semesterId) {
+		return reference("semester", semesterId);
 	}
 
 	/**

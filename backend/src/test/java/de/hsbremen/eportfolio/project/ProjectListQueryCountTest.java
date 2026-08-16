@@ -9,6 +9,9 @@ import de.hsbremen.eportfolio.common.enums.ProjectStatus;
 import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.masterdata.CategoryRepository;
 import de.hsbremen.eportfolio.masterdata.FacultyRepository;
+import de.hsbremen.eportfolio.masterdata.Semester;
+import de.hsbremen.eportfolio.masterdata.SemesterRepository;
+import de.hsbremen.eportfolio.masterdata.TestMasterData;
 import de.hsbremen.eportfolio.reaction.ReactionRepository;
 import de.hsbremen.eportfolio.reaction.TestReaction;
 import de.hsbremen.eportfolio.user.TestUser;
@@ -76,12 +79,15 @@ class ProjectListQueryCountTest {
 	private FacultyRepository facultyRepository;
 
 	@Autowired
+	private SemesterRepository semesterRepository;
+
+	@Autowired
 	private EntityManagerFactory entityManagerFactory;
 
 	@PersistenceContext
 	private EntityManager entityManager;
 
-	private String semester;
+	private Semester semester;
 
 	private User author;
 
@@ -89,7 +95,8 @@ class ProjectListQueryCountTest {
 
 	@BeforeEach
 	void createUsers() {
-		semester = "KAN16-N1 " + UUID.randomUUID();
+		semester = semesterRepository.saveAndFlush(
+				TestMasterData.semesterWithoutId("KAN16-N1 " + UUID.randomUUID(), 1));
 		author = userRepository.saveAndFlush(TestUser.activeWithoutId(Role.STUDENT, "nicht-relevant"));
 		reacting = userRepository.saveAndFlush(TestUser.activeWithoutId(Role.STUDENT, "nicht-relevant"));
 	}
@@ -143,7 +150,7 @@ class ProjectListQueryCountTest {
 		statistics.clear();
 
 		mockMvc.perform(get("/api/projects")
-						.param("semester", semester)
+						.param("semester", semester.getId().toString())
 						.param("size", "50"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.content.length()").value(expectedCards))

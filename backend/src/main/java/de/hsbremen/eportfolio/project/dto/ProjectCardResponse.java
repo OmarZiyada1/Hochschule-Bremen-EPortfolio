@@ -26,7 +26,7 @@ import java.util.UUID;
  * @param status          aktueller Status (§2.2)
  * @param projectType     (§2.6)
  * @param degree          (§2.7)
- * @param semester        z. B. „WS 2025/26"
+ * @param semester        Semester der Entstehung (§3.18)
  * @param category        (§3.6)
  * @param faculty         (§3.8)
  * @param studyProgram    (§3.7)
@@ -56,9 +56,9 @@ public record ProjectCardResponse(
 				nullable = true)
 		Degree degree,
 
-		@Schema(description = "Semester der Entstehung, z. B. \"WS 2025/26\".",
-				example = "WS 2025/26", nullable = true)
-		String semester,
+		@Schema(description = "Semester der Entstehung (§3.18). Im DRAFT noch nicht gesetzt.",
+				nullable = true)
+		ReferenceResponse semester,
 
 		ReferenceResponse category,
 
@@ -102,7 +102,7 @@ public record ProjectCardResponse(
 				project.getStatus(),
 				project.getProjectType(),
 				project.getDegree(),
-				project.getSemester(),
+				ReferenceResponse.from(project.getSemester()),
 				ReferenceResponse.from(project.getCategory()),
 				ReferenceResponse.from(project.getFaculty()),
 				ReferenceResponse.from(project.getStudyProgram()),

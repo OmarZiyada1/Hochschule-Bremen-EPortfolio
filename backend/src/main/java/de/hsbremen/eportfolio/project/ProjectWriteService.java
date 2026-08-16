@@ -10,6 +10,8 @@ import de.hsbremen.eportfolio.common.error.ValidationException;
 import de.hsbremen.eportfolio.masterdata.CategoryRepository;
 import de.hsbremen.eportfolio.masterdata.FacultyRepository;
 import de.hsbremen.eportfolio.masterdata.ModuleRepository;
+import de.hsbremen.eportfolio.masterdata.Semester;
+import de.hsbremen.eportfolio.masterdata.SemesterRepository;
 import de.hsbremen.eportfolio.masterdata.StudyProgramRepository;
 import de.hsbremen.eportfolio.project.dto.MemberRequest;
 import de.hsbremen.eportfolio.project.dto.ProjectCreateRequest;
@@ -82,6 +84,8 @@ public class ProjectWriteService {
 
 	private final ModuleRepository moduleRepository;
 
+	private final SemesterRepository semesterRepository;
+
 	private final ProjectPermissionService permissions;
 
 	private final ProjectReadService readService;
@@ -100,6 +104,7 @@ public class ProjectWriteService {
 			FacultyRepository facultyRepository,
 			StudyProgramRepository studyProgramRepository,
 			ModuleRepository moduleRepository,
+			SemesterRepository semesterRepository,
 			ProjectPermissionService permissions,
 			ProjectReadService readService,
 			Top10Service top10Service) {
@@ -110,6 +115,7 @@ public class ProjectWriteService {
 		this.facultyRepository = facultyRepository;
 		this.studyProgramRepository = studyProgramRepository;
 		this.moduleRepository = moduleRepository;
+		this.semesterRepository = semesterRepository;
 		this.permissions = permissions;
 		this.readService = readService;
 		this.top10Service = top10Service;
@@ -347,7 +353,7 @@ public class ProjectWriteService {
 		project.setCoverImageUrl(emptyAsNull(request.coverImageUrl()));
 		project.setProjectType(request.projectType());
 		project.setDegree(request.degree());
-		project.setSemester(emptyAsNull(request.semester()));
+		project.setSemester(semesterReference(request.semesterId(), project.getSemester()));
 		project.setCategory(reference(request.categoryId(), categoryRepository, "categoryId"));
 		project.setFaculty(reference(request.facultyId(), facultyRepository, "facultyId"));
 		project.setStudyProgram(
@@ -369,6 +375,42 @@ public class ProjectWriteService {
 		return repository.findById(id).orElseThrow(() -> new ValidationException(
 				ErrorCodes.VALIDATION_FAILED,
 				"Unter der in \"" + field + "\" angegebenen ID gibt es keinen Eintrag."));
+	}
+
+	/**
+	 * Loest das Semester auf (§3.18). Wie {@link #reference} ergibt eine
+	 * unbekannte ID <strong>400</strong>, dazu kommt hier der Auswahlzustand.
+	 *
+	 * <p><strong>Ein inaktives Semester laesst sich nicht neu setzen</strong>,
+	 * denn genau dafuer gibt es {@code active}: die Administration nimmt ein
+	 * abgelaufenes Semester aus der Auswahl, und ein Client, der die Liste
+	 * ungefiltert laedt, soll es nicht doch anbieten koennen.
+	 *
+	 * <p><strong>Ein bereits gesetztes bleibt dagegen stehen</strong>, auch wenn
+	 * es inzwischen deaktiviert wurde. Sonst waere ein Projekt aus dem
+	 * vergangenen Semester nicht mehr speicherbar, sobald die Administration
+	 * aufraeumt: jedes {@code PUT} schickt die vollstaendigen Metadaten mit
+	 * (§6.1), also auch das unveraenderte Semester, und liefe in einen 400, den
+	 * die schreibende Person nicht aufloesen koennte, ohne die Angabe zu
+	 * verlieren.
+	 *
+	 * @param requested die ID aus dem Body; {@code null} loescht die Zuordnung
+	 * @param current   das Semester, das am Projekt bereits steht
+	 */
+	private Semester semesterReference(UUID requested, Semester current) {
+		if (requested == null) {
+			return null;
+		}
+		if (current != null && requested.equals(current.getId())) {
+			return current;
+		}
+
+		Semester semester = reference(requested, semesterRepository, "semesterId");
+		if (!semester.isActive()) {
+			throw new ValidationException(ErrorCodes.VALIDATION_FAILED,
+					"semesterId: Dieses Semester steht nicht mehr zur Auswahl.");
+		}
+		return semester;
 	}
 
 	/**

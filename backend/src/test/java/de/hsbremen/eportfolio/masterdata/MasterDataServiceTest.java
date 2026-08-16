@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import de.hsbremen.eportfolio.masterdata.dto.CategoryResponse;
 import de.hsbremen.eportfolio.masterdata.dto.FacultyResponse;
 import de.hsbremen.eportfolio.masterdata.dto.ModuleResponse;
+import de.hsbremen.eportfolio.masterdata.dto.SemesterResponse;
 import de.hsbremen.eportfolio.masterdata.dto.StudyProgramResponse;
 import java.util.List;
 import java.util.UUID;
@@ -36,6 +37,8 @@ class MasterDataServiceTest {
 
 	private ModuleRepository moduleRepository;
 
+	private SemesterRepository semesterRepository;
+
 	private MasterDataService service;
 
 	@BeforeEach
@@ -44,8 +47,9 @@ class MasterDataServiceTest {
 		facultyRepository = mock(FacultyRepository.class);
 		studyProgramRepository = mock(StudyProgramRepository.class);
 		moduleRepository = mock(ModuleRepository.class);
+		semesterRepository = mock(SemesterRepository.class);
 		service = new MasterDataService(categoryRepository, facultyRepository, studyProgramRepository,
-				moduleRepository);
+				moduleRepository, semesterRepository);
 	}
 
 	// --- Kategorien --------------------------------------------------------
@@ -156,6 +160,35 @@ class MasterDataServiceTest {
 		when(moduleRepository.findByStudyProgramIdOrderByNameAsc(unknown)).thenReturn(List.of());
 
 		assertThat(service.modules(unknown)).isEmpty();
+	}
+
+	// --- Semester (§3.18) --------------------------------------------------
+
+	@Test
+	@DisplayName("Ohne Filter kommen alle Semester in der gepflegten Reihenfolge")
+	void semestersWithoutFilter() {
+		Semester older = TestMasterData.semester("WiSe 2025/26", 1);
+		Semester newer = TestMasterData.semester("SoSe 2026", 2);
+		when(semesterRepository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(older, newer));
+
+		assertThat(service.semesters(null))
+				.extracting(SemesterResponse::name)
+				.containsExactly("WiSe 2025/26", "SoSe 2026");
+		verify(semesterRepository).findAllByOrderBySortOrderAsc();
+		verifyNoMoreInteractions(semesterRepository);
+	}
+
+	@Test
+	@DisplayName("Mit active=true fragt der Dienst nur die waehlbaren Semester ab")
+	void semestersWithActiveFilter() {
+		Semester active = TestMasterData.semester("SoSe 2026", 2);
+		when(semesterRepository.findAllByActiveOrderBySortOrderAsc(true)).thenReturn(List.of(active));
+
+		assertThat(service.semesters(true)).singleElement()
+				.extracting(SemesterResponse::active)
+				.isEqualTo(true);
+		verify(semesterRepository).findAllByActiveOrderBySortOrderAsc(true);
+		verifyNoMoreInteractions(semesterRepository);
 	}
 
 	// --- Nullable Kuerzel --------------------------------------------------

@@ -37,7 +37,7 @@ public interface ProjectMetadataRequest {
 
 	Degree degree();
 
-	String semester();
+	UUID semesterId();
 
 	UUID categoryId();
 

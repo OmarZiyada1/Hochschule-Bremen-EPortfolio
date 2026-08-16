@@ -22,8 +22,9 @@ const FILTER_GROUPS = [
  *
  * Die Gruppen erscheinen als Kommt-bald-Hinweis ohne Bedienelemente: die
  * Mehrfachauswahl braucht mehrwertige Filterparameter und entsteht mit
- * KAN-64 (Contract §6.1 seit v43); die Wertequelle der Semester-Gruppe ist
- * ein offener Punkt (§7). Entschieden in der Klaerungsrunde zu KAN-31.
+ * KAN-64 (Contract §6.1 seit v43). Entschieden in der Klaerungsrunde zu
+ * KAN-31. Die Wertequelle der Semester-Gruppe ist seit Contract v45 nicht
+ * mehr offen: sie kommt aus GET /api/semesters (§3.18, KAN-65).
  * Bewusst keine Checkboxen und keine Aufklapp-Pfeile: ein Bedienelement,
  * das nichts tut, verbietet die DoD des Tickets.
  */

@@ -30,6 +30,7 @@ import de.hsbremen.eportfolio.config.JwtProperties;
 import de.hsbremen.eportfolio.config.SecurityConfig;
 import de.hsbremen.eportfolio.project.dto.ProjectCardResponse;
 import de.hsbremen.eportfolio.project.dto.ProjectFilterRequest;
+import de.hsbremen.eportfolio.project.dto.ReferenceResponse;
 import de.hsbremen.eportfolio.user.UserRepository;
 import java.time.Duration;
 import java.util.List;
@@ -156,6 +157,7 @@ class ProjectControllerTest {
 		UUID faculty = UUID.randomUUID();
 		UUID studyProgram = UUID.randomUUID();
 		UUID module = UUID.randomUUID();
+		UUID semester = UUID.randomUUID();
 		UUID author = UUID.randomUUID();
 		when(projectReadService.list(any(), any(), any()))
 				.thenReturn(new PageResponse<>(List.of(), 0, 20, 0, 0));
@@ -167,7 +169,7 @@ class ProjectControllerTest {
 						.param("module", module.toString())
 						.param("degree", "MASTER")
 						.param("type", "THESIS")
-						.param("semester", "WS 2025/26")
+						.param("semester", semester.toString())
 						.param("q", "Portfolio")
 						.param("status", "PUBLISHED")
 						.param("author", author.toString())
@@ -181,7 +183,7 @@ class ProjectControllerTest {
 		assertThat(filter.module()).isEqualTo(module);
 		assertThat(filter.degree()).isEqualTo(Degree.MASTER);
 		assertThat(filter.type()).isEqualTo(ProjectType.THESIS);
-		assertThat(filter.semester()).isEqualTo("WS 2025/26");
+		assertThat(filter.semester()).isEqualTo(semester);
 		assertThat(filter.q()).isEqualTo("Portfolio");
 		assertThat(filter.status()).isEqualTo(ProjectStatus.PUBLISHED);
 		assertThat(filter.author()).isEqualTo(author);
@@ -353,9 +355,11 @@ class ProjectControllerTest {
 	@DisplayName("Die Kachel liefert genau die Felder aus §6.1")
 	void cardFields() throws Exception {
 		UUID id = UUID.randomUUID();
+		ReferenceResponse semester =
+				new ReferenceResponse(UUID.randomUUID(), "WiSe 2025/26", null);
 		ProjectCardResponse card = new ProjectCardResponse(
 				id, "Titel", "Teaser", "/api/files/1", ProjectStatus.PUBLISHED,
-				ProjectType.THESIS, Degree.BACHELOR, "WS 2025/26",
+				ProjectType.THESIS, Degree.BACHELOR, semester,
 				null, null, null, null, List.of("react", "ux"), 3, null);
 		when(projectReadService.list(any(), any(), any()))
 				.thenReturn(new PageResponse<>(List.of(card), 0, 20, 1, 1));
@@ -367,7 +371,7 @@ class ProjectControllerTest {
 				.andExpect(jsonPath("$.content[0].status").value("PUBLISHED"))
 				.andExpect(jsonPath("$.content[0].projectType").value("THESIS"))
 				.andExpect(jsonPath("$.content[0].degree").value("BACHELOR"))
-				.andExpect(jsonPath("$.content[0].semester").value("WS 2025/26"))
+				.andExpect(jsonPath("$.content[0].semester.name").value("WiSe 2025/26"))
 				.andExpect(jsonPath("$.content[0].tags[0]").value("react"))
 				.andExpect(jsonPath("$.content[0].reactionCount").value(3));
 	}

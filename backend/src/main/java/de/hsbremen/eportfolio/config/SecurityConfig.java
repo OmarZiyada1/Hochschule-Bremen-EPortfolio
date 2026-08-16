@@ -181,6 +181,13 @@ public class SecurityConfig {
 					// fallen unter authenticated(). Ob ein Aufrufer die Datei
 					// tatsaechlich zu sehen bekommt, entscheidet der
 					// FileService am Projektstatus, nicht die Filterkette.
+					// /api/semesters kam mit KAN-65 dazu und steht in derselben
+					// Zeile wie die vier uebrigen Stammdatenlisten: §6.1 fuehrt
+					// den Endpoint als PUBLIC, weil Projektbibliothek und
+					// Metadaten-Formular ihre Auswahl daraus fuellen, und ein
+					// Semestername ist nichts Schuetzenswertes. Nur GET; POST,
+					// PATCH, DELETE liegen unter /api/admin/semesters und
+					// fallen damit unter hasRole("ADMIN").
 					// GET /api/users/lookup (KAN-44) steht bewusst nicht hier:
 					// §6.1 verlangt eine gueltige Anmeldung, ohne Token 401
 					// NOT_AUTHENTICATED. Eine oeffentliche Personensuche ueber
@@ -196,6 +203,7 @@ public class SecurityConfig {
 							"/api/files/*",
 							"/api/categories", "/api/faculties",
 							"/api/study-programs", "/api/modules",
+							"/api/semesters",
 							"/api/top10").permitAll()
 
 					// Rollenebene fuer den Admin-Bereich. Der Rest der Matrix

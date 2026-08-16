@@ -11,6 +11,10 @@ import de.hsbremen.eportfolio.masterdata.dto.FacultyUpdateRequest;
 import de.hsbremen.eportfolio.masterdata.dto.ModuleCreateRequest;
 import de.hsbremen.eportfolio.masterdata.dto.ModuleResponse;
 import de.hsbremen.eportfolio.masterdata.dto.ModuleUpdateRequest;
+import de.hsbremen.eportfolio.masterdata.dto.SemesterCreateRequest;
+import de.hsbremen.eportfolio.masterdata.dto.SemesterMoveRequest;
+import de.hsbremen.eportfolio.masterdata.dto.SemesterResponse;
+import de.hsbremen.eportfolio.masterdata.dto.SemesterUpdateRequest;
 import de.hsbremen.eportfolio.masterdata.dto.StudyProgramCreateRequest;
 import de.hsbremen.eportfolio.masterdata.dto.StudyProgramResponse;
 import de.hsbremen.eportfolio.masterdata.dto.StudyProgramUpdateRequest;
@@ -19,6 +23,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -34,11 +39,11 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Die Stammdaten-Zeilen des Admin-Bereichs aus API-Contract §6.1 (KAN-25):
  * {@code POST}, {@code PATCH} und {@code DELETE} fuer Kategorien, Fakultaeten,
- * Studiengaenge und Module, dazu seit KAN-46 das Zusammenfuehren zweier
- * Kategorien.
+ * Studiengaenge, Module und seit KAN-65 Semester, dazu seit KAN-46 das
+ * Zusammenfuehren zweier Kategorien und das Umsortieren der Semester.
  *
  * <p><strong>Getrennt vom {@link MasterDataController}</strong>, der dieselben
- * vier Tabellen unter {@code /api} liest. Die Lese-Endpoints sind PUBLIC und
+ * Tabellen unter {@code /api} liest. Die Lese-Endpoints sind PUBLIC und
  * heben in der Swagger-UI die Token-Anforderung ausdruecklich auf; diese hier
  * sind das Gegenteil. Beides in einem Controller waere eine Klasse, in der die
  * Haelfte der Methoden ein Token braucht und die andere nicht, und die
@@ -50,16 +55,18 @@ import org.springframework.web.bind.annotation.RestController;
  * {@code mayManageMasterData} trotzdem noch einmal (§5).
  *
  * <p><strong>Kein {@code GET} hier.</strong> Die Administrationsseite liest die
- * vier Listen ueber die vorhandenen PUBLIC-Endpoints; §6.1 fuehrt fuer die
- * Stammdaten im Admin-Bereich nur schreibende Zeilen. Ein zweiter Lesepfad mit
+ * Listen ueber die vorhandenen PUBLIC-Endpoints; §6.1 fuehrt fuer die
+ * Stammdaten im Admin-Bereich nur schreibende Zeilen. Das {@code move} des
+ * Semesters ist die einzige Ausnahme von der Regel, dass hier nichts liest: es
+ * antwortet mit der ganzen Liste, weil ein Tausch zwei Zeilen betrifft. Ein zweiter Lesepfad mit
  * identischer Antwort waere eine Kopie, die beim naechsten Feld
  * auseinanderlaeuft.
  */
 @RestController
 @RequestMapping("/api/admin")
-@Tag(name = "Stammdatenverwaltung", description = "Kategorien, Fakultaeten, Studiengaenge und "
-		+ "Module anlegen, aendern und loeschen (§6.1). Ausschliesslich fuer ADMIN (§5). "
-		+ "Gelesen werden die vier Listen ueber die PUBLIC-Endpoints unter /api.")
+@Tag(name = "Stammdatenverwaltung", description = "Kategorien, Fakultaeten, Studiengaenge, "
+		+ "Module und Semester anlegen, aendern und loeschen (§6.1). Ausschliesslich fuer ADMIN "
+		+ "(§5). Gelesen werden die Listen ueber die PUBLIC-Endpoints unter /api.")
 public class MasterDataAdminController {
 
 	private static final String IN_USE = "RESOURCE_IN_USE: der eindeutige Wert ist bereits "
@@ -338,5 +345,92 @@ public class MasterDataAdminController {
 			@PathVariable("id") UUID id) {
 
 		adminService.deleteModule(user, id);
+	}
+
+	// ==================================================================
+	// Semester (§3.18)
+	// ==================================================================
+
+	@Operation(summary = "Semester anlegen",
+			description = "Der Name ist eindeutig; ein bereits vergebener ergibt 409. Die neue "
+					+ "Zeile steht am Ende der Reihenfolge und wird ueber \"move\" verschoben.")
+	@ApiResponse(responseCode = "201", description = "Das angelegte Semester.")
+	@ApiResponse(responseCode = "400", description = "VALIDATION_FAILED: Name fehlt oder ist zu lang.")
+	@ApiResponse(responseCode = "401", description = UNAUTHORIZED)
+	@ApiResponse(responseCode = "403", description = FORBIDDEN)
+	@ApiResponse(responseCode = "409", description = IN_USE)
+	@PostMapping("/semesters")
+	@ResponseStatus(HttpStatus.CREATED)
+	public SemesterResponse createSemester(
+			@AuthenticationPrincipal AuthenticatedUser user,
+			@RequestBody @Valid SemesterCreateRequest request) {
+
+		return adminService.createSemester(user, request);
+	}
+
+	@Operation(summary = "Semester aendern",
+			description = "Beide Felder sind optional; was fehlt, bleibt stehen. Ueber \"active\" "
+					+ "laeuft auch das Deaktivieren: ein inaktives Semester steht bei der "
+					+ "Projektanlage nicht mehr zur Auswahl, bleibt an bestehenden Projekten aber "
+					+ "erhalten.")
+	@ApiResponse(responseCode = "200", description = "Das geaenderte Semester.")
+	@ApiResponse(responseCode = "400", description = "VALIDATION_FAILED: uebermittelter Name ist "
+			+ "leer oder zu lang.")
+	@ApiResponse(responseCode = "401", description = UNAUTHORIZED)
+	@ApiResponse(responseCode = "403", description = FORBIDDEN)
+	@ApiResponse(responseCode = "404", description = NOT_FOUND)
+	@ApiResponse(responseCode = "409", description = IN_USE)
+	@PatchMapping("/semesters/{id}")
+	public SemesterResponse updateSemester(
+			@AuthenticationPrincipal AuthenticatedUser user,
+
+			@Parameter(description = "ID des Semesters.")
+			@PathVariable("id") UUID id,
+
+			@RequestBody @Valid SemesterUpdateRequest request) {
+
+		return adminService.updateSemester(user, id, request);
+	}
+
+	@Operation(summary = "Semester loeschen",
+			description = "Gesperrt, solange noch Projekte darauf verweisen (409). Ein "
+					+ "abgelaufenes Semester wird deaktiviert und nicht geloescht.")
+	@ApiResponse(responseCode = "204", description = "Das Semester ist geloescht.")
+	@ApiResponse(responseCode = "401", description = UNAUTHORIZED)
+	@ApiResponse(responseCode = "403", description = FORBIDDEN)
+	@ApiResponse(responseCode = "404", description = NOT_FOUND)
+	@ApiResponse(responseCode = "409", description = IN_USE)
+	@DeleteMapping("/semesters/{id}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void deleteSemester(
+			@AuthenticationPrincipal AuthenticatedUser user,
+
+			@Parameter(description = "ID des Semesters.")
+			@PathVariable("id") UUID id) {
+
+		adminService.deleteSemester(user, id);
+	}
+
+	@Operation(summary = "Semester umsortieren",
+			description = "Tauscht das Semester mit seiner Nachbarzeile. Am oberen "
+					+ "beziehungsweise unteren Rand ist die Aktion wirkungslos und ergibt "
+					+ "trotzdem 200, weil der gewuenschte Zustand bereits besteht. Die Antwort "
+					+ "ist die vollstaendige neue Reihenfolge.")
+	@ApiResponse(responseCode = "200", description = "Alle Semester in der neuen Reihenfolge.")
+	@ApiResponse(responseCode = "400", description = "VALIDATION_FAILED: \"direction\" fehlt oder "
+			+ "ist weder UP noch DOWN.")
+	@ApiResponse(responseCode = "401", description = UNAUTHORIZED)
+	@ApiResponse(responseCode = "403", description = FORBIDDEN)
+	@ApiResponse(responseCode = "404", description = NOT_FOUND)
+	@PostMapping("/semesters/{id}/move")
+	public List<SemesterResponse> moveSemester(
+			@AuthenticationPrincipal AuthenticatedUser user,
+
+			@Parameter(description = "ID des Semesters, das bewegt wird.")
+			@PathVariable("id") UUID id,
+
+			@RequestBody @Valid SemesterMoveRequest request) {
+
+		return adminService.moveSemester(user, id, request);
 	}
 }

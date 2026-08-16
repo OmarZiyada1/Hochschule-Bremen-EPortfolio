@@ -71,6 +71,10 @@
 			"value": ""
 		},
 		{
+			"key": "semesterId",
+			"value": ""
+		},
+		{
 			"key": "projectId",
 			"value": ""
 		},
@@ -306,6 +310,39 @@
 									"\tpm.expect(body[0].studyProgramId).to.eql(pm.collectionVariables.get('studyProgramId'));",
 									"});",
 									"pm.collectionVariables.set('moduleId', body[0].id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Semester lesen",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/semesters?active=true"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test('Liste nicht leer, Felder id, name, active und sortOrder', function () {",
+									"\tpm.expect(body).to.be.an('array').that.is.not.empty;",
+									"\tpm.expect(body[0]).to.have.keys('id', 'name', 'active', 'sortOrder');",
+									"});",
+									"pm.test('Mit active=true kommen nur waehlbare Semester', function () {",
+									"\tbody.forEach(function (semester) { pm.expect(semester.active).to.eql(true); });",
+									"});",
+									"pm.test('Aufsteigend nach sortOrder', function () {",
+									"\tconst orders = body.map(function (semester) { return semester.sortOrder; });",
+									"\tpm.expect(orders).to.eql(orders.slice().sort(function (a, b) { return a - b; }));",
+									"});",
+									"pm.collectionVariables.set('semesterId', body[0].id);"
 								]
 							}
 						}
@@ -890,7 +927,7 @@
 						"url": "{{baseUrl}}/api/projects/{{projectId}}",
 						"body": {
 							"mode": "raw",
-							"raw": "{\n\t\"version\": {{projectVersion}},\n\t\"title\": \"PMTEST Projekt vollstaendig\",\n\t\"summary\": \"PMTEST Teaser fuer den Testlauf\",\n\t\"projectType\": \"REGULAR\",\n\t\"degree\": \"BACHELOR\",\n\t\"semester\": \"WS 2025/26\",\n\t\"categoryId\": \"{{categoryId}}\",\n\t\"facultyId\": \"{{facultyId}}\",\n\t\"studyProgramId\": \"{{studyProgramId}}\",\n\t\"moduleId\": \"{{moduleId}}\",\n\t\"tags\": [\n\t\t\"pmtest\"\n\t]\n}",
+							"raw": "{\n\t\"version\": {{projectVersion}},\n\t\"title\": \"PMTEST Projekt vollstaendig\",\n\t\"summary\": \"PMTEST Teaser fuer den Testlauf\",\n\t\"projectType\": \"REGULAR\",\n\t\"degree\": \"BACHELOR\",\n\t\"semesterId\": \"{{semesterId}}\",\n\t\"categoryId\": \"{{categoryId}}\",\n\t\"facultyId\": \"{{facultyId}}\",\n\t\"studyProgramId\": \"{{studyProgramId}}\",\n\t\"moduleId\": \"{{moduleId}}\",\n\t\"tags\": [\n\t\t\"pmtest\"\n\t]\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1597,7 +1634,7 @@
 						"url": "{{baseUrl}}/api/projects",
 						"body": {
 							"mode": "raw",
-							"raw": "{\n\t\"title\": \"PMTEST Vier-Augen {{$timestamp}}\",\n\t\"projectType\": \"REGULAR\",\n\t\"degree\": \"BACHELOR\",\n\t\"semester\": \"WS 2025/26\",\n\t\"categoryId\": \"{{categoryId}}\",\n\t\"facultyId\": \"{{facultyId}}\",\n\t\"studyProgramId\": \"{{studyProgramId}}\"\n}",
+							"raw": "{\n\t\"title\": \"PMTEST Vier-Augen {{$timestamp}}\",\n\t\"projectType\": \"REGULAR\",\n\t\"degree\": \"BACHELOR\",\n\t\"semesterId\": \"{{semesterId}}\",\n\t\"categoryId\": \"{{categoryId}}\",\n\t\"facultyId\": \"{{facultyId}}\",\n\t\"studyProgramId\": \"{{studyProgramId}}\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"

@@ -23,7 +23,7 @@ import java.util.UUID;
  * @param module       ID eines Moduls (§3.9)
  * @param degree       (§2.7)
  * @param type         Projekttyp (§2.6)
- * @param semester     exakte Schreibweise, z. B. „WS 2025/26"
+ * @param semester     ID eines Semesters (§3.18)
  * @param q            Suchbegriff fuer Titel und Kurzbeschreibung
  * @param status       Projektstatus (§2.2); wirkt nur innerhalb dessen, was die
  *                     Sichtbarkeitsschranke ohnehin freigibt
@@ -39,7 +39,7 @@ public record ProjectFilterRequest(
 		UUID module,
 		Degree degree,
 		ProjectType type,
-		String semester,
+		UUID semester,
 		String q,
 		ProjectStatus status,
 		UUID author,

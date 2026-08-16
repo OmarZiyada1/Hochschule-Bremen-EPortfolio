@@ -18,6 +18,8 @@ import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.masterdata.Category;
 import de.hsbremen.eportfolio.masterdata.CategoryRepository;
 import de.hsbremen.eportfolio.masterdata.DevMasterDataSeeder;
+import de.hsbremen.eportfolio.masterdata.Semester;
+import de.hsbremen.eportfolio.masterdata.SemesterRepository;
 import de.hsbremen.eportfolio.user.TestUser;
 import de.hsbremen.eportfolio.user.User;
 import de.hsbremen.eportfolio.user.UserRepository;
@@ -91,6 +93,9 @@ class ProjectWriteIntegrationTest {
 	@Autowired
 	private CategoryRepository categoryRepository;
 
+	@Autowired
+	private SemesterRepository semesterRepository;
+
 	@PersistenceContext
 	private EntityManager entityManager;
 
@@ -108,6 +113,8 @@ class ProjectWriteIntegrationTest {
 
 	private Category category;
 
+	private Semester semester;
+
 	/** Entwurf der Autor:in, mit {@code member} als Mitglied und einer Redaktion. */
 	private Project draft;
 
@@ -123,6 +130,7 @@ class ProjectWriteIntegrationTest {
 		admin = save(Role.ADMIN);
 
 		category = categoryRepository.findAllByOrderByNameAsc().getFirst();
+		semester = semesterRepository.findAllByOrderBySortOrderAsc().getFirst();
 
 		draft = newProject(author, ProjectStatus.DRAFT, "Gruppenarbeit");
 		draft.getEditors().add(assignedEditor);
@@ -168,7 +176,7 @@ class ProjectWriteIntegrationTest {
 					"summary", "Ein Teaser",
 					"projectType", "THESIS",
 					"degree", "BACHELOR",
-					"semester", "WS 2025/26",
+					"semesterId", semester.getId().toString(),
 					"categoryId", category.getId().toString(),
 					"tags", List.of("ux", "react"),
 					"editorIds", List.of(assignedEditor.getId().toString()),
@@ -176,7 +184,8 @@ class ProjectWriteIntegrationTest {
 
 			assertThat(created.get("summary").asText()).isEqualTo("Ein Teaser");
 			assertThat(created.get("projectType").asText()).isEqualTo("THESIS");
-			assertThat(created.get("semester").asText()).isEqualTo("WS 2025/26");
+			assertThat(created.get("semester").get("id").asText())
+					.isEqualTo(semester.getId().toString());
 			assertThat(created.get("category").get("id").asText())
 					.isEqualTo(category.getId().toString());
 			assertThat(texts(created.get("tags"))).containsExactly("react", "ux");
@@ -357,7 +366,7 @@ class ProjectWriteIntegrationTest {
 					"version", before,
 					"title", "Neuer Titel",
 					"summary", "Neuer Teaser",
-					"semester", "SS 2026"));
+					"semesterId", semester.getId().toString()));
 
 			assertThat(updated.get("title").asText()).isEqualTo("Neuer Titel");
 			assertThat(updated.get("summary").asText()).isEqualTo("Neuer Teaser");

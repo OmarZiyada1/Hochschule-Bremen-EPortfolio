@@ -111,9 +111,9 @@ public class ProjectController {
 			@Parameter(description = "Filter: Projekttyp (§2.6).")
 			@RequestParam(name = "type", required = false) ProjectType type,
 
-			@Parameter(description = "Filter: Semester in genau der gespeicherten Schreibweise.",
-					example = "WS 2025/26")
-			@RequestParam(name = "semester", required = false) String semester,
+			@Parameter(description = "Filter: ID eines Semesters aus GET /api/semesters (§3.18). "
+					+ "Seit Contract v45 die ID und nicht mehr die Schreibweise.")
+			@RequestParam(name = "semester", required = false) UUID semester,
 
 			@Parameter(description = "Suchbegriff fuer Titel und Kurzbeschreibung, unabhaengig "
 					+ "von Gross- und Kleinschreibung.")

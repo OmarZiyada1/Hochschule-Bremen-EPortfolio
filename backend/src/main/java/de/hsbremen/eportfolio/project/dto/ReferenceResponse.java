@@ -3,17 +3,18 @@ package de.hsbremen.eportfolio.project.dto;
 import de.hsbremen.eportfolio.masterdata.Category;
 import de.hsbremen.eportfolio.masterdata.Faculty;
 import de.hsbremen.eportfolio.masterdata.Module;
+import de.hsbremen.eportfolio.masterdata.Semester;
 import de.hsbremen.eportfolio.masterdata.StudyProgram;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.UUID;
 
 /**
- * Ein Stammdatenbezug eines Projekts: Kategorie, Fakultaet, Studiengang oder
- * Modul (§3.6 bis §3.9).
+ * Ein Stammdatenbezug eines Projekts: Kategorie, Fakultaet, Studiengang, Modul
+ * oder Semester (§3.6 bis §3.9, §3.18).
  *
- * <p>Ein gemeinsames Record fuer alle vier, weil die Projektantwort von ihnen
+ * <p>Ein gemeinsames Record fuer alle fuenf, weil die Projektantwort von ihnen
  * genau dasselbe braucht: die ID zum Weiterfiltern und einen anzeigbaren Namen.
- * Vier fast gleiche Records wuerden das Frontend zwingen, viermal denselben
+ * Fuenf fast gleiche Records wuerden das Frontend zwingen, fuenfmal denselben
  * Baustein zu bauen. Die vollstaendigen Stammdaten samt ihrer Hierarchie
  * liefern weiterhin die Endpoints aus §6.1 (Stammdaten).
  *
@@ -63,5 +64,20 @@ public record ReferenceResponse(
 			return null;
 		}
 		return new ReferenceResponse(module.getId(), module.getName(), module.getAbbreviation());
+	}
+
+	/**
+	 * Das Semester fuehrt wie die Kategorie kein Kuerzel (§3.18).
+	 *
+	 * <p>{@code active} und {@code sortOrder} stehen bewusst nicht in dieser
+	 * Antwort: sie steuern die Auswahl und die Reihenfolge in der
+	 * Semesterverwaltung, nicht die Darstellung eines einzelnen Projekts. Wer
+	 * sie braucht, liest {@code GET /api/semesters}.
+	 */
+	public static ReferenceResponse from(Semester semester) {
+		if (semester == null) {
+			return null;
+		}
+		return new ReferenceResponse(semester.getId(), semester.getName(), null);
 	}
 }

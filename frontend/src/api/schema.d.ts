@@ -600,6 +600,46 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/admin/semesters": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Semester anlegen
+     * @description Der Name ist eindeutig; ein bereits vergebener ergibt 409. Die neue Zeile steht am Ende der Reihenfolge und wird ueber "move" verschoben.
+     */
+    post: operations["createSemester"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/admin/semesters/{id}/move": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Semester umsortieren
+     * @description Tauscht das Semester mit seiner Nachbarzeile. Am oberen beziehungsweise unteren Rand ist die Aktion wirkungslos und ergibt trotzdem 200, weil der gewuenschte Zustand bereits besteht. Die Antwort ist die vollstaendige neue Reihenfolge.
+     */
+    post: operations["moveSemester"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/admin/projects/status": {
     parameters: {
       query?: never
@@ -796,6 +836,30 @@ export interface paths {
     patch: operations["updateStudyProgram"]
     trace?: never
   }
+  "/api/admin/semesters/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Semester loeschen
+     * @description Gesperrt, solange noch Projekte darauf verweisen (409). Ein abgelaufenes Semester wird deaktiviert und nicht geloescht.
+     */
+    delete: operations["deleteSemester"]
+    options?: never
+    head?: never
+    /**
+     * Semester aendern
+     * @description Beide Felder sind optional; was fehlt, bleibt stehen. Ueber "active" laeuft auch das Deaktivieren: ein inaktives Semester steht bei der Projektanlage nicht mehr zur Auswahl, bleibt an bestehenden Projekten aber erhalten.
+     */
+    patch: operations["updateSemester"]
+    trace?: never
+  }
   "/api/admin/modules/{id}": {
     parameters: {
       query?: never
@@ -920,6 +984,26 @@ export interface paths {
      * @description Alle Studiengaenge, nach Name sortiert. Mit dem Parameter "faculty" auf eine Fakultaet eingeschraenkt; eine unbekannte ID ergibt eine leere Liste.
      */
     get: operations["studyPrograms"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/semesters": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Semester lesen
+     * @description Alle Semester in der von der Administration gepflegten Reihenfolge (§3.18). Ohne Paginierung. Mit "active=true" nur die, die bei der Projektanlage zur Auswahl stehen.
+     */
+    get: operations["semesters"]
     put?: never
     post?: never
     delete?: never
@@ -1209,10 +1293,10 @@ export interface components {
        */
       degree?: "BACHELOR" | "MASTER" | "MBA"
       /**
-       * @description Semester der Entstehung. Null loescht den Wert.
-       * @example WS 2025/26
+       * Format: uuid
+       * @description ID eines Semesters aus GET /api/semesters. Null loescht die Zuordnung; nur aktive Semester sind waehlbar (§3.18).
        */
-      semester?: string
+      semesterId?: string
       /**
        * Format: uuid
        * @description ID einer Kategorie. Null loescht die Zuordnung.
@@ -1277,11 +1361,8 @@ export interface components {
        * @enum {string}
        */
       degree?: "BACHELOR" | "MASTER" | "MBA"
-      /**
-       * @description Semester der Entstehung, z. B. "WS 2025/26".
-       * @example WS 2025/26
-       */
-      semester?: string
+      /** @description Semester der Entstehung (§3.18). Im DRAFT noch nicht gesetzt. */
+      semester?: components["schemas"]["ReferenceResponse"]
       category?: components["schemas"]["ReferenceResponse"]
       faculty?: components["schemas"]["ReferenceResponse"]
       studyProgram?: components["schemas"]["ReferenceResponse"]
@@ -1414,11 +1495,8 @@ export interface components {
        * @enum {string}
        */
       degree?: "BACHELOR" | "MASTER" | "MBA"
-      /**
-       * @description Semester der Entstehung, z. B. "WS 2025/26".
-       * @example WS 2025/26
-       */
-      semester?: string
+      /** @description Semester der Entstehung (§3.18). Im DRAFT noch nicht gesetzt. */
+      semester?: components["schemas"]["ReferenceResponse"]
       category?: components["schemas"]["ReferenceResponse"]
       faculty?: components["schemas"]["ReferenceResponse"]
       studyProgram?: components["schemas"]["ReferenceResponse"]
@@ -1472,10 +1550,10 @@ export interface components {
        */
       degree?: "BACHELOR" | "MASTER" | "MBA"
       /**
-       * @description Semester der Entstehung.
-       * @example WS 2025/26
+       * Format: uuid
+       * @description ID eines Semesters aus GET /api/semesters. Nur aktive Semester sind waehlbar (§3.18).
        */
-      semester?: string
+      semesterId?: string
       /**
        * Format: uuid
        * @description ID einer Kategorie aus GET /api/categories.
@@ -1786,6 +1864,42 @@ export interface components {
        */
       facultyId?: string
     }
+    SemesterCreateRequest: {
+      /**
+       * @description Anzeigename des Semesters, eindeutig.
+       * @example WiSe 2026/27
+       */
+      name?: string
+      /**
+       * @description Steht das Semester bei der Projektanlage zur Auswahl? Fehlt das Feld, ist es aktiv.
+       * @example true
+       */
+      active?: boolean
+    }
+    SemesterResponse: {
+      /** Format: uuid */
+      id?: string
+      name?: string
+      /**
+       * @description Nur aktive Semester stehen beim Anlegen und Bearbeiten eines Projekts zur Auswahl. Ein inaktives bleibt an bestehenden Projekten und als Filterwert erhalten.
+       * @example true
+       */
+      active?: boolean
+      /**
+       * Format: int32
+       * @description Reihenfolge in Liste und Auswahl, von der Administration gesetzt. Kleiner heisst weiter oben.
+       * @example 3
+       */
+      sortOrder?: number
+    }
+    SemesterMoveRequest: {
+      /**
+       * @description Richtung: UP tauscht mit der Zeile darueber, DOWN mit der darunter.
+       * @example UP
+       * @enum {string}
+       */
+      direction: "UP" | "DOWN"
+    }
     ProjectBulkStatusRequest: {
       /** @description IDs der Projekte. Jedes wird einzeln geprueft und in einer eigenen Transaktion verarbeitet; ein unzulaessiger Uebergang blockiert die uebrigen nicht. */
       projectIds?: string[]
@@ -1941,6 +2055,18 @@ export interface components {
        * @description Neue Fakultaet. Fehlt das Feld, bleibt die Zuordnung unveraendert.
        */
       facultyId?: string
+    }
+    SemesterUpdateRequest: {
+      /**
+       * @description Neuer Anzeigename. Fehlt das Feld, bleibt er unveraendert.
+       * @example WiSe 2026/27
+       */
+      name?: string
+      /**
+       * @description Steht das Semester bei der Projektanlage zur Auswahl? Fehlt das Feld, bleibt der Zustand unveraendert.
+       * @example false
+       */
+      active?: boolean
     }
     ModuleUpdateRequest: {
       /**
@@ -2715,10 +2841,7 @@ export interface operations {
         degree?: "BACHELOR" | "MASTER" | "MBA"
         /** @description Filter: Projekttyp (§2.6). */
         type?: "REGULAR" | "PAPER" | "THESIS"
-        /**
-         * @description Filter: Semester in genau der gespeicherten Schreibweise.
-         * @example WS 2025/26
-         */
+        /** @description Filter: ID eines Semesters aus GET /api/semesters (§3.18). Seit Contract v45 die ID und nicht mehr die Schreibweise. */
         semester?: string
         /** @description Suchbegriff fuer Titel und Kurzbeschreibung, unabhaengig von Gross- und Kleinschreibung. */
         q?: string
@@ -4048,6 +4171,129 @@ export interface operations {
       }
     }
   }
+  createSemester: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SemesterCreateRequest"]
+      }
+    }
+    responses: {
+      /** @description Das angelegte Semester. */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SemesterResponse"]
+        }
+      }
+      /** @description VALIDATION_FAILED: Name fehlt oder ist zu lang. */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SemesterResponse"]
+        }
+      }
+      /** @description Kein gueltiges Token mitgeschickt. */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SemesterResponse"]
+        }
+      }
+      /** @description NO_PERMISSION: die Rolle ist nicht ADMIN. */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SemesterResponse"]
+        }
+      }
+      /** @description RESOURCE_IN_USE: der eindeutige Wert ist bereits vergeben, oder beim Loeschen verweisen noch andere Zeilen darauf. */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SemesterResponse"]
+        }
+      }
+    }
+  }
+  moveSemester: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description ID des Semesters, das bewegt wird. */
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SemesterMoveRequest"]
+      }
+    }
+    responses: {
+      /** @description Alle Semester in der neuen Reihenfolge. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SemesterResponse"][]
+        }
+      }
+      /** @description VALIDATION_FAILED: "direction" fehlt oder ist weder UP noch DOWN. */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SemesterResponse"][]
+        }
+      }
+      /** @description Kein gueltiges Token mitgeschickt. */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SemesterResponse"][]
+        }
+      }
+      /** @description NO_PERMISSION: die Rolle ist nicht ADMIN. */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SemesterResponse"][]
+        }
+      }
+      /** @description RESOURCE_NOT_FOUND: unter dieser ID gibt es keine solche Zeile. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SemesterResponse"][]
+        }
+      }
+    }
+  }
   changeStatus: {
     parameters: {
       query?: never
@@ -4775,6 +5021,127 @@ export interface operations {
       }
     }
   }
+  deleteSemester: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description ID des Semesters. */
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Das Semester ist geloescht. */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Kein gueltiges Token mitgeschickt. */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description NO_PERMISSION: die Rolle ist nicht ADMIN. */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description RESOURCE_NOT_FOUND: unter dieser ID gibt es keine solche Zeile. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description RESOURCE_IN_USE: der eindeutige Wert ist bereits vergeben, oder beim Loeschen verweisen noch andere Zeilen darauf. */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  updateSemester: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description ID des Semesters. */
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SemesterUpdateRequest"]
+      }
+    }
+    responses: {
+      /** @description Das geaenderte Semester. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SemesterResponse"]
+        }
+      }
+      /** @description VALIDATION_FAILED: uebermittelter Name ist leer oder zu lang. */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SemesterResponse"]
+        }
+      }
+      /** @description Kein gueltiges Token mitgeschickt. */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SemesterResponse"]
+        }
+      }
+      /** @description NO_PERMISSION: die Rolle ist nicht ADMIN. */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SemesterResponse"]
+        }
+      }
+      /** @description RESOURCE_NOT_FOUND: unter dieser ID gibt es keine solche Zeile. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SemesterResponse"]
+        }
+      }
+      /** @description RESOURCE_IN_USE: der eindeutige Wert ist bereits vergeben, oder beim Loeschen verweisen noch andere Zeilen darauf. */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SemesterResponse"]
+        }
+      }
+    }
+  }
   deleteModule: {
     parameters: {
       query?: never
@@ -5220,6 +5587,38 @@ export interface operations {
         }
         content: {
           "*/*": components["schemas"]["StudyProgramResponse"][]
+        }
+      }
+    }
+  }
+  semesters: {
+    parameters: {
+      query?: {
+        /** @description Optionaler Filter auf den Auswahlzustand. Ohne Angabe kommen alle Semester, auch die deaktivierten. */
+        active?: boolean
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Liste der Semester. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SemesterResponse"][]
+        }
+      }
+      /** @description "active" ist kein Wahrheitswert. */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SemesterResponse"][]
         }
       }
     }
