@@ -321,7 +321,7 @@ Sortierbare Felder bei `GET /projects`: `title`, `semester`, `status`,
 | `Passwortregeln` | `PasswordPolicy` |
 | `EMailAdressen` | `EmailAddresses` |
 | `ausgestellterCode` · `klartextCode` | `IssuedCode` · `plainCode` |
-| `gewaehlteRolle` | `selectedRole` |
+| `gewaehlteRolle` | `selectedRole` (entfallen mit Contract v41, KAN-63: die Registrierung erhebt keine Rollenangabe mehr) |
 | `ProfilAendernAnfrage` | `ProfileUpdateRequest` |
 | `NutzerAuswahlAntwort` | `UserLookupResponse` |
 | `NutzerAuswahlService` · `NutzerAuswahlController` | `UserLookupService` · `UserLookupController` |

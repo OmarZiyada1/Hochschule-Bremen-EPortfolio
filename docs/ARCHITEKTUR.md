@@ -606,14 +606,16 @@ Mail-Moduls aus Kapitel 10.
 | `PasswordPolicy` | Mindest- und Höchstlänge, auch für KAN-28 und KAN-43 |
 | `config/RegistrationProperties` | die beiden Domainlisten und die Laufzeit der Codes |
 
-### Die Rolle folgt der Domain, nicht dem Formular
+### Die Rolle folgt der Domain
 
-`selectedRole` steuert in der Oberfläche nur Beschriftung und erwartete Domain.
-Persistiert wird die Rolle, die sich aus der Domain der `hsbEmail` ergibt;
-weicht die Auswahl davon ab, folgt 400 mit einer Meldung am Feld `hsbEmail`.
-Bestimmte die übermittelte Auswahl die Rolle, könnte jede Person mit
-studentischer Adresse durch Umsetzen eines Feldes im Request Redaktionsrechte
-erhalten, und die Freigabe von Portfolios hinge an einer Selbstauskunft.
+Persistiert wird die Rolle, die sich aus der Domain der `hsbEmail` ergibt,
+und nur sie. Eine Rollenangabe im Request gibt es seit Contract v41 nicht
+mehr (KAN-63); das frühere Feld `selectedRole` steuerte nur die Beschriftung
+im Formular und wurde nie übernommen, sondern lediglich gegen die abgeleitete
+Rolle geprüft. Bestimmte eine übermittelte Auswahl die Rolle, könnte jede
+Person mit studentischer Adresse durch Umsetzen eines Feldes im Request
+Redaktionsrechte erhalten, und die Freigabe von Portfolios hinge an einer
+Selbstauskunft.
 
 **Verglichen wird auf Gleichheit, nicht per Suffix.** Ein
 `endsWith("hs-bremen.de")` ließe `boesehs-bremen.de` durch und entwertete die

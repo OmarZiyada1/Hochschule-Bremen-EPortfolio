@@ -85,15 +85,29 @@
     "tokenGallery": "Zur Tokenschicht",
     "componentGallery": "Zur Komponentenbibliothek"
   },
+  "login": {
+    "title": "Anmelden",
+    "email": "E-Mail-Adresse",
+    "emailHint": "Anmeldung mit der privaten E-Mail-Adresse, nicht mit der HSB-Adresse.",
+    "password": "Passwort",
+    "submit": "Anmelden",
+    "pending": "Anmeldung läuft …"
+  },
+  "validation": {
+    "email": {
+      "required": "Bitte geben Sie Ihre E-Mail-Adresse ein.",
+      "invalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein."
+    },
+    "password": {
+      "required": "Bitte geben Sie Ihr Passwort ein."
+    }
+  },
   "placeholder": {
     "hint": "Diese Seite ist ein Platzhalter. Sie entsteht mit dem Ticket {{ticket}}.",
     "hintStatic": "Der Inhalt dieser Seite wird noch ergänzt.",
     "title": {
-      "projects": "Projektbibliothek",
       "projectDetail": "Projektdetail",
       "portfolio": "Portfolio",
-      "login": "Anmelden",
-      "registerRole": "Registrierung: Rolle wählen",
       "registerDetails": "Registrierung: Persönliche Angaben",
       "registerVerifyEmail": "Registrierung: Private E-Mail bestätigen",
       "registerVerifyHsbEmail": "Registrierung: HSB-E-Mail bestätigen",
@@ -275,6 +289,15 @@
     "card": {
       "reactions_one": "{{count}} Reaktion",
       "reactions_other": "{{count}} Reaktionen"
+    },
+    "list": {
+      "title": "Projektbibliothek",
+      "count_one": "{{count}} Projekt",
+      "count_other": "{{count}} Projekte",
+      "empty": {
+        "title": "Keine Projekte vorhanden",
+        "description": "Sobald Projekte veröffentlicht sind, erscheinen sie hier."
+      }
     }
   },
   "user": {

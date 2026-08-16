@@ -22,8 +22,11 @@ import { cn } from "@/lib/utils"
  * Listen ist alles PUBLISHED, dort bleibt status weg. Figma fuehrt ihn aus
  * demselben Grund als eigenen Slot und nicht als festen Bestandteil.
  *
- * Das h3 im Titel setzt die Ebene unterhalb der Listenueberschrift voraus
- * (h1 Seite, h2 Abschnitt).
+ * Die Ueberschriftenebene des Titels setzt die Seite, wie bei EmptyState:
+ * unter einem Abschnitts-h2 bleibt es beim Standard h3, liegt die Liste
+ * direkt unter dem Seiten-h1, uebergibt die Seite Ebene 2. Ein fester Wert
+ * erzeugte dort einen Sprung h1 zu h3, und die Sprungnavigation eines
+ * Screenreaders faende keinen Abschnitt dazwischen (SC 1.3.1).
  */
 export function ProjectCard({
   title,
@@ -36,6 +39,7 @@ export function ProjectCard({
   reactionCount,
   status,
   href,
+  headingLevel = 3,
   className,
 }: {
   title: string
@@ -48,9 +52,12 @@ export function ProjectCard({
   reactionCount?: number
   status?: ProjectStatus
   href?: string
+  /** Ebene der Titel-Ueberschrift, passend zur Seite darum herum. */
+  headingLevel?: 2 | 3
   className?: string
 }) {
   const { t } = useTranslation()
+  const Heading = `h${headingLevel}` as "h2" | "h3"
 
   /* gap-0 und py-0 heben den Innenabstand der Registry-Karte auf: das Cover
      liegt randlos, den Abstand setzt erst der Inhalt darunter. Beides laeuft
@@ -119,7 +126,7 @@ export function ProjectCard({
             Rand einer Flaeche fester Hoehe und waechst nach oben. Ohne
             Begrenzung laeuft ein langer Titel in die Badges am oberen Rand.
             Drei Zeilen wie beim Teaser. */}
-        <h3 className="type-h3 absolute inset-x-3 bottom-3 line-clamp-3 font-semibold text-cover-foreground">
+        <Heading className="type-h3 absolute inset-x-3 bottom-3 line-clamp-3 font-semibold text-cover-foreground">
           {href ? (
             <a href={href} className="hover:underline focus-visible:underline">
               {title}
@@ -127,7 +134,7 @@ export function ProjectCard({
           ) : (
             title
           )}
-        </h3>
+        </Heading>
       </div>
 
       <CardContent className="flex flex-col gap-2.5 px-5 py-4">

@@ -6,7 +6,9 @@ import {
 
 import ComponentGalleryPage from "@/features/token-gallery/ComponentGalleryPage"
 import HomePage from "@/features/home/HomePage"
+import LoginPage from "@/features/auth/LoginPage"
 import NotFoundPage from "@/features/not-found/NotFoundPage"
+import ProjectListPage from "@/features/projects/ProjectListPage"
 import TokenGalleryPage from "@/features/token-gallery/TokenGalleryPage"
 import { AppLayout } from "@/routes/AppLayout"
 import { PlaceholderPage } from "@/routes/PlaceholderPage"
@@ -44,13 +46,10 @@ export const routes: RouteObject[] = [
     children: [
       { path: "/", element: <HomePage /> },
       {
+        /* Durchstich aus KAN-8: echte Liste statt Platzhalter; Filter,
+           Suche und Paginierung folgen mit KAN-31. */
         path: "/projects",
-        element: (
-          <PlaceholderPage
-            titleKey="placeholder.title.projects"
-            ticket="KAN-31"
-          />
-        ),
+        element: <ProjectListPage />,
       },
       {
         element: <RequireRole roles={["STUDENT", "EDITOR"]} />,
@@ -103,25 +102,18 @@ export const routes: RouteObject[] = [
         ),
       },
       {
+        /* Durchstich aus KAN-8: minimales Login statt Platzhalter; die
+           ausgestaltete Seite nach Template folgt mit KAN-33. */
         path: "/login",
-        element: (
-          <PlaceholderPage titleKey="placeholder.title.login" ticket="KAN-33" />
-        ),
+        element: <LoginPage />,
       },
       {
         /* Die kurze, von Hand eingetippte Adresse laeuft nicht ins Leere;
-           verbindlich ist die lange Form (Ticket KAN-7, Umfang 2). */
+           verbindlich ist die lange Form (Ticket KAN-7, Umfang 2). Erster
+           Schritt sind die Angaben: eine Rollenauswahl gibt es seit
+           Contract v41 nicht mehr (KAN-63). */
         path: "/register",
-        element: <Navigate to="/register/role" replace />,
-      },
-      {
-        path: "/register/role",
-        element: (
-          <PlaceholderPage
-            titleKey="placeholder.title.registerRole"
-            ticket="KAN-33"
-          />
-        ),
+        element: <Navigate to="/register/details" replace />,
       },
       {
         path: "/register/details",

@@ -1,47 +1,29 @@
 package de.hsbremen.eportfolio.auth.dto;
 
 import de.hsbremen.eportfolio.auth.PasswordPolicy;
-import de.hsbremen.eportfolio.common.enums.Role;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
- * Angaben aus Schritt 1 und 2 der Registrierung, {@code POST /api/auth/register}
- * (§3.1.1, §6.1).
+ * Angaben der Registrierung, {@code POST /api/auth/register} (§3.1.1, §6.1).
  *
- * @param selectedRole Die im Formular gewaehlte Art der HSB-Adresse.
- *                     <strong>Sie bestimmt die Rolle nicht.</strong> Die Rolle
- *                     wird aus der Domain der {@code hsbEmail} abgeleitet
- *                     (§3.1.1); dieses Feld wird nur dagegen geprueft und
- *                     ergibt bei Abweichung 400. Wuerde die uebermittelte
- *                     Auswahl die Rolle bestimmen, koennte jede Person mit
- *                     studentischer Adresse durch Umsetzen eines Feldes im
- *                     Request Redaktionsrechte erhalten.
- * @param firstName    Vorname.
- * @param lastName     Nachname.
- * @param email        Private Adresse, kuenftige Login-Kennung (§3.1).
- * @param hsbEmail     Hochschuladresse, ausschliesslich
- *                     Zugehoerigkeitsnachweis. Ihre Domain entscheidet ueber die
- *                     Rolle.
- * @param password     Klartextpasswort, siehe {@link PasswordPolicy}.
+ * <p>Eine Rollenangabe gibt es hier bewusst nicht. Die Rolle wird
+ * ausschliesslich aus der Domain der {@code hsbEmail} abgeleitet (§3.1.1);
+ * das fruehere Feld {@code selectedRole} steuerte nur die Beschriftung im
+ * Formular und ist mit Contract v41 entfallen (KAN-63), weil es keine
+ * Information traegt, die der Server nicht ohnehin aus der Adresse gewinnt.
+ *
+ * @param firstName Vorname.
+ * @param lastName  Nachname.
+ * @param email     Private Adresse, kuenftige Login-Kennung (§3.1).
+ * @param hsbEmail  Hochschuladresse, ausschliesslich
+ *                  Zugehoerigkeitsnachweis. Ihre Domain entscheidet ueber die
+ *                  Rolle.
+ * @param password  Klartextpasswort, siehe {@link PasswordPolicy}.
  */
 public record RegisterRequest(
-
-		// Bewusst das Enum und kein String: ein unbekannter Wert scheitert damit
-		// schon an der JSON-Umwandlung und ergibt VALIDATION_FAILED. Anders als
-		// beim Blocktyp (siehe ErrorCodes.BLOCK_TYPE_UNKNOWN) fuehrt §6.2 fuer
-		// eine falsche Rollenauswahl keinen eigenen Fehlercode, es gibt also
-		// nichts zu unterscheiden.
-		@Schema(description = "Art der HSB-Adresse laut Formular, STUDENT oder EDITOR. "
-				+ "Steuert nur die Beschriftung und die erwartete Domain; die "
-				+ "tatsaechliche Rolle leitet der Server aus der Domain der hsbEmail ab "
-				+ "(§3.1.1). ADMIN ist hier nie zulaessig.",
-				example = "STUDENT")
-		@NotNull(message = "Art der HSB-Adresse fehlt.")
-		Role selectedRole,
 
 		@Schema(example = "Erika")
 		@NotBlank(message = "Vorname fehlt.")

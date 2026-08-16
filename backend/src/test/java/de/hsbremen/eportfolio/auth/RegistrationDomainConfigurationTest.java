@@ -5,7 +5,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.mail.MailTemplateService;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -69,7 +68,7 @@ class RegistrationDomainConfigurationTest {
 	@Test
 	@DisplayName("Eine nur hier konfigurierte Studierendendomain wird angenommen")
 	void configuredStudentDomainIsAccepted() throws Exception {
-		register(Role.STUDENT, "erstsemester.example")
+		register("erstsemester.example")
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.role").value("STUDENT"));
 	}
@@ -77,7 +76,7 @@ class RegistrationDomainConfigurationTest {
 	@Test
 	@DisplayName("Eine nur hier konfigurierte Mitarbeitendendomain ergibt EDITOR")
 	void configuredStaffDomainYieldsEditor() throws Exception {
-		register(Role.EDITOR, "tutorium.example")
+		register("tutorium.example")
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.role").value("EDITOR"));
 	}
@@ -85,7 +84,7 @@ class RegistrationDomainConfigurationTest {
 	@Test
 	@DisplayName("Der zweite Eintrag der Liste zaehlt genauso wie der erste")
 	void everyEntryOfTheListCounts() throws Exception {
-		register(Role.EDITOR, "lehre.example")
+		register("lehre.example")
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.role").value("EDITOR"));
 	}
@@ -95,16 +94,15 @@ class RegistrationDomainConfigurationTest {
 	void productionDomainIsRejectedHere() throws Exception {
 		// Der eigentliche Beleg: stuende stud.hs-bremen.de im Code, ginge dieser
 		// Aufruf durch, obwohl die Konfiguration die Endung gar nicht kennt.
-		register(Role.STUDENT, "stud.hs-bremen.de")
+		register("stud.hs-bremen.de")
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
 	}
 
-	private ResultActions register(Role selectedRole, String hsbDomain) throws Exception {
+	private ResultActions register(String hsbDomain) throws Exception {
 		String unique = UUID.randomUUID().toString();
 
 		Map<String, Object> body = new LinkedHashMap<>();
-		body.put("selectedRole", selectedRole.name());
 		body.put("firstName", "Erika");
 		body.put("lastName", "Musterfrau");
 		body.put("email", "privat-" + unique + "@example.org");

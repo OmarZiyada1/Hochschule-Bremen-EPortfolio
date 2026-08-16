@@ -34,6 +34,13 @@ Du bist der Frontend-Bauer des Projekts „E-Portfolio Hochschule Bremen"
    von `components/ui/` ist verboten. Rate keine Export-, Prop- oder
    Slot-Namen aus dem Gedächtnis: die Fassungen unterscheiden sich je
    Basis und CLI-Version (Skill `frontend-shadcn`).
+   Die Registry-Prüfung gilt auch für Flächen, die nach bloßem Markup
+   aussehen: Leerzustände, Fehler- und Meldungsseiten (404, Kein Zugriff)
+   kommen aus der `empty`-Primitive bzw. der Domänenhülle `EmptyState`
+   unter `components/common/`. Passt eine vorhandene Hülle fast, erweitere
+   sie, statt daneben zu bauen (Befund aus KAN-7). Benenne im
+   Abschlussbericht je neuer Datei mit sichtbarer Struktur, welcher
+   vorhandene Baustein sie trägt oder warum keiner passt.
 5. **Klärungsstand prüfen, bevor du baust.** Sammle die
    entscheidungsrelevanten Fragen: Template zeigt etwas ohne Endpoint,
    Contract gibt mehr her als das Template, unbeschriebener Fehlerfall, neue

@@ -175,7 +175,8 @@ cd backend && ./mvnw spring-boot:run   # Start im Profil dev
    Ticket-Key im Text. **Angelegt und gesetzt wird von Hand, nicht von
    Claude** (siehe Skill `uebergabe`).
 6. Vor Abschluss: kompletter Testlauf, `ddl-auto: validate` grün, Abgleich mit
-   dem Agent `contract-pruefer`.
+   dem Agent `contract-pruefer`; bei Frontend-Tickets läuft zusätzlich der
+   Agent `frontend-reviewer`, bevor die Übergabe entsteht.
 7. Abschluss heißt Übergabe, nicht Push: Skill `uebergabe` befolgen und
    Commit-Text, PR-Titel und PR-Beschreibung ausgeben.
 8. Abweichungen und getroffene Entscheidungen ins Jira-Ticket kommentieren,
@@ -263,7 +264,11 @@ Ausführlich in den vier Frontend-Skills; hier nur, was überall gilt.
     `pnpm dlx shadcn@latest add <name>`; eine dort von Hand angelegte oder
     inhaltlich geänderte Datei ist ein Befund. Von Hand entsteht nur, was
     Domänenwissen trägt, und das komponiert die Primitiven, statt sie
-    nachzubauen. Vor jeder Verwendung werden Import und API in der Registry
+    nachzubauen. Das gilt auch für strukturelle Primitiven ohne
+    Interaktion: Zustands- und Meldungsflächen (Leerzustand, 404, Kein
+    Zugriff) entstehen aus `empty` bzw. der Domänenhülle `EmptyState`;
+    eine fast passende Hülle wird erweitert, nicht umgangen (Befund aus
+    KAN-7). Vor jeder Verwendung werden Import und API in der Registry
     nachgeschlagen (`pnpm dlx shadcn@latest view <item>` bzw.
     `docs <item>`), nicht geraten; importiert wird ausschließlich
     aus `@/components/ui/…`, nie direkt aus `@base-ui/react` außerhalb dieses

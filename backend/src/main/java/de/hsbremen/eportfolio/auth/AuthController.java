@@ -91,23 +91,24 @@ public class AuthController {
 	// verdoppeln, denn @ExceptionHandler wirkt nur in seiner eigenen Klasse.
 
 	/**
-	 * Selbstregistrierung, Schritte 1 und 2 aus §3.1.1.
+	 * Selbstregistrierung, Schritt 2 aus §3.1.1.
 	 *
 	 * <p>Legt Konto und Portfolio an und verschickt beide Codes. Die Rolle kommt
-	 * aus der Domain der Hochschuladresse und nicht aus {@code selectedRole},
-	 * siehe {@link RegistrationService#register}.
+	 * ausschliesslich aus der Domain der Hochschuladresse; eine Rollenangabe im
+	 * Request gibt es seit Contract v41 nicht mehr (KAN-63), siehe
+	 * {@link RegistrationService#register}.
 	 */
 	@SecurityRequirements
 	@Operation(summary = "Registrieren und beide Codes anfordern",
 			description = "Legt ein Konto im Status REGISTRATION_PENDING samt Portfolio an "
 					+ "und verschickt je einen sechsstelligen Code an die private und an die "
 					+ "Hochschuladresse. Die Rolle leitet der Server aus der Domain der "
-					+ "hsbEmail ab; selectedRole wird nur dagegen geprueft (§3.1.1). Eine "
-					+ "Anmeldung ist erst nach beiden Bestaetigungen moeglich.")
+					+ "hsbEmail ab (§3.1.1). Eine Anmeldung ist erst nach beiden "
+					+ "Bestaetigungen moeglich.")
 	@ApiResponse(responseCode = "201", description = "Konto angelegt, Codes unterwegs.")
 	@ApiResponse(responseCode = "400",
-			description = "Pflichtfeld fehlt, Passwort zu kurz, HSB-Domain nicht anerkannt "
-					+ "oder selectedRole passt nicht zur abgeleiteten Rolle.")
+			description = "Pflichtfeld fehlt, Passwort zu kurz oder HSB-Domain nicht "
+					+ "anerkannt.")
 	@ApiResponse(responseCode = "409", description = "Private oder HSB-Adresse ist bereits vergeben.")
 	@PostMapping("/register")
 	@ResponseStatus(HttpStatus.CREATED)

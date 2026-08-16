@@ -85,15 +85,29 @@
     "tokenGallery": "Open the token layer",
     "componentGallery": "Open the component library"
   },
+  "login": {
+    "title": "Log in",
+    "email": "Email address",
+    "emailHint": "Log in with your private email address, not your HSB address.",
+    "password": "Password",
+    "submit": "Log in",
+    "pending": "Logging in …"
+  },
+  "validation": {
+    "email": {
+      "required": "Please enter your email address.",
+      "invalid": "Please enter a valid email address."
+    },
+    "password": {
+      "required": "Please enter your password."
+    }
+  },
   "placeholder": {
     "hint": "This page is a placeholder. It will be built with ticket {{ticket}}.",
     "hintStatic": "The content of this page is still to come.",
     "title": {
-      "projects": "Project library",
       "projectDetail": "Project detail",
       "portfolio": "Portfolio",
-      "login": "Log in",
-      "registerRole": "Registration: choose your role",
       "registerDetails": "Registration: personal details",
       "registerVerifyEmail": "Registration: confirm your private email",
       "registerVerifyHsbEmail": "Registration: confirm your HSB email",
@@ -275,6 +289,15 @@
     "card": {
       "reactions_one": "{{count}} reaction",
       "reactions_other": "{{count}} reactions"
+    },
+    "list": {
+      "title": "Project library",
+      "count_one": "{{count}} project",
+      "count_other": "{{count}} projects",
+      "empty": {
+        "title": "No projects yet",
+        "description": "Published projects will appear here."
+      }
     }
   },
   "user": {

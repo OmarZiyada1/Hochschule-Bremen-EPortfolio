@@ -149,7 +149,9 @@ describe("Routenbaum", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("leitet /register sichtbar auf /register/role um", () => {
+  it("leitet /register sichtbar auf /register/details um", () => {
+    /* Erster Schritt sind die Angaben: die Rollenauswahl ist mit
+       Contract v41 entfallen (KAN-63). */
     renderWithProviders(
       <>
         <AppUnderTest />
@@ -161,10 +163,12 @@ describe("Routenbaum", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: "Registrierung: Rolle wählen",
+        name: "Registrierung: Persönliche Angaben",
       })
     ).toBeInTheDocument()
-    expect(screen.getByTestId("pathname")).toHaveTextContent("/register/role")
+    expect(screen.getByTestId("pathname")).toHaveTextContent(
+      "/register/details"
+    )
   })
 
   it("faengt eine unbekannte URL mit der 404-Seite ausserhalb des Rahmens ab", () => {

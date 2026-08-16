@@ -30,13 +30,13 @@ import org.springframework.transaction.annotation.Transactional;
  * anmelden kann; die Zugangskontrolle uebernehmen an ihrer Stelle das
  * Rate-Limit und das Einmalgeheimnis im Postfach.
  *
- * <p><strong>Die Rolle folgt der Domain, nicht der Auswahl im Formular</strong>
- * (§3.1.1). {@code selectedRole} steuert in der Oberflaeche nur Beschriftung und
- * erwartete Domain und wird hier ausschliesslich gegen die abgeleitete Rolle
- * geprueft. Bestimmte die uebermittelte Auswahl die Rolle, koennte jede Person
- * mit studentischer Adresse durch Umsetzen eines Feldes im Request
- * Redaktionsrechte erhalten, und die Freigabe von Portfolios haenge an einer
- * Selbstauskunft.
+ * <p><strong>Die Rolle folgt der Domain</strong> (§3.1.1). Eine Rollenangabe
+ * im Request gibt es seit Contract v41 nicht mehr (KAN-63); bis dahin wurde
+ * eine Formularauswahl {@code selectedRole} nur gegen die abgeleitete Rolle
+ * geprueft, nie uebernommen. Bestimmte eine uebermittelte Auswahl die Rolle,
+ * koennte jede Person mit studentischer Adresse durch Umsetzen eines Feldes im
+ * Request Redaktionsrechte erhalten, und die Freigabe von Portfolios haenge an
+ * einer Selbstauskunft.
  *
  * <p><strong>Verglichen wird exakt, nicht per Suffix.</strong> Ein
  * {@code endsWith("hs-bremen.de")} liesse {@code boesehs-bremen.de} durch und
@@ -84,7 +84,7 @@ public class RegistrationService {
 	}
 
 	// ------------------------------------------------------------------
-	// POST /api/auth/register (Schritte 1 und 2 aus §3.1.1)
+	// POST /api/auth/register (Schritt 2 aus §3.1.1; Schritt 1 entfiel mit v41)
 	// ------------------------------------------------------------------
 
 	/**
@@ -97,8 +97,6 @@ public class RegistrationService {
 	 *       zuerst, weil sie nichts ueber vorhandene Konten verraet: eine
 	 *       fremde Domain ergibt dieselbe Antwort, ob die Adresse nun vergeben
 	 *       ist oder nicht.</li>
-	 *   <li><strong>Abgleich mit {@code selectedRole}</strong>, ebenfalls 400 mit
-	 *       Meldung am Feld {@code hsbEmail}.</li>
 	 *   <li><strong>Eindeutigkeit</strong> beider Adressen, sonst 409
 	 *       {@code RESOURCE_IN_USE}.</li>
 	 * </ol>
@@ -117,8 +115,7 @@ public class RegistrationService {
 	 *
 	 * @return das angelegte Konto ohne {@code passwordHash} und ohne
 	 *         {@code hsbEmail} (§3.1)
-	 * @throws ValidationException bei fremder Domain oder abweichender
-	 *                             {@code selectedRole} (400)
+	 * @throws ValidationException bei fremder Domain (400)
 	 * @throws ConflictException   wenn eine der beiden Adressen vergeben ist (409)
 	 */
 	@Transactional
@@ -127,7 +124,6 @@ public class RegistrationService {
 		String hsbEmail = EmailAddresses.normalize(request.hsbEmail());
 
 		Role role = roleFor(hsbEmail);
-		requireMatchingSelection(request.selectedRole(), role);
 		requireAddressesFree(email, hsbEmail);
 
 		// Beide Flags stehen auf false und der Status auf REGISTRATION_PENDING:
@@ -262,6 +258,11 @@ public class RegistrationService {
 	 * hiesse, die Verwaltung des Systems an den Besitz einer E-Mail-Adresse zu
 	 * binden (§3.1.1).
 	 *
+	 * <p>Tutor:innen mit studentischer Adresse werden hier {@code STUDENT}: die
+	 * Domain belegt den Studierendenstatus, nicht die Tutorentaetigkeit. Die
+	 * Hochstufung uebernimmt ein Admin ueber {@code PATCH /admin/users/{id}}
+	 * (§3.1.1, KAN-25).
+	 *
 	 * @throws ValidationException wenn die Domain in keiner der beiden Listen
 	 *                             steht (400, es entsteht kein Konto)
 	 */
@@ -281,31 +282,6 @@ public class RegistrationService {
 		throw new ValidationException(ErrorCodes.VALIDATION_FAILED,
 				"hsbEmail: \"" + domain + "\" ist keine anerkannte Adressendung der Hochschule Bremen. "
 						+ "Bitte die Hochschuladresse verwenden.");
-	}
-
-	/**
-	 * Prueft die Formularauswahl gegen die abgeleitete Rolle (§3.1.1).
-	 *
-	 * <p>Die Meldung haengt am Feld {@code hsbEmail} und nicht an
-	 * {@code selectedRole}, weil das die Stelle ist, an der die Person etwas
-	 * korrigieren kann: entweder sie hat die falsche Art gewaehlt oder die falsche
-	 * Adresse eingetragen, und die Adresse ist die Angabe mit dem Nachweis
-	 * dahinter.
-	 *
-	 * <p>Der Fall „studentische Adresse, Auswahl EDITOR" ist der Tutor-Fall aus
-	 * §3.1.1 und wird bewusst hier abgewiesen: die Domain belegt den
-	 * Studierendenstatus, aber nicht die Tutorentaetigkeit. Die Hochstufung
-	 * uebernimmt ein Admin ueber {@code PATCH /admin/users/{id}} (KAN-25).
-	 */
-	private static void requireMatchingSelection(Role selected, Role derived) {
-		if (selected == derived) {
-			return;
-		}
-
-		throw new ValidationException(ErrorCodes.VALIDATION_FAILED,
-				"hsbEmail: Diese Adresse gehoert nicht zur gewaehlten Art des Zugangs. "
-						+ "Die Rolle ergibt sich aus der Hochschuladresse und laesst sich nicht "
-						+ "im Formular waehlen.");
 	}
 
 	// ------------------------------------------------------------------
