@@ -33,4 +33,16 @@ describe("KpiTile", () => {
 
     expect(screen.queryByText(/diesen Monat/)).not.toBeInTheDocument()
   })
+
+  it("zeigt die Variante plain ohne Kartenflaeche (CTA-Sektion, KAN-31)", () => {
+    const { container } = renderWithProviders(
+      <KpiTile variant="plain" value="1.200" label="Arbeiten" />
+    )
+
+    expect(screen.getByText("1.200")).toBeInTheDocument()
+    expect(screen.getByText("Arbeiten")).toBeInTheDocument()
+    /* Keine Card-Primitive darunter: die CTA-Sektion fuehrt die Zahl frei
+       auf der Flaeche, nicht als Kachel. */
+    expect(container.querySelector('[data-slot="card"]')).toBeNull()
+  })
 })

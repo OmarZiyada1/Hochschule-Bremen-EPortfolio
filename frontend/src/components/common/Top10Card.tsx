@@ -1,5 +1,6 @@
 import { ImageIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
+import { Link } from "react-router-dom"
 
 import type { ProjectReference } from "@/api/types"
 import { Card, CardContent } from "@/components/ui/card"
@@ -77,10 +78,13 @@ export function Top10Card({
           : "type-body-sm font-medium"
       }
     >
+      {/* Router-Link statt rohem Anker: ein roher href laedt die ganze
+          Anwendung neu und wirft Query-Cache und Scrollposition weg
+          (Review zu KAN-31). */}
       {href ? (
-        <a href={href} className="hover:underline focus-visible:underline">
+        <Link to={href} className="hover:underline focus-visible:underline">
           {title}
-        </a>
+        </Link>
       ) : (
         title
       )}

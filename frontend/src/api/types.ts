@@ -34,3 +34,12 @@ export type ProjectType = NonNullable<
 
 /** Stammdatenbezug, wie ihn ReferenceResponse liefert (Contract 3.6 bis 3.9). */
 export type ProjectReference = ApiSchemas["ReferenceResponse"]
+
+/** Eintrag der kuratierten Top-10 (Contract 3.11, 6.1): Platz, Aufnahmezeitpunkt, Projektkachel. */
+export type Top10EntryResponse = ApiSchemas["Top10EntryResponse"]
+
+/** Fakultaet aus GET /api/faculties (Contract 3.8). */
+export type FacultyResponse = ApiSchemas["FacultyResponse"]
+
+/** Studiengang aus GET /api/study-programs (Contract 3.7). */
+export type StudyProgramResponse = ApiSchemas["StudyProgramResponse"]

@@ -1,5 +1,6 @@
 import { HttpResponse, http } from "msw"
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { getAuthState } from "@/api/auth/authStore"
@@ -11,13 +12,18 @@ import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
 import { signInAs } from "@/tests/routes/helpers"
 
-function pageOf(content: unknown[], totalElements = content.length) {
+function pageOf(
+  content: unknown[],
+  totalElements = content.length,
+  page = 0,
+  size = 20
+) {
   return {
     content,
-    page: 0,
-    size: 20,
+    page,
+    size,
     totalElements,
-    totalPages: totalElements === 0 ? 0 : 1,
+    totalPages: totalElements === 0 ? 0 : Math.ceil(totalElements / size),
   }
 }
 
@@ -75,9 +81,11 @@ describe("ProjectListPage", () => {
         name: "Barrierefreie Navigation im Hochschulportal",
       })
     ).toBeInTheDocument()
-    expect(screen.getByText("2 Projekte")).toBeInTheDocument()
     expect(
-      screen.getByRole("heading", { level: 1, name: "Projektbibliothek" })
+      screen.getByText("2 studentische Projekte gefunden")
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Studentische Projekte" })
     ).toBeInTheDocument()
     /* Die Bibliothek zeigt nur PUBLISHED; ein Badge unterschiede nichts
        und bleibt deshalb weg. */
@@ -166,5 +174,198 @@ describe("ProjectListPage", () => {
     expect(navigate).toHaveBeenCalledWith("/login")
     expect(getAuthState().session).toBeNull()
     expect(getAuthState().sessionNotice).toBe("TOKEN_EXPIRED")
+  })
+
+  it("liest Suche und Seite aus der URL und uebersteht so einen Reload", async () => {
+    const requests: URLSearchParams[] = []
+    server.use(
+      http.get("*/api/projects", ({ request }) => {
+        requests.push(new URL(request.url).searchParams)
+        return HttpResponse.json(
+          pageOf(
+            [
+              {
+                id: "10000000-0000-0000-0000-000000000004",
+                title: "Campus-Garten an der Werderstraße",
+                status: "PUBLISHED",
+              },
+            ],
+            21,
+            1
+          )
+        )
+      })
+    )
+    renderWithProviders(<ProjectListPage />, "/projects?q=garten&page=2")
+
+    await screen.findByText("Campus-Garten an der Werderstraße")
+    /* Die URL ist der einzige Zustand: q geht unveraendert in den Request,
+       die sichtbare Seite 2 wird zur 0-basierten Seite 1 (§6.6), status
+       bleibt fest verdrahtet. */
+    const requested = requests.at(-1)
+    expect(requested?.get("q")).toBe("garten")
+    expect(requested?.get("page")).toBe("1")
+    expect(requested?.get("status")).toBe("PUBLISHED")
+    /* Das Suchfeld zeigt den URL-Zustand an. */
+    expect(screen.getByRole("searchbox")).toHaveValue("garten")
+  })
+
+  it("entprellt die Suche und schreibt sie als q in URL und Request", async () => {
+    const requestedQ: (string | null)[] = []
+    server.use(
+      http.get("*/api/projects", ({ request }) => {
+        requestedQ.push(new URL(request.url).searchParams.get("q"))
+        return HttpResponse.json(pageOf([]))
+      })
+    )
+    renderWithProviders(<ProjectListPage />)
+    await screen.findByRole("searchbox")
+
+    await userEvent.type(screen.getByRole("searchbox"), "garten")
+
+    await waitFor(
+      () => {
+        expect(requestedQ).toContain("garten")
+      },
+      { timeout: 2000 }
+    )
+    /* Kein Request je Tastenanschlag: zwischen leerem Start und fertigem
+       Begriff liegen keine Teilbegriffe fuer jeden Buchstaben. */
+    expect(requestedQ.filter((value) => value !== null && value !== "garten"))
+      .toHaveLength(0)
+  })
+
+  it("blaettert ueber die Paginierung und fragt die naechste Seite an", async () => {
+    const requestedPages: (string | null)[] = []
+    server.use(
+      http.get("*/api/projects", ({ request }) => {
+        const url = new URL(request.url)
+        requestedPages.push(url.searchParams.get("page"))
+        return HttpResponse.json(
+          pageOf(
+            [
+              {
+                id: "10000000-0000-0000-0000-000000000005",
+                title: "Barrierefreie Navigation im Hochschulportal",
+                status: "PUBLISHED",
+              },
+            ],
+            40,
+            url.searchParams.get("page") === "1" ? 1 : 0
+          )
+        )
+      })
+    )
+    renderWithProviders(<ProjectListPage />)
+
+    await screen.findByText("Barrierefreie Navigation im Hochschulportal")
+    expect(
+      screen.getByRole("navigation", { name: "Seitennummerierung" })
+    ).toBeInTheDocument()
+
+    /* Base UI rendert die Anker der Paginierung mit role="button"
+       (Registry-Fassung aus KAN-29); abgefragt wird die tatsaechliche
+       Rolle. */
+    await userEvent.click(
+      screen.getByRole("button", { name: "Zur nächsten Seite" })
+    )
+
+    await waitFor(() => {
+      expect(requestedPages).toContain("1")
+    })
+  })
+
+  it("zeigt die Filtergruppen als Kommt-bald-Hinweis ohne Bedienelemente", async () => {
+    server.use(
+      http.get("*/api/projects", () => HttpResponse.json(pageOf([])))
+    )
+    renderWithProviders(<ProjectListPage />)
+
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Filter" })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("Die Filtergruppen entstehen mit dem Ticket KAN-64.")
+    ).toBeInTheDocument()
+    for (const group of [
+      "Fakultät/Institution",
+      "Studiengang",
+      "Abschluss",
+      "Semester",
+      "Projekttyp",
+      "Kategorie",
+    ]) {
+      expect(screen.getByText(group)).toBeInTheDocument()
+    }
+    /* Kein Bedienelement, das nichts tut (DoD KAN-31): keine Checkboxen,
+       keine Aufklappknoepfe. */
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument()
+  })
+
+  it("bietet bei einer Seite jenseits von totalPages den Weg zur letzten Seite", async () => {
+    server.use(
+      http.get("*/api/projects", ({ request }) =>
+        HttpResponse.json(
+          /* Seite 99 existiert nicht: leerer Inhalt, aber 40 Treffer auf
+             zwei Seiten. Ein veralteter geteilter Link ist hier das
+             Kernszenario. */
+          new URL(request.url).searchParams.get("page") === null
+            ? pageOf(
+                [
+                  {
+                    id: "10000000-0000-0000-0000-000000000006",
+                    title: "Campus-Garten an der Werderstraße",
+                    status: "PUBLISHED",
+                  },
+                ],
+                40
+              )
+            : pageOf([], 40, 98)
+        )
+      )
+    )
+    renderWithProviders(<ProjectListPage />, "/projects?page=99")
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 2,
+        name: "Diese Seite gibt es nicht mehr",
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Zur letzten Seite" })
+    ).toHaveAttribute("href", "/projects?page=2")
+  })
+
+  it("reicht einen sort-Parameter aus der URL nicht an den Server weiter", async () => {
+    const requests: URLSearchParams[] = []
+    server.use(
+      http.get("*/api/projects", ({ request }) => {
+        requests.push(new URL(request.url).searchParams)
+        return HttpResponse.json(pageOf([]))
+      })
+    )
+    renderWithProviders(<ProjectListPage />, "/projects?sort=passwortHash,asc")
+
+    await screen.findByRole("heading", {
+      level: 2,
+      name: "Keine Projekte vorhanden",
+    })
+    /* Die Bibliothek bietet kein Sortier-Element an (Entscheidung zu
+       KAN-31): es gilt der Server-Standard updatedAt,desc, und eine von
+       Hand geschriebene URL kann kein Feld ausserhalb der Positivliste
+       (§6.6) zum Server durchreichen. */
+    expect(requests.at(-1)?.get("sort")).toBeNull()
+  })
+
+  it("nennt eine leere Treffermenge bei aktiver Suche Keine Treffer", async () => {
+    server.use(
+      http.get("*/api/projects", () => HttpResponse.json(pageOf([])))
+    )
+    renderWithProviders(<ProjectListPage />, "/projects?q=unbekannt")
+
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "Keine Treffer" })
+    ).toBeInTheDocument()
   })
 })

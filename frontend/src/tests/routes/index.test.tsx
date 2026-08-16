@@ -1,7 +1,9 @@
+import { HttpResponse, http } from "msw"
 import { screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import i18n from "@/i18n"
+import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
 import { AppUnderTest, LocationProbe, signInAs } from "@/tests/routes/helpers"
 
@@ -17,12 +19,29 @@ describe("Routenbaum", () => {
   })
 
   it("oeffentliche Ebene: die Startseite steht ohne Anmeldung im Rahmen", () => {
+    /* Die fachliche Startseite (KAN-31) zieht Top-10, Projektzahl und
+       Stammdaten; hier zaehlt nur, dass die Route ohne Anmeldung im Rahmen
+       steht, deshalb antworten alle vier Quellen leer. */
+    server.use(
+      http.get("*/api/top10", () => HttpResponse.json([])),
+      http.get("*/api/projects", () =>
+        HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 1,
+          totalElements: 0,
+          totalPages: 0,
+        })
+      ),
+      http.get("*/api/faculties", () => HttpResponse.json([])),
+      http.get("*/api/study-programs", () => HttpResponse.json([]))
+    )
     renderWithProviders(<AppUnderTest />, "/")
 
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: "E-Portfolio Hochschule Bremen",
+        name: "Studentische Innovation sichtbar machen.",
       })
     ).toBeInTheDocument()
   })

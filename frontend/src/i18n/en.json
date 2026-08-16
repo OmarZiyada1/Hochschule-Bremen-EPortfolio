@@ -80,8 +80,30 @@
     }
   },
   "home": {
-    "title": "E-Portfolio Hochschule Bremen",
-    "intro": "The application is set up. The actual views are built with their own tickets; this home page will be built with KAN-31.",
+    "hero": {
+      "label": "HSB · e-portfolio",
+      "titleLine1": "Student innovation,",
+      "titleLine2": "made visible.",
+      "subtitle": "Theses, projects and research from all faculties of Hochschule Bremen, in one place.",
+      "exploreTop10": "Discover the top 10 projects"
+    },
+    "top10": {
+      "label": "HSB · leaderboard",
+      "title": "Top 10 · {{year}}",
+      "description": "The ten strongest projects of the year: theses and research from all faculties that show what students at HSB are capable of.",
+      "viewProject": "View project",
+      "freeSlot": "Open slot",
+      "freeBadge": "Top 10"
+    },
+    "cta": {
+      "label": "Ranks 1 to 10",
+      "title": "That was just the beginning.",
+      "description": "{{works}} works from {{faculties}} faculties are waiting in the project library: find the one that sparks your next idea.",
+      "statWorks": "Works",
+      "statFaculties": "Faculties",
+      "statPrograms": "Degree programmes",
+      "openLibrary": "Open the project library"
+    },
     "tokenGallery": "Open the token layer",
     "componentGallery": "Open the component library"
   },
@@ -297,12 +319,36 @@
       "reactions_other": "{{count}} reactions"
     },
     "list": {
-      "title": "Project library",
-      "count_one": "{{count}} project",
-      "count_other": "{{count}} projects",
+      "label": "Student e-portfolio",
+      "title": "Student projects",
+      "description": "Browse all published student works",
+      "count_one": "{{count}} student project found",
+      "count_other": "{{count}} student projects found",
+      "searchPlaceholder": "Search projects …",
+      "filter": {
+        "title": "Filter",
+        "comingSoon": "The filter groups arrive with ticket {{ticket}}.",
+        "group": {
+          "faculty": "Faculty/Institution",
+          "studyProgram": "Degree programme",
+          "degree": "Degree",
+          "semester": "Semester",
+          "type": "Project type",
+          "category": "Category"
+        }
+      },
       "empty": {
         "title": "No projects yet",
         "description": "Published projects will appear here."
+      },
+      "noResults": {
+        "title": "No matches",
+        "description": "There are no results for this search. Change or clear the search term."
+      },
+      "pageOutOfRange": {
+        "title": "This page no longer exists",
+        "description": "The result list has fewer pages than the requested address.",
+        "action": "Go to the last page"
       }
     }
   },

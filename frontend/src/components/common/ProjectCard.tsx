@@ -1,5 +1,6 @@
 import { ImageIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
+import { Link } from "react-router-dom"
 
 import type { ProjectCardResponse } from "@/api/types"
 import { ClapIcon } from "@/components/common/ClapIcon"
@@ -126,10 +127,13 @@ export function ProjectCard({
             Begrenzung laeuft ein langer Titel in die Badges am oberen Rand.
             Drei Zeilen wie beim Teaser. */}
         <Heading className="type-h3 absolute inset-x-3 bottom-3 line-clamp-3 font-semibold text-cover-foreground">
+          {/* Router-Link statt rohem Anker: ein roher href laedt die ganze
+              Anwendung neu und wirft Query-Cache und Scrollposition weg
+              (Review zu KAN-31, analog Top10Card). */}
           {href ? (
-            <a href={href} className="hover:underline focus-visible:underline">
+            <Link to={href} className="hover:underline focus-visible:underline">
               {project.title ?? ""}
-            </a>
+            </Link>
           ) : (
             (project.title ?? "")
           )}

@@ -185,8 +185,14 @@ Im Repo suchen, jedes Mal neu, weil neue Stellen dazukommen:
 
 ```bash
 grep -rn "Contract v[0-9]\|API-Contract v[0-9]\|version(\"v[0-9]" \
-  --include=*.java --include=*.md --include=*.yml backend docs .claude *.md
+  --include=*.java --include=*.md --include=*.yml --include=*.ts --include=*.tsx \
+  backend frontend/src docs .claude *.md
 ```
+
+Das Frontend gehört ausdrücklich dazu: beim Nachzug auf v43 ist der
+Stand-Satz in `frontend/src/api/errors.ts` durchgerutscht, weil die Suche
+nur Backend, Doku und Skills umfasste (Befund des contract-pruefers zu
+KAN-31).
 
 Bekannte Stellen als Ausgangspunkt, jede einzeln ansehen:
 
