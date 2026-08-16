@@ -2843,7 +2843,7 @@ export interface operations {
         type?: ("REGULAR" | "PAPER" | "THESIS")[]
         /** @description Filter: IDs von Semestern aus GET /api/semesters (§3.18). Seit Contract v45 die ID und nicht mehr die Schreibweise. Wiederholbar, mehrere Werte ODER-verknuepft. */
         semester?: string[]
-        /** @description Suchbegriff fuer Titel und Kurzbeschreibung, unabhaengig von Gross- und Kleinschreibung. */
+        /** @description Suchbegriff fuer Titel, Kurzbeschreibung und die Namen der Autor:in (seit Contract v47 auch der volle Name), unabhaengig von Gross- und Kleinschreibung. */
         q?: string
         /** @description Filter: Projektstatus (§2.2). Wirkt nur innerhalb dessen, was ohne Anmeldung ohnehin sichtbar ist. */
         status?: "DRAFT" | "SUBMITTED" | "APPROVED" | "PUBLISHED" | "REVISION"

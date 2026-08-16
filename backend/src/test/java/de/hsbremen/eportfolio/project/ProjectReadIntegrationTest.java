@@ -377,6 +377,50 @@ class ProjectReadIntegrationTest {
 					.containsExactly(submittedForeignProject.getId());
 		}
 
+		// --- Suche ueber Autor:innennamen (v47, KAN-66) -----------------
+
+		@Test
+		@DisplayName("q findet Projekte ueber den Vornamen und den Nachnamen der Autor:in")
+		void searchByAuthorName() throws Exception {
+			renameAuthor("Milena", "Quastenberg");
+
+			assertThat(listIds(admin, "q", "milena")).containsExactlyInAnyOrder(
+					draftOfAuthor.getId(), publishedProject.getId());
+			assertThat(listIds(admin, "q", "QUASTENBERG")).containsExactlyInAnyOrder(
+					draftOfAuthor.getId(), publishedProject.getId());
+		}
+
+		@Test
+		@DisplayName("Auch der volle Name in einem Suchbegriff trifft (Klaerungsrunde KAN-66)")
+		void searchByFullAuthorName() throws Exception {
+			renameAuthor("Milena", "Quastenberg");
+
+			assertThat(listIds(admin, "q", "milena quastenberg")).containsExactlyInAnyOrder(
+					draftOfAuthor.getId(), publishedProject.getId());
+		}
+
+		@Test
+		@DisplayName("Namenssuche laesst sich mit anderen Filtern kombinieren")
+		void searchByAuthorNameCombinesWithFilters() throws Exception {
+			renameAuthor("Milena", "Quastenberg");
+
+			// type=THESIS traegt nur das veroeffentlichte Projekt; der Entwurf
+			// derselben Autor:in faellt aus der Schnittmenge.
+			assertThat(listIds(admin, "q", "quastenberg", "type", "THESIS"))
+					.containsExactly(publishedProject.getId());
+		}
+
+		@Test
+		@DisplayName("Die Namenssuche weicht die Sichtbarkeitsschranke nicht auf (§5)")
+		void searchByAuthorNameOpensNothing() throws Exception {
+			renameAuthor("Milena", "Quastenberg");
+
+			// PUBLIC findet ueber den Namen nur das Veroeffentlichte, nicht den
+			// Entwurf derselben Autor:in.
+			assertThat(listIds(null, "q", "quastenberg"))
+					.containsExactly(publishedProject.getId());
+		}
+
 		@Test
 		@DisplayName("Platzhalter im Suchbegriff werden maskiert und wirken nicht als Joker")
 		void wildcardsAreEscaped() throws Exception {
@@ -478,6 +522,19 @@ class ProjectReadIntegrationTest {
 			assertThat(listIds(admin, "degree", "", "degree", "BACHELOR"))
 					.containsExactly(publishedProject.getId());
 			assertThat(listIds(admin, "category", "")).hasSize(4);
+		}
+
+		/**
+		 * Gibt der Autor:in von {@code draftOfAuthor} und
+		 * {@code publishedProject} einen unverwechselbaren Namen. Der
+		 * Testhelfer {@code TestUser} nennt alle Personen „Test Person";
+		 * eine Namenssuche traefe damit jedes Projekt dieses Laufs und
+		 * bewiese nichts.
+		 */
+		private void renameAuthor(String firstName, String lastName) {
+			author.setFirstName(firstName);
+			author.setLastName(lastName);
+			userRepository.saveAndFlush(author);
 		}
 
 		/**

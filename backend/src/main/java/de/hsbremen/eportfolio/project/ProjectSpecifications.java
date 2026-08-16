@@ -9,6 +9,7 @@ import de.hsbremen.eportfolio.common.enums.UserStatus;
 import de.hsbremen.eportfolio.user.User;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -156,8 +157,18 @@ public final class ProjectSpecifications {
 	}
 
 	/**
-	 * Filter {@code q}: Volltextsuche ueber Titel und Kurzbeschreibung,
-	 * unabhaengig von Gross- und Kleinschreibung.
+	 * Filter {@code q}: Volltextsuche ueber Titel, Kurzbeschreibung und die
+	 * Namen der Autor:in, unabhaengig von Gross- und Kleinschreibung (§6.1,
+	 * seit Contract v47; bis v46 bewusst ohne Autor:innennamen).
+	 *
+	 * <p>Die Namenssuche laeuft ueber einen einzigen Zweig auf der Verkettung
+	 * {@code firstName + " " + lastName}: jeder Teilstring des Vor- oder
+	 * Nachnamens ist auch Teilstring dieser Verkettung, und nur so trifft die
+	 * naheliegendste Personensuche, naemlich der volle Name in einem Feld
+	 * (Klaerungsrunde zu KAN-66). Beide Namensspalten sind NOT NULL (§3.1),
+	 * die Verkettung kann also nicht zu NULL entarten. {@code author} ist ein
+	 * Pflicht-{@code ManyToOne}; der entstehende Join erzeugt keine
+	 * Doppeltreffer.
 	 *
 	 * <p>Die Platzhalter {@code %} und {@code _} im Suchbegriff werden
 	 * maskiert. Ohne das koennte eine Eingabe von {@code %} die gesamte Liste
@@ -170,9 +181,13 @@ public final class ProjectSpecifications {
 	public static Specification<Project> searchText(String q) {
 		return (root, query, cb) -> {
 			String pattern = "%" + escapeWildcards(q.toLowerCase(Locale.ROOT)) + "%";
+			Expression<String> authorName = cb.concat(
+					cb.concat(root.get("author").get("firstName"), " "),
+					root.get("author").get("lastName"));
 			return cb.or(
 					cb.like(cb.lower(root.get("title")), pattern, ESCAPE_CHARACTER),
-					cb.like(cb.lower(root.get("summary")), pattern, ESCAPE_CHARACTER));
+					cb.like(cb.lower(root.get("summary")), pattern, ESCAPE_CHARACTER),
+					cb.like(cb.lower(authorName), pattern, ESCAPE_CHARACTER));
 		};
 	}
 
