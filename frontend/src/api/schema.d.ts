@@ -427,7 +427,7 @@ export interface paths {
     put?: never
     /**
      * Registrieren und beide Codes anfordern
-     * @description Legt ein Konto im Status REGISTRATION_PENDING samt Portfolio an und verschickt je einen sechsstelligen Code an die private und an die Hochschuladresse. Die Rolle leitet der Server aus der Domain der hsbEmail ab; selectedRole wird nur dagegen geprueft (§3.1.1). Eine Anmeldung ist erst nach beiden Bestaetigungen moeglich.
+     * @description Legt ein Konto im Status REGISTRATION_PENDING samt Portfolio an und verschickt je einen sechsstelligen Code an die private und an die Hochschuladresse. Die Rolle leitet der Server aus der Domain der hsbEmail ab (§3.1.1). Eine Anmeldung ist erst nach beiden Bestaetigungen moeglich.
      */
     post: operations["register"]
     delete?: never
@@ -1649,12 +1649,6 @@ export interface components {
       newPassword?: string
     }
     RegisterRequest: {
-      /**
-       * @description Art der HSB-Adresse laut Formular, STUDENT oder EDITOR. Steuert nur die Beschriftung und die erwartete Domain; die tatsaechliche Rolle leitet der Server aus der Domain der hsbEmail ab (§3.1.1). ADMIN ist hier nie zulaessig.
-       * @example STUDENT
-       * @enum {string}
-       */
-      selectedRole: "STUDENT" | "EDITOR" | "ADMIN"
       /** @example Erika */
       firstName?: string
       /** @example Musterfrau */
@@ -3577,7 +3571,7 @@ export interface operations {
           "*/*": components["schemas"]["UserResponse"]
         }
       }
-      /** @description Pflichtfeld fehlt, Passwort zu kurz, HSB-Domain nicht anerkannt oder selectedRole passt nicht zur abgeleiteten Rolle. */
+      /** @description Pflichtfeld fehlt, Passwort zu kurz oder HSB-Domain nicht anerkannt. */
       400: {
         headers: {
           [name: string]: unknown

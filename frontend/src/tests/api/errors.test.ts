@@ -83,13 +83,13 @@ describe("applyValidationErrors", () => {
     const setError = vi.fn()
     const error = new ApiError({
       ...validationError,
-      message: "selectedRole: passt nicht zur abgeleiteten Rolle",
+      message: "hsbEmail: Domain ist nicht anerkannt",
     })
     applyValidationErrors(error, ["email", "password"], setError)
     expect(setError).toHaveBeenCalledTimes(1)
     expect(setError).toHaveBeenCalledWith("root.server", {
       type: "server",
-      message: "selectedRole: passt nicht zur abgeleiteten Rolle",
+      message: "hsbEmail: Domain ist nicht anerkannt",
     })
   })
 })

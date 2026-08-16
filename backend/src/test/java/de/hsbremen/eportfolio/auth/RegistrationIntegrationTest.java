@@ -142,7 +142,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Legt Konto, Portfolio und zwei Codes an und antwortet mit 201")
 		void createsAccountPortfolioAndCodes() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail)
+			register(email, studentHsbEmail)
 					.andExpect(status().isCreated())
 					.andExpect(jsonPath("$.email").value(email))
 					.andExpect(jsonPath("$.firstName").value("Erika"))
@@ -165,7 +165,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Beide Codes gehen an ihre jeweilige Adresse")
 		void sendsBothCodesToTheirOwnAddress() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail).andExpect(status().isCreated());
+			register(email, studentHsbEmail).andExpect(status().isCreated());
 
 			verify(mailTemplateService).sendPrivateEmailVerification(eq(email), anyString(), any());
 			verify(mailTemplateService).sendHsbEmailVerification(eq(studentHsbEmail), anyString(), any());
@@ -174,7 +174,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Die Mail nennt dieselbe Gueltigkeit, die auch gilt")
 		void mailStatesTheConfiguredValidity() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail).andExpect(status().isCreated());
+			register(email, studentHsbEmail).andExpect(status().isCreated());
 
 			ArgumentCaptor<Duration> validity = ArgumentCaptor.forClass(Duration.class);
 			verify(mailTemplateService)
@@ -191,7 +191,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Die Antwort enthaelt die HSB-Adresse nicht, an keiner Stelle")
 		void responseNeverCarriesHsbEmail() throws Exception {
-			String body = register(Role.STUDENT, email, studentHsbEmail)
+			String body = register(email, studentHsbEmail)
 					.andExpect(status().isCreated())
 					.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
 
@@ -205,9 +205,13 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Eine Mitarbeitendenadresse ergibt die Rolle EDITOR")
 		void staffDomainYieldsEditor() throws Exception {
+			// Die Rolle haengt allein an der Domain; eine Rollenangabe im Request
+			// gibt es seit Contract v41 nicht mehr (KAN-63). Tutor:innen mit
+			// studentischer Adresse registrieren sich als STUDENT und werden vom
+			// Admin hochgestuft (§3.1.1).
 			String staffEmail = "hsb-" + UUID.randomUUID() + "@" + STAFF_DOMAIN;
 
-			register(Role.EDITOR, email, staffEmail)
+			register(email, staffEmail)
 					.andExpect(status().isCreated())
 					.andExpect(jsonPath("$.role").value("EDITOR"));
 
@@ -215,37 +219,11 @@ class RegistrationIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("EDITOR gewaehlt, studentische Adresse eingetragen: 400 und kein Konto")
-		void selectedRoleMustMatchTheDomain() throws Exception {
-			// Der Tutor-Fall aus §3.1.1. Er laeuft ueber die Hochstufung durch den
-			// Admin und nicht ueber die Registrierung, weil eine studentische
-			// Adresse die Tutorentaetigkeit nicht belegt.
-			register(Role.EDITOR, email, studentHsbEmail)
-					.andExpect(status().isBadRequest())
-					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
-					.andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("hsbEmail")));
-
-			assertThat(userRepository.findByEmail(email)).isEmpty();
-		}
-
-		@Test
-		@DisplayName("STUDENT gewaehlt, Mitarbeitendenadresse eingetragen: ebenfalls 400")
-		void selectedRoleMustMatchInBothDirections() throws Exception {
-			String staffEmail = "hsb-" + UUID.randomUUID() + "@" + STAFF_DOMAIN;
-
-			register(Role.STUDENT, email, staffEmail)
-					.andExpect(status().isBadRequest())
-					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
-
-			assertThat(userRepository.findByEmail(email)).isEmpty();
-		}
-
-		@Test
 		@DisplayName("boesehs-bremen.de wird abgelehnt, verglichen wird exakt und nicht per Suffix")
 		void lookalikeDomainIsRejected() throws Exception {
 			// Mit einem endsWith("hs-bremen.de") waere diese Registrierung
 			// erfolgreich und die gesamte Pruefung entwertet (§3.1.1).
-			register(Role.EDITOR, email, "x@boesehs-bremen.de")
+			register(email, "x@boesehs-bremen.de")
 					.andExpect(status().isBadRequest())
 					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
 
@@ -255,19 +233,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Eine hochschulfremde Adresse wird abgelehnt")
 		void foreignDomainIsRejected() throws Exception {
-			register(Role.STUDENT, email, "erika@example.com")
-					.andExpect(status().isBadRequest())
-					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
-
-			assertThat(userRepository.findByEmail(email)).isEmpty();
-		}
-
-		@Test
-		@DisplayName("ADMIN laesst sich nicht waehlen: keine Domain ergibt diese Rolle")
-		void adminIsNeverGrantedByRegistration() throws Exception {
-			// §3.1.1: administrative Rechte an eine Domain zu koppeln hiesse, die
-			// Verwaltung des Systems an den Besitz einer Adresse zu binden.
-			register(Role.ADMIN, email, studentHsbEmail)
+			register(email, "erika@example.com")
 					.andExpect(status().isBadRequest())
 					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
 
@@ -277,9 +243,9 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Eine bereits vergebene private Adresse ergibt 409 RESOURCE_IN_USE")
 		void duplicateEmailConflicts() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail).andExpect(status().isCreated());
+			register(email, studentHsbEmail).andExpect(status().isCreated());
 
-			register(Role.STUDENT, email, "hsb-" + UUID.randomUUID() + "@" + STUDENT_DOMAIN)
+			register(email, "hsb-" + UUID.randomUUID() + "@" + STUDENT_DOMAIN)
 					.andExpect(status().isConflict())
 					.andExpect(jsonPath("$.errorCode").value("RESOURCE_IN_USE"))
 					.andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("email")));
@@ -288,9 +254,9 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Eine bereits vergebene HSB-Adresse ergibt 409 und nennt das Feld")
 		void duplicateHsbEmailConflicts() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail).andExpect(status().isCreated());
+			register(email, studentHsbEmail).andExpect(status().isCreated());
 
-			register(Role.STUDENT, "zweite-" + email, studentHsbEmail)
+			register("zweite-" + email, studentHsbEmail)
 					.andExpect(status().isConflict())
 					.andExpect(jsonPath("$.errorCode").value("RESOURCE_IN_USE"))
 					.andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("hsbEmail")));
@@ -299,21 +265,21 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Adressen werden kleingeschrieben gespeichert, Schreibweise ergibt kein zweites Konto")
 		void addressesAreCaseInsensitive() throws Exception {
-			register(Role.STUDENT, email.toUpperCase(java.util.Locale.ROOT),
+			register(email.toUpperCase(java.util.Locale.ROOT),
 					studentHsbEmail.toUpperCase(java.util.Locale.ROOT))
 					.andExpect(status().isCreated())
 					.andExpect(jsonPath("$.email").value(email));
 
 			assertThat(userRepository.findByEmail(email)).isPresent();
 
-			register(Role.STUDENT, email, studentHsbEmail)
+			register(email, studentHsbEmail)
 					.andExpect(status().isConflict());
 		}
 
 		@Test
 		@DisplayName("Ein zu kurzes Passwort ergibt 400 und kein Konto")
 		void shortPasswordIsRejected() throws Exception {
-			Map<String, Object> body = registerBody(Role.STUDENT, email, studentHsbEmail);
+			Map<String, Object> body = registerBody(email, studentHsbEmail);
 			body.put("password", "kurz123");
 
 			perform(REGISTER, body)
@@ -327,7 +293,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Vor Abschluss ist keine Anmeldung moeglich: 401 ACCOUNT_NOT_ACTIVE")
 		void loginBlockedUntilBothAddressesAreVerified() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail).andExpect(status().isCreated());
+			register(email, studentHsbEmail).andExpect(status().isCreated());
 
 			login(email, PASSWORD)
 					.andExpect(status().isUnauthorized())
@@ -337,7 +303,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Der Code liegt ausschliesslich als Hash in der Datenbank")
 		void codeIsStoredHashedOnly() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail).andExpect(status().isCreated());
+			register(email, studentHsbEmail).andExpect(status().isCreated());
 
 			String plainCode = capturedPrivateCode();
 			VerificationCode stored = openCodes(requireUser(email), VerificationPurpose.PRIVATE_EMAIL)
@@ -354,7 +320,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Der Code hat sechs Stellen, fuehrende Nullen eingeschlossen")
 		void codeHasSixDigits() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail).andExpect(status().isCreated());
+			register(email, studentHsbEmail).andExpect(status().isCreated());
 
 			assertThat(capturedPrivateCode()).matches("\\d{6}");
 		}
@@ -371,7 +337,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Beide Codes eingeloest: Konto wird ACTIVE und die Anmeldung gelingt")
 		void bothCodesActivateTheAccount() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail).andExpect(status().isCreated());
+			register(email, studentHsbEmail).andExpect(status().isCreated());
 
 			submitCode(VerificationPurpose.PRIVATE_EMAIL, capturedPrivateCode())
 					.andExpect(status().isOk())
@@ -396,7 +362,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Nach Abschluss gelingt die Anmeldung auch in anderer Schreibweise")
 		void loginIsCaseInsensitive() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail).andExpect(status().isCreated());
+			register(email, studentHsbEmail).andExpect(status().isCreated());
 			submitCode(VerificationPurpose.PRIVATE_EMAIL, capturedPrivateCode())
 					.andExpect(status().isOk());
 			submitCode(VerificationPurpose.HSB_EMAIL, capturedHsbCode()).andExpect(status().isOk());
@@ -412,7 +378,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Ein falscher Code ergibt 400 VERIFICATION_CODE_INVALID")
 		void wrongCodeIsRejected() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail).andExpect(status().isCreated());
+			register(email, studentHsbEmail).andExpect(status().isCreated());
 
 			submitCode(VerificationPurpose.PRIVATE_EMAIL, otherThan(capturedPrivateCode()))
 					.andExpect(status().isBadRequest())
@@ -424,7 +390,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Ein abgelaufener Code ergibt 400, mit derselben Meldung wie ein falscher")
 		void expiredCodeIsRejected() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail).andExpect(status().isCreated());
+			register(email, studentHsbEmail).andExpect(status().isCreated());
 			String code = capturedPrivateCode();
 
 			VerificationCode stored = openCodes(requireUser(email), VerificationPurpose.PRIVATE_EMAIL)
@@ -442,7 +408,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Ein bereits verbrauchter Code laesst sich kein zweites Mal einloesen")
 		void consumedCodeIsRejected() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail).andExpect(status().isCreated());
+			register(email, studentHsbEmail).andExpect(status().isCreated());
 			String code = capturedPrivateCode();
 
 			submitCode(VerificationPurpose.PRIVATE_EMAIL, code).andExpect(status().isOk());
@@ -455,7 +421,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Ein Code taugt nur fuer seinen eigenen Zweck")
 		void codeIsBoundToItsPurpose() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail).andExpect(status().isCreated());
+			register(email, studentHsbEmail).andExpect(status().isCreated());
 
 			// Sonst genuegte der Zugriff auf ein Postfach, um beide Adressen zu
 			// bestaetigen, und die HSB-Adresse belegte nichts mehr.
@@ -467,7 +433,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Unbekannte Adresse und falscher Code sind nicht zu unterscheiden")
 		void unknownAddressAnswersLikeAWrongCode() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail).andExpect(status().isCreated());
+			register(email, studentHsbEmail).andExpect(status().isCreated());
 
 			String known = bodyOf(submitCode(VerificationPurpose.PRIVATE_EMAIL,
 					otherThan(capturedPrivateCode())).andExpect(status().isBadRequest()));
@@ -482,7 +448,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("PASSWORD_RESET gehoert nicht an diesen Endpoint")
 		void passwordResetPurposeIsRejected() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail).andExpect(status().isCreated());
+			register(email, studentHsbEmail).andExpect(status().isCreated());
 
 			// Der Zweck ist ein gueltiger Wert aus §2.11, aber der eines anderen
 			// Flusses (KAN-43). Ein Ruecksetzcode darf keine Adresse bestaetigen.
@@ -494,7 +460,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Ein deaktiviertes Konto aktiviert sich nicht ueber einen Code selbst")
 		void deactivatedAccountStaysDeactivated() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail).andExpect(status().isCreated());
+			register(email, studentHsbEmail).andExpect(status().isCreated());
 			String privateCode = capturedPrivateCode();
 			String hsbCode = capturedHsbCode();
 
@@ -513,7 +479,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Nach fuenf Versuchen antwortet der Endpoint mit 429")
 		void tooManyAttemptsAreBlocked() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail).andExpect(status().isCreated());
+			register(email, studentHsbEmail).andExpect(status().isCreated());
 			String wrong = otherThan(capturedPrivateCode());
 
 			for (int i = 0; i < 5; i++) {
@@ -539,7 +505,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Ein neuer Code entwertet den vorherigen")
 		void resendInvalidatesThePreviousCode() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail).andExpect(status().isCreated());
+			register(email, studentHsbEmail).andExpect(status().isCreated());
 			String first = capturedPrivateCode();
 
 			resend(email, VerificationPurpose.PRIVATE_EMAIL).andExpect(status().isNoContent());
@@ -583,7 +549,7 @@ class RegistrationIntegrationTest {
 		@Test
 		@DisplayName("Nach fuenf Anforderungen antwortet der Endpoint mit 429")
 		void resendIsRateLimited() throws Exception {
-			register(Role.STUDENT, email, studentHsbEmail).andExpect(status().isCreated());
+			register(email, studentHsbEmail).andExpect(status().isCreated());
 
 			for (int i = 0; i < 5; i++) {
 				resend(email, VerificationPurpose.PRIVATE_EMAIL).andExpect(status().isNoContent());
@@ -616,13 +582,12 @@ class RegistrationIntegrationTest {
 	// Hilfsmittel
 	// ==================================================================
 
-	private ResultActions register(Role selectedRole, String email, String hsbEmail) throws Exception {
-		return perform(REGISTER, registerBody(selectedRole, email, hsbEmail));
+	private ResultActions register(String email, String hsbEmail) throws Exception {
+		return perform(REGISTER, registerBody(email, hsbEmail));
 	}
 
-	private Map<String, Object> registerBody(Role selectedRole, String email, String hsbEmail) {
+	private Map<String, Object> registerBody(String email, String hsbEmail) {
 		Map<String, Object> body = new LinkedHashMap<>();
-		body.put("selectedRole", selectedRole.name());
 		body.put("firstName", "Erika");
 		body.put("lastName", "Musterfrau");
 		body.put("email", email);

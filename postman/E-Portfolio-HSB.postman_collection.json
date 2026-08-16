@@ -664,7 +664,7 @@
 						"description": "Der Verifizierungscode landet in dev nur im Serverlog; der Flow endet hier bewusst nach dem 201.",
 						"body": {
 							"mode": "raw",
-							"raw": "{\n\t\"selectedRole\": \"STUDENT\",\n\t\"firstName\": \"PMTEST\",\n\t\"lastName\": \"Registrierung\",\n\t\"email\": \"{{registerEmail}}\",\n\t\"hsbEmail\": \"{{registerHsbEmail}}\",\n\t\"password\": \"PmTestRegister123\"\n}",
+							"raw": "{\n\t\"firstName\": \"PMTEST\",\n\t\"lastName\": \"Registrierung\",\n\t\"email\": \"{{registerEmail}}\",\n\t\"hsbEmail\": \"{{registerHsbEmail}}\",\n\t\"password\": \"PmTestRegister123\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"

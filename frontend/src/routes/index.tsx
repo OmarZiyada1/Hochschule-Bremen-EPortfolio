@@ -109,18 +109,11 @@ export const routes: RouteObject[] = [
       },
       {
         /* Die kurze, von Hand eingetippte Adresse laeuft nicht ins Leere;
-           verbindlich ist die lange Form (Ticket KAN-7, Umfang 2). */
+           verbindlich ist die lange Form (Ticket KAN-7, Umfang 2). Erster
+           Schritt sind die Angaben: eine Rollenauswahl gibt es seit
+           Contract v41 nicht mehr (KAN-63). */
         path: "/register",
-        element: <Navigate to="/register/role" replace />,
-      },
-      {
-        path: "/register/role",
-        element: (
-          <PlaceholderPage
-            titleKey="placeholder.title.registerRole"
-            ticket="KAN-33"
-          />
-        ),
+        element: <Navigate to="/register/details" replace />,
       },
       {
         path: "/register/details",

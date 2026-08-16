@@ -41,7 +41,7 @@ describe("NavBar", () => {
     expect(screen.getByRole("link", { name: "Anmelden" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Registrieren" })).toHaveAttribute(
       "href",
-      "/register/role"
+      "/register"
     )
   })
 

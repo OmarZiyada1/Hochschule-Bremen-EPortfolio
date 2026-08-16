@@ -209,7 +209,7 @@ export function NavBar({
                Leiste einen klaren Hauptweg behaelt. */
             <>
               <Link
-                to="/register/role"
+                to="/register"
                 className={cn(
                   buttonVariants({ variant: "ghost" }),
                   navGhost,
@@ -274,7 +274,7 @@ export function NavBar({
                 {!user && (
                   <div className="flex items-center gap-2">
                     <Link
-                      to="/register/role"
+                      to="/register"
                       onClick={() => setMenuOpen(false)}
                       className={cn(
                         buttonVariants({ variant: "outline" }),
