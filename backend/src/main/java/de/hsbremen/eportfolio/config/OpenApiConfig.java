@@ -48,14 +48,11 @@ public class OpenApiConfig {
 		return new OpenAPI()
 				.info(new Info()
 						.title("E-Portfolio Hochschule Bremen: API")
-						.version("v45")
+						.version("v46")
 						.description("""
 								REST-API des E-Portfolio-Systems der Hochschule \
 								Bremen (FK4). Stand entspricht dem API-Contract \
-								v45, §6. Offen ist daraus allein die \
-								Mehrfachauswahl der Filterparameter von \
-								GET /projects aus v43: sie nehmen weiterhin \
-								je einen Wert an.
+								v46, §6.
 
 								Authentifizierung: JWT als Bearer-Token. Ohne \
 								gueltiges Token antworten geschuetzte Pfade mit \

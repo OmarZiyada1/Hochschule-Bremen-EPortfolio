@@ -3,6 +3,7 @@ package de.hsbremen.eportfolio.project.dto;
 import de.hsbremen.eportfolio.common.enums.Degree;
 import de.hsbremen.eportfolio.common.enums.ProjectStatus;
 import de.hsbremen.eportfolio.common.enums.ProjectType;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -14,16 +15,22 @@ import java.util.UUID;
  * Query-Parameter weiterhin einzeln, damit die OpenAPI-Beschreibung jeden von
  * ihnen erklaeren kann.
  *
- * <p>Jedes Feld ist optional; {@code null} heisst „dieser Filter ist nicht
- * gesetzt".
+ * <p>Seit Contract v43 sind die sieben Sachfilter <strong>mehrwertig</strong>:
+ * der Parameter darf wiederholt werden ({@code ?faculty=a&faculty=b}), die
+ * Werte desselben Parameters sind ODER-verknuepft, verschiedene Parameter
+ * bleiben untereinander UND-verknuepft. {@code q}, {@code status},
+ * {@code author} und {@code editor} bleiben einwertig (KAN-64).
  *
- * @param category     ID einer Kategorie (§3.6)
- * @param faculty      ID einer Fakultaet (§3.8)
- * @param studyProgram ID eines Studiengangs (§3.7)
- * @param module       ID eines Moduls (§3.9)
- * @param degree       (§2.7)
- * @param type         Projekttyp (§2.6)
- * @param semester     ID eines Semesters (§3.18)
+ * <p>Jedes Feld ist optional; {@code null} (bei den Listen auch eine leere
+ * Liste) heisst „dieser Filter ist nicht gesetzt".
+ *
+ * @param category     IDs von Kategorien (§3.6)
+ * @param faculty      IDs von Fakultaeten (§3.8)
+ * @param studyProgram IDs von Studiengaengen (§3.7)
+ * @param module       IDs von Modulen (§3.9)
+ * @param degree       angestrebte Abschluesse (§2.7)
+ * @param type         Projekttypen (§2.6)
+ * @param semester     IDs von Semestern (§3.18)
  * @param q            Suchbegriff fuer Titel und Kurzbeschreibung
  * @param status       Projektstatus (§2.2); wirkt nur innerhalb dessen, was die
  *                     Sichtbarkeitsschranke ohnehin freigibt
@@ -33,13 +40,13 @@ import java.util.UUID;
  *                     Formen annimmt und erst der Service ihn aufloest
  */
 public record ProjectFilterRequest(
-		UUID category,
-		UUID faculty,
-		UUID studyProgram,
-		UUID module,
-		Degree degree,
-		ProjectType type,
-		UUID semester,
+		List<UUID> category,
+		List<UUID> faculty,
+		List<UUID> studyProgram,
+		List<UUID> module,
+		List<Degree> degree,
+		List<ProjectType> type,
+		List<UUID> semester,
 		String q,
 		ProjectStatus status,
 		UUID author,

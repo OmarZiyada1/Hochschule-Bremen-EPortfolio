@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -173,20 +174,25 @@ public class ProjectReadService {
 	 * <p>Die Schranke ist der Startwert und steht damit garantiert in jeder
 	 * Abfrage, auch wenn spaeter ein Filter hinzukommt und jemand vergisst, ihn
 	 * einzuhaengen.
+	 *
+	 * <p>Die sieben mehrwertigen Sachfilter (seit Contract v43, KAN-64) laufen
+	 * ueber {@link #addAll}: jeder liefert ein einziges in-Praedikat, seine
+	 * Werte sind also ODER-verknuepft, waehrend verschiedene Filter hier
+	 * weiterhin mit UND aneinanderhaengen.
 	 */
 	private Specification<Project> conditions(AuthenticatedUser user, ProjectFilterRequest filter) {
 		List<Specification<Project>> parts = new ArrayList<>();
 		parts.add(ProjectSpecifications.visibleFor(user));
 
-		add(parts, filter.category(), ProjectSpecifications::category);
-		add(parts, filter.faculty(), ProjectSpecifications::faculty);
-		add(parts, filter.studyProgram(), ProjectSpecifications::studyProgram);
-		add(parts, filter.module(), ProjectSpecifications::module);
-		add(parts, filter.degree(), ProjectSpecifications::degree);
-		add(parts, filter.type(), ProjectSpecifications::type);
+		addAll(parts, filter.category(), ProjectSpecifications::category);
+		addAll(parts, filter.faculty(), ProjectSpecifications::faculty);
+		addAll(parts, filter.studyProgram(), ProjectSpecifications::studyProgram);
+		addAll(parts, filter.module(), ProjectSpecifications::module);
+		addAll(parts, filter.degree(), ProjectSpecifications::degree);
+		addAll(parts, filter.type(), ProjectSpecifications::type);
 		add(parts, filter.status(), ProjectSpecifications::status);
 		add(parts, filter.author(), ProjectSpecifications::author);
-		add(parts, filter.semester(), ProjectSpecifications::semester);
+		addAll(parts, filter.semester(), ProjectSpecifications::semester);
 		add(parts, emptyAsNull(filter.q()), ProjectSpecifications::searchText);
 		add(parts, editorId(user, filter.editor()), ProjectSpecifications::editor);
 
@@ -197,6 +203,27 @@ public class ProjectReadService {
 			Function<V, Specification<Project>> part) {
 		if (value != null) {
 			parts.add(part.apply(value));
+		}
+	}
+
+	/**
+	 * Haengt einen mehrwertigen Filter an, wenn er tatsaechlich Werte traegt.
+	 *
+	 * <p>Null-Elemente fallen vorher heraus: ein leerer Einzelwert wie in
+	 * {@code ?faculty=a&faculty=} wird von Springs Konvertierung zu
+	 * {@code null} im Listenelement, und ein {@code in} mit {@code null}
+	 * darin vergliche gegen nichts. Das ist dieselbe Umdeutung „leer heisst
+	 * fehlend" wie bei {@link #emptyAsNull(String)}. Bleibt nichts uebrig
+	 * (Parameter fehlt oder ist ueberall leer), ist der Filter nicht gesetzt.
+	 */
+	private static <V> void addAll(List<Specification<Project>> parts, List<V> values,
+			Function<List<V>, Specification<Project>> part) {
+		if (values == null) {
+			return;
+		}
+		List<V> present = values.stream().filter(Objects::nonNull).toList();
+		if (!present.isEmpty()) {
+			parts.add(part.apply(present));
 		}
 	}
 
