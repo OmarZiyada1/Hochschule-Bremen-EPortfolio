@@ -39,6 +39,36 @@ Contract §2.2; `badge` kennt sie nicht und soll sie nicht kennen.
 Die Entscheidung in einem Satz: **Gibt es eine Registry-Entsprechung, wird sie
 benutzt. Gibt es keine, wird eine Hülle darum gebaut, nicht daneben.**
 
+### Die Falle heißt „das ist doch nur Markup"
+
+Registry-Entsprechungen haben nicht nur interaktive Bausteine. Auch
+strukturelle Primitiven ohne eigene Logik stehen in der Registry: `empty`,
+`field`, `card`, `alert`, `skeleton`, `separator`, `breadcrumb`. Eine
+Fläche, die nach „nur Überschrift plus Text plus Link" aussieht, ist fast
+immer ein Leerzustand und kommt aus `empty` beziehungsweise der Domänenhülle
+`EmptyState`; das gilt ausdrücklich für Fehler- und Zustandsseiten (404,
+Kein Zugriff, „Inhalt folgt"). In KAN-7 sind die 404- und die
+Kein-Zugriff-Seite zunächst als handgebaute h1+p+Link-Struktur entstanden,
+obwohl `empty` installiert war; der Verstoß fiel erst im menschlichen
+Review auf, weil jede Beispielliste nur interaktive Bausteine nannte.
+
+Daraus folgen zwei Pflichten vor **jeder** neuen Datei, die sichtbare
+Struktur rendert, auch unter `features/` und `routes/`, nicht nur unter
+`components/`:
+
+1. **Inventar zuerst.** `frontend/src/components/ui/` und
+   `frontend/src/components/common/` ansehen und benennen, welcher
+   vorhandene Baustein die Fläche trägt oder warum keiner passt; bei
+   Zweifel `pnpm dlx shadcn@latest search @shadcn -q <text>`. „Sieht nach
+   einfachem Markup aus" ist keine Antwort auf diese Frage.
+2. **Eine fast passende Domänenhülle wird erweitert, nicht umgangen.**
+   Konnte `EmptyState` in KAN-7 nur die Überschriftenebenen 2 und 3, die
+   Seite brauchte aber 1, dann ist das ein Grund, die Hülle zu erweitern,
+   kein Grund, daneben zu bauen. Erst wenn die Hülle die Anforderung
+   strukturell nicht darstellt (in KAN-7: Markenkachel und Fehlercode
+   zugleich), komponiert die Seite die Primitive direkt, wie
+   `features/not-found/NotFoundPage.tsx`.
+
 ## 2. shadcn ist keine Abhängigkeit im üblichen Sinn
 
 Es gibt kein Paket `shadcn/ui`, aus dem eine Komponente importiert wird. Die
@@ -448,6 +478,12 @@ nach `CLAUDE.md`, Frontend-Regel 9: vorher fragen, nicht nebenbei eintragen.
 
 - [ ] Vor dem ersten `add` geprüft, ob es die Komponente in der Registry gibt
       (`shadcn search`), statt sie von Hand zu bauen
+- [ ] Für jede neue Datei mit sichtbarer Struktur (auch unter `features/`
+      und `routes/`) benannt, welcher Baustein aus `components/ui/` oder
+      `components/common/` sie trägt oder warum keiner passt; Zustands- und
+      Meldungsflächen aus `empty`/`EmptyState` (Abschnitt 1)
+- [ ] Keine fast passende Domänenhülle umgangen: erweitert statt daneben
+      gebaut (Abschnitt 1)
 - [ ] Vor jeder Verwendung Import und API per `shadcn view <item>` bzw.
       `shadcn docs <item>` nachgeschlagen; Importe nur aus
       `@/components/ui/…`, kein direkter `@base-ui/react`-Import außerhalb

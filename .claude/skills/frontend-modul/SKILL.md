@@ -41,7 +41,11 @@ Entscheidung. Siehe Schritt 0b.
    `frontend-design`), nicht in den Feature-Ordner. Fehlt eine **Primitive**,
    wird sie per `pnpm dlx shadcn@latest add` erzeugt und nicht geschrieben
    (Skill `frontend-shadcn`); `pnpm dlx shadcn@latest info` zeigt, was
-   bereits installiert ist.
+   bereits installiert ist. Das Inventar gilt auch für Flächen, die nach
+   einfachem Markup aussehen: Fehler-, Zustands- und Meldungsseiten sind
+   Leerzustände und kommen aus der `empty`-Primitive bzw. der Domänenhülle
+   `EmptyState`; eine fast passende Hülle wird erweitert, nicht umgangen
+   (Befund aus KAN-7, Skill `frontend-shadcn` Abschnitt 1).
 5. Prüfen, ob der benötigte Endpoint im Backend **wirklich existiert**:
    die Controller unter `backend/src/main/java/de/hsbremen/eportfolio/` oder
    `/v3/api-docs` im laufenden Dev-Profil. Eine Contract-Zeile ist kein
@@ -164,7 +168,11 @@ frontend/src/
 Gibt es eine Registry-Entsprechung, wird sie über `add` erzeugt und nicht
 nachgebaut; von Hand entsteht nur, was Domänenwissen trägt, und das
 komponiert die Primitiven. Ein selbst gebautes Auswahlmenü sieht im Browser
-richtig aus und ist mit der Tastatur fast immer unbrauchbar. Regeln dazu im
+richtig aus und ist mit der Tastatur fast immer unbrauchbar. Die Suche gilt
+auch, wenn die Fläche nach bloßem Markup aussieht: Leerzustände,
+Fehlerseiten und Meldungsflächen haben mit `empty` eine
+Registry-Entsprechung, und eine fast passende Domänenhülle (`EmptyState`)
+wird erweitert statt umgangen (Befund aus KAN-7). Regeln dazu im
 Skill `frontend-shadcn`.
 
 **Bevor eine Primitive verwendet wird: Import und API nachschlagen, nicht
@@ -308,6 +316,11 @@ jeder Umbenennung und belegt nichts.
       API jeder verwendeten Primitive per `view`/`docs`
       nachgeschlagen, Importe nur aus `@/components/ui/…`
       (Skill `frontend-shadcn`)
+- [ ] Jede neue Datei mit sichtbarer Struktur (auch unter `features/` und
+      `routes/`) gegen das Inventar aus `components/ui/` und
+      `components/common/` gehalten; Zustands- und Meldungsflächen aus
+      `empty`/`EmptyState`, fast passende Hüllen erweitert statt umgangen
+      (Befund aus KAN-7)
 - [ ] Jedes Formular validiert über ein zod-Schema mit `react-hook-form`
       (Abschnitt 3b); keine Validierungslogik daneben, kein zod-Schema über
       einer Serverantwort; Server-Feldfehler (400 `VALIDATION_FAILED`)

@@ -66,8 +66,16 @@ Backend-Handwerk der `code-reviewer`; du prüfst das Frontend.
     zeigt und der dort nicht steht, ist ein Befund. Prüfe außerdem, ob eine von Hand gebaute
     Komponente eine Registry-Entsprechung hat (`select`, `dialog`,
     `dropdown-menu`, `pagination`, `tabs`, `tooltip`); dann ist der Nachbau
-    der Befund. Ein direkter Import aus `@base-ui/react` außerhalb von
-    `components/ui/` ist ebenfalls ein
+    der Befund. Das gilt genauso für strukturelle Primitiven ohne
+    Interaktion (`empty`, `field`, `card`, `alert`, `skeleton`): eine
+    handgebaute h1+p+Link-Fläche für einen Leerzustand, eine Fehler- oder
+    Meldungsseite neben installiertem `empty`/`EmptyState` ist derselbe
+    Befund (so geschehen in KAN-7, erst im menschlichen Review gefallen),
+    ebenso eine fast passende Domänenhülle, die umgangen statt erweitert
+    wurde. Halte deshalb jede **neue** Datei, die sichtbare Struktur
+    rendert (auch unter `features/` und `routes/`), gegen das Inventar aus
+    `components/ui/` und `components/common/`. Ein direkter Import aus
+    `@base-ui/react` außerhalb von `components/ui/` ist ebenfalls ein
     Befund: er umgeht die generierte Hülle samt Tokenanbindung und i18n.
     Importe von Primitiven kommen ausschließlich aus
     `@/components/ui/<name>`.
