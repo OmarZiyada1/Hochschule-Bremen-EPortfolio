@@ -147,7 +147,7 @@ describe("LoginPage", () => {
     expect(
       await screen.findByRole("heading", {
         level: 1,
-        name: "Projektbibliothek",
+        name: "Studentische Projekte",
       })
     ).toBeInTheDocument()
     expect(screen.getByTestId("pathname")).toHaveTextContent("/projects")

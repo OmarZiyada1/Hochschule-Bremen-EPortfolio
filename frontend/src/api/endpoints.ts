@@ -18,4 +18,17 @@ export const apiPaths = {
     list: "/api/projects",
     detail: (projectId: string) => `/api/projects/${projectId}`,
   },
+  top10: {
+    list: "/api/top10",
+  },
+  /*
+   * Stammdaten (§6.1, Backend-Modul masterdata): vollstaendige Listen ohne
+   * Paginierung. Eingetragen mit ihrem ersten Verwender, den Kennzahlen der
+   * Startseite (KAN-31); categories folgt erst mit seinem Verwender
+   * (Filter-Seitenleiste, KAN-64), nicht auf Vorrat.
+   */
+  masterData: {
+    faculties: "/api/faculties",
+    studyPrograms: "/api/study-programs",
+  },
 } as const

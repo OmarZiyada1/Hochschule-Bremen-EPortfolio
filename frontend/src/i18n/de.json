@@ -80,8 +80,30 @@
     }
   },
   "home": {
-    "title": "E-Portfolio Hochschule Bremen",
-    "intro": "Die Anwendung ist aufgesetzt. Die fachlichen Ansichten entstehen mit ihren Tickets; diese Startseite entsteht mit KAN-31.",
+    "hero": {
+      "label": "HSB · E-Portfolio",
+      "titleLine1": "Studentische Innovation",
+      "titleLine2": "sichtbar machen.",
+      "subtitle": "Abschlussarbeiten, Projekte und Forschung aus allen Fakultäten der Hochschule Bremen, an einem Ort.",
+      "exploreTop10": "Top-10-Projekte entdecken"
+    },
+    "top10": {
+      "label": "HSB · Bestenliste",
+      "title": "Top 10 · {{year}}",
+      "description": "Die zehn stärksten Projekte des Jahres: Abschlussarbeiten und Forschung aus allen Fakultäten, die zeigen, wozu Studierende an der HSB fähig sind.",
+      "viewProject": "Projekt ansehen",
+      "freeSlot": "Platz frei",
+      "freeBadge": "Top 10"
+    },
+    "cta": {
+      "label": "Platz 1 bis 10",
+      "title": "Das war nur der Anfang.",
+      "description": "{{works}} Arbeiten aus {{faculties}} Fakultäten warten in der Projektbibliothek: finde die eine, die deine nächste Idee auslöst.",
+      "statWorks": "Arbeiten",
+      "statFaculties": "Fakultäten",
+      "statPrograms": "Studiengänge",
+      "openLibrary": "Projektbibliothek öffnen"
+    },
     "tokenGallery": "Zur Tokenschicht",
     "componentGallery": "Zur Komponentenbibliothek"
   },
@@ -297,12 +319,36 @@
       "reactions_other": "{{count}} Reaktionen"
     },
     "list": {
-      "title": "Projektbibliothek",
-      "count_one": "{{count}} Projekt",
-      "count_other": "{{count}} Projekte",
+      "label": "Studentisches E-Portfolio",
+      "title": "Studentische Projekte",
+      "description": "Durchsuchen Sie alle veröffentlichten studentischen Arbeiten",
+      "count_one": "{{count}} studentisches Projekt gefunden",
+      "count_other": "{{count}} studentische Projekte gefunden",
+      "searchPlaceholder": "Projekte durchsuchen …",
+      "filter": {
+        "title": "Filter",
+        "comingSoon": "Die Filtergruppen entstehen mit dem Ticket {{ticket}}.",
+        "group": {
+          "faculty": "Fakultät/Institution",
+          "studyProgram": "Studiengang",
+          "degree": "Abschluss",
+          "semester": "Semester",
+          "type": "Projekttyp",
+          "category": "Kategorie"
+        }
+      },
       "empty": {
         "title": "Keine Projekte vorhanden",
         "description": "Sobald Projekte veröffentlicht sind, erscheinen sie hier."
+      },
+      "noResults": {
+        "title": "Keine Treffer",
+        "description": "Für diese Suche gibt es keine Treffer. Ändern oder leeren Sie den Suchbegriff."
+      },
+      "pageOutOfRange": {
+        "title": "Diese Seite gibt es nicht mehr",
+        "description": "Die Trefferliste hat weniger Seiten als die aufgerufene Adresse.",
+        "action": "Zur letzten Seite"
       }
     }
   },
