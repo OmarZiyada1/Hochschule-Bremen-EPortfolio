@@ -27,14 +27,67 @@ function pageOf(
   }
 }
 
+/* Stammdaten der Filter-Seitenleiste (KAN-64), als Konstanten, damit die
+   Tests URL, Checkbox und Request ueber dieselben IDs verknuepfen. */
+const FACULTY_FK1 = "f0000000-0000-4000-8000-000000000001"
+const FACULTY_FK4 = "f0000000-0000-4000-8000-000000000004"
+const PROGRAM_ARCHITECTURE = "a0000000-0000-4000-8000-000000000001"
+const PROGRAM_INFORMATICS = "a0000000-0000-4000-8000-000000000002"
+const CATEGORY_WEB = "c0000000-0000-4000-8000-000000000001"
+const SEMESTER_WISE = "5e000000-0000-4000-8000-000000000001"
+const SEMESTER_SOSE = "5e000000-0000-4000-8000-000000000002"
+
 /**
  * Projektliste des Durchstichs (Ticket KAN-8): die drei Zustaende Laden,
  * Leere und Fehler, die sichtbare 401-Reaktion und der fest verdrahtete
  * Filter status=PUBLISHED (Klaerungsrunde im Review zu KAN-8, Contract v42).
+ * Seit KAN-64 dazu die Filter-Seitenleiste mit Mehrfachauswahl.
  */
 describe("ProjectListPage", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("de")
+    /* Die Seitenleiste laedt ihre Optionslisten bei jedem Rendern der
+       Seite; die Handler stehen deshalb fuer alle Tests bereit und
+       einzelne Tests ueberschreiben sie bei Bedarf per server.use. */
+    server.use(
+      http.get("*/api/faculties", () =>
+        HttpResponse.json([
+          {
+            id: FACULTY_FK1,
+            name: "Fakultät Architektur, Bau und Umwelt",
+            abbreviation: "FK1",
+          },
+          {
+            id: FACULTY_FK4,
+            name: "Fakultät Elektrotechnik und Informatik",
+            abbreviation: "FK4",
+          },
+        ])
+      ),
+      http.get("*/api/study-programs", () =>
+        HttpResponse.json([
+          {
+            id: PROGRAM_ARCHITECTURE,
+            name: "Architektur",
+            facultyId: FACULTY_FK1,
+          },
+          {
+            id: PROGRAM_INFORMATICS,
+            name: "Informatik",
+            facultyId: FACULTY_FK4,
+          },
+        ])
+      ),
+      http.get("*/api/categories", () =>
+        HttpResponse.json([{ id: CATEGORY_WEB, name: "Webentwicklung" }])
+      ),
+      http.get("*/api/semesters", () =>
+        HttpResponse.json([
+          { id: SEMESTER_WISE, name: "WiSe 2025/26", active: true, sortOrder: 1 },
+          { id: SEMESTER_SOSE, name: "SoSe 2025", active: true, sortOrder: 2 },
+        ])
+      )
+    )
   })
 
   it("zeigt echte Daten aus PageResponse, ohne Status-Badge", async () => {
@@ -275,7 +328,7 @@ describe("ProjectListPage", () => {
     })
   })
 
-  it("zeigt die Filtergruppen als Kommt-bald-Hinweis ohne Bedienelemente", async () => {
+  it("zeigt die sechs Filtergruppen als aufklappbare Checkbox-Gruppen", async () => {
     server.use(
       http.get("*/api/projects", () => HttpResponse.json(pageOf([])))
     )
@@ -284,9 +337,9 @@ describe("ProjectListPage", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "Filter" })
     ).toBeInTheDocument()
-    expect(
-      screen.getByText("Die Filtergruppen entstehen mit dem Ticket KAN-64.")
-    ).toBeInTheDocument()
+    /* Jede Gruppe ist ein echter Aufklappknopf (Template "Projekte
+       (Oeffentlich)"), keine tote Beschriftung wie im Kommt-bald-Rahmen
+       aus KAN-31. */
     for (const group of [
       "Fakultät/Institution",
       "Studiengang",
@@ -295,11 +348,207 @@ describe("ProjectListPage", () => {
       "Projekttyp",
       "Kategorie",
     ]) {
-      expect(screen.getByText(group)).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: group })).toBeInTheDocument()
     }
-    /* Kein Bedienelement, das nichts tut (DoD KAN-31): keine Checkboxen,
-       keine Aufklappknoepfe. */
-    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument()
+    /* Die offenen Gruppen zeigen ihre Optionen aus Stammdaten und Enums. */
+    expect(
+      await screen.findByRole("checkbox", {
+        name: "Fakultät Elektrotechnik und Informatik",
+      })
+    ).not.toBeChecked()
+    expect(screen.getByRole("checkbox", { name: "Bachelor" })).toBeInTheDocument()
+    expect(
+      screen.getByRole("checkbox", { name: "WiSe 2025/26" })
+    ).toBeInTheDocument()
+    expect(screen.getByRole("checkbox", { name: "Paper" })).toBeInTheDocument()
+    /* Studiengang und Kategorie starten zugeklappt wie im Template; ihre
+       Optionen erscheinen erst nach dem Aufklappen. */
+    expect(
+      screen.queryByRole("checkbox", { name: "Webentwicklung" })
+    ).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: "Kategorie" }))
+    expect(
+      await screen.findByRole("checkbox", { name: "Webentwicklung" })
+    ).toBeInTheDocument()
+  })
+
+  it("liest die Mehrfachauswahl aus der URL: Haekchen gesetzt, Parameter wiederholt im Request", async () => {
+    const requests: URLSearchParams[] = []
+    server.use(
+      http.get("*/api/projects", ({ request }) => {
+        requests.push(new URL(request.url).searchParams)
+        return HttpResponse.json(pageOf([]))
+      })
+    )
+    renderWithProviders(
+      <ProjectListPage />,
+      `/projects?faculty=${FACULTY_FK1}&faculty=${FACULTY_FK4}&degree=BACHELOR`
+    )
+
+    /* Der Reload-Fall: die Auswahl kommt vollstaendig aus der URL zurueck. */
+    expect(
+      await screen.findByRole("checkbox", {
+        name: "Fakultät Architektur, Bau und Umwelt",
+      })
+    ).toBeChecked()
+    expect(
+      screen.getByRole("checkbox", {
+        name: "Fakultät Elektrotechnik und Informatik",
+      })
+    ).toBeChecked()
+    expect(screen.getByRole("checkbox", { name: "Bachelor" })).toBeChecked()
+    /* Zum Server geht die wiederholte Parameterform aus §6.1 (v43). */
+    await waitFor(() => {
+      expect(requests.at(-1)?.getAll("faculty")).toEqual([
+        FACULTY_FK1,
+        FACULTY_FK4,
+      ])
+    })
+    expect(requests.at(-1)?.getAll("degree")).toEqual(["BACHELOR"])
+  })
+
+  it("waehlt per Checkbox an und ab und haelt URL-Parameter und Request synchron", async () => {
+    const requests: URLSearchParams[] = []
+    server.use(
+      http.get("*/api/projects", ({ request }) => {
+        requests.push(new URL(request.url).searchParams)
+        return HttpResponse.json(pageOf([]))
+      })
+    )
+    renderWithProviders(<ProjectListPage />, `/projects?type=PAPER&page=3`)
+
+    /* Anwahl ergaenzt den zweiten Wert desselben Parameters und setzt die
+       Seite zurueck: die alte Seitenzahl gehoerte zur alten Treffermenge. */
+    await userEvent.click(
+      await screen.findByRole("checkbox", { name: "Thesis" })
+    )
+    await waitFor(() => {
+      expect(requests.at(-1)?.getAll("type")).toEqual(["PAPER", "THESIS"])
+    })
+    expect(requests.at(-1)?.get("page")).toBeNull()
+
+    /* Abwahl entfernt genau diesen Wert wieder aus URL und Request. */
+    await userEvent.click(screen.getByRole("checkbox", { name: "Paper" }))
+    await waitFor(() => {
+      expect(requests.at(-1)?.getAll("type")).toEqual(["THESIS"])
+    })
+  })
+
+  it("schraenkt die Studiengang-Optionen auf die gewaehlten Fakultaeten ein", async () => {
+    server.use(
+      http.get("*/api/projects", () => HttpResponse.json(pageOf([])))
+    )
+    renderWithProviders(
+      <ProjectListPage />,
+      `/projects?faculty=${FACULTY_FK4}`
+    )
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Studiengang" })
+    )
+    /* Nur die Studiengaenge der gewaehlten Fakultaet sind Optionen. */
+    expect(
+      await screen.findByRole("checkbox", { name: "Informatik" })
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("checkbox", { name: "Architektur" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("entfernt bei der Abwahl einer Fakultaet deren unsichtbar werdende Studiengaenge", async () => {
+    const requests: URLSearchParams[] = []
+    server.use(
+      http.get("*/api/projects", ({ request }) => {
+        requests.push(new URL(request.url).searchParams)
+        return HttpResponse.json(pageOf([]))
+      })
+    )
+    renderWithProviders(
+      <ProjectListPage />,
+      `/projects?faculty=${FACULTY_FK1}&faculty=${FACULTY_FK4}&studyProgram=${PROGRAM_INFORMATICS}`
+    )
+
+    /* Abwahl von FK4: Informatik verschwindet aus der Optionsliste und
+       darf deshalb nicht weiter filtern (Klaerungsrunde zu KAN-64). */
+    await userEvent.click(
+      await screen.findByRole("checkbox", {
+        name: "Fakultät Elektrotechnik und Informatik",
+      })
+    )
+    await waitFor(() => {
+      expect(requests.at(-1)?.getAll("faculty")).toEqual([FACULTY_FK1])
+    })
+    expect(requests.at(-1)?.getAll("studyProgram")).toEqual([])
+  })
+
+  it("oeffnet eine per Template zugeklappte Gruppe, wenn die URL eine Auswahl traegt", async () => {
+    server.use(
+      http.get("*/api/projects", () => HttpResponse.json(pageOf([])))
+    )
+    renderWithProviders(
+      <ProjectListPage />,
+      `/projects?category=${CATEGORY_WEB}`
+    )
+
+    /* Kategorie startet laut Template zugeklappt; mit aktiver Auswahl aus
+       der URL waere die wirksame Filterung sonst nach einem Reload
+       unsichtbar. */
+    expect(
+      await screen.findByRole("checkbox", { name: "Webentwicklung" })
+    ).toBeChecked()
+  })
+
+  it("zeigt einen Fehler der Optionsliste aus dem Envelope in der Gruppe an", async () => {
+    server.use(
+      http.get("*/api/projects", () => HttpResponse.json(pageOf([]))),
+      http.get("*/api/faculties", () =>
+        apiErrorResponse(500, "INTERNAL_ERROR", "/api/faculties")
+      )
+    )
+    renderWithProviders(<ProjectListPage />)
+
+    /* Alle vier Optionslisten teilen denselben OptionsState; der
+       Fehlerzweig ist damit einmal belegt. */
+    expect(
+      await screen.findByText(
+        "Etwas ist schiefgelaufen. Bitte versuchen Sie es später erneut."
+      )
+    ).toBeInTheDocument()
+  })
+
+  it("zeigt die Leermeldung, wenn eine Gruppe keine Optionen hat", async () => {
+    server.use(
+      http.get("*/api/projects", () => HttpResponse.json(pageOf([]))),
+      http.get("*/api/categories", () => HttpResponse.json([]))
+    )
+    renderWithProviders(<ProjectListPage />)
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Kategorie" })
+    )
+    expect(
+      await screen.findByText("Keine Optionen verfügbar.")
+    ).toBeInTheDocument()
+  })
+
+  it("filtert die Semester-Gruppe ueber die IDs aus GET /api/semesters", async () => {
+    const requests: URLSearchParams[] = []
+    server.use(
+      http.get("*/api/projects", ({ request }) => {
+        requests.push(new URL(request.url).searchParams)
+        return HttpResponse.json(pageOf([]))
+      })
+    )
+    renderWithProviders(<ProjectListPage />)
+
+    await userEvent.click(
+      await screen.findByRole("checkbox", { name: "WiSe 2025/26" })
+    )
+    /* Gewaehlt wird die ID der Stammdatenzeile, nicht die Schreibweise
+       (§3.18, Contract v45). */
+    await waitFor(() => {
+      expect(requests.at(-1)?.getAll("semester")).toEqual([SEMESTER_WISE])
+    })
   })
 
   it("bietet bei einer Seite jenseits von totalPages den Weg zur letzten Seite", async () => {

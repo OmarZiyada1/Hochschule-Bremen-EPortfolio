@@ -314,6 +314,11 @@
       "PAPER": "Paper",
       "THESIS": "Thesis"
     },
+    "degree": {
+      "BACHELOR": "Bachelor",
+      "MASTER": "Master",
+      "MBA": "MBA"
+    },
     "card": {
       "reactions_one": "{{count}} reaction",
       "reactions_other": "{{count}} reactions"
@@ -327,7 +332,7 @@
       "searchPlaceholder": "Search projects …",
       "filter": {
         "title": "Filter",
-        "comingSoon": "The filter groups arrive with ticket {{ticket}}.",
+        "noOptions": "No options available.",
         "group": {
           "faculty": "Faculty/Institution",
           "studyProgram": "Degree programme",
@@ -343,7 +348,7 @@
       },
       "noResults": {
         "title": "No matches",
-        "description": "There are no results for this search. Change or clear the search term."
+        "description": "There are no results for this selection. Change or clear the search term or filters."
       },
       "pageOutOfRange": {
         "title": "This page no longer exists",

@@ -32,6 +32,9 @@ export type ProjectType = NonNullable<
   ApiSchemas["ProjectCardResponse"]["projectType"]
 >
 
+/** Angestrebter Abschluss nach Contract 2.7. */
+export type Degree = NonNullable<ApiSchemas["ProjectCardResponse"]["degree"]>
+
 /** Stammdatenbezug, wie ihn ReferenceResponse liefert (Contract 3.6 bis 3.9). */
 export type ProjectReference = ApiSchemas["ReferenceResponse"]
 
@@ -43,3 +46,9 @@ export type FacultyResponse = ApiSchemas["FacultyResponse"]
 
 /** Studiengang aus GET /api/study-programs (Contract 3.7). */
 export type StudyProgramResponse = ApiSchemas["StudyProgramResponse"]
+
+/** Kategorie aus GET /api/categories (Contract 3.6). */
+export type CategoryResponse = ApiSchemas["CategoryResponse"]
+
+/** Semester aus GET /api/semesters (Contract 3.18, seit v45 Stammdaten). */
+export type SemesterResponse = ApiSchemas["SemesterResponse"]

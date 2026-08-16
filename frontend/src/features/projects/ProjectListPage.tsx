@@ -32,6 +32,11 @@ import { cn } from "@/lib/utils"
 import { FilterSidebar } from "@/features/projects/components/FilterSidebar"
 import { useProjectList } from "@/features/projects/hooks/useProjectList"
 import { paginationItems } from "@/features/projects/paginationItems"
+import {
+  FILTER_KEYS,
+  readFilterSelection,
+  type ProjectFilterSelection,
+} from "@/features/projects/projectFilters"
 
 /* Entprellzeit der Suche: kein Request je Tastenanschlag (Skill frontend-api). */
 const SEARCH_DEBOUNCE_MS = 300
@@ -47,9 +52,11 @@ const SEARCH_DEBOUNCE_MS = 300
  * es gilt der Server-Standard updatedAt,desc (§6.6). Ein sort-Parameter in
  * der URL wird deshalb weder gelesen noch weitergereicht.
  *
- * Die Filter-Seitenleiste erscheint als Kommt-bald-Rahmen (FilterSidebar):
- * die Mehrfachauswahl entsteht mit KAN-64, entschieden in der
- * Klaerungsrunde zu diesem Ticket.
+ * Die Filter-Seitenleiste (KAN-64) haelt ihre Auswahl als wiederholte
+ * URL-Parameter (?faculty=a&faculty=b), dieselbe Form, die §6.1 seit v43
+ * fuer den Endpoint festschreibt: die Auswahl ist teilbar, uebersteht den
+ * Reload und laeuft unveraendert in Request und Query-Key. Ein
+ * Filterwechsel setzt die Seite zurueck, wie die Suche.
  *
  * Die Bibliothek zeigt fuer alle Rollen nur Veroeffentlichtes: die
  * Query-Fabrik verdrahtet status=PUBLISHED fest (Klaerungsrunde im Review
@@ -68,6 +75,7 @@ export default function ProjectListPage() {
   const q = searchParams.get("q") ?? ""
   const pageParam = Number.parseInt(searchParams.get("page") ?? "1", 10)
   const page = Number.isNaN(pageParam) || pageParam < 1 ? 1 : pageParam
+  const selection = readFilterSelection(searchParams)
 
   const params: ProjectListParams = {}
   if (q !== "") {
@@ -76,7 +84,44 @@ export default function ProjectListPage() {
   if (page > 1) {
     params.page = page - 1
   }
+  if (selection.category.length > 0) {
+    params.category = selection.category
+  }
+  if (selection.faculty.length > 0) {
+    params.faculty = selection.faculty
+  }
+  if (selection.studyProgram.length > 0) {
+    params.studyProgram = selection.studyProgram
+  }
+  if (selection.degree.length > 0) {
+    params.degree = selection.degree
+  }
+  if (selection.type.length > 0) {
+    params.type = selection.type
+  }
+  if (selection.semester.length > 0) {
+    params.semester = selection.semester
+  }
   const { data, isPending, error, isPlaceholderData } = useProjectList(params)
+
+  /*
+   * Jede Aenderung in der Seitenleiste ersetzt die Filterparameter der URL
+   * vollstaendig und beginnt auf Seite 1: die alte Seitenzahl gehoerte zur
+   * alten Treffermenge, wie bei der Suche.
+   */
+  function applyFilterSelection(next: ProjectFilterSelection) {
+    setSearchParams((previous) => {
+      const nextParams = new URLSearchParams(previous)
+      for (const key of FILTER_KEYS) {
+        nextParams.delete(key)
+        for (const value of next[key]) {
+          nextParams.append(key, value)
+        }
+      }
+      nextParams.delete("page")
+      return nextParams
+    })
+  }
 
   /*
    * Das Suchfeld haelt nur den Tippzwischenstand; massgeblich ist die URL.
@@ -144,7 +189,8 @@ export default function ProjectListPage() {
   }
 
   const totalPages = data?.totalPages ?? 0
-  const hasSearch = q !== ""
+  const hasSearch =
+    q !== "" || FILTER_KEYS.some((key) => selection[key].length > 0)
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
@@ -183,7 +229,10 @@ export default function ProjectListPage() {
       </header>
 
       <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[16rem_1fr] lg:items-start">
-        <FilterSidebar />
+        <FilterSidebar
+          selection={selection}
+          onSelectionChange={applyFilterSelection}
+        />
 
         <div className="flex flex-col gap-4">
           <SearchInput
@@ -227,9 +276,10 @@ export default function ProjectListPage() {
               /* Drei Leerfaelle: eine Seitenzahl jenseits von totalPages
                  (veralteter geteilter Link) bekommt einen Ausweg zur letzten
                  Seite statt einer falschen Leermeldung (Review zu KAN-31);
-                 mit Suchbegriff heisst leer "keine Treffer", ohne heisst es
-                 "noch nichts veroeffentlicht". Unbekannte Filter-IDs ergeben
-                 dieselbe leere Liste und keinen Fehler (§6.1). */
+                 mit Suchbegriff oder aktiver Filterauswahl heisst leer
+                 "keine Treffer", ohne heisst es "noch nichts
+                 veroeffentlicht". Unbekannte Filter-IDs ergeben dieselbe
+                 leere Liste und keinen Fehler (§6.1). */
               data.totalElements > 0 ? (
                 <EmptyState
                   icon={<FolderOpenIcon aria-hidden="true" />}
