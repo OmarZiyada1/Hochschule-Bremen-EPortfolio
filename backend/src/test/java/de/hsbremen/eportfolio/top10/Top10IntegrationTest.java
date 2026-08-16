@@ -182,6 +182,11 @@ class Top10IntegrationTest {
 			entry(second, 2);
 			entry(third, 3);
 
+			// Seit v42 gibt nur die zugewiesene Redaktion zurueck (§5
+			// Fussnote 11); der Entzug bleibt trotzdem ein Redaktionsvorgang.
+			second.getEditors().add(editor);
+			second = projectRepository.saveAndFlush(second);
+
 			mockMvc.perform(as(editor, post("/api/projects/" + second.getId() + "/request-revision"))
 							.contentType(MediaType.APPLICATION_JSON)
 							.content("{\"reason\":\"Bitte die Quellen ergaenzen.\"}"))

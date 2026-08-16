@@ -56,13 +56,16 @@ public final class ProjectSpecifications {
 	 * <li>PUBLIC: nur {@code PUBLISHED}</li>
 	 * <li>STUDENT: zusaetzlich die eigenen, also Projekte, in denen die Person
 	 * Autor:in oder Mitglied ist</li>
-	 * <li>EDITOR und ADMIN: alle Projekte in allen Status</li>
+	 * <li>EDITOR: wie STUDENT, dazu die als Redaktion zugewiesenen Projekte ab
+	 * der Einreichung (alle Status ausser {@code DRAFT})</li>
+	 * <li>ADMIN: alle Projekte in allen Status</li>
 	 * </ul>
 	 *
-	 * <p>Dass EDITOR alles sieht und nicht nur die zugewiesenen Projekte, steht
-	 * so in §5: die Zeile traegt einen vollen Haken, kein {@code (✓)}. „Meine
-	 * Reviews" entsteht daraus ueber den Filter {@code editor=me} und nicht
-	 * ueber eine engere Grundsichtbarkeit.
+	 * <p>Bis Contract v41 trug die EDITOR-Zelle in §5 einen vollen Haken und
+	 * die Redaktion sah alles. Seit v42 ist ein Entwurf Privatsache der
+	 * Projektseite: die zugewiesene Redaktion sieht ihr Projekt erst, wenn die
+	 * Autor:in es eingereicht hat. „Meine Reviews" bleibt der Filter
+	 * {@code editor=me}; er liegt jetzt innerhalb dieser engeren Schranke.
 	 *
 	 * @param user angemeldete Person; {@code null} bedeutet PUBLIC (§2.1)
 	 */
@@ -71,13 +74,19 @@ public final class ProjectSpecifications {
 			if (!isLoggedIn(user)) {
 				return isPublished(root, cb);
 			}
-			if (user.hasRole(Role.EDITOR, Role.ADMIN)) {
+			if (user.hasRole(Role.ADMIN)) {
 				return cb.conjunction();
 			}
-			return cb.or(
+			Predicate visible = cb.or(
 					isPublished(root, cb),
 					cb.equal(root.get("author").get("id"), user.getId()),
 					isMember(root, query, cb, user.getId()));
+			if (user.hasRole(Role.EDITOR)) {
+				visible = cb.or(visible, cb.and(
+						isAssignedEditor(root, query, cb, user.getId()),
+						cb.notEqual(root.get("status"), ProjectStatus.DRAFT)));
+			}
+			return visible;
 		};
 	}
 
@@ -210,6 +219,27 @@ public final class ProjectSpecifications {
 						cb.equal(member.get("project").get("id"), root.get("id")),
 						cb.equal(member.get("user").get("id"), userId)));
 		return cb.exists(membership);
+	}
+
+	/**
+	 * „Diese Person ist diesem Projekt als Redaktion zugewiesen" als
+	 * Unterabfrage auf die Join-Tabelle {@code project_editor} (§3.3).
+	 *
+	 * <p>Aus demselben Grund {@code exists} statt Join wie bei
+	 * {@link #isMember}: die Zuweisung haengt als ODER-Zweig an der
+	 * Sichtbarkeitsschranke, ein innerer Join wuerfe alle Projekte ohne
+	 * Redaktion aus den uebrigen Zweigen.
+	 */
+	private static Predicate isAssignedEditor(Root<Project> root, CriteriaQuery<?> query,
+			CriteriaBuilder cb, UUID userId) {
+		Subquery<UUID> assignment = query.subquery(UUID.class);
+		Root<Project> assigned = assignment.from(Project.class);
+		Join<Project, User> editors = assigned.join("editors", JoinType.INNER);
+		assignment.select(assigned.get("id"))
+				.where(cb.and(
+						cb.equal(assigned.get("id"), root.get("id")),
+						cb.equal(editors.get("id"), userId)));
+		return cb.exists(assignment);
 	}
 
 	/**

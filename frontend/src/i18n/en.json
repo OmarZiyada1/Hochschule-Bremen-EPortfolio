@@ -48,13 +48,12 @@
       "label": "Main navigation",
       "skipToContent": "Skip to content",
       "home": "Home",
-      "projects": "Project library",
+      "projects": "Projects",
       "myPortfolio": "My portfolio",
       "reviews": "My reviews",
       "newProject": "New project",
       "administration": "Administration",
       "login": "Log in",
-      "register": "Register",
       "logout": "Log out",
       "profile": "Profile",
       "openMenu": "Open menu"
@@ -91,7 +90,9 @@
     "emailHint": "Log in with your private email address, not your HSB address.",
     "password": "Password",
     "submit": "Log in",
-    "pending": "Logging in …"
+    "pending": "Logging in …",
+    "registerPrompt": "No account yet?",
+    "registerLink": "Register"
   },
   "validation": {
     "email": {

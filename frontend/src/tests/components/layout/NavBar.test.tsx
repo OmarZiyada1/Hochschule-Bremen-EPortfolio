@@ -17,6 +17,10 @@ const publicLinks: NavBarLink[] = [
 const studentLinks: NavBarLink[] = [
   ...publicLinks,
   { key: "myPortfolio", href: "/my-portfolio" },
+]
+
+const studentMenu: NavBarLink[] = [
+  { key: "myPortfolio", href: "/my-portfolio" },
   { key: "newProject", href: "/projects/new" },
 ]
 
@@ -27,22 +31,24 @@ describe("NavBar", () => {
     await i18n.changeLanguage("de")
   })
 
-  it("zeigt nicht angemeldet die Eintraege, Anmeldung und Registrierung", () => {
+  it("zeigt nicht angemeldet die Eintraege und allein die Anmeldung", () => {
     renderWithProviders(<NavBar links={publicLinks} />)
 
     expect(
       screen.getByRole("navigation", { name: "Hauptnavigation" })
     ).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Startseite" })).toBeInTheDocument()
-    expect(
-      screen.getByRole("link", { name: "Projektbibliothek" })
-    ).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Projekte" })).toBeInTheDocument()
     expect(screen.queryByText("Mein Portfolio")).not.toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Anmelden" })).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Registrieren" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Anmelden" })).toHaveAttribute(
       "href",
-      "/register"
+      "/login"
     )
+    /* Nach Template gibt es keinen eigenen Registrieren-Button mehr; der
+       Weg zur Registrierung fuehrt ueber die Login-Seite (Review KAN-8). */
+    expect(
+      screen.queryByRole("link", { name: "Registrieren" })
+    ).not.toBeInTheDocument()
   })
 
   it("nennt die Marke einmal, obwohl sie zweizeilig steht", () => {
@@ -58,21 +64,24 @@ describe("NavBar", () => {
   it("markiert den aktiven Eintrag nicht nur mit dem Unterstrich", () => {
     renderWithProviders(<NavBar links={publicLinks} activeHref="/projects" />)
 
-    expect(
-      screen.getByRole("link", { name: "Projektbibliothek" })
-    ).toHaveAttribute("aria-current", "page")
+    expect(screen.getByRole("link", { name: "Projekte" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    )
     expect(
       screen.getByRole("link", { name: "Startseite" })
     ).not.toHaveAttribute("aria-current")
   })
 
-  it("zeigt angemeldet die hereingereichten Eintraege und das Nutzermenue", async () => {
+  it("zeigt angemeldet die Eintraege und das Nutzermenue mit Rolle und Abmelden", async () => {
     const user = userEvent.setup()
     const onLogout = vi.fn()
     renderWithProviders(
       <NavBar
         user={{ firstName: "Mira", lastName: "Beispiel" }}
+        role="STUDENT"
         links={studentLinks}
+        menuItems={studentMenu}
         onLogout={onLogout}
       />
     )
@@ -80,15 +89,13 @@ describe("NavBar", () => {
     expect(
       screen.getByRole("link", { name: "Mein Portfolio" })
     ).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Neues Projekt" })).toHaveAttribute(
-      "href",
-      "/projects/new"
-    )
+    /* "Neues Projekt" ist nach Template kein Leisteneintrag mehr, sondern
+       liegt im Nutzermenue. */
     expect(
-      screen.queryByRole("link", { name: "Anmelden" })
+      screen.queryByRole("link", { name: "Neues Projekt" })
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByRole("link", { name: "Registrieren" })
+      screen.queryByRole("link", { name: "Anmelden" })
     ).not.toBeInTheDocument()
 
     /* Der zugaengliche Name ist der Name der Person, nicht mehr eine
@@ -97,7 +104,17 @@ describe("NavBar", () => {
     expect(trigger).toHaveTextContent("MB")
 
     await user.click(trigger)
-    expect(await screen.findByText("Profil")).toBeInTheDocument()
+    /* Das Menue traegt die Rollenbeschriftung aus dem Template und die
+       rollenabhaengigen Eintraege; "Profil" gibt es nicht mehr, das
+       Portfolio uebernimmt diese Aufgabe. */
+    expect(await screen.findByText("Studierende:r")).toBeInTheDocument()
+    expect(
+      screen.getByRole("menuitem", { name: "Neues Projekt" })
+    ).toHaveAttribute("href", "/projects/new")
+    expect(
+      screen.getByRole("menuitem", { name: "Mein Portfolio" })
+    ).toBeInTheDocument()
+    expect(screen.queryByText("Profil")).not.toBeInTheDocument()
 
     await user.click(screen.getByText("Abmelden"))
     expect(onLogout).toHaveBeenCalledTimes(1)

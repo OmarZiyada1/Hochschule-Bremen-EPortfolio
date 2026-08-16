@@ -171,6 +171,29 @@ describe("Routenbaum", () => {
     )
   })
 
+  it("zeigt Anmeldung und Registrierung ohne NavBar und Footer", () => {
+    /* Die Templates blenden beide dort aus (Review zu KAN-8); die fruehere
+       Festlegung aus der Klaerungsrunde zu KAN-7 ist ueberholt. Kennzeichen
+       des Rahmens sind Sprunglink und Hauptnavigation. */
+    const { unmount } = renderWithProviders(<AppUnderTest />, "/login")
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Anmelden" })
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("link", { name: "Zum Inhalt springen" })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("navigation", { name: "Hauptnavigation" })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument()
+    unmount()
+
+    renderWithProviders(<AppUnderTest />, "/register/details")
+    expect(
+      screen.queryByRole("navigation", { name: "Hauptnavigation" })
+    ).not.toBeInTheDocument()
+  })
+
   it("faengt eine unbekannte URL mit der 404-Seite ausserhalb des Rahmens ab", () => {
     renderWithProviders(<AppUnderTest />, "/this-page-does-not-exist")
 

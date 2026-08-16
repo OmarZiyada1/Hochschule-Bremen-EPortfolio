@@ -152,11 +152,18 @@ class BlockIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Projektseite, Redaktion und Admin sehen den Entwurf")
+		@DisplayName("Projektseite und Admin sehen den Entwurf, die zugewiesene Redaktion erst "
+				+ "ab der Einreichung (§5 Fussnote 11, v42)")
 		void projectSideAndStaffMayRead() throws Exception {
-			for (User user : List.of(author, member, assignedEditor, admin)) {
+			for (User user : List.of(author, member, admin)) {
 				assertThat(readBlocks(draft, user).get("blocks")).isEmpty();
 			}
+
+			// Zugewiesen, aber noch DRAFT: der Entwurf bleibt Privatsache der
+			// Projektseite.
+			mockMvc.perform(asUser(blocksRequest(draft), assignedEditor))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
 		}
 
 		@Test

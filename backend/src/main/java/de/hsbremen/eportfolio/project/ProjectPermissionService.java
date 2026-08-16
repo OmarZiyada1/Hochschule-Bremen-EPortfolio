@@ -92,8 +92,14 @@ public class ProjectPermissionService {
 
 	/**
 	 * Zeile „Veroeffentlichte Projekte lesen" (alle ✓) und „Nicht-
-	 * veroeffentlichte Projekte lesen" (PUBLIC ✗, STUDENT (✓), EDITOR ✓,
+	 * veroeffentlichte Projekte lesen" (PUBLIC ✗, STUDENT (✓), EDITOR (✓)¹¹,
 	 * ADMIN ✓).
+	 *
+	 * <p>Fussnote ¹¹ (seit Contract v42): die Redaktion liest nicht mehr jedes
+	 * Projekt, sondern nur die ihr zugewiesenen, und diese erst ab der
+	 * Einreichung. Ein {@code DRAFT} bleibt Privatsache von Autor:in,
+	 * Mitgliedern und Admin, auch gegenueber der bereits zugewiesenen
+	 * Redaktion: zu beurteilen gibt es erst etwas, wenn eingereicht ist.
 	 */
 	public boolean mayReadProject(AuthenticatedUser user, Project project) {
 		if (project.getStatus() == ProjectStatus.PUBLISHED) {
@@ -102,9 +108,12 @@ public class ProjectPermissionService {
 		if (!isLoggedIn(user)) {
 			return false;
 		}
-		// EDITOR steht in der Matrix mit vollem Haken, nicht mit (✓):
-		// die Redaktion darf auch nicht zugewiesene Projekte einsehen.
-		return user.hasRole(Role.EDITOR, Role.ADMIN) || isProjectSide(user, project);
+		if (user.hasRole(Role.ADMIN) || isProjectSide(user, project)) {
+			return true;
+		}
+		return user.hasRole(Role.EDITOR)
+				&& isAssignedEditor(user, project)
+				&& project.getStatus() != ProjectStatus.DRAFT;
 	}
 
 	/**
@@ -112,8 +121,10 @@ public class ProjectPermissionService {
 	 * EDITOR ✓⁷, ADMIN ✓.
 	 *
 	 * <p>Fussnote ⁷ engt den Haken bei EDITOR ausdruecklich ein: „Nur die
-	 * Projektseite sowie zugewiesene Redaktion und Admin". Deshalb reicht die
-	 * System-Rolle EDITOR hier nicht, anders als bei {@link #mayReadProject}.
+	 * Projektseite sowie zugewiesene Redaktion und Admin". Die System-Rolle
+	 * EDITOR reicht hier nicht; seit v42 gilt dieselbe Einschraenkung auch bei
+	 * {@link #mayReadProject}, die Internals-Regel bleibt als eigene, engere
+	 * Zusage bestehen (sie greift auch bei PUBLISHED, wo jede:r lesen darf).
 	 * §3.12 sagt dasselbe noch einmal in Worten. Der Verlauf legt offen, wie oft
 	 * ein Projekt zurueckgewiesen wurde; das ist eine Information ueber den
 	 * Arbeitsprozess einer Person und nicht Teil der oeffentlichen Darstellung
@@ -337,11 +348,14 @@ public class ProjectPermissionService {
 			// „Projekt genehmigen" und „veroeffentlichen": EDITOR ✓¹, ADMIN ✓⁵.
 			case APPROVE, PUBLISH -> mayDecideEditorially(user, project);
 
-			// „Zur Ueberarbeitung zurueckgeben": EDITOR ✓, ADMIN ✓, hier ohne
+			// „Zur Ueberarbeitung zurueckgeben": EDITOR (✓)¹¹, ADMIN ✓, ohne
 			// Fussnote ¹. Das Vier-Augen-Prinzip greift also nicht, und das ist
 			// plausibel: eine Ruecknahme ist keine Freigabe, niemand verschafft
-			// sich damit einen Vorteil.
-			case REQUEST_REVISION -> user.hasRole(Role.EDITOR, Role.ADMIN);
+			// sich damit einen Vorteil. Seit v42 entscheidet auch hier nur die
+			// zugewiesene Redaktion; Admins werden nicht zugewiesen und
+			// entscheiden immer.
+			case REQUEST_REVISION -> user.hasRole(Role.ADMIN)
+					|| (user.hasRole(Role.EDITOR) && isAssignedEditor(user, project));
 		};
 	}
 
@@ -366,16 +380,16 @@ public class ProjectPermissionService {
 	}
 
 	/**
-	 * „Genehmigen": SUBMITTED nach APPROVED durch EDITOR (Fussnote ¹) oder
-	 * ADMIN.
+	 * „Genehmigen": SUBMITTED nach APPROVED durch die zugewiesene Redaktion
+	 * (Fussnoten ¹ und ¹¹) oder ADMIN.
 	 */
 	public boolean mayApprove(AuthenticatedUser user, Project project) {
 		return mayPerform(user, project, ProjectTransition.APPROVE);
 	}
 
 	/**
-	 * „Veroeffentlichen": APPROVED nach PUBLISHED durch EDITOR (Fussnote ¹)
-	 * oder ADMIN.
+	 * „Veroeffentlichen": APPROVED nach PUBLISHED durch die zugewiesene
+	 * Redaktion (Fussnoten ¹ und ¹¹) oder ADMIN.
 	 */
 	public boolean mayPublish(AuthenticatedUser user, Project project) {
 		return mayPerform(user, project, ProjectTransition.PUBLISH);
@@ -383,7 +397,7 @@ public class ProjectPermissionService {
 
 	/**
 	 * „Zur Ueberarbeitung zurueckgeben": SUBMITTED/APPROVED/PUBLISHED nach
-	 * REVISION durch EDITOR oder ADMIN.
+	 * REVISION durch die zugewiesene Redaktion (Fussnote ¹¹) oder ADMIN.
 	 */
 	public boolean mayRequestRevision(AuthenticatedUser user, Project project) {
 		return mayPerform(user, project, ProjectTransition.REQUEST_REVISION);
@@ -392,6 +406,12 @@ public class ProjectPermissionService {
 	/**
 	 * Gemeinsame Rechtepruefung fuer Genehmigen und Veroeffentlichen inklusive
 	 * Vier-Augen-Prinzip.
+	 *
+	 * <p><strong>Nur die zugewiesene Redaktion entscheidet</strong> (Fussnote
+	 * ¹¹, seit Contract v42): wer ein Projekt weder in Liste noch Detail sehen
+	 * darf, soll auch nicht ueber seine Freigabe entscheiden koennen. Admins
+	 * werden nicht zugewiesen und entscheiden deshalb unabhaengig von der
+	 * Join-Tabelle.
 	 *
 	 * <p><strong>Zur Reichweite des Vier-Augen-Prinzips:</strong> Fussnote ¹
 	 * der Matrix haengt ausschliesslich an den EDITOR-Zellen; die ADMIN-Spalte
@@ -403,7 +423,7 @@ public class ProjectPermissionService {
 		if (user.hasRole(Role.ADMIN)) {
 			return true;
 		}
-		if (!user.hasRole(Role.EDITOR)) {
+		if (!user.hasRole(Role.EDITOR) || !isAssignedEditor(user, project)) {
 			return false;
 		}
 		return !properties.fourEyesPrinciple() || !isAuthor(user, project);

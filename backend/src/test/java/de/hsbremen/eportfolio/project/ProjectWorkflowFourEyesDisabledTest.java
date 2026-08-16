@@ -114,7 +114,13 @@ class ProjectWorkflowFourEyesDisabledTest {
 		project.setDegree(Degree.MASTER);
 		project.setCategory(categoryRepository.findAllByOrderByNameAsc().getFirst());
 		project.setSemester("SS 2026");
-		return projectRepository.saveAndFlush(project);
+		Project stored = projectRepository.saveAndFlush(project);
+		// Seit v42 entscheidet nur die zugewiesene Redaktion (§5 Fussnote 11);
+		// die Autor:in hat sich hier selbst gewaehlt, was §5 Fussnote 3 beim
+		// Anlegen erlaubt. Erst dadurch prueft der Test wirklich den
+		// Vier-Augen-Schalter und nicht die Zuweisungsregel.
+		stored.getEditors().add(editor);
+		return projectRepository.saveAndFlush(stored);
 	}
 
 	private MockHttpServletRequestBuilder as(User user, MockHttpServletRequestBuilder request) {

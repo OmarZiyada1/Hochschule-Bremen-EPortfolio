@@ -12,20 +12,24 @@ describe("ProjectCard", () => {
   it("zeigt Cover, Projektart, Fakultaet, Autor, Teaser, Semester und Reaktionen", () => {
     renderWithProviders(
       <ProjectCard
-        title="Campus-Garten"
-        summary="Ein offener Lernort hinter dem AB-Gebäude."
-        projectType="THESIS"
-        faculty={faculty}
-        author={author}
-        semester="SoSe 2026"
-        reactionCount={142}
-        href="/projects/1"
+        project={{
+          id: "1",
+          title: "Campus-Garten",
+          summary: "Ein offener Lernort hinter dem AB-Gebäude.",
+          projectType: "THESIS",
+          faculty,
+          author,
+          semester: "SoSe 2026",
+          reactionCount: 142,
+        }}
       />
     )
 
     expect(
       screen.getByRole("heading", { level: 3, name: "Campus-Garten" })
     ).toBeVisible()
+    /* Der Link entsteht aus project.id; die Kachel kennt genau ein Ziel,
+       die Detailseite. */
     expect(screen.getByRole("link", { name: "Campus-Garten" })).toHaveAttribute(
       "href",
       "/projects/1"
@@ -44,7 +48,9 @@ describe("ProjectCard", () => {
   })
 
   it("zeigt das Fakultaetskuerzel und sagt den vollen Namen an", () => {
-    renderWithProviders(<ProjectCard title="Campus-Garten" faculty={faculty} />)
+    renderWithProviders(
+      <ProjectCard project={{ title: "Campus-Garten", faculty }} />
+    )
 
     /* Sichtbar das Kuerzel, vorgelesen der volle Name. Beides ueber die
        Erreichbarkeit geprueft und nicht ueber ein title-Attribut: das
@@ -59,7 +65,9 @@ describe("ProjectCard", () => {
 
   it("faellt ohne Kuerzel auf den ausgeschriebenen Namen zurueck", () => {
     renderWithProviders(
-      <ProjectCard title="Campus-Garten" faculty={{ name: "Fakultät 4" }} />
+      <ProjectCard
+        project={{ title: "Campus-Garten", faculty: { name: "Fakultät 4" } }}
+      />
     )
 
     expect(screen.getByText("Fakultät 4")).toBeVisible()
@@ -67,7 +75,7 @@ describe("ProjectCard", () => {
 
   it("zeigt ohne Coverbild den Platzhalter statt eines leeren Bildes", () => {
     const { container } = renderWithProviders(
-      <ProjectCard title="Campus-Garten" />
+      <ProjectCard project={{ title: "Campus-Garten" }} />
     )
 
     expect(container.querySelector("img")).toBeNull()
@@ -75,7 +83,9 @@ describe("ProjectCard", () => {
 
   it("zeigt mit Coverbild ein Bild ohne eigenen Namen", () => {
     const { container } = renderWithProviders(
-      <ProjectCard title="Campus-Garten" coverImageUrl="/cover.webp" />
+      <ProjectCard
+        project={{ title: "Campus-Garten", coverImageUrl: "/cover.webp" }}
+      />
     )
 
     const image = container.querySelector("img")
@@ -85,19 +95,29 @@ describe("ProjectCard", () => {
     expect(image).toHaveAttribute("alt", "")
   })
 
-  it("kommt ohne Status, Link und optionale Felder aus", () => {
-    renderWithProviders(<ProjectCard title="Campus-Garten" />)
+  it("kommt ohne id, Status und optionale Felder aus", () => {
+    renderWithProviders(<ProjectCard project={{ title: "Campus-Garten" }} />)
 
     expect(
       screen.getByRole("heading", { level: 3, name: "Campus-Garten" })
     ).toBeVisible()
+    /* Ohne id gibt es kein Linkziel, also auch keinen Link. */
     expect(screen.queryByRole("link")).not.toBeInTheDocument()
     expect(screen.queryByText("Veröffentlicht")).not.toBeInTheDocument()
   })
 
-  it("zeigt den Status nur, wenn die Seite ihn mitgibt", () => {
-    renderWithProviders(<ProjectCard title="Campus-Garten" status="DRAFT" />)
+  it("zeigt den Status nur, wenn die Seite showStatus setzt", () => {
+    const project = { title: "Campus-Garten", status: "DRAFT" } as const
 
+    const { unmount } = renderWithProviders(
+      <ProjectCard project={project} showStatus />
+    )
     expect(screen.getByText("Entwurf")).toBeVisible()
+    unmount()
+
+    /* Ohne showStatus bleibt das Badge weg, auch wenn die Antwort einen
+       Status traegt: ob er etwas unterscheidet, weiss nur die Seite (§5). */
+    renderWithProviders(<ProjectCard project={project} />)
+    expect(screen.queryByText("Entwurf")).not.toBeInTheDocument()
   })
 })

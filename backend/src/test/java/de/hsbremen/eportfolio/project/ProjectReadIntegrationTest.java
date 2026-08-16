@@ -188,6 +188,11 @@ class ProjectReadIntegrationTest {
 		submittedForeignProject = projectRepository.saveAndFlush(submittedForeignProject);
 
 		foreignDraftWithMember = newProject(otherStudent, ProjectStatus.DRAFT, "Delta Gruppenarbeit");
+		// Auch dieser Entwurf hat schon eine zugewiesene Redaktion: er belegt,
+		// dass die Zuweisung allein im DRAFT noch keine Sicht verschafft (§5
+		// Fussnote 11, v42).
+		foreignDraftWithMember.getEditors().add(assignedEditor);
+		foreignDraftWithMember = projectRepository.saveAndFlush(foreignDraftWithMember);
 		ProjectMember membership = projectMemberRepository.saveAndFlush(
 				TestProject.memberWithoutId(foreignDraftWithMember, member, "Frontend"));
 		// Die Zeile steht in der Datenbank, aber die Sammlung des bereits
@@ -230,13 +235,21 @@ class ProjectReadIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Redaktion sieht alle Projekte in allen Status, auch nicht zugewiesene")
-		void editorSeesEverything() throws Exception {
-			assertThat(listIds(otherEditor)).containsExactlyInAnyOrder(
+		@DisplayName("Die zugewiesene Redaktion sieht ihr Projekt ab der Einreichung, den "
+				+ "zugewiesenen Entwurf nicht (§5 Fussnote 11, v42)")
+		void assignedEditorSeesFromSubmissionOn() throws Exception {
+			// foreignDraftWithMember traegt dieselbe Zuweisung, bleibt aber als
+			// DRAFT unsichtbar.
+			assertThat(listIds(assignedEditor)).containsExactlyInAnyOrder(
 					publishedProject.getId(),
-					draftOfAuthor.getId(),
-					submittedForeignProject.getId(),
-					foreignDraftWithMember.getId());
+					submittedForeignProject.getId());
+		}
+
+		@Test
+		@DisplayName("Eine nicht zugewiesene Redakteur:in sieht nur Veroeffentlichtes, wie "
+				+ "Studierende ohne eigene Projekte")
+		void unassignedEditorSeesOnlyPublished() throws Exception {
+			assertThat(listIds(otherEditor)).containsExactly(publishedProject.getId());
 		}
 
 		@Test
@@ -265,24 +278,30 @@ class ProjectReadIntegrationTest {
 	class MyReviews {
 
 		@Test
-		@DisplayName("Liefert genau die zugewiesenen Projekte")
+		@DisplayName("Liefert genau die zugewiesenen Projekte ab der Einreichung")
 		void onlyAssigned() throws Exception {
+			// Der zugewiesene Entwurf fehlt: die Sichtbarkeitsschranke steht
+			// mit UND vor dem Filter (§5 Fussnote 11, v42).
 			assertThat(listIds(assignedEditor, "editor", "me"))
 					.containsExactly(submittedForeignProject.getId());
 		}
 
 		@Test
-		@DisplayName("Eine Redakteur:in ohne Zuweisung bekommt eine leere Liste, obwohl sie alles lesen darf")
+		@DisplayName("Eine Redakteur:in ohne Zuweisung bekommt eine leere Liste")
 		void withoutAssignmentEmpty() throws Exception {
-			assertThat(listIds(otherEditor)).hasSize(4);
 			assertThat(listIds(otherEditor, "editor", "me")).isEmpty();
 		}
 
 		@Test
 		@DisplayName("Dieselbe Wirkung ueber die ausgeschriebene Redakteurs-ID")
 		void viaId() throws Exception {
+			// Der Admin sieht alles, deshalb taucht hier auch der zugewiesene
+			// Entwurf auf; fuer die Redaktion selbst filtert die
+			// Sichtbarkeitsschranke ihn heraus (Test onlyAssigned).
 			assertThat(listIds(admin, "editor", assignedEditor.getId().toString()))
-					.containsExactly(submittedForeignProject.getId());
+					.containsExactlyInAnyOrder(
+							submittedForeignProject.getId(),
+							foreignDraftWithMember.getId());
 		}
 
 		@Test
@@ -462,6 +481,26 @@ class ProjectReadIntegrationTest {
 			mockMvc.perform(asUser(get("/api/projects/" + draftOfAuthor.getId()), otherStudent))
 					.andExpect(status().isForbidden())
 					.andExpect(jsonPath("$.status").value(403))
+					.andExpect(jsonPath("$.errorCode").value(ErrorCodes.NO_PERMISSION));
+		}
+
+		@Test
+		@DisplayName("Auch die zugewiesene Redaktion bekommt den Entwurf nicht, wohl aber das "
+				+ "eingereichte Projekt (§5 Fussnote 11, v42)")
+		void assignedEditorAndTheDraft() throws Exception {
+			mockMvc.perform(asUser(
+							get("/api/projects/" + foreignDraftWithMember.getId()), assignedEditor))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value(ErrorCodes.NO_PERMISSION));
+
+			mockMvc.perform(asUser(
+							get("/api/projects/" + submittedForeignProject.getId()), assignedEditor))
+					.andExpect(status().isOk());
+
+			// Ohne Zuweisung bleibt auch das eingereichte Projekt verborgen.
+			mockMvc.perform(asUser(
+							get("/api/projects/" + submittedForeignProject.getId()), otherEditor))
+					.andExpect(status().isForbidden())
 					.andExpect(jsonPath("$.errorCode").value(ErrorCodes.NO_PERMISSION));
 		}
 

@@ -48,13 +48,12 @@
       "label": "Hauptnavigation",
       "skipToContent": "Zum Inhalt springen",
       "home": "Startseite",
-      "projects": "Projektbibliothek",
+      "projects": "Projekte",
       "myPortfolio": "Mein Portfolio",
       "reviews": "Meine Reviews",
       "newProject": "Neues Projekt",
-      "administration": "Administrationsseite",
+      "administration": "Administration",
       "login": "Anmelden",
-      "register": "Registrieren",
       "logout": "Abmelden",
       "profile": "Profil",
       "openMenu": "Menü öffnen"
@@ -91,7 +90,9 @@
     "emailHint": "Anmeldung mit der privaten E-Mail-Adresse, nicht mit der HSB-Adresse.",
     "password": "Passwort",
     "submit": "Anmelden",
-    "pending": "Anmeldung läuft …"
+    "pending": "Anmeldung läuft …",
+    "registerPrompt": "Noch kein Konto?",
+    "registerLink": "Registrieren"
   },
   "validation": {
     "email": {

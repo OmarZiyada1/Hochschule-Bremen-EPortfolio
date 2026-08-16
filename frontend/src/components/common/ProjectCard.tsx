@@ -1,11 +1,11 @@
 import { HeartIcon, ImageIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import type { ProjectReference, ProjectStatus, ProjectType } from "@/api/types"
+import type { ProjectCardResponse } from "@/api/types"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { UserAvatar } from "@/components/common/UserAvatar"
 import { Card, CardContent } from "@/components/ui/card"
-import { fullNameOf, type PersonName } from "@/lib/name"
+import { fullNameOf } from "@/lib/name"
 import { cn } from "@/lib/utils"
 
 /**
@@ -13,14 +13,16 @@ import { cn } from "@/lib/utils"
  *
  * Aufbau: eine Coverflaeche mit Fakultaetskuerzel, Projektart und dem Titel,
  * darunter Autor:in, Teaser und eine Fusszeile aus Semester und
- * Reaktionszahl. Jedes Feld entspricht einem Feld aus ProjectCardResponse
- * (§6.1); nichts davon ist erfunden, und alles ausser dem Titel darf fehlen,
- * weil der Contract es im DRAFT als nullable fuehrt.
+ * Reaktionszahl. Die Kachel nimmt die ProjectCardResponse aus §6.1 als
+ * Ganzes entgegen (Review zu KAN-8): jede Verwendung reicht `project`
+ * durch, statt die Felder einzeln zu verdrahten; nichts davon ist erfunden,
+ * und alles ausser dem Titel darf fehlen, weil der Contract es im DRAFT als
+ * nullable fuehrt.
  *
- * Reine Darstellung, die Daten kommen ueber Props. Ob der Status ueberhaupt
- * erscheint, entscheidet die Seite anhand der Rechtematrix: in oeffentlichen
- * Listen ist alles PUBLISHED, dort bleibt status weg. Figma fuehrt ihn aus
- * demselben Grund als eigenen Slot und nicht als festen Bestandteil.
+ * Reine Darstellung. Ob der Status erscheint, entscheidet die Seite ueber
+ * `showStatus` anhand der Rechtematrix: die Projektbibliothek zeigt nur
+ * PUBLISHED, dort unterschiede ein Badge nichts; angemeldete eigene
+ * Ansichten ("Mein Portfolio", Administrationsseite) schalten es zu.
  *
  * Die Ueberschriftenebene des Titels setzt die Seite, wie bei EmptyState:
  * unter einem Abschnitts-h2 bleibt es beim Standard h3, liegt die Liste
@@ -29,35 +31,31 @@ import { cn } from "@/lib/utils"
  * Screenreaders faende keinen Abschnitt dazwischen (SC 1.3.1).
  */
 export function ProjectCard({
-  title,
-  summary,
-  coverImageUrl,
-  projectType,
-  faculty,
-  author,
-  semester,
-  reactionCount,
-  status,
-  href,
+  project,
+  showStatus = false,
   headingLevel = 3,
   className,
 }: {
-  title: string
-  summary?: string | null
-  coverImageUrl?: string | null
-  projectType?: ProjectType | null
-  faculty?: ProjectReference | null
-  author?: PersonName | null
-  semester?: string | null
-  reactionCount?: number
-  status?: ProjectStatus
-  href?: string
+  /** Kacheldaten, unveraendert aus der Listen- oder Top-10-Antwort (§6.1). */
+  project: ProjectCardResponse
+  /** Status-Badge zeigen? Entscheidet die Seite nach §5, nicht die Kachel. */
+  showStatus?: boolean
   /** Ebene der Titel-Ueberschrift, passend zur Seite darum herum. */
   headingLevel?: 2 | 3
   className?: string
 }) {
   const { t } = useTranslation()
   const Heading = `h${headingLevel}` as "h2" | "h3"
+
+  /* springdoc markiert kein required; ein Konto ohne Namen gibt es fachlich
+     nicht, die Kachel zeigt dann nichts statt "undefined". */
+  const author = project.author
+    ? {
+        firstName: project.author.firstName ?? "",
+        lastName: project.author.lastName ?? "",
+      }
+    : null
+  const href = project.id ? `/projects/${project.id}` : undefined
 
   /* gap-0 und py-0 heben den Innenabstand der Registry-Karte auf: das Cover
      liegt randlos, den Abstand setzt erst der Inhalt darunter. Beides laeuft
@@ -70,10 +68,10 @@ export function ProjectCard({
             ist Dekoration und traegt keinen Namen: dass hier kein Bild ist,
             sagt der Vorlesende sonst bei jeder Kachel einer Liste erneut. */}
         <div className="relative h-47 w-full">
-          {coverImageUrl ? (
+          {project.coverImageUrl ? (
             <>
               <img
-                src={coverImageUrl}
+                src={project.coverImageUrl}
                 alt=""
                 className="size-full object-cover"
               />
@@ -96,7 +94,7 @@ export function ProjectCard({
         </div>
 
         <div className="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
-          {faculty && (
+          {project.faculty && (
             /* Das Kuerzel ist kurz genug, um allein unverstaendlich zu sein,
                deshalb laeuft es zweispurig: sichtbar das Kuerzel, vorgelesen
                der volle Name. Ueber title allein geht das nicht, den erreicht
@@ -105,19 +103,19 @@ export function ProjectCard({
                einfach da; ihn dann zweimal einzusetzen, sichtbar und
                sr-only, waere derselbe Text an zwei Stellen. */
             <span className="type-label-xs rounded-pill bg-cover-badge px-2.5 py-1 font-bold text-cover-muted">
-              {faculty.abbreviation ? (
+              {project.faculty.abbreviation ? (
                 <>
-                  <span className="sr-only">{faculty.name}</span>
-                  <span aria-hidden="true">{faculty.abbreviation}</span>
+                  <span className="sr-only">{project.faculty.name}</span>
+                  <span aria-hidden="true">{project.faculty.abbreviation}</span>
                 </>
               ) : (
-                faculty.name
+                project.faculty.name
               )}
             </span>
           )}
-          {projectType && (
+          {project.projectType && (
             <span className="type-label-xs rounded-pill bg-card px-2.5 py-1 font-semibold text-card-foreground">
-              {t(`project.type.${projectType}`)}
+              {t(`project.type.${project.projectType}`)}
             </span>
           )}
         </div>
@@ -129,10 +127,10 @@ export function ProjectCard({
         <Heading className="type-h3 absolute inset-x-3 bottom-3 line-clamp-3 font-semibold text-cover-foreground">
           {href ? (
             <a href={href} className="hover:underline focus-visible:underline">
-              {title}
+              {project.title ?? ""}
             </a>
           ) : (
-            title
+            (project.title ?? "")
           )}
         </Heading>
       </div>
@@ -147,15 +145,17 @@ export function ProjectCard({
           </p>
         )}
 
-        {summary && (
+        {project.summary && (
           <p className="type-body-sm line-clamp-3 text-muted-foreground">
-            {summary}
+            {project.summary}
           </p>
         )}
 
-        {status && <StatusBadge status={status} className="self-start" />}
+        {showStatus && project.status && (
+          <StatusBadge status={project.status} className="self-start" />
+        )}
 
-        {(semester || reactionCount !== undefined) && (
+        {(project.semester || project.reactionCount !== undefined) && (
           <>
             {/* Ohne Klasse: die Grundregel in tokens.css gibt jedem Element
                 border-color: var(--border), und genau das ist die Rolle fuer
@@ -164,17 +164,19 @@ export function ProjectCard({
             <hr />
             <div className="flex items-center justify-between gap-2">
               <span className="type-label-xs text-muted-foreground">
-                {semester}
+                {project.semester}
               </span>
-              {reactionCount !== undefined && (
+              {project.reactionCount !== undefined && (
                 <span className="type-caption flex items-center gap-1 text-muted-foreground">
                   <HeartIcon aria-hidden="true" className="size-3.5" />
                   {/* Die Zahl allein sagt nicht, was sie zaehlt. Sichtbar
                       bleibt sie knapp, vorgelesen wird der ganze Satz. */}
                   <span className="sr-only">
-                    {t("project.card.reactions", { count: reactionCount })}
+                    {t("project.card.reactions", {
+                      count: project.reactionCount,
+                    })}
                   </span>
-                  <span aria-hidden="true">{reactionCount}</span>
+                  <span aria-hidden="true">{project.reactionCount}</span>
                 </span>
               )}
             </div>

@@ -6,7 +6,7 @@ import {
   type FieldError as RhfFieldError,
 } from "react-hook-form"
 import { useTranslation } from "react-i18next"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
 import {
@@ -197,6 +197,18 @@ export default function LoginPage() {
           </Button>
         </FieldGroup>
       </form>
+
+      {/* Der Weg zur Registrierung: die Kopfleiste fuehrt nach Template nur
+          noch "Anmelden" (Review zu KAN-8), also haengt der Einstieg hier. */}
+      <p className="type-body-sm text-center text-muted-foreground">
+        {t("login.registerPrompt")}{" "}
+        <Link
+          to="/register"
+          className="font-medium text-primary underline-offset-4 hover:underline focus-visible:underline"
+        >
+          {t("login.registerLink")}
+        </Link>
+      </p>
     </div>
   )
 }

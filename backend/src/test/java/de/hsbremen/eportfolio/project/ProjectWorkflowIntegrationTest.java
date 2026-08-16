@@ -412,11 +412,12 @@ class ProjectWorkflowIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Auch eine nicht zugewiesene Redaktion und der Admin duerfen genehmigen "
-				+ "(§5 fuehrt dort einen vollen Haken)")
-		void otherEditorAndAdminMayApprove() throws Exception {
-			assertThat(ok(otherEditor, submitted(), "approve").get("status").asText())
-					.isEqualTo("APPROVED");
+		@DisplayName("Eine nicht zugewiesene Redaktion darf nicht genehmigen, der Admin ohne "
+				+ "Zuweisung schon (§5 Fussnote 11, v42)")
+		void onlyAssignedEditorsAndAdminsApprove() throws Exception {
+			mockMvc.perform(as(otherEditor, action(submitted(), "approve")))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
 
 			assertThat(ok(admin, submitted(), "approve").get("status").asText())
 					.isEqualTo("APPROVED");
@@ -440,13 +441,17 @@ class ProjectWorkflowIntegrationTest {
 		void fourEyesPrinciple() throws Exception {
 			Project ownProject = saved(complete(assignedEditor, ProjectStatus.SUBMITTED,
 					"Projekt der Redaktion"));
+			// Beide Redakteur:innen sind zugewiesen, sonst pruefte der Test die
+			// Zuweisungsregel (Fussnote 11) statt des Vier-Augen-Prinzips.
+			ownProject.getEditors().add(otherEditor);
+			ownProject = projectRepository.saveAndFlush(ownProject);
 
 			mockMvc.perform(as(assignedEditor, action(ownProject, "approve")))
 					.andExpect(status().isForbidden())
 					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
 
-			// Eine andere Redakteur:in darf dasselbe Projekt genehmigen: die
-			// Sperre haengt an der Person, nicht am Projekt.
+			// Die andere zugewiesene Redakteur:in darf dasselbe Projekt
+			// genehmigen: die Sperre haengt an der Person, nicht am Projekt.
 			assertThat(ok(otherEditor, ownProject, "approve").get("status").asText())
 					.isEqualTo("APPROVED");
 		}
@@ -700,6 +705,19 @@ class ProjectWorkflowIntegrationTest {
 
 			assertThat(revision(assignedEditor, ownProject, "Ich bessere selbst nach.")
 					.get("status").asText()).isEqualTo("REVISION");
+		}
+
+		@Test
+		@DisplayName("Eine nicht zugewiesene Redaktion gibt nicht zurueck: 403 (§5 Fussnote 11, "
+				+ "v42)")
+		void unassignedEditorMayNot() throws Exception {
+			Project submitted = submitted();
+
+			mockMvc.perform(as(otherEditor, revisionRequest(submitted, "Nicht zustaendig.")))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+
+			assertThat(reload(submitted).getStatus()).isEqualTo(ProjectStatus.SUBMITTED);
 		}
 
 		@Test
