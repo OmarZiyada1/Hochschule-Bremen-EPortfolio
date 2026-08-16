@@ -329,7 +329,7 @@
       "description": "Browse all published student works",
       "count_one": "{{count}} student project found",
       "count_other": "{{count}} student projects found",
-      "searchPlaceholder": "Search projects …",
+      "searchPlaceholder": "Search for a project or student …",
       "filter": {
         "title": "Filter",
         "noOptions": "No options available.",
