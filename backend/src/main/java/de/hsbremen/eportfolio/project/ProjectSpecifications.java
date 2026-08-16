@@ -14,6 +14,7 @@ import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import org.springframework.data.jpa.domain.Specification;
@@ -92,41 +93,47 @@ public final class ProjectSpecifications {
 
 	// ------------------------------------------------------------------
 	// Filter aus §6.1
+	//
+	// Die sieben Sachfilter nehmen seit Contract v43 mehrere Werte an
+	// (KAN-64): ein in-Praedikat statt equal, die Werte desselben Parameters
+	// sind damit ODER-verknuepft. Ein einzelner Wert verhaelt sich exakt wie
+	// zuvor, denn ein in mit einem Element ist die Gleichheit. Leere Listen
+	// kommen hier nie an; das stellt der ProjectReadService sicher.
 	// ------------------------------------------------------------------
 
 	/** Filter {@code category} (§3.6). */
-	public static Specification<Project> category(UUID categoryId) {
-		return reference("category", categoryId);
+	public static Specification<Project> category(List<UUID> categoryIds) {
+		return references("category", categoryIds);
 	}
 
 	/** Filter {@code faculty} (§3.8). */
-	public static Specification<Project> faculty(UUID facultyId) {
-		return reference("faculty", facultyId);
+	public static Specification<Project> faculty(List<UUID> facultyIds) {
+		return references("faculty", facultyIds);
 	}
 
 	/** Filter {@code studyProgram} (§3.7). */
-	public static Specification<Project> studyProgram(UUID studyProgramId) {
-		return reference("studyProgram", studyProgramId);
+	public static Specification<Project> studyProgram(List<UUID> studyProgramIds) {
+		return references("studyProgram", studyProgramIds);
 	}
 
 	/** Filter {@code module} (§3.9). */
-	public static Specification<Project> module(UUID moduleId) {
-		return reference("module", moduleId);
+	public static Specification<Project> module(List<UUID> moduleIds) {
+		return references("module", moduleIds);
 	}
 
 	/** Filter {@code author}: Projekte, deren Eigentuemer:in diese Person ist. */
 	public static Specification<Project> author(UUID authorId) {
-		return reference("author", authorId);
+		return (root, query, cb) -> cb.equal(root.get("author").get("id"), authorId);
 	}
 
 	/** Filter {@code degree} (§2.7). */
-	public static Specification<Project> degree(Degree degree) {
-		return (root, query, cb) -> cb.equal(root.get("degree"), degree);
+	public static Specification<Project> degree(List<Degree> degrees) {
+		return (root, query, cb) -> root.get("degree").in(degrees);
 	}
 
 	/** Filter {@code type} (§2.6). */
-	public static Specification<Project> type(ProjectType projectType) {
-		return (root, query, cb) -> cb.equal(root.get("projectType"), projectType);
+	public static Specification<Project> type(List<ProjectType> projectTypes) {
+		return (root, query, cb) -> root.get("projectType").in(projectTypes);
 	}
 
 	/** Filter {@code status} (§2.2), nur zusammen mit der Sichtbarkeitsschranke sinnvoll. */
@@ -144,8 +151,8 @@ public final class ProjectSpecifications {
 	 * Damit verhaelt sich der Parameter wie {@code category}, {@code faculty},
 	 * {@code studyProgram} und {@code module}.
 	 */
-	public static Specification<Project> semester(UUID semesterId) {
-		return reference("semester", semesterId);
+	public static Specification<Project> semester(List<UUID> semesterIds) {
+		return references("semester", semesterIds);
 	}
 
 	/**
@@ -190,12 +197,12 @@ public final class ProjectSpecifications {
 	/** Maskierzeichen fuer {@code like}, siehe {@link #searchText(String)}. */
 	private static final char ESCAPE_CHARACTER = '\\';
 
-	/** Gleichheit auf der ID eines {@code @ManyToOne}-Bezugs, ohne Join. */
-	private static Specification<Project> reference(String field, UUID id) {
+	/** Mitgliedschaft auf der ID eines {@code @ManyToOne}-Bezugs, ohne Join. */
+	private static Specification<Project> references(String field, List<UUID> ids) {
 		// root.get(field).get("id") liest den Fremdschluessel aus der
 		// Projekt-Zeile und loest den Bezug nicht auf; ein Join entsteht dabei
 		// nicht.
-		return (root, query, cb) -> cb.equal(root.get(field).get("id"), id);
+		return (root, query, cb) -> root.get(field).get("id").in(ids);
 	}
 
 	private static Predicate isPublished(Root<Project> root, CriteriaBuilder cb) {

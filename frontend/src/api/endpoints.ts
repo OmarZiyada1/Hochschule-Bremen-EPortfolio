@@ -23,12 +23,14 @@ export const apiPaths = {
   },
   /*
    * Stammdaten (§6.1, Backend-Modul masterdata): vollstaendige Listen ohne
-   * Paginierung. Eingetragen mit ihrem ersten Verwender, den Kennzahlen der
-   * Startseite (KAN-31); categories folgt erst mit seinem Verwender
-   * (Filter-Seitenleiste, KAN-64), nicht auf Vorrat.
+   * Paginierung. Eingetragen mit ihrem ersten Verwender: faculties und
+   * studyPrograms mit den Kennzahlen der Startseite (KAN-31), categories
+   * und semesters mit der Filter-Seitenleiste (KAN-64).
    */
   masterData: {
     faculties: "/api/faculties",
     studyPrograms: "/api/study-programs",
+    categories: "/api/categories",
+    semesters: "/api/semesters",
   },
 } as const

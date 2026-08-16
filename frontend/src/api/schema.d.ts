@@ -173,7 +173,7 @@ export interface paths {
     }
     /**
      * Projektliste lesen
-     * @description Liefert eine Seite im Format PageResponse<ProjectCardResponse> (§6.6). Ohne Token kommen nur veroeffentlichte Projekte; Studierende sehen zusaetzlich ihre eigenen, Redaktion und Admin alle (§5). Unbekannte Filter-IDs ergeben eine leere Liste, kein 404.
+     * @description Liefert eine Seite im Format PageResponse<ProjectCardResponse> (§6.6). Ohne Token kommen nur veroeffentlichte Projekte; Studierende sehen zusaetzlich ihre eigenen, Redaktion und Admin alle (§5). Unbekannte Filter-IDs ergeben eine leere Liste, kein 404. Die Filter category, faculty, studyProgram, module, degree, type und semester sind wiederholbar: Werte desselben Parameters sind ODER-verknuepft, verschiedene Parameter UND-verknuepft (v43).
      */
     get: operations["list_1"]
     put?: never
@@ -2829,20 +2829,20 @@ export interface operations {
   list_1: {
     parameters: {
       query?: {
-        /** @description Filter: ID einer Kategorie aus GET /api/categories. */
-        category?: string
-        /** @description Filter: ID einer Fakultaet aus GET /api/faculties. */
-        faculty?: string
-        /** @description Filter: ID eines Studiengangs aus GET /api/study-programs. */
-        studyProgram?: string
-        /** @description Filter: ID eines Moduls aus GET /api/modules. */
-        module?: string
-        /** @description Filter: angestrebter Abschluss (§2.7). */
-        degree?: "BACHELOR" | "MASTER" | "MBA"
-        /** @description Filter: Projekttyp (§2.6). */
-        type?: "REGULAR" | "PAPER" | "THESIS"
-        /** @description Filter: ID eines Semesters aus GET /api/semesters (§3.18). Seit Contract v45 die ID und nicht mehr die Schreibweise. */
-        semester?: string
+        /** @description Filter: IDs von Kategorien aus GET /api/categories. Wiederholbar, mehrere Werte ODER-verknuepft. */
+        category?: string[]
+        /** @description Filter: IDs von Fakultaeten aus GET /api/faculties. Wiederholbar, mehrere Werte ODER-verknuepft. */
+        faculty?: string[]
+        /** @description Filter: IDs von Studiengaengen aus GET /api/study-programs. Wiederholbar, mehrere Werte ODER-verknuepft. */
+        studyProgram?: string[]
+        /** @description Filter: IDs von Modulen aus GET /api/modules. Wiederholbar, mehrere Werte ODER-verknuepft. */
+        module?: string[]
+        /** @description Filter: angestrebte Abschluesse (§2.7). Wiederholbar, mehrere Werte ODER-verknuepft. */
+        degree?: ("BACHELOR" | "MASTER" | "MBA")[]
+        /** @description Filter: Projekttypen (§2.6). Wiederholbar, mehrere Werte ODER-verknuepft. */
+        type?: ("REGULAR" | "PAPER" | "THESIS")[]
+        /** @description Filter: IDs von Semestern aus GET /api/semesters (§3.18). Seit Contract v45 die ID und nicht mehr die Schreibweise. Wiederholbar, mehrere Werte ODER-verknuepft. */
+        semester?: string[]
         /** @description Suchbegriff fuer Titel und Kurzbeschreibung, unabhaengig von Gross- und Kleinschreibung. */
         q?: string
         /** @description Filter: Projektstatus (§2.2). Wirkt nur innerhalb dessen, was ohne Anmeldung ohnehin sichtbar ist. */

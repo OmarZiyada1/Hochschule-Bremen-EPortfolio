@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
@@ -78,12 +79,22 @@ public class ProjectController {
 	 * ihnen in der OpenAPI-Beschreibung seine eigene Erklaerung tragen kann. Zu
 	 * einem {@code ProjectFilterRequest} gebuendelt werden sie erst beim
 	 * Weiterreichen.
+	 *
+	 * <p>Die sieben Sachfilter sind seit Contract v43 <strong>wiederholbar</strong>
+	 * ({@code ?faculty=a&faculty=b}) und deshalb als Listen gebunden: Werte
+	 * desselben Parameters ODER-verknuepft, verschiedene Parameter untereinander
+	 * UND-verknuepft (KAN-64). Verbindlich ist die wiederholte Parameterform;
+	 * dass Spring bei Listen auch Kommalisten annimmt, ist Beiwerk der Bindung
+	 * und kein zugesicherter Teil des Contracts.
 	 */
 	@Operation(summary = "Projektliste lesen",
 			description = "Liefert eine Seite im Format PageResponse<ProjectCardResponse> (§6.6). "
 					+ "Ohne Token kommen nur veroeffentlichte Projekte; Studierende sehen "
 					+ "zusaetzlich ihre eigenen, Redaktion und Admin alle (§5). Unbekannte "
-					+ "Filter-IDs ergeben eine leere Liste, kein 404.")
+					+ "Filter-IDs ergeben eine leere Liste, kein 404. Die Filter category, "
+					+ "faculty, studyProgram, module, degree, type und semester sind "
+					+ "wiederholbar: Werte desselben Parameters sind ODER-verknuepft, "
+					+ "verschiedene Parameter UND-verknuepft (v43).")
 	@ApiResponse(responseCode = "200", description = "Eine Seite der Projektliste.")
 	@ApiResponse(responseCode = "400", description = "Ein Parameter hat nicht das erwartete Format "
 			+ "oder es wurde nach einem nicht erlaubten Feld sortiert.")
@@ -93,27 +104,34 @@ public class ProjectController {
 	public PageResponse<ProjectCardResponse> list(
 			@AuthenticationPrincipal AuthenticatedUser user,
 
-			@Parameter(description = "Filter: ID einer Kategorie aus GET /api/categories.")
-			@RequestParam(name = "category", required = false) UUID category,
+			@Parameter(description = "Filter: IDs von Kategorien aus GET /api/categories. "
+					+ "Wiederholbar, mehrere Werte ODER-verknuepft.")
+			@RequestParam(name = "category", required = false) List<UUID> category,
 
-			@Parameter(description = "Filter: ID einer Fakultaet aus GET /api/faculties.")
-			@RequestParam(name = "faculty", required = false) UUID faculty,
+			@Parameter(description = "Filter: IDs von Fakultaeten aus GET /api/faculties. "
+					+ "Wiederholbar, mehrere Werte ODER-verknuepft.")
+			@RequestParam(name = "faculty", required = false) List<UUID> faculty,
 
-			@Parameter(description = "Filter: ID eines Studiengangs aus GET /api/study-programs.")
-			@RequestParam(name = "studyProgram", required = false) UUID studyProgram,
+			@Parameter(description = "Filter: IDs von Studiengaengen aus GET /api/study-programs. "
+					+ "Wiederholbar, mehrere Werte ODER-verknuepft.")
+			@RequestParam(name = "studyProgram", required = false) List<UUID> studyProgram,
 
-			@Parameter(description = "Filter: ID eines Moduls aus GET /api/modules.")
-			@RequestParam(name = "module", required = false) UUID module,
+			@Parameter(description = "Filter: IDs von Modulen aus GET /api/modules. "
+					+ "Wiederholbar, mehrere Werte ODER-verknuepft.")
+			@RequestParam(name = "module", required = false) List<UUID> module,
 
-			@Parameter(description = "Filter: angestrebter Abschluss (§2.7).")
-			@RequestParam(name = "degree", required = false) Degree degree,
+			@Parameter(description = "Filter: angestrebte Abschluesse (§2.7). "
+					+ "Wiederholbar, mehrere Werte ODER-verknuepft.")
+			@RequestParam(name = "degree", required = false) List<Degree> degree,
 
-			@Parameter(description = "Filter: Projekttyp (§2.6).")
-			@RequestParam(name = "type", required = false) ProjectType type,
+			@Parameter(description = "Filter: Projekttypen (§2.6). "
+					+ "Wiederholbar, mehrere Werte ODER-verknuepft.")
+			@RequestParam(name = "type", required = false) List<ProjectType> type,
 
-			@Parameter(description = "Filter: ID eines Semesters aus GET /api/semesters (§3.18). "
-					+ "Seit Contract v45 die ID und nicht mehr die Schreibweise.")
-			@RequestParam(name = "semester", required = false) UUID semester,
+			@Parameter(description = "Filter: IDs von Semestern aus GET /api/semesters (§3.18). "
+					+ "Seit Contract v45 die ID und nicht mehr die Schreibweise. "
+					+ "Wiederholbar, mehrere Werte ODER-verknuepft.")
+			@RequestParam(name = "semester", required = false) List<UUID> semester,
 
 			@Parameter(description = "Suchbegriff fuer Titel und Kurzbeschreibung, unabhaengig "
 					+ "von Gross- und Kleinschreibung.")

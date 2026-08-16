@@ -38,9 +38,11 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -395,6 +397,99 @@ class ProjectReadIntegrationTest {
 					.andExpect(status().isOk())
 					.andExpect(jsonPath("$.content").isEmpty());
 		}
+
+		// --- Mehrwertige Filter (v43, KAN-64) --------------------------
+
+		@Test
+		@DisplayName("Zwei Werte desselben Filters liefern die ODER-Vereinigung")
+		void repeatedFilterIsUnion() throws Exception {
+			Category second = secondCategoryOnSubmittedProject();
+
+			assertThat(listIds(admin,
+					"category", category.getId().toString(),
+					"category", second.getId().toString()))
+					.containsExactlyInAnyOrder(
+							publishedProject.getId(),
+							submittedForeignProject.getId());
+		}
+
+		@Test
+		@DisplayName("Auch ein Enum-Filter nimmt mehrere Werte an")
+		void repeatedEnumFilterIsUnion() throws Exception {
+			submittedForeignProject.setDegree(Degree.MASTER);
+			projectRepository.saveAndFlush(submittedForeignProject);
+
+			assertThat(listIds(admin, "degree", "BACHELOR", "degree", "MASTER"))
+					.containsExactlyInAnyOrder(
+							publishedProject.getId(),
+							submittedForeignProject.getId());
+		}
+
+		@Test
+		@DisplayName("Wiederholter Filter und zweiter Filter: ODER innerhalb, UND dazwischen")
+		void repeatedFilterCombinesWithAnd() throws Exception {
+			Category second = secondCategoryOnSubmittedProject();
+
+			// category passt auf beide Projekte, type=THESIS nur auf das
+			// veroeffentlichte: die Schnittmenge ist genau eines.
+			assertThat(listIds(admin,
+					"category", category.getId().toString(),
+					"category", second.getId().toString(),
+					"type", "THESIS"))
+					.containsExactly(publishedProject.getId());
+		}
+
+		@Test
+		@DisplayName("Ein bekannter und ein unbekannter Wert: die Vereinigung ist der bekannte Treffer")
+		void repeatedFilterWithUnknownId() throws Exception {
+			assertThat(listIds(admin,
+					"category", category.getId().toString(),
+					"category", UUID.randomUUID().toString()))
+					.containsExactly(publishedProject.getId());
+		}
+
+		@Test
+		@DisplayName("semester nimmt mehrere IDs an und vereinigt die Semester")
+		void repeatedSemesterFilter() throws Exception {
+			Semester other = semesterRepository.saveAndFlush(
+					TestMasterData.semesterWithoutId("KAN64 " + UUID.randomUUID(), 2));
+			Project inOtherSemester = newProject(otherStudent, ProjectStatus.PUBLISHED,
+					"Epsilon Anderes Semester");
+			inOtherSemester.setSemester(other);
+			projectRepository.saveAndFlush(inOtherSemester);
+
+			// listRequest grenzt jede Anfrage auf das Semester dieses Laufs
+			// ein; das erste Vorkommen ersetzt genau diese Vorgabe, das zweite
+			// haengt das frische Semester an.
+			assertThat(listIds(admin,
+					"semester", semester.getId().toString(),
+					"semester", other.getId().toString()))
+					.containsExactlyInAnyOrder(
+							draftOfAuthor.getId(),
+							publishedProject.getId(),
+							submittedForeignProject.getId(),
+							foreignDraftWithMember.getId(),
+							inOtherSemester.getId());
+		}
+
+		@Test
+		@DisplayName("Ein leerer Wert in der Wiederholung wirkt wie nicht mitgeschickt")
+		void emptyRepeatedValue() throws Exception {
+			assertThat(listIds(admin, "degree", "", "degree", "BACHELOR"))
+					.containsExactly(publishedProject.getId());
+			assertThat(listIds(admin, "category", "")).hasSize(4);
+		}
+
+		/**
+		 * Gibt dem eingereichten Projekt eine zweite Kategorie, damit zwei
+		 * Projekte dieses Laufs in verschiedenen Kategorien stehen.
+		 */
+		private Category secondCategoryOnSubmittedProject() {
+			Category second = categoryRepository.findAllByOrderByNameAsc().get(1);
+			submittedForeignProject.setCategory(second);
+			projectRepository.saveAndFlush(submittedForeignProject);
+			return second;
+		}
 	}
 
 	// ==================================================================
@@ -714,23 +809,30 @@ class ProjectReadIntegrationTest {
 	 *
 	 * <p>Die Parameter laufen ueber eine Map und nicht direkt in den Builder,
 	 * damit ein Aufruf {@code listRequest("size", "3")} die Vorgabe wirklich
-	 * ersetzt. Zweimal {@code size} im selben Request wuerde Spring nicht
-	 * zusammenfuehren, sondern den ersten Wert nehmen, und der Test pruefte
-	 * dann etwas anderes als gemeint.
+	 * ersetzt. Das erste Vorkommen eines Namens in {@code extra} ersetzt also
+	 * die Vorgabe; jedes weitere Vorkommen desselben Namens haengt einen
+	 * zweiten Wert an, denn die Sachfilter sind seit Contract v43 wiederholbar
+	 * und genau diese Form ({@code ?faculty=a&faculty=b}) wollen die
+	 * Mehrfachwert-Tests erzeugen.
 	 *
 	 * @param extra Paare aus Parametername und Wert
 	 */
 	private MockHttpServletRequestBuilder listRequest(String... extra) {
-		Map<String, String> parameters = new LinkedHashMap<>();
-		parameters.put("semester", semester.getId().toString());
-		parameters.put("size", "50");
+		Map<String, List<String>> parameters = new LinkedHashMap<>();
+		parameters.put("semester", new ArrayList<>(List.of(semester.getId().toString())));
+		parameters.put("size", new ArrayList<>(List.of("50")));
+
+		Set<String> replaced = new HashSet<>();
 		for (int i = 0; i + 1 < extra.length; i += 2) {
-			parameters.put(extra[i], extra[i + 1]);
+			if (replaced.add(extra[i])) {
+				parameters.put(extra[i], new ArrayList<>());
+			}
+			parameters.get(extra[i]).add(extra[i + 1]);
 		}
 
 		MockHttpServletRequestBuilder request = get("/api/projects");
-		for (Map.Entry<String, String> entry : parameters.entrySet()) {
-			request = request.param(entry.getKey(), entry.getValue());
+		for (Map.Entry<String, List<String>> entry : parameters.entrySet()) {
+			request = request.param(entry.getKey(), entry.getValue().toArray(String[]::new));
 		}
 		return request;
 	}

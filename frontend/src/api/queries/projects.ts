@@ -3,16 +3,21 @@ import { keepPreviousData, queryOptions } from "@tanstack/react-query"
 import { api } from "@/api/client"
 import { apiPaths } from "@/api/endpoints"
 import type { PageResponse } from "@/api/page"
-import type { ProjectCardResponse } from "@/api/types"
+import type { Degree, ProjectCardResponse, ProjectType } from "@/api/types"
 
 /**
- * Parameter der Projektliste (KAN-31). Alles optional: ohne Angaben gilt
- * serverseitig Seite 0, Groesse 20 und die Sortierung updatedAt,desc
- * (§6.6). Es gibt bewusst keinen sort-Parameter: die Bibliothek bietet
- * kein Sortier-Element an (Entscheidung zu KAN-31, wie im Template), und
- * ein Eintrag ohne Verwender entstuende auf Vorrat. Die Filterparameter
- * aus §6.1 (faculty, category, ...) folgen mit KAN-64, wenn sie
- * mehrwertig sind.
+ * Parameter der Projektliste (KAN-31, Filter seit KAN-64). Alles optional:
+ * ohne Angaben gilt serverseitig Seite 0, Groesse 20 und die Sortierung
+ * updatedAt,desc (§6.6). Es gibt bewusst keinen sort-Parameter: die
+ * Bibliothek bietet kein Sortier-Element an (Entscheidung zu KAN-31, wie im
+ * Template), und ein Eintrag ohne Verwender entstuende auf Vorrat. Aus
+ * demselben Grund fehlt der Filter module aus §6.1: die Seitenleiste hat
+ * keine Modul-Gruppe.
+ *
+ * Die Filter sind Arrays, weil die Parameter seit Contract v43 wiederholbar
+ * sind (?faculty=a&faculty=b): Werte desselben Parameters ODER-verknuepft,
+ * verschiedene Parameter UND-verknuepft. Der Client haengt Arrays als
+ * wiederholte Parameter an, genau die Form, die der Contract festschreibt.
  */
 export interface ProjectListParams {
   /** Suchbegriff q, durchsucht Titel und Kurzbeschreibung (§6.1). */
@@ -21,6 +26,18 @@ export interface ProjectListParams {
   page?: number
   /** Seitengroesse; serverseitig auf 100 gedeckelt und still gekappt (§6.6). */
   size?: number
+  /** IDs von Kategorien aus GET /api/categories (§3.6). */
+  category?: string[]
+  /** IDs von Fakultaeten aus GET /api/faculties (§3.8). */
+  faculty?: string[]
+  /** IDs von Studiengaengen aus GET /api/study-programs (§3.7). */
+  studyProgram?: string[]
+  /** Angestrebte Abschluesse (§2.7). */
+  degree?: Degree[]
+  /** Projekttypen (§2.6). */
+  type?: ProjectType[]
+  /** IDs von Semestern aus GET /api/semesters (§3.18). */
+  semester?: string[]
 }
 
 /**
@@ -40,10 +57,11 @@ export interface ProjectListParams {
  * weiter ein, aufweichen kann er nichts.
  *
  * Suche und Seite stehen seit KAN-31 in der Signatur und damit im
- * Query-Key: ein Wechsel zeigt nie das Ergebnis des vorigen Aufrufs.
- * placeholderData laesst beim Blaettern die vorige Seite stehen, statt das
- * Grid auf Skelette zurueckzuwerfen; beim ersten Laden greift weiterhin
- * isPending.
+ * Query-Key, die Filterauswahl seit KAN-64: ein Wechsel zeigt nie das
+ * Ergebnis des vorigen Aufrufs, und zwei verschiedene Auswahlen teilen
+ * sich keinen Cache-Eintrag. placeholderData laesst beim Blaettern die
+ * vorige Seite stehen, statt das Grid auf Skelette zurueckzuwerfen; beim
+ * ersten Laden greift weiterhin isPending.
  */
 export const projectQueries = {
   list: (params: ProjectListParams = {}) =>

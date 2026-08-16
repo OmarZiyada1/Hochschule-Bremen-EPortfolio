@@ -177,17 +177,37 @@ class ProjectControllerTest {
 				.andExpect(status().isOk());
 
 		ProjectFilterRequest filter = capturedFilter();
-		assertThat(filter.category()).isEqualTo(category);
-		assertThat(filter.faculty()).isEqualTo(faculty);
-		assertThat(filter.studyProgram()).isEqualTo(studyProgram);
-		assertThat(filter.module()).isEqualTo(module);
-		assertThat(filter.degree()).isEqualTo(Degree.MASTER);
-		assertThat(filter.type()).isEqualTo(ProjectType.THESIS);
-		assertThat(filter.semester()).isEqualTo(semester);
+		assertThat(filter.category()).containsExactly(category);
+		assertThat(filter.faculty()).containsExactly(faculty);
+		assertThat(filter.studyProgram()).containsExactly(studyProgram);
+		assertThat(filter.module()).containsExactly(module);
+		assertThat(filter.degree()).containsExactly(Degree.MASTER);
+		assertThat(filter.type()).containsExactly(ProjectType.THESIS);
+		assertThat(filter.semester()).containsExactly(semester);
 		assertThat(filter.q()).isEqualTo("Portfolio");
 		assertThat(filter.status()).isEqualTo(ProjectStatus.PUBLISHED);
 		assertThat(filter.author()).isEqualTo(author);
 		assertThat(filter.editor()).isEqualTo("me");
+	}
+
+	@Test
+	@DisplayName("Ein wiederholter Filterparameter kommt als Liste beider Werte an (v43)")
+	void repeatedFilterBindsAsList() throws Exception {
+		UUID first = UUID.randomUUID();
+		UUID second = UUID.randomUUID();
+		when(projectReadService.list(any(), any(), any()))
+				.thenReturn(new PageResponse<>(List.of(), 0, 20, 0, 0));
+
+		mockMvc.perform(get("/api/projects")
+						.param("faculty", first.toString())
+						.param("faculty", second.toString())
+						.param("degree", "BACHELOR")
+						.param("degree", "MASTER"))
+				.andExpect(status().isOk());
+
+		ProjectFilterRequest filter = capturedFilter();
+		assertThat(filter.faculty()).containsExactly(first, second);
+		assertThat(filter.degree()).containsExactly(Degree.BACHELOR, Degree.MASTER);
 	}
 
 	@Test
