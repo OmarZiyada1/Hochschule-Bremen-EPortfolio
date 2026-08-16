@@ -74,6 +74,16 @@ Zwei Fälle bleiben ausdrücklich stehen:
 
 ## 0. Grundlage feststellen, bevor ein Ticket bewertet wird
 
+Noch davor steht die **Konnektorprüfung** (`CLAUDE.md`, Abschnitt „Konnektoren
+prüfen, bevor ein Ticket beginnt"): ein Aufruf
+`mcp__claude_ai_Atlassian_Rovo__atlassianUserInfo` und, sobald
+Frontend-Tickets im Satz sind, `mcp__claude_ai_Figma__whoami`. Das Ergebnis
+wird genannt, auch wenn beides läuft. Refinement ohne Atlassian ist
+nicht möglich: weder Beschreibung noch Contract wären lesbar, und geschrieben
+wird die Beschreibung ohnehin über den Konnektor. Fällt er aus, hält Claude an
+und bittet darum, ihn auf claude.ai neu zu verbinden und die IDE neu zu
+starten.
+
 Ein Ticket kann nur gegen einen bekannten Stand geprüft werden. Diese Reihenfolge,
 nie abgekürzt:
 

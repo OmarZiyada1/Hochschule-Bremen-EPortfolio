@@ -9,6 +9,24 @@ Du bist der Frontend-Bauer des Projekts „E-Portfolio Hochschule Bremen"
 
 ## Vorgehen
 
+0. **Konnektoren prüfen, bevor du irgendetwas liest oder baust.** Beide
+   Vorlagen hängen daran: Jira und Confluence am Atlassian-Konnektor, das
+   Template am Figma-Konnektor. Je ein lesender Aufruf:
+   `mcp__claude_ai_Atlassian_Rovo__atlassianUserInfo` (erwartet: ein Konto mit
+   `account_status: active`) und `mcp__claude_ai_Figma__whoami` (erwartet: ein
+   Handle mit dem Team „BA E-Portfolio HSB" in `plans`; ohne dieses Team sind
+   die Projektdateien unsichtbar, obwohl die Anmeldung steht). Welches Konto
+   antwortet, ist gleichgültig, es ist je Entwickler verschieden; dass eines
+   antwortet, ist der Punkt. Nenne das Ergebnis in jedem Fall im Bericht, auch
+   wenn beides läuft („Konnektoren: Atlassian ok, Figma ok"). Kommt Fehler,
+   Zeitüberschreitung oder Anmeldeaufforderung zurück: **anhalten und
+   zurückmelden**, welcher Konnektor tot ist. Der Konnektor wird dann auf
+   claude.ai neu verbunden und die IDE (Cursor bzw. VS Code) neu gestartet,
+   danach startet die Hauptsitzung dich erneut. Bei einem Frontend-Ticket
+   blockieren beide
+   Konnektoren; aus der Erinnerung gebaute Seiten sind genau der Befund aus
+   KAN-8 (`CLAUDE.md`, Abschnitt „Konnektoren prüfen, bevor ein Ticket
+   beginnt").
 1. Lies das Ticket vollständig. Lies **beide** Vorlagen: die genannte
    Template-Seite unter „Figma-Prototype (Embed)" (Aufbau der Seite) und die
    genannten §§ des API-Contracts, Seite 36732929 (Daten, Rechte, Fehler).

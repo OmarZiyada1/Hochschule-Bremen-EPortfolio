@@ -6,6 +6,13 @@ Der Projektname ist **„E-Portfolio Hochschule Bremen"**, niemals „Build Your
 Blocks" oder „BYB". Der Admin-Bereich heißt **„Administrationsseite"**, nicht
 „Cockpit".
 
+**Wer gemeint ist, wenn ein Mensch gemeint ist.** Diese Regeln und die Skills
+gelten für alle, die in diesem Repository mit Claude arbeiten, nicht für eine
+bestimmte Person. Wo eine Rückfrage, ein Git-Schritt, eine Freigabe oder ein
+Neustart bei einem Menschen liegt, ist immer die Person gemeint, die die
+Sitzung führt. Ältere Absätze nennen dafür noch den Namen „Omar"; das ist
+dasselbe gemeint und kein Hinweis darauf, dass eine Regel nur für ihn gilt.
+
 ## Schreibstil: kein Gedankenstrich „—"
 
 Der lange Gedankenstrich (Em-Dash `—`) kommt in **keinem** Text vor, den
@@ -154,9 +161,56 @@ cd backend && ./mvnw spring-boot:run   # Start im Profil dev
 # Dev-Login: dev-studi@dev.invalid / test1234 (siehe DevTestnutzerSeeder)
 ```
 
+## Konnektoren prüfen, bevor ein Ticket beginnt
+
+Jira, Confluence und Figma hängen an MCP-Konnektoren. Fallen sie aus (Sitzung
+abgelaufen, Konnektor nach einem Update abgemeldet), meldet das niemand von
+selbst: es fällt erst auf, wenn die Ticketbeschreibung oder das Template
+gebraucht wird, und bis dahin ist womöglich aus dem Gedächtnis gebaut worden.
+Deshalb steht die Prüfung ganz vorn, vor jedem Lesen und vor jeder Codezeile.
+Zwei lesende Aufrufe genügen:
+
+| Konnektor | Prüfaufruf | Erwartete Antwort |
+| --- | --- | --- |
+| Atlassian (Jira, Confluence) | `mcp__claude_ai_Atlassian_Rovo__atlassianUserInfo` | ein Konto mit `account_status: active` |
+| Figma | `mcp__claude_ai_Figma__whoami` | ein Handle mit dem Team „BA E-Portfolio HSB" in `plans` |
+
+Geprüft wird, **dass** ein Konto antwortet, nicht welches: die Konten sind je
+Entwickler verschieden. Beim Figma-Konnektor zählt zusätzlich das Team
+„BA E-Portfolio HSB" in der Antwort, denn ohne dieses Team sind die
+Projektdateien nicht sichtbar, obwohl die Anmeldung funktioniert.
+
+Das Ergebnis wird **immer genannt**, auch wenn beides läuft: eine Zeile der
+Form „Konnektoren: Atlassian ok, Figma ok" vor dem ersten Arbeitsschritt.
+Schweigen liest sich sonst wie „nicht geprüft".
+
+Antwortet ein Aufruf mit Fehler, Zeitüberschreitung oder Anmeldeaufforderung,
+**hält Claude an und bittet darum**, den Konnektor in den Einstellungen von
+claude.ai neu zu verbinden und danach die IDE (Cursor bzw. VS Code) neu zu
+starten. Claude kann die Anmeldung nicht selbst durchführen und startet die
+IDE nicht neu. Nach dem Neustart wird die Prüfung wiederholt; erst dann geht
+es weiter.
+
+Zwei Feinheiten:
+
+- **Atlassian blockiert immer.** Ohne Jira gibt es keinen Sollzustand, ohne
+  Confluence keinen Contract. Ersatzweise aus dem Gedächtnis, aus `docs/` oder
+  aus `docs/STAND.md` zu arbeiten ist ausgeschlossen.
+- **Figma blockiert Frontend-Tickets.** Ein reines Backend-Ticket darf bei
+  ausgefallenem Figma-Konnektor weiterlaufen, aber nur auf ausdrückliche
+  Zusage hin, nach der Meldung. Ungefragt wird das nicht entschieden.
+
+Der Contract-Zugriff über `python .claude/skills/api-contract-sync/contract.py`
+läuft nicht über MCP, sondern über die REST-API aus `.env.atlassian`, kann also
+noch funktionieren, während der Konnektor tot ist. Das ersetzt die Prüfung
+nicht: Tickets lesen, kommentieren und Beschreibungen ändern hängt am
+Konnektor.
+
 ## Arbeitsablauf je Ticket
 
-1. **Arbeitsstand prüfen, bevor irgendetwas entsteht.** `git fetch` und
+1. **Arbeitsstand und Konnektoren prüfen, bevor irgendetwas entsteht.**
+   Zuerst die Konnektoren nach dem Abschnitt „Konnektoren prüfen, bevor ein
+   Ticket beginnt", dann der Arbeitsstand: `git fetch` und
    `git status -sb` zeigen, ob der ausgecheckte Branch hinter seinem Remote
    liegt: auf `main` gegen `origin/main`, auf einem Feature-Branch gegen
    dessen Upstream (und gegen `origin/main`, falls der Branch dahinter

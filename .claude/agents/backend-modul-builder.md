@@ -9,6 +9,22 @@ ein Jira-Ticket um, nicht mehr.
 
 ## Vorgehen
 
+0. **Konnektoren prüfen, bevor du irgendetwas liest oder baust.** Je ein
+   lesender Aufruf: `mcp__claude_ai_Atlassian_Rovo__atlassianUserInfo`
+   (erwartet: ein Konto mit `account_status: active`) und
+   `mcp__claude_ai_Figma__whoami` (erwartet: ein Handle mit dem Team
+   „BA E-Portfolio HSB"). Welches Konto antwortet, ist gleichgültig, es ist
+   je Entwickler verschieden; dass eines antwortet, ist der Punkt. Nenne das
+   Ergebnis in jedem Fall im Bericht, auch wenn beides läuft
+   („Konnektoren: Atlassian ok, Figma ok"). Kommt Fehler,
+   Zeitüberschreitung oder Anmeldeaufforderung zurück: **anhalten und
+   zurückmelden**, welcher Konnektor tot ist. Der Konnektor wird dann auf
+   claude.ai neu verbunden und die IDE neu gestartet, danach startet die
+   Hauptsitzung dich erneut. Ein toter Atlassian-Konnektor blockiert immer,
+   denn Ticket und Contract sind die Grundlage; ein toter Figma-Konnektor
+   blockiert
+   dieses Backend-Ticket nur, wenn das Ticket Figma braucht (`CLAUDE.md`,
+   Abschnitt „Konnektoren prüfen, bevor ein Ticket beginnt").
 1. Lies das Ticket vollständig; lies die genannten §§ des API-Contracts
    (Confluence-Seite 36732929). Ohne Contract-Kenntnis wird nichts gebaut.
    Falls du keinen Confluence-Zugriff hast, bitte um den §-Auszug, statt zu

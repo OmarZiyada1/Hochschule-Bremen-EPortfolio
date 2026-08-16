@@ -20,6 +20,18 @@ Maßgeblich ist die letzte Zeile der Tabelle in §10 („Änderungshistorie
 (fachlich)"), nicht die Seitenversion von Confluence. Die beiden laufen
 auseinander, sobald jemand die Seite ohne fachliche Änderung speichert.
 
+`contract.py` spricht die REST-API aus `.env.atlassian` an und läuft deshalb
+auch dann, wenn der Atlassian-Konnektor tot ist. Die Nachführung braucht ihn
+trotzdem: Jira-Beschreibungen und das Veröffentlichungsprotokoll laufen über
+`mcp__claude_ai_Atlassian_Rovo__*`. Deshalb wird vor der Veröffentlichung
+einer neuen Contract-Version der Konnektor geprüft
+(`mcp__claude_ai_Atlassian_Rovo__atlassianUserInfo`, erwartet: ein Konto mit
+`account_status: active`), und das Ergebnis genannt. Antwortet er nicht, wird
+die Contract-Seite **nicht** halb veröffentlicht: erst anhalten und bitten,
+den Konnektor auf claude.ai neu zu verbinden und die IDE neu zu starten,
+danach laufen Veröffentlichung und Nachführung in einem Zug (`CLAUDE.md`,
+Abschnitt „Konnektoren prüfen, bevor ein Ticket beginnt").
+
 ## Claude veröffentlicht selbst
 
 Diese Arbeit wird **nicht** an Omar zurückgegeben. Weder der Seitentext noch

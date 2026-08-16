@@ -22,19 +22,35 @@ Entscheidung. Siehe Schritt 0b.
 
 ## 0. Vorbereitung (nie überspringen)
 
-1. Arbeitsstand prüfen: `git fetch` und `git status -sb`. Liegt der
+1. **Konnektoren prüfen, vor allem anderen.** Beide Vorlagen dieses Skills
+   hängen daran: Confluence und Jira am Atlassian-Konnektor, das Template am
+   Figma-Konnektor. Je ein lesender Aufruf,
+   `mcp__claude_ai_Atlassian_Rovo__atlassianUserInfo` (erwartet: ein Konto mit
+   `account_status: active`) und `mcp__claude_ai_Figma__whoami` (erwartet: ein
+   Handle mit dem Team „BA E-Portfolio HSB" in `plans`; ohne dieses Team sind
+   die Projektdateien unsichtbar, obwohl die Anmeldung steht). Geprüft wird,
+   dass ein Konto antwortet, nicht welches: die Konten sind je Entwickler
+   verschieden. Das Ergebnis wird immer genannt, auch wenn beides
+   läuft („Konnektoren: Atlassian ok, Figma ok"). Fehler, Zeitüberschreitung
+   oder Anmeldeaufforderung heißt: anhalten und darum bitten, den Konnektor
+   auf claude.ai neu zu verbinden und die IDE (Cursor bzw. VS Code) neu zu
+   starten. Bei einem Frontend-Ticket blockieren **beide** Konnektoren, denn
+   ohne Figma wird die Seite aus der Erinnerung gebaut, und genau das war der
+   Befund aus KAN-8 (`CLAUDE.md`, Abschnitt „Konnektoren prüfen, bevor ein
+   Ticket beginnt").
+2. Arbeitsstand prüfen: `git fetch` und `git status -sb`. Liegt der
    ausgecheckte Branch hinter seinem Remote (auf `main` gegen
    `origin/main`), wird nicht gebaut, sondern das Aktualisieren erbeten;
    `git pull` ist ein schreibender Befehl und bleibt bei Omar (Skill
    `uebergabe`). Ein veralteter Stand erzeugt Arbeit, die der nächste Pull
    wegwirft (`CLAUDE.md`, Arbeitsablauf Schritt 1).
-2. Jira-Ticket lesen; die genannte Template-Seite in Confluence lesen
+3. Jira-Ticket lesen; die genannte Template-Seite in Confluence lesen
    (Abschnitte „Layout-Bereiche", „Verknüpfte Komponenten", „Verweist auf").
-3. Die genannten Contract-§§ nachschlagen, mindestens §5 (Rechtematrix),
+4. Die genannten Contract-§§ nachschlagen, mindestens §5 (Rechtematrix),
    §6.1 (Endpoint-Zeilen), §6.2 (Fehlercodes). Ohne die Endpoint-Zeile wird
    keine Ansicht gebaut, sonst entsteht eine Oberfläche für Daten, die es
    nicht gibt.
-4. Prüfen, was schon existiert: `frontend/src/components/`,
+5. Prüfen, was schon existiert: `frontend/src/components/`,
    `frontend/src/api/`, `frontend/src/styles/tokens/`. Komponenten werden
    wiederverwendet, nicht je Seite neu gebaut. Fehlt eine Komponente, die
    mehrere Seiten brauchen, gehört sie in die Bibliothek (Skill
@@ -46,7 +62,7 @@ Entscheidung. Siehe Schritt 0b.
    Leerzustände und kommen aus der `empty`-Primitive bzw. der Domänenhülle
    `EmptyState`; eine fast passende Hülle wird erweitert, nicht umgangen
    (Befund aus KAN-7, Skill `frontend-shadcn` Abschnitt 1).
-5. Prüfen, ob der benötigte Endpoint im Backend **wirklich existiert**:
+6. Prüfen, ob der benötigte Endpoint im Backend **wirklich existiert**:
    die Controller unter `backend/src/main/java/de/hsbremen/eportfolio/` oder
    `/v3/api-docs` im laufenden Dev-Profil. Eine Contract-Zeile ist kein
    Beleg für einen umgesetzten Endpoint; §8 nennt den Umsetzungsstand.
@@ -56,8 +72,11 @@ Entscheidung. Siehe Schritt 0b.
 Bevor die erste Komponente einer Seite entsteht, wird das Figma-Template
 genau dieser Seite **angesehen**, nicht erinnert: die Template-Seite unter
 „Figma-Prototype (Embed)" in Confluence, dazu die Screenshots, die Omar
-bereitstellt. Ist beides nicht zugänglich, wird um Screenshots gebeten,
-statt aus dem Kopf zu bauen. Der Anlass ist ein Befund aus dem Review zu
+bereitstellt. Kommt dabei ein Konnektorfehler statt eines Inhalts zurück, ist
+das kein Grund weiterzubauen, sondern der Fall aus Schritt 0.1: erst wird der
+Konnektor neu verbunden und die IDE neu gestartet. Ist das Template auch
+danach nicht zugänglich, wird um Screenshots gebeten, statt aus dem Kopf zu
+bauen. Der Anlass ist ein Befund aus dem Review zu
 KAN-8: mehrere Ansichten sahen „ungefähr richtig" aus und mussten komplett
 nachgezogen werden.
 

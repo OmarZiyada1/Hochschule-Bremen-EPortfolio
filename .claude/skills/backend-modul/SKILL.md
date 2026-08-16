@@ -15,21 +15,33 @@ aus KAN-14.
 
 ## 0. Vorbereitung (nie überspringen)
 
-1. Arbeitsstand prüfen: `git fetch` und `git status -sb`. Liegt der
+1. **Konnektoren prüfen, vor allem anderen**: ein Aufruf
+   `mcp__claude_ai_Atlassian_Rovo__atlassianUserInfo` (erwartet: ein Konto mit
+   `account_status: active`) und ein Aufruf
+   `mcp__claude_ai_Figma__whoami` (erwartet: ein Handle mit dem Team
+   „BA E-Portfolio HSB"). Geprüft wird, dass ein Konto antwortet, nicht
+   welches: die Konten sind je Entwickler verschieden. Das Ergebnis wird
+   immer genannt, auch wenn beides läuft („Konnektoren: Atlassian ok, Figma
+   ok"). Fehler, Zeitüberschreitung oder Anmeldeaufforderung heißt: anhalten
+   und darum bitten, den Konnektor auf claude.ai neu zu verbinden und die IDE
+   neu zu starten. Ohne Atlassian gibt es weder Ticket noch Contract, also
+   wird auch nicht ersatzweise aus dem Gedächtnis gebaut (`CLAUDE.md`,
+   Abschnitt „Konnektoren prüfen, bevor ein Ticket beginnt").
+2. Arbeitsstand prüfen: `git fetch` und `git status -sb`. Liegt der
    ausgecheckte Branch hinter seinem Remote (auf `main` gegen
    `origin/main`), wird nicht gebaut, sondern das Aktualisieren erbeten;
    `git pull` ist ein schreibender Befehl und bleibt bei Omar (Skill
    `uebergabe`). Ein veralteter Stand erzeugt Arbeit, die der nächste Pull
    wegwirft (`CLAUDE.md`, Arbeitsablauf Schritt 1).
-2. Jira-Ticket lesen; alle genannten Contract-§§ der Seite
+3. Jira-Ticket lesen; alle genannten Contract-§§ der Seite
    „Datenmodell & API-Contract" (ID 36732929) nachschlagen, mindestens §5
    (Rechtematrix), §6.1 (Endpoint-Zeilen), §6.2/§6.3 (Fehler).
-3. `docs/ARCHITEKTUR.md` §6 („Wo kommt was hin") und das Zielpaket ansehen:
+4. `docs/ARCHITEKTUR.md` §6 („Wo kommt was hin") und das Zielpaket ansehen:
    Welche Entities, Repositories und `may…`-Methoden existieren schon?
    `ProjectPermissionService` deckt die komplette Rechtematrix bereits ab,
    also fast nie neue Berechtigungslogik schreiben, sondern vorhandene
    aufrufen.
-4. Prüfen, ob `config/SecurityConfig` den neuen Pfad schon kennt (viele
+5. Prüfen, ob `config/SecurityConfig` den neuen Pfad schon kennt (viele
    PUBLIC-GET-Regeln stehen vorab da). Fehlt eine Regel: ergänzen und im
    Code-Kommentar begründen, wie dort üblich.
 

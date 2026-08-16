@@ -8,6 +8,15 @@ description: Hausstil für Jira-Tickets im Projekt KAN (E-Portfolio Hochschule B
 Projekt `KAN`, Issue-Typ in der Regel `Task`. Ein Ticket ist ein
 abgeschlossener, testbarer Schnitt, kein Sammelbecken.
 
+Bevor ein Ticket entsteht oder geändert wird, wird der Atlassian-Konnektor
+geprüft: ein Aufruf `mcp__claude_ai_Atlassian_Rovo__atlassianUserInfo`, erwartet
+wird ein Konto mit `account_status: active` (welches, ist gleichgültig, es ist
+je Entwickler verschieden). Ergebnis nennen, auch
+wenn er läuft. Antwortet er nicht, wird nicht ersatzweise ein Ticketentwurf in
+den Chat geschrieben, sondern angehalten und darum gebeten, den Konnektor auf
+claude.ai neu zu verbinden und die IDE neu zu starten (`CLAUDE.md`, Abschnitt
+„Konnektoren prüfen, bevor ein Ticket beginnt").
+
 ## Struktur (Markdown in der Beschreibung)
 
 ```
