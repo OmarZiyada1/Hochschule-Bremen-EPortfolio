@@ -399,7 +399,10 @@ function AlertDialogDemo() {
       <AlertDialogTrigger render={<Button variant="destructive" />}>
         {t("tokens.components.demo.delete")}
       </AlertDialogTrigger>
-      <AlertDialogContent>
+      {/* Modale Flaechen tragen die Figma-Stufe modal (16px) seit der
+          Radius-Umhaengung selbst; die Bruecke legt rounded-xl auf card
+          (Review zu KAN-8, Skill frontend-shadcn Abschnitt 7). */}
+      <AlertDialogContent className="rounded-modal">
         <AlertDialogHeader>
           <AlertDialogTitle>
             {t("tokens.components.demo.alertDialogTitle")}
@@ -455,7 +458,8 @@ function OverlayDemos() {
           <DialogTrigger render={<Button variant="outline" />}>
             {t("tokens.components.demo.dialogTrigger")}
           </DialogTrigger>
-          <DialogContent>
+          {/* Wie beim AlertDialog: rounded-modal an der Verwendungsstelle. */}
+          <DialogContent className="rounded-modal">
             <DialogHeader>
               <DialogTitle>
                 {t("tokens.components.demo.dialogTitle")}
@@ -866,6 +870,11 @@ function DomainDemos() {
   const signedInLinks = [
     ...publicLinks,
     { key: "myPortfolio", href: "/my-portfolio" },
+  ]
+  /* Wie im Template: "Neues Projekt" liegt im Nutzermenue, nicht in der
+     Leiste (Review zu KAN-8). */
+  const signedInMenu = [
+    { key: "myPortfolio", href: "/my-portfolio" },
     { key: "newProject", href: "/projects/new" },
   ]
   return (
@@ -884,7 +893,9 @@ function DomainDemos() {
             </p>
             <NavBar
               user={demoPerson}
+              role="STUDENT"
               links={signedInLinks}
+              menuItems={signedInMenu}
               activeHref="/projects"
               onLogout={() => {}}
             />
@@ -993,25 +1004,30 @@ function ProjectCardDemos() {
     <>
       <ProjectCard
         className="w-full max-w-xs"
-        title={t("tokens.components.demo.projectTitle")}
-        summary={t("tokens.components.demo.projectSummary")}
-        projectType="THESIS"
-        faculty={faculty}
-        author={person}
-        semester={t("tokens.components.demo.semester")}
-        reactionCount={142}
-        href="#"
+        project={{
+          id: "demo",
+          title: t("tokens.components.demo.projectTitle"),
+          summary: t("tokens.components.demo.projectSummary"),
+          projectType: "THESIS",
+          faculty,
+          author: person,
+          semester: t("tokens.components.demo.semester"),
+          reactionCount: 142,
+        }}
       />
       <ProjectCard
         className="w-full max-w-xs"
-        title={t("tokens.components.demo.projectTitle")}
-        summary={t("tokens.components.demo.projectSummary")}
-        projectType="REGULAR"
-        faculty={faculty}
-        author={person}
-        semester={t("tokens.components.demo.semester")}
-        reactionCount={7}
-        status="PUBLISHED"
+        project={{
+          title: t("tokens.components.demo.projectTitle"),
+          summary: t("tokens.components.demo.projectSummary"),
+          projectType: "REGULAR",
+          faculty,
+          author: person,
+          semester: t("tokens.components.demo.semester"),
+          reactionCount: 7,
+          status: "PUBLISHED",
+        }}
+        showStatus
       />
     </>
   )

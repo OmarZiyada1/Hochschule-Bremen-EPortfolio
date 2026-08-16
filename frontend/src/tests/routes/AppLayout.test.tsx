@@ -38,19 +38,22 @@ describe("AppLayout", () => {
     expect(skipLink).toHaveFocus()
   })
 
-  it("zeigt nicht angemeldet Anmeldung und Registrierung", () => {
+  it("zeigt nicht angemeldet allein die Anmeldung", () => {
     renderWithProviders(<AppUnderTest />, "/")
 
     expect(screen.getByRole("link", { name: "Anmelden" })).toBeInTheDocument()
+    /* Nach Template kein eigener Registrieren-Button (Review KAN-8); der
+       Weg fuehrt ueber den Link auf der Login-Seite. */
     expect(
-      screen.getByRole("link", { name: "Registrieren" })
-    ).toBeInTheDocument()
+      screen.queryByRole("link", { name: "Registrieren" })
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("link", { name: "Mein Portfolio" })
     ).not.toBeInTheDocument()
   })
 
-  it("zeigt einem studentischen Konto den eigenen Bereich, keine Administration", () => {
+  it("zeigt einem studentischen Konto den eigenen Bereich, keine Administration", async () => {
+    const user = userEvent.setup()
     signInAs("STUDENT")
     renderWithProviders(<AppUnderTest />, "/")
 
@@ -58,14 +61,22 @@ describe("AppLayout", () => {
       screen.getByRole("link", { name: "Mein Portfolio" })
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("link", { name: "Neues Projekt" })
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByRole("link", { name: "Administrationsseite" })
+      screen.queryByRole("link", { name: "Administration" })
     ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("link", { name: "Meine Reviews" })
     ).not.toBeInTheDocument()
+
+    /* "Neues Projekt" liegt nach Template im Nutzermenue, nicht in der
+       Leiste (Review KAN-8). */
+    expect(
+      screen.queryByRole("link", { name: "Neues Projekt" })
+    ).not.toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: /Mira Beispiel/ }))
+    expect(
+      await screen.findByRole("menuitem", { name: "Neues Projekt" })
+    ).toHaveAttribute("href", "/projects/new")
+    expect(screen.getByText("Studierende:r")).toBeInTheDocument()
   })
 
   it("zeigt einer Redakteur:in Reviews und eigenen Bereich zusammen", () => {
@@ -80,22 +91,18 @@ describe("AppLayout", () => {
     expect(
       screen.getByRole("link", { name: "Mein Portfolio" })
     ).toBeInTheDocument()
-    expect(
-      screen.getByRole("link", { name: "Neues Projekt" })
-    ).toBeInTheDocument()
   })
 
-  it("zeigt einem Admin-Konto keine Projektanlage, aber das Profil", async () => {
+  it("zeigt einem Admin-Konto die Administration und keine Projektanlage", async () => {
     const user = userEvent.setup()
     signInAs("ADMIN")
     renderWithProviders(<AppUnderTest />, "/")
 
     expect(
-      screen.getByRole("link", { name: "Administrationsseite" })
+      screen.getByRole("link", { name: "Administration" })
     ).toBeInTheDocument()
     /* Contract 5, Fussnote 10: keine Projektanlage und keine eigene
-       Projektliste fuer ADMIN, das Profil bleibt ueber das Nutzermenue
-       erreichbar. */
+       Projektliste fuer ADMIN. */
     expect(
       screen.queryByRole("link", { name: "Neues Projekt" })
     ).not.toBeInTheDocument()
@@ -103,8 +110,16 @@ describe("AppLayout", () => {
       screen.queryByRole("link", { name: "Mein Portfolio" })
     ).not.toBeInTheDocument()
 
+    /* Das Nutzermenue folgt dem Template: Rollenbeschriftung, Administration
+       und Abmelden, kein Portfolio-Eintrag fuer ADMIN. */
     await user.click(screen.getByRole("button", { name: /Mira Beispiel/ }))
-    expect(await screen.findByText("Profil")).toBeInTheDocument()
+    expect(
+      await screen.findByRole("menuitem", { name: "Administration" })
+    ).toBeInTheDocument()
+    expect(screen.getByText("Admin")).toBeInTheDocument()
+    expect(
+      screen.queryByRole("menuitem", { name: "Mein Portfolio" })
+    ).not.toBeInTheDocument()
   })
 
   it("meldet ab und kehrt zur oeffentlichen Startseite zurueck", async () => {

@@ -258,10 +258,15 @@ describe("Radien (Foundation, Abschnitt 7)", () => {
   })
 
   it("haelt die shadcn-Bruecke auf den Figma-Stufen", () => {
+    /* Zugeordnet nach der tatsaechlichen Verwendung in den erzeugten
+       Dateien, nicht nach Namensaehnlichkeit (Review zu KAN-8): rounded-lg
+       sitzt an Eingabefeldern und Buttons (Figma: 8px), rounded-xl an
+       Karten (Figma: 12px). modal hat keine Brueckenzeile; modale Flaechen
+       setzen rounded-modal an der Verwendungsstelle. */
     expect(radius.get("radius-sm")).toBe("var(--radius-selection)")
     expect(radius.get("radius-md")).toBe("var(--radius-control)")
-    expect(radius.get("radius-lg")).toBe("var(--radius-card)")
-    expect(radius.get("radius-xl")).toBe("var(--radius-modal)")
+    expect(radius.get("radius-lg")).toBe("var(--radius-control)")
+    expect(radius.get("radius-xl")).toBe("var(--radius-card)")
     /* Befund aus KAN-29: badge.tsx nutzt rounded-4xl, das Badge ist in
        Figma eine Pille. 2xl und 3xl bleiben bewusst ohne Bruecke. */
     expect(radius.get("radius-4xl")).toBe("var(--radius-pill)")
@@ -324,6 +329,30 @@ describe("Schrift (Foundation, Abschnitt 5)", () => {
       "lh-body",
     ]) {
       expect(mobileRem(role), role).toBeGreaterThanOrEqual(1)
+    }
+  })
+
+  /*
+   * Die Schriftrollen setzen Familie, Groesse und Zeilenhoehe, keine Farbe.
+   * Der Test steht hier, weil genau das schon einmal danebenging: aus dem
+   * blauen Seitentitel der Projektbibliothek wurde eine Regel fuer alle
+   * Ueberschriften, und Login, 404 und Startseite fuehren in Figma andere
+   * Rollen (foreground beziehungsweise accent-foreground). Die Farbe gehoert
+   * an die Seite, nicht an die Rolle; siehe den Kommentar in tokens.css.
+   */
+  it("laesst die Schriftrollen ohne Farbe", () => {
+    for (const role of [
+      "type-display",
+      "type-title",
+      "type-h1",
+      "type-h2",
+      "type-h3",
+      "type-overline",
+    ]) {
+      for (const block of blocksOf(typographyCss, `.${role}`)) {
+        expect(block, role).not.toMatch(/(^|;)\s*color\s*:/)
+      }
+      expect(tokensCss, role).not.toContain(`.${role}`)
     }
   })
 })

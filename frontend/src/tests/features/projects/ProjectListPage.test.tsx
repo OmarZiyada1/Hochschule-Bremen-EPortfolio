@@ -23,15 +23,15 @@ function pageOf(content: unknown[], totalElements = content.length) {
 
 /**
  * Projektliste des Durchstichs (Ticket KAN-8): die drei Zustaende Laden,
- * Leere und Fehler, die sichtbare 401-Reaktion und die Statusanzeige nach
- * Anmeldezustand.
+ * Leere und Fehler, die sichtbare 401-Reaktion und der fest verdrahtete
+ * Filter status=PUBLISHED (Klaerungsrunde im Review zu KAN-8, Contract v42).
  */
 describe("ProjectListPage", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("de")
   })
 
-  it("zeigt echte Daten aus PageResponse, oeffentlich ohne Status-Badge", async () => {
+  it("zeigt echte Daten aus PageResponse, ohne Status-Badge", async () => {
     server.use(
       http.get("*/api/projects", () =>
         HttpResponse.json(
@@ -79,30 +79,38 @@ describe("ProjectListPage", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Projektbibliothek" })
     ).toBeInTheDocument()
-    /* PUBLIC sieht ohnehin nur PUBLISHED (§5); ein Badge unterschiede
-       nichts und bleibt deshalb weg. */
+    /* Die Bibliothek zeigt nur PUBLISHED; ein Badge unterschiede nichts
+       und bleibt deshalb weg. */
     expect(screen.queryByText("Veröffentlicht")).not.toBeInTheDocument()
   })
 
-  it("zeigt angemeldet den Projektstatus als Badge", async () => {
+  it("fragt fest mit status=PUBLISHED ab, auch angemeldet ohne Badge", async () => {
     signInAs("STUDENT")
+    let requestedStatus: string | null = null
     server.use(
-      http.get("*/api/projects", () =>
-        HttpResponse.json(
+      http.get("*/api/projects", ({ request }) => {
+        requestedStatus = new URL(request.url).searchParams.get("status")
+        return HttpResponse.json(
           pageOf([
             {
               id: "10000000-0000-0000-0000-000000000003",
-              title: "Mein Entwurf",
-              status: "DRAFT",
+              title: "Veröffentlichtes Projekt",
+              status: "PUBLISHED",
             },
           ])
         )
-      )
+      })
     )
     renderWithProviders(<ProjectListPage />)
 
-    expect(await screen.findByText("Mein Entwurf")).toBeInTheDocument()
-    expect(screen.getByText("Entwurf")).toBeInTheDocument()
+    expect(
+      await screen.findByText("Veröffentlichtes Projekt")
+    ).toBeInTheDocument()
+    /* Der Filter ist in der Query-Fabrik fest verdrahtet und nicht
+       waehlbar: eigene Entwuerfe gehoeren in "Mein Portfolio" (KAN-34),
+       nicht in die oeffentliche Bibliothek. */
+    expect(requestedStatus).toBe("PUBLISHED")
+    expect(screen.queryByText("Veröffentlicht")).not.toBeInTheDocument()
   })
 
   it("zeigt den Leerzustand statt einer leeren Flaeche", async () => {

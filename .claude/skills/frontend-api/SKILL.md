@@ -36,10 +36,14 @@ Alle Requests laufen über den Client in `frontend/src/api/client.ts`. Kein
 
 Aufgerufen wird der Client nur aus den `queryOptions`-Fabriken und
 Mutationsfunktionen unter `src/api/queries/<ressource>.ts`: dort stehen
-Pfad, Response-Typ und Query-Key je Serveroperation an genau einer Stelle,
+Response-Typ und Query-Key je Serveroperation an genau einer Stelle,
 und Feature-Hooks konsumieren die Fabrik, ohne Pfade oder `api.*` zu
-kennen (Skill `frontend-modul`, Abschnitt 2). Eine Fabrik entsteht erst
-mit ihrem ersten Verwender; Einträge ohne Endpoint in §6.1 sind Befunde.
+kennen (Skill `frontend-modul`, Abschnitt 2). Die Pfade selbst liegen als
+Konstanten in `src/api/endpoints.ts` (`apiPaths`, Review zu KAN-8): kein
+Pfad-Literal in Fabriken, Mutationsfunktionen oder im Auth-Kontext, dann
+hat eine Pfadänderung genau eine Fundstelle. Eine Fabrik und ein
+Pfadeintrag entstehen erst mit ihrem ersten Verwender; Einträge ohne
+Endpoint in §6.1 sind Befunde.
 
 Jede Fehlerantwort wird in genau einen Typ übersetzt, das Envelope aus §6.2:
 

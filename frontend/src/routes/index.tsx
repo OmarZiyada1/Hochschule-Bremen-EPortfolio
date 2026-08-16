@@ -11,6 +11,7 @@ import NotFoundPage from "@/features/not-found/NotFoundPage"
 import ProjectListPage from "@/features/projects/ProjectListPage"
 import TokenGalleryPage from "@/features/token-gallery/TokenGalleryPage"
 import { AppLayout } from "@/routes/AppLayout"
+import { AuthLayout } from "@/routes/AuthLayout"
 import { PlaceholderPage } from "@/routes/PlaceholderPage"
 import { RequireAuth } from "@/routes/RequireAuth"
 import { RequireRole } from "@/routes/RequireRole"
@@ -98,56 +99,6 @@ export const routes: RouteObject[] = [
           <PlaceholderPage
             titleKey="placeholder.title.portfolio"
             ticket="KAN-34"
-          />
-        ),
-      },
-      {
-        /* Durchstich aus KAN-8: minimales Login statt Platzhalter; die
-           ausgestaltete Seite nach Template folgt mit KAN-33. */
-        path: "/login",
-        element: <LoginPage />,
-      },
-      {
-        /* Die kurze, von Hand eingetippte Adresse laeuft nicht ins Leere;
-           verbindlich ist die lange Form (Ticket KAN-7, Umfang 2). Erster
-           Schritt sind die Angaben: eine Rollenauswahl gibt es seit
-           Contract v41 nicht mehr (KAN-63). */
-        path: "/register",
-        element: <Navigate to="/register/details" replace />,
-      },
-      {
-        path: "/register/details",
-        element: (
-          <PlaceholderPage
-            titleKey="placeholder.title.registerDetails"
-            ticket="KAN-33"
-          />
-        ),
-      },
-      {
-        path: "/register/verify-email",
-        element: (
-          <PlaceholderPage
-            titleKey="placeholder.title.registerVerifyEmail"
-            ticket="KAN-33"
-          />
-        ),
-      },
-      {
-        path: "/register/verify-hsb-email",
-        element: (
-          <PlaceholderPage
-            titleKey="placeholder.title.registerVerifyHsbEmail"
-            ticket="KAN-33"
-          />
-        ),
-      },
-      {
-        path: "/register/done",
-        element: (
-          <PlaceholderPage
-            titleKey="placeholder.title.registerDone"
-            ticket="KAN-33"
           />
         ),
       },
@@ -317,6 +268,66 @@ export const routes: RouteObject[] = [
       },
     ],
   },
+  {
+    /* Anmeldung und Registrierung liegen ausserhalb des Anwendungsrahmens:
+       ihre Templates blenden NavBar und Footer aus (Review zu KAN-8; die
+       fruehere Festlegung aus der Klaerungsrunde zu KAN-7 ist ueberholt).
+       Die Passwort-Seiten bleiben vorerst im Rahmen, bis KAN-33 ihre
+       Templates umsetzt und die Frage dort entscheidet. */
+    element: <AuthLayout />,
+    children: [
+      {
+        /* Durchstich aus KAN-8: minimales Login statt Platzhalter; die
+           ausgestaltete Seite nach Template folgt mit KAN-33. */
+        path: "/login",
+        element: <LoginPage />,
+      },
+      {
+        /* Die kurze, von Hand eingetippte Adresse laeuft nicht ins Leere;
+           verbindlich ist die lange Form (Ticket KAN-7, Umfang 2). Erster
+           Schritt sind die Angaben: eine Rollenauswahl gibt es seit
+           Contract v41 nicht mehr (KAN-63). */
+        path: "/register",
+        element: <Navigate to="/register/details" replace />,
+      },
+      {
+        path: "/register/details",
+        element: (
+          <PlaceholderPage
+            titleKey="placeholder.title.registerDetails"
+            ticket="KAN-33"
+          />
+        ),
+      },
+      {
+        path: "/register/verify-email",
+        element: (
+          <PlaceholderPage
+            titleKey="placeholder.title.registerVerifyEmail"
+            ticket="KAN-33"
+          />
+        ),
+      },
+      {
+        path: "/register/verify-hsb-email",
+        element: (
+          <PlaceholderPage
+            titleKey="placeholder.title.registerVerifyHsbEmail"
+            ticket="KAN-33"
+          />
+        ),
+      },
+      {
+        path: "/register/done",
+        element: (
+          <PlaceholderPage
+            titleKey="placeholder.title.registerDone"
+            ticket="KAN-33"
+          />
+        ),
+      },
+    ],
+  },
   ...(import.meta.env.DEV
     ? [
         { path: "/dev/tokens", element: <TokenGalleryPage /> },
@@ -325,9 +336,7 @@ export const routes: RouteObject[] = [
     : []),
   /* Die Auffangroute liegt ausserhalb der Layout-Route: ihr Template
      fuehrt keine NavBar, nur den zentrierten Inhalt mit dem Weg zurueck
-     und eine eigene einzeilige Fusszeile. Die Auth-Seiten bleiben dagegen
-     im Rahmen, ihre Templates nennen NavBar und Footer ausdruecklich
-     (Klaerungsrunde KAN-7). */
+     und eine eigene einzeilige Fusszeile. */
   { path: "*", element: <NotFoundPage /> },
 ]
 

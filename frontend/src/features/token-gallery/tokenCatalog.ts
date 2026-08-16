@@ -196,6 +196,7 @@ export const typographyRoles: readonly string[] = [
   "type-nav-brand-lg",
   "type-nav-brand",
   "type-nav-item",
+  "type-avatar-lg",
   "type-label-xs",
 ]
 

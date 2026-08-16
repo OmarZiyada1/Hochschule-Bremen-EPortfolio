@@ -1,7 +1,6 @@
 import { FolderOpenIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { useAuth } from "@/api/auth/AuthContext"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import { EmptyState } from "@/components/common/EmptyState"
 import { ProjectCard } from "@/components/common/ProjectCard"
@@ -14,20 +13,23 @@ import { useProjectList } from "@/features/projects/hooks/useProjectList"
  * GET /projects mit echten Daten, sonst nichts. Die ausgestaltete
  * Projektbibliothek mit Filtern, Suche und Paginierung entsteht mit KAN-31.
  *
- * Wer welche Projekte sieht, entscheidet der Server (§5): PUBLIC nur
- * PUBLISHED, angemeldet je nach Rolle mehr. Der Client filtert nicht nach;
- * das Status-Badge erscheint nur angemeldet, weil oeffentlich alles
- * PUBLISHED ist und ein Badge dort nichts unterschiede (ProjectCard fuehrt
- * den Status aus demselben Grund als eigenen Slot).
+ * Die Bibliothek zeigt fuer alle Rollen nur Veroeffentlichtes: die
+ * Query-Fabrik verdrahtet status=PUBLISHED fest (Klaerungsrunde im Review
+ * zu KAN-8, Contract v42). Ein Status-Badge erscheint deshalb nicht; wo
+ * alles PUBLISHED ist, unterschiede es nichts. Eigene Entwuerfe zeigt
+ * spaeter "Mein Portfolio" (KAN-34), dort schaltet die Seite showStatus zu.
  */
 export default function ProjectListPage() {
   const { t } = useTranslation()
-  const { isAuthenticated } = useAuth()
   const { data, isPending, error } = useProjectList()
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10">
-      <h1 className="type-h1">{t("project.list.title")}</h1>
+      {/* Blau, weil die Vorlage "Projekte (Oeffentlich)" den Seitentitel in
+          primary fuehrt. Die Farbe steht hier und nicht an der Schriftrolle:
+          Login und 404 fuehren dieselbe Rolle in foreground (Kommentar in
+          tokens.css). */}
+      <h1 className="type-h1 text-primary">{t("project.list.title")}</h1>
 
       {isPending && (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -65,26 +67,7 @@ export default function ProjectListPage() {
               {data.content.map((project) => (
                 <li key={project.id}>
                   <ProjectCard
-                    title={project.title ?? ""}
-                    summary={project.summary}
-                    coverImageUrl={project.coverImageUrl}
-                    projectType={project.projectType}
-                    faculty={project.faculty}
-                    author={
-                      project.author
-                        ? {
-                            /* springdoc markiert kein required; ein Konto
-                               ohne Namen gibt es fachlich nicht (wie in
-                               AppLayout). */
-                            firstName: project.author.firstName ?? "",
-                            lastName: project.author.lastName ?? "",
-                          }
-                        : null
-                    }
-                    semester={project.semester}
-                    reactionCount={project.reactionCount}
-                    status={isAuthenticated ? project.status : undefined}
-                    href={project.id ? `/projects/${project.id}` : undefined}
+                    project={project}
                     /* Die Kacheln liegen direkt unter dem Seiten-h1; ohne
                        Abschnittsueberschrift dazwischen ist Ebene 2 die
                        richtige (SC 1.3.1). */

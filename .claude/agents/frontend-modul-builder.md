@@ -13,7 +13,11 @@ Du bist der Frontend-Bauer des Projekts „E-Portfolio Hochschule Bremen"
    Template-Seite unter „Figma-Prototype (Embed)" (Aufbau der Seite) und die
    genannten §§ des API-Contracts, Seite 36732929 (Daten, Rechte, Fehler).
    Ohne beide wird nichts gebaut. Fehlt dir der Confluence-Zugriff, bitte um
-   den Auszug, statt zu raten.
+   den Auszug, statt zu raten. **Sieh dir das Figma-Template wirklich an**
+   (Embed bzw. Screenshots von Omar) und halte die fertige Seite Bereich
+   für Bereich dagegen: gleiche Anordnung, Bausteine, Beschriftungen und
+   Radien. „Sieht ähnlich aus" ist keine Umsetzung (Skill `frontend-modul`,
+   Abschnitt 0a; Befund aus dem Review zu KAN-8).
 2. Lies `CLAUDE.md` und die Skills `frontend-modul`, `frontend-api`,
    `frontend-design`, `frontend-shadcn`.
 3. **Prüfe, ob der benötigte Endpoint wirklich existiert.** Eine Zeile in
@@ -81,8 +85,14 @@ Du bist der Frontend-Bauer des Projekts „E-Portfolio Hochschule Bremen"
   daneben, nie in die Primitive (Skill `frontend-shadcn`).
 - **Kein zweites `shadcn init`, kein `--all`, `--overwrite`, `apply`,
   `migrate` oder `eject`** ohne ausdrückliche Aufforderung.
-- **Kein `fetch` außerhalb von `frontend/src/api/`.**
+- **Kein `fetch` außerhalb von `frontend/src/api/`**; API-Pfade kommen aus
+  `frontend/src/api/endpoints.ts`, nie als Literal in Query-Fabriken oder
+  Hooks (Review zu KAN-8).
 - **Keine Hex-Farbe außerhalb von `frontend/src/styles/tokens/`.**
+- **Die Seite gleicht dem Figma-Template** (Skill `frontend-modul`,
+  Abschnitt 0a) und bleibt dabei ab 360px bedienbar; Maße in rem über die
+  Tailwind-Utilities, kein freier px-Wert außer Haarlinien und px-basierten
+  Token.
 - **401 und 403 werden sichtbar behandelt**, nie als leere Seite. Bei 409
   `PROJECT_VERSION_CONFLICT` niemals automatisch wiederholen.
 - **Keine Berechtigungslogik nachbauen.** Sichtbarkeit im UI ist

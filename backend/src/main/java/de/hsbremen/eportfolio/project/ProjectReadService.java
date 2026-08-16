@@ -118,9 +118,10 @@ public class ProjectReadService {
 	/**
 	 * Gefilterte Projektliste im Seitenformat aus §6.6.
 	 *
-	 * <p>Der Umfang haengt an der Rolle: PUBLIC sieht nur Veroeffentlichtes,
-	 * Studierende zusaetzlich ihre eigenen Projekte, Redaktion und Admin alles
-	 * (§5). Diese Schranke steht immer in der Abfrage; ein Filterwert kann sie
+	 * <p>Der Umfang haengt an der Rolle (§5, seit v42): PUBLIC sieht nur
+	 * Veroeffentlichtes, Studierende zusaetzlich ihre eigenen Projekte, die
+	 * Redaktion zusaetzlich die ihr zugewiesenen ab der Einreichung, der Admin
+	 * alles. Diese Schranke steht immer in der Abfrage; ein Filterwert kann sie
 	 * nicht aufweichen, sondern die Treffermenge nur weiter verkleinern.
 	 *
 	 * <p><strong>Kein 404 bei unbekannten Filter-IDs.</strong> Ein

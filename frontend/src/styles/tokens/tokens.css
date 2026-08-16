@@ -385,11 +385,19 @@
      nur ihre zweite Adresse. Generierte Komponenten lesen die Variable
      ausserdem direkt, button.tsx etwa als
      rounded-[min(var(--radius-md),10px)]: auch dafuer muss sie zur
-     Laufzeit existieren und nicht nur als Utility. */
+     Laufzeit existieren und nicht nur als Utility.
+
+     Zugeordnet wird nach dem, was die Klassen in den erzeugten Dateien
+     tatsaechlich tragen, nicht nach der Namensaehnlichkeit der Skalen
+     (Review zu KAN-8): rounded-lg sitzt in der Registry an Eingabefeldern
+     und Buttons, die in Figma 8px haben, rounded-xl an Karten, die 12px
+     haben. md und lg zeigen deshalb beide auf control. Die Stufe modal
+     (16px) hat keine Brueckenzeile mehr; eine modale Flaeche setzt
+     rounded-modal an der Verwendungsstelle. */
   --radius-sm: var(--radius-selection); /*  4px */
   --radius-md: var(--radius-control); /*  8px */
-  --radius-lg: var(--radius-card); /* 12px */
-  --radius-xl: var(--radius-modal); /* 16px */
+  --radius-lg: var(--radius-control); /*  8px */
+  --radius-xl: var(--radius-card); /* 12px */
 
   /* Befund aus KAN-29: badge.tsx nutzt rounded-4xl, und die Bruecke endete
      bei xl. Das Badge ist in Figma eine Pille, deshalb zeigt die Stufe auf
@@ -520,6 +528,27 @@
     color: var(--nav-foreground);
   }
 }
+
+/*
+ * Keine Farbregel auf den Ueberschriftenrollen, und das ist geprueft und
+ * nicht vergessen. Naheliegend waere gewesen, alle Ueberschriften auf
+ * primary zu setzen, nachdem der Seitentitel der Projektbibliothek in Figma
+ * blau ist. Die uebrigen Vorlagen widerlegen das:
+ *
+ *   Projekte, "Studentische Projekte"     primary
+ *   Projekte, Kickerzeile darueber        primary
+ *   Login, "Anmelden"                     foreground
+ *   404, "Seite nicht gefunden"           foreground
+ *   404, die Zahl                         accent-foreground
+ *   Startseite, "Top 10 . 2026"           accent-foreground
+ *   Startseite, "Das war nur der Anfang." accent-foreground
+ *
+ * Drei Behandlungen, keine Regel. Die Farbe setzt deshalb die Seite an
+ * ihrer Ueberschrift, genau wie die Vorlage sie setzt; eine Regel hier
+ * traefe vier von sieben Faellen falsch und liesse sich an der Vorlage
+ * nicht belegen. Ob die drei Behandlungen Absicht oder Drift sind, klaert
+ * das Design (Notiz an KAN-31, das Startseite und Bibliothek ausbaut).
+ */
 
 /* ============================================================
  * Grundregeln (KAN-6, Abschnitt 4.3). Funktional, keine Kosmetik.

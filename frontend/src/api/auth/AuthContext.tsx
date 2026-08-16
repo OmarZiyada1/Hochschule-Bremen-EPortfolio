@@ -18,6 +18,7 @@ import {
   updateUser,
 } from "@/api/auth/authStore"
 import { api } from "@/api/client"
+import { apiPaths } from "@/api/endpoints"
 import { isApiError, transportError, type ErrorCode } from "@/api/errors"
 import type { LoginResponse, Role, UserResponse } from "@/api/types"
 
@@ -65,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const state = useSyncExternalStore(subscribe, getAuthState)
 
   const login = useCallback(async (email: string, password: string) => {
-    const response = await api.post<LoginResponse>("/api/auth/login", {
+    const response = await api.post<LoginResponse>(apiPaths.auth.login, {
       email,
       password,
     })
@@ -80,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       response.expiresAt === undefined ||
       response.user === undefined
     ) {
-      throw transportError("/api/auth/login")
+      throw transportError(apiPaths.auth.login)
     }
     startSession({
       token: response.token,
@@ -92,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      await api.post<void>("/api/auth/logout")
+      await api.post<void>(apiPaths.auth.logout)
     } catch (error) {
       /*
        * Die Abmeldung besteht darin, dass der Client das Token verwirft;
@@ -109,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const refreshUser = useCallback(async () => {
-    const user = await api.get<UserResponse>("/api/auth/me")
+    const user = await api.get<UserResponse>(apiPaths.auth.me)
     updateUser(user)
   }, [])
 

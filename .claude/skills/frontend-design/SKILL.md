@@ -79,9 +79,14 @@ geschätzt (Confluence „Designentscheidungen", Abschnitt 2.8).
 
 **Die fünf Brückenzeilen sind kein Fremdkörper.** Im `@theme static`-Block
 stehen zusätzlich `--radius-sm`, `--radius-md`, `--radius-lg` und
-`--radius-xl` als Aliase auf `selection`, `control`, `card` und `modal`,
-seit KAN-29 dazu `--radius-4xl` als Alias auf `pill` (das Badge der
-Registry nutzt `rounded-4xl` und ist in Figma eine Pille). Sie tragen
+`--radius-xl` als Aliase auf die Figma-Stufen, seit KAN-29 dazu
+`--radius-4xl` als Alias auf `pill` (das Badge der Registry nutzt
+`rounded-4xl` und ist in Figma eine Pille). Zugeordnet wird nach der
+tatsächlichen Verwendung in den erzeugten Dateien, nicht nach
+Namensähnlichkeit (Review zu KAN-8): `sm` auf `selection` (4px), `md`
+**und** `lg` auf `control` (8px, Eingabefelder und Buttons), `xl` auf
+`card` (12px, Karten). `modal` (16px) hat keine Brückenzeile; modale
+Flächen setzen `rounded-modal` an der Verwendungsstelle. Die Zeilen tragen
 keinen eigenen Wert und stehen nicht in Figma: sie sind die zweite Adresse
 der sechs Stufen, unter der die per CLI erzeugten Komponenten sie finden.
 Wer sie beim Abgleich gegen die Figma-Collection als überzähligen Token
@@ -232,11 +237,19 @@ den Zeigefinger und versprach damit eine Bedienbarkeit, die es nicht gab.
 `tokens.test.ts` verlangt seitdem, dass jede Regel mit `:disabled` auch
 `aria-disabled` abdeckt.
 
-## 5. Responsiv
+## 5. Responsiv, in rem, und das Template ist die Messlatte
 
+- **Die fertige Fläche wird gegen das Figma-Template gehalten**, nicht
+  gegen die Erinnerung daran (Skill `frontend-modul`, Abschnitt 0a).
+  Anordnung, Bausteine, Beschriftungen und Radien stimmen mit dem Template
+  überein; Abweichungen sind entschiedene Fragen, keine Auslegungssache.
+- **Maße in rem.** Die Tailwind-Utilities sind rem-basiert und die richtige
+  Wahl; ein freier px-Wert (`w-[320px]`, eigenes CSS mit px) ist ein
+  Befund. px bleibt für Haarlinien und px-basierte Token (Radius).
 - Tabellen und breite Inhalte scrollen in ihrem eigenen Bereich. Die Seite
   selbst scrollt nie waagerecht.
-- Ab 360 Pixel Breite bedienbar.
+- Ab 360 Pixel Breite bedienbar; das Template zeigt nur Desktop, die
+  Responsivität ist trotzdem Pflicht.
 - Die Admin-Tabellen sind der schwierigste Fall: lieber je Zeile eine Karte
   auf schmalen Bildschirmen als eine gequetschte Tabelle.
 

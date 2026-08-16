@@ -51,6 +51,38 @@ Entscheidung. Siehe Schritt 0b.
    `/v3/api-docs` im laufenden Dev-Profil. Eine Contract-Zeile ist kein
    Beleg für einen umgesetzten Endpoint; §8 nennt den Umsetzungsstand.
 
+## 0a. Figma zuerst: die Seite sieht aus wie das Template (nie überspringen)
+
+Bevor die erste Komponente einer Seite entsteht, wird das Figma-Template
+genau dieser Seite **angesehen**, nicht erinnert: die Template-Seite unter
+„Figma-Prototype (Embed)" in Confluence, dazu die Screenshots, die Omar
+bereitstellt. Ist beides nicht zugänglich, wird um Screenshots gebeten,
+statt aus dem Kopf zu bauen. Der Anlass ist ein Befund aus dem Review zu
+KAN-8: mehrere Ansichten sahen „ungefähr richtig" aus und mussten komplett
+nachgezogen werden.
+
+Verbindlich heißt: die fertige Seite wird Bereich für Bereich gegen das
+Template gehalten. Gleiche Anordnung, gleiche Bausteine, gleiche
+Beschriftungen, gleiche Zustände (angemeldet/nicht angemeldet, je Rolle),
+gleiche Radien nach den Foundation-Stufen (Bedienelemente 8px, Karten 12px,
+Modale 16px). Eine Abweichung ist entweder eine entschiedene Frage aus der
+Klärungsrunde (0b) mit Begründung im Übergabekommentar, oder sie ist ein
+Fehler. „Sieht ähnlich aus" ist keine Umsetzung.
+
+Zwei Dinge zeigt das Template **nicht**, und beide bleiben trotzdem
+Pflicht:
+
+- **Responsivität.** Die Templates sind Desktop-Ansichten. Die Umsetzung
+  bleibt ab 360px bedienbar (Skill `frontend-design`, Abschnitt 5). *Wie*
+  eine Fläche umbricht, entscheidet die Umsetzung; *dass* sie umbricht, ist
+  nicht verhandelbar.
+- **Maße in rem.** Größen, Abstände und Schriftgrade werden in rem
+  ausgedrückt: die Tailwind-Utilities (`p-4`, `gap-6`, `max-w-6xl`) sind
+  rem-basiert und damit die richtige Wahl. Ein freier px-Wert in eigenem
+  CSS oder in eckigen Klammern (`w-[320px]`) ist ein Befund. px bleibt nur
+  für Haarlinien (`border`, 1px) und für Token, deren Stufe px-basiert
+  definiert ist (Radius).
+
 ## 0b. Klärungsrunde vor der ersten Codezeile (nie überspringen)
 
 Fragen werden **vorher** gestellt, nicht im Abschlussbericht gesammelt
@@ -98,7 +130,11 @@ lesbar bleiben.
   `queryOptions`-Fabrik aus `src/api/queries/<ressource>.ts` (eine Datei je
   Ressource: `projects.ts`, `comments.ts`, …). Die Fabrik bündelt Pfad,
   Response-Typ **und** Query-Key an genau einer Stelle; nur sie ruft den
-  zentralen Client (Skill `frontend-api`), nie über ein eigenes `fetch`:
+  zentralen Client (Skill `frontend-api`), nie über ein eigenes `fetch`.
+  **Der Pfad selbst steht auch in der Fabrik nicht als Literal**, sondern
+  kommt aus `src/api/endpoints.ts` (`apiPaths`, Review zu KAN-8): ändert
+  sich ein Pfad im Contract, gibt es genau eine Fundstelle. Ein Pfad wird
+  dort erst mit seinem ersten Verwender eingetragen, nie auf Vorrat:
 
   ```ts
   // src/api/queries/projects.ts
@@ -107,14 +143,14 @@ lesbar bleiben.
       queryOptions({
         queryKey: ["projects", params],
         queryFn: () =>
-          api.get<PageResponse<ProjectCard>>("/api/projects", {
+          api.get<PageResponse<ProjectCard>>(apiPaths.projects.list, {
             query: { page: params.page, sort: params.sort },
           }),
       }),
     detail: (id: string) =>
       queryOptions({
         queryKey: ["project", id],
-        queryFn: () => api.get<ProjectDetail>(`/api/projects/${id}`),
+        queryFn: () => api.get<ProjectDetail>(apiPaths.projects.detail(id)),
       }),
   }
 
@@ -306,6 +342,11 @@ jeder Umbenennung und belegt nichts.
       Begründung
 - [ ] Alle „Layout-Bereiche" der Template-Seite umgesetzt oder ihr Entfallen
       begründet
+- [ ] Die fertige Seite Bereich für Bereich gegen das Figma-Template
+      gehalten (Abschnitt 0a): gleiche Anordnung, Bausteine, Beschriftungen
+      und Radien; jede Abweichung ist entschieden und benannt
+- [ ] Maße in rem über die Tailwind-Utilities; kein freier px-Wert außer
+      Haarlinien und px-basierten Token (Abschnitt 0a), ab 360px bedienbar
 - [ ] Kein handgeschriebener Response-Typ, alles aus `schema.d.ts`
 - [ ] Jede Query-Definition ist eine `queryOptions`-Fabrik unter
       `src/api/queries/`; Hooks kennen weder Pfade noch `api.*`, und

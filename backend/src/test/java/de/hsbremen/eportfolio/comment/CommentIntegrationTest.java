@@ -181,7 +181,7 @@ class CommentIntegrationTest {
 
 		@Test
 		@DisplayName("Am Entwurf gilt die Sichtbarkeit des Projekts: ohne Token 401, fremde "
-				+ "Studierende 403 (§6.3.1)")
+				+ "Studierende und auch die zugewiesene Redaktion 403 (§6.3.1, §5 Fussnote 11)")
 		void draftFollowsProjectVisibility() throws Exception {
 			write(draft, author, CommentType.REPLY, "Noch nicht oeffentlich.");
 
@@ -189,11 +189,16 @@ class CommentIntegrationTest {
 					.andExpect(status().isUnauthorized())
 					.andExpect(jsonPath("$.errorCode").value("NOT_AUTHENTICATED"));
 
-			mockMvc.perform(as(otherStudent, get(commentsPath(draft))))
-					.andExpect(status().isForbidden())
-					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+			// Seit v42 liest die zugewiesene Redaktion das Projekt erst ab der
+			// Einreichung; der Entwurf und seine Kommentare bleiben ihr
+			// verborgen.
+			for (User user : List.of(otherStudent, assignedEditor)) {
+				mockMvc.perform(as(user, get(commentsPath(draft))))
+						.andExpect(status().isForbidden())
+						.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+			}
 
-			for (User user : List.of(author, member, assignedEditor, admin)) {
+			for (User user : List.of(author, member, admin)) {
 				assertThat(list(user, draft)).hasSize(1);
 			}
 		}

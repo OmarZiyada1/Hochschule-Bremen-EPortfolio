@@ -4,7 +4,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "@/api/auth/AuthContext"
 import { Footer } from "@/components/layout/Footer"
 import { NavBar } from "@/components/layout/NavBar"
-import { navLinksFor } from "@/routes/navLinks"
+import { navLinksFor, userMenuFor } from "@/routes/navLinks"
 
 /**
  * Anwendungsrahmen: Sprunglink, Kopfleiste, Inhaltsbereich, Fusszeile
@@ -41,7 +41,9 @@ export function AppLayout() {
               }
             : null
         }
+        role={role}
         links={navLinksFor(role)}
+        menuItems={userMenuFor(role)}
         activeHref={location.pathname}
         onLogout={() => {
           /* Nach der Abmeldung zurueck auf die Startseite: die aktuelle

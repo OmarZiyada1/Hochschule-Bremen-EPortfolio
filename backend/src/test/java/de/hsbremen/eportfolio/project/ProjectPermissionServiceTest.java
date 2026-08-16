@@ -41,6 +41,8 @@ class ProjectPermissionServiceTest {
 
 	private User editorUser;
 
+	private User otherEditorUser;
+
 	private static final AuthenticatedUser PUBLIC = null;
 
 	@BeforeEach
@@ -55,7 +57,8 @@ class ProjectPermissionServiceTest {
 		editorUser = TestUser.active(Role.EDITOR, "hash");
 		editor = AuthenticatedUser.from(editorUser);
 
-		otherEditor = AuthenticatedUser.from(TestUser.active(Role.EDITOR, "hash"));
+		otherEditorUser = TestUser.active(Role.EDITOR, "hash");
+		otherEditor = AuthenticatedUser.from(otherEditorUser);
 		admin = AuthenticatedUser.from(TestUser.active(Role.ADMIN, "hash"));
 	}
 
@@ -86,15 +89,31 @@ class ProjectPermissionServiceTest {
 		}
 
 		@Test
-		@DisplayName("Nicht veroeffentlicht: PUBLIC nein, Fremde nein, eigene ja, Redaktion und Admin ja")
+		@DisplayName("Nicht veroeffentlicht: PUBLIC nein, Fremde nein, eigene ja, Admin ja")
 		void readUnpublished() {
 			Project p = project(ProjectStatus.DRAFT);
 
 			assertThat(service.mayReadProject(PUBLIC, p)).isFalse();
 			assertThat(service.mayReadProject(otherStudent, p)).isFalse();
 			assertThat(service.mayReadProject(author, p)).isTrue();
-			assertThat(service.mayReadProject(otherEditor, p)).isTrue();
+			assertThat(service.mayReadProject(otherEditor, p)).isFalse();
 			assertThat(service.mayReadProject(admin, p)).isTrue();
+		}
+
+		@Test
+		@DisplayName("Fussnote ¹¹ (v42): die zugewiesene Redaktion liest ab SUBMITTED, den Entwurf nicht")
+		void assignedEditorReadsFromSubmissionOn() {
+			// Zugewiesen, aber noch DRAFT: der Entwurf bleibt Privatsache der
+			// Projektseite, zu beurteilen gibt es noch nichts.
+			assertThat(service.mayReadProject(editor, project(ProjectStatus.DRAFT))).isFalse();
+
+			assertThat(service.mayReadProject(editor, project(ProjectStatus.SUBMITTED))).isTrue();
+			assertThat(service.mayReadProject(editor, project(ProjectStatus.APPROVED))).isTrue();
+			assertThat(service.mayReadProject(editor, project(ProjectStatus.REVISION))).isTrue();
+
+			// Ohne Zuweisung gilt die Redaktion wie eine fremde Studierende.
+			assertThat(service.mayReadProject(otherEditor, project(ProjectStatus.SUBMITTED)))
+					.isFalse();
 		}
 
 		@Test
@@ -137,9 +156,10 @@ class ProjectPermissionServiceTest {
 		void unassignedEditorMayNot() {
 			Project p = project(ProjectStatus.SUBMITTED);
 
-			// Unterschied zu mayReadProject: dort darf jede:r Redakteur:in,
-			// hier nur die zugewiesene.
-			assertThat(service.mayReadProject(otherEditor, p)).isTrue();
+			// Seit v42 sperrt schon mayReadProject die nicht zugewiesene
+			// Redaktion aus; die Internals-Regel aus Fussnote 7 bleibt als
+			// eigene, engere Zusage bestehen.
+			assertThat(service.mayReadProject(otherEditor, p)).isFalse();
 			assertThat(service.maySeeProjectInternals(otherEditor, p)).isFalse();
 		}
 	}
@@ -346,12 +366,14 @@ class ProjectPermissionServiceTest {
 	class EditorialDecision {
 
 		@Test
-		@DisplayName("Genehmigen: Redaktion und Admin ja, Studierende nein, PUBLIC nein")
+		@DisplayName("Genehmigen: zugewiesene Redaktion und Admin ja, alle anderen nein")
 		void approve() {
 			Project p = project(ProjectStatus.SUBMITTED);
 
 			assertThat(service.mayApprove(editor, p)).isTrue();
 			assertThat(service.mayApprove(admin, p)).isTrue();
+			// Fussnote ¹¹ (v42): ohne Zuweisung entscheidet die Redaktion nicht.
+			assertThat(service.mayApprove(otherEditor, p)).isFalse();
 			assertThat(service.mayApprove(author, p)).isFalse();
 			assertThat(service.mayApprove(PUBLIC, p)).isFalse();
 		}
@@ -374,17 +396,23 @@ class ProjectPermissionServiceTest {
 		@Test
 		@DisplayName("Vier-Augen-Prinzip: Redakteur:in genehmigt das eigene Projekt nicht (OF 1)")
 		void fourEyesOnApprove() {
-			Project own = TestProject.withAuthor(editorUser, ProjectStatus.SUBMITTED);
+			// Beide Redakteur:innen sind zugewiesen, sonst pruefte der Test die
+			// Zuweisungsregel aus Fussnote ¹¹ statt des Vier-Augen-Prinzips.
+			Project own = TestProject.withEditor(TestProject.withEditor(
+					TestProject.withAuthor(editorUser, ProjectStatus.SUBMITTED),
+					editorUser), otherEditorUser);
 
 			assertThat(service.mayApprove(editor, own)).isFalse();
-			// Ein:e andere:r Redakteur:in darf sehr wohl.
+			// Die andere zugewiesene Redakteur:in darf sehr wohl: die Sperre
+			// haengt an der Person, nicht am Projekt.
 			assertThat(service.mayApprove(otherEditor, own)).isTrue();
 		}
 
 		@Test
 		@DisplayName("Vier-Augen-Prinzip greift auch beim Veroeffentlichen")
 		void fourEyesOnPublish() {
-			Project own = TestProject.withAuthor(editorUser, ProjectStatus.APPROVED);
+			Project own = TestProject.withEditor(
+					TestProject.withAuthor(editorUser, ProjectStatus.APPROVED), editorUser);
 
 			assertThat(service.mayPublish(editor, own)).isFalse();
 		}
@@ -393,7 +421,8 @@ class ProjectPermissionServiceTest {
 		@DisplayName("Abgeschaltetes Vier-Augen-Prinzip erlaubt die eigene Freigabe")
 		void fourEyesSwitchable() {
 			ProjectPermissionService withoutFourEyes = withProperties(false, false);
-			Project own = TestProject.withAuthor(editorUser, ProjectStatus.SUBMITTED);
+			Project own = TestProject.withEditor(
+					TestProject.withAuthor(editorUser, ProjectStatus.SUBMITTED), editorUser);
 
 			assertThat(withoutFourEyes.mayApprove(editor, own)).isTrue();
 		}
@@ -415,12 +444,14 @@ class ProjectPermissionServiceTest {
 		@ParameterizedTest
 		@EnumSource(value = ProjectStatus.class,
 				names = {"SUBMITTED", "APPROVED", "PUBLISHED"})
-		@DisplayName("Redaktion und Admin ja, Studierende nein")
+		@DisplayName("Zugewiesene Redaktion und Admin ja, alle anderen nein")
 		void requestRevision(ProjectStatus status) {
 			Project p = project(status);
 
 			assertThat(service.mayRequestRevision(editor, p)).isTrue();
 			assertThat(service.mayRequestRevision(admin, p)).isTrue();
+			// Fussnote ¹¹ (v42): auch die Ruecknahme gehoert der Zustaendigen.
+			assertThat(service.mayRequestRevision(otherEditor, p)).isFalse();
 			assertThat(service.mayRequestRevision(author, p)).isFalse();
 			assertThat(service.mayRequestRevision(PUBLIC, p)).isFalse();
 		}
@@ -434,7 +465,8 @@ class ProjectPermissionServiceTest {
 		@Test
 		@DisplayName("Kein Vier-Augen-Prinzip: hier traegt die Matrix keine Fussnote ¹")
 		void withoutFourEyes() {
-			Project own = TestProject.withAuthor(editorUser, ProjectStatus.SUBMITTED);
+			Project own = TestProject.withEditor(
+					TestProject.withAuthor(editorUser, ProjectStatus.SUBMITTED), editorUser);
 
 			assertThat(service.mayRequestRevision(editor, own)).isTrue();
 		}
@@ -501,7 +533,8 @@ class ProjectPermissionServiceTest {
 		@DisplayName("Das Vier-Augen-Prinzip haengt am Recht und nicht am Status: es sperrt schon "
 				+ "mayTrigger")
 		void fourEyesBlocksTheTrigger() {
-			Project own = TestProject.withAuthor(editorUser, ProjectStatus.SUBMITTED);
+			Project own = TestProject.withEditor(
+					TestProject.withAuthor(editorUser, ProjectStatus.SUBMITTED), editorUser);
 
 			assertThat(service.mayTrigger(editor, own, ProjectTransition.APPROVE)).isFalse();
 			assertThat(service.mayTrigger(editor, own, ProjectTransition.PUBLISH)).isFalse();

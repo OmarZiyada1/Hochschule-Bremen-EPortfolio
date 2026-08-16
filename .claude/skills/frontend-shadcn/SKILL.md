@@ -397,16 +397,24 @@ die Tailwind-Standardskalen ab, damit jede Farbe über eine Semantic-Rolle
 läuft. Generierte Komponenten benutzen aber `rounded-sm`, `rounded-md`,
 `rounded-lg` und `rounded-xl`.
 
-Die Brücke im `@theme static`-Block hängt shadcns Namen auf die sechs
-Figma-Stufen (KAN-6, Abschnitt 3.3; `--radius-4xl` seit KAN-29):
+Die Brücke im `@theme static`-Block hängt shadcns Namen auf die
+Figma-Stufen (KAN-6, Abschnitt 3.3; `--radius-4xl` seit KAN-29; Zuordnung
+seit dem Review zu KAN-8 nach der tatsächlichen Verwendung statt nach
+Namensähnlichkeit):
 
 ```css
 --radius-sm: var(--radius-selection);   /*  4px */
 --radius-md: var(--radius-control);     /*  8px */
---radius-lg: var(--radius-card);        /* 12px */
---radius-xl: var(--radius-modal);       /* 16px */
+--radius-lg: var(--radius-control);     /*  8px, Eingabefelder und Buttons */
+--radius-xl: var(--radius-card);        /* 12px, Karten */
 --radius-4xl: var(--radius-pill);       /* 9999px */
 ```
+
+`rounded-lg` sitzt in der Registry an Eingabefeldern und Buttons, die in
+Figma 8px tragen, `rounded-xl` an Karten mit 12px; deshalb zeigen `md` und
+`lg` beide auf `control`. Die Stufe `modal` (16px) hat keine Brückenzeile:
+eine modale Fläche setzt `rounded-modal` als `className` an der
+Verwendungsstelle, nicht in der generierten Datei.
 
 ### Die Skala reicht weiter als die Brücke
 
