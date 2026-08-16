@@ -81,8 +81,7 @@ public class ProjectWorkflowService {
 			new RequiredField("studyProgramId", project -> project.getStudyProgram() != null),
 			new RequiredField("degree", project -> project.getDegree() != null),
 			new RequiredField("categoryId", project -> project.getCategory() != null),
-			new RequiredField("semester", project -> project.getSemester() != null
-					&& !project.getSemester().isBlank()));
+			new RequiredField("semesterId", project -> project.getSemester() != null));
 
 	private final ProjectRepository projectRepository;
 

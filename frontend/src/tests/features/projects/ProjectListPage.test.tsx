@@ -41,7 +41,7 @@ describe("ProjectListPage", () => {
               title: "Campus-Garten an der Werderstraße",
               summary: "Freifläche als offener Lernort.",
               status: "PUBLISHED",
-              semester: "SoSe 2026",
+              semester: { id: "s-1", name: "SoSe 2026" },
               reactionCount: 3,
               author: { firstName: "Mira", lastName: "Beispiel" },
             },

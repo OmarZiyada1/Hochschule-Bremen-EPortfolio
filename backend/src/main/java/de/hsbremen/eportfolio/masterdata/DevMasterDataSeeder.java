@@ -59,6 +59,19 @@ public class DevMasterDataSeeder implements ApplicationRunner {
 			"Wettbewerbsbeitrag");
 
 	/**
+	 * Vier Semester in fachlich richtiger Reihenfolge, aeltestes zuerst (§3.18).
+	 *
+	 * <p>Die Schreibweise ist die des Templates &bdquo;Semester&ldquo;. Ohne
+	 * diese Liste haette das Metadaten-Formular keine Auswahl, und die
+	 * Filtergruppe der Projektbibliothek bliebe leer.
+	 */
+	private static final List<String> SEMESTERS = List.of(
+			"WiSe 2024/25",
+			"SoSe 2025",
+			"WiSe 2025/26",
+			"SoSe 2026");
+
+	/**
 	 * FK1 bis FK5 der Hochschule Bremen mit ihren offiziellen Kuerzeln. Die
 	 * Fakultaetsnamen entsprechen dem oeffentlichen Stand der Hochschule, die
 	 * Studiengaenge und Module darunter sind Beispiele.
@@ -115,12 +128,16 @@ public class DevMasterDataSeeder implements ApplicationRunner {
 
 	private final ModuleRepository moduleRepository;
 
+	private final SemesterRepository semesterRepository;
+
 	public DevMasterDataSeeder(CategoryRepository categoryRepository, FacultyRepository facultyRepository,
-			StudyProgramRepository studyProgramRepository, ModuleRepository moduleRepository) {
+			StudyProgramRepository studyProgramRepository, ModuleRepository moduleRepository,
+			SemesterRepository semesterRepository) {
 		this.categoryRepository = categoryRepository;
 		this.facultyRepository = facultyRepository;
 		this.studyProgramRepository = studyProgramRepository;
 		this.moduleRepository = moduleRepository;
+		this.semesterRepository = semesterRepository;
 	}
 
 	@Override
@@ -130,6 +147,9 @@ public class DevMasterDataSeeder implements ApplicationRunner {
 
 		for (String name : CATEGORIES) {
 			created += createCategory(name);
+		}
+		for (String name : SEMESTERS) {
+			created += createSemester(name);
 		}
 		for (FacultySeed seed : FACULTIES) {
 			created += createFaculty(seed);
@@ -148,6 +168,31 @@ public class DevMasterDataSeeder implements ApplicationRunner {
 		Category category = new Category();
 		category.setName(name);
 		categoryRepository.save(category);
+		return 1;
+	}
+
+	/**
+	 * Legt ein Semester am Ende der Reihenfolge an, sofern der Name noch nicht
+	 * vergeben ist.
+	 *
+	 * <p>Die Position wird berechnet und nicht aus der Position in
+	 * {@link #SEMESTERS} genommen: auf einer Entwicklungsdatenbank hat die
+	 * Migration aus KAN-65 moeglicherweise schon Semester aus den frueheren
+	 * Freitexten angelegt, und feste Zahlen wuerden deren Reihenfolge
+	 * durchsetzen.
+	 */
+	private int createSemester(String name) {
+		if (semesterRepository.findByName(name).isPresent()) {
+			return 0;
+		}
+
+		Semester semester = new Semester();
+		semester.setName(name);
+		semester.setActive(true);
+		semester.setSortOrder(semesterRepository.findFirstByOrderBySortOrderDesc()
+				.map(last -> last.getSortOrder() + 1)
+				.orElse(1));
+		semesterRepository.saveAndFlush(semester);
 		return 1;
 	}
 

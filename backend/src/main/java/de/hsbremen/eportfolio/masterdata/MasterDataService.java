@@ -3,6 +3,7 @@ package de.hsbremen.eportfolio.masterdata;
 import de.hsbremen.eportfolio.masterdata.dto.CategoryResponse;
 import de.hsbremen.eportfolio.masterdata.dto.FacultyResponse;
 import de.hsbremen.eportfolio.masterdata.dto.ModuleResponse;
+import de.hsbremen.eportfolio.masterdata.dto.SemesterResponse;
 import de.hsbremen.eportfolio.masterdata.dto.StudyProgramResponse;
 import java.util.List;
 import java.util.UUID;
@@ -10,13 +11,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Lesezugriff auf die Referenzlisten aus §3.6 bis §3.9.
+ * Lesezugriff auf die Referenzlisten aus §3.6 bis §3.9 und §3.18.
  *
- * <p>Alle vier Listen gehen sortiert nach {@code name} und ohne Paginierung
- * heraus (§6.1). Das ist kein vergessenes Seitenmodell: es sind kleine, selten
- * veraenderliche Listen, die das Frontend vollstaendig braucht, als Dropdown
- * bei Projektanlage und Registrierung und als Filterleiste der Projektliste.
- * Eine Seitenaufteilung wuerde dort nur einen zweiten Ladeweg erzeugen.
+ * <p>Alle Listen gehen sortiert und ohne Paginierung heraus (§6.1). Das ist kein
+ * vergessenes Seitenmodell: es sind kleine, selten veraenderliche Listen, die
+ * das Frontend vollstaendig braucht, als Dropdown bei Projektanlage und
+ * Registrierung und als Filterleiste der Projektliste. Eine Seitenaufteilung
+ * wuerde dort nur einen zweiten Ladeweg erzeugen.
+ *
+ * <p>Sortiert wird nach {@code name}, beim Semester dagegen nach der gepflegten
+ * Reihenfolge {@code sortOrder} (§3.18): alphabetisch stuende dort
+ * &bdquo;SoSe 2026&ldquo; vor &bdquo;WiSe 2025/26&ldquo;.
  *
  * <p><strong>Keine Berechtigungspruefung:</strong> die Endpoints sind PUBLIC
  * (§5). Stammdaten haengen an keiner Ressource mit Eigentuemer, es gibt also
@@ -38,12 +43,16 @@ public class MasterDataService {
 
 	private final ModuleRepository moduleRepository;
 
+	private final SemesterRepository semesterRepository;
+
 	public MasterDataService(CategoryRepository categoryRepository, FacultyRepository facultyRepository,
-			StudyProgramRepository studyProgramRepository, ModuleRepository moduleRepository) {
+			StudyProgramRepository studyProgramRepository, ModuleRepository moduleRepository,
+			SemesterRepository semesterRepository) {
 		this.categoryRepository = categoryRepository;
 		this.facultyRepository = facultyRepository;
 		this.studyProgramRepository = studyProgramRepository;
 		this.moduleRepository = moduleRepository;
+		this.semesterRepository = semesterRepository;
 	}
 
 	/** Alle Kategorien fuer {@code GET /api/categories}. */
@@ -95,6 +104,29 @@ public class MasterDataService {
 
 		return found.stream()
 				.map(ModuleResponse::from)
+				.toList();
+	}
+
+	/**
+	 * Semester fuer {@code GET /api/semesters} (§3.18), optional auf den
+	 * Auswahlzustand eingeschraenkt.
+	 *
+	 * <p>Ohne Parameter kommen <strong>alle</strong> Semester, auch die
+	 * deaktivierten. Das Metadaten-Formular fragt mit {@code active=true} nach,
+	 * weil dort nur Waehlbares stehen darf; die Filtergruppe der
+	 * Projektbibliothek dagegen braucht auch die abgelaufenen, sonst
+	 * verschwaenden veroeffentlichte Projekte aus der Suche, sobald ihr Semester
+	 * vorbei ist.
+	 *
+	 * @param active Filter; {@code null} liefert alle Semester
+	 */
+	public List<SemesterResponse> semesters(Boolean active) {
+		List<Semester> found = active == null
+				? semesterRepository.findAllByOrderBySortOrderAsc()
+				: semesterRepository.findAllByActiveOrderBySortOrderAsc(active);
+
+		return found.stream()
+				.map(SemesterResponse::from)
 				.toList();
 	}
 }

@@ -39,6 +39,7 @@ Grundlage ist der Bestand aus Contract v17: 337 Bezeichner, 120 Java-Dateien,
 | `Studiengang` | `StudyProgram` | `study_program` |
 | `Fakultaet` | `Faculty` | `faculty` |
 | `Modul` | `Module` | `module` |
+| `Semester` | `Semester` | `semester` |
 | `Reaktion` | `Reaction` | `reaction` |
 | `Datei` | `StoredFile` | `stored_file` |
 | `Projektmitglied` | `ProjectMember` | `project_member` |
@@ -138,7 +139,7 @@ deshalb durchgehend `BlockEditor` und der Frontend-Ordner
 | `projekttyp` | `projectType` |
 | `autorId` | `authorId` |
 | `fakultaetId` · `studiengangId` · `modulId` | `facultyId` · `studyProgramId` · `moduleId` |
-| `abschluss` · `kategorieId` · `semester` | `degree` · `categoryId` · `semester` |
+| `abschluss` · `kategorieId` · `semesterId` | `degree` · `categoryId` · `semesterId` |
 | `redakteure` · `redakteurIds` | `editors` · `editorIds` |
 | `mitglieder` · `rolleImProjekt` | `members` · `projectRole` |
 | `reaktionen` · `reaktionAnzahl` | `reactions` · `reactionCount` |
@@ -158,6 +159,20 @@ deshalb durchgehend `BlockEditor` und der Frontend-Ordner
 `reihenfolge` wird `orderIndex` und nicht `order`, weil `order` in SQL ein
 reserviertes Wort ist und die Spalte sonst dauerhaft in Anführungszeichen
 stünde.
+
+### Stammdaten
+
+| Deutsch | Englisch |
+| --- | --- |
+| `aktiv` | `active` |
+| `sortierung` | `sortOrder` |
+| `richtung` (`HOCH` · `RUNTER`) | `direction` (`UP` · `DOWN`) |
+
+Diese drei Namen kommen mit dem `Semester` als Stammdatenzeile dazu (Contract
+v45, §3.18, KAN-65). `sortierung` wird `sortOrder` und nicht `orderIndex`: der
+Blockindex nummeriert eine Position innerhalb eines Dokuments, hier ordnet eine
+vom Admin gesetzte Zahl eine Liste. Zwei verschiedene Sachverhalte tragen
+deshalb zwei verschiedene Namen. Die Spalte heißt `sort_order`.
 
 ### Zeitstempel, Historie, Top-10, Verifizierung
 

@@ -12,6 +12,7 @@ import de.hsbremen.eportfolio.common.enums.ProjectType;
 import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.masterdata.CategoryRepository;
 import de.hsbremen.eportfolio.masterdata.DevMasterDataSeeder;
+import de.hsbremen.eportfolio.masterdata.SemesterRepository;
 import de.hsbremen.eportfolio.masterdata.FacultyRepository;
 import de.hsbremen.eportfolio.masterdata.StudyProgramRepository;
 import de.hsbremen.eportfolio.user.TestUser;
@@ -76,6 +77,9 @@ class ProjectWorkflowFourEyesDisabledTest {
 	@Autowired
 	private StudyProgramRepository studyProgramRepository;
 
+	@Autowired
+	private SemesterRepository semesterRepository;
+
 	private User editor;
 
 	@BeforeEach
@@ -113,7 +117,7 @@ class ProjectWorkflowFourEyesDisabledTest {
 		project.setStudyProgram(studyProgramRepository.findAllByOrderByNameAsc().getFirst());
 		project.setDegree(Degree.MASTER);
 		project.setCategory(categoryRepository.findAllByOrderByNameAsc().getFirst());
-		project.setSemester("SS 2026");
+		project.setSemester(semesterRepository.findAllByOrderBySortOrderAsc().getFirst());
 		Project stored = projectRepository.saveAndFlush(project);
 		// Seit v42 entscheidet nur die zugewiesene Redaktion (§5 Fussnote 11);
 		// die Autor:in hat sich hier selbst gewaehlt, was §5 Fussnote 3 beim

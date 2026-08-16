@@ -15,6 +15,10 @@ import de.hsbremen.eportfolio.masterdata.dto.FacultyUpdateRequest;
 import de.hsbremen.eportfolio.masterdata.dto.ModuleCreateRequest;
 import de.hsbremen.eportfolio.masterdata.dto.ModuleResponse;
 import de.hsbremen.eportfolio.masterdata.dto.ModuleUpdateRequest;
+import de.hsbremen.eportfolio.masterdata.dto.SemesterCreateRequest;
+import de.hsbremen.eportfolio.masterdata.dto.SemesterMoveRequest;
+import de.hsbremen.eportfolio.masterdata.dto.SemesterResponse;
+import de.hsbremen.eportfolio.masterdata.dto.SemesterUpdateRequest;
 import de.hsbremen.eportfolio.masterdata.dto.StudyProgramCreateRequest;
 import de.hsbremen.eportfolio.masterdata.dto.StudyProgramResponse;
 import de.hsbremen.eportfolio.masterdata.dto.StudyProgramUpdateRequest;
@@ -22,6 +26,7 @@ import de.hsbremen.eportfolio.project.Project;
 import de.hsbremen.eportfolio.project.ProjectPermissionService;
 import de.hsbremen.eportfolio.project.ProjectRepository;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
@@ -32,13 +37,14 @@ import org.springframework.transaction.annotation.Transactional;
  * Das Stammdaten-CRUD der Administrationsseite aus §6.1 (KAN-25): Anlegen,
  * Aendern und Loeschen von Kategorien, Fakultaeten, Studiengaengen und Modulen
  * (§3.6 bis §3.9), dazu seit KAN-46 das Zusammenfuehren zweier Kategorien
- * ({@link #mergeCategory}).
+ * ({@link #mergeCategory}) und seit KAN-65 die Semester (§3.18) samt ihrer
+ * Reihenfolge ({@link #moveSemester}).
  *
  * <p><strong>Getrennt vom {@link MasterDataService}</strong>, der dieselben vier
  * Tabellen liest. Der Lesedienst ist PUBLIC und kennt keine Rechtepruefung, weil
  * die Listen an keiner Ressource mit Eigentuemer haengen; dieser hier ist ADMIN
- * vorbehalten (§5, Zeile „Kategorien / Studiengaenge / Module / Fakultaeten
- * verwalten"). Beides in einer Klasse hiesse, dass in derselben Datei Methoden
+ * vorbehalten (§5, Zeile „Kategorien / Studiengaenge / Module / Fakultaeten /
+ * Semester verwalten"). Beides in einer Klasse hiesse, dass in derselben Datei Methoden
  * mit und ohne Zugangspruefung nebeneinander stuenden, und beim naechsten
  * Zuwachs vergisst jemand die Pruefung.
  *
@@ -77,6 +83,8 @@ public class MasterDataAdminService {
 
 	private final ModuleRepository moduleRepository;
 
+	private final SemesterRepository semesterRepository;
+
 	private final ProjectRepository projectRepository;
 
 	private final ProjectPermissionService permissions;
@@ -85,12 +93,14 @@ public class MasterDataAdminService {
 			FacultyRepository facultyRepository,
 			StudyProgramRepository studyProgramRepository,
 			ModuleRepository moduleRepository,
+			SemesterRepository semesterRepository,
 			ProjectRepository projectRepository,
 			ProjectPermissionService permissions) {
 		this.categoryRepository = categoryRepository;
 		this.facultyRepository = facultyRepository;
 		this.studyProgramRepository = studyProgramRepository;
 		this.moduleRepository = moduleRepository;
+		this.semesterRepository = semesterRepository;
 		this.projectRepository = projectRepository;
 		this.permissions = permissions;
 	}
@@ -356,6 +366,116 @@ public class MasterDataAdminService {
 	}
 
 	// ==================================================================
+	// Semester (§3.18)
+	// ==================================================================
+
+	/**
+	 * {@code POST /api/admin/semesters}, <strong>201</strong>.
+	 *
+	 * <p>Die neue Zeile bekommt den hoechsten {@code sortOrder} und steht damit
+	 * am Ende der Liste. Die Position waehlt danach {@link #moveSemester}; sie
+	 * steht bewusst nicht im Body (Begruendung in {@link SemesterCreateRequest}).
+	 */
+	public SemesterResponse createSemester(AuthenticatedUser user, SemesterCreateRequest request) {
+		requireMasterDataAdministration(user);
+
+		Semester semester = new Semester();
+		semester.setName(requireFreeSemesterName(request.name(), NEVER_ASSIGNED));
+		semester.setActive(request.active() == null || request.active());
+		semester.setSortOrder(nextSortOrder());
+
+		return SemesterResponse.from(saveSemester(semester));
+	}
+
+	/**
+	 * {@code PATCH /api/admin/semesters/{id}}.
+	 *
+	 * <p>Deckt das Deaktivieren mit ab: {@code active} ist ein gewoehnliches
+	 * Attribut und kein Zustandsuebergang (§3.18). Ein deaktiviertes Semester
+	 * bleibt an den Projekten stehen, die es tragen; geprueft wird der
+	 * Auswahlzustand erst beim naechsten Schreiben am Projekt
+	 * ({@code ProjectWriteService}).
+	 */
+	public SemesterResponse updateSemester(AuthenticatedUser user, UUID id,
+			SemesterUpdateRequest request) {
+
+		Semester semester = loadSemester(id);
+		requireMasterDataAdministration(user);
+
+		if (request.name() != null) {
+			semester.setName(requireFreeSemesterName(request.name(), id));
+		}
+		if (request.active() != null) {
+			semester.setActive(request.active());
+		}
+
+		return SemesterResponse.from(saveSemester(semester));
+	}
+
+	/**
+	 * {@code DELETE /api/admin/semesters/{id}}, <strong>204</strong>.
+	 *
+	 * <p>Gesperrt, solange ein Projekt darauf verweist, wie bei den uebrigen
+	 * Stammdaten. Wer ein abgelaufenes Semester aus der Auswahl nehmen will,
+	 * setzt {@code active} auf {@code false}; das Loeschen ist fuer die
+	 * versehentlich angelegte Zeile da (§3.18).
+	 *
+	 * <p>Die Luecke, die in der Reihenfolge entsteht, wird nicht geschlossen:
+	 * {@code sortOrder} ordnet, es zaehlt nicht. Ein Auffuellen schriebe jede
+	 * uebrige Zeile neu, ohne dass sich an der Reihenfolge etwas aendert.
+	 */
+	public void deleteSemester(AuthenticatedUser user, UUID id) {
+		Semester semester = loadSemester(id);
+		requireMasterDataAdministration(user);
+
+		if (projectRepository.existsBySemesterId(id)) {
+			throw inUse("Dieses Semester", "Projekte");
+		}
+
+		semesterRepository.delete(semester);
+	}
+
+	/**
+	 * {@code POST /api/admin/semesters/{id}/move}, <strong>200</strong> mit der
+	 * vollstaendigen neuen Reihenfolge (§6.1).
+	 *
+	 * <p>Getauscht wird nur mit der unmittelbaren Nachbarzeile. Am oberen
+	 * beziehungsweise unteren Rand gibt es keine, dann bleibt die Liste
+	 * unveraendert und die Antwort trotzdem <strong>200</strong>: der
+	 * gewuenschte Zustand besteht bereits, ein Fehler waere irrefuehrend.
+	 *
+	 * <p>Die Antwort ist die ganze Liste und nicht die bewegte Zeile allein. Die
+	 * Oberflaeche zeichnet die Tabelle danach neu, und zwei Zeilen haben ihre
+	 * Position getauscht; mit nur einer davon muesste der Client die zweite
+	 * erraten.
+	 */
+	public List<SemesterResponse> moveSemester(AuthenticatedUser user, UUID id,
+			SemesterMoveRequest request) {
+
+		Semester semester = loadSemester(id);
+		requireMasterDataAdministration(user);
+
+		Optional<Semester> neighbour =
+				request.direction() == SemesterMoveRequest.MoveDirection.UP
+						? semesterRepository.findFirstBySortOrderLessThanOrderBySortOrderDesc(
+								semester.getSortOrder())
+						: semesterRepository.findFirstBySortOrderGreaterThanOrderBySortOrderAsc(
+								semester.getSortOrder());
+
+		neighbour.ifPresent(other -> {
+			int own = semester.getSortOrder();
+			semester.setSortOrder(other.getSortOrder());
+			other.setSortOrder(own);
+			semesterRepository.saveAll(List.of(semester, other));
+			semesterRepository.flush();
+		});
+
+		return semesterRepository.findAllByOrderBySortOrderAsc().stream()
+				.map(SemesterResponse::from)
+				.toList();
+	}
+
+	// ==================================================================
 	// Pruefungen und gemeinsame Hilfsmittel
 	// ==================================================================
 
@@ -373,7 +493,7 @@ public class MasterDataAdminService {
 	private static final UUID NEVER_ASSIGNED =
 			UUID.fromString("00000000-0000-0000-0000-000000000000");
 
-	/** Zeile „Kategorien / Studiengaenge / Module / Fakultaeten verwalten" aus §5: nur ADMIN. */
+	/** Zeile „Kategorien / Studiengaenge / Module / Fakultaeten / Semester verwalten" aus §5: nur ADMIN. */
 	private void requireMasterDataAdministration(AuthenticatedUser user) {
 		if (!permissions.mayManageMasterData(user)) {
 			throw new AccessDeniedException(
@@ -405,6 +525,11 @@ public class MasterDataAdminService {
 	private Module loadModule(UUID id) {
 		return moduleRepository.findById(id)
 				.orElseThrow(() -> notFound("Modul", id));
+	}
+
+	private Semester loadSemester(UUID id) {
+		return semesterRepository.findById(id)
+				.orElseThrow(() -> notFound("Semester", id));
 	}
 
 	// ------------------------------------------------------------------
@@ -456,6 +581,16 @@ public class MasterDataAdminService {
 		return trimmed;
 	}
 
+	/** Wie {@link #requireFreeCategoryName}, fuer {@code semester.name} (§3.18). */
+	private String requireFreeSemesterName(String name, UUID ownId) {
+		String trimmed = requireFilled(name, "name");
+		if (semesterRepository.existsByNameAndIdNot(trimmed, ownId)) {
+			throw ConflictException.resourceInUse(
+					"name: Ein Semester mit diesem Namen gibt es bereits.");
+		}
+		return trimmed;
+	}
+
 	/** Wie {@link #requireFreeCategoryName}, fuer {@code faculty.abbreviation}. */
 	private String requireFreeAbbreviation(String abbreviation, UUID ownId) {
 		String trimmed = requireFilled(abbreviation, "abbreviation");
@@ -494,6 +629,31 @@ public class MasterDataAdminService {
 			throw ConflictException.resourceInUse(
 					"abbreviation: Eine Fakultaet mit diesem Kuerzel gibt es bereits.");
 		}
+	}
+
+	/** Wie {@link #saveCategory}, fuer das Semester. */
+	private Semester saveSemester(Semester semester) {
+		try {
+			return semesterRepository.saveAndFlush(semester);
+		}
+		catch (DataIntegrityViolationException e) {
+			throw ConflictException.resourceInUse(
+					"name: Ein Semester mit diesem Namen gibt es bereits.");
+		}
+	}
+
+	/**
+	 * Die naechste freie Position am Ende der Liste.
+	 *
+	 * <p>Gezaehlt wird nicht die Zahl der Zeilen, sondern der hoechste vergebene
+	 * Wert erhoeht: nach einem Loeschen bleibt eine Luecke in der Folge stehen
+	 * (siehe {@link #deleteSemester}), und eine Zaehlung ergaebe dann einen
+	 * bereits vergebenen Wert.
+	 */
+	private int nextSortOrder() {
+		return semesterRepository.findFirstByOrderBySortOrderDesc()
+				.map(last -> last.getSortOrder() + 1)
+				.orElse(1);
 	}
 
 	// ------------------------------------------------------------------

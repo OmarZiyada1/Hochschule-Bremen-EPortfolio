@@ -74,6 +74,27 @@ public class ProjectReadService {
 			"title", "semester", "status", "createdAt", "updatedAt", "publishedAt");
 
 	/**
+	 * Sortierfelder, deren Name im Request nicht der Pfad im Objektmodell ist.
+	 *
+	 * <p>Nur {@code semester} steht darin, und zwar seit Contract v45: das Feld
+	 * ist am Projekt ein Fremdschluessel (§3.3, §3.18), und sortiert wird nach
+	 * der von der Administration gepflegten Reihenfolge. Ein Sortieren nach dem
+	 * Namen ergaebe „SoSe 2026" vor „WiSe 2025/26", ein Sortieren nach der ID
+	 * eine zufaellige Ordnung.
+	 *
+	 * <p>Der Name des Parameters bleibt {@code semester}: §6.6 fuehrt ihn so,
+	 * und {@code sortOrder} ist eine Eigenschaft der Stammdatenzeile und nichts,
+	 * das der Client kennen muss.
+	 *
+	 * <p>Der Pfad erzeugt einen <em>aeusseren</em> Join, weil der Bezug
+	 * {@code nullable} ist. Projekte ohne Semester fallen also nicht aus der
+	 * Liste, sondern landen dort, wo Postgres NULL einsortiert (aufsteigend
+	 * zuletzt).
+	 */
+	private static final Map<String, String> SORT_PATHS = Map.of(
+			"semester", "semester.sortOrder");
+
+	/**
 	 * Standardsortierung: zuletzt bearbeitete Projekte zuerst.
 	 *
 	 * <p>Nicht {@code publishedAt}, obwohl das fuer die oeffentliche Galerie
@@ -165,7 +186,7 @@ public class ProjectReadService {
 		add(parts, filter.type(), ProjectSpecifications::type);
 		add(parts, filter.status(), ProjectSpecifications::status);
 		add(parts, filter.author(), ProjectSpecifications::author);
-		add(parts, emptyAsNull(filter.semester()), ProjectSpecifications::semester);
+		add(parts, filter.semester(), ProjectSpecifications::semester);
 		add(parts, emptyAsNull(filter.q()), ProjectSpecifications::searchText);
 		add(parts, editorId(user, filter.editor()), ProjectSpecifications::editor);
 
@@ -231,6 +252,7 @@ public class ProjectReadService {
 	private Pageable completeSort(Pageable pageable) {
 		Sort requested = pageable.getSort().isSorted() ? pageable.getSort() : DEFAULT_SORT;
 
+		List<Sort.Order> orders = new ArrayList<>();
 		for (Sort.Order order : requested) {
 			if (!ALLOWED_SORT_FIELDS.contains(order.getProperty())) {
 				throw new ValidationException(ErrorCodes.VALIDATION_FAILED,
@@ -238,12 +260,15 @@ public class ProjectReadService {
 								+ ALLOWED_SORT_FIELDS.stream().sorted().collect(Collectors.joining(", "))
 								+ ".");
 			}
+			orders.add(order.withProperty(
+					SORT_PATHS.getOrDefault(order.getProperty(), order.getProperty())));
 		}
+		orders.add(Sort.Order.asc("id"));
 
 		return PageRequest.of(
 				pageable.getPageNumber(),
 				pageable.getPageSize(),
-				requested.and(Sort.by(Sort.Direction.ASC, "id")));
+				Sort.by(orders));
 	}
 
 	/**
@@ -422,10 +447,11 @@ public class ProjectReadService {
 	/**
 	 * Behandelt einen leeren Parameter wie einen fehlenden.
 	 *
-	 * <p>{@code ?q=} und {@code ?semester=} kommen als leere Zeichenkette an,
-	 * nicht als {@code null}. Ohne diese Umdeutung wuerde ein Formular, das
-	 * unausgefuellte Felder mitschickt, nach dem leeren Semester filtern und
-	 * eine leere Liste bekommen.
+	 * <p>{@code ?q=} kommt als leere Zeichenkette an, nicht als {@code null}.
+	 * Ohne diese Umdeutung wuerde ein Formular, das unausgefuellte Felder
+	 * mitschickt, nach dem leeren Suchbegriff filtern. Die ID-Filter brauchen
+	 * das nicht: Springs Umwandlung nach {@code UUID} macht aus einer leeren
+	 * Zeichenkette bereits {@code null}.
 	 */
 	private static String emptyAsNull(String value) {
 		if (value == null) {

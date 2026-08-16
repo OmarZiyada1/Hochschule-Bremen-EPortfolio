@@ -28,6 +28,8 @@ import de.hsbremen.eportfolio.masterdata.CategoryRepository;
 import de.hsbremen.eportfolio.masterdata.DevMasterDataSeeder;
 import de.hsbremen.eportfolio.masterdata.Faculty;
 import de.hsbremen.eportfolio.masterdata.FacultyRepository;
+import de.hsbremen.eportfolio.masterdata.Semester;
+import de.hsbremen.eportfolio.masterdata.SemesterRepository;
 import de.hsbremen.eportfolio.masterdata.StudyProgram;
 import de.hsbremen.eportfolio.masterdata.StudyProgramRepository;
 import de.hsbremen.eportfolio.user.TestUser;
@@ -112,6 +114,9 @@ class ProjectWorkflowIntegrationTest {
 	@Autowired
 	private StudyProgramRepository studyProgramRepository;
 
+	@Autowired
+	private SemesterRepository semesterRepository;
+
 	private User author;
 
 	private User member;
@@ -129,6 +134,8 @@ class ProjectWorkflowIntegrationTest {
 	private Faculty faculty;
 
 	private StudyProgram studyProgram;
+
+	private Semester semester;
 
 	/**
 	 * Ein vollstaendig ausgefuellter Entwurf der Autor:in, mit {@code member} als
@@ -150,6 +157,7 @@ class ProjectWorkflowIntegrationTest {
 
 		category = categoryRepository.findAllByOrderByNameAsc().getFirst();
 		faculty = facultyRepository.findAllByOrderByNameAsc().getFirst();
+		semester = semesterRepository.findAllByOrderBySortOrderAsc().getFirst();
 		studyProgram = studyProgramRepository.findByFacultyIdOrderByNameAsc(faculty.getId())
 				.getFirst();
 
@@ -216,7 +224,7 @@ class ProjectWorkflowIntegrationTest {
 					.andExpect(jsonPath("$.message").value(containsString("studyProgramId")))
 					.andExpect(jsonPath("$.message").value(containsString("degree")))
 					.andExpect(jsonPath("$.message").value(containsString("categoryId")))
-					.andExpect(jsonPath("$.message").value(containsString("semester")));
+					.andExpect(jsonPath("$.message").value(containsString("semesterId")));
 
 			// Der Status bleibt, wo er war: die Pruefung greift vor dem Schreiben.
 			assertThat(reload(bare).getStatus()).isEqualTo(ProjectStatus.DRAFT);
@@ -232,19 +240,8 @@ class ProjectWorkflowIntegrationTest {
 			mockMvc.perform(as(author, action(saved(almost), "submit")))
 					.andExpect(status().isBadRequest())
 					.andExpect(jsonPath("$.errorCode").value("PROJECT_INCOMPLETE"))
-					.andExpect(jsonPath("$.message").value(containsString("semester")))
+					.andExpect(jsonPath("$.message").value(containsString("semesterId")))
 					.andExpect(jsonPath("$.message").value(not(containsString("categoryId"))));
-		}
-
-		@Test
-		@DisplayName("Ein leeres Semester zaehlt als fehlendes (§3.3)")
-		void blankSemesterCountsAsMissing() throws Exception {
-			Project almost = complete(author, ProjectStatus.DRAFT, "Leeres Semester");
-			almost.setSemester("   ");
-
-			mockMvc.perform(as(author, action(saved(almost), "submit")))
-					.andExpect(status().isBadRequest())
-					.andExpect(jsonPath("$.errorCode").value("PROJECT_INCOMPLETE"));
 		}
 
 		@Test
@@ -848,7 +845,7 @@ class ProjectWorkflowIntegrationTest {
 		project.setStudyProgram(studyProgram);
 		project.setDegree(Degree.BACHELOR);
 		project.setCategory(category);
-		project.setSemester("WS 2025/26");
+		project.setSemester(semester);
 		return project;
 	}
 
@@ -874,7 +871,7 @@ class ProjectWorkflowIntegrationTest {
 				"title", "Voller Durchlauf",
 				"projectType", "THESIS",
 				"degree", "BACHELOR",
-				"semester", "WS 2025/26",
+				"semesterId", semester.getId().toString(),
 				"categoryId", category.getId().toString(),
 				"facultyId", faculty.getId().toString(),
 				"studyProgramId", studyProgram.getId().toString(),

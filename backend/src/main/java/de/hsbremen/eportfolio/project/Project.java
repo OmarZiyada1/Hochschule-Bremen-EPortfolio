@@ -7,6 +7,7 @@ import de.hsbremen.eportfolio.common.enums.ProjectType;
 import de.hsbremen.eportfolio.masterdata.Category;
 import de.hsbremen.eportfolio.masterdata.Faculty;
 import de.hsbremen.eportfolio.masterdata.Module;
+import de.hsbremen.eportfolio.masterdata.Semester;
 import de.hsbremen.eportfolio.masterdata.StudyProgram;
 import de.hsbremen.eportfolio.user.User;
 import jakarta.persistence.CascadeType;
@@ -82,8 +83,18 @@ public class Project extends AuditableEntity {
 	@JoinColumn(name = "category_id")
 	private Category category;
 
-	@Column(length = 64)
-	private String semester;
+	/**
+	 * Das Semester der Entstehung (§3.3, §3.18).
+	 *
+	 * <p>Seit Contract v45 ein Fremdschluessel und kein Freitext mehr: der Filter
+	 * aus §6.1 verglich exakt auf die getippte Schreibweise, womit
+	 * &bdquo;WiSe 2025/26&ldquo; und &bdquo;WS 25/26&ldquo; zwei verschiedene
+	 * Semester waren. Wie die uebrigen Stammdatenbezuege {@code nullable}: im
+	 * {@code DRAFT} darf es fehlen, Pflicht wird es beim Einreichen.
+	 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "semester_id")
+	private Semester semester;
 
 	private Instant publishedAt;
 
@@ -231,11 +242,11 @@ public class Project extends AuditableEntity {
 		this.category = category;
 	}
 
-	public String getSemester() {
+	public Semester getSemester() {
 		return semester;
 	}
 
-	public void setSemester(String semester) {
+	public void setSemester(Semester semester) {
 		this.semester = semester;
 	}
 

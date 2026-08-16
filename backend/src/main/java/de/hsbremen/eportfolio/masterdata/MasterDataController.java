@@ -3,6 +3,7 @@ package de.hsbremen.eportfolio.masterdata;
 import de.hsbremen.eportfolio.masterdata.dto.CategoryResponse;
 import de.hsbremen.eportfolio.masterdata.dto.FacultyResponse;
 import de.hsbremen.eportfolio.masterdata.dto.ModuleResponse;
+import de.hsbremen.eportfolio.masterdata.dto.SemesterResponse;
 import de.hsbremen.eportfolio.masterdata.dto.StudyProgramResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -86,5 +87,19 @@ public class MasterDataController {
 					+ "GET /api/study-programs. Ohne Angabe kommen alle Module.")
 			@RequestParam(name = "studyProgram", required = false) UUID studyProgram) {
 		return masterDataService.modules(studyProgram);
+	}
+
+	@Operation(summary = "Semester lesen",
+			description = "Alle Semester in der von der Administration gepflegten Reihenfolge "
+					+ "(§3.18). Ohne Paginierung. Mit \"active=true\" nur die, die bei der "
+					+ "Projektanlage zur Auswahl stehen.")
+	@ApiResponse(responseCode = "200", description = "Liste der Semester.")
+	@ApiResponse(responseCode = "400", description = "\"active\" ist kein Wahrheitswert.")
+	@GetMapping("/semesters")
+	public List<SemesterResponse> semesters(
+			@Parameter(description = "Optionaler Filter auf den Auswahlzustand. Ohne Angabe "
+					+ "kommen alle Semester, auch die deaktivierten.")
+			@RequestParam(name = "active", required = false) Boolean active) {
+		return masterDataService.semesters(active);
 	}
 }

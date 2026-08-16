@@ -38,6 +38,26 @@ public final class TestMasterData {
 		return studyProgram;
 	}
 
+	/** Ein aktives Semester an der genannten Position (§3.18). */
+	public static Semester semester(String name, int sortOrder) {
+		Semester semester = new Semester();
+		ReflectionTestUtils.setField(semester, "id", UUID.randomUUID());
+		semester.setName(name);
+		semester.setActive(true);
+		semester.setSortOrder(sortOrder);
+		return semester;
+	}
+
+	/**
+	 * Wie {@link #semester(String, int)}, aber ohne vorbelegte ID: fuer Tests,
+	 * die das Semester tatsaechlich speichern.
+	 */
+	public static Semester semesterWithoutId(String name, int sortOrder) {
+		Semester semester = semester(name, sortOrder);
+		ReflectionTestUtils.setField(semester, "id", null);
+		return semester;
+	}
+
 	public static Module module(String abbreviation, String name, StudyProgram studyProgram) {
 		Module module = new Module();
 		ReflectionTestUtils.setField(module, "id", UUID.randomUUID());

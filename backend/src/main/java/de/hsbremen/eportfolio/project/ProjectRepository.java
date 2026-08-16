@@ -35,10 +35,12 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, JpaSpec
 	 * {@code Project.tags}).
 	 *
 	 * <p>Das Modul fehlt bewusst: die Kachel zeigt es nicht (§6.1), und ein
-	 * weiterer Join kostet ohne Nutzen.
+	 * weiterer Join kostet ohne Nutzen. Das Semester steht seit KAN-65 dabei,
+	 * weil die Kachel es zeigt und es seither ein Bezug und kein Textfeld mehr
+	 * ist (§3.18).
 	 */
 	@Override
-	@EntityGraph(attributePaths = {"author", "category", "faculty", "studyProgram"})
+	@EntityGraph(attributePaths = {"author", "category", "faculty", "studyProgram", "semester"})
 	Page<Project> findAll(Specification<Project> specification, Pageable pageable);
 
 	/**
@@ -46,7 +48,8 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, JpaSpec
 	 * {@code GET /api/projects/{id}}. Hier ist auch das Modul dabei, weil die
 	 * Detailansicht es anzeigt.
 	 */
-	@EntityGraph(attributePaths = {"author", "category", "faculty", "studyProgram", "module"})
+	@EntityGraph(attributePaths = {"author", "category", "faculty", "studyProgram", "module",
+			"semester"})
 	Optional<Project> findWithReferencesById(UUID id);
 
 	/**
@@ -70,7 +73,7 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, JpaSpec
 	 * veroeffentlichte Projekte zwischen zwei Aufrufen nicht die Plaetze
 	 * tauschen.
 	 */
-	@EntityGraph(attributePaths = {"author", "category", "faculty", "studyProgram"})
+	@EntityGraph(attributePaths = {"author", "category", "faculty", "studyProgram", "semester"})
 	List<Project> findByAuthorIdAndStatusOrderByPublishedAtDescIdAsc(UUID authorId,
 			ProjectStatus status);
 
@@ -116,8 +119,8 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, JpaSpec
 	// Ein DELETE auf eine noch referenzierte Stammdaten-Zeile ergibt 409
 	// RESOURCE_IN_USE; andernfalls verloeren die betroffenen Projekte ihre
 	// Klassifikation ohne Vorwarnung. Bewusst vier einzelne Methoden und keine
-	// gemeinsame: alle vier Spalten sind nullable, ein Projekt kann also an
-	// keiner, einer oder allen vier Zeilen haengen.
+	// gemeinsame: alle fuenf Spalten sind nullable, ein Projekt kann also an
+	// keiner, einer oder allen fuenf Zeilen haengen.
 	// ------------------------------------------------------------------
 
 	boolean existsByCategoryId(UUID categoryId);
@@ -127,6 +130,8 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, JpaSpec
 	boolean existsByStudyProgramId(UUID studyProgramId);
 
 	boolean existsByModuleId(UUID moduleId);
+
+	boolean existsBySemesterId(UUID semesterId);
 
 	/**
 	 * Die Projekte einer Kategorie, fuer

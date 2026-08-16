@@ -19,7 +19,7 @@ describe("ProjectCard", () => {
           projectType: "THESIS",
           faculty,
           author,
-          semester: "SoSe 2026",
+          semester: { id: "s-1", name: "SoSe 2026" },
           reactionCount: 142,
         }}
       />

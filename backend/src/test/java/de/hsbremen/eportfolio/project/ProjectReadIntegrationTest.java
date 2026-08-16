@@ -24,6 +24,9 @@ import de.hsbremen.eportfolio.masterdata.DevMasterDataSeeder;
 import de.hsbremen.eportfolio.masterdata.FacultyRepository;
 import de.hsbremen.eportfolio.masterdata.Module;
 import de.hsbremen.eportfolio.masterdata.ModuleRepository;
+import de.hsbremen.eportfolio.masterdata.Semester;
+import de.hsbremen.eportfolio.masterdata.SemesterRepository;
+import de.hsbremen.eportfolio.masterdata.TestMasterData;
 import de.hsbremen.eportfolio.masterdata.StudyProgram;
 import de.hsbremen.eportfolio.masterdata.StudyProgramRepository;
 import de.hsbremen.eportfolio.reaction.ReactionRepository;
@@ -120,8 +123,11 @@ class ProjectReadIntegrationTest {
 	@Autowired
 	private ModuleRepository moduleRepository;
 
+	@Autowired
+	private SemesterRepository semesterRepository;
+
 	/** Klammert die Projekte dieses Laufs von allem ab, was sonst in der DB steht. */
-	private String semester;
+	private Semester semester;
 
 	private User author;
 
@@ -152,7 +158,8 @@ class ProjectReadIntegrationTest {
 	@BeforeEach
 	void buildData() {
 		seeder.run(new DefaultApplicationArguments());
-		semester = "KAN16 " + UUID.randomUUID();
+		semester = semesterRepository.saveAndFlush(
+				TestMasterData.semesterWithoutId("KAN16 " + UUID.randomUUID(), 1));
 
 		author = save(Role.STUDENT);
 		member = save(Role.STUDENT);
@@ -534,7 +541,7 @@ class ProjectReadIntegrationTest {
 					.andExpect(jsonPath("$.status").value("PUBLISHED"))
 					.andExpect(jsonPath("$.projectType").value("THESIS"))
 					.andExpect(jsonPath("$.degree").value("BACHELOR"))
-					.andExpect(jsonPath("$.semester").value(semester))
+					.andExpect(jsonPath("$.semester.name").value(semester.getName()))
 					.andExpect(jsonPath("$.category.id").value(category.getId().toString()))
 					.andExpect(jsonPath("$.studyProgram.abbreviation").value(studyProgram.getAbbreviation()))
 					.andExpect(jsonPath("$.module.id").value(module.getId().toString()))
@@ -715,7 +722,7 @@ class ProjectReadIntegrationTest {
 	 */
 	private MockHttpServletRequestBuilder listRequest(String... extra) {
 		Map<String, String> parameters = new LinkedHashMap<>();
-		parameters.put("semester", semester);
+		parameters.put("semester", semester.getId().toString());
 		parameters.put("size", "50");
 		for (int i = 0; i + 1 < extra.length; i += 2) {
 			parameters.put(extra[i], extra[i + 1]);

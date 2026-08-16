@@ -29,7 +29,7 @@ import java.util.UUID;
  * @param coverImageUrl  Kachelbild
  * @param projectType    (§2.6)
  * @param degree         (§2.7)
- * @param semester       z. B. „WS 2025/26"
+ * @param semesterId     ID eines aktiven Semesters (§3.18)
  * @param categoryId     (§3.6)
  * @param facultyId      (§3.8)
  * @param studyProgramId (§3.7)
@@ -62,9 +62,9 @@ public record ProjectCreateRequest(
 				nullable = true)
 		Degree degree,
 
-		@Schema(description = "Semester der Entstehung.", example = "WS 2025/26", nullable = true)
-		@Size(max = 64, message = "Semester ist zu lang (hoechstens 64 Zeichen).")
-		String semester,
+		@Schema(description = "ID eines Semesters aus GET /api/semesters. Nur aktive Semester "
+				+ "sind waehlbar (§3.18).", nullable = true)
+		UUID semesterId,
 
 		@Schema(description = "ID einer Kategorie aus GET /api/categories.", nullable = true)
 		UUID categoryId,

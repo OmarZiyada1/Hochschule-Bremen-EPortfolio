@@ -165,7 +165,7 @@ export function ProjectCard({
             <hr />
             <div className="flex items-center justify-between gap-2">
               <span className="type-label-xs text-muted-foreground">
-                {project.semester}
+                {project.semester?.name}
               </span>
               {project.reactionCount !== undefined && (
                 <span className="type-caption flex items-center gap-1 text-muted-foreground">
