@@ -60,11 +60,11 @@ export function ProfileCard({
   return (
     <Card>
       <CardContent className="flex flex-col items-center gap-3 px-6 py-2">
+        {/* 96px nach Template (Figma-Knoten "Avatar" der Profilkarte). */}
         <UserAvatar
           person={person}
           imageUrl={avatarUrl ? resolveApiUrl(avatarUrl) : null}
-          size="lg"
-          className="size-24 type-h2"
+          size="xl"
         />
 
         <Heading className="type-h3 text-center font-semibold">{name}</Heading>

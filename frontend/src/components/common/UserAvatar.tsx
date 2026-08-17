@@ -2,6 +2,35 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { initialsOf, fullNameOf, type PersonName } from "@/lib/name"
 import { cn } from "@/lib/utils"
 
+/** Die Stufen, die das Figma-Designsystem tatsaechlich verwendet. */
+export type UserAvatarSize = "sm" | "md" | "lg" | "xl"
+
+/*
+ * Vier Stufen, jede mit ihrer Fundstelle im Template: 24px in der
+ * Autorenzeile der ProjectCard, 28px in der Kopfleiste, 40px in der
+ * Nutzertabelle, 96px in der Profilkarte. Ein Wert ohne Fundstelle kommt
+ * nicht dazu, wie bei den Token (Skill frontend-design, Abschnitt 1).
+ *
+ * <strong>Warum das Mass hier steht und nicht am size-Prop der Primitive:</strong>
+ * deren Stufen kommen als data-[size=…]:size-… und tragen damit eine
+ * hoehere Spezifitaet als eine schlichte size-Klasse von aussen. Ein
+ * size-24 an der Aufrufstelle bleibt deshalb wirkungslos, und nichts warnt
+ * davor: kein Compilerfehler, keine Lint-Warnung, kein roter Test, der
+ * Avatar ist einfach zu klein (Befund aus KAN-34). Die Huelle gibt der
+ * Primitive darum immer dieselbe Stufe und setzt das Mass selbst; so loest
+ * tailwind-merge size-8 gegen size-N auf.
+ *
+ * Die Initialen laufen aus demselben Grund ueber text-*, nicht ueber eine
+ * type-Rolle: AvatarFallback bringt text-sm mit, und verdraengt wird das
+ * nur von einer Klasse aus derselben Gruppe.
+ */
+const avatarSizes: Record<UserAvatarSize, { box: string; initials: string }> = {
+  sm: { box: "size-6", initials: "text-xs" },
+  md: { box: "size-7", initials: "text-xs" },
+  lg: { box: "size-10", initials: "text-sm" },
+  xl: { box: "size-24", initials: "text-3xl" },
+}
+
 /**
  * Avatarflaeche einer Person: Bild, sonst Initialen auf der Markenflaeche
  * (Figma "Avatar").
@@ -33,17 +62,20 @@ export function UserAvatar({
 }: {
   person: PersonName
   imageUrl?: string | null
-  size?: "sm" | "default" | "lg"
+  size?: UserAvatarSize
   labelled?: boolean
   className?: string
 }) {
   const name = fullNameOf(person)
+  const step = avatarSizes[size]
 
   return (
     <Avatar
-      size={size}
+      /* Immer dieselbe Stufe an die Primitive, damit von ihr nur die
+         schlichte size-8 kommt und das Mass der Huelle sie verdraengt. */
+      size="default"
       aria-hidden={labelled ? undefined : true}
-      className={cn("rounded-card after:rounded-card", className)}
+      className={cn("rounded-card after:rounded-card", step.box, className)}
     >
       {labelled && <span className="sr-only">{name}</span>}
       {imageUrl && (
@@ -51,7 +83,10 @@ export function UserAvatar({
       )}
       <AvatarFallback
         aria-hidden={labelled ? true : undefined}
-        className="rounded-card bg-surface-brand font-bold text-surface-brand-foreground"
+        className={cn(
+          "rounded-card bg-surface-brand font-bold text-surface-brand-foreground",
+          step.initials
+        )}
       >
         {initialsOf(person)}
       </AvatarFallback>

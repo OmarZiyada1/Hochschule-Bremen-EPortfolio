@@ -250,11 +250,12 @@ export function ProfileForm({
   return (
     <>
       <div className="flex flex-col items-center gap-2">
+        {/* 96px wie in der Profilkarte, damit beide Seiten dasselbe Bild
+            in derselben Groesse zeigen. */}
         <UserAvatar
           person={person}
           imageUrl={avatarUrl === "" ? null : resolveApiUrl(avatarUrl)}
-          size="lg"
-          className="size-24 type-h2"
+          size="xl"
         />
         {/*
          * Label statt Knopf: das Dateifeld bleibt ein echtes input und

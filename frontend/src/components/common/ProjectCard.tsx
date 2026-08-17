@@ -143,7 +143,9 @@ export function ProjectCard({
       <CardContent className="flex flex-col gap-2.5 px-5 py-4">
         {author && (
           <p className="flex items-center gap-2">
-            <UserAvatar person={author} className="type-label-xs" />
+            {/* 24px nach Template (Figma-Knoten "Avatar" der ProjectCard);
+                die Groesse der Initialen bringt die Stufe mit. */}
+            <UserAvatar person={author} size="sm" />
             <span className="type-body-sm font-medium text-muted-foreground">
               {fullNameOf(author)}
             </span>

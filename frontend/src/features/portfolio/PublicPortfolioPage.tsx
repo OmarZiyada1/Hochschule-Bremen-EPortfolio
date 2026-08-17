@@ -102,7 +102,7 @@ export default function PublicPortfolioPage() {
       )}
 
       {isPending && (
-        <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[1fr_20rem] lg:items-start">
+        <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[1fr_21.25rem] lg:items-start">
           <div className="flex flex-col gap-6">
             <Skeleton className="h-10 w-80 max-w-full rounded-control" />
             <div className="grid gap-6 sm:grid-cols-2">
@@ -116,7 +116,7 @@ export default function PublicPortfolioPage() {
       )}
 
       {data !== undefined && person !== null && (
-        <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[1fr_20rem] lg:items-start">
+        <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[1fr_21.25rem] lg:items-start">
           <div className="flex flex-col gap-6">
             <h1 className="type-h1 text-primary">
               {t("portfolio.public.title", { name: fullNameOf(person) })}

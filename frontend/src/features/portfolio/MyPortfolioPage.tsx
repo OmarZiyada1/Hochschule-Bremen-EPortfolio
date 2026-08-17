@@ -109,7 +109,8 @@ export default function MyPortfolioPage() {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[1fr_20rem] lg:items-start">
+      {/* 21.25rem sind die 340px der Profilkarte aus dem Template. */}
+      <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[1fr_21.25rem] lg:items-start">
         <div className="flex flex-col gap-6">
           <header className="flex flex-wrap items-end justify-between gap-4 border-b pb-4">
             <div className="flex flex-col gap-2">
