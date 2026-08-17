@@ -1,4 +1,4 @@
-{
+﻿{
   "app": {
     "name": "E-Portfolio Hochschule Bremen",
     "institution": "Hochschule Bremen",
@@ -248,6 +248,12 @@
     },
     "code": {
       "invalid": "Please enter the 6-digit code."
+    },
+    "biography": {
+      "tooLong": "The bio must not exceed 5000 characters."
+    },
+    "currentPassword": {
+      "requiredForEmailChange": "Please enter your current password to change the email address."
     }
   },
   "placeholder": {
@@ -468,6 +474,84 @@
         "title": "This page no longer exists",
         "description": "The result list has fewer pages than the requested address.",
         "action": "Go to the last page"
+      }
+    }
+  },
+  "portfolio": {
+    "breadcrumb": "Portfolio",
+    "emailLabel": "Private email",
+    "myPortfolio": {
+      "label": "Student e-portfolio",
+      "title": "My Portfolio",
+      "newProject": "New project",
+      "filterLabel": "Filter by status",
+      "editProfile": "Edit profile",
+      "noProjectsForRole": "This account does not create projects of its own. You can maintain your profile here.",
+      "empty": {
+        "title": "No project yet",
+        "description": "Create your first project; it will appear here with its status."
+      },
+      "noResults": {
+        "title": "No project with this status",
+        "description": "None of your projects currently has this status.",
+        "action": "Show all projects"
+      }
+    },
+    "public": {
+      "title": "{{name}}'s portfolio",
+      "empty": {
+        "title": "Nothing published yet",
+        "description": "This person has not published a project so far."
+      },
+      "notFound": {
+        "title": "Profile not found",
+        "description": "There is no profile at this address. The account may have been removed.",
+        "action": "Go to the project library"
+      }
+    },
+    "profile": {
+      "breadcrumb": "Edit profile",
+      "title": "Edit profile",
+      "back": "Back to portfolio",
+      "changeAvatar": "Change photo",
+      "avatarPending": "Uploading image …",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Private email",
+      "currentPassword": "Current password",
+      "currentPasswordHint": "Required only when changing the email address.",
+      "hsbEmail": "HSB email · not editable",
+      "hsbEmailHint": "The HSB address cannot be changed and is not shown here.",
+      "biography": "Bio",
+      "submit": "Save changes",
+      "pending": "Saving …",
+      "saved": {
+        "all": "Profile and portfolio have been saved.",
+        "profileOnly": "Name and email have been saved, the bio and image have not.",
+        "portfolioOnly": "Bio and image have been saved, name and email have not.",
+        "none": "Nothing has been saved."
+      },
+      "error": {
+        "wrongPassword": "The current password is incorrect. Nothing was changed, not even the name.",
+        "emailInUse": "This email address is already taken. Nothing was changed, not even the name."
+      },
+      "emailChange": {
+        "pending": "Confirmation pending: we have sent a code to {{address}}. Until you confirm, you continue to sign in with your previous address.",
+        "codeLabel": "Confirmation code",
+        "codePlaceholder": "6-digit code",
+        "confirm": "Confirm code",
+        "confirmPending": "Checking …",
+        "resend": "Resend code",
+        "resendCountdown": "Resend code in {{seconds}}s",
+        "resendConfirmed": "A new code has been requested. Please check your inbox."
+      },
+      "passwordReset": {
+        "title": "Reset password",
+        "description": "We will send a code for resetting your password to your private email address.",
+        "send": "Send code",
+        "pending": "Sending …",
+        "confirmation": "If an active account exists for this address, a 6-digit code has been sent to it.",
+        "toReset": "Enter code"
       }
     }
   },

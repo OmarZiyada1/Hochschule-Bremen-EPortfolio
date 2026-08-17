@@ -7,7 +7,11 @@ import { endSession, getAuthState } from "@/api/auth/authStore"
 import LoginPage from "@/features/auth/LoginPage"
 import { readRegistrationFlow } from "@/features/auth/registrationFlow"
 import i18n from "@/i18n"
-import { apiErrorResponse } from "@/tests/msw/handlers"
+import {
+  apiErrorResponse,
+  emptyProjectsHandler,
+  ownPortfolioHandler,
+} from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
 import { AppUnderTest, LocationProbe } from "@/tests/routes/helpers"
@@ -189,7 +193,11 @@ describe("LoginPage", () => {
             status: "ACTIVE",
           },
         })
-      )
+      ),
+      /* Das Ziel der Umleitung ist seit KAN-34 die echte Seite; sie zieht
+         Profil und eigene Projekte, beides hier leer. */
+      ownPortfolioHandler(),
+      emptyProjectsHandler()
     )
     renderWithProviders(
       <>
@@ -204,7 +212,7 @@ describe("LoginPage", () => {
     await fillAndSubmit("mira.beispiel@example.org", "test1234")
 
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Mein Portfolio" })
+      await screen.findByRole("heading", { level: 1, name: "My Portfolio" })
     ).toBeInTheDocument()
     expect(screen.getByTestId("pathname")).toHaveTextContent("/my-portfolio")
   })

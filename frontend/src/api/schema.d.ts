@@ -1340,6 +1340,8 @@ export interface components {
       id?: string
       firstName?: string
       lastName?: string
+      /** @description Profilbild als Referenz /api/files/{id} (§3.15.1). Kann fehlen: das Konto hat keines hinterlegt, oder die Antwort fuehrt es an dieser Stelle nicht mit. Gefuellt ist es an der Autor:in einer Projektkachel. */
+      avatarUrl?: string
     }
     ProjectDetailResponse: {
       /** Format: uuid */

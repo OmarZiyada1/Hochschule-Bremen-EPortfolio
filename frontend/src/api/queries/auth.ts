@@ -3,6 +3,7 @@ import { apiPaths } from "@/api/endpoints"
 import type {
   ForgotPasswordRequest,
   PasswordChangeRequest,
+  ProfileUpdateRequest,
   RegisterRequest,
   ResendVerificationRequest,
   ResetPasswordRequest,
@@ -80,4 +81,24 @@ export function requestPasswordReset(
  */
 export function resetPassword(body: ResetPasswordRequest): Promise<void> {
   return api.post<void>(apiPaths.auth.resetPassword, body)
+}
+
+/**
+ * PUT /auth/me (§6.1, KAN-44, KAN-60): aendert Vorname, Nachname und, wenn
+ * die Adresse abweicht, die private E-Mail. Der Wechsel verlangt zusaetzlich
+ * currentPassword und landet zunaechst nur in pendingEmail; gueltig wird die
+ * neue Adresse erst mit dem eingeloesten Code (§3.1).
+ *
+ * Der Endpoint uebernimmt alles oder nichts (§6.1, praezisiert mit v40):
+ * scheitert der Wechsel an 401 LOGIN_FAILED, 409 RESOURCE_IN_USE oder 429,
+ * bleibt auch die Namensaenderung aus. Das Formular meldet in diesen Faellen
+ * deshalb keinen Teilerfolg.
+ *
+ * Ueberzaehlige Felder im Body bleiben wirkungslos: Rolle, Status und
+ * hsbEmail kennt das Record gar nicht (§6.1, v36/v39).
+ */
+export function updateOwnProfile(
+  body: ProfileUpdateRequest
+): Promise<UserResponse> {
+  return api.put<UserResponse>(apiPaths.auth.me, body)
 }

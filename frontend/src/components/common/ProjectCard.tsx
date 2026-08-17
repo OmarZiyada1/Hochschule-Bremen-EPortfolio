@@ -2,6 +2,7 @@ import { ImageIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
 
+import { resolveApiUrl } from "@/api/client"
 import type { ProjectCardResponse } from "@/api/types"
 import { ClapIcon } from "@/components/common/ClapIcon"
 import { StatusBadge } from "@/components/common/StatusBadge"
@@ -56,6 +57,13 @@ export function ProjectCard({
         firstName: project.author.firstName ?? "",
         lastName: project.author.lastName ?? "",
       }
+    : null
+  /* Das Profilbild kommt seit Contract v49 an der Kachel mit (§6.1); es
+     haengt am Portfolio und nicht am Projekt, der Lesedienst holt es fuer
+     die ganze Seite in einer Abfrage. Ohne hinterlegtes Bild bleibt es bei
+     den Initialen. */
+  const authorAvatarUrl = project.author?.avatarUrl
+    ? resolveApiUrl(project.author.avatarUrl)
     : null
   const href = project.id ? `/projects/${project.id}` : undefined
 
@@ -143,7 +151,9 @@ export function ProjectCard({
       <CardContent className="flex flex-col gap-2.5 px-5 py-4">
         {author && (
           <p className="flex items-center gap-2">
-            <UserAvatar person={author} className="type-label-xs" />
+            {/* 24px nach Template (Figma-Knoten "Avatar" der ProjectCard);
+                die Groesse der Initialen bringt die Stufe mit. */}
+            <UserAvatar person={author} imageUrl={authorAvatarUrl} size="sm" />
             <span className="type-body-sm font-medium text-muted-foreground">
               {fullNameOf(author)}
             </span>

@@ -2,8 +2,10 @@ import { useTranslation } from "react-i18next"
 import { Outlet, useLocation, useNavigate } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
+import { resolveApiUrl } from "@/api/client"
 import { Footer } from "@/components/layout/Footer"
 import { NavBar } from "@/components/layout/NavBar"
+import { useOwnPortfolio } from "@/features/portfolio/hooks/usePortfolio"
 import { navLinksFor, userMenuFor } from "@/routes/navLinks"
 
 /**
@@ -17,9 +19,20 @@ import { navLinksFor, userMenuFor } from "@/routes/navLinks"
  */
 export function AppLayout() {
   const { t } = useTranslation()
-  const { user, role, logout } = useAuth()
+  const { user, role, isAuthenticated, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+
+  /*
+   * Das Profilbild der Kopfleiste kommt aus GET /api/portfolio/me: der
+   * Avatar haengt am Portfolio und nicht am User, UserResponse fuehrt ihn
+   * deshalb nicht (§3.2). Nur fuer Angemeldete, sonst waere der Aufruf ein
+   * sicherer 401. Die Abfrage teilt sich ihren Cache-Eintrag mit den
+   * Portfolio-Seiten, laeuft also einmal je Sitzung und nicht je Seite.
+   * Schlaegt sie fehl, bleibt es bei den Initialen; ein fehlendes Bild ist
+   * kein Fehlerfall der Kopfleiste.
+   */
+  const { data: portfolio } = useOwnPortfolio(isAuthenticated)
 
   return (
     <div className="relative flex min-h-svh flex-col">
@@ -38,6 +51,11 @@ export function AppLayout() {
                    statt "undefined". */
                 firstName: user.firstName ?? "",
                 lastName: user.lastName ?? "",
+                /* Die Referenz /api/files/{id} wird hier zur abrufbaren
+                   Adresse, wie in der Profilkarte (§3.15.1). */
+                avatarUrl: portfolio?.avatarUrl
+                  ? resolveApiUrl(portfolio.avatarUrl)
+                  : undefined,
               }
             : null
         }

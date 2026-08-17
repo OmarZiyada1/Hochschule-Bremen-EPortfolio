@@ -926,10 +926,15 @@ function DomainDemos() {
         <Top10CardDemos />
       </DemoBlock>
 
+      {/* Die vier Stufen aus dem Designsystem, jede mit ihrer Fundstelle:
+          24px Autorenzeile der ProjectCard, 28px Kopfleiste, 40px
+          Nutzertabelle, 96px Profilkarte. Nebeneinander faellt hier auf,
+          wenn eine Stufe ins Leere greift. */}
       <DemoBlock name="UserAvatar">
         <UserAvatar person={demoPerson} size="sm" labelled />
-        <UserAvatar person={demoPerson} labelled />
+        <UserAvatar person={demoPerson} size="md" labelled />
         <UserAvatar person={demoPerson} size="lg" labelled />
+        <UserAvatar person={demoPerson} size="xl" labelled />
       </DemoBlock>
 
       <DemoBlock name="LanguageToggle">

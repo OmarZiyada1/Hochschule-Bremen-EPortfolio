@@ -7,6 +7,8 @@ import de.hsbremen.eportfolio.common.enums.UserStatus;
 import de.hsbremen.eportfolio.common.error.ErrorCodes;
 import de.hsbremen.eportfolio.common.error.ResourceNotFoundException;
 import de.hsbremen.eportfolio.common.error.ValidationException;
+import de.hsbremen.eportfolio.portfolio.PortfolioAvatar;
+import de.hsbremen.eportfolio.portfolio.PortfolioRepository;
 import de.hsbremen.eportfolio.project.dto.BlockResponse;
 import de.hsbremen.eportfolio.project.dto.MemberResponse;
 import de.hsbremen.eportfolio.project.dto.PersonResponse;
@@ -117,6 +119,13 @@ public class ProjectReadService {
 
 	private final ReactionRepository reactionRepository;
 
+	/**
+	 * Nur fuer die Profilbilder der Autor:innen: die Kachel zeigt sie, das
+	 * Projekt kennt sie nicht (§3.2). Gelesen wird ausschliesslich, und zwar
+	 * gesammelt je Seite.
+	 */
+	private final PortfolioRepository portfolioRepository;
+
 	private final ProjectPermissionService permissions;
 
 	public ProjectReadService(ProjectRepository projectRepository,
@@ -124,12 +133,14 @@ public class ProjectReadService {
 			BlockRepository blockRepository,
 			ProjectStatusHistoryRepository statusHistoryRepository,
 			ReactionRepository reactionRepository,
+			PortfolioRepository portfolioRepository,
 			ProjectPermissionService permissions) {
 		this.projectRepository = projectRepository;
 		this.projectMemberRepository = projectMemberRepository;
 		this.blockRepository = blockRepository;
 		this.statusHistoryRepository = statusHistoryRepository;
 		this.reactionRepository = reactionRepository;
+		this.portfolioRepository = portfolioRepository;
 		this.permissions = permissions;
 	}
 
@@ -326,12 +337,16 @@ public class ProjectReadService {
 	 */
 	public List<ProjectCardResponse> cards(List<Project> projects) {
 		Map<UUID, Long> reactions = reactionsPerProject(projects);
+		Map<UUID, String> avatars = avatarsPerAuthor(projects);
 
 		return projects.stream()
 				.map(project -> ProjectCardResponse.from(
 						project,
 						sortedTags(project),
-						reactions.getOrDefault(project.getId(), 0L)))
+						reactions.getOrDefault(project.getId(), 0L),
+						project.getAuthor() == null
+								? null
+								: avatars.get(project.getAuthor().getId())))
 				.toList();
 	}
 
@@ -344,6 +359,31 @@ public class ProjectReadService {
 		}
 		return reactionRepository.countPerProject(ids).stream()
 				.collect(Collectors.toMap(ReactionCount::projectId, ReactionCount::count));
+	}
+
+	/**
+	 * Die Profilbilder aller Autor:innen einer Seite in einer Abfrage.
+	 *
+	 * <p>Das Bild haengt am Portfolio und nicht am Projekt (§3.2); es je
+	 * Kachel nachzuladen waere genau das N+1-Verhalten, das diese Klasse fuer
+	 * Tags und Reaktionen bereits vermeidet. Eine Seite kostet damit eine
+	 * Abfrage mehr, unabhaengig von ihrer Groesse.
+	 *
+	 * <p>Die IDs laufen ueber ein Set: eine Person kann mehrere Projekte auf
+	 * derselben Seite haben, und unter "My Portfolio" ist das der Normalfall.
+	 */
+	private Map<UUID, String> avatarsPerAuthor(List<Project> projects) {
+		Set<UUID> authorIds = projects.stream()
+				.map(Project::getAuthor)
+				.filter(Objects::nonNull)
+				.map(User::getId)
+				.collect(Collectors.toSet());
+
+		if (authorIds.isEmpty()) {
+			return Map.of();
+		}
+		return portfolioRepository.findAvatarsByUserIds(authorIds).stream()
+				.collect(Collectors.toMap(PortfolioAvatar::userId, PortfolioAvatar::avatarUrl));
 	}
 
 	// ------------------------------------------------------------------

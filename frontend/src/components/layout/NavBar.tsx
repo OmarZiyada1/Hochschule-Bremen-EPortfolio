@@ -279,8 +279,9 @@ export function NavBar({
                 >
                   {/* Ohne bg-card: die Wurzel des Avatars ist immer
                       vollstaendig von Bild oder Initialenflaeche verdeckt,
-                      eine Hintergrundfarbe dort ist nie zu sehen. */}
-                  <UserAvatar person={user} imageUrl={user.avatarUrl} />
+                      eine Hintergrundfarbe dort ist nie zu sehen. 28px nach
+                      Template (Figma-Knoten der NavBar). */}
+                  <UserAvatar person={user} imageUrl={user.avatarUrl} size="md" />
                   <span>{fullNameOf(user)}</span>
                   <ChevronDownIcon aria-hidden="true" />
                 </DropdownMenuTrigger>
@@ -362,7 +363,8 @@ export function NavBar({
                   Ausloeser einer zweiten Ebene. */}
               {user && (
                 <div className="flex items-center gap-2.5 px-4">
-                  <UserAvatar person={user} imageUrl={user.avatarUrl} />
+                  {/* Dieselbe Stufe wie in der Leiste darueber. */}
+                  <UserAvatar person={user} imageUrl={user.avatarUrl} size="md" />
                   <span className="flex flex-col">
                     <span className="type-body-sm font-medium">
                       {fullNameOf(user)}

@@ -13,10 +13,18 @@ export function AppUnderTest() {
   return useRoutes(routes)
 }
 
-/** Macht den aktuellen Pfad abfragbar, etwa fuer die /register-Umleitung. */
+/**
+ * Macht Pfad und Suchteil abfragbar, etwa fuer die /register-Umleitung und
+ * fuer Filter, die laut Ticket in der URL stehen muessen (KAN-34).
+ */
 export function LocationProbe() {
   const location = useLocation()
-  return <span data-testid="pathname">{location.pathname}</span>
+  return (
+    <>
+      <span data-testid="pathname">{location.pathname}</span>
+      <span data-testid="search">{location.search}</span>
+    </>
+  )
 }
 
 /**

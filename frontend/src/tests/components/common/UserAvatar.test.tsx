@@ -45,6 +45,36 @@ describe("UserAvatar", () => {
     )
   })
 
+  /*
+   * Der Befund aus KAN-34: die Primitive fuehrt ihre Stufen als
+   * data-[size=…]:size-…, und eine schlichte size-Klasse von aussen kommt
+   * dagegen nicht an. Der Avatar der Profilkarte stand deshalb auf 40px
+   * statt 96px, ohne dass Typecheck, Lint oder ein Test etwas sagten.
+   * Geprueft wird deshalb, dass genau eine Massklasse uebrig bleibt und
+   * zwar die der Stufe.
+   */
+  it.each([
+    ["sm", "size-6"],
+    ["md", "size-7"],
+    ["lg", "size-10"],
+    ["xl", "size-24"],
+  ] as const)("setzt fuer %s die Stufe %s durch", (size, expected) => {
+    const { container } = renderWithProviders(
+      <UserAvatar
+        person={{ firstName: "Mira", lastName: "Beispiel" }}
+        size={size}
+      />
+    )
+
+    const root = container.querySelector("[data-slot=avatar]")
+    expect(root).toHaveClass(expected)
+    /* Die Vorgabe der Primitive darf nicht daneben stehen bleiben: sonst
+       entscheidet die Reihenfolge im erzeugten CSS. */
+    expect(root).not.toHaveClass("size-8")
+    /* Und keine Stufe darf ueber ein data-Attribut zuschlagen. */
+    expect(root).toHaveAttribute("data-size", "default")
+  })
+
   it("nutzt die Markenflaeche und den Kartenradius statt der Kreisform", () => {
     /* Beide Eingriffe sind im Ticket entschieden (Foundation 7) und stehen
        nur hier, damit sie nicht an jeder Aufrufstelle erneut auftauchen. */

@@ -181,6 +181,33 @@ class PortfolioIntegrationTest {
 		}
 
 		@Test
+		@DisplayName("Die Kacheln tragen das Profilbild der Autor:in (§6.1, KAN-34)")
+		void cardsCarryAuthorAvatar() throws Exception {
+			/*
+			 * Das Bild haengt am Portfolio und nicht am Projekt (§3.2); die
+			 * Kachel bekommt es ueber die Sammelabfrage des Lesedienstes.
+			 * Ohne dieses Feld zeigte die Kachel neben dem Namen dauerhaft
+			 * die Initialen, obwohl ein Bild hinterlegt ist.
+			 */
+			mockMvc.perform(get(path(owner)))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.projects[0].author.avatarUrl")
+							.value("https://example.org/avatar.png"))
+					.andExpect(jsonPath("$.projects[1].author.avatarUrl")
+							.value("https://example.org/avatar.png"));
+		}
+
+		@Test
+		@DisplayName("Ohne hinterlegtes Bild bleibt das Feld der Kachel leer")
+		void cardsOmitAvatarWithoutPortfolioRow() throws Exception {
+			/* withoutRow hat kein Portfolio; die Kachel darf deshalb kein
+			   avatarUrl fuehren statt eines erfundenen Werts. */
+			mockMvc.perform(get(path(withoutRow)))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.projects[*].author.avatarUrl").doesNotExist());
+		}
+
+		@Test
 		@DisplayName("Eine blosse Projektmitgliedschaft zaehlt nicht zum eigenen Profil "
 				+ "(Entscheidung aus der Klaerungsrunde zu KAN-22)")
 		void ignoresMembership() throws Exception {

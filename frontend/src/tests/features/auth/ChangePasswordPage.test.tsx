@@ -7,7 +7,11 @@ import { getAuthState, setPasswordChangeRequired } from "@/api/auth/authStore"
 import { rememberRequestedRoute } from "@/api/auth/redirect"
 import ChangePasswordPage from "@/features/auth/ChangePasswordPage"
 import i18n from "@/i18n"
-import { apiErrorResponse } from "@/tests/msw/handlers"
+import {
+  apiErrorResponse,
+  emptyProjectsHandler,
+  ownPortfolioHandler,
+} from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
 import { AppUnderTest, LocationProbe, signInAs } from "@/tests/routes/helpers"
@@ -95,7 +99,11 @@ describe("ChangePasswordPage", () => {
     server.use(
       http.put("*/api/auth/password", () =>
         HttpResponse.json(null, { status: 200 })
-      )
+      ),
+      /* Ziel der Rueckkehr ist seit KAN-34 die echte Seite "My Portfolio";
+         sie zieht Profil und eigene Projekte, beides hier leer. */
+      ownPortfolioHandler(),
+      emptyProjectsHandler()
     )
     signInAs("STUDENT")
     setPasswordChangeRequired(true)
@@ -113,7 +121,7 @@ describe("ChangePasswordPage", () => {
     await fillAndSubmit("initialpasswort", "neueszwoelflanges")
 
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Mein Portfolio" })
+      await screen.findByRole("heading", { level: 1, name: "My Portfolio" })
     ).toBeInTheDocument()
     expect(screen.getByTestId("pathname")).toHaveTextContent("/my-portfolio")
     expect(getAuthState().session?.passwordChangeRequired).toBe(false)

@@ -66,6 +66,17 @@ function buildUrl(path: string, query?: QueryParams): string {
   return new URL(url, window.location.origin).toString()
 }
 
+/**
+ * Macht eine vom Server gelieferte Referenz abrufbar, etwa das
+ * /api/files/{id} eines Avatars (§3.15.1). Solche Adressen landen im src
+ * eines img und laufen deshalb nie durch request(); ohne diese Aufloesung
+ * zeigte das Bild ins Leere, sobald die API auf einem eigenen Ursprung
+ * liegt. Die Basis-URL steht damit weiterhin an genau einer Stelle.
+ */
+export function resolveApiUrl(path: string): string {
+  return buildUrl(path)
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -76,7 +87,14 @@ async function request<T>(
   if (token !== null) {
     headers.set("Authorization", `Bearer ${token}`)
   }
-  if (options.body !== undefined) {
+  /*
+   * FormData traegt seinen Content-Type selbst, samt der Grenzmarke, die
+   * nur fetch kennt (multipart/form-data; boundary=…). Wird der Header hier
+   * gesetzt, fehlt dem Server die Grenzmarke und der Upload scheitert mit
+   * 400, ohne dass etwas am Body falsch waere.
+   */
+  const isMultipart = options.body instanceof FormData
+  if (options.body !== undefined && !isMultipart) {
     headers.set("Content-Type", "application/json")
   }
 
@@ -86,7 +104,11 @@ async function request<T>(
       method,
       headers,
       body:
-        options.body === undefined ? undefined : JSON.stringify(options.body),
+        options.body === undefined
+          ? undefined
+          : isMultipart
+            ? (options.body as FormData)
+            : JSON.stringify(options.body),
       signal: options.signal,
     })
   } catch (error) {

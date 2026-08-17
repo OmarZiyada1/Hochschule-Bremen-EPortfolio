@@ -9,6 +9,23 @@ const faculty = { name: "Fakultät 4", abbreviation: "FK4" }
 const author = { firstName: "Mira", lastName: "Beispiel" }
 
 describe("ProjectCard", () => {
+  /*
+   * Das Autorenbild kommt seit Contract v49 an der Kachel mit (§6.1); vorher
+   * fuehrte PersonResponse nur Name und ID. Dass ein gesetztes avatarUrl als
+   * Bild erscheint, laesst sich hier nicht pruefen: Base UI haengt das Bild
+   * erst nach dem Laden ein, und in jsdom laedt keines. Belegt ist die
+   * Auslieferung des Feldes im Backend (PortfolioIntegrationTest), die
+   * Weitergabe der Stufe in UserAvatar.test.tsx. Geprueft wird hier der
+   * Rueckfall, den die Oberflaeche selbst verantwortet.
+   */
+  it("kommt ohne hinterlegtes Bild mit den Initialen aus", () => {
+    renderWithProviders(
+      <ProjectCard project={{ id: "1", title: "Campus-Garten", author }} />
+    )
+
+    expect(screen.getByText("MB")).toBeInTheDocument()
+  })
+
   it("zeigt Cover, Projektart, Fakultaet, Autor, Teaser, Semester und Reaktionen", () => {
     renderWithProviders(
       <ProjectCard

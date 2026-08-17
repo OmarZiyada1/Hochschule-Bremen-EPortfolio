@@ -9,8 +9,11 @@ import ComponentGalleryPage from "@/features/token-gallery/ComponentGalleryPage"
 import ForgotPasswordPage from "@/features/auth/ForgotPasswordPage"
 import HomePage from "@/features/home/HomePage"
 import LoginPage from "@/features/auth/LoginPage"
+import MyPortfolioPage from "@/features/portfolio/MyPortfolioPage"
 import NotFoundPage from "@/features/not-found/NotFoundPage"
+import ProfileEditPage from "@/features/portfolio/ProfileEditPage"
 import ProjectListPage from "@/features/projects/ProjectListPage"
+import PublicPortfolioPage from "@/features/portfolio/PublicPortfolioPage"
 import RegisterDetailsPage from "@/features/auth/RegisterDetailsPage"
 import RegisterDonePage from "@/features/auth/RegisterDonePage"
 import RegisterVerifyEmailPage from "@/features/auth/RegisterVerifyEmailPage"
@@ -101,35 +104,16 @@ export const routes: RouteObject[] = [
         ),
       },
       {
+        /* Oeffentlich, weil §5 veroeffentlichte Inhalte fuer alle lesbar
+           macht (KAN-34). */
         path: "/portfolios/:userId",
-        element: (
-          <PlaceholderPage
-            titleKey="placeholder.title.portfolio"
-            ticket="KAN-34"
-          />
-        ),
+        element: <PublicPortfolioPage />,
       },
       {
         element: <RequireAuth />,
         children: [
-          {
-            path: "/my-portfolio",
-            element: (
-              <PlaceholderPage
-                titleKey="placeholder.title.myPortfolio"
-                ticket="KAN-34"
-              />
-            ),
-          },
-          {
-            path: "/my-portfolio/profile",
-            element: (
-              <PlaceholderPage
-                titleKey="placeholder.title.profile"
-                ticket="KAN-34"
-              />
-            ),
-          },
+          { path: "/my-portfolio", element: <MyPortfolioPage /> },
+          { path: "/my-portfolio/profile", element: <ProfileEditPage /> },
         ],
       },
       {

@@ -88,12 +88,19 @@ public record ProjectCardResponse(
 	 * ziehen, entstuenden pro Kachel zwei zusaetzliche Abfragen und damit genau
 	 * das N+1-Problem, das der Ticket-Hinweis meint.
 	 *
-	 * @param project       Projekt mit bereits geladenen Bezuegen (Autor,
-	 *                      Kategorie, Fakultaet, Studiengang)
-	 * @param tags          Schlagwoerter dieses Projekts, sortiert
-	 * @param reactionCount Zahl der Reaktionen
+	 * @param project           Projekt mit bereits geladenen Bezuegen (Autor,
+	 *                          Kategorie, Fakultaet, Studiengang)
+	 * @param tags              Schlagwoerter dieses Projekts, sortiert
+	 * @param reactionCount     Zahl der Reaktionen
+	 * @param authorAvatarUrl   Profilbild der Autor:in, {@code null} wenn keines
+	 *                          hinterlegt ist. Kommt wie Tags und Reaktionen von
+	 *                          aussen: es haengt am Portfolio und nicht am
+	 *                          Projekt (§3.2), und der Lesedienst holt es fuer
+	 *                          die ganze Seite in einer Abfrage
 	 */
-	public static ProjectCardResponse from(Project project, List<String> tags, long reactionCount) {
+	public static ProjectCardResponse from(Project project, List<String> tags, long reactionCount,
+			String authorAvatarUrl) {
+
 		return new ProjectCardResponse(
 				project.getId(),
 				project.getTitle(),
@@ -106,7 +113,7 @@ public record ProjectCardResponse(
 				ReferenceResponse.from(project.getCategory()),
 				ReferenceResponse.from(project.getFaculty()),
 				ReferenceResponse.from(project.getStudyProgram()),
-				PersonResponse.from(project.getAuthor()),
+				PersonResponse.from(project.getAuthor(), authorAvatarUrl),
 				tags,
 				reactionCount,
 				project.getPublishedAt());
