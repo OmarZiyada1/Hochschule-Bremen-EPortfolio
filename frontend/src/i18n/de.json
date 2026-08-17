@@ -131,8 +131,6 @@
       "firstName": "Vorname",
       "lastName": "Nachname",
       "hsbEmail": "HSB-E-Mail",
-      "hsbEmailHint": "Die Art der Adresse entscheidet über die Rolle: Eine studentische Adresse ergibt ein Studierendenkonto, eine Mitarbeitendenadresse ein Redaktionskonto.",
-      "tutorHint": "Tutor:innen mit studentischer Adresse registrieren sich normal und werden anschließend von der Administration hochgestuft.",
       "email": "Private E-Mail (Login)",
       "password": "Passwort",
       "passwordHint": "Mindestens 12 Zeichen.",

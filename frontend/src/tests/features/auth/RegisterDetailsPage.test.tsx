@@ -52,7 +52,7 @@ describe("RegisterDetailsPage", () => {
     return user
   }
 
-  it("folgt dem Template: Ueberschrift, Fortschritt, Hilfetexte und der Weg zurueck", () => {
+  it("folgt dem Template: Ueberschrift, Fortschritt und der Weg zurueck, ohne Rollen-Hilfetext", () => {
     renderWithProviders(<RegisterDetailsPage />)
 
     expect(
@@ -70,13 +70,14 @@ describe("RegisterDetailsPage", () => {
     const progress = screen.getByText("Schritt 1 von 3")
     expect(progress.closest("[aria-hidden]")).toBeNull()
 
-    /* Rollenableitung und Tutor-Fall am HSB-Feld (Ticket-DoD). */
+    /* Der Hilfetext zur Rollenableitung samt Tutor-Fall ist auf Wunsch vom
+       17.08.2026 entfallen (Ticketbeschreibung nachgezogen). */
     expect(
-      screen.getByText(/Die Art der Adresse entscheidet über die Rolle/)
-    ).toBeInTheDocument()
+      screen.queryByText(/Die Art der Adresse entscheidet über die Rolle/)
+    ).not.toBeInTheDocument()
     expect(
-      screen.getByText(/Tutor:innen mit studentischer Adresse/)
-    ).toBeInTheDocument()
+      screen.queryByText(/Tutor:innen mit studentischer Adresse/)
+    ).not.toBeInTheDocument()
 
     /* Kein Link "Rolle ändern" mehr; an seiner Stelle der Weg zum Login. */
     expect(screen.queryByText(/Rolle ändern/)).not.toBeInTheDocument()

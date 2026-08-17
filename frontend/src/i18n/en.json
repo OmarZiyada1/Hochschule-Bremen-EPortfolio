@@ -131,8 +131,6 @@
       "firstName": "First name",
       "lastName": "Last name",
       "hsbEmail": "HSB email",
-      "hsbEmailHint": "The type of address determines your role: a student address creates a student account, a staff address an editorial account.",
-      "tutorHint": "Tutors with a student address register normally and are upgraded by the administration afterwards.",
       "email": "Private email (login)",
       "password": "Password",
       "passwordHint": "At least 12 characters.",

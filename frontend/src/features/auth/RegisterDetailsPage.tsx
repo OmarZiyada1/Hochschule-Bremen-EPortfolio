@@ -53,9 +53,8 @@ type FieldName = keyof RegisterDetailsFormValues
  * Adresse. Fortschrittspunkte 1 von 3.
  *
  * Eine Rollenauswahl gibt es nicht: die Rolle folgt allein der Domain der
- * hsbEmail (§3.1.1, Contract v41). Der Hilfetext am Feld erklaert das, und
- * der Tutor-Hinweis nimmt genau der Gruppe die Fehldeutung, die
- * redaktionell arbeitet und trotzdem eine studentische Adresse hat.
+ * hsbEmail (§3.1.1, Contract v41). Ein Hilfetext dazu am Feld ist auf
+ * Wunsch vom 17.08.2026 entfallen (Ticketbeschreibung nachgezogen).
  *
  * Der Untertitel ist neutral statt "Registrierung als Studierende/r" aus
  * dem Template: seit dem Wegfall der Rollenauswahl registrieren sich hier
@@ -216,6 +215,11 @@ export default function RegisterDetailsPage() {
                 <FieldLabel htmlFor={field.name} className={labelClass}>
                   {t("register.details.hsbEmail")}
                 </FieldLabel>
+                {/* Bewusst ohne Hilfetext zur Rollenableitung und zum
+                    Tutor-Fall: auf Wunsch vom 17.08.2026 entfernt, die
+                    Ticketbeschreibung und die Template-Seite sind
+                    nachgezogen. Die Domainregel selbst prueft weiterhin
+                    der Server (§3.1.1), sein 400 erscheint am Feld. */}
                 <Input
                   {...field}
                   id={field.name}
@@ -223,19 +227,9 @@ export default function RegisterDetailsPage() {
                   autoComplete="off"
                   aria-invalid={fieldState.invalid}
                   aria-describedby={
-                    fieldState.invalid
-                      ? "register-hsbEmail-hint register-hsbEmail-error"
-                      : "register-hsbEmail-hint"
+                    fieldState.invalid ? "register-hsbEmail-error" : undefined
                   }
                 />
-                {/* Rollenableitung und Tutor-Fall (Ticket-DoD): ohne den
-                    ersten Satz wirkt die vergebene Rolle willkuerlich, ohne
-                    den zweiten erlebt genau die Gruppe die Domainregel als
-                    Fehler, die richtig arbeitet (§3.1.1). */}
-                <FieldDescription id="register-hsbEmail-hint">
-                  {t("register.details.hsbEmailHint")}{" "}
-                  {t("register.details.tutorHint")}
-                </FieldDescription>
                 {fieldState.invalid && (
                   <FieldError
                     id="register-hsbEmail-error"
