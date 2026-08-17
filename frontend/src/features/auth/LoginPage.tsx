@@ -17,6 +17,7 @@ import {
   isApiError,
   type ErrorCode,
 } from "@/api/errors"
+import { PasswordInput } from "@/components/common/PasswordInput"
 import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -208,10 +209,9 @@ export default function LoginPage() {
                     >
                       {t("login.password")}
                     </FieldLabel>
-                    <Input
+                    <PasswordInput
                       {...field}
                       id={field.name}
-                      type="password"
                       autoComplete="current-password"
                       aria-invalid={fieldState.invalid}
                       aria-describedby={

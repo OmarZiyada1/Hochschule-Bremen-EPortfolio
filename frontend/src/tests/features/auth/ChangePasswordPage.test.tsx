@@ -40,6 +40,15 @@ describe("ChangePasswordPage", () => {
     )
   }
 
+  it("fuehrt an allen drei Passwortfeldern einen Sichtbarkeitsschalter (KAN-67)", () => {
+    signInAs("STUDENT")
+    renderWithProviders(<ChangePasswordPage />)
+
+    expect(
+      screen.getAllByRole("button", { name: "Passwort anzeigen" })
+    ).toHaveLength(3)
+  })
+
   it("fuehrt ohne Anmeldung sichtbar zum Login", () => {
     renderWithProviders(
       <>

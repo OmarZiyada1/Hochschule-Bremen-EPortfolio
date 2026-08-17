@@ -87,6 +87,14 @@ describe("RegisterDetailsPage", () => {
     )
   })
 
+  it("fuehrt an Passwort und Bestaetigung je einen Sichtbarkeitsschalter (KAN-67)", () => {
+    renderWithProviders(<RegisterDetailsPage />)
+
+    expect(
+      screen.getAllByRole("button", { name: "Passwort anzeigen" })
+    ).toHaveLength(2)
+  })
+
   it("beanstandet ein Passwort unter 12 Zeichen vor dem Absenden", async () => {
     /* Kein MSW-Handler: erreichte ein Request den Server, schluege der
        Test ueber onUnhandledRequest "error" fehl (DoD: die Regel prueft

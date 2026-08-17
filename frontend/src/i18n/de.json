@@ -36,6 +36,10 @@
     "search": {
       "label": "Suche"
     },
+    "password": {
+      "show": "Passwort anzeigen",
+      "hide": "Passwort verbergen"
+    },
     "filter": {
       "all": "Alle"
     },
