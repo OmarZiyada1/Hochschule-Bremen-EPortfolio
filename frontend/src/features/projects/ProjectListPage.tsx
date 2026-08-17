@@ -229,18 +229,19 @@ export default function ProjectListPage() {
          * ist lang, und ein Filter, den man erst zurueckscrollen muss, wird
          * nicht benutzt. Moeglich, weil die Gitterzeile items-start fuehrt;
          * ohne das zoege der Rasterplatz die Leiste auf volle Hoehe und
-         * sticky haette nichts, woran es kleben koennte.
-         *
-         * Mit sechs Filtergruppen wird die Leiste hoeher als das Fenster,
-         * sobald mehrere aufgeklappt sind. Deshalb bekommt sie eine
-         * Hoehengrenze und scrollt in sich; ohne die waeren die unteren
-         * Gruppen im geklebten Zustand nicht mehr erreichbar. Erst ab lg:
+         * sticky haette nichts, woran es kleben koennte. Erst ab lg:
          * darunter steht sie ueber der Liste und scrollt mit.
+         *
+         * Bewusst ohne eigene Bildlaufleiste: die Leiste bleibt so hoch,
+         * wie ihre Gruppen sie machen. Ist sie hoeher als das Fenster,
+         * bleibt ihr unteres Ende im geklebten Zustand ausserhalb des
+         * sichtbaren Bereichs; das ist der Preis dafuer, dass sie sonst
+         * nirgends einen zweiten Scrollbalken erzeugt.
          */}
         <FilterSidebar
           selection={selection}
           onSelectionChange={applyFilterSelection}
-          className="lg:sticky lg:top-4 lg:max-h-[calc(100svh-2rem)] lg:overflow-y-auto"
+          className="lg:sticky lg:top-4"
         />
 
         <div className="flex flex-col gap-4">
