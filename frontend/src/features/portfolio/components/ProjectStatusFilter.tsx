@@ -27,12 +27,16 @@ import {
 export function ProjectStatusFilter({
   value,
   onValueChange,
-  labelledBy,
+  label,
 }: {
   value: StatusFilterValue
   onValueChange: (value: StatusFilterValue) => void
-  /** ID der Ueberschrift "Filtern"; sie benennt die Gruppe. */
-  labelledBy: string
+  /**
+   * Zugaenglicher Name der Gruppe. Sichtbar steht ueber dem Schalter
+   * bewusst keine Ueberschrift mehr; ohne diesen Namen waere die Gruppe
+   * fuer einen Screenreader eine Reihe unbeschrifteter Knoepfe.
+   */
+  label: string
 }) {
   const { t } = useTranslation()
 
@@ -46,7 +50,7 @@ export function ProjectStatusFilter({
 
   return (
     <ToggleGroup
-      aria-labelledby={labelledBy}
+      aria-label={label}
       spacing={0}
       value={[value]}
       onValueChange={(next) => {

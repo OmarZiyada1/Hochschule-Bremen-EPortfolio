@@ -1,4 +1,4 @@
-{
+﻿{
   "app": {
     "name": "E-Portfolio Hochschule Bremen",
     "institution": "Hochschule Bremen",
@@ -484,7 +484,7 @@
       "label": "Student e-portfolio",
       "title": "My Portfolio",
       "newProject": "New project",
-      "filterHeading": "Filter",
+      "filterLabel": "Filter by status",
       "editProfile": "Edit profile",
       "noProjectsForRole": "This account does not create projects of its own. You can maintain your profile here.",
       "empty": {

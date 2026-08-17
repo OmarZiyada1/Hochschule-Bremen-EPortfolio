@@ -1,5 +1,4 @@
 import { FolderOpenIcon, SearchXIcon } from "lucide-react"
-import { useId } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, useSearchParams } from "react-router-dom"
 
@@ -58,7 +57,6 @@ export default function MyPortfolioPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
-  const filterHeadingId = useId()
 
   const status = readStatusFilter(searchParams)
   /*
@@ -132,16 +130,17 @@ export default function MyPortfolioPage() {
 
           {mayOwnProjects ? (
             <>
-              <section className="flex flex-col gap-3">
-                <h2 id={filterHeadingId} className="type-h3 font-semibold">
-                  {t("portfolio.myPortfolio.filterHeading")}
-                </h2>
-                <ProjectStatusFilter
-                  value={status}
-                  onValueChange={applyStatus}
-                  labelledBy={filterHeadingId}
-                />
-              </section>
+              {/* Ohne sichtbare Ueberschrift: der Schalter beschriftet sich
+                  selbst, seine sechs Werte sagen, wonach gefiltert wird.
+                  Den zugaenglichen Namen traegt die Gruppe als aria-label,
+                  sonst waere sie eine Reihe unbeschrifteter Knoepfe. Er
+                  scrollt bewusst mit: er steht direkt ueber der Liste und
+                  ist damit dort, wo er gebraucht wird. */}
+              <ProjectStatusFilter
+                value={status}
+                onValueChange={applyStatus}
+                label={t("portfolio.myPortfolio.filterLabel")}
+              />
 
               {projects.isPending && (
                 <div className="grid gap-6 sm:grid-cols-2">
@@ -231,7 +230,11 @@ export default function MyPortfolioPage() {
           )}
         </div>
 
-        <aside>
+        {/* Bleibt beim Scrollen der Projektliste stehen. Moeglich, weil die
+            Gitterzeile items-start fuehrt: ohne das zoege der Rasterplatz
+            die Karte auf volle Hoehe und sticky haette nichts, woran es
+            kleben koennte. */}
+        <aside className="lg:sticky lg:top-4">
           {portfolio.isPending ? (
             <Skeleton className="h-96 rounded-xl" />
           ) : (

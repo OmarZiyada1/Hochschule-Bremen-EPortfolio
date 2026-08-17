@@ -141,7 +141,9 @@ export default function PublicPortfolioPage() {
             )}
           </div>
 
-          <aside>
+          {/* Bleibt beim Scrollen der Arbeiten stehen, wie unter "My
+              Portfolio"; die Gitterzeile fuehrt dafuer items-start. */}
+          <aside className="lg:sticky lg:top-4">
             <ProfileCard
               person={person}
               email={data.user?.email}

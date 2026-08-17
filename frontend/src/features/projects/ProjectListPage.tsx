@@ -224,9 +224,23 @@ export default function ProjectListPage() {
       </header>
 
       <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[16rem_1fr] lg:items-start">
+        {/*
+         * Bleibt beim Scrollen der Trefferliste oben stehen: die Bibliothek
+         * ist lang, und ein Filter, den man erst zurueckscrollen muss, wird
+         * nicht benutzt. Moeglich, weil die Gitterzeile items-start fuehrt;
+         * ohne das zoege der Rasterplatz die Leiste auf volle Hoehe und
+         * sticky haette nichts, woran es kleben koennte.
+         *
+         * Mit sechs Filtergruppen wird die Leiste hoeher als das Fenster,
+         * sobald mehrere aufgeklappt sind. Deshalb bekommt sie eine
+         * Hoehengrenze und scrollt in sich; ohne die waeren die unteren
+         * Gruppen im geklebten Zustand nicht mehr erreichbar. Erst ab lg:
+         * darunter steht sie ueber der Liste und scrollt mit.
+         */}
         <FilterSidebar
           selection={selection}
           onSelectionChange={applyFilterSelection}
+          className="lg:sticky lg:top-4 lg:max-h-[calc(100svh-2rem)] lg:overflow-y-auto"
         />
 
         <div className="flex flex-col gap-4">
