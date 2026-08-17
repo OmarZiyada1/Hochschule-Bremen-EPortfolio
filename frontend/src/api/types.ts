@@ -16,6 +16,20 @@ export type UserResponse = ApiSchemas["UserResponse"]
 export type LoginResponse = ApiSchemas["LoginResponse"]
 export type ProjectCardResponse = ApiSchemas["ProjectCardResponse"]
 
+/** Registrierung und Verifizierung nach Contract §3.1.1, §6.1 (KAN-33). */
+export type RegisterRequest = ApiSchemas["RegisterRequest"]
+export type VerifyRequest = ApiSchemas["VerifyRequest"]
+export type VerificationStatusResponse = ApiSchemas["VerificationStatusResponse"]
+export type ResendVerificationRequest = ApiSchemas["ResendVerificationRequest"]
+
+/** Passwort-Flows nach Contract §6.1, §6.7 (KAN-33). */
+export type PasswordChangeRequest = ApiSchemas["PasswordChangeRequest"]
+export type ForgotPasswordRequest = ApiSchemas["ForgotPasswordRequest"]
+export type ResetPasswordRequest = ApiSchemas["ResetPasswordRequest"]
+
+/** Zweck eines Verifizierungscodes nach Contract §2.11. */
+export type VerificationPurpose = VerifyRequest["purpose"]
+
 /** Rollen nach Contract 2.1: genau drei Werte. PUBLIC ist keine Rolle. */
 export type Role = NonNullable<UserResponse["role"]>
 

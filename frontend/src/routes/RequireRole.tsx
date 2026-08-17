@@ -1,7 +1,11 @@
-import { Navigate, Outlet } from "react-router-dom"
+import { Navigate, Outlet, useLocation } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
-import { LOGIN_PATH } from "@/api/auth/redirect"
+import {
+  CHANGE_PASSWORD_PATH,
+  LOGIN_PATH,
+  rememberRequestedRoute,
+} from "@/api/auth/redirect"
 import type { Role } from "@/api/types"
 import { AccessDeniedPage } from "@/routes/AccessDeniedPage"
 
@@ -14,14 +18,23 @@ import { AccessDeniedPage } from "@/routes/AccessDeniedPage"
  * Die erlaubten Rollen kommen als Prop, weil ein festes
  * RequireRole="STUDENT" an den Projektrouten Redakteur:innen aussperren
  * wuerde, die der Server durchlaesst (Contract 5, Fussnote 10). Ohne
- * Anmeldung geht es zum Login; mit falscher Rolle erscheint eine sichtbare
- * Meldung, keine leere Seite. Verbindlich prueft der Server (§5).
+ * Anmeldung geht es zum Login (die angefragte Route wird fuer die Rueckkehr
+ * gemerkt, Klaerungsrunde KAN-33); mit falscher Rolle erscheint eine
+ * sichtbare Meldung, keine leere Seite. Bei gesetztem
+ * passwordChangeRequired fuehrt die Route zur Passwortseite (Contract 6.7),
+ * wie in RequireAuth. Verbindlich prueft der Server (§5).
  */
 export function RequireRole({ roles }: { roles: Role[] }) {
-  const { isAuthenticated, role } = useAuth()
+  const { isAuthenticated, role, passwordChangeRequired } = useAuth()
+  const location = useLocation()
 
   if (!isAuthenticated) {
+    rememberRequestedRoute(location.pathname + location.search)
     return <Navigate to={LOGIN_PATH} replace />
+  }
+  if (passwordChangeRequired) {
+    rememberRequestedRoute(location.pathname + location.search)
+    return <Navigate to={CHANGE_PASSWORD_PATH} replace />
   }
   if (role === null || !roles.includes(role)) {
     return <AccessDeniedPage />

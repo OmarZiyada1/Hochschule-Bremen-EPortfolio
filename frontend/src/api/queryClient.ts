@@ -10,6 +10,7 @@ import {
   CHANGE_PASSWORD_PATH,
   LOGIN_PATH,
   navigateForAuth,
+  rememberRequestedRoute,
 } from "@/api/auth/redirect"
 import { isApiError } from "@/api/errors"
 
@@ -41,10 +42,22 @@ export function reactToSessionError(error: unknown): void {
     case "NOT_AUTHENTICATED":
     case "TOKEN_INVALID":
     case "TOKEN_EXPIRED":
+      /*
+       * Die aktuelle Route merken, bevor sie verlassen wird: nach der
+       * erneuten Anmeldung geht es dorthin zurueck statt zur Projektliste
+       * (Klaerungsrunde KAN-33). window.location, weil diese Reaktion
+       * ausserhalb von Komponenten laeuft und keinen Router-Hook hat.
+       */
+      rememberRequestedRoute(
+        window.location.pathname + window.location.search
+      )
       endSession(error.errorCode)
       navigateForAuth(LOGIN_PATH)
       break
     case "PASSWORD_CHANGE_REQUIRED":
+      rememberRequestedRoute(
+        window.location.pathname + window.location.search
+      )
       setPasswordChangeRequired(true)
       navigateForAuth(CHANGE_PASSWORD_PATH)
       break

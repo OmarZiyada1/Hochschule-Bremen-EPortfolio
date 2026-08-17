@@ -112,6 +112,7 @@
     "email": "Email",
     "emailHint": "Log in with your private email address, not your HSB address.",
     "password": "Password",
+    "forgotPassword": "Forgot your password?",
     "submit": "Log in",
     "pending": "Logging in …",
     "registerPrompt": "No account yet?",
@@ -121,13 +122,124 @@
     "publicHint": "External visitors can browse projects without logging in.",
     "publicLink": "Projects"
   },
+  "register": {
+    "breadcrumb": "Registration",
+    "progress": "Step {{filled}} of {{total}}",
+    "details": {
+      "title": "Personal details",
+      "subtitle": "Hochschule Bremen E-Portfolio",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "hsbEmail": "HSB email",
+      "hsbEmailHint": "The type of address determines your role: a student address creates a student account, a staff address an editorial account.",
+      "tutorHint": "Tutors with a student address register normally and are upgraded by the administration afterwards.",
+      "email": "Private email (login)",
+      "password": "Password",
+      "passwordHint": "At least 12 characters.",
+      "confirmPassword": "Confirm password",
+      "submit": "Register",
+      "pending": "Registering …",
+      "footnote": "Your private email is used to log in. The HSB email only confirms your affiliation.",
+      "loginPrompt": "Already registered?",
+      "loginLink": "Log in",
+      "addressInUse": "This email address is already registered."
+    },
+    "verify": {
+      "codeLabel": "Six-digit confirmation code",
+      "sentHint": "We sent a 6-digit code to <address>{{address}}</address>.",
+      "submit": "Confirm code",
+      "pending": "Checking …",
+      "resend": "Request a new code",
+      "resendCountdown": "Request a new code in {{seconds}}s",
+      "resendConfirmed": "A new code has been requested. Please check your inbox.",
+      "back": "Back",
+      "PRIVATE_EMAIL": {
+        "title": "Confirm your private email",
+        "subtitle": "This address will be used to log in later."
+      },
+      "HSB_EMAIL": {
+        "title": "Confirm your HSB email",
+        "subtitle": "This confirms your affiliation with Hochschule Bremen."
+      }
+    },
+    "done": {
+      "title": "Account activated",
+      "subtitle": "Your private email and your HSB email have been verified.",
+      "hint": "You can now log in with your private email address.",
+      "emailLabel": "Private email",
+      "hsbEmailLabel": "HSB email",
+      "statusLabel": "Status",
+      "toLogin": "Go to login"
+    }
+  },
+  "changePassword": {
+    "breadcrumb": "Change password",
+    "title": "Change password",
+    "subtitle": "Hochschule Bremen E-Portfolio",
+    "requiredNotice": "Your account requires a new password. Please set one to continue.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "newPasswordHint": "At least 12 characters.",
+    "confirmPassword": "Confirm new password",
+    "submit": "Change password",
+    "pending": "Saving …",
+    "currentPasswordWrong": "The current password is incorrect.",
+    "forgotPrompt": "Don't know your current password?",
+    "forgotLink": "Forgot your password?"
+  },
+  "forgotPassword": {
+    "breadcrumb": "Forgot password",
+    "title": "Forgot password",
+    "subtitle": "Hochschule Bremen E-Portfolio",
+    "email": "Private email (login)",
+    "emailHint": "The address you use to log in.",
+    "submit": "Request code",
+    "pending": "Sending …",
+    "confirmation": "If an active account exists for this address, a 6-digit code has been sent to it.",
+    "toReset": "Enter code",
+    "backToLogin": "Back to login"
+  },
+  "resetPassword": {
+    "breadcrumb": "Reset password",
+    "title": "Reset password",
+    "subtitle": "Hochschule Bremen E-Portfolio",
+    "email": "Private email (login)",
+    "code": "Confirmation code",
+    "newPassword": "New password",
+    "newPasswordHint": "At least 12 characters.",
+    "confirmPassword": "Confirm new password",
+    "submit": "Reset password",
+    "pending": "Saving …",
+    "successTitle": "Password set",
+    "successHint": "Your password has been changed. You can now log in.",
+    "toLogin": "Go to login",
+    "backToLogin": "Back to login"
+  },
   "validation": {
+    "firstName": {
+      "required": "Please enter your first name."
+    },
+    "lastName": {
+      "required": "Please enter your last name."
+    },
     "email": {
       "required": "Please enter your email address.",
       "invalid": "Please enter a valid email address."
     },
+    "hsbEmail": {
+      "required": "Please enter your HSB email address."
+    },
     "password": {
-      "required": "Please enter your password."
+      "required": "Please enter your password.",
+      "tooShort": "The password must be at least 12 characters long.",
+      "tooLong": "The password must not exceed 72 characters."
+    },
+    "passwordConfirm": {
+      "required": "Please confirm the password.",
+      "mismatch": "The passwords do not match."
+    },
+    "code": {
+      "invalid": "Please enter the 6-digit code."
     }
   },
   "placeholder": {
@@ -136,13 +248,6 @@
     "title": {
       "projectDetail": "Project detail",
       "portfolio": "Portfolio",
-      "registerDetails": "Registration: personal details",
-      "registerVerifyEmail": "Registration: confirm your private email",
-      "registerVerifyHsbEmail": "Registration: confirm your HSB email",
-      "registerDone": "Registration: account activated",
-      "forgotPassword": "Forgot password",
-      "resetPassword": "Reset password",
-      "changePassword": "Change password",
       "projectNew": "New project",
       "projectMetadata": "Project metadata",
       "projectEditor": "Editor",
@@ -363,6 +468,11 @@
       "STUDENT": "Student",
       "EDITOR": "Editor",
       "ADMIN": "Admin"
+    },
+    "status": {
+      "REGISTRATION_PENDING": "Registration pending",
+      "ACTIVE": "Active",
+      "DEACTIVATED": "Deactivated"
     }
   },
   "top10": {

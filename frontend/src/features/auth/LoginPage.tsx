@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next"
 import { Link, useNavigate } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
+import { consumeRequestedRoute } from "@/api/auth/redirect"
 import {
   apiErrorMessageKey,
   applyValidationErrors,
@@ -17,16 +18,7 @@ import {
   type ErrorCode,
 } from "@/api/errors"
 import { Alert, AlertTitle } from "@/components/ui/alert"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import {
   Field,
   FieldDescription,
@@ -35,6 +27,8 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { AuthCardHeader } from "@/features/auth/components/AuthCardHeader"
+import { AuthPageShell } from "@/features/auth/components/AuthPageShell"
 import {
   loginFormSchema,
   type LoginFormValues,
@@ -110,13 +104,14 @@ export default function LoginPage() {
     try {
       await login(values.email, values.password)
       /*
-       * Ziel des Durchstichs ist die echte Projektliste (Klaerungsrunde
-       * KAN-8). Haengt am Konto ein Passwortzwang, faengt die zentrale
-       * 403-Reaktion aus KAN-30 den naechsten Request ab und leitet zur
-       * Passwortseite um; hier passiert dafuer bewusst nichts Eigenes
-       * (Contract 6.7).
+       * Zurueck zu der Route, die vor der Umleitung zum Login angefragt
+       * war, ersatzweise zur Projektliste (Klaerungsrunde KAN-33; bis
+       * dahin galt das Pauschalziel des Durchstichs KAN-8). Haengt am
+       * Konto ein Passwortzwang, greift auf der Zielroute der Wrapper
+       * beziehungsweise die zentrale 403-Reaktion aus KAN-30 und leitet
+       * zur Passwortseite um (Contract 6.7).
        */
-      navigate("/projects")
+      navigate(consumeRequestedRoute() ?? "/projects")
     } catch (error) {
       if (!isApiError(error)) {
         throw error
@@ -141,63 +136,13 @@ export default function LoginPage() {
   })
 
   return (
-    <>
-      {/* Brotkrumenleiste des Templates. Sie steht hier und nicht im
-          AuthLayout: bislang fuehrt allein diese Seite eine, und ein
-          generischer Mechanismus aus Routentiteln entsteht erst, wenn die
-          uebrigen Seiten ihn brauchen (Projekte, Projektdetail). */}
-      <div className="border-b bg-card">
-        <div className="mx-auto w-full max-w-6xl px-4 py-3.5">
-          <Breadcrumb className="inline-flex rounded-control border px-3 py-2">
-            <BreadcrumbList className="type-body-sm">
-              <BreadcrumbItem>
-                {/* Der Weg zurueck steht im Template in primary, die
-                    aktuelle Ebene in muted-foreground; die Registry haelt
-                    es genau umgekehrt. */}
-                <BreadcrumbLink
-                  render={<Link to="/" />}
-                  className="font-medium text-primary hover:text-primary-hover"
-                >
-                  {t("common.nav.home")}
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="text-muted-foreground">
-                  {t("login.breadcrumb")}
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-      </div>
+    /* Brotkrumenleiste und Karte kommen seit KAN-33 aus der gemeinsamen
+       Huelle der Auth-Seiten; der Titel bleibt in foreground, wie das
+       Template ihn fuehrt (anders als die Registrierungs-Frames). */
+    <AuthPageShell breadcrumbLabel={t("login.breadcrumb")}>
+      <AuthCardHeader title={t("login.title")} subtitle={t("login.subtitle")} />
 
-      <div className="flex flex-1 items-center justify-center px-4 py-16">
-        {/* 460px breit und 40px Innenabstand wie im Template; der
-            Zeilenabstand von 18px laeuft ueber gap statt ueber Abstaende an
-            den einzelnen Bloecken. */}
-        <Card className="w-full max-w-115 gap-4.5 px-10 py-10">
-          {/* Markenkachel. aria-hidden, weil die Initialen keine Auskunft
-              geben, die der Untertitel darunter nicht ausgeschrieben
-              enthaelt; vorgelesen waere "H B" nur Buchstabensalat. */}
-          <div
-            aria-hidden="true"
-            className="mx-auto flex size-14 items-center justify-center rounded-modal bg-surface-brand text-surface-brand-foreground"
-          >
-            <span className="type-avatar-lg">{t("app.initials")}</span>
-          </div>
-
-          <div className="flex flex-col items-center gap-1 text-center">
-            {/* Ohne Farbutility: das Template fuehrt den Titel hier in
-                foreground, anders als den Seitentitel der Projektbibliothek
-                (Kommentar in tokens.css). */}
-            <h1 className="type-h1">{t("login.title")}</h1>
-            <p className="type-body-sm text-muted-foreground">
-              {t("login.subtitle")}
-            </p>
-          </div>
-
-          {notice !== null && (
+      {notice !== null && (
             <Alert>
               <AlertTitle>{t(`apiError.${notice}`)}</AlertTitle>
             </Alert>
@@ -279,6 +224,15 @@ export default function LoginPage() {
                         errors={[{ message: messageOf(fieldState.error) }]}
                       />
                     )}
+                    {/* Nicht im Figma-Template, aber entschieden
+                        (Klaerungsrunde KAN-33): ohne diesen Einstieg
+                        waere /forgot-password nur per URL erreichbar. */}
+                    <Link
+                      to="/forgot-password"
+                      className="type-body-sm self-end font-semibold text-primary underline-offset-4 hover:underline focus-visible:underline"
+                    >
+                      {t("login.forgotPassword")}
+                    </Link>
                   </Field>
                 )}
               />
@@ -327,8 +281,6 @@ export default function LoginPage() {
               {t("login.publicLink")}
             </Link>
           </div>
-        </Card>
-      </div>
-    </>
+    </AuthPageShell>
   )
 }

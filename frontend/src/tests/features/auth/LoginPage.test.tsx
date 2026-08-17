@@ -56,6 +56,11 @@ describe("LoginPage", () => {
     expect(
       screen.getByRole("link", { name: "Jetzt registrieren" })
     ).toHaveAttribute("href", "/register")
+    /* Nicht im Figma-Template, aber entschieden (Klaerungsrunde KAN-33):
+       ohne diesen Einstieg waere /forgot-password nur per URL erreichbar. */
+    expect(
+      screen.getByRole("link", { name: "Passwort vergessen?" })
+    ).toHaveAttribute("href", "/forgot-password")
     /* Ohne Konto geht es weiter: die Bibliothek ist nach Contract 5 fuer
        PUBLIC lesbar, die Seite darf fuer Externe keine Sackgasse sein. */
     expect(screen.getByRole("link", { name: "Projekte" })).toHaveAttribute(
@@ -154,6 +159,45 @@ describe("LoginPage", () => {
     expect(
       await screen.findByText("Campus-Garten an der Werderstraße")
     ).toBeInTheDocument()
+  })
+
+  it("kehrt nach der Anmeldung zur urspruenglich angefragten Route zurueck", async () => {
+    /* Klaerungsrunde KAN-33: wer von einer geschuetzten Route zum Login
+       umgeleitet wurde, landet nach dem Erfolg wieder dort, nicht auf der
+       Projektliste. */
+    server.use(
+      http.post("*/api/auth/login", () =>
+        HttpResponse.json({
+          token: "test-token",
+          expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+          passwordChangeRequired: false,
+          user: {
+            id: "00000000-0000-0000-0000-000000000001",
+            email: "mira.beispiel@example.org",
+            firstName: "Mira",
+            lastName: "Beispiel",
+            role: "STUDENT",
+            status: "ACTIVE",
+          },
+        })
+      )
+    )
+    renderWithProviders(
+      <>
+        <AppUnderTest />
+        <LocationProbe />
+      </>,
+      "/my-portfolio"
+    )
+    /* RequireAuth hat zum Login umgeleitet und die Route gemerkt. */
+    expect(screen.getByTestId("pathname")).toHaveTextContent("/login")
+
+    await fillAndSubmit("mira.beispiel@example.org", "test1234")
+
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Mein Portfolio" })
+    ).toBeInTheDocument()
+    expect(screen.getByTestId("pathname")).toHaveTextContent("/my-portfolio")
   })
 
   it("zeigt 401 LOGIN_FAILED als Meldung am Formular", async () => {

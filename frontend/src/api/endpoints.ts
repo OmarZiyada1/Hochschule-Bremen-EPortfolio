@@ -13,6 +13,16 @@ export const apiPaths = {
     login: "/api/auth/login",
     logout: "/api/auth/logout",
     me: "/api/auth/me",
+    /*
+     * Registrierung, Verifizierung und die drei Passwort-Flows (§6.1,
+     * §6.7), eingetragen mit ihrem ersten Verwender KAN-33.
+     */
+    register: "/api/auth/register",
+    verify: "/api/auth/verify",
+    verifyResend: "/api/auth/verify/resend",
+    password: "/api/auth/password",
+    forgotPassword: "/api/auth/forgot-password",
+    resetPassword: "/api/auth/reset-password",
   },
   projects: {
     list: "/api/projects",
