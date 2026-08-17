@@ -248,6 +248,12 @@
     },
     "code": {
       "invalid": "Bitte geben Sie den 6-stelligen Code ein."
+    },
+    "biography": {
+      "tooLong": "Die Bio darf höchstens 5000 Zeichen lang sein."
+    },
+    "currentPassword": {
+      "requiredForEmailChange": "Bitte geben Sie Ihr aktuelles Passwort ein, um die E-Mail-Adresse zu ändern."
     }
   },
   "placeholder": {
@@ -468,6 +474,84 @@
         "title": "Diese Seite gibt es nicht mehr",
         "description": "Die Trefferliste hat weniger Seiten als die aufgerufene Adresse.",
         "action": "Zur letzten Seite"
+      }
+    }
+  },
+  "portfolio": {
+    "breadcrumb": "Portfolio",
+    "emailLabel": "Private E-Mail",
+    "myPortfolio": {
+      "label": "Studentisches E-Portfolio",
+      "title": "My Portfolio",
+      "newProject": "Neues Projekt",
+      "filterHeading": "Filtern",
+      "editProfile": "Profil bearbeiten",
+      "noProjectsForRole": "Dieses Konto legt keine eigenen Projekte an. Sie können hier Ihr Profil pflegen.",
+      "empty": {
+        "title": "Noch kein Projekt",
+        "description": "Legen Sie Ihr erstes Projekt an; es erscheint dann hier mit seinem Status."
+      },
+      "noResults": {
+        "title": "Kein Projekt in diesem Status",
+        "description": "In diesem Status liegt derzeit keines Ihrer Projekte.",
+        "action": "Alle Projekte zeigen"
+      }
+    },
+    "public": {
+      "title": "Portfolio von {{name}}",
+      "empty": {
+        "title": "Noch nichts veröffentlicht",
+        "description": "Diese Person hat bisher kein Projekt veröffentlicht."
+      },
+      "notFound": {
+        "title": "Profil nicht gefunden",
+        "description": "Unter dieser Adresse gibt es kein Profil. Vielleicht wurde das Konto entfernt.",
+        "action": "Zur Projektbibliothek"
+      }
+    },
+    "profile": {
+      "breadcrumb": "Profil bearbeiten",
+      "title": "Profil bearbeiten",
+      "back": "Zurück zum Portfolio",
+      "changeAvatar": "Foto ändern",
+      "avatarPending": "Bild wird hochgeladen …",
+      "firstName": "Vorname",
+      "lastName": "Nachname",
+      "email": "Private E-Mail",
+      "currentPassword": "Aktuelles Passwort",
+      "currentPasswordHint": "Nur beim Ändern der E-Mail-Adresse erforderlich.",
+      "hsbEmail": "HS-E-Mail · nicht bearbeitbar",
+      "hsbEmailHint": "Die HSB-Adresse lässt sich nicht ändern und wird hier nicht angezeigt.",
+      "biography": "Bio",
+      "submit": "Änderungen speichern",
+      "pending": "Wird gespeichert …",
+      "saved": {
+        "all": "Profil und Portfolio wurden gespeichert.",
+        "profileOnly": "Name und E-Mail wurden gespeichert, die Bio und das Bild nicht.",
+        "portfolioOnly": "Bio und Bild wurden gespeichert, Name und E-Mail nicht.",
+        "none": "Es wurde nichts gespeichert."
+      },
+      "error": {
+        "wrongPassword": "Das aktuelle Passwort ist falsch. Es wurde nichts geändert, auch nicht der Name.",
+        "emailInUse": "Diese E-Mail-Adresse ist bereits vergeben. Es wurde nichts geändert, auch nicht der Name."
+      },
+      "emailChange": {
+        "pending": "Bestätigung ausstehend: Wir haben einen Code an {{address}} gesendet. Bis zur Bestätigung melden Sie sich weiter mit Ihrer bisherigen Adresse an.",
+        "codeLabel": "Bestätigungscode",
+        "codePlaceholder": "6-stelliger Code",
+        "confirm": "Code bestätigen",
+        "confirmPending": "Wird geprüft …",
+        "resend": "Code erneut senden",
+        "resendCountdown": "Code erneut senden in {{seconds}}s",
+        "resendConfirmed": "Ein neuer Code wurde angefordert. Bitte prüfen Sie Ihr Postfach."
+      },
+      "passwordReset": {
+        "title": "Passwort zurücksetzen",
+        "description": "Wir senden Ihnen einen Code zum Zurücksetzen Ihres Passworts an Ihre private E-Mail-Adresse.",
+        "send": "Code senden",
+        "pending": "Wird gesendet …",
+        "confirmation": "Wenn zu dieser Adresse ein aktives Konto existiert, wurde ein 6-stelliger Code dorthin gesendet.",
+        "toReset": "Code eingeben"
       }
     }
   },

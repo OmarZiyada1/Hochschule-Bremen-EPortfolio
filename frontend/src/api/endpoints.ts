@@ -28,6 +28,23 @@ export const apiPaths = {
     list: "/api/projects",
     detail: (projectId: string) => `/api/projects/${projectId}`,
   },
+  /*
+   * Portfolio (§6.1, §3.2), eingetragen mit KAN-34. Die beiden Pfade
+   * unterscheiden sich nur im Plural, und das ist Absicht: portfolios/{id}
+   * adressiert eine Ressource aus einer Sammlung, portfolio/me diejenige,
+   * die es je angemeldeter Person genau einmal gibt.
+   */
+  portfolio: {
+    me: "/api/portfolio/me",
+    publicProfile: (userId: string) => `/api/portfolios/${userId}`,
+  },
+  /*
+   * Datei-Modul (§3.15, KAN-23). Ein Upload ohne projectId ist per
+   * Definition ein Avatar; einen eigenen Avatar-Endpoint gibt es nicht.
+   */
+  files: {
+    upload: "/api/files",
+  },
   top10: {
     list: "/api/top10",
   },

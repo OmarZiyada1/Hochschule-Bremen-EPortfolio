@@ -30,6 +30,17 @@ export type ResetPasswordRequest = ApiSchemas["ResetPasswordRequest"]
 /** Zweck eines Verifizierungscodes nach Contract §2.11. */
 export type VerificationPurpose = VerifyRequest["purpose"]
 
+/** Eigene Profildaten aendern, PUT /api/auth/me (§6.1, KAN-44, KAN-60). */
+export type ProfileUpdateRequest = ApiSchemas["ProfileUpdateRequest"]
+
+/** Portfolio nach Contract §3.2, §6.1 (KAN-34). */
+export type OwnPortfolioResponse = ApiSchemas["OwnPortfolioResponse"]
+export type PortfolioResponse = ApiSchemas["PortfolioResponse"]
+export type PortfolioUpdateRequest = ApiSchemas["PortfolioUpdateRequest"]
+
+/** Metadaten einer hochgeladenen Datei, POST /api/files (§3.15, KAN-23). */
+export type StoredFileResponse = ApiSchemas["StoredFileResponse"]
+
 /** Rollen nach Contract 2.1: genau drei Werte. PUBLIC ist keine Rolle. */
 export type Role = NonNullable<UserResponse["role"]>
 

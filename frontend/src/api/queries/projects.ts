@@ -3,7 +3,12 @@ import { keepPreviousData, queryOptions } from "@tanstack/react-query"
 import { api } from "@/api/client"
 import { apiPaths } from "@/api/endpoints"
 import type { PageResponse } from "@/api/page"
-import type { Degree, ProjectCardResponse, ProjectType } from "@/api/types"
+import type {
+  Degree,
+  ProjectCardResponse,
+  ProjectStatus,
+  ProjectType,
+} from "@/api/types"
 
 /**
  * Parameter der Projektliste (KAN-31, Filter seit KAN-64). Alles optional:
@@ -41,6 +46,20 @@ export interface ProjectListParams {
 }
 
 /**
+ * Parameter der eigenen Projektliste unter "My Portfolio" (KAN-34).
+ * Weggelassener status heisst "Alle".
+ */
+export interface OwnProjectListParams {
+  /** ID der Autor:in; bei "My Portfolio" die eigene aus dem Auth-Kontext. */
+  authorId: string
+  /** Projektstatus (§2.2), oder undefined fuer den Filterwert "Alle". */
+  status?: ProjectStatus
+}
+
+/** Serverseitiges Maximum aus §6.6; darueber kappt der Server still. */
+const OWN_PROJECTS_PAGE_SIZE = 100
+
+/**
  * queryOptions-Fabrik der Ressource Projekte (Skill frontend-modul,
  * Abschnitt 2): Pfad, Response-Typ und Query-Key stehen hier an genau einer
  * Stelle. Feature-Hooks konsumieren die Fabrik und kennen weder Pfade noch
@@ -72,5 +91,37 @@ export const projectQueries = {
           query: { status: "PUBLISHED", ...params },
         }),
       placeholderData: keepPreviousData,
+    }),
+
+  /**
+   * Die eigenen Projekte fuer "My Portfolio" (KAN-34), gefiltert ueber
+   * author (§6.1).
+   *
+   * <p><strong>author nimmt eine UUID, keinen Sonderwert.</strong> Nur
+   * editor kennt "me"; author verlangt die ID, die der Auth-Kontext ohnehin
+   * fuehrt. Der Aufrufer reicht sie durch, statt dass diese Fabrik den
+   * Sitzungszustand kennt.
+   *
+   * <p>Ohne status kommen alle Status, die §5 fuer die anfragende Person
+   * durchlaesst; das ist der Filterwert "Alle". Der Statusfilter engt nur
+   * weiter ein: die Sichtbarkeitsregel des Servers steht immer mit UND
+   * davor, ein fremder Entwurf wird dadurch nicht sichtbar.
+   *
+   * <p>size ist auf das serverseitige Maximum gesetzt, weil das Template
+   * "My Portfolio" bewusst keine Seitennummerierung fuehrt: die Menge ist
+   * von der Sache her klein. Ueber 100 eigenen Projekten waere eine
+   * Paginierung nachzuruesten; der Server kappt still auf 100 (§6.6).
+   */
+  mine: (params: OwnProjectListParams) =>
+    queryOptions({
+      queryKey: ["projects", "mine", params] as const,
+      queryFn: () =>
+        api.get<PageResponse<ProjectCardResponse>>(apiPaths.projects.list, {
+          query: {
+            author: params.authorId,
+            status: params.status,
+            size: OWN_PROJECTS_PAGE_SIZE,
+          },
+        }),
     }),
 }

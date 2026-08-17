@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it } from "vitest"
 
 import { setPasswordChangeRequired } from "@/api/auth/authStore"
 import i18n from "@/i18n"
+import {
+  emptyProjectsHandler,
+  ownPortfolioHandler,
+} from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
 import { AppUnderTest, LocationProbe, signInAs } from "@/tests/routes/helpers"
@@ -81,11 +85,16 @@ describe("Routenbaum", () => {
   })
 
   it("EDITOR erreicht /my-portfolio", () => {
+    /* Die Seite zieht Profil und eigene Projekte (KAN-34); hier zaehlt nur,
+       dass die Route erreichbar ist, deshalb antworten beide leer. Der
+       Seitentitel heisst nach Template "My Portfolio", waehrend die
+       Navigation "Mein Portfolio" fuehrt. */
+    server.use(ownPortfolioHandler(), emptyProjectsHandler())
     signInAs("EDITOR")
     renderWithProviders(<AppUnderTest />, "/my-portfolio")
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Mein Portfolio" })
+      screen.getByRole("heading", { level: 1, name: "My Portfolio" })
     ).toBeInTheDocument()
   })
 
@@ -132,14 +141,15 @@ describe("Routenbaum", () => {
     ).toBeInTheDocument()
   })
 
-  it("ADMIN erreicht /my-portfolio/profile weiterhin", () => {
+  it("ADMIN erreicht /my-portfolio/profile weiterhin", async () => {
+    server.use(ownPortfolioHandler())
     signInAs("ADMIN")
     renderWithProviders(<AppUnderTest />, "/my-portfolio/profile")
 
     /* Contract 5, Zeile "Eigenes Portfolio bearbeiten": das eigene Profil
        pflegt jede angemeldete Rolle, auch ADMIN. */
     expect(
-      screen.getByRole("heading", { level: 1, name: "Profil bearbeiten" })
+      await screen.findByRole("heading", { level: 1, name: "Profil bearbeiten" })
     ).toBeInTheDocument()
   })
 
