@@ -15,6 +15,7 @@ import {
   applyValidationErrors,
   isApiError,
 } from "@/api/errors"
+import { PasswordInput } from "@/components/common/PasswordInput"
 import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -24,7 +25,6 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import {
   changePasswordFormSchema,
@@ -137,10 +137,9 @@ export default function ChangePasswordPage() {
           <FieldLabel htmlFor={field.name} className={labelClass}>
             {t(`changePassword.${name}`)}
           </FieldLabel>
-          <Input
+          <PasswordInput
             {...field}
             id={field.name}
-            type="password"
             autoComplete={autoComplete}
             aria-invalid={fieldState.invalid}
             aria-describedby={

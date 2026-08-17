@@ -21,6 +21,14 @@ describe("LoginPage", () => {
     await i18n.changeLanguage("de")
   })
 
+  it("fuehrt am Passwortfeld einen Sichtbarkeitsschalter (KAN-67)", () => {
+    renderWithProviders(<LoginPage />)
+
+    expect(
+      screen.getAllByRole("button", { name: "Passwort anzeigen" })
+    ).toHaveLength(1)
+  })
+
   async function fillAndSubmit(email: string, password: string) {
     const user = userEvent.setup()
     if (email !== "") {

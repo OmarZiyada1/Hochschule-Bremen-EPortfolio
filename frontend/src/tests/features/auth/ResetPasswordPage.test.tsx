@@ -21,6 +21,14 @@ describe("ResetPasswordPage", () => {
     await i18n.changeLanguage("de")
   })
 
+  it("fuehrt an beiden Passwortfeldern einen Sichtbarkeitsschalter (KAN-67)", () => {
+    renderWithProviders(<ResetPasswordPage />)
+
+    expect(
+      screen.getAllByRole("button", { name: "Passwort anzeigen" })
+    ).toHaveLength(2)
+  })
+
   async function fillAndSubmit(
     overrides: { code?: string; password?: string } = {}
   ) {

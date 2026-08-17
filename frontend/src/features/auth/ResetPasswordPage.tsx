@@ -10,6 +10,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 
 import { setPasswordChangeRequired } from "@/api/auth/authStore"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { PasswordInput } from "@/components/common/PasswordInput"
 import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -214,10 +215,9 @@ export default function ResetPasswordPage() {
                 <FieldLabel htmlFor={field.name} className={labelClass}>
                   {t("resetPassword.newPassword")}
                 </FieldLabel>
-                <Input
+                <PasswordInput
                   {...field}
                   id={field.name}
-                  type="password"
                   autoComplete="new-password"
                   aria-invalid={fieldState.invalid}
                   aria-describedby={
@@ -247,10 +247,9 @@ export default function ResetPasswordPage() {
                 <FieldLabel htmlFor={field.name} className={labelClass}>
                   {t("resetPassword.confirmPassword")}
                 </FieldLabel>
-                <Input
+                <PasswordInput
                   {...field}
                   id={field.name}
-                  type="password"
                   autoComplete="new-password"
                   aria-invalid={fieldState.invalid}
                   aria-describedby={
