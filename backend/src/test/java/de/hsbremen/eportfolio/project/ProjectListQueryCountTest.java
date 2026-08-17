@@ -12,6 +12,9 @@ import de.hsbremen.eportfolio.masterdata.FacultyRepository;
 import de.hsbremen.eportfolio.masterdata.Semester;
 import de.hsbremen.eportfolio.masterdata.SemesterRepository;
 import de.hsbremen.eportfolio.masterdata.TestMasterData;
+import de.hsbremen.eportfolio.portfolio.Portfolio;
+import de.hsbremen.eportfolio.portfolio.PortfolioRepository;
+import de.hsbremen.eportfolio.portfolio.PortfolioService;
 import de.hsbremen.eportfolio.reaction.ReactionRepository;
 import de.hsbremen.eportfolio.reaction.TestReaction;
 import de.hsbremen.eportfolio.user.TestUser;
@@ -82,6 +85,12 @@ class ProjectListQueryCountTest {
 	private SemesterRepository semesterRepository;
 
 	@Autowired
+	private PortfolioRepository portfolioRepository;
+
+	@Autowired
+	private PortfolioService portfolioService;
+
+	@Autowired
 	private EntityManagerFactory entityManagerFactory;
 
 	@PersistenceContext
@@ -99,6 +108,17 @@ class ProjectListQueryCountTest {
 				TestMasterData.semesterWithoutId("KAN16-N1 " + UUID.randomUUID(), 1));
 		author = userRepository.saveAndFlush(TestUser.activeWithoutId(Role.STUDENT, "nicht-relevant"));
 		reacting = userRepository.saveAndFlush(TestUser.activeWithoutId(Role.STUDENT, "nicht-relevant"));
+
+		/*
+		 * Mit hinterlegtem Profilbild, damit die Sammelabfrage der Avatare
+		 * (KAN-34) hier wirklich Zeilen findet. Ohne sie liefe der Test an
+		 * genau dem Feld vorbei, das seit KAN-34 am ehesten ein N+1
+		 * ausloesen wuerde: das Bild haengt am Portfolio und nicht am
+		 * Projekt (§3.2).
+		 */
+		Portfolio portfolio = portfolioService.createFor(author);
+		portfolio.setAvatarUrl("/api/files/" + UUID.randomUUID());
+		portfolioRepository.saveAndFlush(portfolio);
 	}
 
 	@Test
