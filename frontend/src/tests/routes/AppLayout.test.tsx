@@ -1,9 +1,10 @@
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import i18n from "@/i18n"
+import { ownPortfolioHandler } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
 import { AppUnderTest, LocationProbe, signInAs } from "@/tests/routes/helpers"
@@ -15,6 +16,61 @@ import { AppUnderTest, LocationProbe, signInAs } from "@/tests/routes/helpers"
 describe("AppLayout", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("de")
+  })
+
+  /*
+   * Der Avatar haengt am Portfolio und nicht am User (§3.2): UserResponse
+   * fuehrt ihn nicht, der Rahmen holt ihn deshalb ueber
+   * GET /api/portfolio/me. Ohne diese Verdrahtung blieb es in der
+   * Kopfleiste dauerhaft bei den Initialen, auch wenn ein Bild hinterlegt
+   * war (KAN-34).
+   *
+   * Geprueft wird der Abruf, nicht das gerenderte img: Base UI haengt das
+   * Bild erst nach dem Laden ein, und in jsdom laedt nie eines. Dass eine
+   * gesetzte Adresse als Bild erscheint, ist Sache der Primitive.
+   */
+  it("holt das Profilbild der Kopfleiste aus dem eigenen Portfolio", async () => {
+    let requestedWithToken: string | null = null
+    server.use(
+      http.get("*/api/portfolio/me", ({ request }) => {
+        requestedWithToken = request.headers.get("Authorization")
+        return HttpResponse.json({
+          avatarUrl: "/api/files/aaaa0000-0000-4000-8000-000000000001",
+        })
+      })
+    )
+    signInAs("STUDENT")
+    renderWithProviders(<AppUnderTest />, "/")
+
+    await waitFor(() => expect(requestedWithToken).toBe("Bearer test-token"))
+  })
+
+  it("fragt ohne Anmeldung kein Profil ab", async () => {
+    /* Ohne Token ergaebe der Aufruf einen sicheren 401; die Abfrage bleibt
+       deshalb abgeschaltet, statt ihn zu provozieren. */
+    let requested = false
+    server.use(
+      http.get("*/api/portfolio/me", () => {
+        requested = true
+        return HttpResponse.json({})
+      })
+    )
+    renderWithProviders(<AppUnderTest />, "/")
+
+    expect(
+      await screen.findByRole("link", { name: "Anmelden" })
+    ).toBeInTheDocument()
+    expect(requested).toBe(false)
+  })
+
+  it("bleibt ohne hinterlegtes Bild bei den Initialen", async () => {
+    /* §3.2.1: ein Konto ohne Portfolio-Zeile antwortet 200 mit leeren
+       Feldern. Das ist kein Fehlerfall der Kopfleiste. */
+    server.use(ownPortfolioHandler({}))
+    signInAs("STUDENT")
+    renderWithProviders(<AppUnderTest />, "/")
+
+    expect(await screen.findByText("MB")).toBeInTheDocument()
   })
 
   it("stellt Kopfbereich, Inhalt und Fussbereich als Landmarken", () => {

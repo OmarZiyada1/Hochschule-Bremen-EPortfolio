@@ -16,9 +16,13 @@ import {
  * Das eigene Profil. Fehlt die Portfolio-Zeile, ist die Antwort 200 mit
  * leeren Feldern (§3.2.1): kein Fehlerfall, den die Ansicht behandeln
  * muesste.
+ *
+ * enabled bleibt dem Aufrufer ueberlassen, weil der Anwendungsrahmen die
+ * Abfrage fuer den Avatar in der Kopfleiste braucht und dort auch nicht
+ * angemeldete Personen vorbeikommen; ohne Token ergaebe der Aufruf 401.
  */
-export function useOwnPortfolio() {
-  return useQuery(portfolioQueries.me())
+export function useOwnPortfolio(enabled = true) {
+  return useQuery({ ...portfolioQueries.me(), enabled })
 }
 
 /**
