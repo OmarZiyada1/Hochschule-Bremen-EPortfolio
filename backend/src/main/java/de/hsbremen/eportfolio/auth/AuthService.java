@@ -75,7 +75,10 @@ public class AuthService {
 	 *                                       die API nicht herausfinden laesst,
 	 *                                       welche Adressen registriert sind
 	 * @throws AccountNotActiveException     wenn der Status nicht ACTIVE ist
-	 *                                       (§2.9)
+	 *                                       (§2.9). Traegt den Status, damit der
+	 *                                       Controller REGISTRATION_PENDING und
+	 *                                       DEACTIVATED auf verschiedene
+	 *                                       Fehlercodes abbilden kann (KAN-68)
 	 */
 	@Transactional(readOnly = true)
 	public LoginResponse login(LoginRequest request, String clientIp) {
@@ -111,7 +114,7 @@ public class AuthService {
 		if (user.getStatus() != UserStatus.ACTIVE) {
 			// Weder zaehlen noch zuruecksetzen: das Passwort war richtig, es ist
 			// also kein Fehlversuch; angemeldet ist aber auch niemand.
-			throw new AccountNotActiveException(messageFor(user.getStatus()));
+			throw new AccountNotActiveException(user.getStatus(), messageFor(user.getStatus()));
 		}
 
 		loginAttemptService.reset(email, clientIp);
@@ -258,10 +261,27 @@ public class AuthService {
 		}
 	}
 
-	/** Konto existiert, ist aber nicht ACTIVE (§2.9). Fuehrt zu 401. */
+	/**
+	 * Konto existiert, ist aber nicht ACTIVE (§2.9). Fuehrt zu 401.
+	 *
+	 * <p>Traegt seit KAN-68 den ausloesenden Status: {@code REGISTRATION_PENDING}
+	 * wird im {@code AuthController} zu {@code REGISTRATION_NOT_COMPLETED},
+	 * damit das Frontend den Wiedereinstieg in die Verifizierung anbieten kann;
+	 * {@code DEACTIVATED} bleibt {@code ACCOUNT_NOT_ACTIVE}. Die Unterscheidung
+	 * verraet nichts Neues: sie kommt erst nach der erfolgreichen
+	 * Passwortpruefung zum Tragen, eine Konto-Enumeration ist hier unmoeglich.
+	 */
 	public static class AccountNotActiveException extends RuntimeException {
-		public AccountNotActiveException(String message) {
+
+		private final UserStatus status;
+
+		public AccountNotActiveException(UserStatus status, String message) {
 			super(message);
+			this.status = status;
+		}
+
+		public UserStatus getStatus() {
+			return status;
 		}
 	}
 }

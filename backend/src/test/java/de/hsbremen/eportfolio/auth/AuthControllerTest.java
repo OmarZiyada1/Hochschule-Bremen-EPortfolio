@@ -333,6 +333,22 @@ class AuthControllerTest {
 	}
 
 	@Test
+	@DisplayName("Login eines unverifizierten Kontos: 401 mit REGISTRATION_NOT_COMPLETED (KAN-68)")
+	void loginRegistrationPending() throws Exception {
+		User user = TestUser.create(UUID.randomUUID(), "privat@example.org", "hsb@stud.hs-bremen.de",
+				Role.STUDENT, UserStatus.REGISTRATION_PENDING, passwordEncoder.encode(PASSWORD));
+		when(userRepository.findByEmail("privat@example.org")).thenReturn(Optional.of(user));
+
+		// Eigener Code statt ACCOUNT_NOT_ACTIVE: das Frontend bietet daraufhin
+		// den Wiedereinstieg in die Verifizierung an (§6.2, seit v48).
+		mockMvc.perform(post("/api/auth/login")
+						.contentType("application/json")
+						.content(asJson(new LoginRequest("privat@example.org", PASSWORD))))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.errorCode").value("REGISTRATION_NOT_COMPLETED"));
+	}
+
+	@Test
 	@DisplayName("Login ist ohne Token erreichbar (PUBLIC)")
 	void loginReachableWithoutToken() throws Exception {
 		when(userRepository.findByEmail(any())).thenReturn(Optional.empty());

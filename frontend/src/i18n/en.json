@@ -117,6 +117,7 @@
     "emailHint": "Log in with your private email address, not your HSB address.",
     "password": "Password",
     "forgotPassword": "Forgot your password?",
+    "continueRegistration": "Continue registration",
     "submit": "Log in",
     "pending": "Logging in …",
     "registerPrompt": "No account yet?",
@@ -144,17 +145,21 @@
       "footnote": "Your private email is used to log in. The HSB email only confirms your affiliation.",
       "loginPrompt": "Already registered?",
       "loginLink": "Log in",
-      "addressInUse": "This email address is already registered."
+      "addressInUse": "This email address is already registered.",
+      "resumeHint": "Does this address belong to your own unfinished registration? Then you can continue confirming your email addresses.",
+      "continueRegistration": "Continue registration"
     },
     "verify": {
       "codeLabel": "Six-digit confirmation code",
       "sentHint": "We sent a 6-digit code to <address>{{address}}</address>.",
+      "sentHintFallback": "We sent a 6-digit code to your HSB email address.",
       "submit": "Confirm code",
       "pending": "Checking …",
       "resend": "Request a new code",
       "resendCountdown": "Request a new code in {{seconds}}s",
       "resendConfirmed": "A new code has been requested. Please check your inbox.",
       "back": "Back",
+      "alreadyVerified": "This address is already confirmed",
       "PRIVATE_EMAIL": {
         "title": "Confirm your private email",
         "subtitle": "This address will be used to log in later."
@@ -170,6 +175,7 @@
       "hint": "You can now log in with your private email address.",
       "emailLabel": "Private email",
       "hsbEmailLabel": "HSB email",
+      "hsbEmailFallback": "Confirmed",
       "statusLabel": "Status",
       "toLogin": "Go to login"
     }
@@ -486,7 +492,8 @@
     "NOT_AUTHENTICATED": "Please sign in to continue.",
     "TOKEN_INVALID": "The session is invalid. Please sign in again.",
     "TOKEN_EXPIRED": "The session has expired. Please sign in again.",
-    "ACCOUNT_NOT_ACTIVE": "This account is not active. Please confirm your registration or contact the administration.",
+    "ACCOUNT_NOT_ACTIVE": "This account has been deactivated. Please contact the administration.",
+    "REGISTRATION_NOT_COMPLETED": "Your registration is not complete yet. Please confirm your email addresses.",
     "NO_PERMISSION": "You do not have permission to do this.",
     "PASSWORD_CHANGE_REQUIRED": "Please set a new password first.",
     "TOO_MANY_LOGIN_ATTEMPTS": "Too many failed attempts. Please wait a few minutes and try again.",

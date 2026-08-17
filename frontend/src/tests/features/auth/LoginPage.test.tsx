@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest"
 
 import { endSession, getAuthState } from "@/api/auth/authStore"
 import LoginPage from "@/features/auth/LoginPage"
+import { readRegistrationFlow } from "@/features/auth/registrationFlow"
 import i18n from "@/i18n"
 import { apiErrorResponse } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
@@ -243,6 +244,80 @@ describe("LoginPage", () => {
     expect(
       await screen.findByText("Muss eine gueltige Adresse sein")
     ).toBeInTheDocument()
+  })
+
+  it("bietet bei 401 REGISTRATION_NOT_COMPLETED den Wiedereinstieg in die Verifizierung an (KAN-68)", async () => {
+    server.use(
+      http.post("*/api/auth/login", () =>
+        apiErrorResponse(401, "REGISTRATION_NOT_COMPLETED", "/api/auth/login")
+      )
+    )
+    renderWithProviders(
+      <>
+        <AppUnderTest />
+        <LocationProbe />
+      </>,
+      "/login"
+    )
+
+    /* Grossschreibung mit Absicht: der Flow-Zustand muss die Adresse
+       kleingeschrieben tragen, wie der Server sie ablegt (Contract 3.1). */
+    await fillAndSubmit("Lena@Example.org", "zwoelfzeichenlang")
+
+    expect(
+      await screen.findByText(
+        "Die Registrierung ist noch nicht abgeschlossen. Bitte bestätigen Sie Ihre E-Mail-Adressen."
+      )
+    ).toBeInTheDocument()
+
+    const user = userEvent.setup()
+    await user.click(
+      screen.getByRole("button", { name: "Registrierung fortsetzen" })
+    )
+
+    /* Der Wiedereinstieg landet bei Schritt 2; die HSB-Adresse bleibt
+       leer, weil keine Response sie nennt (Contract 3.1). */
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "Private E-Mail bestätigen",
+      })
+    ).toBeInTheDocument()
+    expect(screen.getByTestId("pathname")).toHaveTextContent(
+      "/register/verify-email"
+    )
+    expect(readRegistrationFlow()).toEqual({
+      email: "lena@example.org",
+      hsbEmail: "",
+      emailVerified: false,
+      hsbEmailVerified: false,
+      status: "REGISTRATION_PENDING",
+    })
+  })
+
+  it("zeigt 401 ACCOUNT_NOT_ACTIVE ohne Wiedereinstiegsangebot", async () => {
+    /* Ein deaktiviertes Konto kann nur die Administration wieder oeffnen;
+       ein Wiedereinstieg in die Registrierung waere eine Attrappe. */
+    server.use(
+      http.post("*/api/auth/login", () =>
+        apiErrorResponse(401, "ACCOUNT_NOT_ACTIVE", "/api/auth/login")
+      )
+    )
+    renderWithProviders(<LoginPage />)
+
+    await fillAndSubmit("mira.beispiel@example.org", "test1234")
+
+    /* Der Text nennt seit v48 nur noch die Deaktivierung: der
+       Registrierungsfall haengt vollstaendig an REGISTRATION_NOT_COMPLETED
+       (Befund des contract-pruefers zu KAN-68). */
+    expect(
+      await screen.findByText(
+        "Dieses Konto ist deaktiviert. Bitte wenden Sie sich an die Administration."
+      )
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Registrierung fortsetzen" })
+    ).not.toBeInTheDocument()
   })
 
   it("zeigt den Hinweis der zentralen 401-Reaktion und raeumt ihn ab", async () => {

@@ -46,6 +46,17 @@ describe("RegisterDonePage", () => {
     expect(screen.getByText("Aktiv")).toBeInTheDocument()
   })
 
+  it("zeigt ohne bekannte HSB-Adresse einen Ersatztext statt einer leeren Zeile (KAN-68)", () => {
+    /* Nach dem Wiedereinstieg ueber den Login bleibt hsbEmail leer, weil
+       keine Response sie nennt (Contract 3.1); bestaetigt ist sie
+       trotzdem, sonst waere der Status nicht ACTIVE. */
+    saveRegistrationFlow({ ...activeFlow, hsbEmail: "" })
+    renderWithProviders(<RegisterDonePage />)
+
+    expect(screen.getByText("Bestätigt")).toBeInTheDocument()
+    expect(screen.getByText("lena@example.org")).toBeInTheDocument()
+  })
+
   it("leitet ohne aktivierten Zustand zum offenen Schritt um", () => {
     saveRegistrationFlow({
       ...activeFlow,

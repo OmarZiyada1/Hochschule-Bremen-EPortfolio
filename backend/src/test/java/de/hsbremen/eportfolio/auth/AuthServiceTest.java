@@ -138,8 +138,11 @@ class AuthServiceTest {
 	void deactivatedAccount() {
 		when(userRepository.findByEmail(PRIVATE_EMAIL)).thenReturn(Optional.of(account(UserStatus.DEACTIVATED)));
 
+		// Der Status haengt an der Ausnahme, weil der Controller daraus seit
+		// KAN-68 den Fehlercode ableitet (DEACTIVATED bleibt ACCOUNT_NOT_ACTIVE).
 		assertThatThrownBy(() -> authService.login(new LoginRequest(PRIVATE_EMAIL, PASSWORD), TEST_IP))
-				.isInstanceOf(AuthService.AccountNotActiveException.class)
+				.isInstanceOfSatisfying(AuthService.AccountNotActiveException.class,
+						ex -> assertThat(ex.getStatus()).isEqualTo(UserStatus.DEACTIVATED))
 				.hasMessageContaining("deaktiviert");
 	}
 
@@ -149,8 +152,11 @@ class AuthServiceTest {
 		when(userRepository.findByEmail(PRIVATE_EMAIL))
 				.thenReturn(Optional.of(account(UserStatus.REGISTRATION_PENDING)));
 
+		// Der Status haengt an der Ausnahme, weil der Controller daraus seit
+		// KAN-68 den Fehlercode REGISTRATION_NOT_COMPLETED ableitet.
 		assertThatThrownBy(() -> authService.login(new LoginRequest(PRIVATE_EMAIL, PASSWORD), TEST_IP))
-				.isInstanceOf(AuthService.AccountNotActiveException.class)
+				.isInstanceOfSatisfying(AuthService.AccountNotActiveException.class,
+						ex -> assertThat(ex.getStatus()).isEqualTo(UserStatus.REGISTRATION_PENDING))
 				.hasMessageContaining("Registrierung");
 	}
 

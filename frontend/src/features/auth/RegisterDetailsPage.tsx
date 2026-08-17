@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useState } from "react"
 import {
   Controller,
   useForm,
@@ -13,7 +14,7 @@ import {
   isApiError,
 } from "@/api/errors"
 import { PasswordInput } from "@/components/common/PasswordInput"
-import { Alert, AlertTitle } from "@/components/ui/alert"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Field,
@@ -83,6 +84,36 @@ export default function RegisterDetailsPage() {
   })
 
   /*
+   * Nach einer 409 an einer der beiden Adressen (RESOURCE_IN_USE) merkt
+   * sich die Seite beide Formularwerte: die vergebene Adresse gehoert
+   * womoeglich zur eigenen, nach Sitzungsverlust abgebrochenen
+   * Registrierung (KAN-68), und der Wiedereinstieg fuehrt dann in die
+   * Verifizierungsschritte statt in eine Sackgasse.
+   */
+  const [resumeValues, setResumeValues] = useState<{
+    email: string
+    hsbEmail: string
+  } | null>(null)
+
+  /*
+   * Saet den Schrittzustand, wie ihn das 201 anlegen wuerde; anders als
+   * beim Wiedereinstieg ueber den Login (LoginPage) sind hier beide
+   * Adressen aus dem Formular bekannt. Einstieg bei Schritt 2 mit
+   * Weiterschalter: welcher Schritt offen ist, laesst sich nicht abfragen
+   * (Contract 6.1, /verify/resend antwortet immer 204).
+   */
+  const continueRegistration = (values: { email: string; hsbEmail: string }) => {
+    saveRegistrationFlow({
+      email: values.email.toLowerCase(),
+      hsbEmail: values.hsbEmail.toLowerCase(),
+      emailVerified: false,
+      hsbEmailVerified: false,
+      status: "REGISTRATION_PENDING",
+    })
+    navigate("/register/verify-email")
+  }
+
+  /*
    * Zod hinterlegt i18n-Schluessel, applyValidationErrors den Meldungstext
    * des Servers (type "server"); uebersetzt wird nur, was aus dem Schema
    * kommt (Muster aus KAN-8).
@@ -95,6 +126,7 @@ export default function RegisterDetailsPage() {
   }
 
   const onSubmit = form.handleSubmit(async (values) => {
+    setResumeValues(null)
     try {
       const account = await registerMutation.mutateAsync({
         firstName: values.firstName,
@@ -146,6 +178,11 @@ export default function RegisterDetailsPage() {
             type: "server",
             message: t("register.details.addressInUse"),
           })
+          // Zusaetzlich zur Feldmeldung der Wiedereinstieg (KAN-68): die
+          // vergebene Adresse kann die eigene, halb fertige Registrierung
+          // sein. Die 409 legt die Existenz ohnehin offen (Contract 6.1),
+          // der Schalter verraet also nichts Neues.
+          setResumeValues({ email: values.email, hsbEmail: values.hsbEmail })
           return
         }
       }
@@ -333,6 +370,22 @@ export default function RegisterDetailsPage() {
           {form.formState.errors.root?.server && (
             <Alert variant="destructive">
               <AlertTitle>{form.formState.errors.root.server.message}</AlertTitle>
+            </Alert>
+          )}
+
+          {resumeValues !== null && (
+            <Alert>
+              <AlertTitle>{t("register.details.resumeHint")}</AlertTitle>
+              <AlertDescription>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="h-auto p-0 font-semibold"
+                  onClick={() => continueRegistration(resumeValues)}
+                >
+                  {t("register.details.continueRegistration")}
+                </Button>
+              </AlertDescription>
             </Alert>
           )}
 

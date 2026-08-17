@@ -3,7 +3,7 @@ package de.hsbremen.eportfolio.common.error;
 /**
  * Fehlercodes fuer das Envelope aus API-Contract §6.2.
  *
- * <p>Stand Contract v47 steht jede Konstante dieser Klasse auch in §6.2.
+ * <p>Stand Contract v48 steht jede Konstante dieser Klasse auch in §6.2.
  * {@link #VALIDATION_FAILED} war bis v14 nur hier gefuehrt und wurde mit v15
  * nachgetragen (Tabelle „Fehlercodes Anfrageformat", Historieneintrag in §10).
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
@@ -58,8 +58,37 @@ public final class ErrorCodes {
 	/** 401: E-Mail oder Passwort falsch. Bewusst ohne Unterscheidung. */
 	public static final String LOGIN_FAILED = "LOGIN_FAILED";
 
-	/** 401: Konto nicht ACTIVE (REGISTRATION_PENDING oder DEACTIVATED), §2.9. */
+	/**
+	 * 401: Konto nicht ACTIVE (§2.9). Beim Login betrifft er seit KAN-68 nur
+	 * noch {@code DEACTIVATED}; ein Konto in {@code REGISTRATION_PENDING}
+	 * erhaelt dort {@link #REGISTRATION_NOT_COMPLETED}. Der
+	 * {@code JwtAuthenticationFilter} antwortet weiterhin mit diesem Code: ein
+	 * Konto in {@code REGISTRATION_PENDING} besitzt kein Token, der Filterfall
+	 * betrifft nur zwischenzeitlich deaktivierte Konten.
+	 */
 	public static final String ACCOUNT_NOT_ACTIVE = "ACCOUNT_NOT_ACTIVE";
+
+	/**
+	 * 401: Anmeldung mit korrektem Passwort, aber das Konto steht noch in
+	 * {@code REGISTRATION_PENDING} (§2.9): die Registrierung ist begonnen und
+	 * mindestens eine der beiden Adressen unbestaetigt (§3.1.1).
+	 *
+	 * <p><strong>Warum ein eigener Code neben
+	 * {@link #ACCOUNT_NOT_ACTIVE}:</strong> die beiden verlangen von der Person
+	 * Verschiedenes. Ein deaktiviertes Konto kann nur die Administration wieder
+	 * oeffnen; eine offene Registrierung loest die Person selbst auf, indem sie
+	 * die Verifizierung abschliesst. Nur mit eigenem Code kann das Frontend den
+	 * Wiedereinstieg in die Verifizierungsschritte anbieten, statt eine
+	 * Sackgassen-Meldung zu zeigen (Frontend-Regel 3: entschieden wird ueber
+	 * den Code, nie ueber den Meldungstext).
+	 *
+	 * <p>Eine Konto-Enumeration entsteht dadurch nicht: der Code kommt erst
+	 * nach der erfolgreichen Passwortpruefung zum Tragen, vorher antwortet der
+	 * Login unveraendert mit {@link #LOGIN_FAILED}.
+	 *
+	 * <p>Vergeben mit KAN-68, nachgetragen in §6.2 mit Contract v48.
+	 */
+	public static final String REGISTRATION_NOT_COMPLETED = "REGISTRATION_NOT_COMPLETED";
 
 	/**
 	 * 429: zu viele fehlgeschlagene Anmeldeversuche fuer diese E-Mail-Adresse

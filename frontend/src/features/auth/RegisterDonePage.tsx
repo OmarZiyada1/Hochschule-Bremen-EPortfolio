@@ -90,7 +90,13 @@ export default function RegisterDonePage() {
           </dt>
           <dd className="type-body-sm flex items-center gap-1.5 font-semibold text-primary">
             <CheckIcon aria-hidden="true" className="size-3.5" />
-            {flow.hsbEmail}
+            {/* Nach dem Wiedereinstieg ueber den Login (KAN-68) ist die
+                HSB-Adresse unbekannt: keine Response nennt sie (Contract
+                3.1). Bestaetigt ist sie trotzdem, sonst waere der Status
+                nicht ACTIVE. */}
+            {flow.hsbEmail !== ""
+              ? flow.hsbEmail
+              : t("register.done.hsbEmailFallback")}
           </dd>
         </div>
         <div className="flex items-baseline justify-between gap-4">
