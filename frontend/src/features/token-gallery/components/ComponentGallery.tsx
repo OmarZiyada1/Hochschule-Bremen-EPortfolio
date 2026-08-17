@@ -1,6 +1,7 @@
 import {
   AlertCircleIcon,
   BoldIcon,
+  CalendarIcon,
   ChevronDownIcon,
   FolderKanbanIcon,
   GraduationCapIcon,
@@ -1117,6 +1118,12 @@ function AdminDemos() {
             icon={<TagsIcon aria-hidden="true" className="size-4" />}
           >
             {t("tokens.components.demo.sidebarCategories")}
+          </SidebarItem>
+          <SidebarItem
+            href="#"
+            icon={<CalendarIcon aria-hidden="true" className="size-4" />}
+          >
+            {t("tokens.components.demo.sidebarSemester")}
           </SidebarItem>
           <SidebarItem
             href="#"
