@@ -167,4 +167,42 @@ describe("RegisterVerifyEmailPage", () => {
       )
     ).toBeInTheDocument()
   })
+
+  it("fuehrt ueber den Weiterschalter zu Schritt 3, ohne den Server zu fragen (KAN-68)", async () => {
+    /* Der Wiedereinstieg landet immer bei Schritt 2, weil der offene
+       Schritt nicht abfragbar ist (/verify/resend antwortet aus
+       Enumeration-Schutz immer 204, Contract 6.1). Kein MSW-Handler: der
+       Schalter setzt nur den lokalen Flow-Zustand, ein Request schluege
+       ueber onUnhandledRequest fehl. */
+    saveRegistrationFlow({ ...flow, hsbEmail: "" })
+    renderWithProviders(
+      <>
+        <AppUnderTest />
+        <LocationProbe />
+      </>,
+      "/register/verify-email"
+    )
+
+    const user = userEvent.setup()
+    await user.click(
+      screen.getByRole("button", { name: "Diese Adresse ist bereits bestätigt" })
+    )
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "HSB-E-Mail bestätigen",
+      })
+    ).toBeInTheDocument()
+    expect(screen.getByTestId("pathname")).toHaveTextContent(
+      "/register/verify-hsb-email"
+    )
+    /* Anzeige ohne hsbEmail (Wiedereinstieg ueber den Login): der
+       Versandhinweis kommt ohne Adresse aus, statt leer zu bleiben. */
+    expect(
+      screen.getByText(
+        "Wir haben einen 6-stelligen Code an Ihre HSB-E-Mail-Adresse gesendet."
+      )
+    ).toBeInTheDocument()
+  })
 })

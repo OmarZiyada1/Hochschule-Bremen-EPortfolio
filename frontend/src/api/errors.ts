@@ -10,7 +10,7 @@
  */
 
 /*
- * Die Fehlercodes aus Contract 6.2 (v47), deckungsgleich mit
+ * Die Fehlercodes aus Contract 6.2 (v48), deckungsgleich mit
  * common/error/ErrorCodes.java im Backend. Als const-Tupel gefuehrt, damit
  * errorCode eine String-Union traegt: ein Tippfehler in einem Code faellt
  * beim Typecheck auf und nicht erst zur Laufzeit in einer Verzweigung, die
@@ -24,6 +24,7 @@ export const ERROR_CODES = [
   "TOKEN_INVALID",
   "TOKEN_EXPIRED",
   "ACCOUNT_NOT_ACTIVE",
+  "REGISTRATION_NOT_COMPLETED",
   "NO_PERMISSION",
   "PASSWORD_CHANGE_REQUIRED",
   "TOO_MANY_LOGIN_ATTEMPTS",

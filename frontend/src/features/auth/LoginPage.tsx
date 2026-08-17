@@ -18,7 +18,7 @@ import {
   type ErrorCode,
 } from "@/api/errors"
 import { PasswordInput } from "@/components/common/PasswordInput"
-import { Alert, AlertTitle } from "@/components/ui/alert"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Field,
@@ -34,6 +34,7 @@ import {
   loginFormSchema,
   type LoginFormValues,
 } from "@/features/auth/LoginForm.schema"
+import { saveRegistrationFlow } from "@/features/auth/registrationFlow"
 
 /**
  * Login-Seite (Ticket KAN-8) nach der Vorlage "Login (Auth)": Anmelden gegen
@@ -89,6 +90,38 @@ export default function LoginPage() {
   })
 
   /*
+   * Bei 401 REGISTRATION_NOT_COMPLETED (KAN-68) merkt sich die Seite die
+   * eingegebene Adresse, damit die Meldung den Wiedereinstieg in die
+   * Verifizierung anbieten kann. Bei ACCOUNT_NOT_ACTIVE (deaktiviertes
+   * Konto) bleibt es bei der Meldung ohne Aktion: das kann nur die
+   * Administration aufloesen. Entschieden wird ueber den errorCode, nie
+   * ueber den Meldungstext (Frontend-Regel 3).
+   */
+  const [pendingRegistrationEmail, setPendingRegistrationEmail] = useState<
+    string | null
+  >(null)
+
+  /*
+   * Saet den Schrittzustand neu, wie ihn die Angaben-Seite nach 201 anlegt:
+   * hsbEmail bleibt leer, weil keine Response sie nennt (Contract 3.1); die
+   * Verify-Schritte kommen seit KAN-68 ohne die Adresse aus. Beide Flags
+   * false und der Einstieg bei Schritt 2: welcher Schritt wirklich offen
+   * ist, laesst sich nicht abfragen (/verify/resend antwortet aus
+   * Enumeration-Schutz immer 204, Contract 6.1); dort fuehrt der
+   * Weiterschalter weiter, verbindlich bleibt die Antwort auf /verify.
+   */
+  const continueRegistration = (email: string) => {
+    saveRegistrationFlow({
+      email: email.toLowerCase(),
+      hsbEmail: "",
+      emailVerified: false,
+      hsbEmailVerified: false,
+      status: "REGISTRATION_PENDING",
+    })
+    navigate("/register/verify-email")
+  }
+
+  /*
    * Zod hinterlegt i18n-Schluessel (LoginForm.schema.ts),
    * applyValidationErrors dagegen den Meldungstext des Servers (type
    * "server", Contract 6.2). Uebersetzt wird deshalb nur, was aus dem
@@ -102,6 +135,7 @@ export default function LoginPage() {
   }
 
   const onSubmit = form.handleSubmit(async (values) => {
+    setPendingRegistrationEmail(null)
     try {
       await login(values.email, values.password)
       /*
@@ -128,6 +162,9 @@ export default function LoginPage() {
             )
         )
         return
+      }
+      if (error.errorCode === "REGISTRATION_NOT_COMPLETED") {
+        setPendingRegistrationEmail(values.email)
       }
       form.setError("root.server", {
         type: "server",
@@ -242,6 +279,20 @@ export default function LoginPage() {
                   <AlertTitle>
                     {form.formState.errors.root.server.message}
                   </AlertTitle>
+                  {pendingRegistrationEmail !== null && (
+                    <AlertDescription>
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="h-auto p-0 font-semibold"
+                        onClick={() =>
+                          continueRegistration(pendingRegistrationEmail)
+                        }
+                      >
+                        {t("login.continueRegistration")}
+                      </Button>
+                    </AlertDescription>
+                  )}
                 </Alert>
               )}
 

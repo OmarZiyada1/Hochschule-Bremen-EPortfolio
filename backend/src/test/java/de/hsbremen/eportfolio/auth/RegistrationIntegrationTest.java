@@ -291,13 +291,15 @@ class RegistrationIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Vor Abschluss ist keine Anmeldung moeglich: 401 ACCOUNT_NOT_ACTIVE")
+		@DisplayName("Vor Abschluss ist keine Anmeldung moeglich: 401 REGISTRATION_NOT_COMPLETED")
 		void loginBlockedUntilBothAddressesAreVerified() throws Exception {
 			register(email, studentHsbEmail).andExpect(status().isCreated());
 
+			// Seit KAN-68 traegt die Antwort den eigenen Code, damit das
+			// Frontend den Wiedereinstieg in die Verifizierung anbieten kann.
 			login(email, PASSWORD)
 					.andExpect(status().isUnauthorized())
-					.andExpect(jsonPath("$.errorCode").value("ACCOUNT_NOT_ACTIVE"));
+					.andExpect(jsonPath("$.errorCode").value("REGISTRATION_NOT_COMPLETED"));
 		}
 
 		@Test

@@ -50,6 +50,13 @@ describe("RegisterVerifyHsbEmailPage", () => {
     expect(
       screen.queryByRole("link", { name: "Zurück" })
     ).not.toBeInTheDocument()
+    /* Auch keinen Weiterschalter (KAN-68): er gehoert nur an Schritt 2,
+       denn hinter Schritt 3 gibt es keinen Schritt zum Ueberspringen. */
+    expect(
+      screen.queryByRole("button", {
+        name: "Diese Adresse ist bereits bestätigt",
+      })
+    ).not.toBeInTheDocument()
   })
 
   it("schickt die private Adresse und wechselt bei status ACTIVE zur Aktiviert-Seite", async () => {

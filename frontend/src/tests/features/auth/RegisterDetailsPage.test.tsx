@@ -214,4 +214,49 @@ describe("RegisterDetailsPage", () => {
       "false"
     )
   })
+
+  it("bietet bei 409 den Wiedereinstieg an und uebernimmt beide Adressen (KAN-68)", async () => {
+    server.use(
+      http.post("*/api/auth/register", () =>
+        apiErrorResponse(
+          409,
+          "RESOURCE_IN_USE",
+          "/api/auth/register",
+          "email: Diese E-Mail-Adresse ist bereits registriert."
+        )
+      )
+    )
+    renderWithProviders(
+      <>
+        <AppUnderTest />
+        <LocationProbe />
+      </>,
+      "/register/details"
+    )
+
+    const user = await fillValid()
+
+    await user.click(
+      await screen.findByRole("button", { name: "Registrierung fortsetzen" })
+    )
+
+    /* Anders als beim Wiedereinstieg ueber den Login sind hier beide
+       Adressen aus dem Formular bekannt und wandern in den Flow. */
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "Private E-Mail bestätigen",
+      })
+    ).toBeInTheDocument()
+    expect(screen.getByTestId("pathname")).toHaveTextContent(
+      "/register/verify-email"
+    )
+    expect(readRegistrationFlow()).toEqual({
+      email: "lena@example.org",
+      hsbEmail: "lmueller@stud.hs-bremen.de",
+      emailVerified: false,
+      hsbEmailVerified: false,
+      status: "REGISTRATION_PENDING",
+    })
+  })
 })

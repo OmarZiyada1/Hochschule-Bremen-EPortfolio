@@ -140,13 +140,20 @@ export function VerifyCodeStep({
       </div>
 
       <p className="type-body-sm text-center text-muted-foreground">
-        <Trans
-          i18nKey="register.verify.sentHint"
-          values={{ address: sentTo }}
-          components={{
-            address: <span className="font-semibold text-primary" />,
-          }}
-        />
+        {/* Nach dem Wiedereinstieg ueber den Login (KAN-68) ist die
+            HSB-Adresse unbekannt: keine Response nennt sie (Contract 3.1),
+            der Hinweis kommt dann ohne Adresse aus. */}
+        {sentTo !== "" ? (
+          <Trans
+            i18nKey="register.verify.sentHint"
+            values={{ address: sentTo }}
+            components={{
+              address: <span className="font-semibold text-primary" />,
+            }}
+          />
+        ) : (
+          t("register.verify.sentHintFallback")
+        )}
       </p>
 
       <form onSubmit={onSubmit} noValidate>
@@ -237,14 +244,31 @@ export function VerifyCodeStep({
       {purpose === "PRIVATE_EMAIL" && (
         <>
           <Separator />
-          <p className="type-body-sm text-center">
+          {/* Weiterschalter fuer den Wiedereinstieg (KAN-68): der Einstieg
+              landet immer bei Schritt 2, weil der offene Schritt nicht
+              abfragbar ist (/verify/resend antwortet aus Enumeration-Schutz
+              immer 204, Contract 6.1). Bewusst ohne updateRegistrationFlow:
+              ein lokal gesetztes emailVerified machte den Klick zur
+              Einbahnstrasse (der Guard von Schritt 2 leitete fortan nach
+              vorn um), und der Guard von Schritt 3 braucht das Flag nicht.
+              Die Flags setzt allein die Serverantwort auf POST /auth/verify
+              (Review-Befund zu KAN-68). */}
+          <div className="flex flex-col items-center gap-1 text-center">
+            <Button
+              type="button"
+              variant="link"
+              className="type-body-sm h-auto p-0 font-semibold"
+              onClick={() => navigate("/register/verify-hsb-email")}
+            >
+              {t("register.verify.alreadyVerified")}
+            </Button>
             <Link
               to="/register/details"
-              className="font-semibold text-primary underline-offset-4 hover:underline focus-visible:underline"
+              className="type-body-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:underline"
             >
               {t("register.verify.back")}
             </Link>
-          </p>
+          </div>
         </>
       )}
     </>

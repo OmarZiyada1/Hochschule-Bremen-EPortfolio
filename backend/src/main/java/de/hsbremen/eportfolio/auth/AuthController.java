@@ -11,6 +11,7 @@ import de.hsbremen.eportfolio.auth.dto.ResetPasswordRequest;
 import de.hsbremen.eportfolio.auth.dto.UserResponse;
 import de.hsbremen.eportfolio.auth.dto.VerificationStatusResponse;
 import de.hsbremen.eportfolio.auth.dto.VerifyRequest;
+import de.hsbremen.eportfolio.common.enums.UserStatus;
 import de.hsbremen.eportfolio.common.error.ApiError;
 import de.hsbremen.eportfolio.common.error.ErrorCodes;
 import de.hsbremen.eportfolio.user.User;
@@ -377,13 +378,26 @@ public class AuthController {
 				request.getRequestURI()));
 	}
 
+	/**
+	 * Unterscheidet seit KAN-68 nach dem Status: ein Konto in
+	 * {@code REGISTRATION_PENDING} erhaelt {@code REGISTRATION_NOT_COMPLETED},
+	 * damit das Frontend den Wiedereinstieg in die Verifizierung anbieten kann
+	 * (§6.2); ein deaktiviertes Konto bleibt bei {@code ACCOUNT_NOT_ACTIVE}
+	 * ohne ein solches Angebot. Der {@link JwtAuthenticationFilter} bleibt
+	 * unveraendert bei {@code ACCOUNT_NOT_ACTIVE}: ein Konto in
+	 * {@code REGISTRATION_PENDING} besitzt kein Token, sein Filterfall betrifft
+	 * nur zwischenzeitlich deaktivierte Konten.
+	 */
 	@ExceptionHandler(AuthService.AccountNotActiveException.class)
 	public ResponseEntity<ApiError> handleAccountNotActive(
 			AuthService.AccountNotActiveException ex, HttpServletRequest request) {
+		String errorCode = ex.getStatus() == UserStatus.REGISTRATION_PENDING
+				? ErrorCodes.REGISTRATION_NOT_COMPLETED
+				: ErrorCodes.ACCOUNT_NOT_ACTIVE;
 		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiError(
 				Instant.now(),
 				HttpStatus.UNAUTHORIZED.value(),
-				ErrorCodes.ACCOUNT_NOT_ACTIVE,
+				errorCode,
 				ex.getMessage(),
 				request.getRequestURI()));
 	}

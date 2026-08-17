@@ -117,6 +117,7 @@
     "emailHint": "Anmeldung mit der privaten E-Mail-Adresse, nicht mit der HSB-Adresse.",
     "password": "Passwort",
     "forgotPassword": "Passwort vergessen?",
+    "continueRegistration": "Registrierung fortsetzen",
     "submit": "Anmelden",
     "pending": "Anmeldung läuft …",
     "registerPrompt": "Noch kein Konto?",
@@ -144,17 +145,21 @@
       "footnote": "Die private E-Mail wird als Login verwendet. Die HSB-E-Mail bestätigt nur Ihre Zugehörigkeit.",
       "loginPrompt": "Bereits registriert?",
       "loginLink": "Anmelden",
-      "addressInUse": "Diese E-Mail-Adresse ist bereits registriert."
+      "addressInUse": "Diese E-Mail-Adresse ist bereits registriert.",
+      "resumeHint": "Gehört die Adresse zu Ihrer eigenen, noch nicht abgeschlossenen Registrierung? Dann können Sie die Bestätigung der E-Mail-Adressen fortsetzen.",
+      "continueRegistration": "Registrierung fortsetzen"
     },
     "verify": {
       "codeLabel": "Sechsstelliger Bestätigungscode",
       "sentHint": "Wir haben einen 6-stelligen Code an <address>{{address}}</address> gesendet.",
+      "sentHintFallback": "Wir haben einen 6-stelligen Code an Ihre HSB-E-Mail-Adresse gesendet.",
       "submit": "Code bestätigen",
       "pending": "Wird geprüft …",
       "resend": "Neuen Code anfordern",
       "resendCountdown": "Neuen Code in {{seconds}}s anfordern",
       "resendConfirmed": "Ein neuer Code wurde angefordert. Bitte prüfen Sie Ihr Postfach.",
       "back": "Zurück",
+      "alreadyVerified": "Diese Adresse ist bereits bestätigt",
       "PRIVATE_EMAIL": {
         "title": "Private E-Mail bestätigen",
         "subtitle": "Diese Adresse wird später für die Anmeldung verwendet."
@@ -170,6 +175,7 @@
       "hint": "Sie können sich jetzt mit Ihrer privaten E-Mail-Adresse anmelden.",
       "emailLabel": "Private E-Mail",
       "hsbEmailLabel": "HSB-E-Mail",
+      "hsbEmailFallback": "Bestätigt",
       "statusLabel": "Status",
       "toLogin": "Zur Anmeldung"
     }
@@ -486,7 +492,8 @@
     "NOT_AUTHENTICATED": "Bitte melden Sie sich an, um fortzufahren.",
     "TOKEN_INVALID": "Die Sitzung ist ungültig. Bitte melden Sie sich erneut an.",
     "TOKEN_EXPIRED": "Die Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
-    "ACCOUNT_NOT_ACTIVE": "Dieses Konto ist nicht aktiv. Bitte bestätigen Sie Ihre Registrierung oder wenden Sie sich an die Administration.",
+    "ACCOUNT_NOT_ACTIVE": "Dieses Konto ist deaktiviert. Bitte wenden Sie sich an die Administration.",
+    "REGISTRATION_NOT_COMPLETED": "Die Registrierung ist noch nicht abgeschlossen. Bitte bestätigen Sie Ihre E-Mail-Adressen.",
     "NO_PERMISSION": "Dafür fehlt Ihnen die Berechtigung.",
     "PASSWORD_CHANGE_REQUIRED": "Bitte vergeben Sie zuerst ein neues Passwort.",
     "TOO_MANY_LOGIN_ATTEMPTS": "Zu viele Fehlversuche. Bitte warten Sie einige Minuten und versuchen Sie es dann erneut.",

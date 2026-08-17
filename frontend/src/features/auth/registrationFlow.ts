@@ -8,10 +8,11 @@ import type { UserStatus } from "@/api/types"
  *
  * Die private Adresse ist die Kennung fuer POST /auth/verify und
  * /verify/resend, auch beim Zweck HSB_EMAIL (§6.1). Die HSB-Adresse steht
- * nur fuer die Anzeige hier: keine Response nennt sie (§3.1), die
- * Aktiviert-Seite und der Versandhinweis in Schritt 3 kommen deshalb nicht
- * ohne den Formularwert aus. Flags und Status stammen dagegen immer aus der
- * letzten Serverantwort, nie aus lokaler Zaehlung.
+ * nur fuer die Anzeige hier: keine Response nennt sie (§3.1). Sie kann seit
+ * KAN-68 leer sein (Wiedereinstieg ueber den Login); Aktiviert-Seite und
+ * Versandhinweis in Schritt 3 zeigen dann einen Ersatztext statt der
+ * Adresse. Flags und Status stammen dagegen immer aus der letzten
+ * Serverantwort, nie aus lokaler Zaehlung.
  */
 export type RegistrationFlowState = {
   /** Private E-Mail, die Login-Kennung; Kennung aller Verifizierungsaufrufe. */
