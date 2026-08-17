@@ -4,11 +4,18 @@ import {
   type RouteObject,
 } from "react-router-dom"
 
+import ChangePasswordPage from "@/features/auth/ChangePasswordPage"
 import ComponentGalleryPage from "@/features/token-gallery/ComponentGalleryPage"
+import ForgotPasswordPage from "@/features/auth/ForgotPasswordPage"
 import HomePage from "@/features/home/HomePage"
 import LoginPage from "@/features/auth/LoginPage"
 import NotFoundPage from "@/features/not-found/NotFoundPage"
 import ProjectListPage from "@/features/projects/ProjectListPage"
+import RegisterDetailsPage from "@/features/auth/RegisterDetailsPage"
+import RegisterDonePage from "@/features/auth/RegisterDonePage"
+import RegisterVerifyEmailPage from "@/features/auth/RegisterVerifyEmailPage"
+import RegisterVerifyHsbEmailPage from "@/features/auth/RegisterVerifyHsbEmailPage"
+import ResetPasswordPage from "@/features/auth/ResetPasswordPage"
 import TokenGalleryPage from "@/features/token-gallery/TokenGalleryPage"
 import { AppLayout } from "@/routes/AppLayout"
 import { AuthLayout } from "@/routes/AuthLayout"
@@ -99,33 +106,6 @@ export const routes: RouteObject[] = [
           <PlaceholderPage
             titleKey="placeholder.title.portfolio"
             ticket="KAN-34"
-          />
-        ),
-      },
-      {
-        path: "/forgot-password",
-        element: (
-          <PlaceholderPage
-            titleKey="placeholder.title.forgotPassword"
-            ticket="KAN-33"
-          />
-        ),
-      },
-      {
-        path: "/reset-password",
-        element: (
-          <PlaceholderPage
-            titleKey="placeholder.title.resetPassword"
-            ticket="KAN-33"
-          />
-        ),
-      },
-      {
-        path: "/change-password",
-        element: (
-          <PlaceholderPage
-            titleKey="placeholder.title.changePassword"
-            ticket="KAN-33"
           />
         ),
       },
@@ -269,16 +249,15 @@ export const routes: RouteObject[] = [
     ],
   },
   {
-    /* Anmeldung und Registrierung liegen ausserhalb des Anwendungsrahmens:
-       ihre Templates blenden NavBar und Footer aus (Review zu KAN-8; die
-       fruehere Festlegung aus der Klaerungsrunde zu KAN-7 ist ueberholt).
-       Die Passwort-Seiten bleiben vorerst im Rahmen, bis KAN-33 ihre
-       Templates umsetzt und die Frage dort entscheidet. */
+    /* Anmeldung, Registrierung und die Passwort-Seiten liegen ausserhalb
+       des Anwendungsrahmens: ihre Templates blenden NavBar und Footer aus
+       (Review zu KAN-8; die fruehere Festlegung aus der Klaerungsrunde zu
+       KAN-7 ist ueberholt). Fuer die Passwort-Seiten hat das die
+       Klaerungsrunde zu KAN-33 entschieden: sie haben kein eigenes
+       Template und folgen dem Kartenstil der uebrigen Auth-Seiten. */
     element: <AuthLayout />,
     children: [
       {
-        /* Durchstich aus KAN-8: minimales Login statt Platzhalter; die
-           ausgestaltete Seite nach Template folgt mit KAN-33. */
         path: "/login",
         element: <LoginPage />,
       },
@@ -290,42 +269,23 @@ export const routes: RouteObject[] = [
         path: "/register",
         element: <Navigate to="/register/details" replace />,
       },
-      {
-        path: "/register/details",
-        element: (
-          <PlaceholderPage
-            titleKey="placeholder.title.registerDetails"
-            ticket="KAN-33"
-          />
-        ),
-      },
-      {
-        path: "/register/verify-email",
-        element: (
-          <PlaceholderPage
-            titleKey="placeholder.title.registerVerifyEmail"
-            ticket="KAN-33"
-          />
-        ),
-      },
+      { path: "/register/details", element: <RegisterDetailsPage /> },
+      { path: "/register/verify-email", element: <RegisterVerifyEmailPage /> },
       {
         path: "/register/verify-hsb-email",
-        element: (
-          <PlaceholderPage
-            titleKey="placeholder.title.registerVerifyHsbEmail"
-            ticket="KAN-33"
-          />
-        ),
+        element: <RegisterVerifyHsbEmailPage />,
       },
+      { path: "/register/done", element: <RegisterDonePage /> },
       {
-        path: "/register/done",
-        element: (
-          <PlaceholderPage
-            titleKey="placeholder.title.registerDone"
-            ticket="KAN-33"
-          />
-        ),
+        /* Bewusst ohne RequireAuth-Wrapper: der leitet bei gesetztem
+           passwordChangeRequired genau hierher um und wuerde auf dieser
+           Seite eine Schleife bauen. Den Anmelde-Guard fuehrt die Seite
+           selbst (Contract 6.7). */
+        path: "/change-password",
+        element: <ChangePasswordPage />,
       },
+      { path: "/forgot-password", element: <ForgotPasswordPage /> },
+      { path: "/reset-password", element: <ResetPasswordPage /> },
     ],
   },
   ...(import.meta.env.DEV

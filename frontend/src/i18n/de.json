@@ -112,6 +112,7 @@
     "email": "E-Mail",
     "emailHint": "Anmeldung mit der privaten E-Mail-Adresse, nicht mit der HSB-Adresse.",
     "password": "Passwort",
+    "forgotPassword": "Passwort vergessen?",
     "submit": "Anmelden",
     "pending": "Anmeldung läuft …",
     "registerPrompt": "Noch kein Konto?",
@@ -121,13 +122,122 @@
     "publicHint": "Externe Besucher können Projekte ohne Anmeldung einsehen.",
     "publicLink": "Projekte"
   },
+  "register": {
+    "breadcrumb": "Registrierung",
+    "progress": "Schritt {{filled}} von {{total}}",
+    "details": {
+      "title": "Persönliche Angaben",
+      "subtitle": "Hochschule Bremen E-Portfolio",
+      "firstName": "Vorname",
+      "lastName": "Nachname",
+      "hsbEmail": "HSB-E-Mail",
+      "email": "Private E-Mail (Login)",
+      "password": "Passwort",
+      "passwordHint": "Mindestens 12 Zeichen.",
+      "confirmPassword": "Passwort bestätigen",
+      "submit": "Registrieren",
+      "pending": "Registrierung läuft …",
+      "footnote": "Die private E-Mail wird als Login verwendet. Die HSB-E-Mail bestätigt nur Ihre Zugehörigkeit.",
+      "loginPrompt": "Bereits registriert?",
+      "loginLink": "Anmelden",
+      "addressInUse": "Diese E-Mail-Adresse ist bereits registriert."
+    },
+    "verify": {
+      "codeLabel": "Sechsstelliger Bestätigungscode",
+      "sentHint": "Wir haben einen 6-stelligen Code an <address>{{address}}</address> gesendet.",
+      "submit": "Code bestätigen",
+      "pending": "Wird geprüft …",
+      "resend": "Neuen Code anfordern",
+      "resendCountdown": "Neuen Code in {{seconds}}s anfordern",
+      "resendConfirmed": "Ein neuer Code wurde angefordert. Bitte prüfen Sie Ihr Postfach.",
+      "back": "Zurück",
+      "PRIVATE_EMAIL": {
+        "title": "Private E-Mail bestätigen",
+        "subtitle": "Diese Adresse wird später für die Anmeldung verwendet."
+      },
+      "HSB_EMAIL": {
+        "title": "HSB-E-Mail bestätigen",
+        "subtitle": "Wir bestätigen damit Ihre Zugehörigkeit zur Hochschule Bremen."
+      }
+    },
+    "done": {
+      "title": "Konto aktiviert",
+      "subtitle": "Ihre private E-Mail und Ihre HSB-E-Mail wurden verifiziert.",
+      "hint": "Sie können sich jetzt mit Ihrer privaten E-Mail-Adresse anmelden.",
+      "emailLabel": "Private E-Mail",
+      "hsbEmailLabel": "HSB-E-Mail",
+      "statusLabel": "Status",
+      "toLogin": "Zur Anmeldung"
+    }
+  },
+  "changePassword": {
+    "breadcrumb": "Passwort ändern",
+    "title": "Passwort ändern",
+    "subtitle": "Hochschule Bremen E-Portfolio",
+    "requiredNotice": "Ihr Konto verlangt ein neues Passwort. Bitte vergeben Sie eines, um weiterzuarbeiten.",
+    "currentPassword": "Aktuelles Passwort",
+    "newPassword": "Neues Passwort",
+    "newPasswordHint": "Mindestens 12 Zeichen.",
+    "confirmPassword": "Neues Passwort bestätigen",
+    "submit": "Passwort ändern",
+    "pending": "Wird gespeichert …",
+    "currentPasswordWrong": "Das aktuelle Passwort ist falsch.",
+    "forgotPrompt": "Aktuelles Passwort nicht zur Hand?",
+    "forgotLink": "Passwort vergessen?"
+  },
+  "forgotPassword": {
+    "breadcrumb": "Passwort vergessen",
+    "title": "Passwort vergessen",
+    "subtitle": "Hochschule Bremen E-Portfolio",
+    "email": "Private E-Mail (Login)",
+    "emailHint": "Die Adresse, mit der Sie sich anmelden.",
+    "submit": "Code anfordern",
+    "pending": "Wird gesendet …",
+    "confirmation": "Wenn zu dieser Adresse ein aktives Konto existiert, wurde ein 6-stelliger Code dorthin gesendet.",
+    "toReset": "Code eingeben",
+    "backToLogin": "Zurück zur Anmeldung"
+  },
+  "resetPassword": {
+    "breadcrumb": "Passwort zurücksetzen",
+    "title": "Passwort zurücksetzen",
+    "subtitle": "Hochschule Bremen E-Portfolio",
+    "email": "Private E-Mail (Login)",
+    "code": "Bestätigungscode",
+    "newPassword": "Neues Passwort",
+    "newPasswordHint": "Mindestens 12 Zeichen.",
+    "confirmPassword": "Neues Passwort bestätigen",
+    "submit": "Passwort zurücksetzen",
+    "pending": "Wird gespeichert …",
+    "successTitle": "Passwort gesetzt",
+    "successHint": "Ihr Passwort wurde geändert. Sie können sich jetzt anmelden.",
+    "toLogin": "Zur Anmeldung",
+    "backToLogin": "Zurück zur Anmeldung"
+  },
   "validation": {
+    "firstName": {
+      "required": "Bitte geben Sie Ihren Vornamen ein."
+    },
+    "lastName": {
+      "required": "Bitte geben Sie Ihren Nachnamen ein."
+    },
     "email": {
       "required": "Bitte geben Sie Ihre E-Mail-Adresse ein.",
       "invalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein."
     },
+    "hsbEmail": {
+      "required": "Bitte geben Sie Ihre HSB-E-Mail-Adresse ein."
+    },
     "password": {
-      "required": "Bitte geben Sie Ihr Passwort ein."
+      "required": "Bitte geben Sie Ihr Passwort ein.",
+      "tooShort": "Das Passwort muss mindestens 12 Zeichen lang sein.",
+      "tooLong": "Das Passwort darf höchstens 72 Zeichen lang sein."
+    },
+    "passwordConfirm": {
+      "required": "Bitte bestätigen Sie das Passwort.",
+      "mismatch": "Die Passwörter stimmen nicht überein."
+    },
+    "code": {
+      "invalid": "Bitte geben Sie den 6-stelligen Code ein."
     }
   },
   "placeholder": {
@@ -136,13 +246,6 @@
     "title": {
       "projectDetail": "Projektdetail",
       "portfolio": "Portfolio",
-      "registerDetails": "Registrierung: Persönliche Angaben",
-      "registerVerifyEmail": "Registrierung: Private E-Mail bestätigen",
-      "registerVerifyHsbEmail": "Registrierung: HSB-E-Mail bestätigen",
-      "registerDone": "Registrierung: Konto aktiviert",
-      "forgotPassword": "Passwort vergessen",
-      "resetPassword": "Passwort zurücksetzen",
-      "changePassword": "Passwort ändern",
       "projectNew": "Neues Projekt",
       "projectMetadata": "Projekt-Metadaten",
       "projectEditor": "Editor",
@@ -363,6 +466,11 @@
       "STUDENT": "Studierende:r",
       "EDITOR": "Redakteur:in",
       "ADMIN": "Admin"
+    },
+    "status": {
+      "REGISTRATION_PENDING": "Registrierung offen",
+      "ACTIVE": "Aktiv",
+      "DEACTIVATED": "Deaktiviert"
     }
   },
   "top10": {

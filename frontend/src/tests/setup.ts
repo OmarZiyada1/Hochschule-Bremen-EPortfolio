@@ -57,6 +57,13 @@ if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {}
 }
 
+/* input-otp (Basis der mit KAN-33 erzeugten input-otp-Primitive) ortet in
+   einem Timer das Element unter dem Zeiger; jsdom kennt elementFromPoint
+   nicht und hat ohnehin kein Layout. Der Ersatz meldet "nichts". */
+if (!document.elementFromPoint) {
+  document.elementFromPoint = () => null
+}
+
 /* Testing Library raeumt nur automatisch auf, wenn die globalen Hooks
    aktiv sind. Dieses Projekt importiert die Testfunktionen ausdruecklich,
    also wird auch das Aufraeumen ausdruecklich angemeldet. */
@@ -69,4 +76,8 @@ afterEach(() => {
   setAuthNavigate(() => {})
   document.documentElement.className = ""
   window.localStorage.clear()
+  // Registrierungs-Schrittzustand und gemerkte Rueckkehr-Route (KAN-33)
+  // liegen im sessionStorage; ohne Aufraeumen erbt der naechste Test einen
+  // halb fertigen Flow.
+  window.sessionStorage.clear()
 })

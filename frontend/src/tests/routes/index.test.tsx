@@ -2,6 +2,7 @@ import { HttpResponse, http } from "msw"
 import { screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it } from "vitest"
 
+import { setPasswordChangeRequired } from "@/api/auth/authStore"
 import i18n from "@/i18n"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
@@ -182,11 +183,54 @@ describe("Routenbaum", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: "Registrierung: Persönliche Angaben",
+        name: "Persönliche Angaben",
       })
     ).toBeInTheDocument()
     expect(screen.getByTestId("pathname")).toHaveTextContent(
       "/register/details"
+    )
+  })
+
+  it("zeigt die Passwort-Seiten ohne NavBar und Footer", () => {
+    /* Klaerungsrunde KAN-33: die drei Passwort-Seiten haben kein eigenes
+       Template und folgen dem rahmenlosen Kartenstil der Auth-Seiten. */
+    const { unmount } = renderWithProviders(<AppUnderTest />, "/forgot-password")
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Passwort vergessen" })
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("navigation", { name: "Hauptnavigation" })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument()
+    unmount()
+
+    renderWithProviders(<AppUnderTest />, "/reset-password")
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Passwort zurücksetzen" })
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("navigation", { name: "Hauptnavigation" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("fuehrt bei gesetztem Passwortzwang jede geschuetzte Route auf die Passwortseite", () => {
+    /* Contract 6.7, DoD KAN-33: das Gate im Server antwortete ohnehin mit
+       403; der Wrapper erspart den sichtbaren Fehlschlag und leitet um. */
+    signInAs("STUDENT")
+    setPasswordChangeRequired(true)
+    renderWithProviders(
+      <>
+        <AppUnderTest />
+        <LocationProbe />
+      </>,
+      "/my-portfolio"
+    )
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Passwort ändern" })
+    ).toBeInTheDocument()
+    expect(screen.getByTestId("pathname")).toHaveTextContent(
+      "/change-password"
     )
   })
 
