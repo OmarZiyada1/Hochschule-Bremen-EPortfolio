@@ -45,3 +45,27 @@
 :root {
   --radius: var(--radius-control); /* 8px */
 }
+
+/*
+ * Blinkender Fake-Caret der input-otp-Primitive (KAN-33). Die Registry-Datei
+ * nutzt animate-caret-blink, liefert aber weder die Theme-Variable noch die
+ * Keyframes mit; ohne beides steht der Caret als statischer Strich, und
+ * weder Typecheck noch Lint noch ein roter Test melden es (derselbe
+ * Fehlermodus wie --radius in input-group.tsx, Review zu KAN-29). Werte wie
+ * in der shadcn-Referenz.
+ */
+@theme inline {
+  --animate-caret-blink: caret-blink 1.25s ease-out infinite;
+
+  @keyframes caret-blink {
+    0%,
+    70%,
+    100% {
+      opacity: 1;
+    }
+    20%,
+    50% {
+      opacity: 0;
+    }
+  }
+}

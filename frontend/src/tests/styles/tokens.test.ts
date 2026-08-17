@@ -433,6 +433,25 @@ describe("Grenzen der Tokenschicht", () => {
     }
   })
 
+  it("definiert die Caret-Animation der input-otp-Primitive", () => {
+    /* Befund des Reviews zu KAN-33, derselbe Fehlermodus wie --radius in
+       input-group.tsx: input-otp.tsx nutzt animate-caret-blink, die
+       Registry liefert aber weder die Theme-Variable noch die Keyframes
+       mit. Ohne beides steht der Fake-Caret als statischer Strich, und
+       nichts meldet es. */
+    const indexCss = withoutComments(
+      readFileSync(join(srcDir, "index.css"), "utf8")
+    )
+    const otp = readFileSync(
+      join(srcDir, "components", "ui", "input-otp.tsx"),
+      "utf8"
+    )
+
+    expect(otp).toMatch(/animate-caret-blink/)
+    expect(indexCss).toMatch(/--animate-caret-blink:\s*caret-blink/)
+    expect(indexCss).toMatch(/@keyframes caret-blink/)
+  })
+
   it("deckt jede Zustandsregel auch in der ARIA-Schreibweise ab", () => {
     /* Base UI meldet inaktive Zustaende ueber aria-disabled, nicht ueber
        :disabled: das gibt es nur an Formularelementen. Eine Regel, die nur
