@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import de.hsbremen.eportfolio.auth.AuthenticatedUser;
 import de.hsbremen.eportfolio.auth.JwtService;
 import de.hsbremen.eportfolio.common.enums.BlockType;
@@ -220,17 +221,63 @@ class BlockIntegrationTest {
 			assertThat(reread.get("blocks")).isEqualTo(saved.get("blocks"));
 		}
 
+		/**
+		 * Der Default ist seit Contract v51 die 2 und nicht mehr die 1 (§2.10,
+		 * KAN-72): was ueber diesen Endpoint hereinkommt, ist gerade gegen die
+		 * geltende Validierung geprueft worden und liegt damit in der aktuellen
+		 * Form vor.
+		 */
 		@Test
-		@DisplayName("schemaVersion: ohne Angabe gilt 1, ein mitgeschickter Wert wird uebernommen")
-		void schemaVersionDefaultsToOne() throws Exception {
+		@DisplayName("schemaVersion: ohne Angabe gilt die aktuelle Version, ein hoeherer "
+				+ "mitgeschickter Wert wird uebernommen")
+		void schemaVersionDefaultsToCurrent() throws Exception {
 			Map<String, Object> withVersion = blockEntry(null, BlockType.TEXT, 1);
-			withVersion.put("schemaVersion", 2);
+			withVersion.put("schemaVersion", 3);
 
 			JsonNode saved = save(author, draft, 0L,
 					List.of(blockEntry(null, BlockType.HEADING, 0), withVersion));
 
-			assertThat(saved.get("blocks").get(0).get("schemaVersion").asInt()).isEqualTo(1);
-			assertThat(saved.get("blocks").get(1).get("schemaVersion").asInt()).isEqualTo(2);
+			assertThat(saved.get("blocks").get(0).get("schemaVersion").asInt())
+					.isEqualTo(BlockSchemaMigration.CURRENT_VERSION);
+			assertThat(saved.get("blocks").get(1).get("schemaVersion").asInt()).isEqualTo(3);
+		}
+
+		/**
+		 * Ein aus Contract v50 stammender Block wird beim Lesen in die aktuelle
+		 * Form gebracht (§2.10). Die Zeile selbst bleibt unangetastet: die
+		 * Migration laeuft im Lesepfad, nicht als Rueckschreiben.
+		 */
+		@Test
+		@DisplayName("Ein Block der Schemaversion 1 kommt migriert aus dem GET zurueck")
+		void oldSchemaVersionIsMigratedOnRead() throws Exception {
+			ObjectNode attrs = objectMapper.createObjectNode();
+			attrs.set("fileIds", objectMapper.createArrayNode()
+					.add("3f1c9a52-0c1e-4a1f-9a3e-2f1d5c7b8e10"));
+			Block stored = TestProject.blockWithoutId(draft, BlockType.GALLERY, 0,
+					node("galleryBlock", attrs));
+			stored.setSchemaVersion(1);
+			blockRepository.saveAndFlush(stored);
+			UUID storedId = stored.getId();
+			entityManager.flush();
+			entityManager.clear();
+
+			JsonNode response = readBlocks(draft, author);
+			JsonNode block = response.get("blocks").get(0);
+
+			assertThat(block.get("schemaVersion").asInt())
+					.isEqualTo(BlockSchemaMigration.CURRENT_VERSION);
+			JsonNode items = block.path("content").path("attrs").path("items");
+			assertThat(items).hasSize(1);
+			assertThat(items.get(0).path("fileId").asText())
+					.isEqualTo("3f1c9a52-0c1e-4a1f-9a3e-2f1d5c7b8e10");
+			assertThat(items.get(0).path("alt").asText()).isEmpty();
+			assertThat(block.path("content").path("attrs").has("fileIds")).isFalse();
+
+			// Die gespeicherte Zeile bleibt, wie sie war.
+			entityManager.clear();
+			Block reloaded = blockRepository.findById(storedId).orElseThrow();
+			assertThat(reloaded.getSchemaVersion()).isEqualTo(1);
+			assertThat(reloaded.getContent().path("attrs").has("fileIds")).isTrue();
 		}
 
 		@Test
@@ -553,6 +600,71 @@ class BlockIntegrationTest {
 					.andExpect(jsonPath("$.path").value(blocksPath(draft.getId())));
 		}
 
+		/**
+		 * Der Angriffsfall aus Befund C3 am ganzen Weg: ein Skript-Link im
+		 * zweiten von drei Bloecken. Ohne die Mark-Pruefung liefe er durch,
+		 * laege dauerhaft in der Datenbank und erschiene auf der oeffentlichen
+		 * Projektdetailseite, die ohne Anmeldung erreichbar ist.
+		 *
+		 * <p>Geprueft wird zusaetzlich, dass danach nichts halb geschrieben
+		 * ist: die Pruefung laeuft ueber die gesamte Liste, bevor die erste
+		 * Zeile faellt, und {@code project.version} bewegt sich nicht.
+		 */
+		@Test
+		@DisplayName("Skript-Link im zweiten von drei Bloecken: 400 im Envelope, Blockliste "
+				+ "und version unveraendert")
+		void hostileLinkIsRejectedAcrossTheWholeRequest() throws Exception {
+			Map<String, Object> withScript = blockEntry(null, BlockType.TEXT, 1);
+			withScript.put("content", paragraphWithLink("javascript:alert(document.cookie)"));
+
+			mockMvc.perform(asUser(saveRequest(draft, 0L, List.of(
+							blockEntry(null, BlockType.HEADING, 0),
+							withScript,
+							blockEntry(null, BlockType.QUOTE, 2))), author))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.errorCode").value("BLOCK_CONTENT_INVALID"))
+					.andExpect(jsonPath("$.status").value(400))
+					.andExpect(jsonPath("$.timestamp").exists())
+					.andExpect(jsonPath("$.path").value(blocksPath(draft.getId())));
+
+			assertThat(blockRepository.findByProjectIdOrderByOrderIndexAsc(draft.getId()))
+					.isEmpty();
+			assertThat(draft.getVersion()).isZero();
+		}
+
+		/**
+		 * Dasselbe Dokument mit {@code https} geht durch, und der Link steht
+		 * unveraendert in der gespeicherten Struktur: der Server filtert, er
+		 * schreibt nicht um (§3.4).
+		 */
+		@Test
+		@DisplayName("Derselbe Aufbau mit https: 200, der Link steht unveraendert in der "
+				+ "gespeicherten Struktur")
+		void safeLinkSurvivesTheRoundTrip() throws Exception {
+			String href = "https://www.hs-bremen.de/fk4";
+			Map<String, Object> withLink = blockEntry(null, BlockType.TEXT, 1);
+			withLink.put("content", paragraphWithLink(href));
+
+			mockMvc.perform(asUser(saveRequest(draft, 0L, List.of(
+							blockEntry(null, BlockType.HEADING, 0),
+							withLink,
+							blockEntry(null, BlockType.QUOTE, 2))), author))
+					.andExpect(status().isOk());
+
+			entityManager.flush();
+			entityManager.clear();
+
+			String stored = mockMvc.perform(asUser(blocksRequest(draft), author))
+					.andExpect(status().isOk())
+					.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+			JsonNode blocks = objectMapper.readTree(stored);
+
+			JsonNode mark = blocks.path("blocks").get(1).path("content").path("content").get(0)
+					.path("marks").get(0);
+			assertThat(mark.path("type").asText()).isEqualTo("link");
+			assertThat(mark.path("attrs").path("href").asText()).isEqualTo(href);
+		}
+
 		@Test
 		@DisplayName("Ein ungueltiger Block am Ende laesst nichts halb Gespeichertes zurueck")
 		void nothingIsWrittenBeforeTheListIsChecked() throws Exception {
@@ -590,6 +702,25 @@ class BlockIntegrationTest {
 
 	private JsonNode node(String nodeType, JsonNode attrs) {
 		return objectMapper.createObjectNode().put("type", nodeType).set("attrs", attrs);
+	}
+
+	/**
+	 * Ein Absatz mit einem Textknoten, der ein {@code link}-Mark auf diese
+	 * Adresse traegt: die Form, in der Tiptap einen Link schickt (§2.5, Links
+	 * sind Marks und keine Bloecke).
+	 */
+	private JsonNode paragraphWithLink(String href) {
+		ObjectNode mark = objectMapper.createObjectNode().put("type", "link");
+		mark.set("attrs", objectMapper.createObjectNode().put("href", href));
+
+		ObjectNode text = objectMapper.createObjectNode()
+				.put("type", "text").put("text", "hier klicken");
+		text.set("marks", objectMapper.createArrayNode().add(mark));
+
+		ObjectNode paragraph = objectMapper.createObjectNode().put("type", "paragraph");
+		paragraph.set("attrs", objectMapper.createObjectNode().put("textAlign", "left"));
+		paragraph.set("content", objectMapper.createArrayNode().add(text));
+		return paragraph;
 	}
 
 	/**

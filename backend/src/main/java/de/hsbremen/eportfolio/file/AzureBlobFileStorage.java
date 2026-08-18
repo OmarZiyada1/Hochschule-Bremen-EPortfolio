@@ -5,7 +5,9 @@ import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobContainerClientBuilder;
 import com.azure.storage.blob.models.BlobHttpHeaders;
+import com.azure.storage.blob.models.BlobRange;
 import com.azure.storage.blob.models.BlobStorageException;
+import com.azure.storage.blob.options.BlobInputStreamOptions;
 import com.azure.storage.blob.options.BlobParallelUploadOptions;
 import de.hsbremen.eportfolio.config.StorageProperties;
 import java.io.InputStream;
@@ -64,6 +66,23 @@ public class AzureBlobFileStorage implements FileStorage {
 	public InputStream load(String key) {
 		try {
 			return blob(key).openInputStream();
+		} catch (BlobStorageException e) {
+			throw new FileStorageException("Kein Objekt unter diesem Schluessel: " + key, e);
+		}
+	}
+
+	/**
+	 * Der Ausschnitt entsteht bei Azure serverseitig: {@link BlobRange} wird
+	 * zum {@code Range}-Kopf der Speicheranfrage, es kommen also nur die
+	 * angeforderten Bytes ueber das Netz. Genau dafuer steht die Methode am
+	 * Port (§3.15.1).
+	 */
+	@Override
+	public InputStream load(String key, long offset, long length) {
+		try {
+			BlobInputStreamOptions options = new BlobInputStreamOptions()
+					.setRange(new BlobRange(offset, length));
+			return blob(key).openInputStream(options);
 		} catch (BlobStorageException e) {
 			throw new FileStorageException("Kein Objekt unter diesem Schluessel: " + key, e);
 		}

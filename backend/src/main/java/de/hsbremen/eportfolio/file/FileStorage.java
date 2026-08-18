@@ -44,6 +44,32 @@ public interface FileStorage {
 	InputStream load(String key);
 
 	/**
+	 * Liest einen Ausschnitt des Objekts (§3.15, HTTP-Range).
+	 *
+	 * <p><strong>Warum die Methode am Port steht und nicht im Controller.</strong>
+	 * Ein erst dort gebildeter Ausschnitt hiesse: das ganze Objekt aus dem
+	 * Speicher ziehen und den ueberwiegenden Teil davon wegwerfen. Bei einem
+	 * 200-MB-Video waeren das je Sprung in der Zeitleiste 200 MB ueber das
+	 * Netz zum Objektspeicher, fuer wenige hundert Kilobyte Nutzlast. Azure
+	 * beherrscht Bereichsabrufe serverseitig, das Dateisystem beherrscht sie
+	 * ueber die Position im Kanal; beides ist nur erreichbar, wenn der Port
+	 * die Werte durchreicht.
+	 *
+	 * <p>Die Aufrufseite hat {@code offset} und {@code length} bereits gegen
+	 * {@code StoredFile.size} geprueft (§6.2,
+	 * {@code FILE_RANGE_NOT_SATISFIABLE}); der Adapter darf sich darauf
+	 * verlassen und braucht keine eigene Bereichsrechnung.
+	 *
+	 * @param key    anbieterneutraler Schluessel
+	 * @param offset erstes zu lesendes Byte, nullbasiert
+	 * @param length Anzahl der Bytes, groesser als 0
+	 * @return Strom ueber genau diesen Ausschnitt; die Aufrufseite schliesst ihn
+	 * @throws FileStorageException wenn es unter dem Schluessel kein Objekt
+	 *         gibt oder das Lesen scheitert
+	 */
+	InputStream load(String key, long offset, long length);
+
+	/**
 	 * Entfernt das Objekt. Ein fehlendes Objekt ist kein Fehler: das Ziel
 	 * "weg" ist dann bereits erreicht.
 	 *

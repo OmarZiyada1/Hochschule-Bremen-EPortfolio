@@ -207,6 +207,22 @@ public class SecurityConfig {
 							"/api/semesters",
 							"/api/top10").permitAll()
 
+					// HEAD auf /api/files/* kam mit KAN-72 dazu, zusammen mit
+					// der Range-Auslieferung (§3.15). RFC 9110 definiert HEAD
+					// als GET ohne Rumpf: wo das GET oeffentlich ist, gibt HEAD
+					// nichts preis, was jenes nicht schon preisgibt. Ohne diese
+					// Zeile ergaebe ein anonymes HEAD auf die Datei eines
+					// veroeffentlichten Projekts 401, waehrend das GET
+					// derselben Datei 200 liefert, und ein Medienelement
+					// koennte Groesse und Accept-Ranges nicht vorab erfragen,
+					// ohne Bytes zu ziehen. Spring beantwortet HEAD ueber
+					// dasselbe @GetMapping; die Entscheidung, ob die Datei
+					// sichtbar ist, trifft weiterhin der FileService am
+					// Projektstatus und nicht die Filterkette. Bewusst nur
+					// fuer diesen Pfad: die uebrigen PUBLIC-GETs liefern JSON,
+					// fuer das ein HEAD keinen Zweck hat.
+					.requestMatchers(HttpMethod.HEAD, "/api/files/*").permitAll()
+
 					// Rollenebene fuer den Admin-Bereich. Der Rest der Matrix
 					// haengt an der Ressource und wird pro Endpoint geprueft.
 					.requestMatchers("/api/admin/**").hasRole("ADMIN")

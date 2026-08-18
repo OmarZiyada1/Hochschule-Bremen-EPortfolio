@@ -14,7 +14,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 class AllowedFileTypeTest {
 
 	@Test
-	@DisplayName("Nur die sieben MIME-Typen aus §3.15 werden aufgeloest")
+	@DisplayName("Nur die neun MIME-Typen aus §3.15 werden aufgeloest")
 	void mimeTypeAllowlist() {
 		assertThat(AllowedFileType.fromMimeType("image/png")).contains(AllowedFileType.PNG);
 		assertThat(AllowedFileType.fromMimeType("image/jpeg")).contains(AllowedFileType.JPEG);
@@ -23,9 +23,14 @@ class AllowedFileTypeTest {
 		assertThat(AllowedFileType.fromMimeType("audio/wav")).contains(AllowedFileType.WAV);
 		assertThat(AllowedFileType.fromMimeType("audio/ogg")).contains(AllowedFileType.OGG);
 		assertThat(AllowedFileType.fromMimeType("application/pdf")).contains(AllowedFileType.PDF);
+		assertThat(AllowedFileType.fromMimeType("video/mp4")).contains(AllowedFileType.MP4);
+		assertThat(AllowedFileType.fromMimeType("video/webm")).contains(AllowedFileType.WEBM);
 
 		assertThat(AllowedFileType.fromMimeType("text/plain")).isEmpty();
-		assertThat(AllowedFileType.fromMimeType("video/mp4")).isEmpty();
+		// Matroska traegt denselben EBML-Kopf wie WebM und scheitert deshalb
+		// bereits an der ersten Stufe, dem gemeldeten Content-Type (§3.15).
+		assertThat(AllowedFileType.fromMimeType("video/x-matroska")).isEmpty();
+		assertThat(AllowedFileType.fromMimeType("video/quicktime")).isEmpty();
 		assertThat(AllowedFileType.fromMimeType("image/gif")).isEmpty();
 		assertThat(AllowedFileType.fromMimeType("application/zip")).isEmpty();
 		assertThat(AllowedFileType.fromMimeType(null)).isEmpty();
@@ -71,11 +76,47 @@ class AllowedFileTypeTest {
 		assertThat(type.matchesSignature(new byte[] { 'R' })).isFalse();
 	}
 
+	/**
+	 * MP4 wird an der ftyp-Box in den Bytes 4 bis 7 erkannt, nicht an der
+	 * Boxlaenge davor: die ist kein Kennzeichen des Formats und variiert
+	 * (§3.15, Contract v53).
+	 */
 	@Test
-	@DisplayName("Limits nach §3.15: Bilder 10 MB, Audio und PDF 25 MB")
+	@DisplayName("MP4: ftyp in den Bytes 4 bis 7, unabhaengig von der Boxlaenge davor")
+	void mp4FileTypeBox() {
+		byte[] otherLength = new byte[] {
+				0x00, 0x00, 0x00, 0x18, 'f', 't', 'y', 'p', 'm', 'p', '4', '2' };
+		assertThat(AllowedFileType.MP4.matchesSignature(otherLength)).isTrue();
+
+		byte[] withoutFtyp = new byte[] {
+				0x00, 0x00, 0x00, 0x20, 'm', 'o', 'o', 'v', 'i', 's', 'o', 'm' };
+		assertThat(AllowedFileType.MP4.matchesSignature(withoutFtyp)).isFalse();
+	}
+
+	@Test
+	@DisplayName("WebM: der EBML-Kopf in den Bytes 0 bis 3, ein abweichender Anfang nicht")
+	void webmEbmlHeader() {
+		byte[] ebml = new byte[] {
+				(byte) 0x1A, 0x45, (byte) 0xDF, (byte) 0xA3, 0x01, 0x02, 0x03, 0x04 };
+		assertThat(AllowedFileType.WEBM.matchesSignature(ebml)).isTrue();
+
+		byte[] different = new byte[] {
+				(byte) 0x1A, 0x45, (byte) 0xDF, 0x00, 0x01, 0x02, 0x03, 0x04 };
+		assertThat(AllowedFileType.WEBM.matchesSignature(different)).isFalse();
+	}
+
+	@Test
+	@DisplayName("HEADER_LENGTH bleibt 12: die beiden Videosignaturen brauchen nicht mehr")
+	void headerLengthStaysTwelve() {
+		assertThat(AllowedFileType.HEADER_LENGTH).isEqualTo(12);
+	}
+
+	@Test
+	@DisplayName("Limits nach §3.15: Bilder 10 MB, Audio und PDF 25 MB, Video 200 MB")
 	void limits() {
 		long tenMib = 10L * 1024 * 1024;
 		long twentyFiveMib = 25L * 1024 * 1024;
+		long twoHundredMib = 200L * 1024 * 1024;
 
 		assertThat(AllowedFileType.PNG.maxBytes()).isEqualTo(tenMib);
 		assertThat(AllowedFileType.JPEG.maxBytes()).isEqualTo(tenMib);
@@ -84,5 +125,7 @@ class AllowedFileTypeTest {
 		assertThat(AllowedFileType.WAV.maxBytes()).isEqualTo(twentyFiveMib);
 		assertThat(AllowedFileType.OGG.maxBytes()).isEqualTo(twentyFiveMib);
 		assertThat(AllowedFileType.PDF.maxBytes()).isEqualTo(twentyFiveMib);
+		assertThat(AllowedFileType.MP4.maxBytes()).isEqualTo(twoHundredMib);
+		assertThat(AllowedFileType.WEBM.maxBytes()).isEqualTo(twoHundredMib);
 	}
 }

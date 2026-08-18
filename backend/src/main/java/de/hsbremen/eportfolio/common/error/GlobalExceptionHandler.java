@@ -122,8 +122,29 @@ public class GlobalExceptionHandler {
 			HttpServletRequest request) {
 		return build(HttpStatus.BAD_REQUEST, ErrorCodes.FILE_TOO_LARGE,
 				"Die Datei ueberschreitet das Groessenlimit (§3.15): hoechstens 10 MB fuer "
-						+ "Bilder, 25 MB fuer Audio und PDF.",
+						+ "Bilder, 25 MB fuer Audio und PDF, 200 MB fuer Video.",
 				request);
+	}
+
+	/**
+	 * Der angeforderte Bereich einer Datei liegt jenseits ihrer Groesse
+	 * (§3.15, KAN-72): 416 {@code FILE_RANGE_NOT_SATISFIABLE}.
+	 *
+	 * <p>Die Antwort traegt zusaetzlich zum Envelope aus §6.2 zwei Kopfzeilen.
+	 * {@code Content-Range: bytes &#42;/&lt;size&gt;} verlangt RFC 9110 fuer
+	 * jeden 416; erst damit kann der Client seine Rechnung korrigieren, ohne
+	 * die Datei erneut anzufragen. {@code Accept-Ranges: bytes} steht wie bei
+	 * jeder anderen Antwort des Datei-Endpoints daneben: der Bereichsabruf ist
+	 * nicht deshalb ausgeschlossen, weil dieser eine misslang.
+	 */
+	@ExceptionHandler(RangeNotSatisfiableException.class)
+	public ResponseEntity<ApiError> handleRangeNotSatisfiable(RangeNotSatisfiableException ex,
+			HttpServletRequest request) {
+		HttpHeaders headers = new HttpHeaders();
+		headers.set(HttpHeaders.CONTENT_RANGE, "bytes */" + ex.getTotalSize());
+		headers.set(HttpHeaders.ACCEPT_RANGES, "bytes");
+		return build(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE,
+				ErrorCodes.FILE_RANGE_NOT_SATISFIABLE, ex.getMessage(), headers, request);
 	}
 
 	/**

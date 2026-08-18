@@ -41,11 +41,18 @@ public class Block extends AuditableEntity {
 	private JsonNode content;
 
 	/**
-	 * Version des Block-JSON-Formats (API-Contract §2.10). Entspricht dem
-	 * Default der Spalte, da JPA die Spalte immer mitschreibt.
+	 * Version des Block-JSON-Formats (API-Contract §2.10).
+	 *
+	 * <p><strong>Seit Contract v51 gilt 2</strong> (KAN-72): §2.5 hat mehrere
+	 * Attributformen geaendert, und §2.10 verlangt dafuer eine erhoehte Version
+	 * samt Migrationsfunktion ({@link BlockSchemaMigration}). Der Default der
+	 * Spalte steht weiterhin auf 1 und wird bewusst nicht per Migration
+	 * angefasst: er beschreibt, was eine Zeile ohne ausdrueckliche Angabe
+	 * bedeutet, und das sind die vor v51 geschriebenen Dokumente. Neue Zeilen
+	 * bekommen den Wert von hier, weil JPA die Spalte immer mitschreibt.
 	 */
 	@Column(nullable = false)
-	private int schemaVersion = 1;
+	private int schemaVersion = BlockSchemaMigration.CURRENT_VERSION;
 
 	protected Block() {
 		// Von JPA benoetigt.

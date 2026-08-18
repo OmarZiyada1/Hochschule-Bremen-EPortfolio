@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -23,6 +24,7 @@ import de.hsbremen.eportfolio.user.User;
 import de.hsbremen.eportfolio.user.UserRepository;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +33,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -237,6 +240,49 @@ class FileIntegrationTest {
 			expectUpload400(file, "FILE_TOO_LARGE");
 		}
 
+		/**
+		 * Die 200-MB-Grenze aus §3.15, ohne 200 MB zu uebertragen: der
+		 * Multipart-Teil meldet die Groesse selbst, und genau diesen Wert
+		 * prueft {@code FileService.requireWithinLimit}. Der Rumpf bleibt
+		 * klein, die Signatur stimmt.
+		 */
+		@Test
+		@DisplayName("Video ueber 200 MB: 400 FILE_TOO_LARGE; bei genau 200 MB entsteht die Zeile")
+		void videoSizeLimit() throws Exception {
+			long limit = 200L * 1024 * 1024;
+
+			expectUpload400(videoPartReporting(limit + 1), "FILE_TOO_LARGE");
+
+			JsonNode created = upload(author, videoPartReporting(limit), draft.getId());
+			assertThat(created.get("size").asLong()).isEqualTo(limit);
+			assertThat(created.get("mimeType").asText()).isEqualTo("video/mp4");
+		}
+
+		@Test
+		@DisplayName("WebM wird angenommen")
+		void webmIsAllowed() throws Exception {
+			JsonNode created = upload(author,
+					part(AllowedFileType.WEBM, TestFiles.sample(AllowedFileType.WEBM)),
+					draft.getId());
+			assertThat(created.get("mimeType").asText()).isEqualTo("video/webm");
+		}
+
+		/**
+		 * Matroska traegt denselben EBML-Kopf wie WebM; die zweite Stufe der
+		 * Typpruefung koennte die beiden also nicht unterscheiden. Sie muss es
+		 * auch nicht: der gemeldete Content-Type steht nicht in der Allowlist,
+		 * und damit faellt der Upload schon an der ersten Stufe (§3.15,
+		 * Contract v53).
+		 */
+		@Test
+		@DisplayName("Matroska mit demselben EBML-Kopf faellt an der MIME-Allowlist")
+		void matroskaIsNotAllowed() throws Exception {
+			MockMultipartFile matroska = new MockMultipartFile("file", "film.mkv",
+					"video/x-matroska", TestFiles.sample(AllowedFileType.WEBM));
+
+			expectUpload400(matroska, "FILE_TYPE_NOT_ALLOWED");
+		}
+
 		@Test
 		@DisplayName("Projekt nicht in DRAFT oder REVISION: 409 PROJECT_STATUS_NOT_EDITABLE")
 		void lockedStatus() throws Exception {
@@ -390,6 +436,218 @@ class FileIntegrationTest {
 	}
 
 	// ==================================================================
+	// GET /api/files/{id} mit Range (§3.15, KAN-72)
+	// ==================================================================
+
+	/**
+	 * Die Bereichsauslieferung nach §3.15 und RFC 9110. Sie gilt fuer jeden
+	 * Dateityp: der Bereich ist eine Eigenschaft der Auslieferung und nicht
+	 * des Typs. Geprueft wird deshalb an einer PNG-Datei, die klein genug
+	 * bleibt, um die erwarteten Bytes im Test hinschreiben zu koennen; kein
+	 * Test schickt 200 MB ueber HTTP.
+	 */
+	@Nested
+	@DisplayName("GET /api/files/{id} mit Range")
+	class RangeRequests {
+
+		private static final int SIZE = 512;
+
+		private UUID id;
+
+		private byte[] content;
+
+		@BeforeEach
+		void uploadKnownContent() throws Exception {
+			content = TestFiles.sample(AllowedFileType.PNG, SIZE);
+			id = UUID.fromString(upload(author,
+					part(AllowedFileType.PNG, content), draft.getId()).get("id").asText());
+			draft.setStatus(ProjectStatus.PUBLISHED);
+			projectRepository.saveAndFlush(draft);
+		}
+
+		@Test
+		@DisplayName("bytes=0-99: 206 mit Content-Range, Content-Length 100 und genau den "
+				+ "ersten 100 Bytes")
+		void firstHundredBytes() throws Exception {
+			byte[] body = mockMvc.perform(get("/api/files/" + id)
+							.header(HttpHeaders.RANGE, "bytes=0-99"))
+					.andExpect(status().isPartialContent())
+					.andExpect(header().string(HttpHeaders.CONTENT_RANGE, "bytes 0-99/" + SIZE))
+					.andExpect(header().string(HttpHeaders.CONTENT_LENGTH, "100"))
+					.andExpect(header().string(HttpHeaders.ACCEPT_RANGES, "bytes"))
+					.andReturn().getResponse().getContentAsByteArray();
+
+			assertThat(body).isEqualTo(Arrays.copyOfRange(content, 0, 100));
+		}
+
+		@Test
+		@DisplayName("Ein offener Bereich liefert bis zum Dateiende")
+		void openEndedRange() throws Exception {
+			byte[] body = mockMvc.perform(get("/api/files/" + id)
+							.header(HttpHeaders.RANGE, "bytes=400-"))
+					.andExpect(status().isPartialContent())
+					.andExpect(header().string(HttpHeaders.CONTENT_RANGE,
+							"bytes 400-" + (SIZE - 1) + "/" + SIZE))
+					.andExpect(header().string(HttpHeaders.CONTENT_LENGTH,
+							String.valueOf(SIZE - 400)))
+					.andReturn().getResponse().getContentAsByteArray();
+
+			assertThat(body).isEqualTo(Arrays.copyOfRange(content, 400, SIZE));
+		}
+
+		@Test
+		@DisplayName("Ein Suffixbereich liefert die letzten Bytes")
+		void suffixRange() throws Exception {
+			byte[] body = mockMvc.perform(get("/api/files/" + id)
+							.header(HttpHeaders.RANGE, "bytes=-50"))
+					.andExpect(status().isPartialContent())
+					.andExpect(header().string(HttpHeaders.CONTENT_RANGE,
+							"bytes " + (SIZE - 50) + "-" + (SIZE - 1) + "/" + SIZE))
+					.andExpect(header().string(HttpHeaders.CONTENT_LENGTH, "50"))
+					.andReturn().getResponse().getContentAsByteArray();
+
+			assertThat(body).isEqualTo(Arrays.copyOfRange(content, SIZE - 50, SIZE));
+		}
+
+		@Test
+		@DisplayName("Ohne Range: 200, vollstaendiger Inhalt, Accept-Ranges gesetzt, ETag und "
+				+ "Cache-Control wie bisher")
+		void withoutRangeHeader() throws Exception {
+			byte[] body = mockMvc.perform(get("/api/files/" + id))
+					.andExpect(status().isOk())
+					.andExpect(header().string(HttpHeaders.ACCEPT_RANGES, "bytes"))
+					.andExpect(header().doesNotExist(HttpHeaders.CONTENT_RANGE))
+					.andExpect(header().string(HttpHeaders.CONTENT_LENGTH, String.valueOf(SIZE)))
+					.andExpect(header().string(HttpHeaders.ETAG, "\"" + id + "\""))
+					.andExpect(header().string(HttpHeaders.CACHE_CONTROL, "public, max-age=86400"))
+					.andReturn().getResponse().getContentAsByteArray();
+
+			assertThat(body).isEqualTo(content);
+		}
+
+		/**
+		 * RFC 9110 schreibt vor, einen Range-Kopf, den der Server nicht
+		 * versteht, zu ignorieren statt ihn zum Fehler zu machen: ein Server,
+		 * der einen kaputten Kopf zum Fehler macht, sperrt jeden
+		 * Zwischenspeicher mit eigener Range-Syntax aus. Mehrere Bereiche
+		 * verlangten eine {@code multipart/byteranges}-Antwort, die dieses
+		 * Portal nicht baut; auch sie ergeben deshalb die vollstaendige Datei.
+		 */
+		@ParameterizedTest
+		@ValueSource(strings = { "unsinn", "bytes=abc", "items=0-10", "bytes=0-99, 200-299" })
+		@DisplayName("Unlesbarer Kopf und Mehrfachbereich ergeben 200 mit vollstaendigem Inhalt")
+		void ignoredRangeHeaders(String rangeHeader) throws Exception {
+			byte[] body = mockMvc.perform(get("/api/files/" + id)
+							.header(HttpHeaders.RANGE, rangeHeader))
+					.andExpect(status().isOk())
+					.andExpect(header().string(HttpHeaders.ACCEPT_RANGES, "bytes"))
+					.andExpect(header().doesNotExist(HttpHeaders.CONTENT_RANGE))
+					.andExpect(header().string(HttpHeaders.CONTENT_LENGTH, String.valueOf(SIZE)))
+					.andReturn().getResponse().getContentAsByteArray();
+
+			assertThat(body).isEqualTo(content);
+		}
+
+		@Test
+		@DisplayName("Ein Bereich jenseits der Dateigroesse: 416 mit Content-Range bytes */size")
+		void rangeBeyondFileSize() throws Exception {
+			mockMvc.perform(get("/api/files/" + id)
+							.header(HttpHeaders.RANGE, "bytes=" + SIZE + "-" + (SIZE + 99)))
+					.andExpect(status().isRequestedRangeNotSatisfiable())
+					.andExpect(header().string(HttpHeaders.CONTENT_RANGE, "bytes */" + SIZE))
+					.andExpect(header().string(HttpHeaders.ACCEPT_RANGES, "bytes"))
+					.andExpect(jsonPath("$.errorCode").value("FILE_RANGE_NOT_SATISFIABLE"))
+					.andExpect(jsonPath("$.status").value(416))
+					.andExpect(jsonPath("$.path").value("/api/files/" + id));
+		}
+
+		/**
+		 * Die Rechte fallen vor der Bereichsaufloesung (§6.3.1). Andernfalls
+		 * verriete ein 416 auf eine fremde Datei deren Groesse, bevor
+		 * ueberhaupt feststeht, ob sie gelesen werden darf.
+		 */
+		@Test
+		@DisplayName("Bereichsabruf auf einen Entwurf: 401 unangemeldet, 403 ohne Recht")
+		void permissionsComeFirst() throws Exception {
+			draft.setStatus(ProjectStatus.DRAFT);
+			projectRepository.saveAndFlush(draft);
+
+			mockMvc.perform(get("/api/files/" + id).header(HttpHeaders.RANGE, "bytes=0-9"))
+					.andExpect(status().isUnauthorized())
+					.andExpect(jsonPath("$.errorCode").value("NOT_AUTHENTICATED"));
+
+			mockMvc.perform(asUser(get("/api/files/" + id)
+							.header(HttpHeaders.RANGE, "bytes=0-9"), otherStudent))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+
+			// Auch ein unerfuellbarer Bereich verraet ohne Leserecht nichts.
+			mockMvc.perform(asUser(get("/api/files/" + id)
+							.header(HttpHeaders.RANGE, "bytes=99999-"), otherStudent))
+					.andExpect(status().isForbidden());
+		}
+
+		/**
+		 * HEAD laeuft ueber dasselbe {@code @GetMapping}; Spring verwirft den
+		 * Rumpf. Ein Medienelement sieht damit Accept-Ranges und
+		 * Content-Length, ohne dass es dafuer einen eigenen Endpoint braucht.
+		 *
+		 * <p>Anonym geht das nur, weil {@code SecurityConfig} den Pfad seit
+		 * KAN-72 auch fuer HEAD freigibt; ohne diese Zeile ergaebe derselbe
+		 * Aufruf 401, waehrend das GET daneben 200 liefert (Klaerung zu
+		 * KAN-72).
+		 */
+		@Test
+		@DisplayName("HEAD liefert dieselben Kopfzeilen ohne Rumpf, angemeldet wie anonym")
+		void headCarriesTheHeaders() throws Exception {
+			for (User user : Arrays.asList(null, author)) {
+				byte[] body = mockMvc.perform(asUser(head("/api/files/" + id), user))
+						.andExpect(status().isOk())
+						.andExpect(header().string(HttpHeaders.ACCEPT_RANGES, "bytes"))
+						.andExpect(header().string(HttpHeaders.CONTENT_LENGTH,
+								String.valueOf(SIZE)))
+						.andExpect(header().string(HttpHeaders.ETAG, "\"" + id + "\""))
+						.andExpect(header().string(HttpHeaders.CACHE_CONTROL,
+								"public, max-age=86400"))
+						.andReturn().getResponse().getContentAsByteArray();
+
+				assertThat(body).isEmpty();
+			}
+		}
+
+		/**
+		 * Ein Range-Kopf an einem HEAD wird nicht aufgeloest: die Antwort traegt
+		 * ohnehin keinen Rumpf, und RFC 9110 laesst den Server ihn ignorieren.
+		 * Sie bleibt deshalb 200 mit der vollen Groesse und ohne Content-Range.
+		 */
+		@Test
+		@DisplayName("HEAD mit Range-Kopf bleibt 200 ohne Content-Range")
+		void headIgnoresTheRangeHeader() throws Exception {
+			mockMvc.perform(head("/api/files/" + id).header(HttpHeaders.RANGE, "bytes=0-99"))
+					.andExpect(status().isOk())
+					.andExpect(header().doesNotExist(HttpHeaders.CONTENT_RANGE))
+					.andExpect(header().string(HttpHeaders.CONTENT_LENGTH, String.valueOf(SIZE)))
+					.andExpect(header().string(HttpHeaders.ACCEPT_RANGES, "bytes"));
+		}
+
+		/**
+		 * Die Freigabe gilt der Filterkette, nicht der Sichtbarkeit: an einem
+		 * Entwurf antwortet auch HEAD nach §6.3.1.
+		 */
+		@Test
+		@DisplayName("HEAD auf einen Entwurf: 401 unangemeldet, 403 ohne Recht")
+		void headFollowsTheSameVisibilityRules() throws Exception {
+			draft.setStatus(ProjectStatus.DRAFT);
+			projectRepository.saveAndFlush(draft);
+
+			mockMvc.perform(head("/api/files/" + id))
+					.andExpect(status().isUnauthorized());
+			mockMvc.perform(asUser(head("/api/files/" + id), otherStudent))
+					.andExpect(status().isForbidden());
+		}
+	}
+
+	// ==================================================================
 	// DELETE /api/files/{id}
 	// ==================================================================
 
@@ -508,8 +766,27 @@ class FileIntegrationTest {
 			case WAV -> "aufnahme.wav";
 			case OGG -> "klang.ogg";
 			case PDF -> "dokument.pdf";
+			case MP4 -> "film.mp4";
+			case WEBM -> "film.webm";
 		};
 		return new MockMultipartFile("file", name, type.mimeType(), content);
+	}
+
+	/**
+	 * Ein MP4-Teil, der eine beliebige Groesse meldet, ohne sie zu uebertragen.
+	 * {@code FileService.requireWithinLimit} prueft {@code getSize()}, und
+	 * genau das ueberschreibt dieses Testdouble; Signatur und Content-Type
+	 * bleiben echt, damit die Typpruefung davor greift wie im Betrieb. So
+	 * bleibt die 200-MB-Grenze pruefbar, ohne 200 MB ueber HTTP zu schicken.
+	 */
+	private MockMultipartFile videoPartReporting(long reportedSize) {
+		byte[] head = TestFiles.sample(AllowedFileType.MP4);
+		return new MockMultipartFile("file", "film.mp4", "video/mp4", head) {
+			@Override
+			public long getSize() {
+				return reportedSize;
+			}
+		};
 	}
 
 	private MockMultipartHttpServletRequestBuilder uploadRequest(MockMultipartFile file,

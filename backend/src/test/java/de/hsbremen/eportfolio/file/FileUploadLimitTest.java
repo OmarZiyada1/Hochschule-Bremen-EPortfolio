@@ -23,6 +23,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
@@ -30,6 +31,29 @@ import org.springframework.util.MultiValueMap;
  * Ein Upload oberhalb des Servlet-Limits ({@code spring.servlet.multipart},
  * KAN-23) ergibt 400 {@code FILE_TOO_LARGE} im Envelope aus §6.2 und keinen
  * 500.
+ *
+ * <p><strong>Die Grenze setzt der Test selbst herab</strong> (KAN-72). Bis
+ * Contract v50 stand sie auf 30 MB, und der Test schickte 31 MB dagegen. Mit
+ * dem Video-Upload liegt sie bei 210 MB; ein Test, der 211 MB durch eine
+ * HTTP-Verbindung schoebe, pruefte nicht mehr, was sein Name sagt, sondern
+ * vor allem die Geduld des Testlaufs. Ueber {@code @SpringBootTest(properties
+ * = ...)} steht sie hier auf 1 MB, und ein 2-MB-PNG loest dieselbe
+ * {@code MaxUploadSizeExceededException} aus wie 211 MB im Betrieb: der
+ * Multipart-Filter unterscheidet die beiden Faelle nicht. Die echten Werte
+ * aus {@code application.yml} deckt kein Test ab, weil sie Konfiguration
+ * sind und keine Logik; dass sie oberhalb des fachlichen Limits liegen,
+ * begruendet der Kommentar dort.
+ *
+ *
+ * <p><strong>{@code @DirtiesContext} gibt die Verbindungen wieder frei.</strong>
+ * Diese Klasse braucht einen eigenen Anwendungskontext, den keine andere
+ * Klasse teilt, und ohne diese Angabe bliebe er samt seinem Verbindungspool
+ * bis zum Ende des gesamten Laufs im Kontext-Cache stehen. Der volle
+ * {@code ./mvnw test} haelt neun solcher Kontexte gleichzeitig, und die
+ * Entwicklungsdatenbank aus den {@code compose.*.yml} laesst hundert
+ * Verbindungen zu: der Lauf scheiterte reproduzierbar mit
+ * {@code FATAL: sorry, too many clients already}, und zwar an einer spaeter
+ * startenden Klasse, die mit der Ursache nichts zu tun hatte (KAN-72).
  *
  * <p><strong>Warum gegen einen echten Server und nicht per MockMvc:</strong>
  * die Multipart-Grenzen setzt der Servlet-Container beim Einlesen des
@@ -40,7 +64,12 @@ import org.springframework.util.MultiValueMap;
  * Test-Transaktion wuerde dort nichts zurueckrollen. Dateizeilen entstehen
  * keine, der Upload scheitert vor dem Controller.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+		properties = {
+				"spring.servlet.multipart.max-file-size=1MB",
+				"spring.servlet.multipart.max-request-size=2MB",
+				"server.tomcat.max-swallow-size=4MB" })
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class FileUploadLimitTest {
 
 	@Autowired
@@ -69,9 +98,10 @@ class FileUploadLimitTest {
 	}
 
 	@Test
-	@DisplayName("31 MB gegen das 30-MB-Servlet-Limit: 400 FILE_TOO_LARGE im Envelope")
+	@DisplayName("2 MB gegen ein im Test auf 1 MB gesetztes Servlet-Limit: 400 FILE_TOO_LARGE "
+			+ "im Envelope")
 	void uploadAboveServletLimit() throws Exception {
-		byte[] bytes = TestFiles.sample(AllowedFileType.PNG, 31 * 1024 * 1024);
+		byte[] bytes = TestFiles.sample(AllowedFileType.PNG, 2 * 1024 * 1024);
 		ByteArrayResource resource = new ByteArrayResource(bytes) {
 			@Override
 			public String getFilename() {

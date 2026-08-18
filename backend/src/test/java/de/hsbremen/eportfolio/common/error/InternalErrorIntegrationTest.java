@@ -364,6 +364,12 @@ class InternalErrorIntegrationTest {
 			throw new FileStorageException("Speicher nicht erreichbar (" + INTERNAL_DETAIL + ")");
 		}
 
+		/** Der Bereichsabruf scheitert wie der vollstaendige (§3.15, KAN-72). */
+		@Override
+		public InputStream load(String key, long offset, long length) {
+			throw new FileStorageException("Speicher nicht erreichbar (" + INTERNAL_DETAIL + ")");
+		}
+
 		@Override
 		public void delete(String key) {
 			// Kein Speicher, nichts zu loeschen.

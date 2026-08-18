@@ -9,6 +9,7 @@ import de.hsbremen.eportfolio.config.StorageProvider;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.nio.file.Path;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,6 +54,38 @@ class LocalFileStorageTest {
 
 		assertThatThrownBy(() -> storage.load(key))
 				.isInstanceOf(FileStorageException.class);
+	}
+
+	/**
+	 * Der Bereichsabruf liefert genau den angeforderten Ausschnitt (§3.15,
+	 * KAN-72). Geprueft werden Anfang, Mitte, das Dateiende und die kuerzeste
+	 * moegliche Laenge: das Dateiende ist die Stelle, an der eine um eins
+	 * verrechnete Grenze zuerst auffiele.
+	 */
+	@Test
+	@DisplayName("Bereichsabruf liefert genau die angeforderten Bytes, auch am Dateiende")
+	void rangeLoad() throws IOException {
+		byte[] content = TestFiles.sample(AllowedFileType.PNG, 512);
+		String key = "projects/" + UUID.randomUUID() + "/" + UUID.randomUUID();
+		storage.store(key, new ByteArrayInputStream(content), content.length, "image/png");
+
+		assertRange(key, content, 0, 100);
+		assertRange(key, content, 100, 200);
+		assertRange(key, content, content.length - 10, 10);
+		assertRange(key, content, content.length - 1, 1);
+		assertRange(key, content, 0, content.length);
+
+		storage.delete(key);
+	}
+
+	private void assertRange(String key, byte[] content, int offset, int length)
+			throws IOException {
+		byte[] expected = Arrays.copyOfRange(content, offset, offset + length);
+		try (InputStream loaded = storage.load(key, offset, length)) {
+			assertThat(loaded.readAllBytes())
+					.as("Bereich %d bis %d", offset, offset + length - 1)
+					.isEqualTo(expected);
+		}
 	}
 
 	@Test
