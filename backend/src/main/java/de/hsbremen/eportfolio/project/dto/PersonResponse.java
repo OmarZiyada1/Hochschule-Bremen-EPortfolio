@@ -9,9 +9,10 @@ import java.util.UUID;
  * oder Urheber:in eines Statusuebergangs (§6.1).
  *
  * <p>Enthaelt bewusst nur Name, ID und Profilbild. Weder {@code email} noch
- * {@code hsbEmail} gehoeren hier hinein: die HSB-Adresse verlaesst den Server
- * ueberhaupt nicht (§3.1), und die private Adresse ist die Login-Kennung, die
- * in einer oeffentlich lesbaren Projektliste nichts zu suchen hat. Ein eigenes
+ * {@code hsbEmail} gehoeren hier hinein: die HSB-Adresse geht nur an Admins
+ * und seit v50 an die Person selbst, nie an Dritte (§3.1), und die private
+ * Adresse ist die Login-Kennung, die in einer oeffentlich lesbaren
+ * Projektliste nichts zu suchen hat. Ein eigenes
  * Record stellt das strukturell sicher; bei einer serialisierten Entity haengt
  * es an Annotationen, die man beim naechsten Feld vergisst.
  *

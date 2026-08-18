@@ -1,11 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useId, useState } from "react"
+import { useEffect, useId, useState } from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { useTranslation } from "react-i18next"
 
 import { useAuth } from "@/api/auth/AuthContext"
 import { resolveApiUrl } from "@/api/client"
-import { applyValidationErrors, apiErrorMessageKey, isApiError } from "@/api/errors"
+import {
+  applyValidationErrors,
+  apiErrorMessageKey,
+  isApiError,
+} from "@/api/errors"
 import type { OwnPortfolioResponse, UserResponse } from "@/api/types"
 import { PasswordInput } from "@/components/common/PasswordInput"
 import { UserAvatar } from "@/components/common/UserAvatar"
@@ -21,7 +25,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { EmailChangeNotice } from "@/features/portfolio/components/EmailChangeNotice"
-import { useUpdateOwnPortfolio, useUpdateOwnProfile, useUploadAvatar } from "@/features/portfolio/hooks/useProfileMutations"
+import {
+  useUpdateOwnPortfolio,
+  useUpdateOwnProfile,
+  useUploadAvatar,
+} from "@/features/portfolio/hooks/useProfileMutations"
 import {
   isEmailChange,
   profileFormSchema,
@@ -57,18 +65,25 @@ type SaveResult = { profileSaved: boolean; portfolioSaved: boolean }
  * Deshalb genuegen defaultValues, und es braucht kein Nachziehen aus einem
  * Effekt: die Seite darueber zeigt bis dahin ihren Ladezustand.
  *
- * <p>Die HSB-Adresse steht als nicht bearbeitbares Feld im Template, wird
- * aber bewusst leer gelassen: sie verlaesst den Server ausschliesslich ueber
- * AdminUserResponse (§3.1), und keine der Antworten dieser Seite fuehrt sie.
- * Das Feld sagt damit genau das, was gilt: die Adresse existiert und ist
- * hier weder sichtbar noch aenderbar.
+ * <p>Die HSB-Adresse steht als nicht bearbeitbares Feld im Template und
+ * zeigt seit Contract v50 die eigene Adresse aus GET /auth/me (KAN-69):
+ * die Auth-Antworten gehen an die Person selbst, und die eigene
+ * Hochschuladresse ist kein Geheimnis vor sich selbst (§3.1). Aenderbar
+ * ist sie weiterhin nicht, und Dritte sehen sie nirgends.
  */
 export function ProfileForm({
   user,
   portfolio,
+  onDirtyChange,
 }: {
   user: UserResponse
   portfolio: OwnPortfolioResponse | undefined
+  /**
+   * Meldet nach oben, ob ungespeicherte Eingaben vorliegen. Die Seite
+   * braucht das fuer die Rueckfrage, bevor ein anderer Weg sie verwirft
+   * (Skill frontend-design, Abschnitt 5).
+   */
+  onDirtyChange?: (dirty: boolean) => void
 }) {
   const { t } = useTranslation()
   const { refreshUser } = useAuth()
@@ -102,6 +117,14 @@ export function ProfileForm({
   const enteredEmail = useWatch({ control: form.control, name: "email" })
   const avatarUrl = useWatch({ control: form.control, name: "avatarUrl" })
   const emailChanged = isEmailChange(enteredEmail, currentEmail)
+
+  /* Der einzige Weg, den Zustand des Formulars nach aussen zu geben: er
+     lebt in react-hook-form, und die Seite darueber muss ihn kennen, ohne
+     das Formular zu besitzen. */
+  const isDirty = form.formState.isDirty
+  useEffect(() => {
+    onDirtyChange?.(isDirty)
+  }, [isDirty, onDirtyChange])
 
   const messageOf = (
     error: { message?: string; type?: string } | undefined
@@ -237,6 +260,16 @@ export function ProfileForm({
          und pendingEmail steuert den Hinweis unten. */
       await refreshUser()
     }
+    if (profileSaved && portfolioSaved) {
+      /*
+       * Der gespeicherte Stand ist der neue Ausgangspunkt: ohne dieses
+       * reset bliebe isDirty fuer immer true, und die Rueckfrage vor dem
+       * Verlassen der Seite kaeme, obwohl nichts mehr offen ist (Befund
+       * aus dem Review zu KAN-69). Die Adresse kommt aus dem Formular, das
+       * die Antwort oben schon nachgezogen hat.
+       */
+      form.reset({ ...form.getValues(), currentPassword: "" })
+    }
     setResult({ profileSaved, portfolioSaved })
   })
 
@@ -245,7 +278,8 @@ export function ProfileForm({
     lastName: user.lastName ?? "",
   }
   const bothSaved = result?.profileSaved === true && result.portfolioSaved
-  const noneSaved = result !== null && !result.profileSaved && !result.portfolioSaved
+  const noneSaved =
+    result !== null && !result.profileSaved && !result.portfolioSaved
 
   return (
     <>
@@ -273,7 +307,7 @@ export function ProfileForm({
         />
         <FieldLabel
           htmlFor={avatarInputId}
-          className="type-body-sm cursor-pointer font-semibold text-primary underline-offset-4 hover:underline peer-focus-visible:underline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring"
+          className="type-body-sm cursor-pointer font-semibold text-primary underline-offset-4 peer-focus-visible:underline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring hover:underline"
         >
           {upload.isPending
             ? t("portfolio.profile.avatarPending")
@@ -451,13 +485,13 @@ export function ProfileForm({
             >
               {t("portfolio.profile.hsbEmail")}
             </FieldLabel>
-            {/* Bewusst ohne Wert: die HSB-Adresse verlaesst den Server nur
-                in der Admin-Nutzerverwaltung (§3.1). Das Feld belegt, dass
-                es sie gibt und dass sie hier nicht zu aendern ist. */}
+            {/* Nicht aenderbar, aber sichtbar (§3.1, seit v50): das Feld
+                zeigt die eigene HSB-Adresse aus GET /auth/me und belegt
+                damit, mit welcher Adresse das Konto nachgewiesen wurde. */}
             <Input
               id="profile-hsbEmail"
               type="email"
-              value=""
+              value={user.hsbEmail ?? ""}
               readOnly
               disabled
               aria-describedby="profile-hsbEmail-hint"

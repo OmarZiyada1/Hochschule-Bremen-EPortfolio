@@ -32,10 +32,12 @@ import org.springframework.transaction.annotation.Transactional;
  * Die Sichtbarkeitsregel fuer {@code hsbEmail} aus §3.1, von beiden Seiten
  * geprueft (KAN-25).
  *
- * <p>§3.1 legt fest: die HSB-Adresse erscheint <strong>ausschliesslich</strong>
- * in der Admin-Nutzerverwaltung und nirgends sonst, auch nicht gegenueber
- * Admins. Sie ist ein internes Nachweismerkmal; der Admin braucht sie, um ein
- * Konto zu beurteilen, jede andere Ansicht nicht.
+ * <p>§3.1 legt fest: die HSB-Adresse erscheint in der Admin-Nutzerverwaltung
+ * und seit v50 in den Auth-Antworten an die Person selbst
+ * ({@code GET/PUT /auth/me}, Login, Registrierung), nirgends sonst. Sie ist
+ * ein internes Nachweismerkmal; der Admin braucht sie, um ein Konto zu
+ * beurteilen, die Person selbst sieht die eigene Adresse im Profil, jede
+ * andere Ansicht nicht.
  *
  * <p><strong>Geprueft wird der gesamte Antworttext</strong> und nicht nur ein
  * benanntes Feld, wie schon im {@code PortfolioIntegrationTest}: eine Adresse
@@ -85,7 +87,7 @@ class AdminUserHsbEmailVisibilityTest {
 	}
 
 	@Test
-	@DisplayName("GET /api/admin/users gibt hsbEmail aus, als einziger Endpoint (§3.1)")
+	@DisplayName("GET /api/admin/users gibt hsbEmail aus (§3.1)")
 	void adminListContainsHsbEmail() throws Exception {
 		mockMvc.perform(as(admin, get("/api/admin/users").param("q", author.getHsbEmail())))
 				.andExpect(status().isOk())
@@ -102,10 +104,11 @@ class AdminUserHsbEmailVisibilityTest {
 	}
 
 	@Test
-	@DisplayName("GET /api/auth/me enthaelt die HSB-Adresse nicht, auch nicht beim Admin selbst")
-	void ownProfileHidesHsbEmail() throws Exception {
-		assertHidden(as(author, get("/api/auth/me")), author);
-		assertHidden(as(admin, get("/api/auth/me")), admin);
+	@DisplayName("GET /api/auth/me zeigt die eigene HSB-Adresse (§3.1, seit v50)")
+	void ownProfileShowsOwnHsbEmail() throws Exception {
+		mockMvc.perform(as(author, get("/api/auth/me")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.hsbEmail").value(author.getHsbEmail()));
 	}
 
 	@Test
@@ -136,7 +139,8 @@ class AdminUserHsbEmailVisibilityTest {
 				.getContentAsString(StandardCharsets.UTF_8);
 
 		assertThat(body)
-				.as("§3.1: hsbEmail verlaesst den Server nur in der Admin-Nutzerverwaltung")
+				.as("§3.1: hsbEmail verlaesst den Server nur in der Admin-Nutzerverwaltung "
+						+ "und in den Auth-Antworten an die Person selbst (v50)")
 				.doesNotContain(person.getHsbEmail());
 	}
 

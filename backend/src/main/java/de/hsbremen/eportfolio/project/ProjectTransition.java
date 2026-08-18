@@ -35,6 +35,14 @@ public enum ProjectTransition {
 	/** Einreichen: {@code DRAFT} oder {@code REVISION} nach {@code SUBMITTED}. */
 	SUBMIT(ProjectStatus.SUBMITTED, ProjectStatus.DRAFT, ProjectStatus.REVISION),
 
+	/**
+	 * Zurueckziehen: {@code SUBMITTED} nach {@code DRAFT} durch die Autor:in
+	 * (§4.1, seit v50). Das Gegenstueck zum Einreichen, solange die Redaktion
+	 * noch nicht entschieden hat: danach fuehrt der Weg zurueck nur noch ueber
+	 * {@link #REQUEST_REVISION} durch die Redaktion.
+	 */
+	WITHDRAW(ProjectStatus.DRAFT, ProjectStatus.SUBMITTED),
+
 	/** Genehmigen: {@code SUBMITTED} nach {@code APPROVED}. */
 	APPROVE(ProjectStatus.APPROVED, ProjectStatus.SUBMITTED),
 

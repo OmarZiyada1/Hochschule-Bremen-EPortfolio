@@ -1,14 +1,18 @@
 import { HttpResponse, http } from "msw"
-import { screen, waitFor } from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { RESEND_COOLDOWN_SECONDS } from "@/features/auth/hooks/useResendCountdown"
 import i18n from "@/i18n"
-import { apiErrorResponse, ownPortfolioHandler } from "@/tests/msw/handlers"
+import {
+  apiErrorResponse,
+  currentUserHandler,
+  ownPortfolioHandler,
+} from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
-import { AppUnderTest, signInAs } from "@/tests/routes/helpers"
+import { AppUnderTest, LocationProbe, signInAs } from "@/tests/routes/helpers"
 
 const CURRENT_EMAIL = "mira.beispiel@example.org"
 const NEW_EMAIL = "mira.neu@example.org"
@@ -48,9 +52,13 @@ async function renderProfile() {
 describe("ProfileEditPage", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("de")
+    /* Die Seite frischt ihre Sitzung beim Betreten auf (KAN-69). Der
+       Handler steht als erster; die Tests, die eine eigene Antwort auf
+       GET /auth/me brauchen, melden ihre danach an und gewinnen damit. */
+    server.use(currentUserHandler())
   })
 
-  it("fuellt das Formular aus beiden Quellen und zeigt nie die HSB-Adresse", async () => {
+  it("fuellt das Formular aus beiden Quellen und zeigt die eigene HSB-Adresse", async () => {
     server.use(
       ownPortfolioHandler({ biography: "Informatik-Studentin an der HSB." })
     )
@@ -62,13 +70,30 @@ describe("ProfileEditPage", () => {
     expect(screen.getByLabelText("Bio")).toHaveValue(
       "Informatik-Studentin an der HSB."
     )
-    /* §3.1: die HSB-Adresse verlaesst den Server nur ueber
-       AdminUserResponse. Das Feld steht laut Template da, bleibt aber
-       ohne Wert. */
+    /* §3.1 (seit v50, KAN-69): die eigene HSB-Adresse steht in den
+       Auth-Antworten an die Person selbst und damit sichtbar, aber nicht
+       aenderbar, in diesem Feld. */
+    const hsbField = screen.getByLabelText("HS-E-Mail · nicht bearbeitbar")
+    expect(hsbField).toHaveValue("mira.beispiel@stud.hs-bremen.de")
+    expect(hsbField).toBeDisabled()
+  })
+
+  it("fuehrt im Breadcrumb ueber Mein Portfolio, ohne eigenen Zurueck-Link", async () => {
+    /* KAN-69: die Seite liegt unter /my-portfolio, der Breadcrumb traegt
+       den Weg; der fruehere Link "Zurueck zum Portfolio" ist entfallen. */
+    server.use(ownPortfolioHandler())
+    await renderProfile()
+
+    /* Im Seitenpfad, nicht in der Kopfleiste: dort steht derselbe Text als
+       Navigationspunkt. */
+    const breadcrumb = screen.getByRole("navigation", { name: "Seitenpfad" })
+    const crumb = within(breadcrumb).getByRole("link", {
+      name: "Mein Portfolio",
+    })
+    expect(crumb).toHaveAttribute("href", "/my-portfolio")
     expect(
-      screen.getByLabelText("HS-E-Mail · nicht bearbeitbar")
-    ).toHaveValue("")
-    expect(screen.queryByText(/hs-bremen\.de/)).not.toBeInTheDocument()
+      screen.queryByRole("link", { name: "Zurück zum Portfolio" })
+    ).not.toBeInTheDocument()
   })
 
   it("kommt mit einem Konto ohne Portfolio-Zeile ohne Fehler aus", async () => {
@@ -81,17 +106,26 @@ describe("ProfileEditPage", () => {
   })
 
   it("blendet das Passwortfeld erst ein, wenn die Adresse geaendert wurde", async () => {
+    /* Gemeint ist das Feld des Profilformulars (#currentPassword); der
+       Bereich "Passwort aendern" darunter traegt dasselbe Label an seinem
+       eigenen Feld (#profile-currentPassword) und steht immer da. */
     server.use(ownPortfolioHandler())
     await renderProfile()
 
     expect(
-      screen.queryByLabelText("Aktuelles Passwort")
+      screen.queryByLabelText("Aktuelles Passwort", {
+        selector: "#currentPassword",
+      })
     ).not.toBeInTheDocument()
 
     await userEvent.clear(screen.getByLabelText("Private E-Mail"))
     await userEvent.type(screen.getByLabelText("Private E-Mail"), NEW_EMAIL)
 
-    expect(await screen.findByLabelText("Aktuelles Passwort")).toBeVisible()
+    expect(
+      await screen.findByLabelText("Aktuelles Passwort", {
+        selector: "#currentPassword",
+      })
+    ).toBeVisible()
   })
 
   it("beanstandet das Absenden mit geaenderter Adresse ohne Passwort", async () => {
@@ -235,7 +269,9 @@ describe("ProfileEditPage", () => {
     await userEvent.clear(screen.getByLabelText("Private E-Mail"))
     await userEvent.type(screen.getByLabelText("Private E-Mail"), NEW_EMAIL)
     await userEvent.type(
-      await screen.findByLabelText("Aktuelles Passwort"),
+      await screen.findByLabelText("Aktuelles Passwort", {
+        selector: "#currentPassword",
+      }),
       "falschesPasswort"
     )
     await userEvent.click(
@@ -251,7 +287,9 @@ describe("ProfileEditPage", () => {
       screen.queryByText("Profil und Portfolio wurden gespeichert.")
     ).not.toBeInTheDocument()
     expect(
-      screen.getByText("Bio und Bild wurden gespeichert, Name und E-Mail nicht.")
+      screen.getByText(
+        "Bio und Bild wurden gespeichert, Name und E-Mail nicht."
+      )
     ).toBeVisible()
   })
 
@@ -270,7 +308,9 @@ describe("ProfileEditPage", () => {
     await userEvent.clear(screen.getByLabelText("Private E-Mail"))
     await userEvent.type(screen.getByLabelText("Private E-Mail"), NEW_EMAIL)
     await userEvent.type(
-      await screen.findByLabelText("Aktuelles Passwort"),
+      await screen.findByLabelText("Aktuelles Passwort", {
+        selector: "#currentPassword",
+      }),
       "richtigesPasswort"
     )
     await userEvent.click(
@@ -299,7 +339,9 @@ describe("ProfileEditPage", () => {
     await userEvent.clear(screen.getByLabelText("Private E-Mail"))
     await userEvent.type(screen.getByLabelText("Private E-Mail"), NEW_EMAIL)
     await userEvent.type(
-      await screen.findByLabelText("Aktuelles Passwort"),
+      await screen.findByLabelText("Aktuelles Passwort", {
+        selector: "#currentPassword",
+      }),
       "richtigesPasswort"
     )
     await userEvent.click(
@@ -321,7 +363,9 @@ describe("ProfileEditPage", () => {
     let confirmed = false
     server.use(
       ownPortfolioHandler(),
-      http.put("*/api/auth/me", () => HttpResponse.json(userResponse(NEW_EMAIL))),
+      http.put("*/api/auth/me", () =>
+        HttpResponse.json(userResponse(NEW_EMAIL))
+      ),
       http.put("*/api/portfolio/me", () =>
         HttpResponse.json({ biography: null, avatarUrl: null })
       ),
@@ -347,7 +391,9 @@ describe("ProfileEditPage", () => {
     await userEvent.clear(screen.getByLabelText("Private E-Mail"))
     await userEvent.type(screen.getByLabelText("Private E-Mail"), NEW_EMAIL)
     await userEvent.type(
-      await screen.findByLabelText("Aktuelles Passwort"),
+      await screen.findByLabelText("Aktuelles Passwort", {
+        selector: "#currentPassword",
+      }),
       "richtigesPasswort"
     )
     await userEvent.click(
@@ -363,7 +409,9 @@ describe("ProfileEditPage", () => {
     expect(screen.getByLabelText("Private E-Mail")).toHaveValue(CURRENT_EMAIL)
 
     await userEvent.type(screen.getByLabelText("Bestätigungscode"), "042317")
-    await userEvent.click(screen.getByRole("button", { name: "Code bestätigen" }))
+    await userEvent.click(
+      screen.getByRole("button", { name: "Code bestätigen" })
+    )
 
     await waitFor(() =>
       expect(screen.getByLabelText("Private E-Mail")).toHaveValue(NEW_EMAIL)
@@ -375,63 +423,186 @@ describe("ProfileEditPage", () => {
     })
   })
 
-  it("fordert einen neuen Code fuer die Wunschadresse an", async () => {
-    let resendBody: Record<string, unknown> | null = null
+  it(
+    "fordert einen neuen Code fuer die Wunschadresse an",
+    async () => {
+      let resendBody: Record<string, unknown> | null = null
+      server.use(
+        ownPortfolioHandler(),
+        http.get("*/api/auth/me", () =>
+          HttpResponse.json(userResponse(NEW_EMAIL))
+        ),
+        http.put("*/api/auth/me", () =>
+          HttpResponse.json(userResponse(NEW_EMAIL))
+        ),
+        http.put("*/api/portfolio/me", () =>
+          HttpResponse.json({ biography: null, avatarUrl: null })
+        ),
+        http.post("*/api/auth/verify/resend", async ({ request }) => {
+          resendBody = (await request.json()) as Record<string, unknown>
+          return new HttpResponse(null, { status: 204 })
+        })
+      )
+      await renderProfile()
+
+      await userEvent.clear(screen.getByLabelText("Private E-Mail"))
+      await userEvent.type(screen.getByLabelText("Private E-Mail"), NEW_EMAIL)
+      await userEvent.type(
+        await screen.findByLabelText("Aktuelles Passwort", {
+          selector: "#currentPassword",
+        }),
+        "richtigesPasswort"
+      )
+      await userEvent.click(
+        screen.getByRole("button", { name: "Änderungen speichern" })
+      )
+      await screen.findByLabelText("Bestätigungscode")
+
+      /* Bis zum Ablauf der Sperrfrist steht dort der Countdown, nicht der
+       Knopf (useResendCountdown, 20 Sekunden nach Template). Geprueft wird
+       die laufende Zahl und nicht die 20: unter Last vergeht zwischen dem
+       Einhaengen und dieser Zeile schon eine Sekunde, und der Test schlug
+       dann grundlos fehl. */
+      expect(screen.getByText(/Code erneut senden in \d+s/)).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", { name: "Code erneut senden" })
+      ).not.toBeInTheDocument()
+
+      /*
+       * Die Frist wird real abgewartet, nicht mit gestellten Timern
+       * uebersprungen: der Countdown plant seinen naechsten Takt in einem
+       * Effekt, und Reacts Scheduler haengt selbst an Timern. Mit
+       * vi.useFakeTimers laeuft deshalb weder der Takt weiter noch das
+       * Rendern dazwischen, und MSW braucht die echte Zeitachse ohnehin.
+       * Der Preis sind rund 20 Sekunden in genau diesem Test.
+       */
+      const resendButton = await screen.findByRole(
+        "button",
+        { name: "Code erneut senden" },
+        { timeout: (RESEND_COOLDOWN_SECONDS + 5) * 1000 }
+      )
+      await userEvent.click(resendButton)
+
+      await waitFor(() =>
+        expect(resendBody).toMatchObject({
+          email: NEW_EMAIL,
+          purpose: "EMAIL_CHANGE",
+        })
+      )
+    },
+    (RESEND_COOLDOWN_SECONDS + 20) * 1000
+  )
+
+  /**
+   * Der Bereich "Passwort aendern" (KAN-69, ueberarbeitet nach der
+   * Sichtpruefung): ein Knopf oeffnet den Dialog mit den drei Feldern; der
+   * Weg "Passwort vergessen" fordert fuer Angemeldete den Code selbst an
+   * und fuehrt direkt zur Code-Eingabe.
+   */
+  async function openPasswordDialog() {
+    await userEvent.click(
+      screen.getByRole("button", { name: "Passwort ändern" })
+    )
+    return screen.findByRole("dialog")
+  }
+
+  async function fillPasswordDialog(currentPassword: string) {
+    await userEvent.type(
+      screen.getByLabelText("Aktuelles Passwort", {
+        selector: "#profile-currentPassword",
+      }),
+      currentPassword
+    )
+    await userEvent.type(
+      screen.getByLabelText("Neues Passwort"),
+      "korrekt-pferd-batterie"
+    )
+    await userEvent.type(
+      screen.getByLabelText("Neues Passwort bestätigen"),
+      "korrekt-pferd-batterie"
+    )
+    await userEvent.click(
+      screen.getByRole("button", { name: "Passwort speichern" })
+    )
+  }
+
+  it("aendert das Passwort im Dialog, ohne Code und ohne Seitenwechsel", async () => {
+    let changeBody: Record<string, unknown> | null = null
     server.use(
       ownPortfolioHandler(),
-      http.get("*/api/auth/me", () => HttpResponse.json(userResponse(NEW_EMAIL))),
-      http.put("*/api/auth/me", () => HttpResponse.json(userResponse(NEW_EMAIL))),
-      http.put("*/api/portfolio/me", () =>
-        HttpResponse.json({ biography: null, avatarUrl: null })
-      ),
-      http.post("*/api/auth/verify/resend", async ({ request }) => {
-        resendBody = (await request.json()) as Record<string, unknown>
-        return new HttpResponse(null, { status: 204 })
+      http.put("*/api/auth/password", async ({ request }) => {
+        changeBody = (await request.json()) as Record<string, unknown>
+        return new HttpResponse(null, { status: 200 })
       })
     )
     await renderProfile()
 
-    await userEvent.clear(screen.getByLabelText("Private E-Mail"))
-    await userEvent.type(screen.getByLabelText("Private E-Mail"), NEW_EMAIL)
-    await userEvent.type(
-      await screen.findByLabelText("Aktuelles Passwort"),
-      "richtigesPasswort"
-    )
-    await userEvent.click(
-      screen.getByRole("button", { name: "Änderungen speichern" })
-    )
-    await screen.findByLabelText("Bestätigungscode")
+    /* Ohne Klick auf den Knopf stehen die drei Felder nicht auf der Seite. */
+    expect(screen.queryByLabelText("Neues Passwort")).not.toBeInTheDocument()
 
-    /* Bis zum Ablauf der Sperrfrist steht dort der Countdown, nicht der
-       Knopf (useResendCountdown, 20 Sekunden nach Template). */
-    expect(screen.getByText("Code erneut senden in 20s")).toBeInTheDocument()
+    await openPasswordDialog()
+    await fillPasswordDialog("altesPasswort123")
 
-    /*
-     * Die Frist wird real abgewartet, nicht mit gestellten Timern
-     * uebersprungen: der Countdown plant seinen naechsten Takt in einem
-     * Effekt, und Reacts Scheduler haengt selbst an Timern. Mit
-     * vi.useFakeTimers laeuft deshalb weder der Takt weiter noch das
-     * Rendern dazwischen, und MSW braucht die echte Zeitachse ohnehin.
-     * Der Preis sind rund 20 Sekunden in genau diesem Test.
-     */
-    const resendButton = await screen.findByRole(
-      "button",
-      { name: "Code erneut senden" },
-      { timeout: (RESEND_COOLDOWN_SECONDS + 5) * 1000 }
+    expect(
+      await screen.findByText("Ihr Passwort wurde geändert.")
+    ).toBeVisible()
+    expect(changeBody).toMatchObject({
+      currentPassword: "altesPasswort123",
+      newPassword: "korrekt-pferd-batterie",
+    })
+    /* Der Dialog ist zu, die Profilseite steht weiter da. */
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Profil bearbeiten" })
+    ).toBeVisible()
+  })
+
+  it("legt ein falsches aktuelles Passwort an sein Feld (401 LOGIN_FAILED)", async () => {
+    server.use(
+      ownPortfolioHandler(),
+      http.put("*/api/auth/password", () =>
+        apiErrorResponse(401, "LOGIN_FAILED", "/api/auth/password")
+      )
     )
-    await userEvent.click(resendButton)
+    await renderProfile()
 
-    await waitFor(() =>
-      expect(resendBody).toMatchObject({
-        email: NEW_EMAIL,
-        purpose: "EMAIL_CHANGE",
+    await openPasswordDialog()
+    await fillPasswordDialog("falschesPasswort")
+
+    expect(
+      await screen.findByText("Das aktuelle Passwort ist falsch.")
+    ).toBeVisible()
+    /* Der Dialog bleibt offen, damit die Meldung sichtbar ist. */
+    expect(screen.getByRole("dialog")).toBeVisible()
+  })
+
+  it("beanstandet fehlende Passworteingaben, bevor ein Request rausgeht", async () => {
+    /* Frontend-Regel 12: die Pflicht steht im zod-Schema. */
+    let calls = 0
+    server.use(
+      ownPortfolioHandler(),
+      http.put("*/api/auth/password", () => {
+        calls += 1
+        return new HttpResponse(null, { status: 200 })
       })
     )
-  }, (RESEND_COOLDOWN_SECONDS + 20) * 1000)
+    await renderProfile()
 
-  it("sendet den Ruecksetzcode an die eigene private Adresse", async () => {
-    /* §6.1, KAN-43: der Code geht an die private Adresse und wird ueber
-       /auth/reset-password eingeloest. Die Antwort ist immer 204. */
+    await openPasswordDialog()
+    await userEvent.click(
+      screen.getByRole("button", { name: "Passwort speichern" })
+    )
+
+    /* Zweimal dieselbe Meldung: am aktuellen und am neuen Passwort. */
+    expect(
+      await screen.findAllByText("Bitte geben Sie Ihr Passwort ein.")
+    ).toHaveLength(2)
+    expect(calls).toBe(0)
+  })
+
+  it("fordert bei Passwort vergessen den Code selbst an und fuehrt zur Code-Eingabe", async () => {
+    /* Sichtpruefung zu KAN-69: die Adresse ist bekannt, also entfaellt die
+       Seite zur Adresseingabe. */
     let forgotBody: Record<string, unknown> | null = null
     server.use(
       ownPortfolioHandler(),
@@ -440,19 +611,202 @@ describe("ProfileEditPage", () => {
         return new HttpResponse(null, { status: 204 })
       })
     )
+    signInAs("STUDENT")
+    renderWithProviders(
+      <>
+        <AppUnderTest />
+        <LocationProbe />
+      </>,
+      "/my-portfolio/profile"
+    )
+    await screen.findByRole("heading", { level: 1, name: "Profil bearbeiten" })
+
+    await openPasswordDialog()
+    await userEvent.click(
+      screen.getByRole("button", { name: "Passwort vergessen?" })
+    )
+
+    await waitFor(() =>
+      expect(screen.getByTestId("pathname")).toHaveTextContent(
+        "/reset-password"
+      )
+    )
+    expect(forgotBody).toMatchObject({ email: CURRENT_EMAIL })
+    /* Die Adresse steht dort bereits im Feld, und der Hinweis sagt, dass
+       der Code unterwegs ist. */
+    expect(screen.getByLabelText("Private E-Mail (Login)")).toHaveValue(
+      CURRENT_EMAIL
+    )
+    expect(
+      screen.getByText(
+        `Wir haben einen 6-stelligen Code an ${CURRENT_EMAIL} gesendet. Geben Sie ihn hier zusammen mit Ihrem neuen Passwort ein.`
+      )
+    ).toBeVisible()
+  })
+
+  it("fragt vor dem Verlassen nach, wenn das Profilformular veraendert wurde", async () => {
+    /* Skill frontend-design, Abschnitt 5: der Weg verlaesst die Seite und
+       wuerde ungespeicherte Eingaben verwerfen. */
+    let forgotCalls = 0
+    server.use(
+      ownPortfolioHandler(),
+      http.post("*/api/auth/forgot-password", () => {
+        forgotCalls += 1
+        return new HttpResponse(null, { status: 204 })
+      })
+    )
+    signInAs("STUDENT")
+    renderWithProviders(
+      <>
+        <AppUnderTest />
+        <LocationProbe />
+      </>,
+      "/my-portfolio/profile"
+    )
+    await screen.findByRole("heading", { level: 1, name: "Profil bearbeiten" })
+
+    await userEvent.clear(screen.getByLabelText("Vorname"))
+    await userEvent.type(screen.getByLabelText("Vorname"), "Mirjam")
+
+    await openPasswordDialog()
+    await userEvent.click(
+      screen.getByRole("button", { name: "Passwort vergessen?" })
+    )
+
+    /* Erst die Rueckfrage, noch kein Code und keine Navigation. */
+    expect(
+      await screen.findByRole("heading", { name: "Profilseite verlassen?" })
+    ).toBeVisible()
+    expect(forgotCalls).toBe(0)
+    expect(screen.getByTestId("pathname")).toHaveTextContent(
+      "/my-portfolio/profile"
+    )
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Code senden und weiter" })
+    )
+
+    await waitFor(() =>
+      expect(screen.getByTestId("pathname")).toHaveTextContent(
+        "/reset-password"
+      )
+    )
+    expect(forgotCalls).toBe(1)
+  })
+
+  it("laesst den Passwortdialog stehen, wenn die Rueckfrage abgebrochen wird", async () => {
+    /* Skill frontend-design, Abschnitt 5: ein Abbruch nimmt nichts vorweg. */
+    let forgotCalls = 0
+    server.use(
+      ownPortfolioHandler(),
+      http.post("*/api/auth/forgot-password", () => {
+        forgotCalls += 1
+        return new HttpResponse(null, { status: 204 })
+      })
+    )
     await renderProfile()
 
-    await userEvent.click(screen.getByRole("button", { name: "Code senden" }))
+    await userEvent.clear(screen.getByLabelText("Vorname"))
+    await userEvent.type(screen.getByLabelText("Vorname"), "Mirjam")
+    await openPasswordDialog()
+    await userEvent.click(
+      screen.getByRole("button", { name: "Passwort vergessen?" })
+    )
+    await screen.findByRole("heading", { name: "Profilseite verlassen?" })
+
+    await userEvent.click(screen.getByRole("button", { name: "Abbrechen" }))
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("heading", { name: "Profilseite verlassen?" })
+      ).not.toBeInTheDocument()
+    )
+    expect(forgotCalls).toBe(0)
+    /* Der Passwortdialog steht weiter offen, samt getippter Eingaben. */
+    expect(
+      screen.getByRole("heading", { name: "Neues Passwort vergeben" })
+    ).toBeVisible()
+    expect(screen.getByLabelText("Vorname")).toHaveValue("Mirjam")
+  })
+
+  it("meldet einen gescheiterten Codeversand sichtbar, statt still zu bleiben", async () => {
+    /* Der Dialog bleibt offen, wenn der Aufruf scheitert: sonst laege die
+       Meldung in einem Knoten, der mit ihm verschwindet (Befund aus dem
+       Review zu KAN-69). */
+    server.use(
+      ownPortfolioHandler(),
+      http.post("*/api/auth/forgot-password", () =>
+        apiErrorResponse(
+          429,
+          "TOO_MANY_LOGIN_ATTEMPTS",
+          "/api/auth/forgot-password"
+        )
+      )
+    )
+    await renderProfile()
+
+    await userEvent.clear(screen.getByLabelText("Vorname"))
+    await userEvent.type(screen.getByLabelText("Vorname"), "Mirjam")
+    await openPasswordDialog()
+    await userEvent.click(
+      screen.getByRole("button", { name: "Passwort vergessen?" })
+    )
+    await screen.findByRole("heading", { name: "Profilseite verlassen?" })
+    await userEvent.click(
+      screen.getByRole("button", { name: "Code senden und weiter" })
+    )
 
     expect(
       await screen.findByText(
-        "Wenn zu dieser Adresse ein aktives Konto existiert, wurde ein 6-stelliger Code dorthin gesendet."
+        "Zu viele Fehlversuche. Bitte warten Sie einige Minuten und versuchen Sie es dann erneut."
       )
     ).toBeVisible()
-    expect(forgotBody).toMatchObject({ email: CURRENT_EMAIL })
-    /* Der Weg zur Code-Eingabe steht daneben, statt das Formular ohne
-       Rueckfrage zu verlassen (Klaerungsrunde KAN-34). */
-    expect(screen.getByRole("button", { name: "Code eingeben" })).toBeVisible()
+  })
+
+  it("fragt nach dem Speichern nicht mehr nach: das Formular ist dann unveraendert", async () => {
+    /* Ohne form.reset bliebe isDirty fuer immer true und die Rueckfrage
+       kaeme ohne Anlass (Befund aus dem Review zu KAN-69). */
+    let forgotCalls = 0
+    const portfolio: { body?: unknown } = {}
+    server.use(
+      ownPortfolioHandler(),
+      http.put("*/api/auth/me", () => HttpResponse.json(userResponse())),
+      portfolioPutHandler(portfolio),
+      http.get("*/api/auth/me", () => HttpResponse.json(userResponse())),
+      http.post("*/api/auth/forgot-password", () => {
+        forgotCalls += 1
+        return new HttpResponse(null, { status: 204 })
+      })
+    )
+    signInAs("STUDENT")
+    renderWithProviders(
+      <>
+        <AppUnderTest />
+        <LocationProbe />
+      </>,
+      "/my-portfolio/profile"
+    )
+    await screen.findByRole("heading", { level: 1, name: "Profil bearbeiten" })
+
+    await userEvent.clear(screen.getByLabelText("Vorname"))
+    await userEvent.type(screen.getByLabelText("Vorname"), "Mirjam")
+    await userEvent.click(
+      screen.getByRole("button", { name: "Änderungen speichern" })
+    )
+    await screen.findByText("Profil und Portfolio wurden gespeichert.")
+
+    await openPasswordDialog()
+    await userEvent.click(
+      screen.getByRole("button", { name: "Passwort vergessen?" })
+    )
+
+    /* Keine Rueckfrage, direkt der Codeversand und der Wechsel. */
+    await waitFor(() =>
+      expect(screen.getByTestId("pathname")).toHaveTextContent(
+        "/reset-password"
+      )
+    )
+    expect(forgotCalls).toBe(1)
   })
 
   it("fuehrt ohne Anmeldung sichtbar zum Login", () => {

@@ -362,6 +362,33 @@ class ProjectPermissionServiceTest {
 	}
 
 	@Nested
+	@DisplayName("Zeile: Projekt zurueckziehen (§4.1, seit v50)")
+	class Withdrawing {
+
+		@Test
+		@DisplayName("Autor:in ja, alle anderen nein: dieselbe Spalte wie beim Einreichen")
+		void withdraw() {
+			Project p = project(ProjectStatus.SUBMITTED);
+
+			assertThat(service.mayWithdraw(author, p)).isTrue();
+			assertThat(service.mayWithdraw(otherStudent, p)).isFalse();
+			assertThat(service.mayWithdraw(editor, p)).isFalse();
+			assertThat(service.mayWithdraw(PUBLIC, p)).isFalse();
+			// Wie beim Einreichen: ADMIN ausdruecklich ✗.
+			assertThat(service.mayWithdraw(admin, p)).isFalse();
+		}
+
+		@Test
+		@DisplayName("Nur aus SUBMITTED: nach der redaktionellen Entscheidung ist der Weg zu")
+		void onlyFromSubmitted() {
+			assertThat(service.mayWithdraw(author, project(ProjectStatus.DRAFT))).isFalse();
+			assertThat(service.mayWithdraw(author, project(ProjectStatus.APPROVED))).isFalse();
+			assertThat(service.mayWithdraw(author, project(ProjectStatus.PUBLISHED))).isFalse();
+			assertThat(service.mayWithdraw(author, project(ProjectStatus.REVISION))).isFalse();
+		}
+	}
+
+	@Nested
 	@DisplayName("Zeile: Genehmigen und Veroeffentlichen (inkl. Vier-Augen-Prinzip)")
 	class EditorialDecision {
 
@@ -511,7 +538,7 @@ class ProjectPermissionServiceTest {
 
 		@ParameterizedTest
 		@EnumSource(ProjectStatus.class)
-		@DisplayName("mayPerform entspricht in jedem Status den vier benannten Methoden")
+		@DisplayName("mayPerform entspricht in jedem Status den benannten Methoden")
 		void namedMethodsAreTheCombination(ProjectStatus status) {
 			Project p = project(status);
 
@@ -520,6 +547,8 @@ class ProjectPermissionServiceTest {
 
 				assertThat(service.maySubmit(user, p))
 						.isEqualTo(service.mayPerform(user, p, ProjectTransition.SUBMIT));
+				assertThat(service.mayWithdraw(user, p))
+						.isEqualTo(service.mayPerform(user, p, ProjectTransition.WITHDRAW));
 				assertThat(service.mayApprove(user, p))
 						.isEqualTo(service.mayPerform(user, p, ProjectTransition.APPROVE));
 				assertThat(service.mayPublish(user, p))

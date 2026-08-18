@@ -221,7 +221,11 @@
     "successTitle": "Password set",
     "successHint": "Your password has been changed. You can now log in.",
     "toLogin": "Go to login",
-    "backToLogin": "Back to login"
+    "backToLogin": "Back to login",
+    "codeSentNotice": "We have sent a 6-digit code to {{address}}. Enter it here together with your new password.",
+    "resend": "Send a new code",
+    "resendCountdown": "Send a new code in {{seconds}}s",
+    "resendConfirmed": "A new code has been requested. Please check your inbox."
   },
   "validation": {
     "firstName": {
@@ -495,6 +499,27 @@
         "title": "No project with this status",
         "description": "None of your projects currently has this status.",
         "action": "Show all projects"
+      },
+      "card": {
+        "edit": "Edit",
+        "editFor": "Edit: {{title}}",
+        "withdraw": "Withdraw",
+        "withdrawFor": "Withdraw: {{title}}",
+        "deleteFor": "Delete: {{title}}",
+        "withdrawDone": "The submission has been withdrawn; the project is a draft again.",
+        "delete": "Delete",
+        "deleteDone": "The project has been deleted.",
+        "cancel": "Cancel",
+        "withdrawDialog": {
+          "title": "Withdraw project",
+          "description": "“{{title}}” will be withdrawn from review and saved as a draft again. You can then edit it and submit it once more.",
+          "confirm": "Withdraw"
+        },
+        "deleteDialog": {
+          "title": "Delete project?",
+          "description": "“{{title}}” will be deleted permanently, including its content and files. This cannot be undone.",
+          "confirm": "Delete permanently"
+        }
       }
     },
     "public": {
@@ -512,7 +537,6 @@
     "profile": {
       "breadcrumb": "Edit profile",
       "title": "Edit profile",
-      "back": "Back to portfolio",
       "changeAvatar": "Change photo",
       "avatarPending": "Uploading image …",
       "firstName": "First name",
@@ -521,7 +545,7 @@
       "currentPassword": "Current password",
       "currentPasswordHint": "Required only when changing the email address.",
       "hsbEmail": "HSB email · not editable",
-      "hsbEmailHint": "The HSB address cannot be changed and is not shown here.",
+      "hsbEmailHint": "This address verifies your account with the university. It cannot be changed.",
       "biography": "Bio",
       "submit": "Save changes",
       "pending": "Saving …",
@@ -545,13 +569,21 @@
         "resendCountdown": "Resend code in {{seconds}}s",
         "resendConfirmed": "A new code has been requested. Please check your inbox."
       },
-      "passwordReset": {
-        "title": "Reset password",
-        "description": "We will send a code for resetting your password to your private email address.",
-        "send": "Send code",
-        "pending": "Sending …",
-        "confirmation": "If an active account exists for this address, a 6-digit code has been sent to it.",
-        "toReset": "Enter code"
+      "passwordChange": {
+        "title": "Change password",
+        "description": "You change your password with your current password, no code required.",
+        "open": "Change password",
+        "dialogTitle": "Choose a new password",
+        "dialogDescription": "Enter your current password and choose a new one.",
+        "forgotLeavesPage": "This takes you to the code entry; unsaved profile changes will be lost.",
+        "leaveDialog": {
+          "title": "Leave the profile page?",
+          "description": "You have profile changes that have not been saved. We will send you a code now and take you to the code entry; the unsaved changes will be lost.",
+          "confirm": "Send code and continue"
+        },
+        "cancel": "Cancel",
+        "submit": "Save password",
+        "success": "Your password has been changed."
       }
     }
   },

@@ -26,12 +26,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Der redaktionelle Kern: die vier Workflow-Endpoints aus API-Contract §6.1,
+ * Der redaktionelle Kern: die Workflow-Endpoints aus API-Contract §6.1,
  * also der Zustandsautomat aus §4 als {@code POST /api/projects/{id}/submit},
- * {@code /approve}, {@code /publish} und {@code /request-revision}.
+ * {@code /withdraw}, {@code /approve}, {@code /publish} und
+ * {@code /request-revision}.
  *
  * <p><strong>Warum ein eigener Dienst</strong> neben {@link ProjectWriteService}:
- * dort geht es um die Felder eines Projekts, hier um seinen Zustand. Die vier
+ * dort geht es um die Felder eines Projekts, hier um seinen Zustand. Die
  * Methoden teilen sich nichts mit dem Anlegen und Aendern ausser der Entity,
  * dafuer alles untereinander: dieselbe Pruefreihenfolge, denselben
  * Historieneintrag, dieselbe Antwortform. Zusammengelegt waeren es zwei Themen in
@@ -149,6 +150,31 @@ public class ProjectWorkflowService {
 		requireCompleteForSubmit(project);
 
 		return perform(user, project, ProjectTransition.SUBMIT);
+	}
+
+	// ------------------------------------------------------------------
+	// POST /api/projects/{id}/withdraw
+	// ------------------------------------------------------------------
+
+	/**
+	 * Zurueckziehen: {@code SUBMITTED} nach {@code DRAFT} durch die Autor:in
+	 * (§4.1, seit v50).
+	 *
+	 * <p>Das Gegenstueck zum Einreichen, ohne dessen Pruefungen: die
+	 * Vollstaendigkeit aus §3.3 und die offenen Aenderungswuensche aus §2.4
+	 * betreffen den Weg <em>zur</em> Redaktion, nicht den zurueck. Es entsteht
+	 * auch kein {@code CHANGE_REQUEST}-Kommentar: die Autor:in holt die eigene
+	 * Arbeit zurueck und schuldet sich selbst keine Begruendung. Uebrig bleibt
+	 * der Historieneintrag aus {@link #perform} (§3.12).
+	 *
+	 * <p>Erst mit diesem Uebergang wird auch das Loeschen wieder moeglich: die
+	 * Rechtematrix erlaubt es der Autor:in nur im {@code DRAFT} (§6.1).
+	 */
+	public ProjectDetailResponse withdraw(AuthenticatedUser user, UUID projectId) {
+		Project project = load(projectId);
+		requireAllowed(user, project, ProjectTransition.WITHDRAW);
+
+		return perform(user, project, ProjectTransition.WITHDRAW);
 	}
 
 	// ------------------------------------------------------------------

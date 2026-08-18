@@ -52,8 +52,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/admin/users")
 @Tag(name = "Nutzerverwaltung", description = "Konten anlegen, aendern und sperren (§6.1). "
-		+ "Ausschliesslich fuer ADMIN (§5). Der einzige Ort, an dem hsbEmail ausgegeben "
-		+ "wird (§3.1).")
+		+ "Ausschliesslich fuer ADMIN (§5). Der einzige Ort, an dem hsbEmail fremder Konten "
+		+ "ausgegeben wird; die eigene Adresse fuehren seit v50 auch die Auth-Antworten an "
+		+ "die Person selbst (§3.1).")
 public class AdminUserController {
 
 	private final AdminUserService userService;

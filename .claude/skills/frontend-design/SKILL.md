@@ -178,13 +178,25 @@ Beim Bauen jeder Komponente:
   sinnvolle Reihenfolge, keine Fokusfalle in Dialogen.
 - **Beschriftung:** jedes Formularfeld hat ein verbundenes Label. Ein
   Platzhalter ist kein Label; er verschwindet beim Tippen.
-- **Schaltflächen mit reinem Symbol** brauchen einen zugänglichen Namen.
+- **Schaltflächen mit reinem Symbol** brauchen einen zugänglichen Namen,
+  und zwar als `sr-only`-Text im Knopf. Ein **Tooltip ist kein Name**: er
+  erscheint auf Touch gar nicht, und die Registry-Primitive hängt ihn
+  nachgemessen weder als `aria-labelledby` noch als `aria-describedby` an
+  den Auslöser, ist für Screenreader also gar nicht vorhanden. Er ist die
+  sichtbare Ergänzung für die Maus und gehört an jedes Symbol, das ohne
+  Text steht (`tooltip` aus der Registry, ein Provider je Gruppe für die
+  gemeinsame Verzögerung). Kurz im Tooltip, vollständig im Namen:
+  „Löschen" gegen „Löschen: {{title}}". Ein Test, der den Tooltip prüft,
+  sucht seinen **Text**; eine `tooltip`-Rolle gibt es nicht.
 - **Überschriften** bilden eine Hierarchie ohne übersprungene Ebenen
   (Erfolgskriterium 1.3.1). Sie werden nicht für Schriftgrößen missbraucht.
-  **Die Ebene setzt die Domänenhülle, nicht die Primitive.** Jede
-  Title-Komponente der Registry (`CardTitle`, `EmptyTitle`, `DialogTitle`)
-  rendert ein `div`; sie kann die Ebene nicht kennen, weil sie nicht weiß,
-  worunter sie sitzt. Also nimmt die Hülle sie als Prop entgegen und legt ein
+  **Die Ebene setzt die Domänenhülle, nicht die Primitive.** `CardTitle`
+  und `EmptyTitle` rendern ein `div`; sie können die Ebene nicht kennen,
+  weil sie nicht wissen, worunter sie sitzen. Ausgenommen sind
+  `DialogTitle` und `AlertDialogTitle`: die rendern unter Base UI selbst
+  ein `h2` (nachgeprüft in `@base-ui/react/dialog/title`), dort wird keine
+  Ebene nachgereicht, und ein zusätzlich hineingelegtes `h2` wäre eine
+  Überschrift zu viel. Also nimmt die Hülle sie als Prop entgegen und legt ein
   echtes `h2`/`h3` hinein, wie `ProjectCard` es für `CardTitle` tut. Fehlt
   das, trägt die Seite keinen einzigen Sprungpunkt: in KAN-29 war der
   Leerzustand jeder Liste auf diese Weise für die Überschriftennavigation
@@ -237,7 +249,80 @@ den Zeigefinger und versprach damit eine Bedienbarkeit, die es nicht gab.
 `tokens.test.ts` verlangt seitdem, dass jede Regel mit `:disabled` auch
 `aria-disabled` abdeckt.
 
-## 5. Responsiv, in rem, und das Template ist die Messlatte
+## 5. Handlungen mit Folgen fragen nach
+
+**Eine Handlung, die den Zustand für andere sichtbar verändert oder sich
+nicht mit demselben Klick zurücknehmen lässt, wird bestätigt, bevor sie
+läuft.** Nicht als freundliche Geste, sondern weil ein Fehlklick sonst
+Arbeit vernichtet: WCAG 2.2 nennt das in Erfolgskriterium 3.3.4
+(Fehlervermeidung) und verlangt für Daten, die Nutzende selbst
+verantworten, entweder Umkehrbarkeit, Prüfung oder Bestätigung. Die
+Bestätigung ist der Weg, den dieses Projekt geht.
+
+Bestätigt wird über die Registry-Primitive `alert-dialog` (nie über
+`window.confirm`, nie über einen selbst gebauten Kasten), mit diesem
+Aufbau:
+
+- **Titel:** die Handlung als Frage oder als Vorgang, in der Sprache der
+  Oberfläche („Projekt löschen?", „Projekt zurückziehen").
+- **Text:** was genau geschieht, mit dem betroffenen Gegenstand beim Namen.
+  Der Titel des Projekts steht darin, nicht „dieses Element". Bei
+  Unumkehrbarem steht der Satz ausdrücklich dabei („Das lässt sich nicht
+  rückgängig machen.").
+- **Auch der Auslöser nennt den Gegenstand**, sobald dieselbe Handlung in
+  einer Liste mehrfach vorkommt. Fünf Karten mit fünfmal „Löschen" ergeben
+  eine Elementliste, in der nichts zu unterscheiden ist; der zugängliche
+  Name lautet deshalb „Löschen: {{title}}" (SC 2.4.6). Sichtbar bleibt das
+  Symbol.
+- **Zwei Schaltflächen:** Abbrechen zuerst, dann die Handlung mit ihrem
+  eigenen Verb beschriftet, nie „OK". Nur was wirklich zerstört, trägt
+  `variant="destructive"`; ein umkehrbarer Schritt wie das Zurückziehen
+  bekommt die normale Betonung, sonst verliert Rot seine Bedeutung.
+- **Abbrechen stellt den Zustand von vorher wieder her**, einschließlich
+  Fokus: die Rückfrage darf nichts vorwegnehmen. Wer sie aus einem anderen
+  Dialog heraus auslöst, lässt diesen offen und legt die Rückfrage darüber
+  (Base UI kennt geschachtelte Dialoge); ihn vorher zu schließen hieße, dass
+  der Abbruch bereits die halbe Wirkung hat.
+- **Ein gesteuerter Dialog ohne Trigger benennt sein `finalFocus`.** Ohne
+  auslösendes Element hat Base UI beim Schließen kein Rückgabeziel, und der
+  Fokus fällt auf `body` (SC 2.4.3).
+- **Wo die Meldung danach steht, entscheidet, ob der Dialog schließt.** Nach
+  der Bestätigung schließt er, und der Ausgang erscheint an einer Stelle,
+  die danach noch im Baum steht. Bleibt er offen, steht die Meldung in ihm.
+  Verboten ist allein der dritte Fall: Dialog zu und Meldung in einem
+  Knoten, der mit ihm verschwindet. Der Fehlschlag ist dann unsichtbar, und
+  für die Person passiert scheinbar nichts (zweimal Befund in KAN-69).
+
+Wann eine Rückfrage Pflicht ist und wann sie nur stört:
+
+| Fall | Rückfrage |
+| --- | --- |
+| Löschen von Projekt, Block, Datei, Kommentar, Stammdatum | ja, mit „unwiderruflich" im Text |
+| Statuswechsel, der fremde Sicht ändert: einreichen, zurückziehen, genehmigen, veröffentlichen, zur Überarbeitung zurückgeben | ja |
+| Konto deaktivieren, Rolle ändern, Passwort zurücksetzen (Administration) | ja, mit dem Hinweis auf die sofortige Wirkung |
+| Zusammenführen von Kategorien, Umsortieren mit Datenwirkung | ja |
+| Speichern, Filtern, Sortieren, Navigieren, Anlegen eines Entwurfs | nein, das wäre nur ein Klick mehr |
+| Verlassen einer Seite mit ungespeicherten Eingaben | ja, sobald das Formular verändert wurde (Geltungsbereich unten) |
+
+**Geltungsbereich der letzten Zeile.** Gemeint ist zunächst jeder Weg, den
+die Ansicht **selbst** auslöst: ein Knopf, der navigiert, ein Wechsel in
+einen anderen Bereich, ein Abbruch mit Datenverlust. Ein Wächter über
+**jede** Navigation (Breadcrumb, Kopfleiste, Zurück-Knopf des Browsers)
+braucht `useBlocker` und damit einen Data-Router in Anwendung *und*
+Testhülle; das ist eigene Arbeit und gehört ausdrücklich ins Ticket, wenn
+es verlangt wird. Was nicht bewacht ist, wird im Übergabekommentar benannt,
+statt als erledigt zu gelten. Ebenso gilt: ein Formular, dessen Stand
+gespeichert wurde, ist **nicht mehr verändert** (`form.reset` nach dem
+Speichern); sonst fragt die Rückfrage ohne Anlass und wird zur Gewohnheit,
+die man wegklickt.
+
+Die Rückfrage ersetzt keine Serverprüfung: sie ist Bequemlichkeit, die
+Rechte- und Statusregeln entscheidet der Server (§4.1, §5). Und sie ersetzt
+keine Rückmeldung danach: der Ausgang wird angesagt, und zwar dort, wo er
+nach der Handlung noch steht. Verschwindet das Element mitsamt seiner
+Meldung, gehört die Live-Region eine Ebene höher (Befund aus KAN-69).
+
+## 6. Responsiv, in rem, und das Template ist die Messlatte
 
 - **Die fertige Fläche wird gegen das Figma-Template gehalten**, nicht
   gegen die Erinnerung daran (Skill `frontend-modul`, Abschnitt 0a).
@@ -253,7 +338,7 @@ den Zeigefinger und versprach damit eine Bedienbarkeit, die es nicht gab.
 - Die Admin-Tabellen sind der schwierigste Fall: lieber je Zeile eine Karte
   auf schmalen Bildschirmen als eine gequetschte Tabelle.
 
-## 6. Definition of Done
+## 7. Definition of Done
 
 - [ ] Keine Hex-Farbe außerhalb von `frontend/src/styles/tokens/`
 - [ ] Jede Primitive unter `components/ui/` per CLI erzeugt, keine von Hand
@@ -267,6 +352,9 @@ den Zeigefinger und versprach damit eine Bedienbarkeit, die es nicht gab.
       nachgewiesen statt über `getByText`; die Ebene setzt die Domänenhülle
 - [ ] Jede Zustandsregel in CSS deckt neben `:disabled` auch `aria-disabled`
       ab (Base UI meldet Zustände über ARIA)
+- [ ] Jede Handlung mit Folgen (Abschnitt 5) fragt über `alert-dialog` nach,
+      benennt den Gegenstand im Text und meldet ihren Ausgang an einer
+      Stelle, die danach noch sichtbar ist
 - [ ] Kontrast geprüft, Abweichungen im Token korrigiert
 - [ ] Kein waagerechtes Scrollen der Seite auf 360 Pixel
 - [ ] Verbleibende Einschränkungen benannt, nicht verschwiegen

@@ -1,3 +1,5 @@
+import { queryOptions } from "@tanstack/react-query"
+
 import { api } from "@/api/client"
 import { apiPaths } from "@/api/endpoints"
 import type {
@@ -18,16 +20,39 @@ import type {
  * aus api/endpoints.ts. Die Feature-Hooks unter features/auth/hooks packen
  * diese Funktionen in useMutation und kennen weder Pfade noch api.*.
  *
- * Login, Logout und GET /auth/me laufen weiterhin ueber den Auth-Kontext
- * (KAN-30): sie schreiben den Sitzungszustand und gehoeren deshalb dorthin,
- * nicht in eine Fabrik, die davon nichts weiss.
+ * Login und Logout laufen weiterhin ueber den Auth-Kontext (KAN-30): sie
+ * schreiben den Sitzungszustand und gehoeren deshalb dorthin, nicht in eine
+ * Fabrik, die davon nichts weiss. GET /auth/me steht seit KAN-69 zusaetzlich
+ * als lesende Fabrik daneben, siehe {@link authQueries}.
  */
 
 /**
+ * queryOptions-Fabrik der Ressource Auth (Skill frontend-modul, Abschnitt 2).
+ *
+ * <p><strong>Warum GET /auth/me hier ein zweites Mal auftaucht.</strong> Der
+ * Auth-Kontext haelt die Person aus dem Login im localStorage; dieser Stand
+ * kann aelter sein als das, was der Server heute liefert. Bei der
+ * Sichtpruefung zu KAN-69 fiel genau das auf: die mit Contract v50
+ * hinzugekommene {@code hsbEmail} fehlte in einer Sitzung, die vor der
+ * Aenderung begonnen hatte. Eine Ansicht, die den aktuellen Kontostand
+ * braucht, liest ihn deshalb als Query und bekommt damit Ladezustand,
+ * Fehlerzustand und Deduplizierung wie jede andere Leseabfrage; der
+ * Sitzungszustand bleibt davon unberuehrt und wird weiterhin allein vom
+ * Kontext geschrieben.
+ */
+export const authQueries = {
+  me: () =>
+    queryOptions({
+      queryKey: ["auth", "me"] as const,
+      queryFn: () => api.get<UserResponse>(apiPaths.auth.me),
+    }),
+}
+
+/**
  * POST /auth/register (§6.1): legt das Konto an und antwortet 201 in der
- * Form von GET /auth/me, also ohne passwordHash und ohne hsbEmail. Die
- * Antwort nennt die aus der Domain abgeleitete Rolle und den Status
- * REGISTRATION_PENDING.
+ * Form von GET /auth/me, also ohne passwordHash; die eigene hsbEmail steht
+ * seit Contract v50 mit darin (§3.1). Die Antwort nennt die aus der Domain
+ * abgeleitete Rolle und den Status REGISTRATION_PENDING.
  */
 export function register(body: RegisterRequest): Promise<UserResponse> {
   return api.post<UserResponse>(apiPaths.auth.register, body)

@@ -3,11 +3,13 @@ import { useState } from "react"
 import {
   Controller,
   useForm,
+  useWatch,
   type FieldError as RhfFieldError,
 } from "react-hook-form"
 import { useTranslation } from "react-i18next"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
+import { useAuth } from "@/api/auth/AuthContext"
 import { setPasswordChangeRequired } from "@/api/auth/authStore"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import { PasswordInput } from "@/components/common/PasswordInput"
@@ -21,11 +23,19 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp"
 import { Separator } from "@/components/ui/separator"
 import { AuthCardHeader } from "@/features/auth/components/AuthCardHeader"
 import { AuthPageShell } from "@/features/auth/components/AuthPageShell"
-import { useResetPassword } from "@/features/auth/hooks/useAuthMutations"
+import {
+  useRequestPasswordReset,
+  useResetPassword,
+} from "@/features/auth/hooks/useAuthMutations"
+import { useResendCountdown } from "@/features/auth/hooks/useResendCountdown"
 import {
   resetPasswordFormSchema,
   type ResetPasswordFormValues,
@@ -47,18 +57,38 @@ import {
  * mit 400 VERIFICATION_CODE_INVALID; die Seite zeigt dafuer genau eine
  * Meldung und schliesst nichts ueber das Konto. Das Rate-Limit-429
  * erscheint als Wartehinweis (§6.5, seit v34 auch an diesem Endpoint).
+ *
+ * <p><strong>Ein neuer Code laesst sich hier anfordern</strong> (KAN-69):
+ * derselbe Aufruf wie beim Vergessen, POST /auth/forgot-password mit der
+ * Adresse aus dem Feld. Ohne ihn muesste jemand, dessen Code abgelaufen
+ * ist, die Seite verlassen und den Weg von vorn beginnen. Die Sperrfrist
+ * ist dieselbe wie bei den Bestaetigungscodes (useResendCountdown); sie
+ * laeuft ab dem Betreten der Seite, denn dorthin kommt man mit einem
+ * gerade verschickten Code.
+ *
+ * <p>Wer aus dem Profil kommt ("Passwort vergessen" im Dialog "Passwort
+ * aendern"), traegt {@code codeSent} im Router-State: der Code ist dann
+ * schon angefordert, und die Seite sagt das, statt die Person raten zu
+ * lassen, ob sie noch etwas ausloesen muss.
  */
 export default function ResetPasswordPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
+  const { isAuthenticated, logout } = useAuth()
   const resetMutation = useResetPassword()
+  const requestReset = useRequestPasswordReset()
+  const { remaining, ready, restart } = useResendCountdown()
   const [succeeded, setSucceeded] = useState(false)
+  const [resendConfirmed, setResendConfirmed] = useState(false)
 
+  const routerState = location.state as {
+    email?: unknown
+    codeSent?: unknown
+  } | null
   const prefilledEmail =
-    typeof (location.state as { email?: unknown } | null)?.email === "string"
-      ? ((location.state as { email: string }).email)
-      : ""
+    typeof routerState?.email === "string" ? routerState.email : ""
+  const arrivedWithCode = routerState?.codeSent === true
 
   const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordFormSchema),
@@ -70,11 +100,40 @@ export default function ResetPasswordPage() {
     },
   })
 
+  /* useWatch statt form.watch: vertraeglich mit dem React Compiler, wie im
+     ProfileForm. Die Adresse bleibt editierbar, der neue Code geht deshalb
+     an das, was gerade im Feld steht. */
+  const enteredEmail = useWatch({ control: form.control, name: "email" })
+
   const messageOf = (error: RhfFieldError | undefined): string | undefined => {
     if (error?.message === undefined) {
       return undefined
     }
     return error.type === "server" ? error.message : t(error.message)
+  }
+
+  const onResend = async () => {
+    setResendConfirmed(false)
+    /* Ohne gueltige Adresse liefe der Aufruf in ein 400; das beantwortet
+       das Schema billiger und am Feld. */
+    if (!(await form.trigger("email"))) {
+      return
+    }
+    try {
+      await requestReset.mutateAsync({ email: enteredEmail })
+      restart()
+      setResendConfirmed(true)
+    } catch (error) {
+      if (!isApiError(error)) {
+        throw error
+      }
+      /* Fachlich scheitert der Aufruf nie (§3.16, immer 204); was hier
+         ankommt, ist das Rate-Limit-429 oder ein Transportfehler. */
+      form.setError("root.server", {
+        type: "server",
+        message: t(apiErrorMessageKey(error), { defaultValue: error.message }),
+      })
+    }
   }
 
   const onSubmit = form.handleSubmit(async (values) => {
@@ -92,6 +151,16 @@ export default function ResetPasswordPage() {
        * nichts.
        */
       setPasswordChangeRequired(false)
+      /*
+       * Wer aus dem Profil hierher kam, ist noch angemeldet: das Token ist
+       * zustandslos und ueberlebt den Passwortwechsel (§6.5). Genau das
+       * soll es nicht: nach einem neuen Passwort gehoert die alte Sitzung
+       * beendet, und erst dann stimmt auch die Ansage "Sie koennen sich
+       * jetzt anmelden" (Befund aus dem Review zu KAN-69).
+       */
+      if (isAuthenticated) {
+        await logout()
+      }
       setSucceeded(true)
     } catch (error) {
       if (!isApiError(error)) {
@@ -130,6 +199,17 @@ export default function ResetPasswordPage() {
         title={t("resetPassword.title")}
         subtitle={t("resetPassword.subtitle")}
       />
+
+      {arrivedWithCode && (
+        /* role=status statt des assertiven Standards der Primitive: das
+           hier ist eine Auskunft und keine Fehlermeldung (Befund aus dem
+           Review zu KAN-69). */
+        <Alert role="status">
+          <AlertTitle>
+            {t("resetPassword.codeSentNotice", { address: prefilledEmail })}
+          </AlertTitle>
+        </Alert>
+      )}
 
       <form onSubmit={onSubmit} noValidate>
         <FieldGroup className="gap-4.5">
@@ -203,6 +283,33 @@ export default function ResetPasswordPage() {
                     errors={[{ message: messageOf(fieldState.error) }]}
                   />
                 )}
+
+                {/* Bis zum Ablauf der Sperrfrist steht dort der Countdown
+                    und kein Knopf, damit niemand ins Rate-Limit laeuft. Ohne
+                    Adresse im Feld gaebe es kein Ziel, dann bleibt er
+                    deaktiviert. */}
+                {ready ? (
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0"
+                    disabled={requestReset.isPending || enteredEmail === ""}
+                    onClick={() => void onResend()}
+                  >
+                    {t("resetPassword.resend")}
+                  </Button>
+                ) : (
+                  <FieldDescription>
+                    {t("resetPassword.resendCountdown", {
+                      seconds: remaining,
+                    })}
+                  </FieldDescription>
+                )}
+
+                <p role="status" className="type-body-sm text-muted-foreground">
+                  {resendConfirmed && t("resetPassword.resendConfirmed")}
+                </p>
               </Field>
             )}
           />
@@ -270,7 +377,9 @@ export default function ResetPasswordPage() {
 
           {form.formState.errors.root?.server && (
             <Alert variant="destructive">
-              <AlertTitle>{form.formState.errors.root.server.message}</AlertTitle>
+              <AlertTitle>
+                {form.formState.errors.root.server.message}
+              </AlertTitle>
             </Alert>
           )}
 

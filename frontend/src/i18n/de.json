@@ -221,7 +221,11 @@
     "successTitle": "Passwort gesetzt",
     "successHint": "Ihr Passwort wurde geändert. Sie können sich jetzt anmelden.",
     "toLogin": "Zur Anmeldung",
-    "backToLogin": "Zurück zur Anmeldung"
+    "backToLogin": "Zurück zur Anmeldung",
+    "codeSentNotice": "Wir haben einen 6-stelligen Code an {{address}} gesendet. Geben Sie ihn hier zusammen mit Ihrem neuen Passwort ein.",
+    "resend": "Code erneut senden",
+    "resendCountdown": "Code erneut senden in {{seconds}}s",
+    "resendConfirmed": "Ein neuer Code wurde angefordert. Bitte prüfen Sie Ihr Postfach."
   },
   "validation": {
     "firstName": {
@@ -495,6 +499,27 @@
         "title": "Kein Projekt in diesem Status",
         "description": "In diesem Status liegt derzeit keines Ihrer Projekte.",
         "action": "Alle Projekte zeigen"
+      },
+      "card": {
+        "edit": "Bearbeiten",
+        "editFor": "Bearbeiten: {{title}}",
+        "withdraw": "Zurückziehen",
+        "withdrawFor": "Zurückziehen: {{title}}",
+        "deleteFor": "Löschen: {{title}}",
+        "withdrawDone": "Die Einreichung wurde zurückgezogen; das Projekt ist wieder ein Entwurf.",
+        "delete": "Löschen",
+        "deleteDone": "Das Projekt wurde gelöscht.",
+        "cancel": "Abbrechen",
+        "withdrawDialog": {
+          "title": "Projekt zurückziehen",
+          "description": "„{{title}}“ wird aus der Einreichung zurückgezogen und wieder als Entwurf gespeichert. Sie können es danach bearbeiten und erneut einreichen.",
+          "confirm": "Zurückziehen"
+        },
+        "deleteDialog": {
+          "title": "Projekt löschen?",
+          "description": "„{{title}}“ wird endgültig gelöscht, samt Inhalt und Dateien. Das lässt sich nicht rückgängig machen.",
+          "confirm": "Endgültig löschen"
+        }
       }
     },
     "public": {
@@ -512,7 +537,6 @@
     "profile": {
       "breadcrumb": "Profil bearbeiten",
       "title": "Profil bearbeiten",
-      "back": "Zurück zum Portfolio",
       "changeAvatar": "Foto ändern",
       "avatarPending": "Bild wird hochgeladen …",
       "firstName": "Vorname",
@@ -521,7 +545,7 @@
       "currentPassword": "Aktuelles Passwort",
       "currentPasswordHint": "Nur beim Ändern der E-Mail-Adresse erforderlich.",
       "hsbEmail": "HS-E-Mail · nicht bearbeitbar",
-      "hsbEmailHint": "Die HSB-Adresse lässt sich nicht ändern und wird hier nicht angezeigt.",
+      "hsbEmailHint": "Mit dieser Adresse ist Ihr Konto an der Hochschule nachgewiesen. Sie lässt sich nicht ändern.",
       "biography": "Bio",
       "submit": "Änderungen speichern",
       "pending": "Wird gespeichert …",
@@ -545,13 +569,21 @@
         "resendCountdown": "Code erneut senden in {{seconds}}s",
         "resendConfirmed": "Ein neuer Code wurde angefordert. Bitte prüfen Sie Ihr Postfach."
       },
-      "passwordReset": {
-        "title": "Passwort zurücksetzen",
-        "description": "Wir senden Ihnen einen Code zum Zurücksetzen Ihres Passworts an Ihre private E-Mail-Adresse.",
-        "send": "Code senden",
-        "pending": "Wird gesendet …",
-        "confirmation": "Wenn zu dieser Adresse ein aktives Konto existiert, wurde ein 6-stelliger Code dorthin gesendet.",
-        "toReset": "Code eingeben"
+      "passwordChange": {
+        "title": "Passwort ändern",
+        "description": "Sie ändern Ihr Passwort mit dem aktuellen Passwort, ohne Code.",
+        "open": "Passwort ändern",
+        "dialogTitle": "Neues Passwort vergeben",
+        "dialogDescription": "Geben Sie Ihr aktuelles Passwort ein und vergeben Sie ein neues.",
+        "forgotLeavesPage": "Dieser Weg führt zur Code-Eingabe; ungespeicherte Änderungen am Profil gehen dabei verloren.",
+        "leaveDialog": {
+          "title": "Profilseite verlassen?",
+          "description": "Sie haben Änderungen am Profil, die noch nicht gespeichert sind. Wir senden Ihnen jetzt einen Code und führen Sie zur Code-Eingabe; die ungespeicherten Änderungen gehen dabei verloren.",
+          "confirm": "Code senden und weiter"
+        },
+        "cancel": "Abbrechen",
+        "submit": "Passwort speichern",
+        "success": "Ihr Passwort wurde geändert."
       }
     }
   },

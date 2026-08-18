@@ -103,8 +103,9 @@ export default function LoginPage() {
 
   /*
    * Saet den Schrittzustand neu, wie ihn die Angaben-Seite nach 201 anlegt:
-   * hsbEmail bleibt leer, weil keine Response sie nennt (Contract 3.1); die
-   * Verify-Schritte kommen seit KAN-68 ohne die Adresse aus. Beide Flags
+   * hsbEmail bleibt leer, denn die Verify-Schritte kommen seit KAN-68 ohne
+   * die Adresse aus (seit Contract v50 stuende sie in der Antwort, gebraucht
+   * wird sie hier nicht). Beide Flags
    * false und der Einstieg bei Schritt 2: welcher Schritt wirklich offen
    * ist, laesst sich nicht abfragen (/verify/resend antwortet aus
    * Enumeration-Schutz immer 204, Contract 6.1); dort fuehrt der

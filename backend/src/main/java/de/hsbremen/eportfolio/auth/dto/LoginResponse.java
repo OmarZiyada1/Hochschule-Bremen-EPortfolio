@@ -15,8 +15,9 @@ import java.time.Instant;
  *                               {@code expiresAt}: der Client soll direkt zur
  *                               Passwortseite fuehren koennen, statt erst in
  *                               ein 403 zu laufen.
- * @param user                   Benutzerdaten ohne {@code passwordHash} und
- *                               ohne {@code hsbEmail}
+ * @param user                   Benutzerdaten ohne {@code passwordHash}; die
+ *                               eigene {@code hsbEmail} steht seit v50 mit
+ *                               darin (§3.1)
  */
 public record LoginResponse(
 		String token,

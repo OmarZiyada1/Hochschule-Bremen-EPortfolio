@@ -27,6 +27,12 @@ export const apiPaths = {
   projects: {
     list: "/api/projects",
     detail: (projectId: string) => `/api/projects/${projectId}`,
+    /*
+     * Zurueckziehen der eigenen Einreichung (§4.1, seit Contract v50,
+     * KAN-69). Geloescht wird dagegen ueber detail: DELETE /projects/{id}
+     * hat keinen eigenen Pfad.
+     */
+    withdraw: (projectId: string) => `/api/projects/${projectId}/withdraw`,
   },
   /*
    * Portfolio (§6.1, §3.2), eingetragen mit KAN-34. Die beiden Pfade

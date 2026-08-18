@@ -725,12 +725,15 @@ ist es die des Zustandsautomaten aus §4.1.
 `blocksByType` ist überhaupt nur möglich, weil `Block.type` eine eigene Spalte
 ist und nicht bloß im `jsonb` des Inhalts steckt (§2.5).
 
-### `AdminUserResponse` ist der einzige Ort mit `hsbEmail`
+### `hsbEmail` hat genau zwei Orte: Nutzerverwaltung und die Person selbst
 
-§3.1 erlaubt die HSB-Adresse ausschließlich in der Nutzerverwaltung und
-verlangt dafür ein **eigenes** Record, getrennt von `auth.dto.UserResponse`.
-Wäre es dasselbe, gelangte die Adresse zwangsläufig in jede Antwort, die einen
-User einbettet. `AdminUserHsbEmailVisibilityTest` hält beide Seiten fest und
+§3.1 erlaubt die HSB-Adresse in der Nutzerverwaltung (`AdminUserResponse`)
+und seit Contract v50 in den Auth-Antworten an die Person selbst
+(`auth.dto.UserResponse`: Login, Registrierung, `GET/PUT /auth/me`, KAN-69);
+das Profilformular zeigt sie als nicht änderbares Feld. Dritte sehen die
+Adresse weiterhin nie. Es bleiben bewusst **zwei getrennte** Records: wäre es
+dasselbe, gelangte die Adresse zwangsläufig in jede Antwort, die einen User
+einbettet. `AdminUserHsbEmailVisibilityTest` hält beide Seiten fest und
 prüft dabei den gesamten Antworttext, nicht nur ein benanntes Feld.
 
 ### Was KAN-25 entschieden hat, weil der Contract schwieg

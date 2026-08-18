@@ -17,27 +17,27 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Die vier Workflow-Endpoints aus API-Contract §6.1 (KAN-19): der
- * Zustandsautomat aus §4 als Aktionen am Projekt.
+ * Die Workflow-Endpoints aus API-Contract §6.1 (KAN-19, {@code /withdraw} seit
+ * v50): der Zustandsautomat aus §4 als Aktionen am Projekt.
  *
  * <p><strong>Warum ein eigener Controller</strong> neben dem
  * {@link ProjectController}, aus demselben Grund wie beim
- * {@link BlockController}: das sind vier Aktionen mit einer gemeinsamen
+ * {@link BlockController}: das sind Aktionen mit einer gemeinsamen
  * Geschichte, dem redaktionellen Ablauf, und mit ganz anderen Lesern als die
  * Pflege der Metadaten. In der OpenAPI-Oberflaeche stehen sie damit unter einer
- * eigenen Ueberschrift, statt die Projektbeschreibung um vier fachfremde Zeilen
+ * eigenen Ueberschrift, statt die Projektbeschreibung um fachfremde Zeilen
  * zu verlaengern.
  *
  * <p><strong>Warum {@code POST} und nicht {@code PATCH} auf das Projekt.</strong>
- * §6.1 legt die vier Pfade so fest, und das passt zur Sache: „einreichen" ist
+ * §6.1 legt die Pfade so fest, und das passt zur Sache: „einreichen" ist
  * eine Handlung mit Vorbedingungen, Nebenwirkungen und eigenem Recht, keine
  * Feldaenderung. Ein {@code PATCH {"status": "SUBMITTED"}} liesse dagegen offen,
- * welche der vier Handlungen gemeint ist, und legte die Regeln aus §4.1 in einen
+ * welche der Handlungen gemeint ist, und legte die Regeln aus §4.1 in einen
  * Feldwert.
  *
  * <p><strong>Zur Freigabe in {@code SecurityConfig}:</strong> dort ist fuer die
- * Projektpfade ausdruecklich nur {@code GET} freigegeben. Diese vier
- * {@code POST}-Pfade fallen damit unter
+ * Projektpfade ausdruecklich nur {@code GET} freigegeben. Diese
+ * {@code POST}-Pfade (einschliesslich {@code /withdraw}, v50) fallen damit unter
  * {@code anyRequest().authenticated()} und ergeben ohne Token 401
  * {@code NOT_AUTHENTICATED}; eine eigene Zeile brauchen sie nicht.
  * {@code @AuthenticationPrincipal} ist hier also nie {@code null}. Bewusst steht
@@ -94,6 +94,36 @@ public class ProjectWorkflowController {
 			@PathVariable("projectId") UUID projectId) {
 
 		return workflowService.submit(user, projectId);
+	}
+
+	/**
+	 * Zurueckziehen.
+	 *
+	 * <p>Das Gegenstueck zum Einreichen (§4.1, seit v50): die Autor:in holt die
+	 * eigene Einreichung zurueck, solange die Redaktion nicht entschieden hat.
+	 */
+	@Operation(summary = "Projekt zurueckziehen",
+			description = "SUBMITTED nach DRAFT, ausgeloest von der Autor:in (§4.1, seit v50). "
+					+ "Ohne die Pruefungen des Einreichens: Vollstaendigkeit und offene "
+					+ "Aenderungswuensche betreffen nur den Weg zur Redaktion. Danach ist das "
+					+ "Projekt wieder bearbeitbar und als Entwurf auch loeschbar (§6.1).")
+	@ApiResponse(responseCode = "200", description = "Das zurueckgezogene Projekt, mit neuem "
+			+ "Status und dem frischen Eintrag in statusHistory.")
+	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
+	@ApiResponse(responseCode = "403", description = "Angemeldet, aber nicht die Autor:in. "
+			+ "Projektmitglieder duerfen mitschreiben, aber nicht zurueckziehen (§4.1).")
+	@ApiResponse(responseCode = "404", description = "Unter dieser ID gibt es kein Projekt.")
+	@ApiResponse(responseCode = "409", description = "PROJECT_STATUS_TRANSITION_INVALID: das "
+			+ "Projekt steht nicht in SUBMITTED; nach einer redaktionellen Entscheidung "
+			+ "fuehrt der Weg zurueck nur ueber request-revision.")
+	@PostMapping("/withdraw")
+	public ProjectDetailResponse withdraw(
+			@AuthenticationPrincipal AuthenticatedUser user,
+
+			@Parameter(description = "ID des Projekts.")
+			@PathVariable("projectId") UUID projectId) {
+
+		return workflowService.withdraw(user, projectId);
 	}
 
 	/** Genehmigen. */

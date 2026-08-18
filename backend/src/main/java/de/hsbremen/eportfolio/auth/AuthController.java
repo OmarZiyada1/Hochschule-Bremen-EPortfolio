@@ -63,7 +63,8 @@ public class AuthController {
 
 	/**
 	 * Anmeldung mit privater E-Mail + Passwort. Liefert Token und
-	 * Benutzerdaten (ohne {@code passwordHash}, ohne {@code hsbEmail}).
+	 * Benutzerdaten: nie {@code passwordHash}, seit v50 mit der eigenen
+	 * {@code hsbEmail} (§3.1).
 	 */
 	// Kein Bearer-Token: dieser Endpoint liefert das Token ja erst. Hebt die
 	// global registrierte Anforderung aus OpenApiConfig gezielt fuer diesen

@@ -16,6 +16,9 @@ export type UserResponse = ApiSchemas["UserResponse"]
 export type LoginResponse = ApiSchemas["LoginResponse"]
 export type ProjectCardResponse = ApiSchemas["ProjectCardResponse"]
 
+/** Projektdetail, Antwort der Workflow-Endpoints (§6.1, KAN-69). */
+export type ProjectDetailResponse = ApiSchemas["ProjectDetailResponse"]
+
 /** Registrierung und Verifizierung nach Contract §3.1.1, §6.1 (KAN-33). */
 export type RegisterRequest = ApiSchemas["RegisterRequest"]
 export type VerifyRequest = ApiSchemas["VerifyRequest"]

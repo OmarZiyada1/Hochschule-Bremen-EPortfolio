@@ -45,7 +45,9 @@ export default function PublicPortfolioPage() {
   const { data, isPending, error } = usePublicPortfolio(userId ?? "")
 
   const notFound =
-    error !== null && isApiError(error) && error.errorCode === "RESOURCE_NOT_FOUND"
+    error !== null &&
+    isApiError(error) &&
+    error.errorCode === "RESOURCE_NOT_FOUND"
 
   const person = data?.user
     ? {

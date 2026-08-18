@@ -188,6 +188,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/projects/{projectId}/withdraw": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Projekt zurueckziehen
+     * @description SUBMITTED nach DRAFT, ausgeloest von der Autor:in (§4.1, seit v50). Ohne die Pruefungen des Einreichens: Vollstaendigkeit und offene Aenderungswuensche betreffen nur den Weg zur Redaktion. Danach ist das Projekt wieder bearbeitbar und als Entwurf auch loeschbar (§6.1).
+     */
+    post: operations["withdraw"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/projects/{projectId}/top10-nomination": {
     parameters: {
       query?: never
@@ -266,7 +286,7 @@ export interface paths {
      * Eigene Reaktion zuruecknehmen
      * @description Entfernt die Reaktion der angemeldeten Person an diesem Projekt und liefert die neue Gesamtzahl. Betroffen ist ausschliesslich die eigene Zeile; eine fremde Reaktion laesst sich ueber diesen Endpoint gar nicht adressieren. Idempotent: gibt es keine Reaktion, bleibt der Aufruf folgenlos und antwortet trotzdem mit 200. Die Antwort ist 200 und nicht 204, weil der Client den neuen Zaehler braucht (§6.1).
      */
-    delete: operations["withdraw"]
+    delete: operations["withdraw_1"]
     options?: never
     head?: never
     patch?: never
@@ -1466,6 +1486,7 @@ export interface components {
       id?: string
       email?: string
       pendingEmail?: string
+      hsbEmail?: string
       firstName?: string
       lastName?: string
       /** @enum {string} */
@@ -2949,6 +2970,65 @@ export interface operations {
       }
     }
   }
+  withdraw: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description ID des Projekts. */
+        projectId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Das zurueckgezogene Projekt, mit neuem Status und dem frischen Eintrag in statusHistory. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["ProjectDetailResponse"]
+        }
+      }
+      /** @description Kein gueltiges Token mitgeschickt. */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["ProjectDetailResponse"]
+        }
+      }
+      /** @description Angemeldet, aber nicht die Autor:in. Projektmitglieder duerfen mitschreiben, aber nicht zurueckziehen (§4.1). */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["ProjectDetailResponse"]
+        }
+      }
+      /** @description Unter dieser ID gibt es kein Projekt. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["ProjectDetailResponse"]
+        }
+      }
+      /** @description PROJECT_STATUS_TRANSITION_INVALID: das Projekt steht nicht in SUBMITTED; nach einer redaktionellen Entscheidung fuehrt der Weg zurueck nur ueber request-revision. */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["ProjectDetailResponse"]
+        }
+      }
+    }
+  }
   nominate: {
     parameters: {
       query?: never
@@ -3211,7 +3291,7 @@ export interface operations {
       }
     }
   }
-  withdraw: {
+  withdraw_1: {
     parameters: {
       query?: never
       header?: never

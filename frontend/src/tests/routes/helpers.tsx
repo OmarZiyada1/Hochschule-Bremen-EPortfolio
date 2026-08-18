@@ -36,6 +36,9 @@ export function signInAs(role: Role): void {
   const user: UserResponse = {
     id: "00000000-0000-0000-0000-000000000001",
     email: "mira.beispiel@example.org",
+    /* Die eigene HSB-Adresse steht seit Contract v50 in den Auth-Antworten
+       an die Person selbst (§3.1, KAN-69). */
+    hsbEmail: "mira.beispiel@stud.hs-bremen.de",
     firstName: "Mira",
     lastName: "Beispiel",
     role,

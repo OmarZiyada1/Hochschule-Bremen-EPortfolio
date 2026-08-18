@@ -525,8 +525,8 @@ class AuthControllerTest {
 	// --- Keine Geheimnisse in Responses ------------------------------------
 
 	@Test
-	@DisplayName("Keine Auth-Response enthaelt passwordHash oder hsbEmail (§3.1)")
-	void noPasswordHashAndNoHsbEmailInResponses() throws Exception {
+	@DisplayName("Auth-Responses: nie passwordHash, die eigene hsbEmail seit v50 schon (§3.1)")
+	void noPasswordHashButOwnHsbEmailInResponses() throws Exception {
 		User user = activeUser();
 		when(userRepository.findByEmail("privat@example.org")).thenReturn(Optional.of(user));
 		when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
@@ -551,12 +551,12 @@ class AuthControllerTest {
 			assertThat(body)
 					.as("Der BCrypt-Hash selbst darf nicht vorkommen")
 					.doesNotContain(user.getPasswordHash());
+			/* Seit v50 gehoert die eigene HSB-Adresse in die Antwort: sie geht
+			   immer an die Person selbst (Login, me). Dritte sehen sie weiter
+			   nicht, das prueft AdminUserHsbEmailVisibilityTest. */
 			assertThat(body)
-					.as("Feldname hsbEmail darf nicht vorkommen")
-					.doesNotContain("hsbEmail");
-			assertThat(body)
-					.as("Die HSB-Adresse selbst darf nicht vorkommen")
-					.doesNotContain(user.getHsbEmail());
+					.as("Die eigene HSB-Adresse steht in der Antwort (§3.1, v50)")
+					.contains(user.getHsbEmail());
 		}
 	}
 }

@@ -60,7 +60,9 @@ export function ProjectStatusFilter({
          * Wert ist kein Zustand dieser Seite: er faellt auf "Alle" zurueck,
          * statt eine leere Liste zu zeigen.
          */
-        onValueChange((next[0] as StatusFilterValue | undefined) ?? ALL_STATUSES)
+        onValueChange(
+          (next[0] as StatusFilterValue | undefined) ?? ALL_STATUSES
+        )
       }}
       className="max-w-full flex-wrap rounded-control border bg-muted p-1"
     >
