@@ -3,17 +3,19 @@ spring:
     # Ohne explizites SPRING_PROFILES_ACTIVE laeuft die Anwendung im dev-Profil.
     default: dev
   servlet:
-    # Schranke des Multipart-Filters (KAN-23). Bewusst OBERHALB des groessten
-    # fachlichen Limits aus §3.15 (25 MB): stuende der Wert darunter, griffe
-    # er vor dem Controller und die Antwort waere nicht das Envelope aus
-    # §6.2. So prueft der FileService die fachlichen Limits selbst, und der
-    # Filter faengt nur ab, was ohnehin niemals zulaessig waere. Seine
+    # Schranke des Multipart-Filters (KAN-23, angehoben mit KAN-72). Bewusst
+    # OBERHALB des groessten fachlichen Limits aus §3.15, seit Contract v51
+    # 200 MB fuer Video: stuende der Wert darunter, griffe er vor dem
+    # Controller und die Antwort waere nicht das Envelope aus §6.2. So prueft
+    # der FileService die fachlichen Limits selbst, und der Filter faengt nur
+    # ab, was ohnehin niemals zulaessig waere. Seine
     # MaxUploadSizeExceededException bildet der GlobalExceptionHandler auf
     # 400 FILE_TOO_LARGE ab, dieselbe Antwort wie bei der fachlichen
-    # Pruefung.
+    # Pruefung. max-request-size liegt darueber, weil neben der Datei noch
+    # Grenzmarken und das Feld projectId im Koerper stehen.
     multipart:
-      max-file-size: 30MB
-      max-request-size: 32MB
+      max-file-size: 210MB
+      max-request-size: 212MB
   jpa:
     hibernate:
       ddl-auto: validate
@@ -135,13 +137,14 @@ app:
 
 server:
   tomcat:
-    # Gehoert zur Multipart-Schranke oben (KAN-23): weist die Anwendung einen
-    # Upload ab, liest Tomcat den Rest des Request-Koerpers zu Ende, damit
-    # die Antwort den Client ueberhaupt erreicht. Der Default (2 MB) ist
-    # kleiner als ein abgelehnter 30-MB-Upload; Tomcat wuerde die Verbindung
-    # kappen und der Client saehe einen Verbindungsfehler statt des 400
-    # FILE_TOO_LARGE. Der Wert liegt deshalb oberhalb von max-request-size.
-    max-swallow-size: 40MB
+    # Gehoert zur Multipart-Schranke oben (KAN-23, angehoben mit KAN-72):
+    # weist die Anwendung einen Upload ab, liest Tomcat den Rest des
+    # Request-Koerpers zu Ende, damit die Antwort den Client ueberhaupt
+    # erreicht. Der Default (2 MB) ist kleiner als ein abgelehnter
+    # 210-MB-Upload; Tomcat wuerde die Verbindung kappen und der Client saehe
+    # einen Verbindungsfehler statt des 400 FILE_TOO_LARGE. Der Wert liegt
+    # deshalb oberhalb von max-request-size.
+    max-swallow-size: 220MB
 
 management:
   endpoints:

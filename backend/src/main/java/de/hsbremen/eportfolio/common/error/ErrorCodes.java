@@ -3,7 +3,7 @@ package de.hsbremen.eportfolio.common.error;
 /**
  * Fehlercodes fuer das Envelope aus API-Contract §6.2.
  *
- * <p>Stand Contract v50 steht jede Konstante dieser Klasse auch in §6.2.
+ * <p>Stand Contract v54 steht jede Konstante dieser Klasse auch in §6.2.
  * {@link #VALIDATION_FAILED} war bis v14 nur hier gefuehrt und wurde mit v15
  * nachgetragen (Tabelle „Fehlercodes Anfrageformat", Historieneintrag in §10).
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
@@ -41,8 +41,12 @@ package de.hsbremen.eportfolio.common.error;
  * <p>Ebenso neu entstanden ist {@link #INTERNAL_ERROR} mit KAN-55 (Contract
  * v31): bis dahin fuehrte §6.2 ueberhaupt keinen Code fuer den unerwarteten
  * Serverfehler, und ein 500 lief an dem einen Fehlerformat vorbei. Zuletzt kam
- * {@link #CHANGE_REQUESTS_OPEN} mit KAN-59 dazu (Contract v38): §2.4 verlangte
- * den Review-Kreislauf, ohne dass ein Code die Sperre beim Einreichen trug.
+ * Davor kam {@link #CHANGE_REQUESTS_OPEN} mit KAN-59 dazu (Contract v38): §2.4
+ * verlangte den Review-Kreislauf, ohne dass ein Code die Sperre beim
+ * Einreichen trug.
+ * Zuletzt {@link #FILE_RANGE_NOT_SATISFIABLE} mit KAN-72 (Contract v52): §3.15
+ * verlangt seit v51, dass die Dateiauslieferung HTTP-Range beantwortet, und
+ * fuer den unerfuellbaren Bereich fuehrte §6.2 bis dahin keinen Code.
  */
 public final class ErrorCodes {
 
@@ -226,7 +230,7 @@ public final class ErrorCodes {
 
 	/**
 	 * 400: die Datei ueberschreitet das Groessenlimit ihrer Verwendung
-	 * (§3.15): 10 MB fuer Bilder, 25 MB fuer Audio und PDF.
+	 * (§3.15): 10 MB fuer Bilder, 25 MB fuer Audio und PDF, 200 MB fuer Video.
 	 *
 	 * <p>Derselbe Code antwortet auch, wenn schon der Multipart-Filter den
 	 * Upload abweist ({@code MaxUploadSizeExceededException} im
@@ -234,6 +238,29 @@ public final class ErrorCodes {
 	 * Aussage, egal welche der beiden Schranken zuerst griff.
 	 */
 	public static final String FILE_TOO_LARGE = "FILE_TOO_LARGE";
+
+	/**
+	 * 416: der angeforderte Bereich einer Datei liegt jenseits ihrer Groesse
+	 * (§3.15). Die Antwort traegt {@code Content-Range: bytes &#42;/&lt;size&gt;},
+	 * damit der Client seine Rechnung korrigieren kann, ohne die Datei erneut
+	 * anzufragen.
+	 *
+	 * <p><strong>Nicht jeder unbrauchbare Range-Kopf landet hier.</strong> Nach
+	 * RFC 9110 ignoriert der Server einen Kopf, den er nicht versteht, und
+	 * antwortet mit 200 und dem vollstaendigen Inhalt; dasselbe gilt fuer eine
+	 * Anfrage nach mehreren Bereichen, denn eine
+	 * {@code multipart/byteranges}-Antwort baut dieses Portal nicht. Dieser
+	 * Code betrifft allein den verstandenen, aber unerfuellbaren Bereich.
+	 *
+	 * <p><strong>Warum ueberhaupt ein Code:</strong> Backend-Regel 4 kennt
+	 * keine Fehlerantwort ausserhalb des Envelopes aus §6.2, und §6.2 duldet
+	 * keinen Code, der nur im Code steht. Ein 416 ohne Envelope waere ein
+	 * zweites Fehlerformat an genau der Stelle, an der ein Medienelement
+	 * maschinell weiterentscheidet.
+	 *
+	 * <p>Vergeben mit KAN-72, nachgetragen in §6.2 mit Contract v52.
+	 */
+	public static final String FILE_RANGE_NOT_SATISFIABLE = "FILE_RANGE_NOT_SATISFIABLE";
 
 	/**
 	 * 400: der eingegebene Verifizierungscode passt nicht, ist abgelaufen oder

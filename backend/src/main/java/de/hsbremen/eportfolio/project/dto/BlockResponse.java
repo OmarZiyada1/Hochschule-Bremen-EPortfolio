@@ -3,6 +3,7 @@ package de.hsbremen.eportfolio.project.dto;
 import com.fasterxml.jackson.databind.JsonNode;
 import de.hsbremen.eportfolio.common.enums.BlockType;
 import de.hsbremen.eportfolio.project.Block;
+import de.hsbremen.eportfolio.project.BlockSchemaMigration;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.UUID;
 
@@ -14,6 +15,16 @@ import java.util.UUID;
  * einliest, wie er ihn geschrieben hat. Jede Umformung hier waere eine zweite
  * Schema-Definition neben der des Editors und muesste bei jeder Aenderung
  * mitgezogen werden.
+ *
+ * <p><strong>Die eine Ausnahme ist die Schemamigration</strong> (§2.10,
+ * KAN-72). Steht in der Zeile eine aeltere {@code schemaVersion}, bringt
+ * {@link BlockSchemaMigration} den Knoten beim Lesen in die aktuelle Form, und
+ * die Antwort meldet die neue Version. Das ist keine zweite Schemadefinition,
+ * sondern die von §2.10 verlangte Uebersetzung: ohne sie liesse sich ein
+ * Dokument aus einer aelteren Version nicht mehr speichern, weil der
+ * Schreibweg die alten Attributformen seit v51 abweist. Diese Fabrik ist der
+ * einzige Weg vom {@link Block} in eine Antwort, deshalb steht die Migration
+ * hier und nicht in jedem Aufrufer.
  *
  * @param id            stabile Block-ID; der Autosave-Pfad aus §6.1 schickt sie
  *                      zurueck, damit Blocke aktualisiert statt neu angelegt
@@ -38,11 +49,13 @@ public record BlockResponse(
 		int schemaVersion) {
 
 	public static BlockResponse from(Block block) {
+		JsonNode content = BlockSchemaMigration.toCurrent(
+				block.getType(), block.getContent(), block.getSchemaVersion());
 		return new BlockResponse(
 				block.getId(),
 				block.getType(),
 				block.getOrderIndex(),
-				block.getContent(),
-				block.getSchemaVersion());
+				content,
+				Math.max(block.getSchemaVersion(), BlockSchemaMigration.CURRENT_VERSION));
 	}
 }

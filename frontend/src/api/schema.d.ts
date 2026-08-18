@@ -952,6 +952,34 @@ export interface paths {
     patch: operations["updateCategory"]
     trace?: never
   }
+  "/api/files/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Datei abrufen
+     * @description Streamt den Inhalt mit korrektem Content-Type. Oeffentlich, wenn das zugehoerige Projekt PUBLISHED ist oder es sich um einen Avatar handelt; sonst gelten die Regeln des Projekts (§3.15, §5). Beantwortet HTTP-Range-Anfragen und sendet Accept-Ranges: bytes bei jeder Antwort; ohne Range-Kopf kommt der vollstaendige Inhalt.
+     */
+    get: operations["download"]
+    put?: never
+    post?: never
+    /**
+     * Datei loeschen
+     * @description Entfernt Datenbankzeile und Objekt im Speicher. Erlaubt sind die Person, die hochgeladen hat (bei Projektdateien nur in DRAFT und REVISION), und die Administration jederzeit (§6.1).
+     */
+    delete: operations["delete_2"]
+    options?: never
+    /**
+     * Kopfzeilen einer Datei abrufen
+     * @description Wie GET, aber ohne Rumpf: Content-Type, Content-Length, Accept-Ranges, ETag und Cache-Control. Ein Medienelement erfaehrt damit Groesse und Bereichsfaehigkeit, ohne Bytes zu uebertragen.
+     */
+    head: operations["head"]
+    patch?: never
+    trace?: never
+  }
   "/api/users/lookup": {
     parameters: {
       query?: never
@@ -1067,30 +1095,6 @@ export interface paths {
     put?: never
     post?: never
     delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/files/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /**
-     * Datei abrufen
-     * @description Streamt den Inhalt mit korrektem Content-Type. Oeffentlich, wenn das zugehoerige Projekt PUBLISHED ist oder es sich um einen Avatar handelt; sonst gelten die Regeln des Projekts (§3.15, §5).
-     */
-    get: operations["download"]
-    put?: never
-    post?: never
-    /**
-     * Datei loeschen
-     * @description Entfernt Datenbankzeile und Objekt im Speicher. Erlaubt sind die Person, die hochgeladen hat (bei Projektdateien nur in DRAFT und REVISION), und die Administration jederzeit (§6.1).
-     */
-    delete: operations["delete_2"]
     options?: never
     head?: never
     patch?: never
@@ -1221,8 +1225,8 @@ export interface components {
       content: components["schemas"]["JsonNode"]
       /**
        * Format: int32
-       * @description Version des Editor-Schemas (§2.10). Fehlt sie, gilt 1.
-       * @example 1
+       * @description Version des Editor-Schemas (§2.10). Fehlt sie, gilt die aktuelle Version.
+       * @example 2
        */
       schemaVersion?: number
     }
@@ -1817,7 +1821,7 @@ export interface components {
       /** @description Initialpasswort im Klartext, mindestens 12 Zeichen. Die Person muss es bei der ersten Anmeldung aendern (§6.7). */
       password?: string
     }
-    /** @description Ein Konto in der Nutzerverwaltung. Der einzige Antworttyp, der hsbEmail enthaelt (§3.1). passwordHash kommt nirgends vor. */
+    /** @description Ein Konto in der Nutzerverwaltung. Der einzige Antworttyp, der hsbEmail fremder Konten enthaelt; die eigene Adresse fuehren seit v50 auch die Auth-Antworten an die Person selbst (§3.1). passwordHash kommt nirgends vor. */
     AdminUserResponse: {
       /** Format: uuid */
       id?: string
@@ -3600,7 +3604,7 @@ export interface operations {
           "*/*": components["schemas"]["StoredFileResponse"]
         }
       }
-      /** @description FILE_TYPE_NOT_ALLOWED, wenn der Typ nicht in der Allowlist steht oder der Inhalt nicht zu ihm passt; FILE_TOO_LARGE oberhalb des Limits (10 MB Bilder, 25 MB Audio und PDF). */
+      /** @description FILE_TYPE_NOT_ALLOWED, wenn der Typ nicht in der Allowlist steht oder der Inhalt nicht zu ihm passt; FILE_TOO_LARGE oberhalb des Limits (10 MB Bilder, 25 MB Audio und PDF, 200 MB Video). */
       400: {
         headers: {
           [name: string]: unknown
@@ -5578,6 +5582,168 @@ export interface operations {
       }
     }
   }
+  download: {
+    parameters: {
+      query?: never
+      header?: {
+        /** @description Optionaler Bereich nach RFC 9110, etwa bytes=0-99. */
+        Range?: string
+      }
+      path: {
+        /** @description ID der Datei. */
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Der vollstaendige Dateiinhalt. Auch die Antwort auf einen unlesbaren Range-Kopf und auf eine Anfrage nach mehreren Bereichen (RFC 9110). */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": string
+        }
+      }
+      /** @description Der angeforderte Ausschnitt, mit Content-Range und passender Content-Length. */
+      206: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": string
+        }
+      }
+      /** @description Die Datei ist nicht oeffentlich und es wurde kein gueltiges Token mitgeschickt. */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": string
+        }
+      }
+      /** @description Angemeldet, aber ohne Leserecht auf das zugehoerige Projekt. */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": string
+        }
+      }
+      /** @description Unter dieser ID gibt es keine Datei. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": string
+        }
+      }
+      /** @description FILE_RANGE_NOT_SATISFIABLE, wenn der angeforderte Bereich jenseits der Dateigroesse liegt. Die Antwort traegt Content-Range: bytes *\/<size>. */
+      416: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": string
+        }
+      }
+    }
+  }
+  delete_2: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description ID der Datei. */
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Geloescht. */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Kein gueltiges Token mitgeschickt. */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Angemeldet, aber weder Uploader:in noch ADMIN. */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unter dieser ID gibt es keine Datei. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description PROJECT_STATUS_NOT_EDITABLE, wenn die Uploader:in eine Projektdatei ausserhalb von DRAFT und REVISION loeschen will. */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  head: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description ID der Datei. */
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Nur Kopfzeilen, kein Rumpf. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Die Datei ist nicht oeffentlich und es wurde kein gueltiges Token mitgeschickt. */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Angemeldet, aber ohne Leserecht auf das zugehoerige Projekt. */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unter dieser ID gibt es keine Datei. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
   lookup: {
     parameters: {
       query?: {
@@ -5766,105 +5932,6 @@ export interface operations {
         content: {
           "*/*": components["schemas"]["ModuleResponse"][]
         }
-      }
-    }
-  }
-  download: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description ID der Datei. */
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Der Dateiinhalt. */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "*/*": string
-        }
-      }
-      /** @description Die Datei ist nicht oeffentlich und es wurde kein gueltiges Token mitgeschickt. */
-      401: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "*/*": string
-        }
-      }
-      /** @description Angemeldet, aber ohne Leserecht auf das zugehoerige Projekt. */
-      403: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "*/*": string
-        }
-      }
-      /** @description Unter dieser ID gibt es keine Datei. */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "*/*": string
-        }
-      }
-    }
-  }
-  delete_2: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description ID der Datei. */
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Geloescht. */
-      204: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-      /** @description Kein gueltiges Token mitgeschickt. */
-      401: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-      /** @description Angemeldet, aber weder Uploader:in noch ADMIN. */
-      403: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-      /** @description Unter dieser ID gibt es keine Datei. */
-      404: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-      /** @description PROJECT_STATUS_NOT_EDITABLE, wenn die Uploader:in eine Projektdatei ausserhalb von DRAFT und REVISION loeschen will. */
-      409: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
       }
     }
   }

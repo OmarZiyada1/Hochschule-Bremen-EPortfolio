@@ -10,6 +10,7 @@ import com.azure.storage.blob.BlobContainerClientBuilder;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -18,6 +19,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
@@ -38,10 +40,17 @@ import org.springframework.test.context.DynamicPropertySource;
  * Verbindungszeichenfolge kommt deshalb ueber {@code @DynamicPropertySource}
  * in den Kontext.
  *
+ *
+ * <p><strong>{@code @DirtiesContext} gibt die Verbindungen wieder frei</strong>,
+ * aus demselben Grund wie in {@code FileUploadLimitTest}: der eigene Kontext
+ * dieser Klasse bliebe sonst samt Verbindungspool bis zum Ende des Laufs im
+ * Cache stehen (KAN-72).
+ *
  * <p>Der Kontext startet mit {@code app.storage.provider=azure} und beweist
  * damit zugleich die Auswahl ueber {@code @ConditionalOnProperty} (§6.8).
  */
 @SpringBootTest
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class AzureBlobFileStorageTest {
 
 	/** Das dokumentierte Entwicklungskonto von Azurite, kein Geheimnis. */
@@ -121,6 +130,38 @@ class AzureBlobFileStorageTest {
 
 		assertThatThrownBy(() -> storage.load(key))
 				.isInstanceOf(FileStorageException.class);
+	}
+
+	/**
+	 * Der Bereichsabruf liefert genau den angeforderten Ausschnitt (§3.15,
+	 * KAN-72). Geprueft werden Anfang, Mitte, das Dateiende und die kuerzeste
+	 * moegliche Laenge: das Dateiende ist die Stelle, an der eine um eins
+	 * verrechnete Grenze zuerst auffiele.
+	 */
+	@Test
+	@DisplayName("Bereichsabruf liefert genau die angeforderten Bytes, auch am Dateiende")
+	void rangeLoad() throws IOException {
+		byte[] content = TestFiles.sample(AllowedFileType.PNG, 512);
+		String key = "projects/" + UUID.randomUUID() + "/" + UUID.randomUUID();
+		storage.store(key, new ByteArrayInputStream(content), content.length, "image/png");
+
+		assertRange(key, content, 0, 100);
+		assertRange(key, content, 100, 200);
+		assertRange(key, content, content.length - 10, 10);
+		assertRange(key, content, content.length - 1, 1);
+		assertRange(key, content, 0, content.length);
+
+		storage.delete(key);
+	}
+
+	private void assertRange(String key, byte[] content, int offset, int length)
+			throws IOException {
+		byte[] expected = Arrays.copyOfRange(content, offset, offset + length);
+		try (InputStream loaded = storage.load(key, offset, length)) {
+			assertThat(loaded.readAllBytes())
+					.as("Bereich %d bis %d", offset, offset + length - 1)
+					.isEqualTo(expected);
+		}
 	}
 
 	@Test

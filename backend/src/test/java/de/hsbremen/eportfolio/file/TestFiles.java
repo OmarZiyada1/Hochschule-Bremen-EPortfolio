@@ -42,6 +42,13 @@ public final class TestFiles {
 					'R', 'I', 'F', 'F', 0x24, 0x00, 0x00, 0x00, 'W', 'A', 'V', 'E' };
 			case OGG -> new byte[] { 'O', 'g', 'g', 'S', 0x00, 0x02 };
 			case PDF -> new byte[] { '%', 'P', 'D', 'F', '-', '1', '.', '4' };
+			// Die ftyp-Box steht in den Bytes 4 bis 7, davor die Boxlaenge
+			// (§3.15, Contract v53). Der Marken-Code danach ist beliebig.
+			case MP4 -> new byte[] {
+					0x00, 0x00, 0x00, 0x20, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm' };
+			// EBML-Kopf; der DocType dahinter wird nicht geprueft.
+			case WEBM -> new byte[] {
+					(byte) 0x1A, 0x45, (byte) 0xDF, (byte) 0xA3, (byte) 0x9F, 0x42 };
 		};
 	}
 

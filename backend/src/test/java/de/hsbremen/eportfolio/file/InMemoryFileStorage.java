@@ -43,6 +43,16 @@ public class InMemoryFileStorage implements FileStorage {
 		return new ByteArrayInputStream(bytes);
 	}
 
+	/** Ausschnitt aus dem Bytearray; die Grenzen hat die Aufrufseite geprueft. */
+	@Override
+	public InputStream load(String key, long offset, long length) {
+		byte[] bytes = objects.get(key);
+		if (bytes == null) {
+			throw new FileStorageException("Kein Objekt unter diesem Schluessel: " + key);
+		}
+		return new ByteArrayInputStream(bytes, (int) offset, (int) length);
+	}
+
 	@Override
 	public void delete(String key) {
 		objects.remove(key);

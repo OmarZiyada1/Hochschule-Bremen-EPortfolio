@@ -3,6 +3,8 @@ package de.hsbremen.eportfolio.file;
 import de.hsbremen.eportfolio.config.StorageProperties;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.Channels;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -61,6 +63,34 @@ public class LocalFileStorage implements FileStorage {
 		}
 	}
 
+	/**
+	 * Springt ueber {@code Files.newByteChannel} an die Position und begrenzt
+	 * den Strom auf die Ausschnittslaenge.
+	 *
+	 * <p>{@code readNBytes} schiede aus, obwohl es kuerzer waere: es zoege den
+	 * Ausschnitt vollstaendig in den Speicher, und genau das soll der
+	 * Bereichsabruf vermeiden. Der Kanal liest stattdessen weiter, waehrend
+	 * die Antwort schon hinausgeht.
+	 */
+	@Override
+	public InputStream load(String key, long offset, long length) {
+		Path target = resolve(key);
+		try {
+			SeekableByteChannel channel = Files.newByteChannel(target);
+			try {
+				channel.position(offset);
+			} catch (IOException | RuntimeException e) {
+				channel.close();
+				throw e;
+			}
+			return new BoundedInputStream(Channels.newInputStream(channel), length);
+		} catch (NoSuchFileException e) {
+			throw new FileStorageException("Kein Objekt unter diesem Schluessel: " + key, e);
+		} catch (IOException e) {
+			throw new FileStorageException("Objekt konnte nicht gelesen werden: " + key, e);
+		}
+	}
+
 	@Override
 	public void delete(String key) {
 		try {
@@ -82,5 +112,71 @@ public class LocalFileStorage implements FileStorage {
 			throw new FileStorageException("Unzulaessiger Speicherschluessel: " + key);
 		}
 		return target;
+	}
+
+	/**
+	 * Deckelt einen Strom auf eine feste Anzahl Bytes. Nur fuer
+	 * {@link #load(String, long, long)}: der Kanal wuerde sonst bis zum
+	 * Dateiende weiterlesen, und die Antwort waere laenger als das
+	 * angekuendigte {@code Content-Length}.
+	 *
+	 * <p>Paketprivat und hier statt in einer Bibliothek, weil das Ticket keine
+	 * neue Abhaengigkeit vorsieht und der Bedarf auf diesen einen Adapter
+	 * begrenzt ist; Azure liefert seinen Ausschnitt bereits begrenzt.
+	 */
+	static final class BoundedInputStream extends InputStream {
+
+		private final InputStream delegate;
+
+		private long remaining;
+
+		BoundedInputStream(InputStream delegate, long limit) {
+			this.delegate = delegate;
+			this.remaining = limit;
+		}
+
+		@Override
+		public int read() throws IOException {
+			if (remaining <= 0) {
+				return -1;
+			}
+			int value = delegate.read();
+			if (value >= 0) {
+				remaining--;
+			}
+			return value;
+		}
+
+		/**
+		 * {@inheritDoc}
+		 *
+		 * <p>Eine Leseanforderung der Laenge 0 ergibt 0 und nicht {@code -1};
+		 * so verlangt es der Vertrag von {@link InputStream}, und zwar auch am
+		 * Ende des Ausschnitts (Befund des code-reviewers zu KAN-72).
+		 */
+		@Override
+		public int read(byte[] buffer, int offset, int length) throws IOException {
+			if (length == 0) {
+				return 0;
+			}
+			if (remaining <= 0) {
+				return -1;
+			}
+			int read = delegate.read(buffer, offset, (int) Math.min(length, remaining));
+			if (read > 0) {
+				remaining -= read;
+			}
+			return read;
+		}
+
+		@Override
+		public int available() throws IOException {
+			return (int) Math.min(delegate.available(), remaining);
+		}
+
+		@Override
+		public void close() throws IOException {
+			delegate.close();
+		}
 	}
 }

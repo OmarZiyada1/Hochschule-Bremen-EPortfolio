@@ -1,6 +1,7 @@
 package de.hsbremen.eportfolio.project.dto;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import de.hsbremen.eportfolio.project.BlockSchemaMigration;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -29,8 +30,8 @@ import java.util.UUID;
  *                      sonst <strong>400</strong> (§3.4)
  * @param content       genau ein Top-Level-Knoten des ProseMirror-Dokuments,
  *                      unveraendert (§2.5)
- * @param schemaVersion Version des Editor-Schemas (§2.10); fehlt sie, gilt 1 wie
- *                      der Default der Spalte
+ * @param schemaVersion Version des Editor-Schemas (§2.10); fehlt sie, gilt die
+ *                      aktuelle Version
  */
 public record BlockRequest(
 		@Schema(description = "ID eines vorhandenen Blocks. Weglassen legt einen neuen an; die "
@@ -53,17 +54,27 @@ public record BlockRequest(
 		@NotNull(message = "content fehlt.")
 		JsonNode content,
 
-		@Schema(description = "Version des Editor-Schemas (§2.10). Fehlt sie, gilt 1.",
-				example = "1", nullable = true)
+		@Schema(description = "Version des Editor-Schemas (§2.10). Fehlt sie, gilt die "
+				+ "aktuelle Version.", example = "2", nullable = true)
 		@Positive(message = "schemaVersion muss groesser als 0 sein.")
 		Integer schemaVersion) {
 
-	/** Default aus §2.10 und aus der Spaltendefinition von {@code block}. */
-	public static final int DEFAULT_SCHEMA_VERSION = 1;
+	/**
+	 * Default aus §2.10, seit Contract v51 die Version 2 (KAN-72).
+	 *
+	 * <p>Bewusst die <em>aktuelle</em> Version und nicht mehr die 1 aus der
+	 * Spaltendefinition: was ueber diesen Endpoint hereinkommt, ist gerade
+	 * gegen die geltende Validierung geprueft worden und liegt damit in der
+	 * aktuellen Form vor. Stuende hier weiter 1, truege jede neu gespeicherte
+	 * Zeile eine Version, die zu ihrem Inhalt nicht passt, und die Migration
+	 * liefe bei jedem Lesen ins Leere.
+	 */
+	public static final int DEFAULT_SCHEMA_VERSION = BlockSchemaMigration.CURRENT_VERSION;
 
 	/**
 	 * {@code schemaVersion} mit Default. Ein Editor, der das Feld nicht kennt,
-	 * schreibt damit dasselbe wie einer, der ausdruecklich {@code 1} schickt.
+	 * schreibt damit dasselbe wie einer, der die aktuelle Version ausdruecklich
+	 * schickt.
 	 */
 	public int schemaVersionOrDefault() {
 		return schemaVersion == null ? DEFAULT_SCHEMA_VERSION : schemaVersion;

@@ -10,7 +10,7 @@
  */
 
 /*
- * Die Fehlercodes aus Contract 6.2 (v50), deckungsgleich mit
+ * Die Fehlercodes aus Contract 6.2 (v54), deckungsgleich mit
  * common/error/ErrorCodes.java im Backend. Als const-Tupel gefuehrt, damit
  * errorCode eine String-Union traegt: ein Tippfehler in einem Code faellt
  * beim Typecheck auf und nicht erst zur Laufzeit in einer Verzweigung, die
@@ -34,6 +34,7 @@ export const ERROR_CODES = [
   "EMBED_PROVIDER_NOT_ALLOWED",
   "FILE_TYPE_NOT_ALLOWED",
   "FILE_TOO_LARGE",
+  "FILE_RANGE_NOT_SATISFIABLE",
   "PROJECT_INCOMPLETE",
   "PROJECT_NOT_FOUND",
   "RESOURCE_NOT_FOUND",
