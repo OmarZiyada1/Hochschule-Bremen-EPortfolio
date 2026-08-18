@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -58,10 +59,10 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Die vier Workflow-Endpoints aus §6.1 gegen die echte Datenbank: einreichen,
- * genehmigen, veroeffentlichen und zur Ueberarbeitung zurueckgeben, jeweils mit
- * der Uebergangstabelle aus §4.1, den Rechten aus §5, den Pflichtfeldern aus
- * §3.3 und der Fehlerpolitik aus §6.3.1.
+ * Die Workflow-Endpoints aus §6.1 gegen die echte Datenbank: einreichen,
+ * zurueckziehen (seit v50), genehmigen, veroeffentlichen und zur Ueberarbeitung
+ * zurueckgeben, jeweils mit der Uebergangstabelle aus §4.1, den Rechten aus §5,
+ * den Pflichtfeldern aus §3.3 und der Fehlerpolitik aus §6.3.1.
  *
  * <p>{@code @Transactional} rollt am Ende alles zurueck, die
  * Entwicklungsdatenbank bleibt unveraendert. Die Anmeldung laeuft ueber echte
@@ -380,6 +381,98 @@ class ProjectWorkflowIntegrationTest {
 			mockMvc.perform(as(author, action(returned, "submit")))
 					.andExpect(status().isConflict())
 					.andExpect(jsonPath("$.errorCode").value("CHANGE_REQUESTS_OPEN"));
+		}
+	}
+
+	// ==================================================================
+	// POST /api/projects/{id}/withdraw
+	// ==================================================================
+
+	@Nested
+	@DisplayName("POST /api/projects/{id}/withdraw")
+	class Withdrawing {
+
+		@Test
+		@DisplayName("Die Autor:in zieht die Einreichung zurueck: 200, Status DRAFT, Eintrag "
+				+ "SUBMITTED nach DRAFT in der Historie")
+		void authorWithdraws() throws Exception {
+			Project submitted = submitted();
+
+			JsonNode response = ok(author, submitted, "withdraw");
+
+			assertThat(response.get("status").asText()).isEqualTo("DRAFT");
+			assertThat(lastEntry(submitted).getFromStatus()).isEqualTo(ProjectStatus.SUBMITTED);
+			assertThat(lastEntry(submitted).getToStatus()).isEqualTo(ProjectStatus.DRAFT);
+			assertThat(lastEntry(submitted).getChangedBy().getId()).isEqualTo(author.getId());
+			// Anders als bei request-revision entsteht kein Aenderungswunsch: die
+			// Autor:in schuldet sich selbst keine Begruendung.
+			assertThat(commentRepository.findByProjectId(submitted.getId())).isEmpty();
+		}
+
+		@Test
+		@DisplayName("Danach ist das Projekt wieder ein Entwurf: bearbeitbar, erneut einreichbar "
+				+ "und von der Autor:in loeschbar (§6.1)")
+		void withdrawnProjectIsADraftAgain() throws Exception {
+			Project submitted = submitted();
+			ok(author, submitted, "withdraw");
+
+			// Erneut einreichbar: das Hin und Her Autor:in / Redaktion bleibt offen.
+			assertThat(ok(author, submitted, "submit").get("status").asText())
+					.isEqualTo("SUBMITTED");
+
+			// Wieder bearbeitbar. Das PUT ersetzt die Metadaten als Ganzes und
+			// leert dabei die Pflichtfelder; deshalb steht es nach dem letzten
+			// Einreichen und nicht davor.
+			ok(author, submitted, "withdraw");
+			mockMvc.perform(as(author, metadata(submitted, reload(submitted).getVersion())))
+					.andExpect(status().isOk());
+
+			// Der Weg aus der Klaerungsrunde: zurueckziehen, dann loeschen. Die
+			// Rechtematrix erlaubt der Autor:in das Loeschen nur im DRAFT.
+			mockMvc.perform(as(author, delete("/api/projects/" + submitted.getId())))
+					.andExpect(status().isNoContent());
+			assertThat(projectRepository.findById(submitted.getId())).isEmpty();
+		}
+
+		@Test
+		@DisplayName("Mitglieder, fremde Studierende, Redaktion und Admin duerfen nicht "
+				+ "zurueckziehen: 403, wie beim Einreichen (§4.1)")
+		void onlyTheAuthorMayWithdraw() throws Exception {
+			Project submitted = submitted();
+
+			for (User user : List.of(member, otherStudent, assignedEditor, otherEditor, admin)) {
+				mockMvc.perform(as(user, action(submitted, "withdraw")))
+						.andExpect(status().isForbidden())
+						.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+			}
+
+			assertThat(reload(submitted).getStatus()).isEqualTo(ProjectStatus.SUBMITTED);
+		}
+
+		@ParameterizedTest(name = "aus {0}")
+		@EnumSource(value = ProjectStatus.class,
+				names = {"DRAFT", "APPROVED", "PUBLISHED", "REVISION"})
+		@DisplayName("Aus jedem anderen Status: 409, denn §4.1 fuehrt nur SUBMITTED; nach der "
+				+ "redaktionellen Entscheidung geht es nur ueber request-revision zurueck")
+		void invalidSources(ProjectStatus status) throws Exception {
+			Project project = saved(complete(author, status, "Nicht eingereicht"));
+
+			mockMvc.perform(as(author, action(project, "withdraw")))
+					.andExpect(status().isConflict())
+					.andExpect(jsonPath("$.errorCode").value("PROJECT_STATUS_TRANSITION_INVALID"))
+					.andExpect(jsonPath("$.message").value(containsString("SUBMITTED")));
+		}
+
+		@Test
+		@DisplayName("Unbekannte ID: 404, ohne Token: 401")
+		void notFoundAndAnonymous() throws Exception {
+			mockMvc.perform(as(author, post("/api/projects/" + UUID.randomUUID() + "/withdraw")))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.errorCode").value("PROJECT_NOT_FOUND"));
+
+			mockMvc.perform(action(submitted(), "withdraw"))
+					.andExpect(status().isUnauthorized())
+					.andExpect(jsonPath("$.errorCode").value("NOT_AUTHENTICATED"));
 		}
 	}
 

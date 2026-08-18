@@ -6,6 +6,7 @@ import type { PageResponse } from "@/api/page"
 import type {
   Degree,
   ProjectCardResponse,
+  ProjectDetailResponse,
   ProjectStatus,
   ProjectType,
 } from "@/api/types"
@@ -124,4 +125,24 @@ export const projectQueries = {
           },
         }),
     }),
+}
+
+/**
+ * POST /projects/{id}/withdraw (§4.1, seit Contract v50, KAN-69): die
+ * Autor:in holt die eigene Einreichung aus SUBMITTED nach DRAFT zurueck.
+ * Aus jedem anderen Status antwortet der Server 409
+ * PROJECT_STATUS_TRANSITION_INVALID.
+ */
+export function withdrawProject(
+  projectId: string
+): Promise<ProjectDetailResponse> {
+  return api.post<ProjectDetailResponse>(apiPaths.projects.withdraw(projectId))
+}
+
+/**
+ * DELETE /projects/{id} (§6.1): Autor:in nur im Entwurf, Admin jederzeit,
+ * ergibt 204. Bloecke und Dateien fallen serverseitig per Cascade mit.
+ */
+export function deleteProject(projectId: string): Promise<void> {
+  return api.delete<void>(apiPaths.projects.detail(projectId))
 }

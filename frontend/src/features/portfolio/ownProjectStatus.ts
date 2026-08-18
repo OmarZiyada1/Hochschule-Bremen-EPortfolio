@@ -76,3 +76,18 @@ export function statusQueryValue(
 ): ProjectStatus | undefined {
   return value === ALL_STATUSES ? undefined : value
 }
+
+/**
+ * Traegt eine eigene Kachel in diesem Status eine Handlung (KAN-69)?
+ * Bearbeiten in DRAFT und REVISION, Loeschen in DRAFT, Zurueckziehen in
+ * SUBMITTED; APPROVED und PUBLISHED bekommen keine, damit die
+ * veroeffentlichte Kachel ihre Reaktionszahl behaelt.
+ *
+ * <p>Die Antwort steht hier und nicht zusaetzlich in der Seite: sonst
+ * muesste ein neuer Status an zwei Stellen nachgezogen werden (Befund aus
+ * dem Review zu KAN-69). Welche Handlung es genau ist, entscheidet
+ * {@code OwnProjectCardActions}.
+ */
+export function hasOwnCardAction(status: ProjectStatus | undefined): boolean {
+  return status === "DRAFT" || status === "REVISION" || status === "SUBMITTED"
+}

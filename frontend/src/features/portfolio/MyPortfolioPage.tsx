@@ -1,4 +1,5 @@
 import { FolderOpenIcon, SearchXIcon } from "lucide-react"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, useSearchParams } from "react-router-dom"
 
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { OwnProjectCardActions } from "@/features/portfolio/components/OwnProjectCardActions"
 import { ProfileCard } from "@/features/portfolio/components/ProfileCard"
 import { ProjectStatusFilter } from "@/features/portfolio/components/ProjectStatusFilter"
 import {
@@ -25,11 +27,13 @@ import {
 } from "@/features/portfolio/hooks/usePortfolio"
 import {
   ALL_STATUSES,
+  hasOwnCardAction,
   readStatusFilter,
   statusQueryValue,
   writeStatusFilter,
   type StatusFilterValue,
 } from "@/features/portfolio/ownProjectStatus"
+import { cn } from "@/lib/utils"
 
 /**
  * "My Portfolio" nach dem gleichnamigen Template (KAN-34): eigene Projekte
@@ -57,6 +61,18 @@ export default function MyPortfolioPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
+  /* Der Ausgang einer Kartenhandlung wird hier angesagt und nicht in der
+     Kachel: beim Loeschen verschwindet die Kachel und mit ihr jede Meldung,
+     die in ihr stuende (Befund aus dem Review zu KAN-69). Die laufende
+     Nummer unterscheidet zwei gleichlautende Meldungen voneinander. */
+  const [actionDone, setActionDone] = useState<{
+    id: number
+    message: string
+  } | null>(null)
+
+  function announce(message: string) {
+    setActionDone((previous) => ({ id: (previous?.id ?? 0) + 1, message }))
+  }
 
   const status = readStatusFilter(searchParams)
   /*
@@ -142,6 +158,25 @@ export default function MyPortfolioPage() {
                 label={t("portfolio.myPortfolio.filterLabel")}
               />
 
+              {/*
+               * Die Region steht dauerhaft im Baum, damit die Ansage beim
+               * Fuellen greift. Leer ist sie sr-only und damit kein
+               * Flex-Element mehr: sonst kostete sie dauerhaft die
+               * Spaltenluecke zwischen Filter und Liste. Der key sorgt
+               * dafuer, dass auch zweimal derselbe Satz zweimal angesagt
+               * wird (beides Befunde aus dem Review zu KAN-69).
+               */}
+              <p
+                key={actionDone?.id}
+                role="status"
+                className={cn(
+                  "type-body-sm text-muted-foreground",
+                  actionDone === null && "sr-only"
+                )}
+              >
+                {actionDone?.message}
+              </p>
+
               {projects.isPending && (
                 <div className="grid gap-6 sm:grid-cols-2">
                   {/* Skeleton in der Form des Ergebnisses, kein zentrierter
@@ -173,9 +208,7 @@ export default function MyPortfolioPage() {
                     <EmptyState
                       icon={<FolderOpenIcon aria-hidden="true" />}
                       title={t("portfolio.myPortfolio.empty.title")}
-                      description={t(
-                        "portfolio.myPortfolio.empty.description"
-                      )}
+                      description={t("portfolio.myPortfolio.empty.description")}
                       action={
                         <Button
                           nativeButton={false}
@@ -211,10 +244,24 @@ export default function MyPortfolioPage() {
                             Einreichungen nebeneinander (§5, v42). Die
                             Kacheln liegen unter dem Seiten-h1, also
                             Ebene 2 (SC 1.3.1). */}
+                        {/* Die Handlung haengt am Status (KAN-69): DRAFT
+                            und REVISION bearbeiten, SUBMITTED zurueckziehen,
+                            DRAFT zusaetzlich loeschen. APPROVED und
+                            PUBLISHED bekommen bewusst keine, damit die
+                            veroeffentlichte Karte ihre Reaktionszahl
+                            behaelt (action-Slot der ProjectCard). */}
                         <ProjectCard
                           project={project}
                           showStatus
                           headingLevel={2}
+                          action={
+                            hasOwnCardAction(project.status) ? (
+                              <OwnProjectCardActions
+                                project={project}
+                                onDone={announce}
+                              />
+                            ) : undefined
+                          }
                         />
                       </li>
                     ))}

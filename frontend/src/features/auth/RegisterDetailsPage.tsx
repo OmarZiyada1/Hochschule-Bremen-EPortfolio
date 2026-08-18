@@ -138,9 +138,10 @@ export default function RegisterDetailsPage() {
       /*
        * Der Server schreibt Adressen kleingeschrieben (§3.1); die Kennung
        * fuer die Verifizierungsaufrufe kommt deshalb aus der Antwort, nicht
-       * aus dem Formular. Nur die hsbEmail gibt es in keiner Response, sie
-       * bleibt als Anzeigewert aus dem Formular (kleingeschrieben, damit
-       * die Anzeige dem gespeicherten Konto entspricht).
+       * aus dem Formular. Die hsbEmail bleibt als Anzeigewert aus dem
+       * Formular (kleingeschrieben, damit die Anzeige dem gespeicherten
+       * Konto entspricht); seit Contract v50 nennt die Antwort auch sie,
+       * gebraucht wird sie hier aber nur zur Anzeige.
        */
       saveRegistrationFlow({
         email: account.email ?? values.email.toLowerCase(),

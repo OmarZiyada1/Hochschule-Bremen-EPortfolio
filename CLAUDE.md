@@ -228,9 +228,12 @@ Konnektor.
 5. Branch `KAN-<nr>-<kurzbeschreibung>`; kleine, nachvollziehbare Commits mit
    Ticket-Key im Text. **Angelegt und gesetzt wird von Hand, nicht von
    Claude** (siehe Skill `uebergabe`).
-6. Vor Abschluss: kompletter Testlauf, `ddl-auto: validate` grün, Abgleich mit
-   dem Agent `contract-pruefer`; bei Frontend-Tickets läuft zusätzlich der
-   Agent `frontend-reviewer`, bevor die Übergabe entsteht.
+6. Vor Abschluss: kompletter Testlauf, `ddl-auto: validate` grün. Danach
+   starten die Prüf-Agents **von selbst**, ohne dass jemand sie anfordert:
+   der `contract-pruefer` immer, bei Backend-Änderungen zusätzlich der
+   `code-reviewer`, bei Frontend-Änderungen der `frontend-reviewer` (bei
+   Tickets über beide Schichten alle drei). Erst wenn deren Befunde behandelt
+   oder ausdrücklich vertagt sind, entsteht die Übergabe.
 7. Abschluss heißt Übergabe, nicht Push: Skill `uebergabe` befolgen und
    Commit-Text, PR-Titel und PR-Beschreibung ausgeben.
 8. Abweichungen und getroffene Entscheidungen ins Jira-Ticket kommentieren,
@@ -276,10 +279,13 @@ derselben Nachricht, und dann exakt dieser eine Befehl.
   generierten Datei geändert werden darf.
 - `.claude/agents/backend-modul-builder`: setzt ein Modul-Ticket komplett um.
 - `.claude/agents/frontend-modul-builder`: setzt ein Frontend-Ticket komplett um.
-- `.claude/agents/contract-pruefer`: read-only Abgleich gegen den Contract.
-- `.claude/agents/code-reviewer`: Konventions-Review Backend vor dem Merge.
+- `.claude/agents/contract-pruefer`: read-only Abgleich gegen den Contract;
+  läuft ungefragt bei jedem Ticketabschluss (Arbeitsablauf Schritt 6).
+- `.claude/agents/code-reviewer`: Konventions-Review Backend; läuft ungefragt
+  nach jeder Backend-Änderung, spätestens vor dem Merge nach `main`.
 - `.claude/agents/frontend-reviewer`: Konventions- und
-  Barrierefreiheits-Review für `frontend/`.
+  Barrierefreiheits-Review für `frontend/`; läuft ungefragt nach jeder
+  Frontend-Änderung, spätestens vor dem Merge nach `main`.
 
 ## Nicht verhandelbare Regeln (Frontend)
 

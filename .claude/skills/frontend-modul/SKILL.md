@@ -92,7 +92,7 @@ Zwei Dinge zeigt das Template **nicht**, und beide bleiben trotzdem
 Pflicht:
 
 - **Responsivität.** Die Templates sind Desktop-Ansichten. Die Umsetzung
-  bleibt ab 360px bedienbar (Skill `frontend-design`, Abschnitt 5). *Wie*
+  bleibt ab 360px bedienbar (Skill `frontend-design`, Abschnitt 6). *Wie*
   eine Fläche umbricht, entscheidet die Umsetzung; *dass* sie umbricht, ist
   nicht verhandelbar.
 - **Maße in rem.** Größen, Abstände und Schriftgrade werden in rem

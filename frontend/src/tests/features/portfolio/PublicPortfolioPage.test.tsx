@@ -47,7 +47,9 @@ describe("PublicPortfolioPage", () => {
   })
 
   it("zeigt ohne Anmeldung Profil und veroeffentlichte Arbeiten", async () => {
-    server.use(http.get(`*/api/portfolios/${USER_ID}`, () => HttpResponse.json(PROFILE)))
+    server.use(
+      http.get(`*/api/portfolios/${USER_ID}`, () => HttpResponse.json(PROFILE))
+    )
     renderWithProviders(<AppUnderTest />, PATH)
 
     expect(
@@ -79,13 +81,13 @@ describe("PublicPortfolioPage", () => {
     renderWithProviders(<AppUnderTest />, PATH)
 
     await screen.findByText("lena.mueller@example.org")
-    expect(
-      screen.queryByText("lena@stud.hs-bremen.de")
-    ).not.toBeInTheDocument()
+    expect(screen.queryByText("lena@stud.hs-bremen.de")).not.toBeInTheDocument()
   })
 
   it("zeigt keinen Rollen-Badge, weil die Antwort keine Rolle fuehrt", async () => {
-    server.use(http.get(`*/api/portfolios/${USER_ID}`, () => HttpResponse.json(PROFILE)))
+    server.use(
+      http.get(`*/api/portfolios/${USER_ID}`, () => HttpResponse.json(PROFILE))
+    )
     renderWithProviders(<AppUnderTest />, PATH)
 
     await screen.findByText("lena.mueller@example.org")
@@ -115,7 +117,11 @@ describe("PublicPortfolioPage", () => {
        Statuscode und keine leere Seite. */
     server.use(
       http.get(`*/api/portfolios/${USER_ID}`, () =>
-        apiErrorResponse(404, "RESOURCE_NOT_FOUND", `/api/portfolios/${USER_ID}`)
+        apiErrorResponse(
+          404,
+          "RESOURCE_NOT_FOUND",
+          `/api/portfolios/${USER_ID}`
+        )
       )
     )
     renderWithProviders(<AppUnderTest />, PATH)

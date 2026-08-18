@@ -1,6 +1,6 @@
 ---
 name: contract-pruefer
-description: Prüft read-only, ob ein Modul, Branch oder Diff des E-Portfolio-Backends dem API-Contract (Confluence-Seite 36732929) entspricht, und liefert einen Abweichungsbericht. Einsetzen vor jedem Merge eines Backend-Moduls und beim Abschluss eines KAN-Tickets.
+description: Prüft read-only, ob ein Modul, Branch oder Diff des E-Portfolio-Backends dem API-Contract (Confluence-Seite 36732929) entspricht, und liefert einen Abweichungsbericht. Proaktiv einsetzen beim Abschluss jedes KAN-Tickets und vor jedem Merge eines Backend-Moduls, ohne auf eine Aufforderung zu warten.
 tools: Read, Grep, Glob, Bash
 ---
 

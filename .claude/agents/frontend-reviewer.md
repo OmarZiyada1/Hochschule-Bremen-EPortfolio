@@ -1,6 +1,6 @@
 ---
 name: frontend-reviewer
-description: Konventions-, Qualitäts- und Barrierefreiheits-Review für Änderungen im Ordner frontend/ des E-Portfolio-Repositories, read-only. Einsetzen nach Abschluss eines Frontend-Tickets und vor jedem Merge nach main.
+description: Konventions-, Qualitäts- und Barrierefreiheits-Review für Änderungen im Ordner frontend/ des E-Portfolio-Repositories, read-only. Proaktiv einsetzen, sobald ein Frontend-Ticket umgesetzt ist oder neue Änderungen unter frontend/ vorliegen, ohne auf eine Aufforderung zu warten; spätestens vor jedem Merge nach main.
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -121,31 +121,44 @@ Backend-Handwerk der `code-reviewer`; du prüfst das Frontend.
    - **`sr-only` unter `aria-hidden`.** Der Text steht im DOM, `getByText`
      findet ihn, vorgelesen wird er nie. Prüfung:
      `getByText(t).closest("[aria-hidden]")` muss `null` sein.
-   - **Titel ohne Überschriftenrolle.** `CardTitle`, `EmptyTitle` und
-     `DialogTitle` rendern ein `div`; setzt die Domänenhülle keine Ebene,
-     hat die Ansicht keinen Sprungpunkt. Prüfung über
-     `getByRole("heading", { level })`.
+   - **Titel ohne Überschriftenrolle.** `CardTitle` und `EmptyTitle`
+     rendern ein `div`; setzt die Domänenhülle keine Ebene, hat die Ansicht
+     keinen Sprungpunkt. Prüfung über `getByRole("heading", { level })`.
+     **Nicht** betroffen sind `DialogTitle` und `AlertDialogTitle`: die
+     rendern unter Base UI selbst ein `h2`, eine zusätzlich hineingelegte
+     Überschrift wäre dort eine zu viel.
    - **Zustandsregel nur auf `:disabled`.** Base UI meldet inaktiv über
      `aria-disabled`; `:disabled` gibt es nur an Formularelementen.
    Eine Live-Region, die bei **jedem Tastendruck** neu schreibt, ist
    ebenfalls ein Befund: sie erzeugt eine Ansage je Zeichen und übertönt die
    Eingabe. SC 4.1.3 verlangt Wahrnehmbarkeit, nicht Dauerfeuer; angesagt
    wird an Schwellen.
-10. **Sicherheit und Datensparsamkeit:** keine Berechtigungslogik
-    nachgebaut; `hsbEmail` nur in der Admin-Nutzerverwaltung; kein Token,
-    kein Verifizierungscode in einer Konsolenausgabe; keine Base64-Datei im
-    Blockdokument.
-11. **Tests:** je Ansicht Happy Path, Leerzustand, Fehlerfall aus dem
+10. **Handlungen mit Folgen fragen nach** (Skill `frontend-design`,
+    Abschnitt 5): Löschen, jeder Statuswechsel mit fremder Sichtbarkeit
+    (einreichen, zurückziehen, genehmigen, veröffentlichen, zurückgeben),
+    Kontoänderungen der Administration und das Verlassen eines veränderten
+    Formulars laufen über eine Rückfrage mit `alert-dialog`, nie über
+    `window.confirm` und nie ungefragt. Geprüft wird dreierlei: der Request
+    geht **erst nach** der Bestätigung raus, der Text nennt den Gegenstand
+    beim Namen, und der Dialog schließt in jedem Ausgang (sonst liegt die
+    Fehlermeldung unsichtbar dahinter). `variant="destructive"` trägt nur,
+    was wirklich zerstört; ein umkehrbarer Schritt in Rot ist ein Befund.
+11. **Sicherheit und Datensparsamkeit:** keine Berechtigungslogik
+    nachgebaut; `hsbEmail` fremder Konten nur in der Admin-Nutzerverwaltung,
+    die eigene zusätzlich im eigenen Profil aus `GET /auth/me` (Contract v50,
+    KAN-69); kein Token, kein Verifizierungscode in einer Konsolenausgabe;
+    keine Base64-Datei im Blockdokument.
+12. **Tests:** je Ansicht Happy Path, Leerzustand, Fehlerfall aus dem
     Envelope, geschützte Route ohne Token; je Mutation Erfolg und der
     erwartete Fachfehler. Getestet über die sichtbare Oberfläche, nicht über
     interne Props. `pnpm test`, `pnpm typecheck`, `pnpm lint` und
     `pnpm build` laufen grün (ausführen, wenn möglich; sonst als „nicht
     ausgeführt" kennzeichnen, nie als bestanden behaupten).
-12. **Keine stillen Annahmen:** `TODO`, „vorerst", auskommentierter Code,
+13. **Keine stillen Annahmen:** `TODO`, „vorerst", auskommentierter Code,
     Mock-Daten oder eine Schaltfläche ohne Wirkung im ausgelieferten Code
     sind ein Befund. Entscheidungen werden vor der Umsetzung geklärt
     (`CLAUDE.md`, „Fragen vor der Umsetzung").
-13. **Schreibstil:** neuer Text ohne Em-Dash `—`, auch in
+14. **Schreibstil:** neuer Text ohne Em-Dash `—`, auch in
     Oberflächentexten.
 
 ## Berichtsformat

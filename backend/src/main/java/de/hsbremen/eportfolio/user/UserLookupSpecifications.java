@@ -46,8 +46,9 @@ public final class UserLookupSpecifications {
 	 * am Treffer ablesen, ob ein Konto zu dieser Adresse existiert. Der
 	 * Endpoint waere damit fuer jede angemeldete Person ein Verzeichnis
 	 * registrierter Adressen, genau das, was §6.1 an mehreren Stellen
-	 * ausschliesst; fuer {@code hsbEmail} verbietet §3.1 jede Sichtbarkeit
-	 * ausserhalb der Administrationsseite ohnehin.
+	 * ausschliesst; fuer die {@code hsbEmail} fremder Konten verbietet §3.1
+	 * jede Sichtbarkeit ausserhalb der Administrationsseite ohnehin (die
+	 * eigene fuehren seit v50 nur die Auth-Antworten an die Person selbst).
 	 *
 	 * <p>Die Wildcards des eingeschickten Begriffs werden maskiert, wie in
 	 * {@code AdminUserSpecifications}: ohne das machte ein einzelnes {@code %}

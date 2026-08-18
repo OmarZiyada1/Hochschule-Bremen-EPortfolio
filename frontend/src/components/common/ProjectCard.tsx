@@ -1,4 +1,5 @@
 import { ImageIcon } from "lucide-react"
+import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
 
@@ -37,6 +38,7 @@ export function ProjectCard({
   project,
   showStatus = false,
   headingLevel = 3,
+  action,
   className,
 }: {
   /** Kacheldaten, unveraendert aus der Listen- oder Top-10-Antwort (§6.1). */
@@ -45,6 +47,15 @@ export function ProjectCard({
   showStatus?: boolean
   /** Ebene der Titel-Ueberschrift, passend zur Seite darum herum. */
   headingLevel?: 2 | 3
+  /**
+   * Handlung in der Fusszeile, etwa "Bearbeiten" oder "Zurueckziehen" unter
+   * "My Portfolio" (KAN-69). Sie ersetzt dort die Reaktionszahl: beide
+   * teilen sich den Platz rechts vom Semester, und auf einer eigenen,
+   * nicht veroeffentlichten Karte sagt eine Reaktionszahl nichts. Ob und
+   * welche Handlung erscheint, entscheidet die Seite nach §5 und §4.1; die
+   * Kachel bleibt reine Darstellung.
+   */
+  action?: ReactNode
   className?: string
 }) {
   const { t } = useTranslation()
@@ -170,7 +181,9 @@ export function ProjectCard({
           <StatusBadge status={project.status} className="self-start" />
         )}
 
-        {(project.semester || project.reactionCount !== undefined) && (
+        {(project.semester ||
+          project.reactionCount !== undefined ||
+          action !== undefined) && (
           <>
             {/* Ohne Klasse: die Grundregel in tokens.css gibt jedem Element
                 border-color: var(--border), und genau das ist die Rolle fuer
@@ -181,21 +194,25 @@ export function ProjectCard({
               <span className="type-label-xs text-muted-foreground">
                 {project.semester?.name}
               </span>
-              {project.reactionCount !== undefined && (
-                <span className="type-caption flex items-center gap-1 text-muted-foreground">
-                  {/* Klatschen, nicht Herz: die Reaktion ist ein Applaus
-                      wie im Figma-Template und auf der Referenzplattform,
-                      keine Gefaellt-mir-Angabe. */}
-                  <ClapIcon className="size-3.5" />
-                  {/* Die Zahl allein sagt nicht, was sie zaehlt. Sichtbar
-                      bleibt sie knapp, vorgelesen wird der ganze Satz. */}
-                  <span className="sr-only">
-                    {t("project.card.reactions", {
-                      count: project.reactionCount,
-                    })}
+              {action !== undefined ? (
+                action
+              ) : (
+                project.reactionCount !== undefined && (
+                  <span className="type-caption flex items-center gap-1 text-muted-foreground">
+                    {/* Klatschen, nicht Herz: die Reaktion ist ein Applaus
+                        wie im Figma-Template und auf der Referenzplattform,
+                        keine Gefaellt-mir-Angabe. */}
+                    <ClapIcon className="size-3.5" />
+                    {/* Die Zahl allein sagt nicht, was sie zaehlt. Sichtbar
+                        bleibt sie knapp, vorgelesen wird der ganze Satz. */}
+                    <span className="sr-only">
+                      {t("project.card.reactions", {
+                        count: project.reactionCount,
+                      })}
+                    </span>
+                    <span aria-hidden="true">{project.reactionCount}</span>
                   </span>
-                  <span aria-hidden="true">{project.reactionCount}</span>
-                </span>
+                )
               )}
             </div>
           </>

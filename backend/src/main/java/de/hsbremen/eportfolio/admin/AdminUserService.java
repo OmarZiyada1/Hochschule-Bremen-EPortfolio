@@ -40,9 +40,11 @@ import org.springframework.transaction.annotation.Transactional;
  * Die Nutzerverwaltung der Administrationsseite aus §6.1: Liste, Einzelabruf,
  * Anlage, Aenderung und Deaktivierung von Konten (KAN-25).
  *
- * <p><strong>Der einzige Ort, an dem {@code hsbEmail} ausgegeben wird</strong>
- * (§3.1), und zwar ueber {@code AdminUserResponse}. Zur Begruendung und zur
- * Trennung von {@code auth.dto.UserResponse} siehe dort.
+ * <p><strong>Der einzige Ort, an dem {@code hsbEmail} fremder Konten
+ * ausgegeben wird</strong> (§3.1), und zwar ueber {@code AdminUserResponse};
+ * die eigene Adresse fuehren seit v50 auch die Auth-Antworten an die Person
+ * selbst (KAN-69). Zur Begruendung und zur Trennung von
+ * {@code auth.dto.UserResponse} siehe dort.
  *
  * <p><strong>Reihenfolge der Pruefungen</strong> wie in den uebrigen Diensten,
  * nach §6.3.1: laden (fehlt → 404 {@code RESOURCE_NOT_FOUND}) → Berechtigung

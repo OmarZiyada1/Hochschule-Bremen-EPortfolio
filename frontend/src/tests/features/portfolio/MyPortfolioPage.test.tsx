@@ -1,5 +1,5 @@
 import { HttpResponse, http } from "msw"
-import { screen, waitFor } from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it } from "vitest"
 
@@ -28,7 +28,10 @@ const DRAFT_PROJECT = {
   summary: "Erste Konzeption eines TypeScript-Toolkits.",
   status: "DRAFT",
   author: { firstName: "Mira", lastName: "Beispiel" },
-  semester: { id: "5e000000-0000-4000-8000-000000000001", name: "WiSe 2025/26" },
+  semester: {
+    id: "5e000000-0000-4000-8000-000000000001",
+    name: "WiSe 2025/26",
+  },
 }
 
 const PUBLISHED_PROJECT = {
@@ -36,6 +39,37 @@ const PUBLISHED_PROJECT = {
   title: "Voice2Text HSB",
   summary: "Whisper-basierte Vorlesungstranskription.",
   status: "PUBLISHED",
+  author: { firstName: "Mira", lastName: "Beispiel" },
+  semester: { id: "5e000000-0000-4000-8000-000000000002", name: "SoSe 2025" },
+  reactionCount: 58,
+}
+
+const SUBMITTED_PROJECT = {
+  id: "11111111-0000-4000-8000-000000000003",
+  title: "GreenLab",
+  summary: "Sensor-Plattform fuer HSB-Labore.",
+  status: "SUBMITTED",
+  author: { firstName: "Mira", lastName: "Beispiel" },
+  semester: {
+    id: "5e000000-0000-4000-8000-000000000001",
+    name: "WiSe 2025/26",
+  },
+}
+
+const REVISION_PROJECT = {
+  id: "11111111-0000-4000-8000-000000000004",
+  title: "OpenSchedule",
+  summary: "Open-Source-Stundenplaner.",
+  status: "REVISION",
+  author: { firstName: "Mira", lastName: "Beispiel" },
+  semester: { id: "5e000000-0000-4000-8000-000000000002", name: "SoSe 2025" },
+}
+
+const APPROVED_PROJECT = {
+  id: "11111111-0000-4000-8000-000000000005",
+  title: "FlowNet",
+  summary: "Stream-Processing-Framework.",
+  status: "APPROVED",
   author: { firstName: "Mira", lastName: "Beispiel" },
   semester: { id: "5e000000-0000-4000-8000-000000000002", name: "SoSe 2025" },
 }
@@ -201,7 +235,10 @@ describe("MyPortfolioPage", () => {
     renderWithProviders(<AppUnderTest />, "/my-portfolio")
 
     expect(
-      await screen.findByRole("heading", { level: 2, name: "Noch kein Projekt" })
+      await screen.findByRole("heading", {
+        level: 2,
+        name: "Noch kein Projekt",
+      })
     ).toBeVisible()
   })
 
@@ -218,6 +255,242 @@ describe("MyPortfolioPage", () => {
         level: 2,
         name: "Kein Projekt in diesem Status",
       })
+    ).toBeVisible()
+  })
+
+  it("traegt je Status genau die vorgesehene Kartenhandlung (KAN-69)", async () => {
+    /* DRAFT und REVISION: Bearbeiten (DRAFT zusaetzlich Loeschen);
+       SUBMITTED: Zurueckziehen; APPROVED: nichts; PUBLISHED: nichts, aber
+       die Reaktionszahl. */
+    server.use(
+      ownPortfolioHandler(),
+      http.get("*/api/projects", () =>
+        HttpResponse.json(
+          projectsPage([
+            DRAFT_PROJECT,
+            SUBMITTED_PROJECT,
+            REVISION_PROJECT,
+            APPROVED_PROJECT,
+            PUBLISHED_PROJECT,
+          ])
+        )
+      )
+    )
+    signInAs("STUDENT")
+    renderWithProviders(<AppUnderTest />, "/my-portfolio")
+    await screen.findByRole("heading", { level: 2, name: "FlowNet" })
+
+    /* Base UI rendert das Navigationsziel als a mit role="button". */
+    const editButtons = screen.getAllByRole("button", { name: /^Bearbeiten:/ })
+    expect(editButtons).toHaveLength(2)
+    expect(editButtons[0]).toHaveAttribute(
+      "href",
+      `/projects/${DRAFT_PROJECT.id}/editor`
+    )
+    expect(editButtons[1]).toHaveAttribute(
+      "href",
+      `/projects/${REVISION_PROJECT.id}/editor`
+    )
+    expect(screen.getAllByRole("button", { name: /^Löschen:/ })).toHaveLength(1)
+    expect(
+      screen.getAllByRole("button", { name: /^Zurückziehen:/ })
+    ).toHaveLength(1)
+    /* Die veroeffentlichte Karte behaelt ihre Reaktionszahl. */
+    expect(screen.getByText("58 Reaktionen")).toBeInTheDocument()
+  })
+
+  it("zeigt beim Zeigen auf einen Symbolknopf seine Beschriftung", async () => {
+    /* Der Tooltip ist die sichtbare Ergaenzung fuer die Maus; der
+       zugaengliche Name bleibt der sr-only-Text und wird durch ihn nicht
+       ersetzt (Skill frontend-design, Abschnitt 4). */
+    server.use(
+      ownPortfolioHandler(),
+      http.get("*/api/projects", () =>
+        HttpResponse.json(projectsPage([SUBMITTED_PROJECT]))
+      )
+    )
+    signInAs("STUDENT")
+    renderWithProviders(<AppUnderTest />, "/my-portfolio")
+    await screen.findByRole("heading", { level: 2, name: "GreenLab" })
+
+    const button = screen.getByRole("button", { name: /^Zurückziehen:/ })
+    await userEvent.hover(button)
+
+    /* Die Primitive rendert die Flaeche ohne eigene Rolle (nachgemessen
+       unter jsdom), gesucht wird deshalb der Text. Er steht exakt so da;
+       der Name des Knopfes traegt zusaetzlich den Projekttitel. */
+    expect(
+      await screen.findByText(
+        "Zurückziehen",
+        { exact: true },
+        { timeout: 3000 }
+      )
+    ).toBeVisible()
+    /* Der Name kommt weiterhin aus dem sr-only-Text, nicht aus dem
+       Tooltip: sonst fiele der Projekttitel aus der Ansage. */
+    expect(button).toHaveAccessibleName(
+      `Zurückziehen: ${SUBMITTED_PROJECT.title}`
+    )
+  })
+
+  it("zieht eine Einreichung zurueck und zeigt sie danach als Entwurf", async () => {
+    /* POST /projects/{id}/withdraw (§4.1, seit Contract v50); die Liste
+       wird danach neu geladen. */
+    let withdrawn = false
+    server.use(
+      ownPortfolioHandler(),
+      http.get("*/api/projects", () =>
+        HttpResponse.json(
+          projectsPage([
+            withdrawn
+              ? { ...SUBMITTED_PROJECT, status: "DRAFT" }
+              : SUBMITTED_PROJECT,
+          ])
+        )
+      ),
+      http.post(`*/api/projects/${SUBMITTED_PROJECT.id}/withdraw`, () => {
+        withdrawn = true
+        return HttpResponse.json({
+          ...SUBMITTED_PROJECT,
+          status: "DRAFT",
+        })
+      })
+    )
+    signInAs("STUDENT")
+    renderWithProviders(<AppUnderTest />, "/my-portfolio")
+    await screen.findByRole("heading", { level: 2, name: "GreenLab" })
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /^Zurückziehen:/ })
+    )
+
+    /* Erst der Dialog, noch kein Request: der Statuswechsel ist fuer die
+       Redaktion sichtbar (Skill frontend-design, Abschnitt 5). */
+    expect(
+      await screen.findByRole("heading", { name: "Projekt zurückziehen" })
+    ).toBeVisible()
+    expect(withdrawn).toBe(false)
+
+    await userEvent.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: "Zurückziehen",
+      })
+    )
+
+    /* Der Beleg ist die Kartenhandlung des Entwurfs, nicht das Wort
+       "Entwurf": das traegt auch der Filterknopf daneben. */
+    expect(
+      await screen.findByRole("button", { name: /^Bearbeiten:/ })
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: /^Zurückziehen:/ })
+    ).not.toBeInTheDocument()
+  })
+
+  it("loescht einen Entwurf erst nach der Bestaetigung im Dialog", async () => {
+    let deleteCalls = 0
+    let deleted = false
+    server.use(
+      ownPortfolioHandler(),
+      http.get("*/api/projects", () =>
+        HttpResponse.json(projectsPage(deleted ? [] : [DRAFT_PROJECT]))
+      ),
+      http.delete(`*/api/projects/${DRAFT_PROJECT.id}`, () => {
+        deleteCalls += 1
+        deleted = true
+        return new HttpResponse(null, { status: 204 })
+      })
+    )
+    signInAs("STUDENT")
+    renderWithProviders(<AppUnderTest />, "/my-portfolio")
+    await screen.findByRole("heading", { level: 2, name: "EdgeML Toolkit" })
+
+    await userEvent.click(screen.getByRole("button", { name: /^Löschen:/ }))
+
+    /* Erst der Dialog, noch kein Request: die Aktion ist endgueltig. */
+    expect(
+      await screen.findByRole("heading", { name: "Projekt löschen?" })
+    ).toBeVisible()
+    expect(deleteCalls).toBe(0)
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Endgültig löschen" })
+    )
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 2,
+        name: "Noch kein Projekt",
+      })
+    ).toBeVisible()
+    expect(deleteCalls).toBe(1)
+  })
+
+  it("meldet einen 409 an der Kachel, wenn die Redaktion schneller war", async () => {
+    /* Der fachlich erwartete Fehlschlag des Zurueckziehens (§4.1): das
+       Projekt steht nicht mehr in SUBMITTED. */
+    server.use(
+      ownPortfolioHandler(),
+      http.get("*/api/projects", () =>
+        HttpResponse.json(projectsPage([SUBMITTED_PROJECT]))
+      ),
+      http.post(`*/api/projects/${SUBMITTED_PROJECT.id}/withdraw`, () =>
+        apiErrorResponse(
+          409,
+          "PROJECT_STATUS_TRANSITION_INVALID",
+          `/api/projects/${SUBMITTED_PROJECT.id}/withdraw`
+        )
+      )
+    )
+    signInAs("STUDENT")
+    renderWithProviders(<AppUnderTest />, "/my-portfolio")
+    await screen.findByRole("heading", { level: 2, name: "GreenLab" })
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /^Zurückziehen:/ })
+    )
+    await userEvent.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", {
+        name: "Zurückziehen",
+      })
+    )
+
+    expect(
+      await screen.findByText("Dieser Statuswechsel ist nicht zulässig.")
+    ).toBeVisible()
+    /* Der Dialog schliesst auch im Fehlerfall, sonst laege die Meldung
+       unsichtbar dahinter (Skill frontend-design, Abschnitt 5). */
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+  })
+
+  it("loescht nicht, wenn der Bestaetigungsdialog abgebrochen wird", async () => {
+    let deleteCalls = 0
+    server.use(
+      ownPortfolioHandler(),
+      http.get("*/api/projects", () =>
+        HttpResponse.json(projectsPage([DRAFT_PROJECT]))
+      ),
+      http.delete(`*/api/projects/${DRAFT_PROJECT.id}`, () => {
+        deleteCalls += 1
+        return new HttpResponse(null, { status: 204 })
+      })
+    )
+    signInAs("STUDENT")
+    renderWithProviders(<AppUnderTest />, "/my-portfolio")
+    await screen.findByRole("heading", { level: 2, name: "EdgeML Toolkit" })
+
+    await userEvent.click(screen.getByRole("button", { name: /^Löschen:/ }))
+    await screen.findByRole("heading", { name: "Projekt löschen?" })
+    await userEvent.click(screen.getByRole("button", { name: "Abbrechen" }))
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("heading", { name: "Projekt löschen?" })
+      ).not.toBeInTheDocument()
+    )
+    expect(deleteCalls).toBe(0)
+    expect(
+      screen.getByRole("heading", { level: 2, name: "EdgeML Toolkit" })
     ).toBeVisible()
   })
 

@@ -345,6 +345,12 @@ public class ProjectPermissionService {
 			// wenn er das Projekt angelegt hat.
 			case SUBMIT -> !user.hasRole(Role.ADMIN) && isAuthor(user, project);
 
+			// „Projekt zurueckziehen" (§4.1, seit v50): dieselbe Spalte wie beim
+			// Einreichen, denn es ist dessen Gegenstueck. Wer einreichen darf,
+			// darf die eigene Einreichung zurueckholen, solange die Redaktion
+			// nicht entschieden hat; ADMIN bleibt aussen vor wie beim SUBMIT.
+			case WITHDRAW -> !user.hasRole(Role.ADMIN) && isAuthor(user, project);
+
 			// „Projekt genehmigen" und „veroeffentlichen": EDITOR ✓¹, ADMIN ✓⁵.
 			case APPROVE, PUBLISH -> mayDecideEditorially(user, project);
 
@@ -377,6 +383,11 @@ public class ProjectPermissionService {
 	/** „Einreichen": DRAFT/REVISION nach SUBMITTED durch die Autor:in. */
 	public boolean maySubmit(AuthenticatedUser user, Project project) {
 		return mayPerform(user, project, ProjectTransition.SUBMIT);
+	}
+
+	/** „Zurueckziehen": SUBMITTED nach DRAFT durch die Autor:in (seit v50). */
+	public boolean mayWithdraw(AuthenticatedUser user, Project project) {
+		return mayPerform(user, project, ProjectTransition.WITHDRAW);
 	}
 
 	/**

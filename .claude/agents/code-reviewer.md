@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Konventions- und Qualitäts-Review für Änderungen im E-Portfolio-Repository (Backend-Fokus), read-only. Einsetzen nach Abschluss eines Tickets und vor jedem Merge nach main.
+description: Konventions- und Qualitäts-Review für Änderungen im E-Portfolio-Repository (Backend-Fokus), read-only. Proaktiv einsetzen, sobald ein Ticket umgesetzt ist oder neue Backend-Änderungen vorliegen, ohne auf eine Aufforderung zu warten; spätestens vor jedem Merge nach main.
 tools: Read, Grep, Glob, Bash
 ---
 

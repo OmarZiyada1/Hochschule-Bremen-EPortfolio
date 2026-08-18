@@ -18,8 +18,8 @@ import org.junit.jupiter.params.provider.EnumSource;
  * <p>Der zweite Teil ist der wichtigere: §4.1 sagt „Jeder Uebergang, der nicht in
  * dieser Tabelle steht, wird abgewiesen", und diese Aussage laesst sich nur
  * pruefen, indem alle Kombinationen aus Status und Uebergang durchgezaehlt werden.
- * Bei fuenf Status und vier Uebergaengen sind das zwanzig Faelle, von denen acht
- * zulaessig sind.
+ * Bei fuenf Status und fuenf Uebergaengen sind das fuenfundzwanzig Faelle, von
+ * denen neun zulaessig sind.
  */
 class ProjectTransitionTest {
 
@@ -34,6 +34,9 @@ class ProjectTransitionTest {
 					ProjectTransition.SUBMIT,
 					Set.of(ProjectStatus.DRAFT, ProjectStatus.REVISION),
 
+					ProjectTransition.WITHDRAW,
+					Set.of(ProjectStatus.SUBMITTED),
+
 					ProjectTransition.APPROVE,
 					Set.of(ProjectStatus.SUBMITTED),
 
@@ -45,9 +48,10 @@ class ProjectTransitionTest {
 							ProjectStatus.PUBLISHED)));
 
 	@Test
-	@DisplayName("Die vier Zielstatus stehen wie in §4.1")
+	@DisplayName("Die Zielstatus stehen wie in §4.1")
 	void targets() {
 		assertThat(ProjectTransition.SUBMIT.target()).isEqualTo(ProjectStatus.SUBMITTED);
+		assertThat(ProjectTransition.WITHDRAW.target()).isEqualTo(ProjectStatus.DRAFT);
 		assertThat(ProjectTransition.APPROVE.target()).isEqualTo(ProjectStatus.APPROVED);
 		assertThat(ProjectTransition.PUBLISH.target()).isEqualTo(ProjectStatus.PUBLISHED);
 		assertThat(ProjectTransition.REQUEST_REVISION.target()).isEqualTo(ProjectStatus.REVISION);
@@ -68,14 +72,16 @@ class ProjectTransitionTest {
 	}
 
 	@Test
-	@DisplayName("Es gibt genau vier Uebergaenge mit Ausgangsstatus; „Anlegen\" (– nach DRAFT) "
+	@DisplayName("Es gibt genau fuenf Uebergaenge mit Ausgangsstatus; „Anlegen\" (– nach DRAFT) "
 			+ "gehoert nicht dazu")
-	void onlyFourTransitions() {
-		assertThat(ProjectTransition.values()).hasSize(4);
-		// Kein Uebergang fuehrt nach DRAFT: dorthin kommt ein Projekt nur durch
-		// POST /api/projects, und dieser Fall hat keinen Ausgangsstatus (§4.1).
+	void onlyFiveTransitions() {
+		assertThat(ProjectTransition.values()).hasSize(5);
+		// Nach DRAFT fuehrt seit v50 genau ein Uebergang, das Zurueckziehen.
+		// Das Anlegen zaehlt weiter nicht dazu: dorthin kommt ein neues Projekt
+		// nur durch POST /api/projects, ohne Ausgangsstatus (§4.1).
 		assertThat(ProjectTransition.values())
-				.noneMatch(transition -> transition.target() == ProjectStatus.DRAFT);
+				.filteredOn(transition -> transition.target() == ProjectStatus.DRAFT)
+				.containsExactly(ProjectTransition.WITHDRAW);
 	}
 
 	@Test

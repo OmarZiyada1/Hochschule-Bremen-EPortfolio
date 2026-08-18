@@ -10,10 +10,11 @@ import java.util.UUID;
 /**
  * Ein Konto in der Antwort der Nutzerverwaltung (§6.1, §3.1).
  *
- * <p><strong>Der einzige Ort, an dem {@code hsbEmail} den Server verlaesst.</strong>
- * §3.1 nennt dafuer {@code GET /api/admin/users} und
- * {@code GET /api/admin/users/{id}} und schliesst jeden anderen Kontext
- * ausdruecklich aus, auch gegenueber Admins. Die Ausnahme besteht, weil ein
+ * <p><strong>Der einzige Ort, an dem {@code hsbEmail} fremder Konten den
+ * Server verlaesst.</strong> §3.1 nennt dafuer {@code GET /api/admin/users}
+ * und {@code GET /api/admin/users/{id}}; die eigene Adresse steht seit v50
+ * zusaetzlich in den Auth-Antworten an die Person selbst (KAN-69). Jeder
+ * andere Kontext bleibt ausgeschlossen. Die Admin-Ausnahme besteht, weil ein
  * Admin die Hochschulzugehoerigkeit sehen muss, um ein Konto zu beurteilen: sie
  * ist genau das Merkmal, an dem sich das Konto als legitim erweist, und eine
  * Rollenzuweisung ohne diese Information waere eine Entscheidung ins Blaue.
@@ -47,7 +48,8 @@ import java.util.UUID;
  */
 @Schema(name = "AdminUserResponse",
 		description = "Ein Konto in der Nutzerverwaltung. Der einzige Antworttyp, der hsbEmail "
-				+ "enthaelt (§3.1). passwordHash kommt nirgends vor.")
+				+ "fremder Konten enthaelt; die eigene Adresse fuehren seit v50 auch die "
+				+ "Auth-Antworten an die Person selbst (§3.1). passwordHash kommt nirgends vor.")
 public record AdminUserResponse(
 		UUID id,
 

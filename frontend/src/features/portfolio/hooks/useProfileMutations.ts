@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
-import { updateOwnProfile } from "@/api/queries/auth"
+import { authQueries, updateOwnProfile } from "@/api/queries/auth"
 import { uploadAvatar } from "@/api/queries/files"
 import { portfolioQueries, updateOwnPortfolio } from "@/api/queries/portfolio"
 
@@ -35,10 +35,20 @@ export function useUpdateOwnPortfolio() {
 /**
  * PUT /api/auth/me. Der Sitzungszustand wird nicht hier nachgezogen: die
  * Seite ruft dafuer refreshUser aus dem Auth-Kontext, der als einzige
- * Stelle den Store schreibt (KAN-30).
+ * Stelle den Store schreibt (KAN-30). Die gelesene Fassung derselben
+ * Ressource wird dagegen hier invalidiert, sonst zeigte die Profilseite
+ * nach dem Speichern noch den Stand von vor der Aenderung (KAN-69).
  */
 export function useUpdateOwnProfile() {
-  return useMutation({ mutationFn: updateOwnProfile })
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: updateOwnProfile,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: authQueries.me().queryKey,
+      })
+    },
+  })
 }
 
 /**

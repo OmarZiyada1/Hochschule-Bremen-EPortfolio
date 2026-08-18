@@ -255,6 +255,7 @@ beiden Orten steht" auch für ihn gilt.
 | `/auth/passwort-zuruecksetzen` | `/auth/reset-password` |
 | `/projekte` | `/projects` |
 | `/projekte/{id}/einreichen` | `/projects/{id}/submit` |
+| `/projekte/{id}/zurueckziehen` | `/projects/{id}/withdraw` |
 | `/projekte/{id}/genehmigen` | `/projects/{id}/approve` |
 | `/projekte/{id}/veroeffentlichen` | `/projects/{id}/publish` |
 | `/projekte/{id}/ueberarbeitung` | `/projects/{id}/request-revision` |

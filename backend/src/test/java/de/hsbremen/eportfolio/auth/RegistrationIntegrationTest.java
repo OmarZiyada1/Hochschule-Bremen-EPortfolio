@@ -189,16 +189,16 @@ class RegistrationIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Die Antwort enthaelt die HSB-Adresse nicht, an keiner Stelle")
-		void responseNeverCarriesHsbEmail() throws Exception {
+		@DisplayName("Die Antwort traegt die eigene HSB-Adresse (v50), aber nie passwordHash")
+		void responseCarriesOwnHsbEmailButNoSecrets() throws Exception {
 			String body = register(email, studentHsbEmail)
 					.andExpect(status().isCreated())
 					.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
 
-			// Geprueft wird der gesamte Text und nicht nur das Feld: die Adresse
-			// schadet auch dann, wenn sie an unerwarteter Stelle im JSON auftaucht
-			// (§3.1).
-			assertThat(body).doesNotContain(studentHsbEmail);
+			// Die Antwort geht an die Person selbst; seit v50 steht die eigene
+			// HSB-Adresse deshalb mit darin (§3.1). Dritte sehen sie weiterhin
+			// nicht, das prueft AdminUserHsbEmailVisibilityTest.
+			assertThat(body).contains(studentHsbEmail);
 			assertThat(body).doesNotContain("passwordHash");
 		}
 

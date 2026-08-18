@@ -3,6 +3,7 @@ import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it } from "vitest"
 
+import { RESEND_COOLDOWN_SECONDS } from "@/features/auth/hooks/useResendCountdown"
 import ResetPasswordPage from "@/features/auth/ResetPasswordPage"
 import i18n from "@/i18n"
 import { apiErrorResponse } from "@/tests/msw/handlers"
@@ -147,4 +148,57 @@ describe("ResetPasswordPage", () => {
       )
     ).toBeInTheDocument()
   })
+
+  it("haelt den Knopf fuer einen neuen Code bis zum Ablauf der Sperrfrist zurueck", async () => {
+    /* KAN-69: ein abgelaufener Code laesst sich hier ersetzen, ohne die
+       Seite zu verlassen. Die Sperrfrist laeuft ab dem Betreten. */
+    renderWithProviders(<ResetPasswordPage />)
+
+    /* Die laufende Zahl, nicht die 20: unter Last ist die erste Sekunde
+       schon vorbei, bevor diese Zeile laeuft. */
+    expect(screen.getByText(/Code erneut senden in \d+s/)).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Code erneut senden" })
+    ).not.toBeInTheDocument()
+  })
+
+  it(
+    "fordert nach Ablauf der Frist einen neuen Code fuer die eingetragene Adresse an",
+    async () => {
+      let forgotBody: Record<string, unknown> | null = null
+      server.use(
+        http.post("*/api/auth/forgot-password", async ({ request }) => {
+          forgotBody = (await request.json()) as Record<string, unknown>
+          return new HttpResponse(null, { status: 204 })
+        })
+      )
+      renderWithProviders(<ResetPasswordPage />)
+
+      await userEvent.type(
+        screen.getByLabelText("Private E-Mail (Login)"),
+        "lena@example.org"
+      )
+
+      /*
+       * Die Frist wird real abgewartet, nicht mit gestellten Timern
+       * uebersprungen: der Countdown plant seinen naechsten Takt in einem
+       * Effekt, und Reacts Scheduler haengt selbst an Timern (siehe
+       * ProfileEditPage.test).
+       */
+      const resendButton = await screen.findByRole(
+        "button",
+        { name: "Code erneut senden" },
+        { timeout: (RESEND_COOLDOWN_SECONDS + 5) * 1000 }
+      )
+      await userEvent.click(resendButton)
+
+      expect(
+        await screen.findByText(
+          "Ein neuer Code wurde angefordert. Bitte prüfen Sie Ihr Postfach."
+        )
+      ).toBeVisible()
+      expect(forgotBody).toMatchObject({ email: "lena@example.org" })
+    },
+    (RESEND_COOLDOWN_SECONDS + 20) * 1000
+  )
 })

@@ -78,9 +78,10 @@ class ProfileUpdateIntegrationTest {
 				.andExpect(jsonPath("$.firstName").value("Erika"))
 				.andExpect(jsonPath("$.lastName").value("Musterfrau"))
 				.andExpect(jsonPath("$.email").value(user.getEmail()))
-				// Die beiden Verbote aus §3.1, wie bei GET /auth/me.
+				// passwordHash bleibt verboten (§3.1); die eigene hsbEmail steht
+				// seit v50 in den Auth-Antworten an die Person selbst.
 				.andExpect(jsonPath("$.passwordHash").doesNotExist())
-				.andExpect(jsonPath("$.hsbEmail").doesNotExist());
+				.andExpect(jsonPath("$.hsbEmail").value(user.getHsbEmail()));
 
 		User reloaded = userRepository.findById(user.getId()).orElseThrow();
 		assertThat(reloaded.getFirstName()).isEqualTo("Erika");
