@@ -141,9 +141,11 @@ describe("Primitives (Foundation, Abschnitt 2)", () => {
 const gradientRoles = ["cover", "nav"]
 
 describe("Semantic-Rollen (Foundation, Abschnitt 3)", () => {
-  it("fuehrt 70 Rollen je Modus", () => {
-    expect(semanticLight.size).toBe(70)
-    expect(semanticDark.size).toBe(70)
+  it("fuehrt 80 Rollen je Modus", () => {
+    /* 70 seit KAN-29, dazu die zehn Inhaltsfarb-Rollen aus KAN-10
+       (API-Contract 2.5): fuenf Textfarben und fuenf Hervorhebungen. */
+    expect(semanticLight.size).toBe(80)
+    expect(semanticDark.size).toBe(80)
   })
 
   it("nutzt in beiden Modi dieselben Rollennamen", () => {

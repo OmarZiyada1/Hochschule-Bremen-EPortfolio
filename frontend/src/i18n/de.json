@@ -602,6 +602,44 @@
   "top10": {
     "position": "Platz {{position}}"
   },
+  "projectContent": {
+    "unknownBlock": {
+      "title": "Dieser Abschnitt kann nicht angezeigt werden",
+      "description": "Ein Inhaltsblock vom Typ „{{nodeType}}“ liegt in einer Form vor, die diese Ansicht nicht darstellen kann.",
+      "withoutType": "ohne Typangabe"
+    },
+    "code": {
+      "regionLabel": "Quelltext, waagerecht scrollbar"
+    },
+    "formula": {
+      "errorTitle": "Formel kann nicht dargestellt werden",
+      "errorDescription": "Die Formel enthält einen Fehler in der LaTeX-Schreibweise. Der eingegebene Ausdruck lautet:",
+      "regionLabel": "Formel, waagerecht scrollbar"
+    },
+    "table": {
+      "regionLabel": "Tabelle, waagerecht scrollbar"
+    },
+    "video": {
+      "label": "Video aus diesem Beitrag",
+      "embedTitle": "Eingebettetes Video von {{provider}}"
+    },
+    "audio": {
+      "label": "Audioaufnahme aus diesem Beitrag"
+    },
+    "embed": {
+      "title": "Eingebetteter Inhalt von {{provider}}"
+    },
+    "document": {
+      "accessibleName": "{{fileName}} herunterladen, PDF, {{size}}"
+    },
+    "provider": {
+      "youtube": "YouTube",
+      "vimeo": "Vimeo",
+      "figma": "Figma",
+      "codepen": "CodePen",
+      "gist": "GitHub Gist"
+    }
+  },
   "apiError": {
     "VALIDATION_FAILED": "Die Eingaben sind unvollständig oder ungültig. Bitte prüfen Sie die markierten Felder.",
     "LOGIN_FAILED": "Anmeldung fehlgeschlagen. E-Mail-Adresse oder Passwort ist falsch.",
@@ -619,6 +657,7 @@
     "EMBED_PROVIDER_NOT_ALLOWED": "Dieser Anbieter ist für Einbettungen nicht zugelassen.",
     "FILE_TYPE_NOT_ALLOWED": "Dieser Dateityp ist nicht zugelassen.",
     "FILE_TOO_LARGE": "Die Datei ist zu groß.",
+    "FILE_RANGE_NOT_SATISFIABLE": "Der angeforderte Ausschnitt der Datei liegt außerhalb ihrer Größe.",
     "PROJECT_INCOMPLETE": "Das Projekt ist noch unvollständig. Bitte füllen Sie die Pflichtfelder aus, bevor Sie einreichen.",
     "PROJECT_NOT_FOUND": "Dieses Projekt existiert nicht oder wurde entfernt.",
     "RESOURCE_NOT_FOUND": "Der aufgerufene Eintrag existiert nicht oder wurde entfernt.",

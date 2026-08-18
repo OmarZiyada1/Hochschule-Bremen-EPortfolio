@@ -1,0 +1,394 @@
+/*
+ * Darstellung der Inhaltsblocke (KAN-10, API-Contract 2.5).
+ *
+ * Diese Datei traegt die Klasse .project-content und damit alles, was ein
+ * Beitrag aussieht: Schrift, Abstaende, Bildbreiten, Galerieraster,
+ * Tabellen und die zehn Inhaltsfarb-Rollen.
+ *
+ * Drei Festlegungen, aus denen sich fast jede Regel unten erklaert:
+ *
+ * 1. Jeder Wert kommt aus tokens.css oder typography-tokens.css, hell und
+ *    dunkel. Ein Hex-Wert steht hier nicht (Frontend-Regel 5); Laengen sind
+ *    rem oder relativ, kein freier px-Wert ausser Haarlinien.
+ * 2. Layout aus dem Dokument steht als Datenattribut und nicht als
+ *    Inline-Stil: data-width, data-columns, data-text-align und data-color.
+ *    Ein Inline-Stil bliebe auf dem Telefon bei 50 Prozent stehen und
+ *    liesse sich per Medienabfrage nicht ueberschreiben; KAN-41 braucht
+ *    fuer den Druck andere Breiten.
+ * 3. Die Klasse haengt nicht an .ProseMirror. KAN-36 setzt sie spaeter auch
+ *    auf der Schreibflaeche des Editors, damit ein Beitrag beim Schreiben
+ *    aussieht wie danach. Deshalb greifen die Regeln unten ueber
+ *    Elementnamen und Datenattribute, die beide Wege erzeugen, und nicht
+ *    ueber Utility-Klassen, die der Editor-DOM nicht kennt.
+ *
+ * Das Typography-Plugin von Tailwind wird bewusst nicht eingefuehrt: es
+ * braechte eine zweite Farbquelle neben der Tokenschicht mit.
+ */
+
+/*
+ * Alles steht in @layer components, wie die Rollenklassen der beiden
+ * Tokendateien auch. Ohne Layer laege diese Datei ueber base, components
+ * und utilities zugleich: eine Utility-Klasse, die ein spaeterer Verwender
+ * (KAN-36, KAN-37, KAN-41) innerhalb der Flaeche setzt, und selbst die
+ * className-Prop von ProjectContent traefen dann nichts mehr. Kein Fehler,
+ * keine Warnung, kein roter Test, nur falsches Aussehen (Befund aus dem
+ * Frontend-Review zu KAN-10).
+ */
+@layer components {
+  .project-content {
+    font-family: var(--font-body);
+    font-size: var(--fs-body-lg);
+    line-height: var(--lh-body);
+    color: var(--foreground);
+    /* SC 1.4.10: eine lange Adresse ohne Leerzeichen darf die Spalte nicht
+       sprengen. */
+    overflow-wrap: break-word;
+  }
+
+  /* Ein Abstand zwischen zwei Blocken, gesetzt am Nachfolger: so traegt der
+     erste Block keinen Aussenabstand nach oben, den die Seite ausgleichen
+     muesste. */
+  .project-content > * + * {
+    margin-block-start: 1rem;
+  }
+
+  /* ============================================================
+   * Ueberschriften
+   *
+   * Der Renderer gibt nur h2 und h3 aus; die einzige h1 ist der Projekttitel
+   * der verwendenden Seite (Contract 2.5, 3.3, SC 1.3.1).
+   *
+   * Die Tokennamen --fs-h1 und --fs-h2 benennen die Figma-Textstile und
+   * nicht die HTML-Ebene: der Seitentitel traegt --fs-title, die
+   * Zwischenueberschrift darunter --fs-h1, die naechste Stufe --fs-h2. Wer
+   * hier auf die gleichnamige Ebene ginge, saehe eine Gliederung, deren
+   * zweite Stufe kleiner ist als der Fliesstext.
+   * ============================================================ */
+  .project-content h2,
+  .project-content h3 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+  }
+
+  .project-content h2 {
+    font-size: var(--fs-h1);
+    line-height: var(--lh-h1);
+  }
+
+  .project-content h3 {
+    font-size: var(--fs-h2);
+    line-height: var(--lh-h2);
+  }
+
+  .project-content > h2 + *,
+  .project-content > h3 + * {
+    margin-block-start: 0.5rem;
+  }
+
+  .project-content > * + h2,
+  .project-content > * + h3 {
+    margin-block-start: 2rem;
+  }
+
+  /* ============================================================
+   * Absatz, Listen, Zitat, Trenner, Link
+   * ============================================================ */
+  .project-content p[data-text-align="left"] {
+    text-align: start;
+  }
+
+  .project-content p[data-text-align="center"] {
+    text-align: center;
+  }
+
+  .project-content p[data-text-align="right"] {
+    text-align: end;
+  }
+
+  .project-content p[data-text-align="justify"] {
+    text-align: justify;
+  }
+
+  .project-content ul {
+    list-style: disc;
+    padding-inline-start: 1.5rem;
+  }
+
+  .project-content ol {
+    list-style: decimal;
+    padding-inline-start: 1.5rem;
+  }
+
+  .project-content li + li {
+    margin-block-start: 0.25rem;
+  }
+
+  .project-content blockquote {
+    border-inline-start: 0.25rem solid var(--border);
+    padding-inline-start: 1rem;
+    color: var(--muted-foreground);
+  }
+
+  .project-content hr {
+    border: 0;
+    border-block-start: 1px solid var(--border);
+    margin-block: 2rem;
+  }
+
+  .project-content a {
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .project-content a:hover {
+    color: var(--primary-hover);
+  }
+
+  /* ============================================================
+   * Quelltext
+   *
+   * Ohne Syntaxhervorhebung: dafuer gibt es kein freigegebenes Paket. Der
+   * Block scrollt in seinem eigenen Bereich, die Seite scrollt nie
+   * waagerecht.
+   * ============================================================ */
+  .project-content code {
+    font-family: var(--font-mono);
+    font-size: var(--fs-body-sm);
+    background-color: var(--muted);
+    border-radius: var(--radius-selection);
+    padding-inline: 0.25rem;
+  }
+
+  .project-content pre {
+    overflow-x: auto;
+    background-color: var(--muted);
+    border-radius: var(--radius-card);
+    padding: 1rem;
+  }
+
+  .project-content pre code {
+    background-color: transparent;
+    padding-inline: 0;
+  }
+
+  /* ============================================================
+   * Inhaltsfarben (Contract 2.5): Rollenname am data-color, Wert aus der
+   * Tokenschicht. Die Schrift auf einer Hervorhebung bleibt foreground;
+   * trifft eine Textfarbe auf eine Hervorhebung, ist der Kontrast nicht
+   * zugesichert, und die Werkzeugleiste aus KAN-70 setzt deshalb je Auswahl
+   * entweder das eine oder das andere.
+   * ============================================================ */
+  .project-content span[data-color="neutral"] {
+    color: var(--content-text-neutral);
+  }
+
+  .project-content span[data-color="blue"] {
+    color: var(--content-text-blue);
+  }
+
+  .project-content span[data-color="green"] {
+    color: var(--content-text-green);
+  }
+
+  .project-content span[data-color="amber"] {
+    color: var(--content-text-amber);
+  }
+
+  .project-content span[data-color="red"] {
+    color: var(--content-text-red);
+  }
+
+  .project-content mark[data-color] {
+    color: var(--foreground);
+    border-radius: var(--radius-selection);
+    padding-inline: 0.125rem;
+  }
+
+  .project-content mark[data-color="neutral"] {
+    background-color: var(--content-highlight-neutral);
+  }
+
+  .project-content mark[data-color="blue"] {
+    background-color: var(--content-highlight-blue);
+  }
+
+  .project-content mark[data-color="green"] {
+    background-color: var(--content-highlight-green);
+  }
+
+  .project-content mark[data-color="amber"] {
+    background-color: var(--content-highlight-amber);
+  }
+
+  .project-content mark[data-color="red"] {
+    background-color: var(--content-highlight-red);
+  }
+
+  /* ============================================================
+   * Tabelle
+   *
+   * Der scrollbare Bereich traegt im Markup tabindex, Rolle und Namen; hier
+   * steht nur, dass er scrollt (SC 2.1.1, 1.4.10).
+   * ============================================================ */
+  .project-content [data-block="table-scroll"] {
+    overflow-x: auto;
+    max-inline-size: 100%;
+  }
+
+  .project-content table {
+    inline-size: 100%;
+    border-collapse: collapse;
+  }
+
+  .project-content caption {
+    caption-side: top;
+    text-align: start;
+    color: var(--muted-foreground);
+    font-size: var(--fs-body-sm);
+    padding-block-end: 0.5rem;
+  }
+
+  .project-content th,
+  .project-content td {
+    border: 1px solid var(--border);
+    padding: 0.5rem 0.75rem;
+    text-align: start;
+    vertical-align: top;
+  }
+
+  .project-content thead th {
+    background-color: var(--muted);
+  }
+
+  /* ============================================================
+   * Medien
+   *
+   * Alles bleibt in der Textspalte (SC 1.4.10). Die Hoehe einer Einbettung
+   * kommt aus dem Dokument und steht als Attribut am iframe; deshalb setzt
+   * die Regel unten fuer freistehende iframes keine block-size, sondern nur
+   * die Breite.
+   * ============================================================ */
+  .project-content img,
+  .project-content video,
+  .project-content audio,
+  .project-content iframe {
+    max-inline-size: 100%;
+  }
+
+  .project-content figure {
+    margin: 0;
+  }
+
+  .project-content figcaption {
+    color: var(--muted-foreground);
+    font-size: var(--fs-body-sm);
+    margin-block-start: 0.5rem;
+  }
+
+  .project-content figure > img,
+  .project-content figure > video {
+    inline-size: 100%;
+    block-size: auto;
+    border-radius: var(--radius-card);
+  }
+
+  .project-content audio {
+    inline-size: 100%;
+  }
+
+  .project-content iframe {
+    inline-size: 100%;
+    border: 0;
+    border-radius: var(--radius-card);
+  }
+
+  /* Das Video einer Einbettung fuellt seine Breite und behaelt das
+     Seitenverhaeltnis; die Hoehe kommt hier aus dem Verhaeltnis und nicht aus
+     einem Attribut. */
+  .project-content figure > iframe {
+    aspect-ratio: 16 / 9;
+    block-size: auto;
+  }
+
+  /* ------------------------------------------------------------
+   * Bildbreite: drei Stufen aus dem Dokument (Contract 2.5).
+   * ------------------------------------------------------------ */
+  .project-content figure[data-width] {
+    margin-inline: auto;
+    max-inline-size: 100%;
+  }
+
+  .project-content figure[data-width="100"] {
+    inline-size: 100%;
+  }
+
+  .project-content figure[data-width="75"] {
+    inline-size: 75%;
+  }
+
+  .project-content figure[data-width="50"] {
+    inline-size: 50%;
+  }
+
+  /* ------------------------------------------------------------
+   * Galerieraster: zwei oder drei Spalten (Contract 2.5).
+   *
+   * minmax(0, 1fr) statt 1fr, weil ein breites Bild sonst seine Spalte
+   * aufspreizt. Die Bilder stehen in einer Liste, damit ihre Anzahl angesagt
+   * wird.
+   * ------------------------------------------------------------ */
+  .project-content figure[data-columns] ul {
+    display: grid;
+    gap: 0.75rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .project-content figure[data-columns="2"] ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .project-content figure[data-columns="3"] ul {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .project-content figure[data-columns] li {
+    aspect-ratio: 4 / 3;
+    margin-block-start: 0;
+  }
+
+  .project-content figure[data-columns] img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    border-radius: var(--radius-card);
+  }
+
+  /* ------------------------------------------------------------
+   * Unterhalb der schmalen Ansicht steht alles einspaltig und in voller
+   * Breite. Damit ist SC 1.4.10 bei 320 CSS-Pixeln erfuellt: drei Bilder
+   * nebeneinander waeren dort briefmarkengross.
+   * ------------------------------------------------------------ */
+  @media (width < 40rem) {
+    .project-content figure[data-width] {
+      inline-size: 100%;
+    }
+
+    .project-content figure[data-columns] ul {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ============================================================
+   * Formel
+   *
+   * KaTeX bringt sein eigenes Stylesheet mit (geladen in renderMath.ts). Eine
+   * lange Formel scrollt in ihrem eigenen Bereich statt die Seite waagerecht
+   * zu schieben.
+   * ============================================================ */
+  .project-content [data-block="math"] {
+    overflow-x: auto;
+  }
+}

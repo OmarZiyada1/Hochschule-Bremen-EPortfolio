@@ -36,4 +36,32 @@ export default defineConfig([
       'react-refresh/only-export-components': 'off',
     },
   },
+  {
+    /*
+      Kein Tiptap im Lesepfad (KAN-10). Der Read-Only-Renderer ist ein
+      eigener JSON-Renderer: die oeffentliche Detailseite ist die haeufigste
+      Ansicht und die einzige ohne Anmeldung, und ein ProseMirror-Buendel
+      waere dort die groesste einzelne Abhaengigkeit des Frontends.
+
+      Die Regel greift genau hier und nicht global, weil Editor und Schema
+      Tiptap selbstverstaendlich brauchen. Ein Test ueber die Importe des
+      Renderer-Moduls prueft dasselbe ein zweites Mal, denn diese Regel
+      sieht nur den direkten Import und nicht den ueber eine Zwischendatei.
+    */
+    files: ['src/features/project-content/renderer/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@tiptap/*', '@tiptap/**', 'prosemirror-*'],
+              message:
+                'Der Read-Only-Renderer laeuft ohne Tiptap (KAN-10, Risiko R7).',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ])

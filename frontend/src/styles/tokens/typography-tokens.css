@@ -22,6 +22,23 @@
   --font-heading: "Zilla Slab", Georgia, serif;
   --font-body: "Source Sans 3", system-ui, -apple-system, sans-serif;
 
+  /* Dritte Familie, nachgetragen mit KAN-10. Figma fuehrt keinen
+     Monospace-Stil, der Quelltextblock aus API-Contract 2.5 braucht aber
+     eine: proportionale Ziffern und Zeichenbreiten machen eingerueckten
+     Code unlesbar. Es steht bewusst keine geladene Schrift darin, sondern
+     die Systemauswahl: eine vierte Webschrift kostet Ladezeit fuer einen
+     Blocktyp, den die wenigsten Beitraege benutzen. Benannter Punkt fuer
+     das Design, falls die Foundation-Seite einen eigenen Stil bekommt.
+
+     Anders als die beiden Rollen darueber traegt diese denselben Namen wie
+     Tailwinds Theme-Variable und ersetzt sie damit: die Utility-Klasse
+     font-mono zeigt im ganzen Frontend auf diese Zeile. Das ist gewollt,
+     es soll nur eine Monospace-Auswahl geben, schraenkt aber den Absatz
+     darueber ein, der begruendet, warum die beiden anderen Familien
+     bewusst keine Utility-Klasse erzeugen. */
+  --font-mono:
+    ui-monospace, "Cascadia Mono", "Source Code Pro", Menlo, Consolas, monospace;
+
   /* ----------------------------------------------------------
    * Sechs fluide Groessen (Foundation 5.1)
    * ---------------------------------------------------------- */
