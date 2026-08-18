@@ -22,7 +22,8 @@ export type ProjectDetailResponse = ApiSchemas["ProjectDetailResponse"]
 /** Registrierung und Verifizierung nach Contract §3.1.1, §6.1 (KAN-33). */
 export type RegisterRequest = ApiSchemas["RegisterRequest"]
 export type VerifyRequest = ApiSchemas["VerifyRequest"]
-export type VerificationStatusResponse = ApiSchemas["VerificationStatusResponse"]
+export type VerificationStatusResponse =
+  ApiSchemas["VerificationStatusResponse"]
 export type ResendVerificationRequest = ApiSchemas["ResendVerificationRequest"]
 
 /** Passwort-Flows nach Contract §6.1, §6.7 (KAN-33). */
@@ -80,3 +81,18 @@ export type CategoryResponse = ApiSchemas["CategoryResponse"]
 
 /** Semester aus GET /api/semesters (Contract 3.18, seit v45 Stammdaten). */
 export type SemesterResponse = ApiSchemas["SemesterResponse"]
+
+/**
+ * Blockliste eines Projekts nach Contract 3.4 und 6.1 (KAN-10). Die
+ * Huellen kommen wie alles andere aus der Generierung; von Hand
+ * geschrieben wird allein das Typmodell fuer content, weil springdoc
+ * JsonNode als Record<string, never> erzeugt und damit nichts hergibt
+ * (features/project-content/blockTypes.ts).
+ */
+export type BlockResponse = ApiSchemas["BlockResponse"]
+export type BlocksResponse = ApiSchemas["BlocksResponse"]
+export type BlockRequest = ApiSchemas["BlockRequest"]
+export type BlocksUpdateRequest = ApiSchemas["BlocksUpdateRequest"]
+
+/** Blocktyp nach Contract 2.5: genau vierzehn Werte. */
+export type BlockType = NonNullable<BlockResponse["type"]>

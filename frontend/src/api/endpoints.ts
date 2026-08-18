@@ -50,6 +50,15 @@ export const apiPaths = {
    */
   files: {
     upload: "/api/files",
+    /*
+     * Auslieferung einer Datei (§6.1). Es gibt keine zweite Adresse:
+     * weder Containername noch Endpoint noch Speicherschluessel erscheinen
+     * in einer Antwort (§3.15.1), der Client kennt allein diesen Pfad.
+     * Eingetragen mit KAN-10, wo der Read-Only-Renderer ihn fuer Bild,
+     * Galerie, Audio, Video und Dokument braucht; er setzt keine URL selbst
+     * zusammen (Frontend-Regel 3).
+     */
+    detail: (fileId: string) => `/api/files/${fileId}`,
   },
   top10: {
     list: "/api/top10",

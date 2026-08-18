@@ -14,13 +14,20 @@
  *    liefert die Zustandsvarianten data-open:, data-closed:, data-checked:
  *    und die Accordion-Keyframes, auf die generierte Komponenten bauen.
  *    Fehlt der Import, greift keine dieser Varianten, und nichts meldet es.
- * 3. die Tokenschicht: erst Farben und Radien, dann Schrift.
+ * 3. die Tokenschicht: erst Farben und Radien, dann Schrift,
+ * 4. die Blockdarstellung, die auf beiden aufsetzt.
  */
 
 @import "tailwindcss";
 @import "shadcn/tailwind.css";
 @import "./styles/tokens/tokens.css";
 @import "./styles/tokens/typography-tokens.css";
+/*
+ * 4. die Darstellung der Inhaltsblocke (KAN-10). Sie steht nach der
+ *    Tokenschicht, weil sie ausschliesslich deren Variablen liest, und
+ *    nicht darin, weil sie keine Werte definiert, sondern sie anwendet.
+ */
+@import "./styles/project-content.css";
 
 /*
  * shadcn-eigene Basisvariable, kein Wert aus der Figma-Collection. Sie steht

@@ -181,6 +181,36 @@
   --pill-danger-bg: var(--rot-100);
   --pill-danger-fg: var(--rot-800);
 
+  /* Inhaltsfarben der Bloecke (KAN-10, API-Contract 2.5 seit v51). Fuenf
+     Rollen als Textfarbe, dieselben fuenf als Hervorhebung, zusammen zehn.
+     Nicht fuenfzehn: die Schrift auf einer Hervorhebung bleibt foreground,
+     und ein eigenes -fg je Ton verspraeche einen Kontrast, den die
+     Kombination aus Textfarbe und Hervorhebung ohnehin nicht zusichert.
+
+     Ein Textabschnitt im Editor speichert den Rollennamen (neutral, blue,
+     green, amber, red) und nie einen Hex-Wert: der waere im Dunkelmodus
+     derselbe Ton auf dunklem Grund und verfehlte SC 1.4.3. Aufgeloest wird
+     er ueber data-color in styles/project-content.css.
+
+     Gemessen gegen die tatsaechlich sichtbare Flaeche, nicht geschaetzt:
+     jede Textrolle gegen background (neutral/50), jede Hervorhebung mit
+     foreground (neutral/900) darauf. Textrollen hell 7,2 / 6,5 / 5,2 / 6,8
+     / 6,2:1, Hervorhebungen 13,9 bis 15,4:1. Gewaehlt ist je Familie die
+     saettigungsstaerkste Stufe mit Abstand zur Schwelle: bernstein/700
+     laege bei 4,80 und rot/600 bei 4,62:1, also zu dicht an der Grenze,
+     um eine Rampenkorrektur zu ueberleben. */
+  --content-text-neutral: var(--neutral-600);
+  --content-text-blue: var(--blau-600);
+  --content-text-green: var(--gruen-700);
+  --content-text-amber: var(--bernstein-800);
+  --content-text-red: var(--rot-700);
+
+  --content-highlight-neutral: var(--neutral-200);
+  --content-highlight-blue: var(--blau-100);
+  --content-highlight-green: var(--gruen-100);
+  --content-highlight-amber: var(--bernstein-100);
+  --content-highlight-red: var(--rot-100);
+
   /* Markenflaechen (Foundation 3.7). surface-brand-muted ist Zweittext
      ausschliesslich auf einer Markenflaeche, nie auf card. */
   --surface-brand: var(--blau-800);
@@ -305,6 +335,23 @@
   --pill-warning-fg: var(--bernstein-400);
   --pill-danger-bg: var(--rot-950);
   --pill-danger-fg: var(--rot-400);
+
+  /* Inhaltsfarben im dunklen Modus (KAN-10). Dieselben Rollennamen,
+     dieselbe Bauart wie die Status- und Rollenpaare daneben: die 950er
+     Stufe als Hervorhebungsflaeche, die 400er als Textfarbe. Textrollen
+     12,6 / 7,1 / 9,7 / 11,2 / 6,8:1 gegen background (neutral/950),
+     Hervorhebungen 13,3 bis 15,1:1 mit foreground (neutral/100) darauf. */
+  --content-text-neutral: var(--neutral-300);
+  --content-text-blue: var(--blau-400);
+  --content-text-green: var(--gruen-400);
+  --content-text-amber: var(--bernstein-400);
+  --content-text-red: var(--rot-400);
+
+  --content-highlight-neutral: var(--neutral-800);
+  --content-highlight-blue: var(--blau-950);
+  --content-highlight-green: var(--gruen-950);
+  --content-highlight-amber: var(--bernstein-950);
+  --content-highlight-red: var(--rot-950);
 
   /* surface-brand ist im dunklen Modus bewusst nicht blau, sonst setzt sich
      die Flaeche nicht vom Seitenhintergrund ab. surface-highlight wird
@@ -470,6 +517,17 @@
   --color-pill-warning-fg: var(--pill-warning-fg);
   --color-pill-danger-bg: var(--pill-danger-bg);
   --color-pill-danger-fg: var(--pill-danger-fg);
+
+  --color-content-text-neutral: var(--content-text-neutral);
+  --color-content-text-blue: var(--content-text-blue);
+  --color-content-text-green: var(--content-text-green);
+  --color-content-text-amber: var(--content-text-amber);
+  --color-content-text-red: var(--content-text-red);
+  --color-content-highlight-neutral: var(--content-highlight-neutral);
+  --color-content-highlight-blue: var(--content-highlight-blue);
+  --color-content-highlight-green: var(--content-highlight-green);
+  --color-content-highlight-amber: var(--content-highlight-amber);
+  --color-content-highlight-red: var(--content-highlight-red);
 
   --color-surface-brand: var(--surface-brand);
   --color-surface-brand-foreground: var(--surface-brand-foreground);

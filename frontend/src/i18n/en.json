@@ -602,6 +602,44 @@
   "top10": {
     "position": "Rank {{position}}"
   },
+  "projectContent": {
+    "unknownBlock": {
+      "title": "This section cannot be displayed",
+      "description": "A content block of type “{{nodeType}}” is stored in a form this view cannot render.",
+      "withoutType": "without a type"
+    },
+    "code": {
+      "regionLabel": "Source code, scrollable horizontally"
+    },
+    "formula": {
+      "errorTitle": "Formula cannot be displayed",
+      "errorDescription": "The formula contains an error in its LaTeX notation. The expression entered is:",
+      "regionLabel": "Formula, scrollable horizontally"
+    },
+    "table": {
+      "regionLabel": "Table, scrollable horizontally"
+    },
+    "video": {
+      "label": "Video from this contribution",
+      "embedTitle": "Embedded video from {{provider}}"
+    },
+    "audio": {
+      "label": "Audio recording from this contribution"
+    },
+    "embed": {
+      "title": "Embedded content from {{provider}}"
+    },
+    "document": {
+      "accessibleName": "Download {{fileName}}, PDF, {{size}}"
+    },
+    "provider": {
+      "youtube": "YouTube",
+      "vimeo": "Vimeo",
+      "figma": "Figma",
+      "codepen": "CodePen",
+      "gist": "GitHub Gist"
+    }
+  },
   "apiError": {
     "VALIDATION_FAILED": "The input is incomplete or invalid. Please check the highlighted fields.",
     "LOGIN_FAILED": "Login failed. The email address or password is incorrect.",
@@ -619,6 +657,7 @@
     "EMBED_PROVIDER_NOT_ALLOWED": "This provider is not allowed for embeds.",
     "FILE_TYPE_NOT_ALLOWED": "This file type is not allowed.",
     "FILE_TOO_LARGE": "The file is too large.",
+    "FILE_RANGE_NOT_SATISFIABLE": "The requested part of the file lies outside its size.",
     "PROJECT_INCOMPLETE": "The project is still incomplete. Please fill in the required fields before submitting.",
     "PROJECT_NOT_FOUND": "This project does not exist or has been removed.",
     "RESOURCE_NOT_FOUND": "The requested entry does not exist or has been removed.",

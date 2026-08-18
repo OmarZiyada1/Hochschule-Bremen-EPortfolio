@@ -1,0 +1,38 @@
+import { mergeAttributes, Node } from "@tiptap/react"
+
+import { textAttribute } from "@/features/project-content/extensions/attributes"
+
+/**
+ * AUDIO (Contract 2.5, seit v51 ausschliesslich als Upload).
+ *
+ * <p>Der Block traegt {@code fileId} und {@code caption}, <strong>kein
+ * {@code src}</strong>. Eine Fremdadresse im Dokument braeche die Regel aus
+ * 3.15, dass Dateien nie im Dokument liegen, und waere beim Rendern ein
+ * ungepruefter Abruf gegen einen beliebigen Host. Das bis v50 im Code
+ * geduldete {@code src} erzeugt dieses Schema deshalb nicht; die Whitelist
+ * entfernt ein mitgeliefertes, und der Server weist es mit 400 ab.
+ */
+export const AudioBlock = Node.create({
+  name: "audioBlock",
+  group: "block",
+  atom: true,
+  draggable: true,
+
+  addAttributes() {
+    return {
+      fileId: textAttribute("fileId"),
+      caption: textAttribute("caption", ""),
+    }
+  },
+
+  parseHTML() {
+    return [{ tag: 'figure[data-type="audio-block"]' }]
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return [
+      "figure",
+      mergeAttributes(HTMLAttributes, { "data-type": "audio-block" }),
+    ]
+  },
+})
