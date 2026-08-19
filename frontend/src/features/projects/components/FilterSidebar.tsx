@@ -54,8 +54,7 @@ function programsOfFaculties(
   }
   return programs.filter(
     (program) =>
-      program.facultyId !== undefined &&
-      facultyIds.includes(program.facultyId)
+      program.facultyId !== undefined && facultyIds.includes(program.facultyId)
   )
 }
 
@@ -160,10 +159,7 @@ export function FilterSidebar({
                       onToggle={() =>
                         onSelectionChange({
                           ...selection,
-                          studyProgram: toggleValue(
-                            selection.studyProgram,
-                            id
-                          ),
+                          studyProgram: toggleValue(selection.studyProgram, id),
                         })
                       }
                     />

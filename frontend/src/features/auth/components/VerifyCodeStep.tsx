@@ -9,7 +9,11 @@ import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError } from "@/components/ui/field"
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp"
 import { Separator } from "@/components/ui/separator"
 import {
   useResendVerificationCode,

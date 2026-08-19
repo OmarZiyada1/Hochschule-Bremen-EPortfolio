@@ -1,6 +1,8 @@
 import { screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
+import { resolveApiUrl } from "@/api/client"
+import { apiPaths } from "@/api/endpoints"
 import type { BlockResponse } from "@/api/types"
 import { ProjectContent } from "@/features/project-content/renderer/ProjectContent"
 import { renderWithProviders } from "@/tests/render"
@@ -13,6 +15,17 @@ import { renderWithProviders } from "@/tests/render"
 
 const FILE_A = "11111111-2222-4333-8444-555555555555"
 const FILE_B = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+
+/*
+ * Die Dateiadresse laeuft wie jede andere Referenz im src durch
+ * resolveApiUrl (ProjectCard, ProfileCard, AppLayout tun dasselbe): sie
+ * landet in einem img, video oder a und nie in request(), muesste die
+ * Basis-URL also selbst tragen. Der Test bildet das ueber dieselbe Funktion
+ * ab, statt eine Form fest zu verdrahten.
+ */
+function fileUrl(fileId: string): string {
+  return resolveApiUrl(apiPaths.files.detail(fileId))
+}
 
 function blocksOf(...contents: unknown[]): BlockResponse[] {
   return contents.map((content, index) => ({
@@ -174,7 +187,7 @@ describe("Bild und Galerie", () => {
     const image = screen.getByRole("img", { name: "Ein Messaufbau" })
     expect(figure).toHaveAttribute("data-width", "75")
     expect(figure).not.toHaveAttribute("style")
-    expect(image).toHaveAttribute("src", `/api/files/${FILE_A}`)
+    expect(image).toHaveAttribute("src", fileUrl(FILE_A))
     expect(image).toHaveAttribute("loading", "lazy")
     expect(image).toHaveAttribute("decoding", "async")
     expect(container.querySelector("figcaption")).toHaveTextContent(
@@ -239,7 +252,7 @@ describe("Video, Audio und Einbettung", () => {
     expect(video).toHaveAttribute("preload", "metadata")
     expect(video).not.toHaveAttribute("autoplay")
     expect(video).not.toHaveAttribute("loop")
-    expect(video).toHaveAttribute("src", `/api/files/${FILE_A}`)
+    expect(video).toHaveAttribute("src", fileUrl(FILE_A))
     /* Ohne Unterschrift bleibt der allgemeine Name aus i18n. */
     expect(video).toHaveAttribute("aria-label", "Video aus diesem Beitrag")
     /* Keine Untertitelspur: benannte Grenze von KAN-10, 2.5 kennt kein
@@ -289,7 +302,7 @@ describe("Video, Audio und Einbettung", () => {
     expect(audio).toHaveAttribute("controls")
     expect(audio).toHaveAttribute("preload", "metadata")
     expect(audio).not.toHaveAttribute("autoplay")
-    expect(audio).toHaveAttribute("src", `/api/files/${FILE_B}`)
+    expect(audio).toHaveAttribute("src", fileUrl(FILE_B))
     expect(audio).toHaveAttribute(
       "aria-label",
       "Audioaufnahme aus diesem Beitrag"
@@ -363,7 +376,7 @@ describe("Video, Audio und Einbettung", () => {
     })
 
     const link = screen.getByRole("link", { name: /bericht\.pdf/ })
-    expect(link).toHaveAttribute("href", `/api/files/${FILE_A}`)
+    expect(link).toHaveAttribute("href", fileUrl(FILE_A))
     expect(link.getAttribute("aria-label")).toMatch(/PDF/)
     expect(link.getAttribute("aria-label")).toMatch(/MB/)
   })

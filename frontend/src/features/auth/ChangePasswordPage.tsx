@@ -180,12 +180,18 @@ export default function ChangePasswordPage() {
       <form onSubmit={onSubmit} noValidate>
         <FieldGroup className="gap-4.5">
           {passwordField("currentPassword", "current-password")}
-          {passwordField("newPassword", "new-password", "change-newPassword-hint")}
+          {passwordField(
+            "newPassword",
+            "new-password",
+            "change-newPassword-hint"
+          )}
           {passwordField("confirmPassword", "new-password")}
 
           {form.formState.errors.root?.server && (
             <Alert variant="destructive">
-              <AlertTitle>{form.formState.errors.root.server.message}</AlertTitle>
+              <AlertTitle>
+                {form.formState.errors.root.server.message}
+              </AlertTitle>
             </Alert>
           )}
 

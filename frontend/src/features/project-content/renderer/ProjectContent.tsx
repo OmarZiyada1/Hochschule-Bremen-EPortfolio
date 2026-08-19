@@ -1,6 +1,7 @@
 import { Fragment, useId, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
+import { resolveApiUrl } from "@/api/client"
 import { apiPaths } from "@/api/endpoints"
 import type { BlockResponse } from "@/api/types"
 import { blocksToDoc } from "@/features/project-content/blockSerialization"
@@ -55,8 +56,17 @@ export function ProjectContent({
     () => ({
       t: t as TranslateFn,
       locale: i18n.language,
+      /*
+       * Ueber resolveApiUrl, nicht ueber den nackten Pfad: die Adresse landet
+       * im src eines img, video oder iframe und laeuft nie durch request(),
+       * die Basis-URL muesste sie also selbst tragen. Ohne das laedt bei
+       * gesetztem VITE_API_BASE_URL kein einziges Blockmedium, waehrend das
+       * Titelbild daneben erscheint (aufgefallen in KAN-32, dem ersten
+       * Verwender des Standards).
+       */
       resolveFileUrl:
-        resolveFileUrl ?? ((fileId: string) => apiPaths.files.detail(fileId)),
+        resolveFileUrl ??
+        ((fileId: string) => resolveApiUrl(apiPaths.files.detail(fileId))),
       idPrefix,
     }),
     [t, i18n.language, resolveFileUrl, idPrefix]

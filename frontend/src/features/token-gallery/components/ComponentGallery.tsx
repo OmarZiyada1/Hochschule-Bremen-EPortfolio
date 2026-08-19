@@ -1017,7 +1017,10 @@ function ProjectCardDemos() {
           projectType: "THESIS",
           faculty,
           author: person,
-          semester: { id: "demo-semester", name: t("tokens.components.demo.semester") },
+          semester: {
+            id: "demo-semester",
+            name: t("tokens.components.demo.semester"),
+          },
           reactionCount: 142,
         }}
       />
@@ -1029,7 +1032,10 @@ function ProjectCardDemos() {
           projectType: "REGULAR",
           faculty,
           author: person,
-          semester: { id: "demo-semester", name: t("tokens.components.demo.semester") },
+          semester: {
+            id: "demo-semester",
+            name: t("tokens.components.demo.semester"),
+          },
           reactionCount: 7,
           status: "PUBLISHED",
         }}

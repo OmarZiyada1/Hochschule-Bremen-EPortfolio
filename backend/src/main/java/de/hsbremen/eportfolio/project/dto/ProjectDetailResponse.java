@@ -16,13 +16,28 @@ import java.util.UUID;
  * Projektmitglieder, den geordneten Inhalt, {@code version} sowie die
  * Audit-Zeitstempel.
  *
- * <p><strong>Zwei Felder haengen an einer Sichtbarkeitspruefung:</strong>
- * {@code editors} und {@code statusHistory} sind nur fuer die Projektseite, die
- * zugewiesene Redaktion und Admins gefuellt (§5 Fussnote ⁷, §3.12). Fuer alle
- * anderen stehen sie auf {@code null}, und zwar bewusst auf {@code null} und
- * nicht auf die leere Liste: das Frontend soll „darf ich nicht sehen" von „es
- * gibt keine" unterscheiden koennen. Eine leere Liste in beiden Faellen wuerde
- * etwa suggerieren, ein Projekt habe keine Redaktion, obwohl es eine hat.
+ * <p><strong>Zwei Felder haengen an einer Sichtbarkeitspruefung</strong>, seit
+ * Contract v55 aber nicht mehr an derselben. {@code statusHistory} ist nur fuer
+ * die Projektseite, die zugewiesene Redaktion und Admins gefuellt (§5 Fussnote ⁷,
+ * §3.12). {@code editors} folgt derselben Regel, ist zusaetzlich aber fuer alle
+ * sichtbar, sobald das Projekt {@code PUBLISHED} ist (§3.3): wer eine
+ * veroeffentlichte Arbeit betreut hat, gehoert zu ihrer Angabe. Entschieden wird
+ * beides in {@code ProjectPermissionService}.
+ *
+ * <p>Wer sie nicht sehen darf, bekommt {@code null}, und zwar bewusst
+ * {@code null} und nicht die leere Liste: das Frontend soll „darf ich nicht
+ * sehen" von „es gibt keine" unterscheiden koennen. Eine leere Liste in beiden
+ * Faellen wuerde etwa suggerieren, ein Projekt habe keine Redaktion, obwohl es
+ * eine hat. Das Feld wird dabei nie weggelassen, sondern steht ausdruecklich
+ * auf {@code null}; ein Client, der auf „nicht vorhanden" prueft statt auf
+ * {@code null}, liegt fuer jede unbeteiligte Person falsch.
+ *
+ * <p>Praktisch trifft das seit v55 nur noch {@code statusHistory}: wer ein
+ * nicht veroeffentlichtes Projekt ueberhaupt lesen darf, sieht auch dessen
+ * Redaktion, {@code editors} ist in jeder ausgelieferten Antwort also gefuellt.
+ * Damit ist {@code statusHistory} zugleich das Kennzeichen, an dem ein Client
+ * erkennt, dass die lesende Person die Interna sehen darf (Projektseite,
+ * zugewiesene Redaktion oder Admin), ohne aus der Rolle zu raten.
  *
  * @param id            ID des Projekts
  * @param title         Titel; Metadatum, kein Inhaltsblock (§3.3)
@@ -101,13 +116,21 @@ public record ProjectDetailResponse(
 		@Schema(description = "Zahl der Reaktionen auf dieses Projekt (§3.10).", example = "12")
 		long reactionCount,
 
-		@Schema(description = "Zugewiesene Redakteur:innen (§3.3). Null, wenn die anfragende "
-				+ "Person sie nicht sehen darf (§5, Fussnote 7); eine leere Liste bedeutet "
-				+ "dagegen, dass keine Redaktion zugewiesen ist.", nullable = true)
+		@Schema(description = "Zugewiesene Redakteur:innen (§3.3). Bei einem PUBLISHED-Projekt "
+				+ "fuer alle sichtbar, auch ohne Anmeldung (seit Contract v55); in jedem "
+				+ "anderen Status nur fuer die Projektseite, die zugewiesene Redaktion und "
+				+ "Admins. In der Praxis damit immer gefuellt: wer ein nicht "
+				+ "veroeffentlichtes Projekt ueberhaupt lesen darf, gehoert genau zu diesem "
+				+ "Kreis. Eine leere Liste bedeutet, dass keine Redaktion zugewiesen ist.",
+				nullable = true)
 		List<PersonResponse> editors,
 
-		@Schema(description = "Aktivitaetsverlauf, aufsteigend nach Zeitpunkt (§3.12). Null, "
-				+ "wenn die anfragende Person ihn nicht sehen darf (§5, Fussnote 7).",
+		@Schema(description = "Aktivitaetsverlauf, aufsteigend nach Zeitpunkt (§3.12). "
+				+ "Ausdruecklich null, wenn die anfragende Person ihn nicht sehen darf "
+				+ "(§5, Fussnote 7); das Feld fehlt nicht, es steht auf null. Damit "
+				+ "zugleich das Kennzeichen, an dem ein Client erkennt, dass die lesende "
+				+ "Person die Interna sehen darf, also Projektseite, zugewiesene Redaktion "
+				+ "oder Admin ist, ohne aus der Rolle zu raten.",
 				nullable = true)
 		List<StatusHistoryResponse> statusHistory,
 

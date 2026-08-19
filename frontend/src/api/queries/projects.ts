@@ -9,6 +9,7 @@ import type {
   ProjectDetailResponse,
   ProjectStatus,
   ProjectType,
+  ReactionResponse,
 } from "@/api/types"
 
 /**
@@ -125,6 +126,48 @@ export const projectQueries = {
           },
         }),
     }),
+
+  /**
+   * Ein einzelnes Projekt samt Bloecken, Metadaten und Reaktionszahl
+   * (§6.1, KAN-32).
+   *
+   * <p>Welche Felder die Antwort traegt, entscheidet der Server: Die
+   * Statushistorie steht nur fuer die am Projekt Beteiligten, die
+   * zugewiesene Redaktion und Admins (§3.12); die Redaktionszuweisung
+   * zusaetzlich fuer alle, sobald das Projekt PUBLISHED ist (§3.3, seit
+   * Contract v55). Der Client raet daran nichts, sondern zeigt an, was da
+   * ist.
+   *
+   * <p>Der Key traegt nur die ID. Der sichtbare Umfang haengt an der
+   * angemeldeten Person, und die wechselt nicht innerhalb einer Sitzung,
+   * ohne dass der Auth-Kontext den Cache ohnehin leert.
+   */
+  detail: (projectId: string) =>
+    queryOptions({
+      queryKey: ["projects", "detail", projectId] as const,
+      queryFn: () =>
+        api.get<ProjectDetailResponse>(apiPaths.projects.detail(projectId)),
+    }),
+}
+
+/**
+ * POST und DELETE /projects/{id}/reaction (§6.1, §3.10, KAN-32).
+ *
+ * <p>Beide Richtungen sind idempotent und antworten mit <strong>200</strong>
+ * {@code { count }}: zweimal Setzen ist kein Fehler, und Entfernen ohne
+ * vorherige Reaktion ebenso wenig. Der Zaehler kommt deshalb immer aus der
+ * Antwort und wird nie im Client hochgezaehlt.
+ *
+ * <p>Angemeldet zu sein ist Voraussetzung (§5, Zeile „Reaktion geben": PUBLIC
+ * hat dort ein Kreuz). Die Oberflaeche haelt die Schaltflaeche ohne Token
+ * gesperrt und nennt den Grund, statt einen 401 zu erzeugen.
+ */
+export function addReaction(projectId: string): Promise<ReactionResponse> {
+  return api.post<ReactionResponse>(apiPaths.projects.reaction(projectId))
+}
+
+export function removeReaction(projectId: string): Promise<ReactionResponse> {
+  return api.delete<ReactionResponse>(apiPaths.projects.reaction(projectId))
 }
 
 /**

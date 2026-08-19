@@ -165,6 +165,66 @@ class ProjectPermissionServiceTest {
 	}
 
 	@Nested
+	@DisplayName("Sichtbarkeit von editors (§3.3, seit Contract v55)")
+	class ProjectEditorsVisibility {
+
+		@Test
+		@DisplayName("Bei PUBLISHED sehen auch PUBLIC und Unbeteiligte die Redaktion")
+		void publishedIsPublic() {
+			Project p = project(ProjectStatus.PUBLISHED);
+
+			assertThat(service.maySeeProjectEditors(PUBLIC, p)).isTrue();
+			assertThat(service.maySeeProjectEditors(otherStudent, p)).isTrue();
+			assertThat(service.maySeeProjectEditors(otherEditor, p)).isTrue();
+		}
+
+		/*
+		 * Ueber @EnumSource statt ueber eine getippte Liste: ein kuenftiger
+		 * Statuswert faellt sonst lautlos aus der Abdeckung, und beim
+		 * Fehlschlag meldet die Schleife nur den ersten Status statt jeden
+		 * einzeln.
+		 */
+		@ParameterizedTest
+		@EnumSource(value = ProjectStatus.class, names = "PUBLISHED",
+				mode = EnumSource.Mode.EXCLUDE)
+		@DisplayName("Vor der Veroeffentlichung gilt weiter die enge Zusage")
+		void unpublishedStaysRestricted(ProjectStatus status) {
+			User memberUser = TestUser.active(Role.STUDENT, "hash");
+			Project p = TestProject.withMember(project(status), memberUser);
+
+			assertThat(service.maySeeProjectEditors(PUBLIC, p)).isFalse();
+			assertThat(service.maySeeProjectEditors(otherStudent, p)).isFalse();
+			assertThat(service.maySeeProjectEditors(otherEditor, p)).isFalse();
+
+			assertThat(service.maySeeProjectEditors(author, p)).isTrue();
+			assertThat(service.maySeeProjectEditors(admin, p)).isTrue();
+			// Die beiden Faelle, die Fussnote 7 eigens einengt.
+			assertThat(service.maySeeProjectEditors(editor, p)).isTrue();
+			assertThat(service.maySeeProjectEditors(AuthenticatedUser.from(memberUser), p))
+					.isTrue();
+		}
+
+		@Test
+		@DisplayName("Die Statushistorie geht nicht mit: eine nicht zugewiesene Redaktion "
+				+ "sieht am veroeffentlichten Projekt die Redaktion, aber nicht den Verlauf")
+		void historyDoesNotFollow() {
+			Project p = project(ProjectStatus.PUBLISHED);
+
+			/*
+			 * Genau diese Trennung nutzt das Frontend: an einem gefuellten
+			 * statusHistory erkennt es den Kreis, der die Interna sehen darf,
+			 * ohne die Rolle zu raten. otherEditor ist der Fall, den es ohne
+			 * v55 nicht gaebe: angemeldet, Rolle EDITOR, aber diesem Projekt
+			 * nicht zugewiesen.
+			 */
+			assertThat(service.maySeeProjectEditors(otherEditor, p)).isTrue();
+			assertThat(service.maySeeProjectInternals(otherEditor, p)).isFalse();
+			assertThat(service.maySeeProjectEditors(PUBLIC, p)).isTrue();
+			assertThat(service.maySeeProjectInternals(PUBLIC, p)).isFalse();
+		}
+	}
+
+	@Nested
 	@DisplayName("Zeile: Projekt anlegen")
 	class Creating {
 

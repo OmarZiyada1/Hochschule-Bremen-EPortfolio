@@ -1,0 +1,594 @@
+import { screen, waitFor, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { http, HttpResponse } from "msw"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import type {
+  BlockResponse,
+  ProjectDetailResponse,
+  StatusHistoryResponse,
+} from "@/api/types"
+import ProjectDetailPage from "@/features/projects/ProjectDetailPage"
+import { apiErrorResponse } from "@/tests/msw/handlers"
+import { server } from "@/tests/msw/server"
+import { renderWithProviders } from "@/tests/render"
+import { signInAs } from "@/tests/routes/helpers"
+
+/*
+ * Die Detailtiefe der Blockdarstellung (data-width, data-columns, beide
+ * Videoquellen, fremder Einbettungs-Host) liegt beim Renderer und ist in
+ * ProjectContent.test.tsx aus KAN-10 geprueft. Hier steht der Durchstich
+ * durch die Seite und alles, was diese Seite selbst beitraegt.
+ *
+ * jsdom laedt weder Bilder noch iframes noch Medienstroeme; geprueft werden
+ * Struktur und Attribute.
+ */
+
+const PROJECT_ID = "8f14e45f-ceea-467a-9c9e-1f1e3a3d4b5c"
+const FILE_A = "11111111-2222-4333-8444-555555555555"
+const FILE_B = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+
+function paragraph(text: string) {
+  return {
+    type: "paragraph",
+    attrs: { textAlign: null },
+    content: [{ type: "text", text }],
+  }
+}
+
+/**
+ * Je ein Block aller vierzehn Typen aus §2.5. LIST kommt zweimal vor
+ * (bulletList und orderedList bilden beide auf LIST ab), damit jeder
+ * Knotenname des Typmodells wirklich einmal durchlaeuft.
+ */
+const ALL_BLOCK_NODES: unknown[] = [
+  {
+    type: "heading",
+    attrs: { level: 2 },
+    content: [{ type: "text", text: "Aufbau" }],
+  },
+  paragraph("Ein Absatz im Fliesstext."),
+  {
+    type: "bulletList",
+    content: [{ type: "listItem", content: [paragraph("Erster Punkt")] }],
+  },
+  {
+    type: "orderedList",
+    attrs: { start: 1 },
+    content: [{ type: "listItem", content: [paragraph("Erster Schritt")] }],
+  },
+  { type: "blockquote", content: [paragraph("Ein Zitat.")] },
+  {
+    type: "codeBlock",
+    attrs: { language: "java" },
+    content: [{ type: "text", text: "int a = 1;" }],
+  },
+  { type: "mathBlock", attrs: { latex: "E = mc^2" } },
+  {
+    type: "table",
+    attrs: { caption: "Messreihe" },
+    content: [
+      {
+        type: "tableRow",
+        content: [
+          { type: "tableHeader", attrs: {}, content: [paragraph("Groesse")] },
+          { type: "tableHeader", attrs: {}, content: [paragraph("Wert")] },
+        ],
+      },
+      {
+        type: "tableRow",
+        content: [
+          { type: "tableHeader", attrs: {}, content: [paragraph("Masse")] },
+          { type: "tableCell", attrs: {}, content: [paragraph("12 kg")] },
+        ],
+      },
+    ],
+  },
+  { type: "horizontalRule" },
+  {
+    type: "imageBlock",
+    attrs: { fileId: FILE_A, alt: "Ein Messaufbau", caption: "", width: 75 },
+  },
+  {
+    type: "galleryBlock",
+    attrs: {
+      items: [{ fileId: FILE_A, alt: "Erstes Bild" }],
+      columns: 2,
+      caption: "",
+    },
+  },
+  { type: "videoBlock", attrs: { fileId: FILE_A, caption: "" } },
+  { type: "audioBlock", attrs: { fileId: FILE_B, caption: "" } },
+  {
+    type: "documentBlock",
+    attrs: { fileId: FILE_A, fileName: "bericht.pdf", size: 2_400_000 },
+  },
+  {
+    type: "embedBlock",
+    attrs: {
+      provider: "codepen",
+      embedUrl: "https://codepen.io/pen/embed/abc",
+      height: 520,
+    },
+  },
+]
+
+function blocksOf(contents: unknown[]): BlockResponse[] {
+  return contents.map((content, index) => ({
+    id: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+    orderIndex: index,
+    schemaVersion: 2,
+    content: content as BlockResponse["content"],
+  }))
+}
+
+const HISTORY: StatusHistoryResponse[] = [
+  {
+    toStatus: "DRAFT",
+    changedBy: { id: "u-1", firstName: "Mira", lastName: "Beispiel" },
+    timestamp: "2026-03-01T09:00:00Z",
+  },
+  {
+    fromStatus: "SUBMITTED",
+    toStatus: "PUBLISHED",
+    changedBy: { id: "u-2", firstName: "Jo", lastName: "Schmidt" },
+    timestamp: "2026-05-02T10:30:00Z",
+  },
+]
+
+/*
+ * Der Server schickt die gesperrten Listenfelder ausdruecklich als null
+ * (Jackson steht auf Include.ALWAYS). Die generierte schema.d.ts fuehrt sie
+ * nur als optional: springdoc meldet zwar nullable, openapi-typescript
+ * erzeugt daraus aber kein "| null". Der Testtyp bildet deshalb die echte
+ * Antwort ab und nicht die geschoente, sonst prueft die Suite einen Zustand,
+ * den es nie gibt.
+ */
+type NullableDetailResponse = Omit<
+  ProjectDetailResponse,
+  "editors" | "statusHistory"
+> & {
+  editors?: ProjectDetailResponse["editors"] | null
+  statusHistory?: ProjectDetailResponse["statusHistory"] | null
+}
+
+type DetailResponseOverrides = Partial<NullableDetailResponse>
+
+function projectResponse(
+  overrides: DetailResponseOverrides = {}
+): NullableDetailResponse {
+  return {
+    id: PROJECT_ID,
+    title: "SmartCampus: IoT-gestuetztes Gebaeudemanagement",
+    summary: "Ein verteiltes Sensornetzwerk mit Edge-Inferenz.",
+    status: "PUBLISHED",
+    projectType: "THESIS",
+    degree: "BACHELOR",
+    semester: { id: "s-1", name: "WiSe 2025/26" },
+    category: { id: "c-1", name: "Digitalisierung" },
+    faculty: {
+      id: "f-1",
+      name: "Elektrotechnik und Informatik",
+      abbreviation: "FK4",
+    },
+    studyProgram: { id: "p-1", name: "Informatik", abbreviation: "INF" },
+    module: { id: "m-1", name: "Bachelorarbeit" },
+    author: { id: "u-1", firstName: "Lena", lastName: "Mueller" },
+    members: [
+      {
+        userId: "u-3",
+        firstName: "Tobias",
+        lastName: "Lang",
+        projectRole: "Frontend",
+      },
+    ],
+    tags: ["IoT", "Machine Learning"],
+    blocks: blocksOf(ALL_BLOCK_NODES),
+    reactionCount: 142,
+    /*
+     * Ausdruecklich null und nicht weggelassen: Jackson steht auf
+     * Include.ALWAYS, der Server schickt "statusHistory": null. Ein Mock, der
+     * den Schluessel weglaesst, prueft einen Zustand, den es nie gibt, und
+     * verdeckte genau den Fehler, an dem die Seite fuer jede unbeteiligte
+     * Person in einen TypeError lief (Befund des contract-pruefers).
+     */
+    editors: null,
+    statusHistory: null,
+    version: 3,
+    publishedAt: "2025-10-15T08:00:00Z",
+    ...overrides,
+  }
+}
+
+function detailHandler(body: NullableDetailResponse) {
+  return http.get(`*/api/projects/${PROJECT_ID}`, () => HttpResponse.json(body))
+}
+
+function renderPage() {
+  return renderWithProviders(<ProjectDetailPage />, `/projects/${PROJECT_ID}`)
+}
+
+/**
+ * Der Status-Badge neben dem Titel. Gesucht wird im Kopfblock und nicht auf
+ * der ganzen Seite: „Veroeffentlicht" steht auch als Zeilenname in der
+ * Metadaten-Seitenleiste, ein Textabgleich ueber das Dokument traefe beide.
+ */
+function statusBadge(): HTMLElement | null {
+  const heading = screen.queryByRole("heading", { level: 1 })
+  const header = heading?.closest("div")?.parentElement
+  if (!header) {
+    return null
+  }
+  return within(header).queryByText("Veröffentlicht")
+}
+
+/*
+ * useParams liest aus der Route, die Seite wird hier aber direkt gerendert.
+ * Der Router-Kontext kommt aus renderWithProviders; die ID reicht der Test
+ * ueber denselben Mechanismus wie die Anwendung durch.
+ */
+vi.mock("react-router-dom", async () => {
+  const actual =
+    await vi.importActual<typeof import("react-router-dom")>("react-router-dom")
+  return { ...actual, useParams: () => ({ projectId: PROJECT_ID }) }
+})
+
+describe("Inhalt und Gliederung", () => {
+  beforeEach(() => {
+    server.use(detailHandler(projectResponse()))
+  })
+
+  it("stellt ein veroeffentlichtes Projekt mit Bloecken aller vierzehn Typen dar", async () => {
+    const { container } = renderPage()
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "SmartCampus: IoT-gestuetztes Gebaeudemanagement",
+      })
+    ).toBeInTheDocument()
+
+    /* Kein Typ faellt durch die Whitelist: der Renderer setzt an die Stelle
+       eines verworfenen Blocks eine sichtbare Notiz (role="note"). Die
+       Formel wird nachgeladen, deshalb erst warten. */
+    await waitFor(() => {
+      expect(container.querySelector("math")).not.toBeNull()
+    })
+    expect(screen.queryAllByRole("note")).toHaveLength(0)
+
+    expect(container.querySelector("ul")).not.toBeNull()
+    expect(container.querySelector("ol")).not.toBeNull()
+    expect(container.querySelector("blockquote")).not.toBeNull()
+    expect(container.querySelector("pre")).not.toBeNull()
+    expect(container.querySelector("table")).not.toBeNull()
+    expect(container.querySelector("video")).not.toBeNull()
+    expect(container.querySelector("audio")).not.toBeNull()
+    expect(container.querySelector("iframe")).not.toBeNull()
+    expect(
+      screen.getByRole("img", { name: "Ein Messaufbau" })
+    ).toBeInTheDocument()
+    expect(screen.getByRole("img", { name: "Erstes Bild" })).toBeInTheDocument()
+    expect(
+      screen.getByRole("link", { name: /bericht\.pdf/ })
+    ).toBeInTheDocument()
+  })
+
+  it("fuehrt genau eine h1, und keine Blockueberschrift ist eine h1", async () => {
+    renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    const level1 = screen.getAllByRole("heading", { level: 1 })
+    expect(level1).toHaveLength(1)
+    expect(level1[0]).toHaveTextContent(
+      "SmartCampus: IoT-gestuetztes Gebaeudemanagement"
+    )
+
+    /* Die Blockueberschrift aus dem Dokument steht auf Ebene 2 (§2.5). */
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Aufbau" })
+    ).toBeInTheDocument()
+  })
+
+  it("oeffnet die Projektdaten schmal als Schublade von rechts", async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    expect(screen.queryByRole("dialog")).toBeNull()
+
+    /*
+     * jsdom laedt kein Tailwind, lg:hidden und hidden lg:block greifen hier
+     * also nicht: Karte und Knopf stehen beide im Dokument. Geprueft wird
+     * deshalb die Mechanik, nicht der Umbruch. Dass die Karte ab lg steht
+     * und der Knopf darunter, entscheidet CSS und keine Bedingung im Code.
+     */
+    await user.click(
+      screen.getByRole("button", { name: "Projektdaten anzeigen" })
+    )
+
+    /* Derselbe Baustein wie in der Karte: die Schublade fuehrt keine zweite
+       Fassung der Projektdaten, sondern ProjectInfoPanel. */
+    const drawer = await screen.findByRole("dialog")
+    expect(within(drawer).getByText("Projektdaten")).toBeInTheDocument()
+    expect(within(drawer).getByText("Digitalisierung")).toBeInTheDocument()
+    expect(within(drawer).getByText("WiSe 2025/26")).toBeInTheDocument()
+    expect(within(drawer).getByText("10/2025")).toBeInTheDocument()
+    /* Nicht nur die Metadaten: die Reaktionen sind Teil desselben Panels
+       und waeren schmal sonst gar nicht erreichbar. */
+    expect(within(drawer).getByText("Reaktionen")).toBeInTheDocument()
+  })
+
+  it("zeigt die Metadaten der Seitenleiste mit der Autor:in vor den Mitgliedern", async () => {
+    renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+
+    expect(screen.getByText("Digitalisierung")).toBeInTheDocument()
+    expect(screen.getByText("WiSe 2025/26")).toBeInTheDocument()
+    expect(screen.getByText("10/2025")).toBeInTheDocument()
+
+    /* Der Studiengang steht mit vollem Namen und ohne Kuerzel: das Kuerzel
+       wiederholte ihn nur in kurz (Vorgabe zur Abnahme von KAN-32). Auf der
+       Kachel bleibt es, dort ist der volle Name nicht zu sehen. */
+    expect(screen.getByText("Informatik")).toBeInTheDocument()
+    expect(screen.queryByText("INF")).toBeNull()
+
+    const members = screen.getByText("Projektmitglieder").parentElement
+    const names = within(members as HTMLElement).getAllByRole("listitem")
+    expect(names[0]).toHaveTextContent("Lena Mueller")
+    expect(names[1]).toHaveTextContent("Tobias Lang")
+  })
+})
+
+describe("Titelbild", () => {
+  it("zeigt es nur, wenn coverImageUrl gesetzt ist", async () => {
+    server.use(detailHandler(projectResponse({ coverImageUrl: undefined })))
+    const { container, unmount } = renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    /* Nur die Bilder aus dem Blockinhalt, keine Titelbildflaeche. */
+    const withoutCover = container.querySelectorAll("img").length
+    unmount()
+
+    server.use(
+      detailHandler(projectResponse({ coverImageUrl: `/api/files/${FILE_B}` }))
+    )
+    const second = renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    expect(second.container.querySelectorAll("img")).toHaveLength(
+      withoutCover + 1
+    )
+  })
+})
+
+describe("Reaktionen", () => {
+  it("aktualisiert den Zaehler aus der Antwort, ohne Reload, und vertraegt zwei Klicks", async () => {
+    signInAs("STUDENT")
+    const user = userEvent.setup()
+    let posted = 0
+    let deleted = 0
+
+    server.use(
+      detailHandler(projectResponse()),
+      http.post(`*/api/projects/${PROJECT_ID}/reaction`, () => {
+        posted += 1
+        return HttpResponse.json({ count: 143 })
+      }),
+      http.delete(`*/api/projects/${PROJECT_ID}/reaction`, () => {
+        deleted += 1
+        return HttpResponse.json({ count: 142 })
+      })
+    )
+
+    renderPage()
+    await screen.findByRole("heading", { level: 1 })
+    expect(screen.getByText("142")).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: /Reagieren/ }))
+    expect(await screen.findByText("143")).toBeInTheDocument()
+
+    /* Zweiter Klick nimmt zurueck; beide Richtungen sind idempotent und der
+       Zaehler folgt immer der Antwort, er wird nie im Client gezaehlt. */
+    await user.click(screen.getByRole("button", { name: /zurücknehmen/i }))
+    expect(await screen.findByText("142")).toBeInTheDocument()
+
+    expect(posted).toBe(1)
+    expect(deleted).toBe(1)
+    /* Kein Neuladen der Seite: der Titel steht unveraendert, ohne dass die
+       Ansicht durch den Ladezustand gelaufen waere. */
+    expect(
+      screen.getByRole("heading", { level: 1, name: /SmartCampus/ })
+    ).toBeInTheDocument()
+  })
+
+  it("ist an einem nicht veroeffentlichten Projekt gesperrt und nennt den Grund", async () => {
+    signInAs("STUDENT")
+    const user = userEvent.setup()
+    /* Kein Handler fuer die Reaktionspfade: onUnhandledRequest steht auf
+       "error", ein hinausgehender Request waere damit ein Testfehler. §3.10
+       fuehrt Reaktionen ausdruecklich auf ein veroeffentlichtes Projekt, der
+       Server antwortete sonst mit 403 NO_PERMISSION. */
+    server.use(
+      detailHandler(
+        projectResponse({ status: "DRAFT", statusHistory: HISTORY })
+      )
+    )
+
+    renderPage()
+    await screen.findByRole("heading", { level: 1 })
+
+    const button = screen.getByRole("button", { name: /Reagieren/ })
+    expect(button).toBeDisabled()
+    expect(
+      screen.getByText(
+        "Auf dieses Projekt lässt sich nicht reagieren, solange es nicht veröffentlicht ist."
+      )
+    ).toBeInTheDocument()
+
+    await user.click(button)
+    expect(screen.getByText("142")).toBeInTheDocument()
+  })
+
+  it("macht einen 403 aus der Mutation sichtbar", async () => {
+    signInAs("STUDENT")
+    const user = userEvent.setup()
+    server.use(
+      detailHandler(projectResponse()),
+      http.post(`*/api/projects/${PROJECT_ID}/reaction`, () =>
+        apiErrorResponse(
+          403,
+          "NO_PERMISSION",
+          `/api/projects/${PROJECT_ID}/reaction`
+        )
+      )
+    )
+
+    renderPage()
+    await screen.findByRole("heading", { level: 1 })
+    await user.click(screen.getByRole("button", { name: /Reagieren/ }))
+
+    /* Nie stumm scheitern (Frontend-Regel 4). */
+    expect(await screen.findByRole("alert")).toBeInTheDocument()
+    expect(screen.getByText("142")).toBeInTheDocument()
+  })
+
+  it("ist ohne Anmeldung nicht bedienbar, nennt den Grund und schickt keinen Request", async () => {
+    const user = userEvent.setup()
+    /*
+     * Kein Handler fuer die Reaktionspfade: server.use laeuft mit
+     * onUnhandledRequest "error", ein Request waere damit ein Testfehler.
+     */
+    server.use(detailHandler(projectResponse()))
+
+    renderPage()
+    await screen.findByRole("heading", { level: 1 })
+
+    const button = screen.getByRole("button", { name: /Reagieren/ })
+    expect(button).toBeDisabled()
+    expect(
+      screen.getByText(
+        "Melden Sie sich an, um auf dieses Projekt zu reagieren."
+      )
+    ).toBeInTheDocument()
+
+    await user.click(button)
+    expect(screen.getByText("142")).toBeInTheDocument()
+  })
+})
+
+describe("Sichtbarkeitsunterschiede", () => {
+  it("zeigt ohne statusHistory keinen Status-Badge", async () => {
+    server.use(detailHandler(projectResponse()))
+    renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    /* Oeffentlich ist ohnehin alles PUBLISHED, dort unterschiede der Badge
+       nichts (Klaerungsrunde zu KAN-32). Gesucht wird der Badge, nicht der
+       Text: "Veroeffentlicht" ist zugleich die Beschriftung der Zeile
+       "Veroeffentlicht 10/2025" in der Seitenleiste. */
+    expect(statusBadge()).toBeNull()
+  })
+
+  it("zeigt mit statusHistory den Status-Badge, aber keinen Verlauf", async () => {
+    signInAs("STUDENT")
+    server.use(detailHandler(projectResponse({ statusHistory: HISTORY })))
+
+    renderPage()
+    await screen.findByRole("heading", { level: 1 })
+
+    expect(statusBadge()).not.toBeNull()
+
+    /* statusHistory bleibt das Kennzeichen der Beteiligten und steuert den
+       Badge, wird aber nicht mehr ausgegeben: der Aktivitaetsverlauf gehoert
+       in den Editor (KAN-36) und nicht in die Leseansicht (Vorgabe zur
+       Abnahme von KAN-32). */
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(screen.queryByText("Aktivitätsverlauf")).toBeNull()
+    expect(screen.queryByText(/Jo Schmidt/)).toBeNull()
+  })
+
+  it("laesst den Redaktionsabschnitt weg, wenn editors fehlt", async () => {
+    server.use(detailHandler(projectResponse({ editors: null })))
+    renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    expect(screen.queryByText("Redakteur:innen")).toBeNull()
+    /* Der Redaktionshinweis steht trotzdem, nur ohne den Redaktionsteil. */
+    expect(
+      screen.getByText(/im Rahmen des Studiengangs Informatik/)
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/redigiert/)).toBeNull()
+  })
+
+  it("zeigt die Redaktion, sobald der Server sie liefert (§3.3, seit Contract v55)", async () => {
+    server.use(
+      detailHandler(
+        projectResponse({
+          editors: [{ id: "u-9", firstName: "Jo", lastName: "Schmidt" }],
+        })
+      )
+    )
+    renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    expect(screen.getByText("Redakteur:innen")).toBeInTheDocument()
+    /* Beide Stellen des Templates: die Rubrik und der Redaktionshinweis. */
+    expect(
+      screen.getByText(/durchgeführt und von Jo Schmidt redigiert/)
+    ).toBeInTheDocument()
+  })
+})
+
+describe("Fehlerfaelle", () => {
+  it("landet bei 404 PROJECT_NOT_FOUND sichtbar auf der Auffangroute", async () => {
+    server.use(
+      http.get(`*/api/projects/${PROJECT_ID}`, () =>
+        apiErrorResponse(
+          404,
+          "PROJECT_NOT_FOUND",
+          `/api/projects/${PROJECT_ID}`
+        )
+      )
+    )
+
+    renderPage()
+
+    /* Bewusst nicht NotFoundPage: die liegt ausserhalb der Layout-Route und
+       braechte hier ein zweites main und eine zweite Fusszeile mit. Geprueft
+       wird deshalb der Leerzustand dieser Seite samt Weg hinaus. */
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "Projekt nicht gefunden",
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Zur Projektbibliothek" })
+    ).toBeInTheDocument()
+    expect(document.querySelectorAll("main")).toHaveLength(0)
+  })
+
+  it("zeigt bei 403 NO_PERMISSION einen Leerzustand statt einer leeren Seite", async () => {
+    signInAs("STUDENT")
+    server.use(
+      http.get(`*/api/projects/${PROJECT_ID}`, () =>
+        apiErrorResponse(403, "NO_PERMISSION", `/api/projects/${PROJECT_ID}`)
+      )
+    )
+
+    renderPage()
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "Kein Zugriff auf dieses Projekt",
+      })
+    ).toBeInTheDocument()
+    /* Die Handlung ist ein Link im Knopfgewand: Button rendert mit
+       nativeButton={false} ein a mit role="button". */
+    expect(
+      screen.getByRole("button", { name: "Zur Projektbibliothek" })
+    ).toBeInTheDocument()
+  })
+})

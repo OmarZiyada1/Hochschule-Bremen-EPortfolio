@@ -102,7 +102,10 @@ export default function RegisterDetailsPage() {
    * Weiterschalter: welcher Schritt offen ist, laesst sich nicht abfragen
    * (Contract 6.1, /verify/resend antwortet immer 204).
    */
-  const continueRegistration = (values: { email: string; hsbEmail: string }) => {
+  const continueRegistration = (values: {
+    email: string
+    hsbEmail: string
+  }) => {
     saveRegistrationFlow({
       email: values.email.toLowerCase(),
       hsbEmail: values.hsbEmail.toLowerCase(),
@@ -370,7 +373,9 @@ export default function RegisterDetailsPage() {
 
           {form.formState.errors.root?.server && (
             <Alert variant="destructive">
-              <AlertTitle>{form.formState.errors.root.server.message}</AlertTitle>
+              <AlertTitle>
+                {form.formState.errors.root.server.message}
+              </AlertTitle>
             </Alert>
           )}
 

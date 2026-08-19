@@ -1,20 +1,12 @@
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Link } from "react-router-dom"
+import { BreadcrumbBar } from "@/components/common/BreadcrumbBar"
 
 import { useAuth } from "@/api/auth/AuthContext"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import { authQueries } from "@/api/queries/auth"
 import { Alert, AlertTitle } from "@/components/ui/alert"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -74,75 +66,59 @@ export default function ProfileEditPage() {
   const loadError = error ?? me.error
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8">
-      <Breadcrumb className="inline-flex self-start rounded-control border px-3 py-2">
-        <BreadcrumbList className="type-body-sm">
-          <BreadcrumbItem>
-            <BreadcrumbLink
-              render={<Link to="/" />}
-              className="font-medium text-primary hover:text-primary-hover"
-            >
-              {t("common.nav.home")}
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink
-              render={<Link to="/my-portfolio" />}
-              className="font-medium text-primary hover:text-primary-hover"
-            >
-              {t("common.nav.myPortfolio")}
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{t("portfolio.profile.breadcrumb")}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+    <>
+      <BreadcrumbBar
+        items={[
+          { label: t("common.nav.home"), to: "/" },
+          { label: t("common.nav.myPortfolio"), to: "/my-portfolio" },
+          { label: t("portfolio.profile.breadcrumb") },
+        ]}
+      />
 
-      <Card className="mx-auto w-full max-w-xl">
-        <CardContent className="flex flex-col gap-6 px-6">
-          {isPending || me.isPending ? (
-            <>
-              <Skeleton className="mx-auto size-24 rounded-card" />
-              <Skeleton className="h-8 w-48 rounded-control" />
-              <Skeleton className="h-64 rounded-control" />
-            </>
-          ) : (
-            <>
-              {/* Ein Fehler verhindert das Formular nicht: Name und Adresse
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8">
+        <Card className="mx-auto w-full max-w-xl">
+          <CardContent className="flex flex-col gap-6 px-6">
+            {isPending || me.isPending ? (
+              <>
+                <Skeleton className="mx-auto size-24 rounded-card" />
+                <Skeleton className="h-8 w-48 rounded-control" />
+                <Skeleton className="h-64 rounded-control" />
+              </>
+            ) : (
+              <>
+                {/* Ein Fehler verhindert das Formular nicht: Name und Adresse
                   stehen notfalls im Auth-Kontext, nur Biografie und Bild
                   fehlen dann. Gemeldet wird er trotzdem, statt still leere
                   oder veraltete Felder zu zeigen. */}
-              {loadError !== null && (
-                <Alert variant="destructive">
-                  <AlertTitle>
-                    {isApiError(loadError)
-                      ? t(apiErrorMessageKey(loadError), {
-                          defaultValue: loadError.message,
-                        })
-                      : t("apiError.INTERNAL_ERROR")}
-                  </AlertTitle>
-                </Alert>
-              )}
+                {loadError !== null && (
+                  <Alert variant="destructive">
+                    <AlertTitle>
+                      {isApiError(loadError)
+                        ? t(apiErrorMessageKey(loadError), {
+                            defaultValue: loadError.message,
+                          })
+                        : t("apiError.INTERNAL_ERROR")}
+                    </AlertTitle>
+                  </Alert>
+                )}
 
-              <ProfileForm
-                user={person}
-                portfolio={data}
-                onDirtyChange={setProfileDirty}
-              />
+                <ProfileForm
+                  user={person}
+                  portfolio={data}
+                  onDirtyChange={setProfileDirty}
+                />
 
-              <Separator />
+                <Separator />
 
-              <PasswordChangeSection
-                email={person.email ?? ""}
-                unsavedChanges={profileDirty}
-              />
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                <PasswordChangeSection
+                  email={person.email ?? ""}
+                  unsavedChanges={profileDirty}
+                />
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </>
   )
 }
