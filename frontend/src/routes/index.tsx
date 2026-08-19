@@ -12,6 +12,7 @@ import LoginPage from "@/features/auth/LoginPage"
 import MyPortfolioPage from "@/features/portfolio/MyPortfolioPage"
 import NotFoundPage from "@/features/not-found/NotFoundPage"
 import ProfileEditPage from "@/features/portfolio/ProfileEditPage"
+import ProjectDetailPage from "@/features/projects/ProjectDetailPage"
 import ProjectListPage from "@/features/projects/ProjectListPage"
 import PublicPortfolioPage from "@/features/portfolio/PublicPortfolioPage"
 import RegisterDetailsPage from "@/features/auth/RegisterDetailsPage"
@@ -95,13 +96,11 @@ export const routes: RouteObject[] = [
         ],
       },
       {
+        /* Oeffentlich, weil §5 veroeffentlichte Inhalte fuer alle lesbar
+           macht; die engere Schranke fuer nicht veroeffentlichte Projekte
+           liegt im Server (KAN-32). */
         path: "/projects/:projectId",
-        element: (
-          <PlaceholderPage
-            titleKey="placeholder.title.projectDetail"
-            ticket="KAN-32"
-          />
-        ),
+        element: <ProjectDetailPage />,
       },
       {
         /* Oeffentlich, weil §5 veroeffentlichte Inhalte fuer alle lesbar

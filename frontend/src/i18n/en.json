@@ -264,7 +264,6 @@
     "hint": "This page is a placeholder. It will be built with ticket {{ticket}}.",
     "hintStatic": "The content of this page is still to come.",
     "title": {
-      "projectDetail": "Project detail",
       "portfolio": "Portfolio",
       "projectNew": "New project",
       "projectMetadata": "Project metadata",
@@ -478,6 +477,60 @@
         "title": "This page no longer exists",
         "description": "The result list has fewer pages than the requested address.",
         "action": "Go to the last page"
+      }
+    },
+    "detail": {
+      "breadcrumb": "Project",
+      "abstract": "Abstract",
+      "content": "Project description",
+      "editorial": {
+        "setting": "as part of the {{studyProgram}} degree programme at Hochschule Bremen in {{semester}}",
+        "settingStudyProgram": "as part of the {{studyProgram}} degree programme at Hochschule Bremen",
+        "settingSemester": "at Hochschule Bremen in {{semester}}",
+        "plain": "This project was carried out {{setting}}.",
+        "withEditors_one": "This project was carried out {{setting}} and edited by {{editors}}.",
+        "withEditors_other": "This project was carried out {{setting}} and edited by {{editors}}."
+      },
+      "reactions": {
+        "heading": "Reactions",
+        "add_one": "React, {{count}} reaction so far",
+        "add_other": "React, {{count}} reactions so far",
+        "remove_one": "Undo your reaction, {{count}} reaction so far",
+        "remove_other": "Undo your reaction, {{count}} reactions so far",
+        "loginRequired": "Sign in to react to this project.",
+        "publishedRequired": "This project cannot be reacted to until it has been published."
+      },
+      "notFound": {
+        "title": "Project not found",
+        "description": "There is no project at this address. It may have been withdrawn or deleted.",
+        "action": "To the project library"
+      },
+      "empty": {
+        "title": "No content yet",
+        "description": "No content has been added to this project so far."
+      },
+      "error": {
+        "title": "Project could not be loaded"
+      },
+      "meta": {
+        "open": "Show project data",
+        "type": "Project type",
+        "faculty": "Faculty",
+        "studyProgram": "Degree programme",
+        "degree": "Degree",
+        "semester": "Semester",
+        "category": "Category",
+        "module": "Subject / module",
+        "published": "Published",
+        "members": "Project members",
+        "editors": "Editors",
+        "tags": "Tags",
+        "label": "Project data"
+      },
+      "forbidden": {
+        "title": "No access to this project",
+        "description": "This project has not been published yet. Only the people involved, the assigned editors and the administration can access it.",
+        "action": "To the project library"
       }
     }
   },

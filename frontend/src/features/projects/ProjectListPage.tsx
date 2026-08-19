@@ -1,6 +1,7 @@
 import { FolderOpenIcon, SearchXIcon } from "lucide-react"
 import { useEffect, useState, type MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
+import { BreadcrumbBar } from "@/components/common/BreadcrumbBar"
 import { Link, useSearchParams } from "react-router-dom"
 
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
@@ -10,14 +11,6 @@ import { EmptyState } from "@/components/common/EmptyState"
 import { ProjectCard } from "@/components/common/ProjectCard"
 import { SearchInput } from "@/components/common/SearchInput"
 import { Alert, AlertTitle } from "@/components/ui/alert"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import {
   Pagination,
   PaginationContent,
@@ -188,218 +181,212 @@ export default function ProjectListPage() {
     q !== "" || FILTER_KEYS.some((key) => selection[key].length > 0)
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
-      <Breadcrumb className="inline-flex self-start rounded-control border px-3 py-2">
-        <BreadcrumbList className="type-body-sm">
-          <BreadcrumbItem>
-            {/* Der Weg zurueck steht im Template in primary, die aktuelle
-                Ebene in muted-foreground; die Registry haelt es genau
-                umgekehrt (gleiche Abweichung wie im Login). */}
-            <BreadcrumbLink
-              render={<Link to="/" />}
-              className="font-medium text-primary hover:text-primary-hover"
-            >
-              {t("common.nav.home")}
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{t("common.nav.projects")}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+    <>
+      <BreadcrumbBar
+        items={[
+          { label: t("common.nav.home"), to: "/" },
+          { label: t("common.nav.projects") },
+        ]}
+      />
 
-      <header className="flex flex-col gap-2">
-        <p className="type-overline tracking-widest text-primary uppercase">
-          {t("project.list.label")}
-        </p>
-        {/* Blau, weil die Vorlage "Projekte (Oeffentlich)" den Seitentitel in
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
+        <header className="flex flex-col gap-2">
+          <p className="type-overline tracking-widest text-primary uppercase">
+            {t("project.list.label")}
+          </p>
+          {/* Blau, weil die Vorlage "Projekte (Oeffentlich)" den Seitentitel in
             primary fuehrt. Die Farbe steht hier und nicht an der Schriftrolle:
             Login und 404 fuehren dieselbe Rolle in foreground (Kommentar in
             tokens.css). */}
-        <h1 className="type-h1 text-primary">{t("project.list.title")}</h1>
-        <p className="type-body text-muted-foreground">
-          {t("project.list.description")}
-        </p>
-      </header>
+          <h1 className="type-h1 text-primary">{t("project.list.title")}</h1>
+          <p className="type-body text-muted-foreground">
+            {t("project.list.description")}
+          </p>
+        </header>
 
-      <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[16rem_1fr] lg:items-start">
-        {/*
-         * Bleibt beim Scrollen der Trefferliste oben stehen: die Bibliothek
-         * ist lang, und ein Filter, den man erst zurueckscrollen muss, wird
-         * nicht benutzt. Moeglich, weil die Gitterzeile items-start fuehrt;
-         * ohne das zoege der Rasterplatz die Leiste auf volle Hoehe und
-         * sticky haette nichts, woran es kleben koennte. Erst ab lg:
-         * darunter steht sie ueber der Liste und scrollt mit.
-         *
-         * Bewusst ohne eigene Bildlaufleiste: die Leiste bleibt so hoch,
-         * wie ihre Gruppen sie machen. Ist sie hoeher als das Fenster,
-         * bleibt ihr unteres Ende im geklebten Zustand ausserhalb des
-         * sichtbaren Bereichs; das ist der Preis dafuer, dass sie sonst
-         * nirgends einen zweiten Scrollbalken erzeugt.
-         */}
-        <FilterSidebar
-          selection={selection}
-          onSelectionChange={applyFilterSelection}
-          className="lg:sticky lg:top-4"
-        />
-
-        <div className="flex flex-col gap-4">
-          <SearchInput
-            label={t("common.search.label")}
-            labelHidden
-            value={searchValue}
-            onValueChange={setSearchValue}
-            placeholder={t("project.list.searchPlaceholder")}
+        <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[16rem_1fr] lg:items-start">
+          {/*
+           * Bleibt beim Scrollen der Trefferliste oben stehen: die Bibliothek
+           * ist lang, und ein Filter, den man erst zurueckscrollen muss, wird
+           * nicht benutzt. Moeglich, weil die Gitterzeile items-start fuehrt;
+           * ohne das zoege der Rasterplatz die Leiste auf volle Hoehe und
+           * sticky haette nichts, woran es kleben koennte. Erst ab lg:
+           * darunter steht sie ueber der Liste und scrollt mit.
+           *
+           * Bewusst ohne eigene Bildlaufleiste: die Leiste bleibt so hoch,
+           * wie ihre Gruppen sie machen. Ist sie hoeher als das Fenster,
+           * bleibt ihr unteres Ende im geklebten Zustand ausserhalb des
+           * sichtbaren Bereichs; das ist der Preis dafuer, dass sie sonst
+           * nirgends einen zweiten Scrollbalken erzeugt.
+           */}
+          <FilterSidebar
+            selection={selection}
+            onSelectionChange={applyFilterSelection}
+            className="lg:sticky lg:top-4"
           />
 
-          {/* Live-Region: die neue Trefferzahl wird angesagt, statt fuer
+          <div className="flex flex-col gap-4">
+            <SearchInput
+              label={t("common.search.label")}
+              labelHidden
+              value={searchValue}
+              onValueChange={setSearchValue}
+              placeholder={t("project.list.searchPlaceholder")}
+            />
+
+            {/* Live-Region: die neue Trefferzahl wird angesagt, statt fuer
               Screenreader stumm zu wechseln (Skill frontend-design). */}
-          <p aria-live="polite" className="type-body-sm text-muted-foreground">
-            {data !== undefined
-              ? t("project.list.count", { count: data.totalElements })
-              : ""}
-          </p>
+            <p
+              aria-live="polite"
+              className="type-body-sm text-muted-foreground"
+            >
+              {data !== undefined
+                ? t("project.list.count", { count: data.totalElements })
+                : ""}
+            </p>
 
-          {isPending && (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {/* Skeleton in der Form des Ergebnisses (Skill frontend-modul,
+            {isPending && (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {/* Skeleton in der Form des Ergebnisses (Skill frontend-modul,
                   Abschnitt 5): Kachelflaechen, kein zentrierter Spinner. */}
-              {Array.from({ length: 6 }, (_, index) => (
-                <Skeleton key={index} className="h-80 rounded-xl" />
-              ))}
-            </div>
-          )}
+                {Array.from({ length: 6 }, (_, index) => (
+                  <Skeleton key={index} className="h-80 rounded-xl" />
+                ))}
+              </div>
+            )}
 
-          {error !== null && (
-            <Alert variant="destructive">
-              <AlertTitle>
-                {isApiError(error)
-                  ? t(apiErrorMessageKey(error), { defaultValue: error.message })
-                  : t("apiError.INTERNAL_ERROR")}
-              </AlertTitle>
-            </Alert>
-          )}
+            {error !== null && (
+              <Alert variant="destructive">
+                <AlertTitle>
+                  {isApiError(error)
+                    ? t(apiErrorMessageKey(error), {
+                        defaultValue: error.message,
+                      })
+                    : t("apiError.INTERNAL_ERROR")}
+                </AlertTitle>
+              </Alert>
+            )}
 
-          {data !== undefined &&
-            (data.content.length === 0 ? (
-              /* Drei Leerfaelle: eine Seitenzahl jenseits von totalPages
+            {data !== undefined &&
+              (data.content.length === 0 ? (
+                /* Drei Leerfaelle: eine Seitenzahl jenseits von totalPages
                  (veralteter geteilter Link) bekommt einen Ausweg zur letzten
                  Seite statt einer falschen Leermeldung (Review zu KAN-31);
                  mit Suchbegriff oder aktiver Filterauswahl heisst leer
                  "keine Treffer", ohne heisst es "noch nichts
                  veroeffentlicht". Unbekannte Filter-IDs ergeben dieselbe
                  leere Liste und keinen Fehler (§6.1). */
-              data.totalElements > 0 ? (
-                <EmptyState
-                  icon={<FolderOpenIcon aria-hidden="true" />}
-                  title={t("project.list.pageOutOfRange.title")}
-                  description={t("project.list.pageOutOfRange.description")}
-                  action={
-                    <Button
-                      variant="outline"
-                      nativeButton={false}
-                      render={<Link to={pageSearch(data.totalPages)} />}
-                    >
-                      {t("project.list.pageOutOfRange.action")}
-                    </Button>
-                  }
-                />
-              ) : hasSearch ? (
-                <EmptyState
-                  icon={<SearchXIcon aria-hidden="true" />}
-                  title={t("project.list.noResults.title")}
-                  description={t("project.list.noResults.description")}
-                />
+                data.totalElements > 0 ? (
+                  <EmptyState
+                    icon={<FolderOpenIcon aria-hidden="true" />}
+                    title={t("project.list.pageOutOfRange.title")}
+                    description={t("project.list.pageOutOfRange.description")}
+                    action={
+                      <Button
+                        variant="outline"
+                        nativeButton={false}
+                        render={<Link to={pageSearch(data.totalPages)} />}
+                      >
+                        {t("project.list.pageOutOfRange.action")}
+                      </Button>
+                    }
+                  />
+                ) : hasSearch ? (
+                  <EmptyState
+                    icon={<SearchXIcon aria-hidden="true" />}
+                    title={t("project.list.noResults.title")}
+                    description={t("project.list.noResults.description")}
+                  />
+                ) : (
+                  <EmptyState
+                    icon={<FolderOpenIcon aria-hidden="true" />}
+                    title={t("project.list.empty.title")}
+                    description={t("project.list.empty.description")}
+                  />
+                )
               ) : (
-                <EmptyState
-                  icon={<FolderOpenIcon aria-hidden="true" />}
-                  title={t("project.list.empty.title")}
-                  description={t("project.list.empty.description")}
-                />
-              )
-            ) : (
-              <>
-                {/* Waehrend keepPreviousData die vorige Seite haelt, macht
+                <>
+                  {/* Waehrend keepPreviousData die vorige Seite haelt, macht
                     aria-busy plus Abblendung den Wechsel sichtbar, statt zur
                     neuen Seitenzahl den alten Inhalt zu behaupten (Review zu
                     KAN-31). */}
-                <ul
-                  aria-busy={isPlaceholderData || undefined}
-                  className={cn(
-                    "grid gap-6 transition-opacity sm:grid-cols-2 lg:grid-cols-3",
-                    isPlaceholderData && "opacity-60"
-                  )}
-                >
-                  {data.content.map((project) => (
-                    <li key={project.id}>
-                      <ProjectCard
-                        project={project}
-                        /* Die Kacheln liegen unter dem Seiten-h1; die
+                  <ul
+                    aria-busy={isPlaceholderData || undefined}
+                    className={cn(
+                      "grid gap-6 transition-opacity sm:grid-cols-2 lg:grid-cols-3",
+                      isPlaceholderData && "opacity-60"
+                    )}
+                  >
+                    {data.content.map((project) => (
+                      <li key={project.id}>
+                        <ProjectCard
+                          project={project}
+                          /* Die Kacheln liegen unter dem Seiten-h1; die
                            Sidebar-Ueberschrift "Filter" ist ein Geschwister
                            auf Ebene 2, kein Elternteil. Ebene 2 bleibt
                            richtig (SC 1.3.1). */
-                        headingLevel={2}
-                      />
-                    </li>
-                  ))}
-                </ul>
+                          headingLevel={2}
+                        />
+                      </li>
+                    ))}
+                  </ul>
 
-                {totalPages > 1 && (
-                  <Pagination className="mt-2">
-                    <PaginationContent>
-                      <PaginationItem>
-                        {page > 1 ? (
-                          <PaginationPrevious
-                            href={pageSearch(page - 1)}
-                            onClick={(event) => goToPage(event, page - 1)}
-                          />
-                        ) : (
-                          /* Ohne href ist der inaktive Schritt weder klick-
+                  {totalPages > 1 && (
+                    <Pagination className="mt-2">
+                      <PaginationContent>
+                        <PaginationItem>
+                          {page > 1 ? (
+                            <PaginationPrevious
+                              href={pageSearch(page - 1)}
+                              onClick={(event) => goToPage(event, page - 1)}
+                            />
+                          ) : (
+                            /* Ohne href ist der inaktive Schritt weder klick-
                              noch fokussierbar; aria-disabled sagt warum. */
-                          <PaginationPrevious
-                            aria-disabled="true"
-                            className="pointer-events-none opacity-50"
-                          />
+                            <PaginationPrevious
+                              aria-disabled="true"
+                              className="pointer-events-none opacity-50"
+                            />
+                          )}
+                        </PaginationItem>
+                        {paginationItems(page, totalPages).map((item) =>
+                          typeof item === "number" ? (
+                            <PaginationItem key={item}>
+                              <PaginationLink
+                                href={pageSearch(item)}
+                                onClick={(event) => goToPage(event, item)}
+                                isActive={item === page}
+                              >
+                                {item}
+                              </PaginationLink>
+                            </PaginationItem>
+                          ) : (
+                            <PaginationItem key={item}>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          )
                         )}
-                      </PaginationItem>
-                      {paginationItems(page, totalPages).map((item) =>
-                        typeof item === "number" ? (
-                          <PaginationItem key={item}>
-                            <PaginationLink
-                              href={pageSearch(item)}
-                              onClick={(event) => goToPage(event, item)}
-                              isActive={item === page}
-                            >
-                              {item}
-                            </PaginationLink>
-                          </PaginationItem>
-                        ) : (
-                          <PaginationItem key={item}>
-                            <PaginationEllipsis />
-                          </PaginationItem>
-                        )
-                      )}
-                      <PaginationItem>
-                        {page < totalPages ? (
-                          <PaginationNext
-                            href={pageSearch(page + 1)}
-                            onClick={(event) => goToPage(event, page + 1)}
-                          />
-                        ) : (
-                          <PaginationNext
-                            aria-disabled="true"
-                            className="pointer-events-none opacity-50"
-                          />
-                        )}
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                )}
-              </>
-            ))}
+                        <PaginationItem>
+                          {page < totalPages ? (
+                            <PaginationNext
+                              href={pageSearch(page + 1)}
+                              onClick={(event) => goToPage(event, page + 1)}
+                            />
+                          ) : (
+                            <PaginationNext
+                              aria-disabled="true"
+                              className="pointer-events-none opacity-50"
+                            />
+                          )}
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
+                </>
+              ))}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }

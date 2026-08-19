@@ -1406,9 +1406,9 @@ export interface components {
        * @example 12
        */
       reactionCount?: number
-      /** @description Zugewiesene Redakteur:innen (§3.3). Null, wenn die anfragende Person sie nicht sehen darf (§5, Fussnote 7); eine leere Liste bedeutet dagegen, dass keine Redaktion zugewiesen ist. */
+      /** @description Zugewiesene Redakteur:innen (§3.3). Bei einem PUBLISHED-Projekt fuer alle sichtbar, auch ohne Anmeldung (seit Contract v55); in jedem anderen Status nur fuer die Projektseite, die zugewiesene Redaktion und Admins. Null heisst 'darf ich nicht sehen'; eine leere Liste bedeutet dagegen, dass keine Redaktion zugewiesen ist. */
       editors?: components["schemas"]["PersonResponse"][]
-      /** @description Aktivitaetsverlauf, aufsteigend nach Zeitpunkt (§3.12). Null, wenn die anfragende Person ihn nicht sehen darf (§5, Fussnote 7). */
+      /** @description Aktivitaetsverlauf, aufsteigend nach Zeitpunkt (§3.12). Ausdruecklich null, wenn die anfragende Person ihn nicht sehen darf (§5, Fussnote 7); das Feld fehlt nicht, es steht auf null. Damit zugleich das Kennzeichen, an dem ein Client erkennt, dass die lesende Person die Interna sehen darf, also Projektseite, zugewiesene Redaktion oder Admin ist, ohne aus der Rolle zu raten. */
       statusHistory?: components["schemas"]["StatusHistoryResponse"][]
       /**
        * Format: int64

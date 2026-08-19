@@ -182,157 +182,157 @@ export default function LoginPage() {
       <AuthCardHeader title={t("login.title")} subtitle={t("login.subtitle")} />
 
       {notice !== null && (
-            <Alert>
-              <AlertTitle>{t(`apiError.${notice}`)}</AlertTitle>
-            </Alert>
-          )}
+        <Alert>
+          <AlertTitle>{t(`apiError.${notice}`)}</AlertTitle>
+        </Alert>
+      )}
 
-          <form onSubmit={onSubmit} noValidate>
-            <FieldGroup className="gap-4.5">
-              <Controller
-                name="email"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                    {/* Versalien und 11px wie im Template. Grossbuchstaben
+      <form onSubmit={onSubmit} noValidate>
+        <FieldGroup className="gap-4.5">
+          <Controller
+            name="email"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid} className="gap-1.5">
+                {/* Versalien und 11px wie im Template. Grossbuchstaben
                         entstehen ueber CSS und nicht im Schluessel: der
                         zugaengliche Name bleibt dadurch "E-Mail" und wird
                         nicht buchstabiert. */}
-                    <FieldLabel
-                      htmlFor={field.name}
-                      className="type-label-xs text-muted-foreground uppercase group-data-[invalid=true]/field:text-destructive"
-                    >
-                      {t("login.email")}
-                    </FieldLabel>
-                    <Input
-                      {...field}
-                      id={field.name}
-                      type="email"
-                      autoComplete="email"
-                      aria-invalid={fieldState.invalid}
-                      /* Der Fehler haengt mit am Feld: role="alert" sagt ihn nur
+                <FieldLabel
+                  htmlFor={field.name}
+                  className="type-label-xs text-muted-foreground uppercase group-data-[invalid=true]/field:text-destructive"
+                >
+                  {t("login.email")}
+                </FieldLabel>
+                <Input
+                  {...field}
+                  id={field.name}
+                  type="email"
+                  autoComplete="email"
+                  aria-invalid={fieldState.invalid}
+                  /* Der Fehler haengt mit am Feld: role="alert" sagt ihn nur
                          beim Erscheinen an, wer spaeter zurueck zum Feld tabbt,
                          hoerte sonst nur "ungueltig" ohne Grund. */
-                      aria-describedby={
-                        fieldState.invalid
-                          ? "login-email-hint login-email-error"
-                          : "login-email-hint"
-                      }
-                    />
-                    {/* Bleibt stehen, obwohl das Template ihn nicht fuehrt:
+                  aria-describedby={
+                    fieldState.invalid
+                      ? "login-email-hint login-email-error"
+                      : "login-email-hint"
+                  }
+                />
+                {/* Bleibt stehen, obwohl das Template ihn nicht fuehrt:
                         dort steht als Platzhalter eine HSB-Adresse, und
                         genau die ist es nicht (Contract 3.1, hsbEmail ist
                         nicht die Anmeldekennung). Ohne den Satz probieren
                         Studierende die falsche Adresse. */}
-                    <FieldDescription id="login-email-hint">
-                      {t("login.emailHint")}
-                    </FieldDescription>
-                    {fieldState.invalid && (
-                      <FieldError
-                        id="login-email-error"
-                        errors={[{ message: messageOf(fieldState.error) }]}
-                      />
-                    )}
-                  </Field>
+                <FieldDescription id="login-email-hint">
+                  {t("login.emailHint")}
+                </FieldDescription>
+                {fieldState.invalid && (
+                  <FieldError
+                    id="login-email-error"
+                    errors={[{ message: messageOf(fieldState.error) }]}
+                  />
                 )}
-              />
-              <Controller
-                name="password"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                    <FieldLabel
-                      htmlFor={field.name}
-                      className="type-label-xs text-muted-foreground uppercase group-data-[invalid=true]/field:text-destructive"
-                    >
-                      {t("login.password")}
-                    </FieldLabel>
-                    <PasswordInput
-                      {...field}
-                      id={field.name}
-                      autoComplete="current-password"
-                      aria-invalid={fieldState.invalid}
-                      aria-describedby={
-                        fieldState.invalid ? "login-password-error" : undefined
-                      }
-                    />
-                    {fieldState.invalid && (
-                      <FieldError
-                        id="login-password-error"
-                        errors={[{ message: messageOf(fieldState.error) }]}
-                      />
-                    )}
-                    {/* Nicht im Figma-Template, aber entschieden
+              </Field>
+            )}
+          />
+          <Controller
+            name="password"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid} className="gap-1.5">
+                <FieldLabel
+                  htmlFor={field.name}
+                  className="type-label-xs text-muted-foreground uppercase group-data-[invalid=true]/field:text-destructive"
+                >
+                  {t("login.password")}
+                </FieldLabel>
+                <PasswordInput
+                  {...field}
+                  id={field.name}
+                  autoComplete="current-password"
+                  aria-invalid={fieldState.invalid}
+                  aria-describedby={
+                    fieldState.invalid ? "login-password-error" : undefined
+                  }
+                />
+                {fieldState.invalid && (
+                  <FieldError
+                    id="login-password-error"
+                    errors={[{ message: messageOf(fieldState.error) }]}
+                  />
+                )}
+                {/* Nicht im Figma-Template, aber entschieden
                         (Klaerungsrunde KAN-33): ohne diesen Einstieg
                         waere /forgot-password nur per URL erreichbar. */}
-                    <Link
-                      to="/forgot-password"
-                      className="type-body-sm self-end font-semibold text-primary underline-offset-4 hover:underline focus-visible:underline"
-                    >
-                      {t("login.forgotPassword")}
-                    </Link>
-                  </Field>
-                )}
-              />
+                <Link
+                  to="/forgot-password"
+                  className="type-body-sm self-end font-semibold text-primary underline-offset-4 hover:underline focus-visible:underline"
+                >
+                  {t("login.forgotPassword")}
+                </Link>
+              </Field>
+            )}
+          />
 
-              {form.formState.errors.root?.server && (
-                <Alert variant="destructive">
-                  <AlertTitle>
-                    {form.formState.errors.root.server.message}
-                  </AlertTitle>
-                  {pendingRegistrationEmail !== null && (
-                    <AlertDescription>
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="h-auto p-0 font-semibold"
-                        onClick={() =>
-                          continueRegistration(pendingRegistrationEmail)
-                        }
-                      >
-                        {t("login.continueRegistration")}
-                      </Button>
-                    </AlertDescription>
-                  )}
-                </Alert>
+          {form.formState.errors.root?.server && (
+            <Alert variant="destructive">
+              <AlertTitle>
+                {form.formState.errors.root.server.message}
+              </AlertTitle>
+              {pendingRegistrationEmail !== null && (
+                <AlertDescription>
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 font-semibold"
+                    onClick={() =>
+                      continueRegistration(pendingRegistrationEmail)
+                    }
+                  >
+                    {t("login.continueRegistration")}
+                  </Button>
+                </AlertDescription>
               )}
+            </Alert>
+          )}
 
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting
-                  ? t("login.pending")
-                  : t("login.submit")}
-              </Button>
-            </FieldGroup>
-          </form>
+          <Button type="submit" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting
+              ? t("login.pending")
+              : t("login.submit")}
+          </Button>
+        </FieldGroup>
+      </form>
 
-          {/* Der Weg zur Registrierung: die Kopfleiste fuehrt nach Template nur
+      {/* Der Weg zur Registrierung: die Kopfleiste fuehrt nach Template nur
               noch "Anmelden" (Review zu KAN-8), also haengt der Einstieg hier. */}
-          <p className="type-body-sm text-center text-muted-foreground">
-            {t("login.registerPrompt")}{" "}
-            <Link
-              to="/register"
-              className="font-semibold text-primary underline-offset-4 hover:underline focus-visible:underline"
-            >
-              {t("login.registerLink")}
-            </Link>
-          </p>
+      <p className="type-body-sm text-center text-muted-foreground">
+        {t("login.registerPrompt")}{" "}
+        <Link
+          to="/register"
+          className="font-semibold text-primary underline-offset-4 hover:underline focus-visible:underline"
+        >
+          {t("login.registerLink")}
+        </Link>
+      </p>
 
-          {/* Der oeffentliche Weg aus dem Template: wer nichts einreichen
+      {/* Der oeffentliche Weg aus dem Template: wer nichts einreichen
               will, braucht kein Konto (Contract 5, PUBLIC sieht alles
               Veroeffentlichte). Ohne diesen Hinweis endet die Seite fuer
               Externe in einer Sackgasse. */}
-          <div className="flex flex-col items-center gap-1 text-center">
-            <p className="type-caption text-muted-foreground">
-              {t("login.publicHint")}
-            </p>
-            <Link
-              to="/projects"
-              className="type-body-sm inline-flex items-center gap-2 rounded-control font-semibold text-primary underline-offset-4 hover:underline focus-visible:underline"
-            >
-              <ArrowRightIcon aria-hidden="true" className="size-3.5" />
-              {t("login.publicLink")}
-            </Link>
-          </div>
+      <div className="flex flex-col items-center gap-1 text-center">
+        <p className="type-caption text-muted-foreground">
+          {t("login.publicHint")}
+        </p>
+        <Link
+          to="/projects"
+          className="type-body-sm inline-flex items-center gap-2 rounded-control font-semibold text-primary underline-offset-4 hover:underline focus-visible:underline"
+        >
+          <ArrowRightIcon aria-hidden="true" className="size-3.5" />
+          {t("login.publicLink")}
+        </Link>
+      </div>
     </AuthPageShell>
   )
 }

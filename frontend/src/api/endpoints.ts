@@ -33,6 +33,13 @@ export const apiPaths = {
      * hat keinen eigenen Pfad.
      */
     withdraw: (projectId: string) => `/api/projects/${projectId}/withdraw`,
+    /*
+     * Reaktion setzen (POST) und entfernen (DELETE), beide idempotent und
+     * beide mit 200 { count } (§6.1, §3.10). Ein Pfad fuer zwei Methoden:
+     * die Reaktion der anfragenden Person ist eine Ressource, die es je
+     * Projekt einmal gibt. Eingetragen mit KAN-32.
+     */
+    reaction: (projectId: string) => `/api/projects/${projectId}/reaction`,
   },
   /*
    * Portfolio (§6.1, §3.2), eingetragen mit KAN-34. Die beiden Pfade

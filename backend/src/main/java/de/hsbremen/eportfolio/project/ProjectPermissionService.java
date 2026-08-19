@@ -130,11 +130,10 @@ public class ProjectPermissionService {
 	 * Arbeitsprozess einer Person und nicht Teil der oeffentlichen Darstellung
 	 * ihres Ergebnisses.
 	 *
-	 * <p><strong>Gilt auch fuer {@code editors}</strong> in
-	 * {@code ProjectDetailResponse}: KAN-16 nennt fuer beide Felder dieselbe
-	 * Zielgruppe. Wer das Projekt betreut, ist ebenso eine Aussage ueber den
-	 * laufenden Begutachtungsvorgang wie der Verlauf selbst; die beiden Felder
-	 * auseinanderzuziehen haette keinen fachlichen Grund.
+	 * <p><strong>Gilt seit Contract v55 nur noch fuer die Statushistorie.</strong>
+	 * Bis v54 hing {@code editors} an derselben Zusage, weil KAN-16 fuer beide
+	 * Felder dieselbe Zielgruppe nannte. Fuer ein veroeffentlichtes Projekt
+	 * traegt das nicht: siehe {@link #maySeeProjectEditors}.
 	 */
 	public boolean maySeeProjectInternals(AuthenticatedUser user, Project project) {
 		if (!isLoggedIn(user)) {
@@ -143,6 +142,46 @@ public class ProjectPermissionService {
 		return user.hasRole(Role.ADMIN)
 				|| isProjectSide(user, project)
 				|| isAssignedEditor(user, project);
+	}
+
+	/**
+	 * Sichtbarkeit von {@code editors} in {@code ProjectDetailResponse}
+	 * (§3.3, seit Contract v55).
+	 *
+	 * <p>Bei {@code PUBLISHED} darf die zugewiesene Redaktion jede:r sehen, auch
+	 * ohne Anmeldung; in jedem anderen Status gilt weiter die enge Zusage aus
+	 * {@link #maySeeProjectInternals}.
+	 *
+	 * <p><strong>Warum die Statushistorie nicht mitgeht:</strong> deren
+	 * Begruendung in §3.12 zielt auf den Arbeitsprozess, der Verlauf legt offen,
+	 * wie oft eine Arbeit zurueckgewiesen wurde. Wer eine <em>veroeffentlichte</em>
+	 * Arbeit betreut hat, ist dagegen eine Angabe zum Ergebnis und gehoert zu ihm
+	 * wie das Impressum zu einem Text. Das oeffentliche Template
+	 * „Projektdetail" fuehrt die Redaktion deshalb an zwei Stellen, im
+	 * Redaktionshinweis und in der Metadaten-Seitenleiste; bis v54 waeren beide
+	 * fuer PUBLIC dauerhaft leer geblieben (aufgefallen in KAN-32).
+	 *
+	 * <p>Aus der Trennung folgt ein Nebennutzen, auf den sich das Frontend
+	 * stuetzt: {@code statusHistory} ist jetzt das einzige Feld der
+	 * Detailantwort, das genau dann steht, wenn die lesende Person die Interna
+	 * sehen darf, also Projektseite, zugewiesene Redaktion oder Admin ist
+	 * (§5 Fussnote ⁷). Ein Client erkennt den Kreis daran, ohne aus der Rolle
+	 * zu raten. Praezisiert mit v56: „am Projekt beteiligt" schloss den Admin
+	 * aus, der das Feld sehr wohl sieht.
+	 *
+	 * <p><strong>Heute ist diese Methode an jeder erreichbaren Stelle wahr</strong>,
+	 * und das ist kein Versehen. Wer eine Antwort ueberhaupt zu sehen bekommt,
+	 * hat {@link #mayReadProject} passiert; bei einem nicht veroeffentlichten
+	 * Projekt laesst die Regel nur Admin, Projektseite und zugewiesene Redaktion
+	 * durch, also genau den Kreis von {@link #maySeeProjectInternals}. Formal:
+	 * {@code mayReadProject(nicht PUBLISHED)} zieht {@code maySeeProjectInternals}
+	 * nach sich. Der Guard im Lesedienst bleibt trotzdem stehen, damit eine
+	 * spaetere Lockerung von {@code mayReadProject} das Feld nicht stillschweigend
+	 * mit oeffnet: er ist die Verteidigung in der Tiefe, nicht toter Code.
+	 */
+	public boolean maySeeProjectEditors(AuthenticatedUser user, Project project) {
+		return project.getStatus() == ProjectStatus.PUBLISHED
+				|| maySeeProjectInternals(user, project);
 	}
 
 	// ------------------------------------------------------------------

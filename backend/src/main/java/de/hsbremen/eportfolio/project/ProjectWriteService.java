@@ -56,8 +56,9 @@ import org.springframework.transaction.annotation.Transactional;
  * lassen es sich von {@link ProjectReadService#detail} erzeugen. So ist
  * garantiert, dass die Antwort auf ein {@code POST} oder {@code PUT} exakt der
  * eines anschliessenden {@code GET} entspricht, einschliesslich der
- * Sichtbarkeitsregel fuer {@code editors} und {@code statusHistory} (§5,
- * Fussnote ⁷). Eine zweite Zusammenstellung derselben Antwort waere genau die
+ * Sichtbarkeitsregeln fuer {@code statusHistory} (§5, Fussnote ⁷) und fuer
+ * {@code editors}, das seit Contract v55 einer eigenen, weiteren Regel folgt
+ * (§3.3). Eine zweite Zusammenstellung derselben Antwort waere genau die
  * Stelle, an der die beiden auseinanderlaufen.
  *
  * <p><strong>Reihenfolge der Pruefungen</strong> in jeder Methode, nach §6.3.1

@@ -423,7 +423,13 @@ public class ProjectReadService {
 			throw new AccessDeniedException("Fuer dieses Projekt fehlt die Leseberechtigung.");
 		}
 
+		/*
+		 * Zwei getrennte Fragen seit Contract v55 (§3.3): die Redaktion eines
+		 * veroeffentlichten Projekts sieht jede:r, den Verlauf weiterhin nur die
+		 * Projektseite, die zugewiesene Redaktion und der Admin (§3.12).
+		 */
 		boolean internalsVisible = permissions.maySeeProjectInternals(user, project);
+		boolean editorsVisible = permissions.maySeeProjectEditors(user, project);
 
 		return ProjectDetailResponse.from(
 				project,
@@ -431,7 +437,7 @@ public class ProjectReadService {
 				reactionRepository.countByProjectId(projectId),
 				members(projectId),
 				blocks(projectId),
-				internalsVisible ? editors(project) : null,
+				editorsVisible ? editors(project) : null,
 				internalsVisible ? statusHistory(projectId) : null);
 	}
 

@@ -222,8 +222,10 @@ class BlockIntegrationTest {
 		}
 
 		/**
-		 * Der Default ist seit Contract v51 die 2 und nicht mehr die 1 (§2.10,
-		 * KAN-72): was ueber diesen Endpoint hereinkommt, ist gerade gegen die
+		 * Die aktuelle Schemaversion ist seit Contract v51 die 2 und nicht mehr
+		 * die 1 (§2.10, in dessen Text nachgetragen mit v56; der Spaltendefault
+		 * bleibt bewusst die 1 und beschreibt den Bestand davor): was ueber
+		 * diesen Endpoint hereinkommt, ist gerade gegen die
 		 * geltende Validierung geprueft worden und liegt damit in der aktuellen
 		 * Form vor.
 		 */

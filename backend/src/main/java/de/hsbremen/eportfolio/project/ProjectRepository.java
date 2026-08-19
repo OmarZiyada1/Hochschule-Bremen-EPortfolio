@@ -47,9 +47,17 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, JpaSpec
 	 * Ein Projekt samt seiner Stammdatenbezuege fuer
 	 * {@code GET /api/projects/{id}}. Hier ist auch das Modul dabei, weil die
 	 * Detailansicht es anzeigt.
+	 *
+	 * <p><strong>{@code editors} seit Contract v55 im Graph.</strong> Die
+	 * Sammlung ist LAZY und blieb bei einem anonymen Aufruf frueher ungeladen,
+	 * weil die Sichtbarkeitspruefung kurzschloss. Seit die Redaktion eines
+	 * veroeffentlichten Projekts oeffentlich ist (§3.3), wird sie bei jedem
+	 * Aufruf gebraucht, und das ist der meistbesuchte Lesepfad der Anwendung.
+	 * Eine zweite Abfrage je Seitenaufruf spart der Graph ein; ein kartesisches
+	 * Problem entsteht nicht, weil die Abfrage genau eine Zeile liefert.
 	 */
 	@EntityGraph(attributePaths = {"author", "category", "faculty", "studyProgram", "module",
-			"semester"})
+			"semester", "editors"})
 	Optional<Project> findWithReferencesById(UUID id);
 
 	/**

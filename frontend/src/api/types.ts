@@ -96,3 +96,16 @@ export type BlocksUpdateRequest = ApiSchemas["BlocksUpdateRequest"]
 
 /** Blocktyp nach Contract 2.5: genau vierzehn Werte. */
 export type BlockType = NonNullable<BlockResponse["type"]>
+
+/**
+ * Bausteine der Projektdetailseite (Contract 3.12, 6.1; KAN-32).
+ * ReactionResponse traegt allein den Zaehler nach der Aenderung (3.10).
+ *
+ * Bewusst nur diese beiden: fuer Person, Mitglied und Referenz entstehen
+ * keine Aliase auf Vorrat. Die Detailseite reicht das ganze Projektobjekt
+ * durch, und fuer die Referenz gibt es mit ProjectReference oben bereits
+ * einen Namen. Zwei Namen fuer denselben Schema-Typ in einer Datei sind eine
+ * Fehlerquelle, kein Komfort.
+ */
+export type StatusHistoryResponse = ApiSchemas["StatusHistoryResponse"]
+export type ReactionResponse = ApiSchemas["ReactionResponse"]

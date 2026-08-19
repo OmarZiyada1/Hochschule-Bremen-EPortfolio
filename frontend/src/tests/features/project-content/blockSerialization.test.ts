@@ -322,9 +322,25 @@ describe("blocksToDoc", () => {
     expect(doc.content).toHaveLength(1)
   })
 
+  it("nimmt die aktuelle Schemaversion an", () => {
+    /* 2 seit Contract v51, und der Server liefert nie weniger: BlockResponse
+       migriert beim Lesen (KAN-72). Bis KAN-32 stand die Konstante hier auf 1
+       und verwarf damit jeden real gespeicherten Block. */
+    const { doc, dropped } = blocksToDoc([
+      responseOf(paragraph("aus dem Bestand"), {
+        schemaVersion: BLOCK_SCHEMA_VERSION,
+      }),
+    ])
+
+    expect(dropped).toEqual([])
+    expect(doc.content).toHaveLength(1)
+  })
+
   it("raet bei einer kuenftigen Schemaversion nicht, sondern verwirft", () => {
     const { doc, dropped } = blocksToDoc([
-      responseOf(paragraph("aus der Zukunft"), { schemaVersion: 2 }),
+      responseOf(paragraph("aus der Zukunft"), {
+        schemaVersion: BLOCK_SCHEMA_VERSION + 1,
+      }),
     ])
 
     expect(doc.content).toEqual([])

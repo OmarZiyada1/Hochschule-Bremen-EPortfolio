@@ -264,7 +264,6 @@
     "hint": "Diese Seite ist ein Platzhalter. Sie entsteht mit dem Ticket {{ticket}}.",
     "hintStatic": "Der Inhalt dieser Seite wird noch ergänzt.",
     "title": {
-      "projectDetail": "Projektdetail",
       "portfolio": "Portfolio",
       "projectNew": "Neues Projekt",
       "projectMetadata": "Projekt-Metadaten",
@@ -478,6 +477,60 @@
         "title": "Diese Seite gibt es nicht mehr",
         "description": "Die Trefferliste hat weniger Seiten als die aufgerufene Adresse.",
         "action": "Zur letzten Seite"
+      }
+    },
+    "detail": {
+      "breadcrumb": "Projekt",
+      "abstract": "Abstract",
+      "content": "Projektbeschreibung",
+      "editorial": {
+        "setting": "im Rahmen des Studiengangs {{studyProgram}} an der Hochschule Bremen im {{semester}}",
+        "settingStudyProgram": "im Rahmen des Studiengangs {{studyProgram}} an der Hochschule Bremen",
+        "settingSemester": "an der Hochschule Bremen im {{semester}}",
+        "plain": "Dieses Projekt wurde {{setting}} durchgeführt.",
+        "withEditors_one": "Dieses Projekt wurde {{setting}} durchgeführt und von {{editors}} redigiert.",
+        "withEditors_other": "Dieses Projekt wurde {{setting}} durchgeführt und von {{editors}} redigiert."
+      },
+      "reactions": {
+        "heading": "Reaktionen",
+        "add_one": "Reagieren, bisher {{count}} Reaktion",
+        "add_other": "Reagieren, bisher {{count}} Reaktionen",
+        "remove_one": "Eigene Reaktion zurücknehmen, bisher {{count}} Reaktion",
+        "remove_other": "Eigene Reaktion zurücknehmen, bisher {{count}} Reaktionen",
+        "loginRequired": "Melden Sie sich an, um auf dieses Projekt zu reagieren.",
+        "publishedRequired": "Auf dieses Projekt lässt sich nicht reagieren, solange es nicht veröffentlicht ist."
+      },
+      "notFound": {
+        "title": "Projekt nicht gefunden",
+        "description": "Unter dieser Adresse liegt kein Projekt. Möglicherweise wurde es zurückgezogen oder gelöscht.",
+        "action": "Zur Projektbibliothek"
+      },
+      "empty": {
+        "title": "Noch kein Inhalt",
+        "description": "Für dieses Projekt wurde bisher kein Inhalt erfasst."
+      },
+      "error": {
+        "title": "Projekt konnte nicht geladen werden"
+      },
+      "meta": {
+        "open": "Projektdaten anzeigen",
+        "type": "Projekttyp",
+        "faculty": "Fakultät",
+        "studyProgram": "Studiengang",
+        "degree": "Abschluss",
+        "semester": "Semester",
+        "category": "Kategorie",
+        "module": "Fach / Modul",
+        "published": "Veröffentlicht",
+        "members": "Projektmitglieder",
+        "editors": "Redakteur:innen",
+        "tags": "Tags",
+        "label": "Projektdaten"
+      },
+      "forbidden": {
+        "title": "Kein Zugriff auf dieses Projekt",
+        "description": "Dieses Projekt ist noch nicht veröffentlicht. Es können nur die Beteiligten, die zuständige Redaktion und die Administration darauf zugreifen.",
+        "action": "Zur Projektbibliothek"
       }
     }
   },

@@ -28,8 +28,19 @@ import {
  * Version des Editor-Schemas, mit der geschrieben wird (Contract 2.10).
  * Bei jeder Aenderung der Knotentypen wird sie erhoeht und
  * {@link migrateBlockContent} um einen Schritt ergaenzt.
+ *
+ * <p><strong>2 seit Contract v51</strong>, im Backend
+ * {@code BlockSchemaMigration.CURRENT_VERSION}. Die Formen, die dieses Modul
+ * und der Renderer erwarten, sind genau die der Version 2: die Galerie
+ * fuehrt {@code items} statt {@code fileIds}, AUDIO kennt kein {@code src},
+ * und HEADING beginnt bei Ebene 2. Die Konstante stand bis KAN-32
+ * gleichwohl auf 1, und weil {@link blocksToDoc} alles verwirft, was eine
+ * hoehere Version traegt, fiel jeder real gespeicherte Block durch: der
+ * Server liefert seit KAN-72 immer mindestens 2 (BlockResponse.from
+ * migriert beim Lesen). Auf der Detailseite waeren damit nur Platzhalter
+ * erschienen.
  */
-export const BLOCK_SCHEMA_VERSION = 1
+export const BLOCK_SCHEMA_VERSION = 2
 
 /**
  * Die letzte Serverantwort, auf das reduziert, was fuer stabile IDs noetig
@@ -260,10 +271,19 @@ function readNodeType(content: unknown): string | null {
  * ("bei jeder Aenderung der Node-Typen wird die Version erhoeht und eine
  * Migrationsfunktion ergaenzt"), die aber bis KAN-10 nirgends verortet war.
  *
- * <p>Fuer Version 1 ist sie die Identitaet. Sie steht trotzdem hier und
- * nicht erst dann, wenn sie gebraucht wird: der Aufrufer in
- * {@link blocksToDoc} ist der einzige Ort, an dem ein alter Bestand
- * vorbeikommt, und ihn nachtraeglich einzubauen hiesse, ihn zu suchen.
+ * <p>Sie ist fuer jede Version die Identitaet, und das bleibt sie
+ * absichtlich: den Schritt von 1 nach 2 (Contract v51) geht der Server
+ * bereits beim Lesen, {@code BlockResponse.from} geht jeden gespeicherten
+ * Knoten durch {@code BlockSchemaMigration} und meldet danach mindestens
+ * {@link BLOCK_SCHEMA_VERSION}. Ein Dokument der Version 1 erreicht diese
+ * Funktion also gar nicht. Ihn hier ein zweites Mal auszuformulieren hiesse,
+ * Serverlogik ohne Verwender nachzubauen, und zwei Fassungen derselben
+ * Migration liefen frueher oder spaeter auseinander.
+ *
+ * <p>Der benannte Ort bleibt trotzdem stehen: der Aufrufer in
+ * {@link blocksToDoc} ist die einzige Stelle, an der ein alter Bestand
+ * vorbeikaeme, und ihn nachtraeglich zu suchen waere teurer, als ihn zu
+ * halten. Die naechste Schemaaenderung traegt ihren Schritt hier ein.
  */
 export function migrateBlockContent(
   content: unknown,

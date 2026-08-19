@@ -759,18 +759,32 @@ class ProjectReadIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Weder passwordHash noch hsbEmail stehen irgendwo in der Antwort (§3.1)")
+		@DisplayName("Weder passwordHash noch hsbEmail stehen irgendwo in der Antwort (§3.1), "
+				+ "auch nicht in der seit v55 oeffentlichen Redaktionsliste")
 		void noSensitiveFields() throws Exception {
+			/*
+			 * Die Redaktion wird hier ausdruecklich zugewiesen: seit Contract
+			 * v55 liefert die Antwort eines veroeffentlichten Projekts sie an
+			 * jede:n aus, auch ohne Anmeldung. Ohne diese Zeile liefe der
+			 * Waechter gegen eine leere Liste und saehe genau an den
+			 * Personenobjekten vorbei, die das Ticket neu oeffentlich macht.
+			 */
+			publishedProject.getEditors().add(assignedEditor);
+			projectRepository.saveAndFlush(publishedProject);
+
 			String detail = body(get("/api/projects/" + publishedProject.getId()));
 			String list = body(asUser(listRequest(), admin));
 
-			assertThat(detail).doesNotContain("passwordHash", "hsbEmail", author.getHsbEmail());
-			assertThat(list).doesNotContain("passwordHash", "hsbEmail", author.getHsbEmail());
+			assertThat(detail).contains(assignedEditor.getId().toString());
+			assertThat(detail).doesNotContain("passwordHash", "hsbEmail",
+					author.getHsbEmail(), assignedEditor.getHsbEmail());
+			assertThat(list).doesNotContain("passwordHash", "hsbEmail",
+					author.getHsbEmail(), assignedEditor.getHsbEmail());
 		}
 	}
 
 	@Nested
-	@DisplayName("Detail: editors und Statushistorie (§3.12, §5 Fussnote 7)")
+	@DisplayName("Detail: editors und Statushistorie (§3.3, §3.12, §5 Fussnote 7)")
 	class ProjectInternals {
 
 		@BeforeEach
@@ -779,25 +793,54 @@ class ProjectReadIntegrationTest {
 					publishedProject, null, ProjectStatus.DRAFT, author, Instant.now()));
 			publishedProject.getEditors().add(assignedEditor);
 			projectRepository.saveAndFlush(publishedProject);
+
+			statusHistoryRepository.saveAndFlush(TestProject.historyWithoutId(
+					draftOfAuthor, null, ProjectStatus.DRAFT, author, Instant.now()));
+			draftOfAuthor.getEditors().add(assignedEditor);
+			projectRepository.saveAndFlush(draftOfAuthor);
 		}
 
 		@Test
-		@DisplayName("Fuer PUBLIC stehen beide Felder auf null, nicht auf der leeren Liste")
-		void publicSeesNothing() throws Exception {
+		@DisplayName("Fuer PUBLIC steht die Statushistorie auf null, die Redaktion aber nicht: "
+				+ "das Projekt ist veroeffentlicht (§3.3, seit Contract v55)")
+		void publicSeesEditorsButNoHistory() throws Exception {
 			mockMvc.perform(get("/api/projects/" + publishedProject.getId()))
 					.andExpect(status().isOk())
-					.andExpect(jsonPath("$.editors").value(nullValue()))
+					.andExpect(jsonPath("$.editors.length()").value(1))
+					.andExpect(jsonPath("$.editors[0].id")
+							.value(assignedEditor.getId().toString()))
 					.andExpect(jsonPath("$.statusHistory").value(nullValue()));
 		}
 
 		@Test
-		@DisplayName("Unbeteiligte Angemeldete sehen sie ebenfalls nicht")
-		void othersSeeNothing() throws Exception {
+		@DisplayName("Unbeteiligte Angemeldete sehen dasselbe wie PUBLIC")
+		void othersSeeEditorsButNoHistory() throws Exception {
 			mockMvc.perform(asUser(
 							get("/api/projects/" + publishedProject.getId()), otherStudent))
 					.andExpect(status().isOk())
-					.andExpect(jsonPath("$.editors").value(nullValue()))
+					.andExpect(jsonPath("$.editors.length()").value(1))
 					.andExpect(jsonPath("$.statusHistory").value(nullValue()));
+		}
+
+		@Test
+		@DisplayName("Vor der Veroeffentlichung bleibt auch die Redaktion verdeckt: "
+				+ "die Autor:in sieht sie, eine unbeteiligte Person nicht")
+		void unpublishedKeepsEditorsHidden() throws Exception {
+			mockMvc.perform(asUser(
+							get("/api/projects/" + draftOfAuthor.getId()), author))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.editors.length()").value(1))
+					.andExpect(jsonPath("$.statusHistory.length()").value(1));
+
+			/*
+			 * Eine unbeteiligte Person kommt an einen Entwurf gar nicht heran,
+			 * die Schranke greift schon beim Lesen (§5, Fussnote 11). Genau
+			 * deshalb legt v55 die Redaktion nur bei PUBLISHED offen: dort ist
+			 * das Projekt ohnehin fuer alle lesbar.
+			 */
+			mockMvc.perform(asUser(
+							get("/api/projects/" + draftOfAuthor.getId()), otherStudent))
+					.andExpect(status().isForbidden());
 		}
 
 		@Test
