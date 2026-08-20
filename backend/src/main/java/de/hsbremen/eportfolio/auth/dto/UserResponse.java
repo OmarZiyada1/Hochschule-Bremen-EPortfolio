@@ -3,6 +3,7 @@ package de.hsbremen.eportfolio.auth.dto;
 import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
 import de.hsbremen.eportfolio.user.User;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.UUID;
 
 /**
@@ -28,7 +29,13 @@ import java.util.UUID;
 public record UserResponse(
 		UUID id,
 		String email,
+
+		@Schema(description = "Gewuenschte neue private E-Mail eines laufenden Adresswechsels "
+				+ "(§3.1). Null, wenn kein Wechsel laeuft; daran erkennt die Oberflaeche "
+				+ "den Zustand \"Bestaetigung ausstehend\".",
+				nullable = true)
 		String pendingEmail,
+
 		String hsbEmail,
 		String firstName,
 		String lastName,

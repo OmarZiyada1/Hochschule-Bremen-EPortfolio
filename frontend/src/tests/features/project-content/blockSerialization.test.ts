@@ -134,7 +134,16 @@ function asResponses(requests: ContentBlockRequest[]): ContentBlockResponse[] {
     type: request.type,
     orderIndex: request.orderIndex,
     content: request.content,
-    schemaVersion: request.schemaVersion,
+    /*
+     * Im Request darf die Angabe fehlen, in der Antwort nie: laesst der
+     * Client sie weg, setzt der Server die aktuelle Version ein (§2.10), und
+     * beim Lesen migriert BlockResponse.from ohnehin auf den heutigen Stand.
+     * Die Nachbildung muss das mitmachen, sonst prueft die Suite eine
+     * Antwortform, die es nicht gibt. Sichtbar geworden ist der Unterschied
+     * erst, seit die generierten Typen null von "nicht gesetzt" trennen
+     * (KAN-74).
+     */
+    schemaVersion: request.schemaVersion ?? BLOCK_SCHEMA_VERSION,
   }))
 }
 

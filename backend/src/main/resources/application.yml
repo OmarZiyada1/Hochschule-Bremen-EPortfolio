@@ -51,6 +51,22 @@ springdoc:
     enabled: false
   api-docs:
     enabled: false
+    # Ausgabeformat des Dokuments, bewusst 3.0 und nicht der Standard 3.1.
+    #
+    # In OpenAPI 3.1 ist "nullable" kein Schluesselwort mehr; swagger-core
+    # verwirft jedes @Schema(nullable = true) ersatzlos und ohne Warnung.
+    # Die rund 70 Stellen im Code, an denen ein Feld ausdruecklich null sein
+    # darf (etwa ProjectDetailResponse.statusHistory nach §3.12), stehen dann
+    # nirgends im Dokument, und die aus /v3/api-docs erzeugte
+    # frontend/src/api/schema.d.ts kennt kein einziges "| null". Ein Client,
+    # der auf "Feld fehlt" statt auf null prueft, liegt damit falsch, ohne
+    # dass der Typecheck das sehen koennte: genau dieser Fehler hat in
+    # KAN-32 die oeffentliche Projektdetailseite getroffen (KAN-74).
+    #
+    # Betroffen ist allein das beschreibende Dokument, das ohnehin nur im
+    # Profil dev ausgeliefert wird. Endpoints, Wire-Format und Verhalten
+    # bleiben unveraendert; eine Rueckstufung der API ist das nicht.
+    version: openapi_3_0
 
 app:
   security:

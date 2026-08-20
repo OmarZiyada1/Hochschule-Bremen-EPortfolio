@@ -60,10 +60,16 @@ public record ProjectCardResponse(
 				nullable = true)
 		ReferenceResponse semester,
 
+		@Schema(description = "Kategorie (§3.6). Im DRAFT noch nicht gesetzt.",
+				nullable = true)
 		ReferenceResponse category,
 
+		@Schema(description = "Fakultaet (§3.8). Im DRAFT noch nicht gesetzt.",
+				nullable = true)
 		ReferenceResponse faculty,
 
+		@Schema(description = "Studiengang (§3.7). Im DRAFT noch nicht gesetzt.",
+				nullable = true)
 		ReferenceResponse studyProgram,
 
 		PersonResponse author,
