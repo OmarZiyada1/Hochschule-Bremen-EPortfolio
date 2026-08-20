@@ -110,8 +110,15 @@ export function ProjectEditorsField({
           role="EDITOR"
           excludedIds={excludedIds}
           placeholder={t("project.metadata.editors.placeholder")}
-          description={t("project.metadata.editors.hint")}
-          onSelect={add}
+          /* value bleibt null: die gewaehlte Person wandert sofort in die
+             Pillenliste darunter, und das Feld ist wieder frei fuer die
+             naechste. */
+          value={null}
+          onChange={(person) => {
+            if (person !== null) {
+              add(person)
+            }
+          }}
         />
       )}
 

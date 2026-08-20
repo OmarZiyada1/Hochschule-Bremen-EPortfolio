@@ -103,7 +103,13 @@ export function FilterSelect({
 
   return (
     <Field data-invalid={invalid} className={cn("gap-2", className)}>
-      <FieldLabel htmlFor={triggerId}>
+      {/* Der Hausstil fuer Feldbeschriftungen, wie in den Auth-Seiten und
+          im Profilformular: klein, gedaempft, in Versalien. So tragen alle
+          Beschriftungen einer Seite dieselbe Farbe und dasselbe Gewicht. */}
+      <FieldLabel
+        htmlFor={triggerId}
+        className="type-label-xs text-muted-foreground uppercase group-data-[invalid=true]/field:text-destructive"
+      >
         {label}
         {labelSuffix}
       </FieldLabel>
@@ -115,7 +121,7 @@ export function FilterSelect({
       >
         <SelectTrigger
           id={triggerId}
-          className="w-full"
+          className="h-11 w-full"
           aria-invalid={invalid}
           aria-describedby={describedBy}
         >

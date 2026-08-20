@@ -1,5 +1,4 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { AsteriskIcon } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { useTranslation } from "react-i18next"
@@ -257,19 +256,30 @@ export function ProjectMetadataForm({
    * Feldes.
    */
   const requiredForSubmit = (
-    <span className="inline-flex items-center">
-      <AsteriskIcon
-        aria-hidden="true"
-        className="size-3 text-muted-foreground"
-      />
+    <span className="ml-0.5">
+      {/* Ein Sternzeichen statt eines Symbols: es erbt Farbe und Groesse der
+          Beschriftung und sitzt eng daran, statt als eigenes Icon daneben zu
+          stehen. */}
+      <span aria-hidden="true">*</span>
       {/* Das Leerzeichen ist kein Schoenheitsfehler: JSX wirft die
-          Zeilenumbrueche weg, und ohne es lautet der zugaengliche Name
-          "Fakultaeterforderlich zum Einreichen" (Befund des
-          frontend-reviewers). */}
+          Zeilenumbrueche weg, und ohne es liefe der zugaengliche Name
+          zusammen (Befund des frontend-reviewers). */}
       <span className="sr-only">
         {" "}
         {t("project.metadata.requiredForSubmit.marker")}
       </span>
+    </span>
+  )
+
+  /**
+   * Pflichtkennzeichnung der Mitgliederfelder. Gleiches Zeichen wie oben,
+   * anderer Grund: hier geht es nicht um das Einreichen, sondern darum, dass
+   * ohne beide Angaben kein Eintrag entsteht (§3.13).
+   */
+  const memberRequired = (
+    <span className="ml-0.5">
+      <span aria-hidden="true">*</span>
+      <span className="sr-only"> {t("project.metadata.members.required")}</span>
     </span>
   )
 
@@ -353,21 +363,25 @@ export function ProjectMetadataForm({
             control={form.control}
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                <FieldLabel
-                  htmlFor={field.name}
-                  className="type-label-xs text-muted-foreground uppercase group-data-[invalid=true]/field:text-destructive"
-                >
+                {/*
+                 * Die Beschriftung bleibt fuer Screenreader stehen, sichtbar
+                 * traegt sie der Platzhalter: die Spalte ist eine Vorschau
+                 * und soll aussehen wie die Kachel, nicht wie ein Formular
+                 * (Vorgabe zu KAN-35). Ein Feld ohne verbundenes Label waere
+                 * trotzdem ein Befund (SC 3.3.2), deshalb sr-only statt gar
+                 * nicht.
+                 */}
+                <FieldLabel htmlFor={field.name} className="sr-only">
                   {t("project.metadata.title.label")}
                 </FieldLabel>
-                {/* Gross und mit blosser Unterlinie wie im Template: das Feld
-                    zeigt den Titel so, wie die Kachel ihn zeigen wird. Die
-                    Beschriftung darueber steht trotzdem sichtbar da, denn ein
-                    Platzhalter ist kein Label (SC 3.3.2). */}
+                {/* Gross, fett und ohne Rahmen, nur mit einer Unterlinie:
+                    der Platzhalter traegt dieselbe Groesse und dasselbe
+                    Gewicht wie der spaetere Titel. */}
                 <Input
                   {...field}
                   id={field.name}
                   disabled={disabled}
-                  className="type-h3 h-auto rounded-none border-0 border-b bg-transparent px-0 py-1 font-semibold shadow-none dark:bg-transparent"
+                  className="type-h3 h-auto rounded-none border-0 border-b bg-transparent px-0 py-1 font-semibold shadow-none focus-visible:border-ring focus-visible:ring-0 dark:bg-transparent"
                   placeholder={t("project.metadata.title.placeholder")}
                   aria-invalid={fieldState.invalid}
                   aria-describedby="project-metadata-title-counter"
@@ -391,10 +405,7 @@ export function ProjectMetadataForm({
             control={form.control}
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                <FieldLabel
-                  htmlFor={field.name}
-                  className="type-label-xs text-muted-foreground uppercase group-data-[invalid=true]/field:text-destructive"
-                >
+                <FieldLabel htmlFor={field.name} className="sr-only">
                   {t("project.metadata.summary.label")}
                 </FieldLabel>
                 <Textarea
@@ -402,6 +413,7 @@ export function ProjectMetadataForm({
                   id={field.name}
                   rows={3}
                   disabled={disabled}
+                  className="resize-none rounded-none border-0 border-b bg-transparent px-0 py-1 shadow-none focus-visible:border-ring focus-visible:ring-0 dark:bg-transparent"
                   placeholder={t("project.metadata.summary.placeholder")}
                   aria-invalid={fieldState.invalid}
                   aria-describedby="project-metadata-summary-counter project-metadata-preview-hint"
@@ -649,7 +661,6 @@ export function ProjectMetadataForm({
                 <TagCombobox
                   value={field.value}
                   onChange={field.onChange}
-                  labelHidden
                   disabled={disabled}
                 />
               )}
@@ -691,6 +702,7 @@ export function ProjectMetadataForm({
                     onChange={field.onChange}
                     authorId={project.author.id}
                     disabled={disabled}
+                    labelSuffix={memberRequired}
                   />
                   {/* Ein Schemafehler an einem Array-Pfad traegt keine eigene
                       message; ohne diese Zeile bliebe das Speichern

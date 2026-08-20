@@ -14,14 +14,8 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldLabel,
-} from "@/components/ui/field"
+import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { fullNameOf } from "@/lib/name"
-import { cn } from "@/lib/utils"
 
 /**
  * Wartezeit vor der Suchanfrage, wie bei der TagCombobox (KAN-75) und in
@@ -34,12 +28,18 @@ const SEARCH_DEBOUNCE_MS = 300
  * Auswahlfeld fuer eine Person aus {@code GET /api/users/lookup} (§6.1,
  * KAN-35): tippen, aus der Vorschlagsliste waehlen, fertig.
  *
- * <p><strong>Sie waehlt genau eine Person und behaelt keine.</strong> Nach
- * der Wahl meldet sie die Person nach oben und leert sich wieder. Wer eine
- * Mehrfachauswahl braucht, sammelt darueber: die Redaktionszuweisung
- * ({@code ProjectEditorsField}) legt Pillen darunter, die Mitgliederliste
- * ({@code ProjectMembersField}) eine Zeile je Person. So gibt es ein
- * Suchfeld fuer beide Faelle statt zweier fast gleicher.
+ * <p><strong>Gesteuert ueber {@code value} und {@code onChange}</strong>,
+ * und daran haengt das sichtbare Verhalten. Bleibt {@code value} nach der
+ * Wahl gesetzt, steht der Name im Feld stehen (Mitgliederzeile). Setzt der
+ * Aufrufer ihn sofort wieder auf {@code null}, leert sich das Feld und die
+ * Person wandert in eine Liste daneben (Redaktionszuweisung). Es gibt
+ * deshalb nur eine Betriebsart und keinen Schalter dafuer.
+ *
+ * <p><strong>Der getippte Text ueberlagert den Namen, statt ihn zu
+ * ersetzen.</strong> Angezeigt wird {@code typed ?? Name(value)}: solange
+ * niemand tippt, steht die gewaehlte Person da; sobald jemand tippt, sucht
+ * das Feld. Ohne diese Trennung braeuchte es einen Effekt, der den
+ * Eingabewert nachzieht, und der liefe dem Tippen hinterher.
  *
  * <p><strong>Gesucht wird serverseitig, nicht im Browser.</strong> Die Zahl
  * der Konten waechst mit jedem Semester; eine vollstaendige Liste zu laden
@@ -51,42 +51,32 @@ const SEARCH_DEBOUNCE_MS = 300
  * <p><strong>Die Antwort traegt keine Adressen</strong>, und diese
  * Komponente zeigt deshalb auch keine an. Genau dafuer gibt es den
  * Endpoint: {@code AdminUserResponse} fuehrt {@code hsbEmail} und scheidet
- * als Quelle aus (§3.1). Unterscheiden lassen sich Namensgleiche hier
- * folglich nicht; das ist die bewusste Gegenleistung fuer die Zusage, dass
- * die Adressen den Server nicht verlassen.
- *
- * <p><strong>{@code q} sucht ueber Vor- und Nachname</strong> (§6.1), nicht
- * ueber Adressen. Das Feld ist entsprechend beschriftet, damit niemand eine
- * Adresse eintippt und aus einem leeren Ergebnis schliesst, das Konto gebe
- * es nicht.
+ * als Quelle aus (§3.1). Namensgleiche lassen sich hier folglich nicht
+ * unterscheiden; das ist die bewusste Gegenleistung dafuer, dass die
+ * Adressen den Server nicht verlassen.
  *
  * <p>Barrierefreiheit: Rollen, {@code aria-expanded},
  * {@code aria-activedescendant} und die Tastaturbedienung bringt die
- * Primitive aus Base UI mit (Frontend-Regel 11). Von Hand kommt die
- * Live-Region fuer die Trefferzahl (SC 4.1.3).
+ * Primitive aus Base UI mit (Frontend-Regel 11).
  */
 export function PersonCombobox({
   label,
   labelSuffix,
-  onSelect,
+  value,
+  onChange,
   id,
   role,
   excludedIds,
   placeholder,
-  description,
-  labelHidden = false,
   disabled = false,
   className,
 }: {
   label: string
-  /**
-   * Zusatz hinter der Beschriftung, etwa die Kennzeichnung "erforderlich
-   * zum Einreichen". Er gehoert in das Label und nicht daneben, sonst
-   * traegt ihn der zugaengliche Name des Feldes nicht (SC 3.3.2).
-   */
+  /** Zusatz hinter der Beschriftung, etwa die Pflichtkennzeichnung. */
   labelSuffix?: ReactNode
-  /** Meldet die gewaehlte Person; das Feld leert sich danach selbst. */
-  onSelect: (person: UserLookupResponse) => void
+  /** Die gewaehlte Person, oder {@code null} fuer "keine". */
+  value: UserLookupResponse | null
+  onChange: (person: UserLookupResponse | null) => void
   id?: string
   /** Rollenfilter, etwa {@code EDITOR} fuer die Redaktion. Ohne ihn alle Rollen. */
   role?: Role
@@ -97,27 +87,28 @@ export function PersonCombobox({
    */
   excludedIds?: readonly string[]
   placeholder?: string
-  description?: string
-  labelHidden?: boolean
   disabled?: boolean
   className?: string
 }) {
   const { t } = useTranslation()
   const generatedId = useId()
   const inputId = id ?? generatedId
-  const descriptionId = `${inputId}-description`
 
-  const [query, setQuery] = useState("")
+  /* null heisst "es wurde nichts getippt"; dann zeigt das Feld die gewaehlte
+     Person. Ein leerer String ist etwas anderes: bewusst geleert. */
+  const [typed, setTyped] = useState<string | null>(null)
   const [debouncedQuery, setDebouncedQuery] = useState("")
   const [open, setOpen] = useState(false)
 
+  const inputValue = typed ?? (value === null ? "" : fullNameOf(value))
+
   useEffect(() => {
     const handle = setTimeout(
-      () => setDebouncedQuery(query.trim()),
+      () => setDebouncedQuery((typed ?? "").trim()),
       SEARCH_DEBOUNCE_MS
     )
     return () => clearTimeout(handle)
-  }, [query])
+  }, [typed])
 
   const results = useQuery({
     ...userQueries.lookup({ role, q: debouncedQuery }),
@@ -145,7 +136,10 @@ export function PersonCombobox({
 
   return (
     <Field className={className}>
-      <FieldLabel htmlFor={inputId} className={cn(labelHidden && "sr-only")}>
+      <FieldLabel
+        htmlFor={inputId}
+        className="type-label-xs text-muted-foreground uppercase"
+      >
         {label}
         {labelSuffix}
       </FieldLabel>
@@ -155,27 +149,32 @@ export function PersonCombobox({
         /* Der Server hat bereits gefiltert, siehe Kommentar an der Komponente. */
         filter={null}
         itemToStringLabel={(person: UserLookupResponse) => fullNameOf(person)}
-        value={null}
+        value={value}
         onValueChange={(picked) => {
-          if (picked !== null && typeof picked === "object") {
-            onSelect(picked as UserLookupResponse)
-            setQuery("")
-            setDebouncedQuery("")
-            setOpen(false)
-          }
+          /* typed zuruecksetzen: ab jetzt zeigt das Feld wieder den Namen
+             der gewaehlten Person, beziehungsweise nichts. */
+          setTyped(null)
+          setDebouncedQuery("")
+          setOpen(false)
+          onChange(
+            picked !== null && typeof picked === "object"
+              ? (picked as UserLookupResponse)
+              : null
+          )
         }}
-        inputValue={query}
-        onInputValueChange={setQuery}
+        inputValue={inputValue}
+        onInputValueChange={setTyped}
         open={open}
         onOpenChange={setOpen}
         disabled={disabled}
       >
         <ComboboxInput
           id={inputId}
-          aria-describedby={
-            description === undefined ? undefined : descriptionId
-          }
+          className="h-11"
           disabled={disabled}
+          /* Erst wenn eine Person feststeht: sonst stuende ein Kreuz an
+             einem leeren Feld. */
+          showClear={value !== null}
           placeholder={placeholder ?? t("project.people.placeholder")}
         />
         <ComboboxContent>
@@ -198,10 +197,6 @@ export function PersonCombobox({
               })
             : t("apiError.INTERNAL_ERROR")}
         </FieldError>
-      )}
-
-      {description !== undefined && (
-        <FieldDescription id={descriptionId}>{description}</FieldDescription>
       )}
 
       {/*

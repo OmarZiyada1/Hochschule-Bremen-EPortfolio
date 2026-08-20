@@ -641,7 +641,6 @@
       "editors": {
         "label": "Editor",
         "placeholder": "Search by name …",
-        "hint": "The search covers first and last name.",
         "chosen": "Assigned editors",
         "remove": "Remove {{name}} from the editorial assignment",
         "none": "No editorial assignment.",
@@ -653,16 +652,13 @@
         "person": "Member",
         "personPlaceholder": "Search by name …",
         "role": "Role",
-        "rolePlaceholder": "e.g. frontend",
+        "rolePlaceholder": "Role in the project, for example frontend",
         "remove": "Remove {{name}} from the project members",
         "chosen": "Added project members",
         "invalid": "Please check the project member entries.",
         "required": "required",
-        "roleHint": "For example frontend, research or editing.",
         "addButton": "Add member",
-        "needsPerson": "Choose a person first.",
-        "needsRole": "State a role for {{name}}.",
-        "ready": "{{name}} can be added."
+        "none": "No members added yet."
       },
       "notFound": {
         "title": "Project not found",

@@ -641,7 +641,6 @@
       "editors": {
         "label": "Redakteur:in",
         "placeholder": "Nach Namen suchen …",
-        "hint": "Gesucht wird über Vor- und Nachname.",
         "chosen": "Zugewiesene Redaktion",
         "remove": "{{name}} aus der Redaktion entfernen",
         "none": "Keine Redaktion zugewiesen.",
@@ -653,16 +652,13 @@
         "person": "Mitglied",
         "personPlaceholder": "Nach Namen suchen …",
         "role": "Rolle",
-        "rolePlaceholder": "z. B. Frontend",
+        "rolePlaceholder": "Rolle im Projekt, etwa Frontend",
         "remove": "{{name}} aus den Projektmitgliedern entfernen",
         "chosen": "Aufgenommene Projektmitglieder",
         "invalid": "Bitte prüfen Sie die Angaben zu den Projektmitgliedern.",
         "required": "Pflichtangabe",
-        "roleHint": "Zum Beispiel Frontend, Recherche oder Redaktion.",
         "addButton": "Mitglied aufnehmen",
-        "needsPerson": "Wählen Sie zuerst eine Person.",
-        "needsRole": "Geben Sie noch eine Rolle für {{name}} an.",
-        "ready": "{{name}} kann aufgenommen werden."
+        "none": "Noch keine Mitglieder aufgenommen."
       },
       "notFound": {
         "title": "Projekt nicht gefunden",

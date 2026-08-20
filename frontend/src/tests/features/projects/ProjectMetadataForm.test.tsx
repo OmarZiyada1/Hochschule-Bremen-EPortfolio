@@ -205,7 +205,7 @@ describe("ProjectMetadataForm", () => {
       "Redakteur:in",
     ]) {
       expect(
-        screen.getByLabelText(`${label} erforderlich zum Einreichen`),
+        screen.getByLabelText(`${label}* erforderlich zum Einreichen`),
         label
       ).toBeVisible()
     }

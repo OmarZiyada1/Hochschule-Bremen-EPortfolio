@@ -547,24 +547,30 @@ describe("ProjectMetadataPage", () => {
     const user = userEvent.setup()
     renderEditRoute(draft())
 
-    /* Ohne Person sagt die Zeile, was zuerst fehlt. */
-    const person = await screen.findByLabelText(/^Mitglied/)
-    expect(screen.getByText("Wählen Sie zuerst eine Person.")).toBeVisible()
+    const add = await screen.findByRole("button", {
+      name: "Mitglied aufnehmen",
+    })
+    /* Ohne Person und ohne Rolle geht nichts. */
+    expect(add).toBeDisabled()
 
-    await user.click(person)
+    await user.click(screen.getByLabelText(/^Mitglied/))
     await user.click(await screen.findByRole("option", { name: "Tom Busch" }))
 
+    /*
+     * Die gewaehlte Person bleibt im Feld stehen, statt sofort nach unten zu
+     * wandern (Vorgabe zu KAN-35).
+     */
+    await waitFor(() =>
+      expect(screen.getByLabelText(/^Mitglied/)).toHaveValue("Tom Busch")
+    )
+
     /* projectRole ist am MemberRequest @NotBlank; ohne Bezeichnung liefe der
-       PUT in ein 400, dessen Feldname sich keiner Zeile zuordnen liesse.
-       Statt den Knopf nur zu sperren, benennt die Zeile den fehlenden Teil. */
-    const add = screen.getByRole("button", { name: "Mitglied aufnehmen" })
+       PUT in ein 400, dessen Feldname sich keiner Zeile zuordnen liesse. */
     expect(add).toBeDisabled()
-    expect(
-      screen.getByText("Geben Sie noch eine Rolle für Tom Busch an.")
-    ).toBeVisible()
+
     /*
      * Beide Felder tragen die Pflichtkennzeichnung, und zwar als Text und
-     * nicht nur als Symbol (SC 1.4.1). Der Text muss erreichbar sein: ein
+     * nicht nur als Zeichen (SC 1.4.1). Der Text muss erreichbar sein: ein
      * sr-only unter aria-hidden besteht getByText und wird trotzdem nie
      * vorgelesen (Befund aus KAN-29).
      */
@@ -577,7 +583,6 @@ describe("ProjectMetadataPage", () => {
     await user.type(screen.getByLabelText(/^Rolle/), "Frontend")
 
     await waitFor(() => expect(add).toBeEnabled())
-    expect(screen.getByText("Tom Busch kann aufgenommen werden.")).toBeVisible()
   })
 
   it("sperrt die Redaktionszuweisung fuer eine Autor:in mit der Rolle EDITOR (§5, Fussnote 3)", async () => {
