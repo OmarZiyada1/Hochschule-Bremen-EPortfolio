@@ -5,6 +5,7 @@ import { apiPaths } from "@/api/endpoints"
 import type {
   CategoryResponse,
   FacultyResponse,
+  ModuleResponse,
   SemesterResponse,
   StudyProgramResponse,
 } from "@/api/types"
@@ -17,11 +18,27 @@ import type {
  *
  * Erste Verwender: die Kennzahlen der CTA-Sektion der Startseite (KAN-31)
  * fuer faculties und studyPrograms, die Filter-Seitenleiste der
- * Projektbibliothek (KAN-64) fuer categories und semesters.
+ * Projektbibliothek (KAN-64) fuer categories und semesters, das
+ * Metadatenformular (KAN-35) fuer modules und fuer die Parameter unten.
  *
- * semesters kommt bewusst ohne active-Parameter: ein deaktiviertes Semester
- * bleibt ein gueltiger Filterwert, sonst fielen veroeffentlichte Projekte
- * aus der Suche, sobald ihr Semester vorbei ist (§3.18).
+ * <p><strong>Die Parameter sind optional, und das ist der Punkt.</strong>
+ * Ohne Angabe verhalten sich die Fabriken wie bisher, es gibt also keine
+ * Aenderung an den bestehenden Verwendern. Filtern muss aber genau das
+ * Gegenteil von Bearbeiten:
+ *
+ * <ul>
+ * <li>Die Seitenleiste braucht <em>alle</em> Semester, auch deaktivierte.
+ * Sonst fielen veroeffentlichte Projekte aus der Suche, sobald ihr Semester
+ * vorbei ist (§3.18). Das Metadatenformular braucht umgekehrt nur die
+ * aktiven, denn nur die sind waehlbar; ein inaktives ergibt 400
+ * VALIDATION_FAILED.</li>
+ * <li>Die Seitenleiste zeigt alle Studiengaenge nebeneinander, das
+ * Formular nur die der gewaehlten Fakultaet.</li>
+ * </ul>
+ *
+ * <p>Die Parameter stehen im Query-Key, nicht nur im Request. Ohne das
+ * teilten sich „alle Semester" und „nur aktive" einen Cache-Eintrag, und
+ * welche Liste die Auswahl zeigt, entschiede die Reihenfolge der Aufrufe.
  */
 export const masterDataQueries = {
   faculties: () =>
@@ -29,11 +46,19 @@ export const masterDataQueries = {
       queryKey: ["faculties"] as const,
       queryFn: () => api.get<FacultyResponse[]>(apiPaths.masterData.faculties),
     }),
-  studyPrograms: () =>
+
+  /**
+   * @param facultyId Nur Studiengaenge dieser Fakultaet (§6.1, Filter
+   *   {@code faculty}). Ohne Angabe kommen alle. Eine unbekannte ID ergibt
+   *   eine leere Liste, keinen 404.
+   */
+  studyPrograms: (facultyId?: string) =>
     queryOptions({
-      queryKey: ["studyPrograms"] as const,
+      queryKey: ["studyPrograms", { faculty: facultyId ?? null }] as const,
       queryFn: () =>
-        api.get<StudyProgramResponse[]>(apiPaths.masterData.studyPrograms),
+        api.get<StudyProgramResponse[]>(apiPaths.masterData.studyPrograms, {
+          query: { faculty: facultyId },
+        }),
     }),
   categories: () =>
     queryOptions({
@@ -41,10 +66,32 @@ export const masterDataQueries = {
       queryFn: () =>
         api.get<CategoryResponse[]>(apiPaths.masterData.categories),
     }),
-  semesters: () =>
+
+  /**
+   * @param active Nur aktive Semester (§3.18, §6.1). Ohne Angabe kommen
+   *   alle, auch die deaktivierten.
+   */
+  semesters: (active?: boolean) =>
     queryOptions({
-      queryKey: ["semesters"] as const,
+      queryKey: ["semesters", { active: active ?? null }] as const,
       queryFn: () =>
-        api.get<SemesterResponse[]>(apiPaths.masterData.semesters),
+        api.get<SemesterResponse[]>(apiPaths.masterData.semesters, {
+          query: { active },
+        }),
+    }),
+
+  /**
+   * Module (§3.9, KAN-35).
+   *
+   * @param studyProgramId Nur Module dieses Studiengangs (§6.1, Filter
+   *   {@code studyProgram}). Ohne Angabe kommen alle.
+   */
+  modules: (studyProgramId?: string) =>
+    queryOptions({
+      queryKey: ["modules", { studyProgram: studyProgramId ?? null }] as const,
+      queryFn: () =>
+        api.get<ModuleResponse[]>(apiPaths.masterData.modules, {
+          query: { studyProgram: studyProgramId },
+        }),
     }),
 }

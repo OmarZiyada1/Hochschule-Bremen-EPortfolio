@@ -81,6 +81,26 @@ export const apiPaths = {
     studyPrograms: "/api/study-programs",
     categories: "/api/categories",
     semesters: "/api/semesters",
+    /*
+     * Module (§3.9, KAN-35). Kommt spaeter als die uebrigen vier, weil erst
+     * das Metadatenformular ein Feld dafuer hat: die Filter-Seitenleiste der
+     * Projektbibliothek fuehrt bewusst keine Modul-Gruppe (KAN-64).
+     */
+    modules: "/api/modules",
+  },
+  /*
+   * Personensuche fuer Auswahlfelder (§6.1, KAN-44), eingetragen mit ihrem
+   * ersten Verwender: Redaktionszuweisung und Projektmitglieder im
+   * Metadatenformular (KAN-35).
+   *
+   * Bewusst nicht unter masterData: das sind Stammdaten, die die
+   * Administration pflegt. Dies ist eine Suche ueber Konten, und sie
+   * verlangt eine Anmeldung (§5, Zeile „Auswahlliste der Redakteur:innen
+   * lesen"). Die Antwort fuehrt ausschliesslich id, firstName und
+   * lastName; hsbEmail steht allein in der Admin-Nutzerverwaltung (§3.1).
+   */
+  users: {
+    lookup: "/api/users/lookup",
   },
   /*
    * Schlagwoerter (§6.1, §3.19, KAN-75). Bewusst neben masterData und

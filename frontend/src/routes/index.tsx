@@ -14,6 +14,8 @@ import NotFoundPage from "@/features/not-found/NotFoundPage"
 import ProfileEditPage from "@/features/portfolio/ProfileEditPage"
 import ProjectDetailPage from "@/features/projects/ProjectDetailPage"
 import ProjectListPage from "@/features/projects/ProjectListPage"
+import NewProjectPage from "@/features/projects/NewProjectPage"
+import ProjectMetadataPage from "@/features/projects/ProjectMetadataPage"
 import PublicPortfolioPage from "@/features/portfolio/PublicPortfolioPage"
 import RegisterDetailsPage from "@/features/auth/RegisterDetailsPage"
 import RegisterDonePage from "@/features/auth/RegisterDonePage"
@@ -67,22 +69,15 @@ export const routes: RouteObject[] = [
         element: <RequireRole roles={["STUDENT", "EDITOR"]} />,
         children: [
           {
+            /* Legt das Projekt mit einem vorlaeufigen Titel an und fuehrt
+               sofort auf seine Metadatenseite (KAN-35). Kein eigenes
+               Anlegeformular: es zeigte dieselben Felder ein zweites Mal. */
             path: "/projects/new",
-            element: (
-              <PlaceholderPage
-                titleKey="placeholder.title.projectNew"
-                ticket="KAN-35"
-              />
-            ),
+            element: <NewProjectPage />,
           },
           {
             path: "/projects/:projectId/metadata",
-            element: (
-              <PlaceholderPage
-                titleKey="placeholder.title.projectMetadata"
-                ticket="KAN-35"
-              />
-            ),
+            element: <ProjectMetadataPage />,
           },
           {
             path: "/projects/:projectId/editor",

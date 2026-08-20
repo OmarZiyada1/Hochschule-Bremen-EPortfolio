@@ -21,7 +21,6 @@ import {
   FieldError,
   FieldLabel,
 } from "@/components/ui/field"
-import { cn } from "@/lib/utils"
 
 /**
  * Obergrenze aus Contract §3.3: hoechstens fuenf Schlagwoerter je Projekt.
@@ -106,7 +105,6 @@ export function TagCombobox({
   onChange,
   id,
   label,
-  labelHidden = false,
   disabled = false,
   className,
 }: {
@@ -114,7 +112,6 @@ export function TagCombobox({
   onChange: (next: string[]) => void
   id?: string
   label?: string
-  labelHidden?: boolean
   disabled?: boolean
   className?: string
 }) {
@@ -213,7 +210,10 @@ export function TagCombobox({
 
   return (
     <Field className={className}>
-      <FieldLabel htmlFor={inputId} className={cn(labelHidden && "sr-only")}>
+      <FieldLabel
+        htmlFor={inputId}
+        className="type-label-xs text-muted-foreground uppercase"
+      >
         {label ?? t("project.tags.label")}
       </FieldLabel>
 

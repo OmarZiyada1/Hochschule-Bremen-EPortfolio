@@ -151,9 +151,66 @@ async function request<T>(
   }
 }
 
+/**
+ * Holt eine Datei als Blob statt als JSON.
+ *
+ * <p><strong>Warum das noetig ist:</strong> {@code GET /api/files/{id}} ist
+ * zwar in {@code SecurityConfig} offen, aber {@code FileService.download}
+ * laesst eine projektgebundene Datei nur durch, wenn die anfragende Person
+ * das Projekt lesen darf (§5, Zeile „Datei lesen"). Ein
+ * {@code <img src="/api/files/…">} schickt keinen
+ * {@code Authorization}-Header: das Token liegt im Store und nicht in einem
+ * Cookie. Das Titelbild eines Entwurfs bliebe damit stumm leer, ohne Fehler
+ * und ohne Meldung. Ueber diesen Weg traegt der Abruf das Token wie jeder
+ * andere, und aus dem Blob wird an der Verwendungsstelle eine Object-URL
+ * (Befund des frontend-reviewers zu KAN-35).
+ *
+ * <p>Fehler laufen wie ueberall als {@code ApiError} auf, damit die Anzeige
+ * einen 403 von einem 404 unterscheiden kann.
+ */
+async function requestBlob(
+  path: string,
+  options: { signal?: AbortSignal } = {}
+): Promise<Blob> {
+  const headers = new Headers()
+  const token = getToken()
+  if (token !== null) {
+    headers.set("Authorization", `Bearer ${token}`)
+  }
+
+  let response: Response
+  try {
+    response = await fetch(buildUrl(path), {
+      method: "GET",
+      headers,
+      signal: options.signal,
+    })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw error
+    }
+    throw transportError(path)
+  }
+
+  if (!response.ok) {
+    let body: unknown = null
+    try {
+      body = await response.json()
+    } catch {
+      // kein JSON: apiErrorFromBody faellt auf den Transportfehler zurueck
+    }
+    throw apiErrorFromBody(body, response.status, path)
+  }
+
+  return response.blob()
+}
+
 export const api = {
   get<T>(path: string, options?: Omit<RequestOptions, "body">): Promise<T> {
     return request<T>("GET", path, options)
+  },
+  getBlob(path: string, options?: { signal?: AbortSignal }): Promise<Blob> {
+    return requestBlob(path, options)
   },
   post<T>(
     path: string,

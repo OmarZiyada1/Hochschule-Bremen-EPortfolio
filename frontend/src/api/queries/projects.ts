@@ -6,9 +6,11 @@ import type { PageResponse } from "@/api/page"
 import type {
   Degree,
   ProjectCardResponse,
+  ProjectCreateRequest,
   ProjectDetailResponse,
   ProjectStatus,
   ProjectType,
+  ProjectUpdateRequest,
   ReactionResponse,
 } from "@/api/types"
 
@@ -148,6 +150,50 @@ export const projectQueries = {
       queryFn: () =>
         api.get<ProjectDetailResponse>(apiPaths.projects.detail(projectId)),
     }),
+}
+
+/**
+ * POST /api/projects (§6.1, §4.1 Zeile „Anlegen", KAN-35): legt ein Projekt
+ * im Status {@code DRAFT} an und antwortet <strong>201</strong> mit der
+ * vollstaendigen Detailantwort.
+ *
+ * <p><strong>title ist das einzige Pflichtfeld.</strong> Alles Weitere darf
+ * fehlen, weil ein Entwurf ein Arbeitszustand ist; die Vollstaendigkeit
+ * verlangt erst das Einreichen (§3.3). Ein Admin-Konto bekommt hier
+ * <strong>403</strong> {@code NO_PERMISSION}: die Administrationsseite
+ * verwaltet fremde Projekte, sie verfasst keine eigenen (§5, Fussnote 10).
+ */
+export function createProject(
+  request: ProjectCreateRequest
+): Promise<ProjectDetailResponse> {
+  return api.post<ProjectDetailResponse>(apiPaths.projects.list, request)
+}
+
+/**
+ * PUT /api/projects/{id} (§6.1, KAN-35): ersetzt die Metadaten des
+ * Projekts. Der Inhalt laeuft ueber einen eigenen Endpoint und wird hier
+ * nie mitgeschickt (§6.1).
+ *
+ * <p><strong>Der Body traegt immer die ganze Metadatenkarte.</strong> Die
+ * Einzelfelder haben ersetzende Semantik: was fehlt oder auf {@code null}
+ * steht, wird geloescht. Gebaut wird er deshalb ausschliesslich ueber
+ * {@code toProjectUpdateRequest} aus der zuletzt bekannten Detailantwort
+ * (features/projects/ProjectMetadataForm.schema.ts), nie von Hand aus
+ * einzelnen Feldern.
+ *
+ * <p><strong>Bei 409 PROJECT_VERSION_CONFLICT wird nicht wiederholt</strong>
+ * (§6.4, Skill frontend-api Abschnitt 6). Ein zweiter Versuch mit der neuen
+ * Version ueberschriebe genau die fremde Aenderung, vor der das Locking
+ * schuetzt; die aufrufende Stelle zeigt stattdessen den Konflikt.
+ */
+export function updateProject(
+  projectId: string,
+  request: ProjectUpdateRequest
+): Promise<ProjectDetailResponse> {
+  return api.put<ProjectDetailResponse>(
+    apiPaths.projects.detail(projectId),
+    request
+  )
 }
 
 /**

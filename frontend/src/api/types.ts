@@ -20,6 +20,38 @@ export type ProjectCardResponse = ApiSchemas["ProjectCardResponse"]
 /** Projektdetail, Antwort der Workflow-Endpoints (§6.1, KAN-69). */
 export type ProjectDetailResponse = ApiSchemas["ProjectDetailResponse"]
 
+/**
+ * Anlegen und Metadaten aendern, POST /api/projects und
+ * PUT /api/projects/{id} (§6.1, KAN-35).
+ *
+ * <p><strong>Die beiden Requests sind nicht dasselbe.</strong>
+ * ProjectUpdateRequest fuehrt zusaetzlich das Pflichtfeld version fuer das
+ * Optimistic Locking (§6.4), und seine Einzelfelder haben ersetzende
+ * Semantik: ein fehlendes oder null gesetztes Feld loescht den Wert. Beim
+ * Anlegen gibt es nichts zu loeschen, dort heisst ein fehlendes Feld nur
+ * „noch nicht gesetzt".
+ */
+export type ProjectCreateRequest = ApiSchemas["ProjectCreateRequest"]
+export type ProjectUpdateRequest = ApiSchemas["ProjectUpdateRequest"]
+
+/**
+ * Projektmitglied im Request (§3.13): Co-Autor:in oder Mitwirkende mit
+ * freier Funktionsbezeichnung. Nicht zu verwechseln mit der zugewiesenen
+ * Redaktion, die die System-Rolle EDITOR traegt (§3.3).
+ *
+ * Nur die Request-Seite hat einen Verwender; MemberResponse bekommt keinen
+ * Alias auf Vorrat, das Formular liest die Antwort ueber
+ * ProjectDetailResponse.members.
+ */
+export type MemberRequest = ApiSchemas["MemberRequest"]
+
+/**
+ * Person aus GET /api/users/lookup (§6.1, KAN-44). Fuehrt ausschliesslich
+ * id, firstName und lastName: der Endpoint ist kein Personenverzeichnis,
+ * und hsbEmail verlaesst den Server hier nicht (§3.1).
+ */
+export type UserLookupResponse = ApiSchemas["UserLookupResponse"]
+
 /** Registrierung und Verifizierung nach Contract §3.1.1, §6.1 (KAN-33). */
 export type RegisterRequest = ApiSchemas["RegisterRequest"]
 export type VerifyRequest = ApiSchemas["VerifyRequest"]
@@ -88,6 +120,13 @@ export type CategoryResponse = ApiSchemas["CategoryResponse"]
 /** Semester aus GET /api/semesters (Contract 3.18, seit v45 Stammdaten). */
 export type SemesterResponse = ApiSchemas["SemesterResponse"]
 
+/**
+ * Modul aus GET /api/modules (Contract 3.9), eingetragen mit seinem ersten
+ * Verwender KAN-35. Traegt studyProgramId, weil dasselbe Feld zugleich der
+ * Filter ist: GET /api/modules?studyProgram={id}.
+ */
+export type ModuleResponse = ApiSchemas["ModuleResponse"]
+
 /** Schlagwort aus GET /api/tags (Contract 3.19, seit v57 Stammdaten). */
 export type TagResponse = ApiSchemas["TagResponse"]
 
@@ -110,11 +149,12 @@ export type BlockType = BlockResponse["type"]
  * Bausteine der Projektdetailseite (Contract 3.12, 6.1; KAN-32).
  * ReactionResponse traegt allein den Zaehler nach der Aenderung (3.10).
  *
- * Bewusst nur diese beiden: fuer Person, Mitglied und Referenz entstehen
- * keine Aliase auf Vorrat. Die Detailseite reicht das ganze Projektobjekt
- * durch, und fuer die Referenz gibt es mit ProjectReference oben bereits
- * einen Namen. Zwei Namen fuer denselben Schema-Typ in einer Datei sind eine
- * Fehlerquelle, kein Komfort.
+ * Fuer die Referenz entsteht hier kein weiterer Alias: dafuer steht oben
+ * bereits ProjectReference. Zwei Namen fuer denselben Schema-Typ in einer
+ * Datei sind eine Fehlerquelle, kein Komfort. Der Mitglieds-Typ hat mit
+ * KAN-35 einen Verwender bekommen und steht seitdem oben bei den
+ * Projekt-Requests, nicht mehr auf Vorrat; fuer PersonResponse gibt es
+ * weiterhin keinen, die Detailseite reicht das ganze Projektobjekt durch.
  */
 export type StatusHistoryResponse = ApiSchemas["StatusHistoryResponse"]
 export type ReactionResponse = ApiSchemas["ReactionResponse"]

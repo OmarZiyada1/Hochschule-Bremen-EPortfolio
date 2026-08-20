@@ -88,6 +88,23 @@ Modale 16px). Eine Abweichung ist entweder eine entschiedene Frage aus der
 Klärungsrunde (0b) mit Begründung im Übergabekommentar, oder sie ist ein
 Fehler. „Sieht ähnlich aus" ist keine Umsetzung.
 
+### Eine stehende Ausnahme: kein Zurück-Link neben der Brotkrume
+
+Mehrere Figma-Templates zeigen unter dem Brotkrumenband zusätzlich einen
+Link „Zurück zu …“. **Dieser Link wird nicht gebaut**, auch wenn er im
+Template steht. Das Brotkrumenband trägt den Weg zurück bereits, und zwar
+vollständig: ein zweiter Link daneben sagt dasselbe ein zweites Mal und
+verschiebt die Überschrift nach unten.
+
+Die Entscheidung ist nicht neu und gilt für alle Seiten: mit KAN-69 ist der
+Link auf „Profil bearbeiten" ersatzlos entfallen, mit KAN-35 auf
+„Projekt-Metadaten". Sie muss nicht bei jeder Seite erneut erfragt werden,
+und sie gehört auch nicht in die Klärungsrunde.
+
+Nicht gemeint ist die Handlung in einem Leerzustand: eine 404- oder
+Kein-Zugriff-Fläche braucht ihren Weg hinaus, denn dort steht sonst nichts,
+und der gehört als `action` an `EmptyState`.
+
 Zwei Dinge zeigt das Template **nicht**, und beide bleiben trotzdem
 Pflicht:
 
