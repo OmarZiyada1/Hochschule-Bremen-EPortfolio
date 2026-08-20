@@ -82,6 +82,9 @@ export type CategoryResponse = ApiSchemas["CategoryResponse"]
 /** Semester aus GET /api/semesters (Contract 3.18, seit v45 Stammdaten). */
 export type SemesterResponse = ApiSchemas["SemesterResponse"]
 
+/** Schlagwort aus GET /api/tags (Contract 3.19, seit v57 Stammdaten). */
+export type TagResponse = ApiSchemas["TagResponse"]
+
 /**
  * Blockliste eines Projekts nach Contract 3.4 und 6.1 (KAN-10). Die
  * Huellen kommen wie alles andere aus der Generierung; von Hand

@@ -11,6 +11,8 @@ import de.hsbremen.eportfolio.masterdata.CategoryRepository;
 import de.hsbremen.eportfolio.masterdata.FacultyRepository;
 import de.hsbremen.eportfolio.masterdata.Semester;
 import de.hsbremen.eportfolio.masterdata.SemesterRepository;
+import de.hsbremen.eportfolio.masterdata.Tag;
+import de.hsbremen.eportfolio.masterdata.TagRepository;
 import de.hsbremen.eportfolio.masterdata.TestMasterData;
 import de.hsbremen.eportfolio.portfolio.Portfolio;
 import de.hsbremen.eportfolio.portfolio.PortfolioRepository;
@@ -85,6 +87,9 @@ class ProjectListQueryCountTest {
 	private SemesterRepository semesterRepository;
 
 	@Autowired
+	private TagRepository tagRepository;
+
+	@Autowired
 	private PortfolioRepository portfolioRepository;
 
 	@Autowired
@@ -98,6 +103,10 @@ class ProjectListQueryCountTest {
 
 	private Semester semester;
 
+	private Tag tagA;
+
+	private Tag tagB;
+
 	private User author;
 
 	private User reacting;
@@ -106,6 +115,15 @@ class ProjectListQueryCountTest {
 	void createUsers() {
 		semester = semesterRepository.saveAndFlush(
 				TestMasterData.semesterWithoutId("KAN16-N1 " + UUID.randomUUID(), 1));
+		/*
+		 * Seit §3.19 sind Tags Stammdatenzeilen, die sich alle Projekte
+		 * teilen. Genau zwei davon je Lauf, und create() haengt sie an jedes
+		 * Projekt: die Sammelabfrage darf mit der Zahl der Kacheln nicht
+		 * wachsen, das ist die Zusage dieses Tests. Der gewuerfelte Namensteil
+		 * haelt den Unique-Index auf lower(name) von frueheren Laeufen frei.
+		 */
+		tagA = tagRepository.saveAndFlush(TestMasterData.tagWithoutId("kan16-a-" + UUID.randomUUID()));
+		tagB = tagRepository.saveAndFlush(TestMasterData.tagWithoutId("kan16-b-" + UUID.randomUUID()));
 		author = userRepository.saveAndFlush(TestUser.activeWithoutId(Role.STUDENT, "nicht-relevant"));
 		reacting = userRepository.saveAndFlush(TestUser.activeWithoutId(Role.STUDENT, "nicht-relevant"));
 
@@ -154,7 +172,7 @@ class ProjectListQueryCountTest {
 			project.setPublishedAt(Instant.now());
 			project = projectRepository.saveAndFlush(project);
 
-			project.getTags().addAll(List.of("tag-a", "tag-b"));
+			project.getTags().addAll(List.of(tagA, tagB));
 			projectRepository.saveAndFlush(project);
 
 			reactionRepository.saveAndFlush(TestReaction.withoutId(project, reacting));

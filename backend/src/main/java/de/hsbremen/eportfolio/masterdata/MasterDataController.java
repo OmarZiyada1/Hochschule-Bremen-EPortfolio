@@ -5,6 +5,7 @@ import de.hsbremen.eportfolio.masterdata.dto.FacultyResponse;
 import de.hsbremen.eportfolio.masterdata.dto.ModuleResponse;
 import de.hsbremen.eportfolio.masterdata.dto.SemesterResponse;
 import de.hsbremen.eportfolio.masterdata.dto.StudyProgramResponse;
+import de.hsbremen.eportfolio.masterdata.dto.TagResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -18,10 +19,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Die vier Stammdaten-Endpoints aus API-Contract §6.1.
+ * Die Stammdaten-Endpoints aus API-Contract §6.1.
  *
- * <p>Alle vier sind PUBLIC (§5) und in {@code SecurityConfig} bereits als
- * GET-Pfad freigegeben. Dort war die Regel schon vor dem Controller hinterlegt,
+ * <p>Alle sind PUBLIC (§5) und in {@code SecurityConfig} als GET-Pfad
+ * freigegeben. Dort war die Regel schon vor dem Controller hinterlegt,
  * damit er nicht versehentlich hinter {@code anyRequest().authenticated()}
  * landet.
  *
@@ -101,5 +102,24 @@ public class MasterDataController {
 					+ "kommen alle Semester, auch die deaktivierten.")
 			@RequestParam(name = "active", required = false) Boolean active) {
 		return masterDataService.semesters(active);
+	}
+
+	@Operation(summary = "Schlagwoerter lesen",
+			description = "Die gebraeuchlichsten Schlagwoerter als Vorschlaege fuer das "
+					+ "Auswahlfeld im Metadaten-Formular (§3.19). Sortiert nach "
+					+ "Verwendungszahl absteigend, bei Gleichstand nach Name. Ohne "
+					+ "Paginierung: die Trefferzahl begrenzt \"limit\", die Auswahl "
+					+ "verfeinert \"q\".")
+	@ApiResponse(responseCode = "200", description = "Liste der Schlagwoerter mit Verwendungszahl.")
+	@ApiResponse(responseCode = "400", description = "\"limit\" liegt ausserhalb von 1 bis 100.")
+	@GetMapping("/tags")
+	public List<TagResponse> tags(
+			@Parameter(description = "Optionaler Filter auf den Namen: ohne Ruecksicht auf "
+					+ "Gross- und Kleinschreibung, an beliebiger Stelle im Wort. Ohne "
+					+ "Angabe kommen die haeufigsten Schlagwoerter.")
+			@RequestParam(name = "q", required = false) String q,
+			@Parameter(description = "Obergrenze der Trefferzahl, 1 bis 100. Ohne Angabe 20.")
+			@RequestParam(name = "limit", required = false) Integer limit) {
+		return masterDataService.tags(q, limit);
 	}
 }

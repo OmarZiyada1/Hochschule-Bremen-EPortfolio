@@ -382,6 +382,29 @@ describe("Grenzen der Tokenschicht", () => {
    */
   const uiFiles = filesUnder(join(srcDir, "components", "ui"))
 
+  /*
+   * Variablen, die Base UI zur Laufzeit auf den Positioner schreibt, also
+   * Masse der Ankerflaeche und des verbleibenden Platzes im Fenster. Sie
+   * gehoeren der Bibliothek und nicht der Tokenschicht; die Liste steht in
+   * node_modules/@base-ui/react/*\/positioner/*PositionerCssVars.js und ist von
+   * dort uebernommen.
+   *
+   * Sie hier nachzutragen waere falsch und nicht bloss unnoetig: eine eigene
+   * Definition von --anchor-width setzte einen festen Wert an eine Stelle, an
+   * der Base UI die tatsaechliche Breite meldet, und die Auswahlliste einer
+   * Combobox waere danach immer gleich breit. Aufgefallen mit der Primitive
+   * combobox (KAN-75); popover.tsx entging der Pruefung nur, weil es
+   * --transform-origin ueber Tailwinds Klammersyntax nutzt und nicht ueber
+   * var().
+   */
+  const BASE_UI_POSITIONER_VARS = new Set([
+    "anchor-height",
+    "anchor-width",
+    "available-height",
+    "available-width",
+    "transform-origin",
+  ])
+
   it("laesst keine Registry-Datei auf eine undefinierte Variable zeigen", () => {
     const indexCss = withoutComments(
       readFileSync(join(srcDir, "index.css"), "utf8")
@@ -408,7 +431,8 @@ describe("Grenzen der Tokenschicht", () => {
            ("--gap": spacing in toggle-group.tsx). Wer nur die erste prueft,
            meldet die zweite faelschlich als Befund. */
         const setInFile = new RegExp(`["']?--${name}["']?\\s*:`).test(content)
-        if (setInFile || name.startsWith("tw-")) continue
+        if (setInFile || name.startsWith("tw-") || BASE_UI_POSITIONER_VARS.has(name))
+          continue
 
         expect(
           defined.has(name),

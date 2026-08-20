@@ -9,11 +9,10 @@ import de.hsbremen.eportfolio.masterdata.Faculty;
 import de.hsbremen.eportfolio.masterdata.Module;
 import de.hsbremen.eportfolio.masterdata.Semester;
 import de.hsbremen.eportfolio.masterdata.StudyProgram;
+import de.hsbremen.eportfolio.masterdata.Tag;
 import de.hsbremen.eportfolio.user.User;
 import jakarta.persistence.CascadeType;
-import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -120,7 +119,20 @@ public class Project extends AuditableEntity {
 	private Long version;
 
 	/**
-	 * Freie Schlagwoerter, hoechstens fuenf (§3.3).
+	 * Schlagwoerter, hoechstens fuenf (§3.3, §3.19).
+	 *
+	 * <p><strong>Seit Contract v57 ein Bezug und keine Zeichenkette mehr.</strong>
+	 * Bis dahin stand der Text in {@code project_tag.tag}, womit
+	 * &bdquo;Nachhaltigkeit&ldquo; und &bdquo;nachhaltigkeit&ldquo; zwei
+	 * verschiedene Tags waren. Nach aussen aendert das nichts: Anfragen und
+	 * Antworten fuehren {@code tags} weiterhin als Liste von Namen, nur steht
+	 * dahinter jetzt je Wort genau eine Zeile.
+	 *
+	 * <p>{@code project_tag} ist dieselbe Tabelle wie zuvor, jetzt aber eine
+	 * Verknuepfungstabelle mit {@code tag_id} statt einer Wertetabelle. Die
+	 * Richtung ist einseitig: {@link de.hsbremen.eportfolio.masterdata.Tag}
+	 * traegt keine Rueckseite auf {@code Project}, weil eine Stammdatenzeile kein
+	 * Einstieg in den Projektbestand sein soll.
 	 *
 	 * <p>{@code @BatchSize} ist die Antwort auf das N+1-Problem der Kachelliste:
 	 * ohne die Angabe laedt Hibernate die Tags jedes Treffers mit einer eigenen
@@ -130,11 +142,12 @@ public class Project extends AuditableEntity {
 	 * weil eine Sammlung mitzuladen die Paginierung in den Arbeitsspeicher
 	 * verschieben wuerde.
 	 */
-	@ElementCollection
-	@CollectionTable(name = "project_tag", joinColumns = @JoinColumn(name = "project_id"))
-	@Column(name = "tag", length = 64)
+	@ManyToMany(fetch = FetchType.LAZY)
+	@JoinTable(name = "project_tag",
+			joinColumns = @JoinColumn(name = "project_id"),
+			inverseJoinColumns = @JoinColumn(name = "tag_id"))
 	@BatchSize(size = 50)
-	private Set<String> tags = new HashSet<>();
+	private Set<Tag> tags = new HashSet<>();
 
 	@ManyToMany(fetch = FetchType.LAZY)
 	@JoinTable(name = "project_editor",
@@ -263,11 +276,11 @@ public class Project extends AuditableEntity {
 		return version;
 	}
 
-	public Set<String> getTags() {
+	public Set<Tag> getTags() {
 		return tags;
 	}
 
-	public void setTags(Set<String> tags) {
+	public void setTags(Set<Tag> tags) {
 		this.tags = tags;
 	}
 

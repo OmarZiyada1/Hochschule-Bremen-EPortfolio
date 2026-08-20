@@ -40,6 +40,7 @@ Grundlage ist der Bestand aus Contract v17: 337 Bezeichner, 120 Java-Dateien,
 | `Fakultaet` | `Faculty` | `faculty` |
 | `Modul` | `Module` | `module` |
 | `Semester` | `Semester` | `semester` |
+| `Schlagwort` | `Tag` | `tag` |
 | `Reaktion` | `Reaction` | `reaction` |
 | `Datei` | `StoredFile` | `stored_file` |
 | `Projektmitglied` | `ProjectMember` | `project_member` |
@@ -50,7 +51,7 @@ Grundlage ist der Bestand aus Contract v17: 337 Bezeichner, 120 Java-Dateien,
 | `VerifizierungsCode` | `VerificationCode` | `verification_code` |
 
 Join- und Nebentabellen: `projekt_redakteur` wird `project_editor`,
-`projekt_tag` wird `project_tag`.
+`projekt_tag` wird `project_tag`. Seit KAN-75 ist das keine Wertetabelle mehr, sondern die Verknüpfungstabelle zwischen `project` und `tag` (Contract v57, §3.19); der Text steht in `tag.name`, die Zuordnung trägt nur noch `tag_id`.
 
 ### Drei Namen, die nicht die wörtliche Übersetzung sind
 
@@ -167,12 +168,18 @@ stünde.
 | `aktiv` | `active` |
 | `sortierung` | `sortOrder` |
 | `richtung` (`HOCH` · `RUNTER`) | `direction` (`UP` · `DOWN`) |
+| `verwendungszahl` | `usageCount` |
 
-Diese drei Namen kommen mit dem `Semester` als Stammdatenzeile dazu (Contract
+Die ersten drei Namen kommen mit dem `Semester` als Stammdatenzeile dazu (Contract
 v45, §3.18, KAN-65). `sortierung` wird `sortOrder` und nicht `orderIndex`: der
 Blockindex nummeriert eine Position innerhalb eines Dokuments, hier ordnet eine
 vom Admin gesetzte Zahl eine Liste. Zwei verschiedene Sachverhalte tragen
 deshalb zwei verschiedene Namen. Die Spalte heißt `sort_order`.
+
+`verwendungszahl` wird `usageCount` und kommt mit dem `Tag` als
+Stammdatenzeile dazu (Contract v57, §3.19, KAN-75). Sie ist kein Feld der
+Entity, sondern eine Aggregation über `project_tag`, und steht deshalb nur in
+`TagResponse`, nicht in `Tag`. Eine Spalte gibt es dafür nicht.
 
 ### Zeitstempel, Historie, Top-10, Verifizierung
 

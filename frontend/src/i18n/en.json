@@ -442,6 +442,19 @@
       "MASTER": "Master",
       "MBA": "MBA"
     },
+    "tags": {
+      "label": "Tags",
+      "placeholder": "Search or create a tag …",
+      "selected": "Selected tags",
+      "create": "Add “{{name}}”",
+      "empty": "No tag found.",
+      "loading": "Loading suggestions …",
+      "max": "At most {{max}} tags.",
+      "limitReached": "More than {{max}} tags are not possible. Remove one to add another.",
+      "remove": "Remove {{name}}",
+      "hits_one": "{{count}} suggestion",
+      "hits_other": "{{count}} suggestions"
+    },
     "card": {
       "reactions_one": "{{count}} reaction",
       "reactions_other": "{{count}} reactions"

@@ -442,6 +442,19 @@
       "MASTER": "Master",
       "MBA": "MBA"
     },
+    "tags": {
+      "label": "Schlagwörter",
+      "placeholder": "Schlagwort suchen oder anlegen …",
+      "selected": "Gewählte Schlagwörter",
+      "create": "„{{name}}“ hinzufügen",
+      "empty": "Kein Schlagwort gefunden.",
+      "loading": "Vorschläge werden geladen …",
+      "max": "Höchstens {{max}} Schlagwörter.",
+      "limitReached": "Mehr als {{max}} Schlagwörter sind nicht möglich. Entfernen Sie eines, um ein anderes hinzuzufügen.",
+      "remove": "{{name}} entfernen",
+      "hits_one": "{{count}} Vorschlag",
+      "hits_other": "{{count}} Vorschläge"
+    },
     "card": {
       "reactions_one": "{{count}} Reaktion",
       "reactions_other": "{{count}} Reaktionen"

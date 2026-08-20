@@ -1,6 +1,9 @@
 package de.hsbremen.eportfolio.masterdata;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -11,15 +14,25 @@ import de.hsbremen.eportfolio.masterdata.dto.FacultyResponse;
 import de.hsbremen.eportfolio.masterdata.dto.ModuleResponse;
 import de.hsbremen.eportfolio.masterdata.dto.SemesterResponse;
 import de.hsbremen.eportfolio.masterdata.dto.StudyProgramResponse;
+import de.hsbremen.eportfolio.common.error.ValidationException;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 /**
- * Fachliche Tests der vier Lesepfade aus §6.1: Abbildung Entity auf DTO und die
+ * Fachliche Tests der Lesepfade aus §6.1: Abbildung Entity auf DTO und die
  * Frage, welche Abfrage der Filter ausloest.
+ *
+ * <p>Bei den Schlagwoertern (§3.19) kommt eine dritte Frage hinzu, die sich nur
+ * hier stellen laesst: <em>womit</em> der Service die Abfrage aufruft. Muster
+ * und Obergrenze entstehen im Service, nicht in der Datenbank, und ein Fehler
+ * darin faellt gegen die echte Datenbank nicht auf, weil das Ergebnis auch dann
+ * plausibel aussieht.
  *
  * <p>Die Repositories sind Mocks. Dass die Sortierung tatsaechlich greift, kann
  * hier nicht geprueft werden: sie steckt im Methodennamen der Abfrage und wird
@@ -39,6 +52,8 @@ class MasterDataServiceTest {
 
 	private SemesterRepository semesterRepository;
 
+	private TagRepository tagRepository;
+
 	private MasterDataService service;
 
 	@BeforeEach
@@ -48,8 +63,9 @@ class MasterDataServiceTest {
 		studyProgramRepository = mock(StudyProgramRepository.class);
 		moduleRepository = mock(ModuleRepository.class);
 		semesterRepository = mock(SemesterRepository.class);
+		tagRepository = mock(TagRepository.class);
 		service = new MasterDataService(categoryRepository, facultyRepository, studyProgramRepository,
-				moduleRepository, semesterRepository);
+				moduleRepository, semesterRepository, tagRepository);
 	}
 
 	// --- Kategorien --------------------------------------------------------
@@ -203,5 +219,51 @@ class MasterDataServiceTest {
 		assertThat(service.studyPrograms(null)).singleElement()
 				.extracting(StudyProgramResponse::abbreviation)
 				.isNull();
+	}
+
+	// --- Schlagwoerter (§3.19) ---------------------------------------------
+
+	@Test
+	@DisplayName("Ohne Suchbegriff ist das Muster wirkungslos und die Vorgabe greift")
+	void tagsWithoutQueryUsesDefaultLimit() {
+		when(tagRepository.findUsage(any(), any())).thenReturn(List.of());
+
+		service.tags(null, null);
+
+		ArgumentCaptor<String> muster = ArgumentCaptor.forClass(String.class);
+		ArgumentCaptor<Pageable> seite = ArgumentCaptor.forClass(Pageable.class);
+		verify(tagRepository).findUsage(muster.capture(), seite.capture());
+
+		assertThat(muster.getValue()).isEqualTo("%");
+		assertThat(seite.getValue())
+				.isEqualTo(PageRequest.of(0, MasterDataService.TAG_LIMIT_DEFAULT));
+	}
+
+	@Test
+	@DisplayName("Die like-Platzhalter der Eingabe werden entwertet, das Maskierzeichen zuerst")
+	void tagsEscapeWildcardsInQuery() {
+		when(tagRepository.findUsage(any(), any())).thenReturn(List.of());
+
+		// Enthaelt alle drei Sonderzeichen und zusaetzlich innere
+		// Mehrfach-Leerzeichen: das Ergebnis zeigt beides auf einmal.
+		service.tags("50%  A!_B", 5);
+
+		ArgumentCaptor<String> muster = ArgumentCaptor.forClass(String.class);
+		verify(tagRepository).findUsage(muster.capture(), eq(PageRequest.of(0, 5)));
+
+		// Das Maskierzeichen wird zuerst verdoppelt, sonst maskierte die zweite
+		// Ersetzung die Maskierung der ersten ein zweites Mal.
+		assertThat(muster.getValue()).isEqualTo("%50!% a!!!_b%");
+	}
+
+	@Test
+	@DisplayName("Ein limit ausserhalb von 1 bis 100 ergibt 400, ohne die Datenbank zu fragen")
+	void tagsRejectLimitOutOfRange() {
+		for (int outOfRange : new int[] { 0, -1, MasterDataService.TAG_LIMIT_MAX + 1 }) {
+			assertThatThrownBy(() -> service.tags(null, outOfRange))
+					.isInstanceOf(ValidationException.class)
+					.hasMessageContaining("limit");
+		}
+		verifyNoMoreInteractions(tagRepository);
 	}
 }

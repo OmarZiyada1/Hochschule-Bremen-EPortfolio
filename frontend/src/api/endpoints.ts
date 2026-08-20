@@ -82,4 +82,19 @@ export const apiPaths = {
     categories: "/api/categories",
     semesters: "/api/semesters",
   },
+  /*
+   * Schlagwoerter (§6.1, §3.19, KAN-75). Bewusst neben masterData und
+   * nicht darin, obwohl derselbe Controller sie ausliefert: die vier
+   * Listen dort sind vollstaendig und werden einmal geladen, diese ist
+   * eine Vorschlagsliste, die beim Tippen neu abgefragt wird. Die
+   * Nachbarschaft in endpoints.ts suggerierte sonst eine Gleichartigkeit,
+   * die es nicht gibt.
+   *
+   * Der Endpoint kennt zwei Parameter, gesendet wird nur q. limit bleibt
+   * bewusst beim Serverstandard von 20: das Auswahlfeld zeigt Vorschlaege
+   * und keine Gesamtliste, und wer mehr sehen will, tippt.
+   */
+  tags: {
+    list: "/api/tags",
+  },
 } as const

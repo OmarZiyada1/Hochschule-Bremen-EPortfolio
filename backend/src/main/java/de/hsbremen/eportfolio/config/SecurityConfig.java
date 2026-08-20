@@ -196,6 +196,15 @@ public class SecurityConfig {
 					// fuer angemeldete Autor:innen. Eine Rollenregel braucht
 					// der Pfad nicht, schon Studierende nutzen ihn fuer die
 					// Redaktionszuweisung (§5, Fussnote 3).
+					// /api/tags kam mit KAN-75 dazu und steht aus demselben Grund
+					// wie /api/semesters bei den uebrigen Stammdatenlisten: §6.1
+					// fuehrt den Endpoint als PUBLIC. Die Vorschlagsliste enthaelt
+					// nur Woerter und ihre Verwendungszahl, keine Projektbezuege;
+					// aus ihr laesst sich nicht ablesen, welches Projekt welches
+					// Tag traegt, auch nicht fuer Entwuerfe. Nur GET: geschrieben
+					// wird an dieser Tabelle allein als Nebenwirkung von
+					// POST/PUT /api/projects, und die fallen unter
+					// authenticated().
 					.requestMatchers(HttpMethod.GET,
 							"/api/projects", "/api/projects/*",
 							"/api/projects/*/blocks",
@@ -204,7 +213,7 @@ public class SecurityConfig {
 							"/api/files/*",
 							"/api/categories", "/api/faculties",
 							"/api/study-programs", "/api/modules",
-							"/api/semesters",
+							"/api/semesters", "/api/tags",
 							"/api/top10").permitAll()
 
 					// HEAD auf /api/files/* kam mit KAN-72 dazu, zusammen mit
