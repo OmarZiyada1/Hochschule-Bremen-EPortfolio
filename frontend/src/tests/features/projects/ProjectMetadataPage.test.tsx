@@ -35,7 +35,6 @@ import { AppUnderTest, LocationProbe, signInAs } from "@/tests/routes/helpers"
  */
 
 const PROJECT_ID = "8f14e45f-ceea-467a-9c9e-1f1e3a3d4b5c"
-const NEW_PROJECT_ID = "1c2b3a4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d"
 
 const FACULTIES: FacultyResponse[] = [
   { id: "f-4", name: "Fakultät 4", abbreviation: "FK4" },
@@ -157,7 +156,6 @@ function ProbedPage() {
 function renderPage(path: string) {
   return renderWithProviders(
     <Routes>
-      <Route path="/projects/new" element={<ProbedPage />} />
       <Route path="/projects/:projectId/metadata" element={<ProbedPage />} />
       {/* Auffangroute, damit die Adresse nach einer Weiterleitung noch
           ablesbar ist: ohne sie verschwindet LocationProbe mit der
@@ -178,53 +176,6 @@ function renderEditRoute(project: ProjectDetailResponse) {
 describe("ProjectMetadataPage", () => {
   beforeEach(() => {
     requests = []
-  })
-
-  it("legt ein Projekt mit dem Titel allein an und fuehrt auf die Metadaten-Route", async () => {
-    const user = userEvent.setup()
-    signInAs("STUDENT")
-    server.use(
-      ...masterDataHandlers(),
-      ownPortfolioHandler(),
-      currentUserHandler(),
-      detailHandler(draft({ id: NEW_PROJECT_ID, title: "Neues Projekt" })),
-      http.post("*/api/projects", async ({ request }) => {
-        requests.push({
-          method: "POST",
-          url: new URL(request.url),
-          body: await request.json(),
-        })
-        return HttpResponse.json(
-          draft({ id: NEW_PROJECT_ID, title: "Neues Projekt" }),
-          { status: 201 }
-        )
-      })
-    )
-
-    renderWithProviders(
-      <>
-        <AppUnderTest />
-        <LocationProbe />
-      </>,
-      "/projects/new"
-    )
-
-    await user.type(
-      await screen.findByLabelText("Projekttitel"),
-      "Neues Projekt"
-    )
-    await user.click(screen.getByRole("button", { name: "Projekt anlegen" }))
-
-    await waitFor(() =>
-      expect(screen.getByTestId("pathname")).toHaveTextContent(
-        `/projects/${NEW_PROJECT_ID}/metadata`
-      )
-    )
-
-    const post = requests.find((entry) => entry.method === "POST")
-    expect(post?.body).toMatchObject({ title: "Neues Projekt" })
-    /* Beim Anlegen gibt es keinen Stand, gegen den zu pruefen waere. */
-    expect(post?.body).not.toHaveProperty("version")
   })
 
   it("zeigt das dreistufige Brotkrumenband, dessen letzte Stufe nicht verlinkt ist", async () => {
@@ -273,45 +224,6 @@ describe("ProjectMetadataPage", () => {
     ).toBeVisible()
     /* Das Formular entsteht gar nicht erst. */
     expect(screen.queryByLabelText("Projekttitel")).not.toBeInTheDocument()
-  })
-
-  it("macht einen trotzdem eintreffenden 403 NO_PERMISSION sichtbar", async () => {
-    const user = userEvent.setup()
-    signInAs("STUDENT")
-    server.use(
-      ...masterDataHandlers(),
-      http.post("*/api/projects", () =>
-        apiErrorResponse(403, "NO_PERMISSION", "/api/projects")
-      )
-    )
-
-    renderPage("/projects/new")
-
-    await user.type(await screen.findByLabelText("Projekttitel"), "Versuch")
-    await user.click(screen.getByRole("button", { name: "Projekt anlegen" }))
-
-    /* Die Sichtbarkeitsregel im Routing ist Bequemlichkeit, keine
-       Sicherheitsmassnahme (§5): der Serverfehler wird angezeigt. */
-    expect(
-      await screen.findByText("Dafür fehlt Ihnen die Berechtigung.")
-    ).toBeVisible()
-  })
-
-  it("sperrt das Titelbild auf /projects/new und nennt den Grund", async () => {
-    signInAs("STUDENT")
-    server.use(...masterDataHandlers())
-
-    renderPage("/projects/new")
-
-    expect(await screen.findByText("Kein Titelbild")).toBeVisible()
-    expect(
-      screen.getByText(
-        "Ein Titelbild lässt sich hinzufügen, sobald das Projekt angelegt ist."
-      )
-    ).toBeVisible()
-    /* Ohne projectId waere derselbe Upload per Definition ein Avatar
-       (§3.15), deshalb gibt es dort kein Dateifeld. */
-    expect(screen.queryByLabelText("Titelbild wählen")).not.toBeInTheDocument()
   })
 
   it("setzt Studiengang und Fach zurueck, wenn die Fakultaet wechselt, und sagt es an", async () => {
@@ -400,14 +312,10 @@ describe("ProjectMetadataPage", () => {
     signInAs("STUDENT")
     renderPage(`/projects/${PROJECT_ID}/metadata`)
 
-    await user.click(await screen.findByLabelText("Name"))
+    await user.click(await screen.findByLabelText(/^Mitglied/))
     await user.click(await screen.findByRole("option", { name: "Tom Busch" }))
-    await user.type(screen.getByLabelText("Rolle"), "Frontend")
-    await user.click(
-      screen.getByRole("button", {
-        name: "Tom Busch als Projektmitglied aufnehmen",
-      })
-    )
+    await user.type(screen.getByLabelText(/^Rolle/), "Frontend")
+    await user.click(screen.getByRole("button", { name: "Mitglied aufnehmen" }))
 
     await waitFor(() =>
       expect(
@@ -639,31 +547,37 @@ describe("ProjectMetadataPage", () => {
     const user = userEvent.setup()
     renderEditRoute(draft())
 
-    await user.click(await screen.findByLabelText("Name"))
+    /* Ohne Person sagt die Zeile, was zuerst fehlt. */
+    const person = await screen.findByLabelText(/^Mitglied/)
+    expect(screen.getByText("Wählen Sie zuerst eine Person.")).toBeVisible()
+
+    await user.click(person)
     await user.click(await screen.findByRole("option", { name: "Tom Busch" }))
 
     /* projectRole ist am MemberRequest @NotBlank; ohne Bezeichnung liefe der
-       PUT in ein 400, dessen Feldname sich keiner Zeile zuordnen liesse. */
+       PUT in ein 400, dessen Feldname sich keiner Zeile zuordnen liesse.
+       Statt den Knopf nur zu sperren, benennt die Zeile den fehlenden Teil. */
+    const add = screen.getByRole("button", { name: "Mitglied aufnehmen" })
+    expect(add).toBeDisabled()
     expect(
-      screen.getByRole("button", {
-        name: "Tom Busch aufnehmen, dafür erst eine Funktionsbezeichnung angeben",
-      })
-    ).toBeDisabled()
-    expect(
-      screen.getByText(
-        "Geben Sie eine Funktionsbezeichnung an, zum Beispiel Frontend."
-      )
+      screen.getByText("Geben Sie noch eine Rolle für Tom Busch an.")
     ).toBeVisible()
+    /*
+     * Beide Felder tragen die Pflichtkennzeichnung, und zwar als Text und
+     * nicht nur als Symbol (SC 1.4.1). Der Text muss erreichbar sein: ein
+     * sr-only unter aria-hidden besteht getByText und wird trotzdem nie
+     * vorgelesen (Befund aus KAN-29).
+     */
+    const markers = screen.getAllByText("Pflichtangabe")
+    expect(markers).toHaveLength(2)
+    for (const marker of markers) {
+      expect(marker.closest("[aria-hidden]")).toBeNull()
+    }
 
-    await user.type(screen.getByLabelText("Rolle"), "Frontend")
+    await user.type(screen.getByLabelText(/^Rolle/), "Frontend")
 
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", {
-          name: "Tom Busch als Projektmitglied aufnehmen",
-        })
-      ).toBeEnabled()
-    )
+    await waitFor(() => expect(add).toBeEnabled())
+    expect(screen.getByText("Tom Busch kann aufgenommen werden.")).toBeVisible()
   })
 
   it("sperrt die Redaktionszuweisung fuer eine Autor:in mit der Rolle EDITOR (§5, Fussnote 3)", async () => {

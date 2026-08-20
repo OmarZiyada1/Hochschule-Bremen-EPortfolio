@@ -603,10 +603,6 @@
         "typeNotAllowed": "Erlaubt sind die Formate PNG, JPEG und WebP.",
         "tooLarge": "Die Datei ist größer als {{max}} MB."
       },
-      "classification": {
-        "heading": "Klassifikation",
-        "description": "Damit Lesende Ihr Projekt finden können."
-      },
       "requiredForSubmit": {
         "legend": "Mit * markierte Angaben brauchen Sie erst zum Einreichen, nicht zum Speichern.",
         "marker": "erforderlich zum Einreichen"
@@ -641,12 +637,8 @@
         "facultyChanged": "Die Fakultät wurde geändert. Studiengang und Fach wurden zurückgesetzt.",
         "studyProgramChanged": "Der Studiengang wurde geändert. Das Fach wurde zurückgesetzt."
       },
-      "tags": {
-        "heading": "Tags",
-        "description": "Bis zu 5 Tags, die Ihr Projekt beschreiben."
-      },
+      "tags": {},
       "editors": {
-        "heading": "Redaktion",
         "label": "Redakteur:in",
         "placeholder": "Nach Namen suchen …",
         "hint": "Gesucht wird über Vor- und Nachname.",
@@ -658,21 +650,19 @@
         "lockedForMembers": "Die zuständige Redaktion bestimmt die Autor:in des Projekts."
       },
       "members": {
-        "heading": "Projektmitglieder",
-        "description": "Co-Autor:innen und Mitwirkende.",
-        "person": "Name",
+        "person": "Mitglied",
         "personPlaceholder": "Nach Namen suchen …",
         "role": "Rolle",
         "rolePlaceholder": "z. B. Frontend",
-        "add": "{{name}} als Projektmitglied aufnehmen",
         "remove": "{{name}} aus den Projektmitgliedern entfernen",
-        "clearPerson": "Auswahl {{name}} zurücknehmen",
         "chosen": "Aufgenommene Projektmitglieder",
-        "addNeedsPerson": "Projektmitglied aufnehmen, dafür erst eine Person wählen",
-        "addNeedsRole": "{{name}} aufnehmen, dafür erst eine Funktionsbezeichnung angeben",
-        "roleRequired": "Geben Sie eine Funktionsbezeichnung an, zum Beispiel Frontend.",
         "invalid": "Bitte prüfen Sie die Angaben zu den Projektmitgliedern.",
-        "pending": "Gewählt"
+        "required": "Pflichtangabe",
+        "roleHint": "Zum Beispiel Frontend, Recherche oder Redaktion.",
+        "addButton": "Mitglied aufnehmen",
+        "needsPerson": "Wählen Sie zuerst eine Person.",
+        "needsRole": "Geben Sie noch eine Rolle für {{name}} an.",
+        "ready": "{{name}} kann aufgenommen werden."
       },
       "notFound": {
         "title": "Projekt nicht gefunden",
@@ -689,7 +679,9 @@
         "untitled": "diesem Projekt",
         "stay": "Weiter bearbeiten",
         "discard": "Verwerfen und zurück"
-      }
+      },
+      "untitledTitle": "Unbenanntes Projekt",
+      "creating": "Das Projekt wird angelegt …"
     }
   },
   "portfolio": {

@@ -79,7 +79,6 @@ export function ProjectMetadataForm({
   onDirtyChange,
   onUploadCoverImage,
   disabled = false,
-  submitLabel,
   headingLevel = 2,
 }: {
   /** Zuletzt bekannter Stand; Ausgangswerte und Quelle der {@code version}. */
@@ -99,15 +98,14 @@ export function ProjectMetadataForm({
    */
   onDirtyChange?: (dirty: boolean) => void
   /**
-   * Laedt das Titelbild hoch und liefert die Referenz {@code /api/files/{id}}.
-   * Fehlt sie, ist die Titelbild-Flaeche gesperrt: auf {@code /projects/new}
-   * gibt es noch keine {@code projectId}, und ohne sie waere derselbe
-   * Upload per Definition ein Avatar (§3.15).
+   * Laedt das Titelbild hoch und liefert die Referenz
+   * {@code /api/files/{id}}. Der Upload braucht eine {@code projectId}
+   * (§3.15); auf beiden Verwendungsstellen gibt es sie, weil das Projekt
+   * vorher angelegt wird.
    */
-  onUploadCoverImage?: (file: File) => Promise<string>
+  onUploadCoverImage: (file: File) => Promise<string>
   /** Status ohne Bearbeitungsrecht: alles schreibgeschuetzt (§4.1). */
   disabled?: boolean
-  submitLabel?: string
   /**
    * Ebene der Abschnittsueberschriften, passend zur Umgebung. Auf der Route
    * traegt die Seite die {@code h1}, also gilt 2; im Sheet des Editors
@@ -307,11 +305,20 @@ export function ProjectMetadataForm({
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-8">
       <div className="grid gap-8 lg:grid-cols-[3fr_4fr]">
-        {/* Linke Spalte: die Vorschau, also das, was Aussenstehende von
-            diesem Projekt in Listen und auf Karten sehen werden. */}
+        {/*
+         * Linke Spalte: die Vorschau, also das, was Aussenstehende von
+         * diesem Projekt in Listen und auf Karten sehen werden.
+         *
+         * Sie bleibt beim Scrollen stehen, damit Titelbild, Titel und
+         * Kurzbeschreibung sichtbar sind, waehrend rechts die Klassifikation
+         * gefuellt wird. self-start ist dabei Bedingung: ein Grid-Element
+         * fuellt sonst die volle Zeilenhoehe, und sticky haette nichts, an
+         * dem es kleben koennte. Erst ab lg, denn schmal stehen die Spalten
+         * untereinander und eine klebende Flaeche verdeckte den Rest.
+         */}
         <section
           aria-labelledby="project-metadata-preview"
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start"
         >
           <Heading
             id="project-metadata-preview"
@@ -329,15 +336,7 @@ export function ProjectMetadataForm({
                 onChange={field.onChange}
                 uploading={uploading}
                 disabled={disabled}
-                lockedReason={
-                  onUploadCoverImage === undefined
-                    ? t("project.metadata.cover.lockedUntilCreated")
-                    : undefined
-                }
                 onUpload={async (file) => {
-                  if (onUploadCoverImage === undefined) {
-                    return field.value
-                  }
                   setUploading(true)
                   try {
                     return await onUploadCoverImage(file)
@@ -427,26 +426,18 @@ export function ProjectMetadataForm({
         </section>
 
         <div className="flex flex-col gap-8">
-          <section
-            aria-labelledby="project-metadata-classification"
-            className="flex flex-col gap-4"
-          >
-            <div className="flex flex-col gap-1">
-              <Heading
-                id="project-metadata-classification"
-                className="type-h3 font-semibold text-primary"
-              >
-                {t("project.metadata.classification.heading")}
-              </Heading>
-              <FieldDescription>
-                {t("project.metadata.classification.description")}
-              </FieldDescription>
-              {/* Die Legende zum Stern: ohne sie traegt das Symbol allein
-                  die Information, und das genuegt SC 1.4.1 nicht. */}
-              <FieldDescription>
-                {t("project.metadata.requiredForSubmit.legend")}
-              </FieldDescription>
-            </div>
+          {/*
+           * Ohne Abschnittsueberschrift: die Beschriftung ueber jedem Feld
+           * sagt bereits, worum es geht, und eine Ueberschrift daruber
+           * wiederholte das nur (Rueckmeldung zu KAN-35). Die Gliederung
+           * traegt der Abstand, nicht ein zweiter Text.
+           */}
+          <div className="flex flex-col gap-4">
+            {/* Die Legende zum Stern bleibt: ohne sie traegt das Symbol
+                allein die Information, und das genuegt SC 1.4.1 nicht. */}
+            <FieldDescription>
+              {t("project.metadata.requiredForSubmit.legend")}
+            </FieldDescription>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Controller
@@ -646,23 +637,11 @@ export function ProjectMetadataForm({
             >
               {cascadeNotice}
             </p>
-          </section>
+          </div>
 
-          <section
-            aria-labelledby="project-metadata-tags"
-            className="flex flex-col gap-3"
-          >
-            <div className="flex flex-col gap-1">
-              <Heading
-                id="project-metadata-tags"
-                className="type-h3 font-semibold text-primary"
-              >
-                {t("project.metadata.tags.heading")}
-              </Heading>
-              <FieldDescription>
-                {t("project.metadata.tags.description")}
-              </FieldDescription>
-            </div>
+          {/* Die Obergrenze steht in der TagCombobox selbst; ein zweiter
+              Hinweis darueber sagte dasselbe zweimal. */}
+          <div className="flex flex-col gap-3">
             <Controller
               name="tags"
               control={form.control}
@@ -675,18 +654,9 @@ export function ProjectMetadataForm({
                 />
               )}
             />
-          </section>
+          </div>
 
-          <section
-            aria-labelledby="project-metadata-editors"
-            className="flex flex-col gap-3"
-          >
-            <Heading
-              id="project-metadata-editors"
-              className="type-h3 font-semibold text-primary"
-            >
-              {t("project.metadata.editors.heading")}
-            </Heading>
+          <div className="flex flex-col gap-3">
             <Controller
               name="editors"
               control={form.control}
@@ -708,23 +678,9 @@ export function ProjectMetadataForm({
                 </>
               )}
             />
-          </section>
+          </div>
 
-          <section
-            aria-labelledby="project-metadata-members"
-            className="flex flex-col gap-3"
-          >
-            <div className="flex flex-col gap-1">
-              <Heading
-                id="project-metadata-members"
-                className="type-h3 font-semibold text-primary"
-              >
-                {t("project.metadata.members.heading")}
-              </Heading>
-              <FieldDescription>
-                {t("project.metadata.members.description")}
-              </FieldDescription>
-            </div>
+          <div className="flex flex-col gap-3">
             <Controller
               name="members"
               control={form.control}
@@ -750,7 +706,7 @@ export function ProjectMetadataForm({
                 </>
               )}
             />
-          </section>
+          </div>
 
           {disabled && (
             <Alert>
@@ -790,7 +746,7 @@ export function ProjectMetadataForm({
             >
               {form.formState.isSubmitting
                 ? t("project.metadata.submitPending")
-                : (submitLabel ?? t("project.metadata.submit"))}
+                : t("project.metadata.submit")}
             </Button>
             <Button type="button" variant="ghost" onClick={onCancel}>
               {t("common.action.cancel")}

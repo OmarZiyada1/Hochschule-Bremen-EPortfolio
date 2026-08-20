@@ -74,6 +74,7 @@ function renderForm(
       project={project}
       onSubmit={onSubmit}
       onCancel={() => {}}
+      onUploadCoverImage={() => Promise.resolve("/api/files/neu")}
     />
   )
   return project
@@ -90,22 +91,36 @@ describe("ProjectMetadataForm", () => {
     expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument()
   })
 
-  it("gliedert die Abschnitte auf Ebene 2, damit die h1 der Route darueber steht", async () => {
+  it("kommt ohne Abschnittsueberschriften aus, die Feldbeschriftungen tragen alles", async () => {
     renderForm()
 
     await screen.findByLabelText("Projekttitel")
+    /*
+     * Eine Ueberschrift ueber einer Gruppe beschrifteter Felder wiederholt
+     * nur, was die Beschriftungen schon sagen (Rueckmeldung zu KAN-35).
+     * Geblieben ist allein "Vorschau": sie benennt die linke Spalte, deren
+     * Felder etwas anderes zeigen als sie heissen.
+     */
     for (const name of [
-      "Vorschau",
       "Klassifikation",
       "Tags",
       "Redaktion",
       "Projektmitglieder",
     ]) {
       expect(
-        screen.getByRole("heading", { level: 2, name }),
+        screen.queryByRole("heading", { name }),
         name
-      ).toBeVisible()
+      ).not.toBeInTheDocument()
     }
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Vorschau" })
+    ).toBeVisible()
+
+    /* Die Felder selbst bleiben beschriftet. */
+    expect(screen.getByLabelText(/^Fakultät/)).toBeVisible()
+    expect(screen.getByLabelText("Schlagwörter")).toBeVisible()
+    expect(screen.getByLabelText(/^Redakteur:in/)).toBeVisible()
+    expect(screen.getByLabelText(/^Mitglied/)).toBeVisible()
   })
 
   it("setzt keine eigene Mutation ab, sondern reicht den Body an onSubmit", async () => {

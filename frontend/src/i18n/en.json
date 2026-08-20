@@ -603,10 +603,6 @@
         "typeNotAllowed": "Allowed formats are PNG, JPEG and WebP.",
         "tooLarge": "The file is larger than {{max}} MB."
       },
-      "classification": {
-        "heading": "Classification",
-        "description": "So that readers can find your project."
-      },
       "requiredForSubmit": {
         "legend": "Entries marked with * are only needed for submission, not for saving.",
         "marker": "required for submission"
@@ -641,12 +637,8 @@
         "facultyChanged": "The faculty has changed. Study programme and module have been reset.",
         "studyProgramChanged": "The study programme has changed. The module has been reset."
       },
-      "tags": {
-        "heading": "Tags",
-        "description": "Up to 5 tags that describe your project."
-      },
+      "tags": {},
       "editors": {
-        "heading": "Editorial",
         "label": "Editor",
         "placeholder": "Search by name …",
         "hint": "The search covers first and last name.",
@@ -658,21 +650,19 @@
         "lockedForMembers": "The editorial assignment is set by the author of the project."
       },
       "members": {
-        "heading": "Project members",
-        "description": "Co-authors and contributors.",
-        "person": "Name",
+        "person": "Member",
         "personPlaceholder": "Search by name …",
         "role": "Role",
         "rolePlaceholder": "e.g. frontend",
-        "add": "Add {{name}} as a project member",
         "remove": "Remove {{name}} from the project members",
-        "clearPerson": "Undo the selection of {{name}}",
         "chosen": "Added project members",
-        "addNeedsPerson": "Add project member, choose a person first",
-        "addNeedsRole": "Add {{name}}, state a role in the project first",
-        "roleRequired": "State a role in the project, for example frontend.",
         "invalid": "Please check the project member entries.",
-        "pending": "Chosen"
+        "required": "required",
+        "roleHint": "For example frontend, research or editing.",
+        "addButton": "Add member",
+        "needsPerson": "Choose a person first.",
+        "needsRole": "State a role for {{name}}.",
+        "ready": "{{name}} can be added."
       },
       "notFound": {
         "title": "Project not found",
@@ -689,7 +679,9 @@
         "untitled": "this project",
         "stay": "Continue editing",
         "discard": "Discard and go back"
-      }
+      },
+      "untitledTitle": "Untitled project",
+      "creating": "The project is being created …"
     }
   },
   "portfolio": {

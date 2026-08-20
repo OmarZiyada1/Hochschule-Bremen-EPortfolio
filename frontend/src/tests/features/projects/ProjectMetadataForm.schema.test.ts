@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest"
 
 import {
   projectMetadataSchema,
-  toProjectCreateRequest,
   toProjectMetadataValues,
   toProjectUpdateRequest,
   type ProjectMetadataValues,
@@ -179,19 +178,6 @@ describe("toProjectUpdateRequest", () => {
     expect(request.tags).toEqual([])
     expect(request.editorIds).toEqual([])
     expect(request.members).toEqual([])
-  })
-})
-
-describe("toProjectCreateRequest", () => {
-  it("laesst version weg, denn beim Anlegen gibt es keinen Stand", () => {
-    const project = fullProject()
-    const request = toProjectCreateRequest(
-      toProjectUpdateRequest(project, toProjectMetadataValues(project))
-    )
-
-    expect(request).not.toHaveProperty("version")
-    expect(request.title).toBe("Campus-Garten")
-    expect(request.editorIds).toEqual(["e-1"])
   })
 })
 

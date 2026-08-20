@@ -16,20 +16,14 @@ import { AppUnderTest, LocationProbe, signInAs } from "@/tests/routes/helpers"
  * den direkten Aufruf der Routen.
  */
 /**
- * Die Quellen, die das Metadatenformular auf /projects/new beim Aufbau
- * zieht (KAN-35): Stammdaten fuer die Klassifikation, Schlagwortvorschlaege
- * und die Personensuche. Studiengaenge und Module bleiben aus, solange die
- * uebergeordnete Wahl fehlt. Hier zaehlt nur, dass die Route erreichbar ist,
- * deshalb antworten alle leer.
+ * /projects/new legt seit KAN-35 sofort ein Projekt an und leitet auf dessen
+ * Metadatenseite weiter. Hier zaehlt nur, dass die Route erreichbar ist; die
+ * Antwort bleibt deshalb liegen, ohne dass ihr jemand folgt.
  */
-function projectMetadataHandlers() {
-  return [
-    http.get("*/api/faculties", () => HttpResponse.json([])),
-    http.get("*/api/categories", () => HttpResponse.json([])),
-    http.get("*/api/semesters", () => HttpResponse.json([])),
-    http.get("*/api/tags", () => HttpResponse.json([])),
-    http.get("*/api/users/lookup", () => HttpResponse.json([])),
-  ]
+function createProjectHandler() {
+  return http.post("*/api/projects", () =>
+    HttpResponse.json({}, { status: 201 })
+  )
 }
 
 describe("Routenbaum", () => {
@@ -92,7 +86,7 @@ describe("Routenbaum", () => {
   it("EDITOR erreicht /projects/new", () => {
     /* Seit KAN-35 steht dort das Metadatenformular; die Seitenueberschrift
        heisst nach Template "Projekt-Metadaten", auch beim Anlegen. */
-    server.use(ownPortfolioHandler(), ...projectMetadataHandlers())
+    server.use(ownPortfolioHandler(), createProjectHandler())
     signInAs("EDITOR")
     renderWithProviders(<AppUnderTest />, "/projects/new")
 
@@ -188,7 +182,7 @@ describe("Routenbaum", () => {
   })
 
   it("liest /projects/new nicht als Projekt-ID", () => {
-    server.use(ownPortfolioHandler(), ...projectMetadataHandlers())
+    server.use(ownPortfolioHandler(), createProjectHandler())
     signInAs("STUDENT")
     renderWithProviders(<AppUnderTest />, "/projects/new")
 

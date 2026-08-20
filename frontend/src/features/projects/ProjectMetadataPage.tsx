@@ -1,9 +1,8 @@
-import { ArrowLeftIcon, FileQuestionIcon, LockIcon } from "lucide-react"
+import { FileQuestionIcon, LockIcon } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, useNavigate, useParams } from "react-router-dom"
 
-import { useAuth } from "@/api/auth/AuthContext"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import type { ProjectDetailResponse, ProjectUpdateRequest } from "@/api/types"
 import { BreadcrumbBar } from "@/components/common/BreadcrumbBar"
@@ -24,14 +23,12 @@ import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useProjectDetail } from "@/features/projects/hooks/useProjectDetail"
 import {
-  useCreateProject,
   useUpdateProject,
   useUploadCoverImage,
 } from "@/features/projects/hooks/useProjectMetadataMutations"
 import { ProjectMetadataForm } from "@/features/projects/ProjectMetadataForm"
-import { toProjectCreateRequest } from "@/features/projects/ProjectMetadataForm.schema"
 
-/** Wohin "Zurueck" und "Abbrechen" fuehren: die eigene Projektliste. */
+/** Wohin "Abbrechen" fuehrt: die eigene Projektliste. */
 const PORTFOLIO_PATH = "/my-portfolio"
 
 /**
@@ -45,20 +42,23 @@ function isEditable(status: ProjectDetailResponse["status"]): boolean {
 }
 
 /**
- * "Projekt-Metadaten" nach dem gleichnamigen Template (KAN-35), fuer beide
- * Routen: {@code /projects/new} und {@code /projects/:projectId/metadata}.
+ * "Projekt-Metadaten" nach dem gleichnamigen Template (KAN-35), Route
+ * {@code /projects/:projectId/metadata}.
  *
- * <p><strong>Anlegen laeuft in zwei Schritten</strong> (Klaerungsrunde zu
- * KAN-35). Auf {@code /projects/new} steht dasselbe Formular, aber ohne
- * Titelbild: {@code POST /api/files} verlangt eine {@code projectId}, und
- * die gibt es vor dem Anlegen nicht. Absenden legt das Projekt an und fuehrt
- * auf die Metadaten-Route, wo das Titelbild nachgetragen werden kann oder
- * eben nicht. Von dort geht es weiter in den Editor.
+ * <p>Sie ist zugleich der zweite Schritt des Anlegens: {@code /projects/new}
+ * legt das Projekt mit einem vorlaeufigen Titel an und fuehrt hierher
+ * ({@code NewProjectPage}). Von hier geht es mit dem Speichern in den
+ * Editor. Ein eigenes Anlegeformular gibt es bewusst nicht: es haette
+ * dieselben Felder ein zweites Mal gezeigt.
  *
  * <p><strong>Die Seitenhuelle ist Sache dieser Route</strong>, nicht des
- * Formulars: Brotkrume, Zurueck-Weg und die einzige {@code h1} stehen hier.
+ * Formulars: Brotkrume und die einzige {@code h1} stehen hier.
  * {@code ProjectMetadataForm} bleibt ohne Huelle, damit der Editor es als
  * Dialog oeffnen kann, ohne die Brotkrume mitzubringen (KAN-36).
+ *
+ * <p><strong>Kein eigener Zurueck-Link.</strong> Den Weg ins Portfolio
+ * traegt das Brotkrumenband; ein zweiter Link daneben sagt dasselbe ein
+ * zweites Mal. Dieselbe Entscheidung wie auf der Profilseite (KAN-69).
  *
  * <p><strong>Der Versionskonflikt gehoert hierher</strong>, nicht ins
  * Formular. Nur diese Route kann neu laden, also entscheidet sie, und sie
@@ -73,16 +73,12 @@ function isEditable(status: ProjectDetailResponse["status"]): boolean {
  */
 export default function ProjectMetadataPage() {
   const { t } = useTranslation()
-  const { projectId } = useParams()
+  const { projectId = "" } = useParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
 
-  const creating = projectId === undefined
-
-  const detail = useProjectDetail(projectId ?? "", !creating)
-  const create = useCreateProject()
-  const update = useUpdateProject(projectId ?? "")
-  const uploadCover = useUploadCoverImage(projectId ?? "")
+  const detail = useProjectDetail(projectId)
+  const update = useUpdateProject(projectId)
+  const uploadCover = useUploadCoverImage(projectId)
 
   const [conflict, setConflict] = useState(false)
   /* Ungespeicherte Eingaben: der Weg zurueck fragt dann vorher nach
@@ -90,7 +86,7 @@ export default function ProjectMetadataPage() {
   const [dirty, setDirty] = useState(false)
   const [confirmLeave, setConfirmLeave] = useState(false)
 
-  const error = creating ? null : detail.error
+  const error = detail.error
   const forbidden =
     error !== null && isApiError(error) && error.errorCode === "NO_PERMISSION"
   const notFound =
@@ -98,60 +94,16 @@ export default function ProjectMetadataPage() {
     isApiError(error) &&
     error.errorCode === "PROJECT_NOT_FOUND"
 
-  /*
-   * Der leere Entwurf fuer die Anlege-Route. Er ist kein Serverstand,
-   * sondern der Ausgangspunkt eines Formulars, das denselben Vertrag
-   * bedient wie auf der Bearbeiten-Route: ein project, ein onSubmit, ein
-   * Body-Bauer. Die Alternative waere ein zweites Formular mit eigenen
-   * Standardwerten gewesen, also genau die zweite Wahrheit, die dieses
-   * Ticket vermeidet.
-   *
-   * version 0 entspricht dem Default der Entity (§3.3); benutzt wird sie
-   * nicht, denn POST /projects kennt kein Optimistic Locking und die Route
-   * laesst das Feld beim Umbau auf den Create-Request weg.
-   */
-  const emptyDraft: ProjectDetailResponse = {
-    id: "",
-    title: "",
-    summary: null,
-    coverImageUrl: null,
-    status: "DRAFT",
-    projectType: null,
-    degree: null,
-    semester: null,
-    category: null,
-    faculty: null,
-    studyProgram: null,
-    module: null,
-    author: {
-      id: user?.id ?? "",
-      firstName: user?.firstName ?? "",
-      lastName: user?.lastName ?? "",
-      avatarUrl: null,
-    },
-    members: [],
-    tags: [],
-    blocks: [],
-    reactionCount: 0,
-    editors: [],
-    statusHistory: null,
-    version: 0,
-    publishedAt: null,
-    createdAt: "",
-    updatedAt: "",
-  }
-
-  const project = creating ? emptyDraft : detail.data
+  const project = detail.data
 
   /**
-   * Der Weg zurueck ins Portfolio, über „Abbrechen“ wie über den Zurück-Link.
+   * Der Weg zurueck ins Portfolio ueber "Abbrechen".
    *
    * <p>Traegt das Formular ungespeicherte Eingaben, wird vorher gefragt
    * (Skill frontend-design, Abschnitt 5); sonst geht es direkt weiter, denn
-   * ein Klick mehr ohne Grund ist auch keine Freundlichkeit. Dasselbe
-   * Muster wie in {@code PasswordChangeSection} aus KAN-69.
+   * ein Klick mehr ohne Grund ist auch keine Freundlichkeit.
    *
-   * <p><strong>Bewacht sind die Wege, die diese Seite selbst anbietet.</strong>
+   * <p><strong>Bewacht ist der Weg, den diese Seite selbst anbietet.</strong>
    * Brotkrume, Kopfleiste und der Zurueck-Knopf des Browsers laufen
    * ungehindert weiter: dafuer braeuchte es {@code useBlocker} und damit
    * einen Data-Router in Anwendung und Testhuelle, und das ist eigene
@@ -166,25 +118,12 @@ export default function ProjectMetadataPage() {
   }
 
   /**
-   * Der eine Schreibweg des Formulars. Er unterscheidet die beiden Routen,
-   * das Formular selbst tut es nicht.
-   *
-   * <p>Beim Anlegen faellt {@code version} weg: {@code ProjectCreateRequest}
-   * kennt sie nicht, es gibt noch keinen Stand, gegen den zu pruefen waere.
-   * Der Rest des Bodys ist derselbe, den {@code toProjectUpdateRequest}
-   * gebaut hat.
+   * Der Schreibweg des Formulars: {@code PUT /api/projects/{id}}, danach in
+   * den Editor.
    */
   const submit = async (
     request: ProjectUpdateRequest
   ): Promise<ProjectDetailResponse> => {
-    if (creating) {
-      const created = await create.mutateAsync(toProjectCreateRequest(request))
-      /* replace, damit der Zurueck-Knopf des Browsers nicht auf ein
-         Anlegeformular fuehrt, dessen Projekt es inzwischen gibt. */
-      void navigate(`/projects/${created.id}/metadata`, { replace: true })
-      return created
-    }
-
     try {
       const updated = await update.mutateAsync(request)
       void navigate(`/projects/${updated.id}/editor`)
@@ -204,6 +143,15 @@ export default function ProjectMetadataPage() {
     }
   }
 
+  const backToPortfolio = (
+    <Link
+      to={PORTFOLIO_PATH}
+      className={buttonVariants({ variant: "secondary" })}
+    >
+      {t("project.metadata.backToPortfolio")}
+    </Link>
+  )
+
   return (
     <>
       <BreadcrumbBar
@@ -221,14 +169,7 @@ export default function ProjectMetadataPage() {
             icon={<FileQuestionIcon aria-hidden="true" />}
             title={t("project.metadata.notFound.title")}
             description={t("project.metadata.notFound.description")}
-            action={
-              <Link
-                to={PORTFOLIO_PATH}
-                className={buttonVariants({ variant: "secondary" })}
-              >
-                {t("project.metadata.backToPortfolio")}
-              </Link>
-            }
+            action={backToPortfolio}
           />
         ) : forbidden ? (
           <EmptyState
@@ -236,40 +177,15 @@ export default function ProjectMetadataPage() {
             icon={<LockIcon aria-hidden="true" />}
             title={t("project.metadata.forbidden.title")}
             description={t("project.metadata.forbidden.description")}
-            action={
-              <Link
-                to={PORTFOLIO_PATH}
-                className={buttonVariants({ variant: "secondary" })}
-              >
-                {t("project.metadata.backToPortfolio")}
-              </Link>
-            }
+            action={backToPortfolio}
           />
         ) : (
           <>
-            <div className="flex flex-col gap-2">
-              <Link
-                to={PORTFOLIO_PATH}
-                className="type-body-sm inline-flex w-fit items-center gap-2 text-primary underline-offset-4 hover:underline"
-                onClick={(event) => {
-                  /* Ein echter Link bleibt er trotzdem: Rechtsklick und
-                     „in neuem Tab öffnen“ funktionieren weiter, nur der
-                     gewoehnliche Klick laeuft durch die Rueckfrage. */
-                  if (dirty) {
-                    event.preventDefault()
-                    setConfirmLeave(true)
-                  }
-                }}
-              >
-                <ArrowLeftIcon aria-hidden="true" className="size-4" />
-                {t("project.metadata.backToPortfolio")}
-              </Link>
-              <h1 className="type-h2 font-semibold text-primary">
-                {t("project.metadata.heading")}
-              </h1>
-            </div>
+            <h1 className="type-h2 font-semibold text-primary">
+              {t("project.metadata.heading")}
+            </h1>
 
-            {!creating && detail.isPending ? (
+            {detail.isPending ? (
               <div className="grid gap-8 lg:grid-cols-[3fr_4fr]">
                 <div className="flex flex-col gap-4">
                   <Skeleton className="aspect-[7/4] w-full rounded-card" />
@@ -295,33 +211,22 @@ export default function ProjectMetadataPage() {
                 </AlertTitle>
               </Alert>
             ) : (
-              <div>
-                <ProjectMetadataForm
-                  /* Nach einem Neuladen wegen Versionskonflikt traegt das
-                     Projekt eine neue version. Der Schluessel setzt das
-                     Formular damit auf den Serverstand zurueck, ohne dass es
-                     dafuer einen Effekt braeuchte. */
-                  key={`${project.id}-${project.version}`}
-                  project={project}
-                  disabled={!isEditable(project.status)}
-                  submitLabel={
-                    creating
-                      ? t("project.metadata.submitCreate")
-                      : t("project.metadata.submit")
-                  }
-                  onUploadCoverImage={
-                    creating
-                      ? undefined
-                      : async (file) => {
-                          const stored = await uploadCover.mutateAsync(file)
-                          return stored.url
-                        }
-                  }
-                  onSubmit={submit}
-                  onDirtyChange={setDirty}
-                  onCancel={leaveToPortfolio}
-                />
-              </div>
+              <ProjectMetadataForm
+                /* Nach einem Neuladen wegen Versionskonflikt traegt das
+                   Projekt eine neue version. Der Schluessel setzt das
+                   Formular damit auf den Serverstand zurueck, ohne dass es
+                   dafuer einen Effekt braeuchte. */
+                key={`${project.id}-${project.version}`}
+                project={project}
+                disabled={!isEditable(project.status)}
+                onUploadCoverImage={async (file) => {
+                  const stored = await uploadCover.mutateAsync(file)
+                  return stored.url
+                }}
+                onSubmit={submit}
+                onDirtyChange={setDirty}
+                onCancel={leaveToPortfolio}
+              />
             )}
           </>
         )}
@@ -343,7 +248,7 @@ export default function ProjectMetadataPage() {
             <AlertDialogDescription>
               {t("project.metadata.leave.description", {
                 title:
-                  project?.title === undefined || project.title === ""
+                  project === undefined || project.title === ""
                     ? t("project.metadata.leave.untitled")
                     : project.title,
               })}

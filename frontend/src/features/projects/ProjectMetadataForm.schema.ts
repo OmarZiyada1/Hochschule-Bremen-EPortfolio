@@ -3,7 +3,6 @@ import { z } from "zod"
 import type {
   Degree,
   MemberRequest,
-  ProjectCreateRequest,
   ProjectDetailResponse,
   ProjectType,
   ProjectUpdateRequest,
@@ -258,49 +257,5 @@ export function toProjectUpdateRequest(
       userId: member.id,
       projectRole: member.projectRole,
     })),
-  }
-}
-
-/**
- * Setzt den Body aus {@link toProjectUpdateRequest} auf
- * {@code POST /api/projects} um.
- *
- * <p>Es bleibt bei <strong>einem</strong> Body-Bauer: die Werte kommen
- * unveraendert aus {@link toProjectUpdateRequest}, diese Funktion ist nur
- * der Uebergang zwischen zwei Request-Typen, die sich in genau zwei Punkten
- * unterscheiden.
- *
- * <ul>
- * <li>{@code version} faellt weg. Beim Anlegen gibt es keinen Stand, gegen
- * den zu pruefen waere; {@code ProjectCreateRequest} fuehrt das Feld nicht,
- * und es mitzuschicken hiesse, dem Server ein unbekanntes Feld
- * unterzuschieben.</li>
- * <li>{@code tags}, {@code editorIds} und {@code members} kennen kein
- * {@code null}. Im Update-Request heisst {@code null} „unveraendert lassen";
- * beim Anlegen gibt es nichts, das unveraendert bleiben koennte, also wird
- * daraus „weggelassen".</li>
- * </ul>
- *
- * <p>Die Felder stehen einzeln da und nicht als Spread. Das ist Absicht:
- * so bricht der Typecheck, sobald der Contract ein Pflichtfeld ergaenzt,
- * statt es still zu uebergehen.
- */
-export function toProjectCreateRequest(
-  request: ProjectUpdateRequest
-): ProjectCreateRequest {
-  return {
-    title: request.title,
-    summary: request.summary,
-    coverImageUrl: request.coverImageUrl,
-    projectType: request.projectType,
-    degree: request.degree,
-    semesterId: request.semesterId,
-    categoryId: request.categoryId,
-    facultyId: request.facultyId,
-    studyProgramId: request.studyProgramId,
-    moduleId: request.moduleId,
-    tags: request.tags ?? undefined,
-    editorIds: request.editorIds ?? undefined,
-    members: request.members ?? undefined,
   }
 }

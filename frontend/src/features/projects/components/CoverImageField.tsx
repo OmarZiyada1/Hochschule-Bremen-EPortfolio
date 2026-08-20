@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import { fileQueries } from "@/api/queries/files"
 import { Button } from "@/components/ui/button"
-import { FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
+import { FieldError, FieldLabel } from "@/components/ui/field"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   COVER_IMAGE_MAX_BYTES,
@@ -39,11 +39,9 @@ const MAX_MEGABYTES = Math.round(COVER_IMAGE_MAX_BYTES / (1024 * 1024))
  * Datei mit Token, und daraus wird eine Object-URL (Befund des
  * frontend-reviewers).
  *
- * <p><strong>Auf {@code /projects/new} ist die Flaeche gesperrt.</strong>
- * {@code POST /api/files} verlangt eine {@code projectId}, und die gibt es
- * vor dem Anlegen nicht; ohne sie waere derselbe Upload per Definition ein
- * Avatar und fuer jede:n abrufbar (§3.15). Statt das zu verschweigen, nennt
- * das Feld den Grund und den naechsten Schritt.
+ * <p>Eine {@code projectId} gibt es hier immer: {@code /projects/new} legt
+ * das Projekt an, bevor diese Seite erscheint. Ohne sie waere derselbe
+ * Upload per Definition ein Avatar und fuer jede:n abrufbar (§3.15).
  *
  * <p><strong>Die Vorpruefung ist Komfort, nicht die Regel.</strong>
  * Verbindlich bleibt der Server mit <strong>400</strong>
@@ -67,7 +65,6 @@ export function CoverImageField({
   onUpload,
   uploading = false,
   disabled = false,
-  lockedReason,
 }: {
   /** Referenz der Form /api/files/{id}, leer heisst "kein Titelbild". */
   value: string
@@ -76,18 +73,11 @@ export function CoverImageField({
   onUpload: (file: File) => Promise<string>
   uploading?: boolean
   disabled?: boolean
-  /**
-   * Warum kein Upload moeglich ist, etwa weil das Projekt noch nicht
-   * angelegt wurde. Gesetzt heisst: kein Dateifeld, dafuer der Grund.
-   */
-  lockedReason?: string
 }) {
   const { t } = useTranslation()
   const inputId = useId()
   const errorId = `${inputId}-error`
   const [error, setError] = useState<string | null>(null)
-
-  const locked = disabled || lockedReason !== undefined
 
   const image = useQuery({
     ...fileQueries.blob(value),
@@ -174,11 +164,7 @@ export function CoverImageField({
         ) : null}
       </div>
 
-      {locked ? (
-        lockedReason !== undefined && (
-          <FieldDescription>{lockedReason}</FieldDescription>
-        )
-      ) : (
+      {disabled ? null : (
         <div className="flex flex-wrap items-center gap-3">
           <input
             id={inputId}
