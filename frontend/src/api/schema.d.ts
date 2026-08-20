@@ -1020,6 +1020,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/tags": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Schlagwoerter lesen
+     * @description Die gebraeuchlichsten Schlagwoerter als Vorschlaege fuer das Auswahlfeld im Metadaten-Formular (§3.19). Sortiert nach Verwendungszahl absteigend, bei Gleichstand nach Name. Ohne Paginierung: die Trefferzahl begrenzt "limit", die Auswahl verfeinert "q".
+     */
+    get: operations["tags"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/study-programs": {
     parameters: {
       query?: never
@@ -1406,7 +1426,7 @@ export interface components {
        * @example 12
        */
       reactionCount?: number
-      /** @description Zugewiesene Redakteur:innen (§3.3). Bei einem PUBLISHED-Projekt fuer alle sichtbar, auch ohne Anmeldung (seit Contract v55); in jedem anderen Status nur fuer die Projektseite, die zugewiesene Redaktion und Admins. Null heisst 'darf ich nicht sehen'; eine leere Liste bedeutet dagegen, dass keine Redaktion zugewiesen ist. */
+      /** @description Zugewiesene Redakteur:innen (§3.3). Bei einem PUBLISHED-Projekt fuer alle sichtbar, auch ohne Anmeldung (seit Contract v55); in jedem anderen Status nur fuer die Projektseite, die zugewiesene Redaktion und Admins. In der Praxis damit immer gefuellt: wer ein nicht veroeffentlichtes Projekt ueberhaupt lesen darf, gehoert genau zu diesem Kreis. Eine leere Liste bedeutet, dass keine Redaktion zugewiesen ist. */
       editors?: components["schemas"]["PersonResponse"][]
       /** @description Aktivitaetsverlauf, aufsteigend nach Zeitpunkt (§3.12). Ausdruecklich null, wenn die anfragende Person ihn nicht sehen darf (§5, Fussnote 7); das Feld fehlt nicht, es steht auf null. Damit zugleich das Kennzeichen, an dem ein Client erkennt, dass die lesende Person die Interna sehen darf, also Projektseite, zugewiesene Redaktion oder Admin ist, ohne aus der Rolle zu raten. */
       statusHistory?: components["schemas"]["StatusHistoryResponse"][]
@@ -2136,6 +2156,17 @@ export interface components {
       id?: string
       firstName?: string
       lastName?: string
+    }
+    TagResponse: {
+      /** Format: uuid */
+      id?: string
+      name?: string
+      /**
+       * Format: int64
+       * @description Zahl der Projekte mit diesem Tag, ueber alle Projektstatus gezaehlt. Bestimmt die Reihenfolge der Vorschlaege; ein Tag, dessen letztes Projekt geloescht wurde, bleibt mit 0 stehen.
+       * @example 12
+       */
+      usageCount?: number
     }
     /** @description Seite eines paginierten Ergebnisses (§6.6). */
     PageResponse: {
@@ -5803,6 +5834,40 @@ export interface operations {
         }
         content: {
           "*/*": components["schemas"]["Top10EntryResponse"][]
+        }
+      }
+    }
+  }
+  tags: {
+    parameters: {
+      query?: {
+        /** @description Optionaler Filter auf den Namen: ohne Ruecksicht auf Gross- und Kleinschreibung, an beliebiger Stelle im Wort. Ohne Angabe kommen die haeufigsten Schlagwoerter. */
+        q?: string
+        /** @description Obergrenze der Trefferzahl, 1 bis 100. Ohne Angabe 20. */
+        limit?: number
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Liste der Schlagwoerter mit Verwendungszahl. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["TagResponse"][]
+        }
+      }
+      /** @description "limit" liegt ausserhalb von 1 bis 100. */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["TagResponse"][]
         }
       }
     }

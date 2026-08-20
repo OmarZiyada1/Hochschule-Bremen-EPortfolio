@@ -7,6 +7,7 @@ import de.hsbremen.eportfolio.common.enums.UserStatus;
 import de.hsbremen.eportfolio.common.error.ErrorCodes;
 import de.hsbremen.eportfolio.common.error.ResourceNotFoundException;
 import de.hsbremen.eportfolio.common.error.ValidationException;
+import de.hsbremen.eportfolio.masterdata.Tag;
 import de.hsbremen.eportfolio.portfolio.PortfolioAvatar;
 import de.hsbremen.eportfolio.portfolio.PortfolioRepository;
 import de.hsbremen.eportfolio.project.dto.BlockResponse;
@@ -535,12 +536,20 @@ public class ProjectReadService {
 	}
 
 	/**
-	 * Tags alphabetisch. Die Entity haelt sie in einem {@code Set}, das keine
-	 * Reihenfolge zusichert; ohne Sortierung koennte dieselbe Kachel zwischen
-	 * zwei Aufrufen unterschiedlich aussehen.
+	 * Tags alphabetisch, als Namen. Die Entity haelt sie in einem {@code Set},
+	 * das keine Reihenfolge zusichert; ohne Sortierung koennte dieselbe Kachel
+	 * zwischen zwei Aufrufen unterschiedlich aussehen.
+	 *
+	 * <p>Seit Contract v57 steht hinter jedem Tag eine Stammdatenzeile (§3.19).
+	 * An der Antwort aendert das nichts: {@code tags} bleibt eine Liste von
+	 * Namen (§3.3). Die {@code id} eines Tags braucht allein die Vorschlagsliste
+	 * aus {@code GET /api/tags}, nicht das Projekt.
 	 */
 	private static List<String> sortedTags(Project project) {
-		return project.getTags().stream().sorted().toList();
+		return project.getTags().stream()
+				.map(Tag::getName)
+				.sorted()
+				.toList();
 	}
 
 	private static String nameOrEmpty(User user, boolean lastName) {

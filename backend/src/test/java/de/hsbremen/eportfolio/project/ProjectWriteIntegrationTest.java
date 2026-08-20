@@ -20,6 +20,8 @@ import de.hsbremen.eportfolio.masterdata.CategoryRepository;
 import de.hsbremen.eportfolio.masterdata.DevMasterDataSeeder;
 import de.hsbremen.eportfolio.masterdata.Semester;
 import de.hsbremen.eportfolio.masterdata.SemesterRepository;
+import de.hsbremen.eportfolio.masterdata.TagRepository;
+import de.hsbremen.eportfolio.masterdata.TestMasterData;
 import de.hsbremen.eportfolio.user.TestUser;
 import de.hsbremen.eportfolio.user.User;
 import de.hsbremen.eportfolio.user.UserRepository;
@@ -80,6 +82,9 @@ class ProjectWriteIntegrationTest {
 
 	@Autowired
 	private ProjectRepository projectRepository;
+
+	@Autowired
+	private TagRepository tagRepository;
 
 	@Autowired
 	private ProjectMemberRepository projectMemberRepository;
@@ -178,7 +183,7 @@ class ProjectWriteIntegrationTest {
 					"degree", "BACHELOR",
 					"semesterId", semester.getId().toString(),
 					"categoryId", category.getId().toString(),
-					"tags", List.of("ux", "react"),
+					"tags", List.of("ux-test", "react-test"),
 					"editorIds", List.of(assignedEditor.getId().toString()),
 					"members", List.of(memberEntry(member, "Frontend"))));
 
@@ -188,7 +193,7 @@ class ProjectWriteIntegrationTest {
 					.isEqualTo(semester.getId().toString());
 			assertThat(created.get("category").get("id").asText())
 					.isEqualTo(category.getId().toString());
-			assertThat(texts(created.get("tags"))).containsExactly("react", "ux");
+			assertThat(texts(created.get("tags"))).containsExactly("react-test", "ux-test");
 			assertThat(created.get("editors")).hasSize(1);
 			assertThat(created.get("members")).hasSize(1);
 			assertThat(created.get("members").get(0).get("projectRole").asText())
@@ -389,17 +394,37 @@ class ProjectWriteIntegrationTest {
 		}
 
 		@Test
+		@DisplayName("Ein neues Tag neben geaenderten Metadaten zaehlt version trotzdem "
+				+ "um genau eins hoch")
+		void newTagDoesNotDisturbTheVersionCounter() throws Exception {
+			long vorher = draft.getVersion();
+
+			// insertIfAbsent ist eine native Abfrage; Hibernate leert davor die
+			// Session, der Flush liegt also mitten im Schreibvorgang. Die Zusage
+			// aus §6.4 gilt trotzdem: ein Aufruf, ein Versionsschritt.
+			JsonNode updated = updated(author, draft, json(
+					"version", vorher,
+					"title", "Titel und Tag zugleich",
+					"summary", "Ein Teaser",
+					"tags", List.of("frisch-" + UUID.randomUUID())));
+
+			assertThat(updated.get("version").asLong()).isEqualTo(vorher + 1);
+			assertThat(updated.get("title").asText()).isEqualTo("Titel und Tag zugleich");
+			assertThat(updated.get("tags")).hasSize(1);
+		}
+
+		@Test
 		@DisplayName("Sammlungen dagegen nicht: fehlende tags, members und editorIds bleiben, "
 				+ "[] leert sie")
 		void collectionsSurviveOmission() throws Exception {
-			draft.getTags().add("ux");
+			draft.getTags().add(TestMasterData.existingOrNewTag(tagRepository, "ux-test"));
 			projectRepository.saveAndFlush(draft);
 
 			JsonNode kept = updated(author, draft, json(
 					"version", draft.getVersion(),
 					"title", "Sammlungen unangetastet"));
 
-			assertThat(texts(kept.get("tags"))).containsExactly("ux");
+			assertThat(texts(kept.get("tags"))).containsExactly("ux-test");
 			assertThat(kept.get("members")).hasSize(1);
 			assertThat(kept.get("editors")).hasSize(1);
 

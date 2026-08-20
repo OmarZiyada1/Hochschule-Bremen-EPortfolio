@@ -29,6 +29,7 @@ import de.hsbremen.eportfolio.masterdata.SemesterRepository;
 import de.hsbremen.eportfolio.masterdata.TestMasterData;
 import de.hsbremen.eportfolio.masterdata.StudyProgram;
 import de.hsbremen.eportfolio.masterdata.StudyProgramRepository;
+import de.hsbremen.eportfolio.masterdata.TagRepository;
 import de.hsbremen.eportfolio.reaction.ReactionRepository;
 import de.hsbremen.eportfolio.reaction.TestReaction;
 import de.hsbremen.eportfolio.user.TestUser;
@@ -100,6 +101,9 @@ class ProjectReadIntegrationTest {
 
 	@Autowired
 	private ProjectRepository projectRepository;
+
+	@Autowired
+	private TagRepository tagRepository;
 
 	@Autowired
 	private ProjectMemberRepository projectMemberRepository;
@@ -189,7 +193,12 @@ class ProjectReadIntegrationTest {
 		// Die bestehende Sammlung fuellen statt sie zu ersetzen: das Projekt ist
 		// bereits gespeichert, seine Tag-Sammlung wird also von Hibernate
 		// verwaltet.
-		publishedProject.getTags().addAll(List.of("ux", "react"));
+		// Namen mit Zusatz, weil tag seit §3.19 eine geteilte Stammdatentabelle
+		// ist: ein blankes "react" gibt es in der Entwicklungsdatenbank bereits,
+		// und die Zusicherung weiter unten haengt an der Schreibweise.
+		publishedProject.getTags().addAll(List.of(
+				TestMasterData.existingOrNewTag(tagRepository, "ux-test"),
+				TestMasterData.existingOrNewTag(tagRepository, "react-test")));
 		publishedProject = projectRepository.saveAndFlush(publishedProject);
 
 		submittedForeignProject = newProject(otherStudent, ProjectStatus.SUBMITTED, "Gamma Review");
@@ -703,8 +712,8 @@ class ProjectReadIntegrationTest {
 					.andExpect(jsonPath("$.updatedAt").exists())
 					.andExpect(jsonPath("$.publishedAt").exists())
 					// Tags kommen alphabetisch, damit die Antwort stabil ist.
-					.andExpect(jsonPath("$.tags[0]").value("react"))
-					.andExpect(jsonPath("$.tags[1]").value("ux"));
+					.andExpect(jsonPath("$.tags[0]").value("react-test"))
+					.andExpect(jsonPath("$.tags[1]").value("ux-test"));
 		}
 
 		@Test

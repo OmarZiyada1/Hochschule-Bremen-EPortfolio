@@ -67,6 +67,50 @@ public final class TestMasterData {
 		return module;
 	}
 
+
+	/**
+	 * Ein Schlagwort mit vorbelegter ID, fuer Unit-Tests ohne
+	 * Persistenzkontext (§3.19).
+	 */
+	public static Tag tag(String name) {
+		Tag tag = new Tag();
+		ReflectionTestUtils.setField(tag, "id", UUID.randomUUID());
+		tag.setName(name);
+		return tag;
+	}
+
+	/**
+	 * Wie {@link #tag(String)}, aber ohne vorbelegte ID: fuer Tests, die das
+	 * Schlagwort tatsaechlich speichern.
+	 */
+	public static Tag tagWithoutId(String name) {
+		Tag tag = tag(name);
+		ReflectionTestUtils.setField(tag, "id", null);
+		return tag;
+	}
+
+	/**
+	 * Das Schlagwort mit diesem Namen, angelegt falls es fehlt (§3.19).
+	 *
+	 * <p>Anders als bei den uebrigen Stammdaten reicht ein blankes Speichern
+	 * hier nicht: {@code tag} ist ueber {@code lower(name)} eindeutig, und die
+	 * Entwicklungsdatenbank traegt den Bestand, den die Migration aus den
+	 * vorhandenen Projekten uebernommen hat. Ein zweites &bdquo;react&ldquo;
+	 * scheiterte an {@code uq_tag_name_lower}, und zwar erst beim Flush,
+	 * mitten im {@code @BeforeEach}.
+	 *
+	 * <p><strong>Wer danach auf einen Namen zusichert, waehlt ihn so, dass er
+	 * dem Test gehoert</strong> (etwa mit einem Zusatz wie {@code -test} oder
+	 * einem gewuerfelten Teil). Sonst entscheidet die Schreibweise einer
+	 * fremden Zeile ueber das Ergebnis: gibt es bereits
+	 * &bdquo;React&ldquo;, liefert diese Methode genau die, und eine
+	 * Zusicherung auf &bdquo;react&ldquo; schluege fehl.
+	 */
+	public static Tag existingOrNewTag(TagRepository repository, String name) {
+		return repository.findByNameNormalized(name)
+				.orElseGet(() -> repository.saveAndFlush(tagWithoutId(name)));
+	}
+
 	private TestMasterData() {
 	}
 }

@@ -37,11 +37,12 @@ public interface ReactionRepository extends JpaRepository<Reaction, UUID> {
 	 * {@code on conflict do nothing} entsteht der Fehler gar nicht erst, und der
 	 * Constraint entscheidet den Wettlauf dort, wo er ohnehin entschieden wird.
 	 *
-	 * <p><strong>Die einzige native Abfrage im Backend</strong>, und zwar
+	 * <p><strong>Eine von zwei nativen Abfragen im Backend</strong>, und zwar
 	 * begruendet: {@code on conflict} ist SQL von PostgreSQL und hat in JPQL kein
 	 * Gegenstueck. Das Projekt ist ohnehin auf PostgreSQL 16 festgelegt (jsonb in
 	 * §3.4, Flyway, kein H2 in den Tests), es entsteht hier also keine neue
-	 * Bindung.
+	 * Bindung. Die zweite steht aus demselben Grund in
+	 * {@code TagRepository.insertIfAbsent} (§3.19).
 	 *
 	 * <p><strong>Folge fuer {@code createdAt}:</strong> der Wert kommt von
 	 * {@code now()} und nicht von {@code @CreatedDate}, weil diese Anweisung am

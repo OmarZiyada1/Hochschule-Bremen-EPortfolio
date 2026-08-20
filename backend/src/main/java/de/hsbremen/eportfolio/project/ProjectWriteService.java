@@ -13,6 +13,8 @@ import de.hsbremen.eportfolio.masterdata.ModuleRepository;
 import de.hsbremen.eportfolio.masterdata.Semester;
 import de.hsbremen.eportfolio.masterdata.SemesterRepository;
 import de.hsbremen.eportfolio.masterdata.StudyProgramRepository;
+import de.hsbremen.eportfolio.masterdata.Tag;
+import de.hsbremen.eportfolio.masterdata.TagRepository;
 import de.hsbremen.eportfolio.project.dto.MemberRequest;
 import de.hsbremen.eportfolio.project.dto.ProjectCreateRequest;
 import de.hsbremen.eportfolio.project.dto.ProjectDetailResponse;
@@ -32,6 +34,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.security.access.AccessDeniedException;
@@ -87,6 +90,8 @@ public class ProjectWriteService {
 
 	private final SemesterRepository semesterRepository;
 
+	private final TagRepository tagRepository;
+
 	private final ProjectPermissionService permissions;
 
 	private final ProjectReadService readService;
@@ -106,6 +111,7 @@ public class ProjectWriteService {
 			StudyProgramRepository studyProgramRepository,
 			ModuleRepository moduleRepository,
 			SemesterRepository semesterRepository,
+			TagRepository tagRepository,
 			ProjectPermissionService permissions,
 			ProjectReadService readService,
 			Top10Service top10Service) {
@@ -117,6 +123,7 @@ public class ProjectWriteService {
 		this.studyProgramRepository = studyProgramRepository;
 		this.moduleRepository = moduleRepository;
 		this.semesterRepository = semesterRepository;
+		this.tagRepository = tagRepository;
 		this.permissions = permissions;
 		this.readService = readService;
 		this.top10Service = top10Service;
@@ -155,11 +162,14 @@ public class ProjectWriteService {
 		}
 		User author = loadCurrentUser(user);
 
+		// Vor jeder Mutation, siehe resolveTags.
+		Set<Tag> tags = resolveTags(request.tags());
+
 		Project project = new Project();
 		project.setAuthor(author);
 		project.setStatus(ProjectStatus.DRAFT);
 		applyMetadata(project, request);
-		applyTags(project, request.tags());
+		applyTags(project, tags);
 		applyMembers(user, project, request.members(), author);
 		applyEditors(user, project, request.editorIds());
 
@@ -199,8 +209,11 @@ public class ProjectWriteService {
 		requireEditable(user, project);
 		requireCurrentVersion(project, request.version());
 
+		// Vor jeder Mutation, siehe resolveTags.
+		Set<Tag> tags = resolveTags(request.tags());
+
 		applyMetadata(project, request);
-		applyTags(project, request.tags());
+		applyTags(project, tags);
 		applyMembers(user, project, request.members(), project.getAuthor());
 		applyEditors(user, project, request.editorIds());
 
@@ -414,27 +427,136 @@ public class ProjectWriteService {
 		return semester;
 	}
 
+	/** Innere Mehrfach-Leerzeichen, siehe {@link #normalizedTagName(String)}. */
+	private static final Pattern INNER_WHITESPACE = Pattern.compile("\\s+");
+
 	/**
-	 * Schlagwoerter, hoechstens fuenf (§3.3). Die Obergrenze prueft die
-	 * Bean-Validation am Request, hier wird nur uebernommen.
+	 * Schlagwoerter, hoechstens fuenf (§3.3, §3.19). Die Obergrenze und die
+	 * Laenge je Wort pruefen die Bean-Validation am Request; hier wird
+	 * normalisiert, aufgeloest und uebernommen.
+	 *
+	 * <p><strong>Seit Contract v57 werden daraus Stammdatenzeilen.</strong> Ein
+	 * Wort, das es schon gibt, wird wiederverwendet, und zwar mit
+	 * <em>seinem</em> Anzeigenamen: wer &bdquo;nachhaltigkeit&ldquo; tippt,
+	 * bekommt das vorhandene &bdquo;Nachhaltigkeit&ldquo;. Sonst stuenden auf
+	 * zwei Kacheln zwei Schreibweisen desselben Worts, und die Vorschlagsliste
+	 * fuehrte es doppelt.
+	 *
+	 * <p>Ein Wort, das es noch nicht gibt, entsteht in der getippten
+	 * Schreibweise. Das ist die Entscheidung aus §3.19: das Feld ist eine
+	 * Combobox und kein Auswahlfeld mit fester Liste, und es gibt keinen
+	 * Freigabeschritt.
+	 *
+	 * <p>Aufgeloest wird in {@link #resolveTags(Set)}, und zwar vor jeder
+	 * Mutation am Projekt; hier wird nur noch uebernommen.
+	 *
+	 * <p><strong>Sortiert wird, bevor aufgeloest wird.</strong> Stehen in
+	 * <em>einer</em> Anfrage zwei Schreibweisen desselben neuen Worts, entsteht
+	 * die Zeile in derjenigen, die zuerst an die Reihe kommt. Ohne das
+	 * {@code sorted()} waere das die Iterationsreihenfolge eines {@code Set},
+	 * also nichts, worauf sich jemand berufen koennte: dieselbe Anfrage koennte
+	 * einmal &bdquo;Robotik&ldquo; und einmal &bdquo;robotik&ldquo; anlegen. Auf
+	 * ein vorhandenes Wort hat die Reihenfolge keinen Einfluss, das gewinnt
+	 * ohnehin mit seinem Anzeigenamen.
 	 *
 	 * <p>Die vorhandene Sammlung wird geleert und neu gefuellt statt ersetzt:
 	 * sie gehoert zu einer verwalteten Entity, und ein neues {@code Set} wuerde
-	 * Hibernate die Sammlung unter den Fuessen wegziehen.
+	 * Hibernate die Sammlung unter den Fuessen wegziehen. Der Vergleich davor
+	 * spart den Schreibvorgang, wenn sich nichts geaendert hat; er traegt, weil
+	 * beide Seiten dieselben verwalteten Instanzen desselben
+	 * Persistenzkontextes enthalten.
 	 */
-	private void applyTags(Project project, Set<String> requested) {
-		if (requested == null) {
+	private void applyTags(Project project, Set<Tag> wanted) {
+		if (wanted == null) {
 			return;
 		}
-		Set<String> wanted = requested.stream()
-				.map(String::trim)
-				.collect(Collectors.toCollection(LinkedHashSet::new));
-
 		if (project.getTags().equals(wanted)) {
 			return;
 		}
 		project.getTags().clear();
 		project.getTags().addAll(wanted);
+	}
+
+	/**
+	 * Loest die eingehenden Namen in Zeilen der Tabelle {@code tag} auf, ohne das
+	 * Projekt anzufassen.
+	 *
+	 * <p><strong>Warum das vor jeder Mutation geschieht und nicht mittendrin:</strong>
+	 * das Auflösen fragt die Datenbank ({@link #tagReference}), und Hibernate
+	 * schreibt vor einer Abfrage aus, was im Persistenzkontext offen steht. Liefe
+	 * es nach {@code applyMetadata}, entstuende dort ein erster
+	 * {@code update project ...} und damit ein Versionsschritt, der zweite kaeme
+	 * beim Schreiben der Zuordnungen: ein Aufruf von {@code PUT} zaehlte
+	 * {@code version} um zwei hoch statt um eins (§6.4). Fachlich waere das
+	 * folgenlos, weil die Antwort den neuen Stand traegt, aber es widerspraeche
+	 * der Zusage &bdquo;ein Schreibvorgang, ein Versionsschritt&ldquo;, an der
+	 * sich der Editor mit seinem Autosave orientiert. Vor der ersten Mutation ist
+	 * nichts offen, der Flush schreibt nichts, und es bleibt bei einem Schritt.
+	 *
+	 * @param requested Namen aus dem Request; {@code null} heisst
+	 *                  &bdquo;unveraendert&ldquo; und wird durchgereicht
+	 * @return die aufgeloesten Zeilen, oder {@code null} bei {@code null}
+	 */
+	private Set<Tag> resolveTags(Set<String> requested) {
+		if (requested == null) {
+			return null;
+		}
+		return requested.stream()
+				.map(ProjectWriteService::normalizedTagName)
+				.filter(name -> !name.isEmpty())
+				.distinct()
+				.sorted()
+				.map(this::tagReference)
+				.collect(Collectors.toCollection(LinkedHashSet::new));
+	}
+
+	/**
+	 * Die Normalform eines Schlagworts: getrimmt, innere Mehrfach-Leerzeichen
+	 * zusammengezogen.
+	 *
+	 * <p>Genau dieselbe Form benutzt die Migration {@code V202608191630__tag.sql}
+	 * bei der Uebernahme des Bestands. Liefen die beiden auseinander, gaebe es
+	 * Zeilen, die dieser Schreibweg nie wiederfaende: er suchte nach
+	 * &bdquo;Green IT&ldquo; und legte es neben einem gespeicherten
+	 * &bdquo;Green&nbsp;&nbsp;IT&ldquo; ein zweites Mal an.
+	 *
+	 * <p>Die Gross- und Kleinschreibung bleibt hier stehen. Sie ist erst beim
+	 * Vergleich gleichgueltig, und fuer ein neues Tag ist sie der Anzeigename.
+	 *
+	 * <p>Dass {@link #applyTags} das Ergebnis danach auf Leere prueft, ist
+	 * Vorsorge und kein toter Zweig mit Aussicht auf Wirkung: heute faengt die
+	 * Bean-Validation den nur aus Leerzeichen bestehenden Wert schon am Request
+	 * ab ({@code @NotBlank}, 400 {@code VALIDATION_FAILED}). Faellt diese
+	 * Annotation kuenftig weg, entsteht hier trotzdem keine Zeile mit leerem
+	 * Namen.
+	 */
+	private static String normalizedTagName(String raw) {
+		return INNER_WHITESPACE.matcher(raw.trim()).replaceAll(" ");
+	}
+
+	/**
+	 * Loest einen normalisierten Namen in eine Zeile der Tabelle {@code tag} auf
+	 * und legt sie an, falls es sie noch nicht gibt (§3.19).
+	 *
+	 * <p><strong>Einfuegen statt vorher fragen und dann einfuegen.</strong> Zwei
+	 * gleichzeitige Speicherungen mit demselben neuen Wort verletzten sonst den
+	 * Unique-Index {@code uq_tag_name_lower}; PostgreSQL braeche die laufende
+	 * Transaktion daraufhin ab, und aus einem gelungenen Speichervorgang wuerde
+	 * 500 {@code INTERNAL_ERROR}. {@code insertIfAbsent} laesst den Fehler gar
+	 * nicht erst entstehen, weshalb hier auch kein Fehlercode hinzukommt.
+	 *
+	 * <p>Die vorgeschaltete Suche bleibt trotzdem stehen: im Regelfall gibt es
+	 * das Wort bereits, und dann ist ein Lesevorgang billiger als ein Einfuegen,
+	 * das ohnehin nichts tut.
+	 */
+	private Tag tagReference(String name) {
+		return tagRepository.findByNameNormalized(name)
+				.orElseGet(() -> {
+					tagRepository.insertIfAbsent(name);
+					return tagRepository.findByNameNormalized(name)
+							.orElseThrow(() -> new IllegalStateException(
+									"Tag konnte nicht angelegt werden: " + name));
+				});
 	}
 
 	// ------------------------------------------------------------------

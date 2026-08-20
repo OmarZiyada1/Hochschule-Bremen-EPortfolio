@@ -1,23 +1,33 @@
 package de.hsbremen.eportfolio.masterdata;
 
+import de.hsbremen.eportfolio.common.error.ErrorCodes;
+import de.hsbremen.eportfolio.common.error.ValidationException;
 import de.hsbremen.eportfolio.masterdata.dto.CategoryResponse;
 import de.hsbremen.eportfolio.masterdata.dto.FacultyResponse;
 import de.hsbremen.eportfolio.masterdata.dto.ModuleResponse;
 import de.hsbremen.eportfolio.masterdata.dto.SemesterResponse;
 import de.hsbremen.eportfolio.masterdata.dto.StudyProgramResponse;
+import de.hsbremen.eportfolio.masterdata.dto.TagResponse;
 import java.util.List;
+import java.util.Locale;
+import java.util.regex.Pattern;
 import java.util.UUID;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Lesezugriff auf die Referenzlisten aus §3.6 bis §3.9 und §3.18.
+ * Lesezugriff auf die Referenzlisten aus §3.6 bis §3.9, §3.18 und §3.19.
  *
  * <p>Alle Listen gehen sortiert und ohne Paginierung heraus (§6.1). Das ist kein
  * vergessenes Seitenmodell: es sind kleine, selten veraenderliche Listen, die
  * das Frontend vollstaendig braucht, als Dropdown bei Projektanlage und
  * Registrierung und als Filterleiste der Projektliste. Eine Seitenaufteilung
  * wuerde dort nur einen zweiten Ladeweg erzeugen.
+ *
+ * <p><strong>Ausnahme sind die Schlagwoerter</strong> (§3.19): sie werden nicht
+ * gepflegt, sondern wachsen mit jedem Projekt, und gehen deshalb begrenzt
+ * heraus. Die ausfuehrliche Begruendung steht an {@link #tags(String, Integer)}.
  *
  * <p>Sortiert wird nach {@code name}, beim Semester dagegen nach der gepflegten
  * Reihenfolge {@code sortOrder} (§3.18): alphabetisch stuende dort
@@ -45,14 +55,17 @@ public class MasterDataService {
 
 	private final SemesterRepository semesterRepository;
 
+	private final TagRepository tagRepository;
+
 	public MasterDataService(CategoryRepository categoryRepository, FacultyRepository facultyRepository,
 			StudyProgramRepository studyProgramRepository, ModuleRepository moduleRepository,
-			SemesterRepository semesterRepository) {
+			SemesterRepository semesterRepository, TagRepository tagRepository) {
 		this.categoryRepository = categoryRepository;
 		this.facultyRepository = facultyRepository;
 		this.studyProgramRepository = studyProgramRepository;
 		this.moduleRepository = moduleRepository;
 		this.semesterRepository = semesterRepository;
+		this.tagRepository = tagRepository;
 	}
 
 	/** Alle Kategorien fuer {@code GET /api/categories}. */
@@ -128,5 +141,111 @@ public class MasterDataService {
 		return found.stream()
 				.map(SemesterResponse::from)
 				.toList();
+	}
+
+	// ------------------------------------------------------------------
+	// Schlagwoerter (§3.19)
+	// ------------------------------------------------------------------
+
+	/**
+	 * Vorgabe fuer {@code limit}, wenn der Aufruf keine nennt (§6.1).
+	 *
+	 * <p>Paketsichtbar und nicht privat, damit der Test die Zahl nicht ein
+	 * zweites Mal aufschreibt: eine Vorgabe, die an zwei Stellen steht, laeuft
+	 * beim naechsten Contract-Nachtrag auseinander.
+	 */
+	static final int TAG_LIMIT_DEFAULT = 20;
+
+	/** Obergrenze fuer {@code limit} (§6.1). */
+	static final int TAG_LIMIT_MAX = 100;
+
+	/**
+	 * Maskierzeichen fuer {@code like} in {@link TagRepository#findUsage}.
+	 *
+	 * <p>Ein Ausrufezeichen und nicht der Backslash aus dem
+	 * {@code ProjectSpecifications}: HQL kann den Backslash in einem
+	 * Zeichenkettenliteral nicht als Zeichen ausdruecken, die Begruendung steht
+	 * an der Abfrage. Fachlich macht die Wahl keinen Unterschied, solange das
+	 * Zeichen sich selbst entwertet, und genau das tut die erste Ersetzung in
+	 * {@link #likePattern(String)}.
+	 */
+	private static final String TAG_ESCAPE = "!";
+
+	/**
+	 * Innere Mehrfach-Leerzeichen, siehe {@link #likePattern(String)}. Dasselbe
+	 * Muster wie in {@code ProjectWriteService.normalizedTagName}; es steht hier
+	 * ein zweites Mal, weil ein gemeinsamer Ort einen der beiden Dienste vom
+	 * anderen abhaengig machte und die Normalform an beiden Enden derselben
+	 * Zusage aus &sect;3.19 haengt.
+	 */
+	private static final Pattern INNER_WHITESPACE = Pattern.compile("\\s+");
+
+	/**
+	 * Die Vorschlagsliste fuer {@code GET /api/tags} (§3.19), nach
+	 * Verwendungshaeufigkeit absteigend und bei Gleichstand nach Name.
+	 *
+	 * <p><strong>Warum begrenzt und nicht vollstaendig wie die uebrigen
+	 * Stammdaten:</strong> die vier anderen Listen sind gepflegt und klein, die
+	 * Zahl der Tags waechst dagegen mit jedem Projekt, weil Autor:innen neue
+	 * anlegen duerfen. Eine vollstaendige Liste waere in einem Jahr weder fuer
+	 * das Auswahlfeld brauchbar noch fuer die Leitung erklaerbar. Gebraucht
+	 * werden ohnehin nur die vordersten; wer ein selteneres Wort sucht, tippt,
+	 * und dann filtert {@code q}.
+	 *
+	 * <p><strong>Ein Wert ausserhalb der Grenzen ergibt 400 und wird nicht
+	 * stillschweigend gekappt.</strong> Gekappt bekaeme der Aufrufer weniger
+	 * Treffer als angefordert, ohne es zu erfahren, und suchte den Fehler bei
+	 * sich. Ein neuer Fehlercode entsteht dafuer nicht: Zahlenbereiche laufen
+	 * ueber das vorhandene {@code VALIDATION_FAILED} (§6.2).
+	 *
+	 * @param query  Filter auf den Namen, ohne Ruecksicht auf Gross- und
+	 *               Kleinschreibung und an beliebiger Stelle im Wort;
+	 *               {@code null} oder leer liefert die haeufigsten Tags
+	 * @param limit  Obergrenze der Trefferzahl; {@code null} bedeutet
+	 *               {@value #TAG_LIMIT_DEFAULT}
+	 * @return hoechstens {@code limit} Tags, das gebraeuchlichste zuerst
+	 * @throws ValidationException wenn {@code limit} ausserhalb von 1 bis
+	 *                             {@value #TAG_LIMIT_MAX} liegt
+	 */
+	public List<TagResponse> tags(String query, Integer limit) {
+		int effectiveLimit = limit == null ? TAG_LIMIT_DEFAULT : limit;
+		if (effectiveLimit < 1 || effectiveLimit > TAG_LIMIT_MAX) {
+			throw new ValidationException(ErrorCodes.VALIDATION_FAILED,
+					"limit: Erlaubt ist 1 bis " + TAG_LIMIT_MAX + ".");
+		}
+
+		return tagRepository.findUsage(likePattern(query), PageRequest.of(0, effectiveLimit)).stream()
+				.map(TagResponse::from)
+				.toList();
+	}
+
+	/**
+	 * Baut das {@code like}-Muster fuer {@link #tags(String, Integer)}.
+	 *
+	 * <p>Ohne Suchbegriff ist es {@code %} und damit wirkungslos; ein zweiter
+	 * Abfragezweig fuer diesen Fall waere dieselbe Abfrage ein zweites Mal.
+	 * Die Platzhalter der Eingabe werden entwertet, sonst faende eine Suche nach
+	 * {@code %} alles und eine nach {@code _} jedes Wort: dieselbe Ueberlegung
+	 * wie bei {@code ProjectSpecifications.searchText}.
+	 *
+	 * <p><strong>Der Suchbegriff durchlaeuft dieselbe Normalform wie ein
+	 * eingehendes Schlagwort</strong> (&sect;3.19): getrimmt, innere
+	 * Mehrfach-Leerzeichen zusammengezogen. Ohne das Zusammenziehen faende
+	 * &bdquo;Green&nbsp;&nbsp;IT&ldquo; das gespeicherte
+	 * &bdquo;Green&nbsp;IT&ldquo; nicht, und das Auswahlfeld boete dasselbe Wort
+	 * als neu an, obwohl der Schreibweg beides auf dieselbe Zeile abbildet. Der
+	 * Suchweg beantwortet damit dieselbe Frage wie der Schreibweg und nicht eine
+	 * knapp danebenliegende.
+	 */
+	private static String likePattern(String query) {
+		if (query == null || query.isBlank()) {
+			return "%";
+		}
+		String normalized = INNER_WHITESPACE.matcher(query.trim()).replaceAll(" ");
+		String escaped = normalized.toLowerCase(Locale.ROOT)
+				.replace(TAG_ESCAPE, TAG_ESCAPE + TAG_ESCAPE)
+				.replace("%", TAG_ESCAPE + "%")
+				.replace("_", TAG_ESCAPE + "_");
+		return "%" + escaped + "%";
 	}
 }
