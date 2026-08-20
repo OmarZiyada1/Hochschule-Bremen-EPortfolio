@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       token: response.token,
       expiresAt: response.expiresAt,
       user: response.user,
-      passwordChangeRequired: response.passwordChangeRequired ?? false,
+      passwordChangeRequired: response.passwordChangeRequired,
     })
   }, [])
 

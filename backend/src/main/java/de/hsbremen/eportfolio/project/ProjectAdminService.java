@@ -7,7 +7,7 @@ import de.hsbremen.eportfolio.common.error.ResourceNotFoundException;
 import de.hsbremen.eportfolio.common.error.ValidationException;
 import de.hsbremen.eportfolio.project.dto.ProjectBulkStatusRequest;
 import de.hsbremen.eportfolio.project.dto.ProjectBulkStatusResponse;
-import de.hsbremen.eportfolio.project.dto.ProjectBulkStatusResult;
+import de.hsbremen.eportfolio.project.dto.ProjectBulkStatusResultResponse;
 import de.hsbremen.eportfolio.project.dto.RevisionRequest;
 import java.util.ArrayList;
 import java.util.List;
@@ -88,7 +88,7 @@ public class ProjectAdminService {
 		ProjectTransition transition = requireKnownAction(request.action());
 		RevisionRequest revision = requireMatchingReason(transition, request.reason());
 
-		List<ProjectBulkStatusResult> results = new ArrayList<>(request.projectIds().size());
+		List<ProjectBulkStatusResultResponse> results = new ArrayList<>(request.projectIds().size());
 		for (UUID projectId : request.projectIds()) {
 			results.add(apply(user, projectId, transition, revision));
 		}
@@ -109,7 +109,7 @@ public class ProjectAdminService {
 	 * <p>Welche das sind, entscheidet {@link #errorCodeOf}; alles andere wirft
 	 * es weiter und ergibt einen 500 fuer die ganze Anfrage.
 	 */
-	private ProjectBulkStatusResult apply(AuthenticatedUser user, UUID projectId,
+	private ProjectBulkStatusResultResponse apply(AuthenticatedUser user, UUID projectId,
 			ProjectTransition transition, RevisionRequest revision) {
 
 		try {
@@ -119,10 +119,10 @@ public class ProjectAdminService {
 			else {
 				workflowService.requestRevision(user, projectId, revision);
 			}
-			return ProjectBulkStatusResult.success(projectId);
+			return ProjectBulkStatusResultResponse.success(projectId);
 		}
 		catch (RuntimeException e) {
-			return ProjectBulkStatusResult.failure(projectId, errorCodeOf(e));
+			return ProjectBulkStatusResultResponse.failure(projectId, errorCodeOf(e));
 		}
 	}
 

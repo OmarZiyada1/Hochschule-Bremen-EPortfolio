@@ -49,8 +49,8 @@ export function AppLayout() {
                 /* springdoc markiert kein required; ein Konto ohne Namen
                    gibt es fachlich nicht, die Leiste zeigt dann nichts
                    statt "undefined". */
-                firstName: user.firstName ?? "",
-                lastName: user.lastName ?? "",
+                firstName: user.firstName,
+                lastName: user.lastName,
                 /* Die Referenz /api/files/{id} wird hier zur abrufbaren
                    Adresse, wie in der Profilkarte (§3.15.1). */
                 avatarUrl: portfolio?.avatarUrl

@@ -42,8 +42,8 @@ export function FeaturedTop10Card({
   const position = entry.position ?? 1
   const author = project.author
     ? {
-        firstName: project.author.firstName ?? "",
-        lastName: project.author.lastName ?? "",
+        firstName: project.author.firstName,
+        lastName: project.author.lastName,
       }
     : null
 

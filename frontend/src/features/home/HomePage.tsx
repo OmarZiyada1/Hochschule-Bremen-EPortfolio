@@ -259,12 +259,12 @@ function Top10SlotTile({
     <Top10Card
       variant={variant}
       position={slot.position}
-      title={project.title ?? ""}
+      title={project.title}
       author={
         project.author
           ? {
-              firstName: project.author.firstName ?? "",
-              lastName: project.author.lastName ?? "",
+              firstName: project.author.firstName,
+              lastName: project.author.lastName,
             }
           : null
       }

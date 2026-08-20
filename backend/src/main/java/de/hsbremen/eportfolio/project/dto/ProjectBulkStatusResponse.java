@@ -5,7 +5,7 @@ import java.util.List;
 
 /**
  * Antwort von {@code POST /api/admin/projects/status} (§6.1, KAN-46): je ein
- * {@link ProjectBulkStatusResult} zu jeder angefragten ID, in der Reihenfolge
+ * {@link ProjectBulkStatusResultResponse} zu jeder angefragten ID, in der Reihenfolge
  * des Bodys.
  *
  * <p><strong>Der Statuscode ist 200, auch wenn jede Zeile gescheitert ist.</strong>
@@ -28,5 +28,5 @@ public record ProjectBulkStatusResponse(
 
 		@Schema(description = "Ein Ergebnis je angefragter Projekt-ID, in der Reihenfolge des "
 				+ "Bodys.")
-		List<ProjectBulkStatusResult> results) {
+		List<ProjectBulkStatusResultResponse> results) {
 }

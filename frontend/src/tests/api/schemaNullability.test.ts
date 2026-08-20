@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
-import type { ApiSchemas, ProjectDetailResponse } from "@/api/types"
+import type { ProjectDetailResponse } from "@/api/types"
+import { person, projectDetail, statusHistoryEntry } from "@/tests/fixtures"
 
 /*
  * Was die generierte schema.d.ts ueber null aussagt (KAN-74).
@@ -85,13 +86,55 @@ describe("generierte Typen: Nullbarkeit", () => {
       entry: NonNullable<ProjectDetailResponse["statusHistory"]>[number]
     ) => entry.toStatus
 
-    const personId = (person: ApiSchemas["PersonResponse"]) => person.id
+    const personId = (author: ProjectDetailResponse["author"]) => author.id
 
-    const tag = (value: NonNullable<ProjectDetailResponse["tags"]>[number]) =>
-      value.length
+    /* Ohne NonNullable: tags ist seit KAN-76 Pflicht und nicht nullbar, die
+       Huelle waere hier wirkungslos. Bei statusHistory oben bleibt sie
+       noetig, weil das Feld weiterhin null sein darf. */
+    const tag = (value: ProjectDetailResponse["tags"][number]) => value.length
 
-    expect(entryStatus({ toStatus: "PUBLISHED" })).toBe("PUBLISHED")
-    expect(personId({ id: "u-1" })).toBe("u-1")
+    expect(entryStatus(statusHistoryEntry({ toStatus: "PUBLISHED" }))).toBe(
+      "PUBLISHED"
+    )
+    expect(personId(person({ id: "u-1" }))).toBe("u-1")
     expect(tag("IoT")).toBe(3)
+  })
+})
+
+/*
+ * Was die generierte schema.d.ts ueber Anwesenheit aussagt (KAN-76).
+ *
+ * Die Gegenprobe zum Block darueber: dort geht es um den Wert null, hier um
+ * den fehlenden Schluessel. Beide Aussagen sind unabhaengig, und beide sind
+ * schon einmal verloren gegangen.
+ */
+describe("generierte Typen: Pflichtfelder", () => {
+  it("fuehrt die immer gelieferten Felder ohne Fragezeichen", () => {
+    /*
+     * Zugriff ohne Absicherung. Waeren die Felder optional, meldete tsc
+     * hier TS18048; genau so stand es bis KAN-76 im Code, und die Seiten
+     * glichen es mit Pruefungen wie `title ?? ""` aus.
+     */
+    const detail = projectDetail()
+
+    const laenge = (project: ProjectDetailResponse) =>
+      project.title.length + project.tags.length + project.author.id.length
+
+    expect(laenge(detail)).toBeGreaterThan(0)
+    expect(detail.version).toBe(1)
+  })
+
+  it("laesst nullbare Felder trotzdem als Schluessel stehen", () => {
+    /*
+     * Jackson steht auf Include.ALWAYS: ein nullbares Feld fehlt nie, es
+     * traegt dann den Wert null. Der Typ sagt deshalb `T | null` und nicht
+     * `T | null | undefined`, und eine Pruefung auf undefined waere hier
+     * die ueberfluessige Sorte.
+     */
+    const detail = projectDetail()
+
+    expect(detail).toHaveProperty("statusHistory")
+    expect(detail.statusHistory).toBeNull()
+    expect(detail.summary).toBeNull()
   })
 })

@@ -8,6 +8,7 @@ import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springdoc.core.customizers.PropertyCustomizer;
 import org.springframework.context.annotation.Bean;
@@ -199,6 +200,62 @@ public class OpenApiConfig {
 			}
 			openApi.getComponents().getSchemas().values()
 					.forEach(schema -> schema.setNullable(null));
+		};
+	}
+
+	/**
+	 * Traegt an jedem Antwortschema ein, dass seine Eigenschaften immer kommen
+	 * (KAN-76).
+	 *
+	 * <p>Ohne diese Angabe erzeugt {@code openapi-typescript} jede Eigenschaft
+	 * optional, auch {@code id}, {@code title} und {@code status}. Der Typ sagt
+	 * dann nichts mehr zu: {@code title} ist {@code string | undefined}, obwohl
+	 * der Server ihn bei jedem Projekt sendet, und im Frontend entstehen
+	 * Pruefungen wie {@code data.title ?? ""} fuer einen Fall, den es fachlich
+	 * nicht gibt. Wer sich an solche Pruefungen gewoehnt, uebersieht spaeter die
+	 * eine, die zaehlt.
+	 *
+	 * <p><strong>Pflicht ist jede Eigenschaft, auch die nullbare.</strong>
+	 * {@code required} und {@code nullable} beantworten zwei verschiedene
+	 * Fragen: „steht der Schluessel im JSON" und „darf sein Wert null sein".
+	 * Hier wird nur die erste beantwortet, und die Antwort ist ueberall
+	 * dieselbe, weil Jackson bei {@code Include.ALWAYS} bleibt und kein Feld
+	 * weglaesst. Was im Record steht, steht in der Antwort, notfalls mit dem
+	 * Wert null.
+	 *
+	 * <p>Im erzeugten Typ ist der Unterschied genau der, den das Frontend
+	 * braucht: aus {@code statusHistory?: T[] | null} wird
+	 * {@code statusHistory: T[] | null}. Null muss weiterhin behandelt werden,
+	 * ein fehlender Schluessel kann nicht mehr vorkommen. Die Zusage faellt,
+	 * sobald ein DTO {@code @JsonInclude(NON_NULL)} bekommt; heute setzt das
+	 * nirgends jemand.
+	 *
+	 * <p><strong>Nur Antworten.</strong> An einem {@code …Request} waere dieselbe
+	 * Rechnung falsch. Dort entscheidet nicht Jackson, sondern der Aufrufer, ob
+	 * ein Feld mitkommt, und was Pflicht ist, steht bereits da: Bean Validation
+	 * speist es aus {@code @NotNull} und Verwandten. Ein Ueberschreiben machte
+	 * jedes freiwillige Eingabefeld zum Pflichtfeld.
+	 *
+	 * <p>Voraussetzung sind die beiden Haken darueber (KAN-74): sie sorgen
+	 * dafuer, dass {@code nullable} an der Eigenschaft steht und nicht am
+	 * gemeinsamen Modell unter {@code components}. Auf die Reihenfolge der Beans
+	 * kommt es nicht an, weil dieser Haken {@code nullable} gar nicht liest.
+	 */
+	@Bean
+	public OpenApiCustomizer requiredResponsePropertiesCustomizer() {
+		return openApi -> {
+			if (openApi.getComponents() == null || openApi.getComponents().getSchemas() == null) {
+				return;
+			}
+			openApi.getComponents().getSchemas().forEach((name, model) -> {
+				// Ueber den Umweg Schema<?>, weil der rohe Typ aus der Map sonst
+				// auch die Typargumente von getProperties() wegwirft.
+				Schema<?> schema = model;
+				if (!name.endsWith("Response") || schema.getProperties() == null) {
+					return;
+				}
+				schema.setRequired(new ArrayList<>(schema.getProperties().keySet()));
+			});
 		};
 	}
 

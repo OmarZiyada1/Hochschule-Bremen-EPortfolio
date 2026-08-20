@@ -5,6 +5,7 @@ import { Table, TableBody } from "@/components/ui/table"
 import { renderWithProviders } from "@/tests/render"
 
 import { ProjectTableRow } from "@/components/common/ProjectTableRow"
+import { reference } from "@/tests/fixtures"
 
 function renderRow(row: React.ReactNode) {
   return renderWithProviders(
@@ -20,7 +21,10 @@ describe("ProjectTableRow", () => {
       <ProjectTableRow
         title="Campus-Garten"
         author={{ firstName: "Mira", lastName: "Beispiel" }}
-        studyProgram={{ name: "Medieninformatik" }}
+        studyProgram={reference({
+          name: "Medieninformatik",
+          abbreviation: null,
+        })}
         semester="SoSe 2026"
         status="PUBLISHED"
         href="/projects/1"

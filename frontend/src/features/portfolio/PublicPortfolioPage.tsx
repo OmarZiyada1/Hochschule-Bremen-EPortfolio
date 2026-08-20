@@ -44,8 +44,8 @@ export default function PublicPortfolioPage() {
 
   const person = data?.user
     ? {
-        firstName: data.user.firstName ?? "",
-        lastName: data.user.lastName ?? "",
+        firstName: data.user.firstName,
+        lastName: data.user.lastName,
       }
     : null
 
@@ -132,7 +132,7 @@ export default function PublicPortfolioPage() {
             <aside className="lg:sticky lg:top-4">
               <ProfileCard
                 person={person}
-                email={data.user?.email}
+                email={data.user.email}
                 biography={data.biography}
                 avatarUrl={data.avatarUrl}
               />
