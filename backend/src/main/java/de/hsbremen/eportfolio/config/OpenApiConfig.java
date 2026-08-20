@@ -1,10 +1,15 @@
 package de.hsbremen.eportfolio.config;
 
+import io.swagger.v3.core.converter.AnnotatedType;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import java.lang.annotation.Annotation;
+import org.springdoc.core.customizers.OpenApiCustomizer;
+import org.springdoc.core.customizers.PropertyCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -71,5 +76,164 @@ public class OpenApiConfig {
 				// tatsaechlich ein Token verlangen, entscheidet allein die
 				// SecurityFilterChain.
 				.addSecurityItem(new SecurityRequirement().addList(BEARER_SCHEMA));
+	}
+
+	/**
+	 * Haelt {@code @Schema(nullable = true)} an Feldern fest, deren Typ ein
+	 * eigenes Schema ist (KAN-74).
+	 *
+	 * <p>In OpenAPI 3.0 darf neben einem {@code $ref} kein weiteres
+	 * Schluesselwort stehen: ein Leser muesste sonst entscheiden, ob
+	 * {@code nullable} zum Verweis oder zum verwiesenen Schema gehoert.
+	 * swagger-core loest das, indem es die Eigenschaft auf den blossen
+	 * {@code $ref} eindampft und Beschreibung wie {@code nullable}
+	 * <strong>ersatzlos verwirft</strong>, ohne Warnung. Betroffen sind genau
+	 * die Bezuege am Projekt, die nach §3.3 im {@code DRAFT} noch nicht
+	 * gesetzt sind: {@code category}, {@code faculty}, {@code studyProgram},
+	 * {@code module} und {@code semester} an Karte wie Detail, dazu
+	 * {@code Top10NominationResponse.decidedBy} (§3.11). Zehn Felder, deren
+	 * Nullbarkeit ohne diesen Haken in {@code frontend/src/api/schema.d.ts}
+	 * nicht ankommt, waehrend die uebrigen 44 Angaben durchlaufen.
+	 *
+	 * <p>Der vorgesehene Ausweg von 3.0 ist die Huelle
+	 * {@code allOf: [ { $ref } ]}: der Verweis steht dann als einziger Eintrag
+	 * in einer Zusammensetzung, und {@code nullable} daneben bezieht sich
+	 * eindeutig auf die Eigenschaft. Die Beschreibung wird gleich mit
+	 * gerettet, sie faellt demselben Eindampfen zum Opfer.
+	 *
+	 * <p>Angesetzt wird an der Eigenschaft und nicht am fertigen Dokument:
+	 * nach dem Aufbau ist die Annotation nicht mehr zu sehen, ein
+	 * {@code OpenApiCustomizer} muesste die Nullbarkeit also raten. Der
+	 * {@link PropertyCustomizer} bekommt mit dem {@link AnnotatedType} die
+	 * Annotationen der Record-Komponente selbst gereicht und liest sie
+	 * einfach ab.
+	 *
+	 * <p>Gilt nur fuer 3.0. Stellt jemand {@code springdoc.api-docs.version}
+	 * zurueck auf 3.1, ist die Huelle unnoetig, aber nicht falsch: dort ist
+	 * {@code allOf} neben Geschwisterfeldern ohnehin erlaubt.
+	 */
+	@Bean
+	public PropertyCustomizer nullableReferencePropertyCustomizer() {
+		return (property, type) -> {
+			io.swagger.v3.oas.annotations.media.Schema annotation = schemaAnnotationOf(type);
+			if (property == null || annotation == null || !annotation.nullable()) {
+				return property;
+			}
+
+			// Listenfelder wie ProjectDetailResponse.statusHistory oder
+			// ProjectUpdateRequest.tags. Ihr nullable gehoert an die Liste und
+			// steht dort auch schon: eine Liste wird nicht zum blossen $ref
+			// eingedampft, das passiert nur ihren Eintraegen.
+			//
+			// Der Eintragstyp wird jedoch mit denselben Annotationen
+			// aufgeloest, und swagger-core reicht die Angabe damit an beide
+			// weiter. Hier wird sie vom Eintrag wieder genommen, in beiden
+			// Auspraegungen: die Huelle, die der Zweig unten kurz zuvor um
+			// einen $ref gelegt hat, und das nullable, das swagger-core einem
+			// einfachen Eintragstyp wie String selbst angehaengt hat.
+			//
+			// Die Regel gilt im ganzen Projekt: eine Liste als Ganzes kann
+			// null sein, ein Eintrag darin nie. Weder §3.3 (tags, editors)
+			// noch §3.4 (blocks) noch §3.12 (statusHistory) kennen einen
+			// Listeneintrag ohne Wert.
+			Schema<?> items = property.getItems();
+			if (items != null) {
+				String wrapped = wrappedRefOf(items);
+				if (wrapped != null) {
+					property.setItems(new Schema<>().$ref(wrapped));
+				} else {
+					items.setNullable(null);
+				}
+				return property;
+			}
+
+			if (property.get$ref() == null) {
+				return property;
+			}
+
+			Schema<?> wrapper = new Schema<>()
+					.addAllOfItem(new Schema<>().$ref(property.get$ref()))
+					.nullable(true);
+
+			// Beschreibung aus der Annotation und nicht aus property: dort ist
+			// sie beim Eindampfen schon verloren gegangen.
+			if (!annotation.description().isBlank()) {
+				wrapper.setDescription(annotation.description());
+			}
+
+			return wrapper;
+		};
+	}
+
+	/**
+	 * Nimmt {@code nullable} von den benannten Schemas unter
+	 * {@code components.schemas} (KAN-74).
+	 *
+	 * <p>Ein benanntes Schema ist ein <em>Typ</em>. Ob eine bestimmte
+	 * <em>Verwendung</em> dieses Typs null sein darf, entscheidet die Stelle,
+	 * an der er verwendet wird, und niemals er selbst: {@code PersonResponse}
+	 * ist als Autor:in eines Projekts immer da (§3.3) und als
+	 * {@code decidedBy} einer Nominierung null, solange nicht entschieden ist
+	 * (§3.11). Steht die Angabe am Typ, gilt sie fuer beide.
+	 *
+	 * <p>Genau das passiert ohne diesen Haken. swagger-core loest den Typ das
+	 * erste Mal an einer Stelle auf, die {@code @Schema(nullable = true)}
+	 * traegt, und heftet die Angabe an das Modell, das es unter
+	 * {@code components} ablegt. Betroffen sind vier Schemas
+	 * ({@code PersonResponse}, {@code ReferenceResponse},
+	 * {@code StatusHistoryResponse}, {@code MemberRequest}), und die Folge ist
+	 * grob: {@code openapi-typescript} erzeugt daraus einen Typ, der ueberall
+	 * null sein kann, also auch als Eintrag einer Liste. Der Typecheck
+	 * verlangt dann eine Pruefung an jeder Stelle, an der ein Autor:innenname
+	 * gelesen wird, obwohl der Server dort nie null sendet.
+	 *
+	 * <p>Im Dokument nach 3.1 fiel das nicht auf, weil dort ohnehin jedes
+	 * {@code nullable} verworfen wurde. Sichtbar wird es erst, seit
+	 * {@code springdoc.api-docs.version} auf 3.0 steht.
+	 */
+	@Bean
+	public OpenApiCustomizer schemaLevelNullableCustomizer() {
+		return openApi -> {
+			if (openApi.getComponents() == null || openApi.getComponents().getSchemas() == null) {
+				return;
+			}
+			openApi.getComponents().getSchemas().values()
+					.forEach(schema -> schema.setNullable(null));
+		};
+	}
+
+	/**
+	 * Der Verweis aus einer von dieser Klasse gesetzten Huelle, oder
+	 * {@code null}, wenn das Schema keine solche ist.
+	 */
+	private static String wrappedRefOf(Schema<?> schema) {
+		if (!Boolean.TRUE.equals(schema.getNullable())
+				|| schema.getAllOf() == null
+				|| schema.getAllOf().size() != 1) {
+			return null;
+		}
+		return ((Schema<?>) schema.getAllOf().get(0)).get$ref();
+	}
+
+	/**
+	 * Die {@code @Schema}-Annotation der gerade aufgeloesten Eigenschaft, oder
+	 * {@code null}, wenn sie keine traegt.
+	 *
+	 * <p>{@code getCtxAnnotations()} liefert die Annotationen der Stelle, an
+	 * der der Typ verwendet wird, also der Record-Komponente, und nicht die des
+	 * Typs selbst. Genau das wird hier gebraucht: {@code nullable} steht am
+	 * Feld, nicht an {@code ReferenceResponse}.
+	 */
+	private static io.swagger.v3.oas.annotations.media.Schema schemaAnnotationOf(AnnotatedType type) {
+		Annotation[] annotations = type == null ? null : type.getCtxAnnotations();
+		if (annotations == null) {
+			return null;
+		}
+		for (Annotation annotation : annotations) {
+			if (annotation instanceof io.swagger.v3.oas.annotations.media.Schema schema) {
+				return schema;
+			}
+		}
+		return null;
 	}
 }

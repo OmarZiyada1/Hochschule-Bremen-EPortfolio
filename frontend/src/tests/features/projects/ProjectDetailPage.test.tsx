@@ -138,25 +138,16 @@ const HISTORY: StatusHistoryResponse[] = [
 
 /*
  * Der Server schickt die gesperrten Listenfelder ausdruecklich als null
- * (Jackson steht auf Include.ALWAYS). Die generierte schema.d.ts fuehrt sie
- * nur als optional: springdoc meldet zwar nullable, openapi-typescript
- * erzeugt daraus aber kein "| null". Der Testtyp bildet deshalb die echte
- * Antwort ab und nicht die geschoente, sonst prueft die Suite einen Zustand,
- * den es nie gibt.
+ * (Jackson steht auf Include.ALWAYS). Seit KAN-74 sagt die generierte
+ * schema.d.ts das auch: editors und statusHistory stehen dort als
+ * "| null". Der eigene Testtyp, der diese Wahrheit bis dahin von Hand
+ * nachtrug, ist damit entfallen; gemockt wird gegen den echten Antworttyp.
  */
-type NullableDetailResponse = Omit<
-  ProjectDetailResponse,
-  "editors" | "statusHistory"
-> & {
-  editors?: ProjectDetailResponse["editors"] | null
-  statusHistory?: ProjectDetailResponse["statusHistory"] | null
-}
-
-type DetailResponseOverrides = Partial<NullableDetailResponse>
+type DetailResponseOverrides = Partial<ProjectDetailResponse>
 
 function projectResponse(
   overrides: DetailResponseOverrides = {}
-): NullableDetailResponse {
+): ProjectDetailResponse {
   return {
     id: PROJECT_ID,
     title: "SmartCampus: IoT-gestuetztes Gebaeudemanagement",
@@ -200,7 +191,7 @@ function projectResponse(
   }
 }
 
-function detailHandler(body: NullableDetailResponse) {
+function detailHandler(body: ProjectDetailResponse) {
   return http.get(`*/api/projects/${PROJECT_ID}`, () => HttpResponse.json(body))
 }
 

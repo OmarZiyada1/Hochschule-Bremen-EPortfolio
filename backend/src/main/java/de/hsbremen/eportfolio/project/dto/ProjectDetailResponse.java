@@ -91,12 +91,21 @@ public record ProjectDetailResponse(
 				nullable = true)
 		ReferenceResponse semester,
 
+		@Schema(description = "Kategorie (§3.6). Im DRAFT noch nicht gesetzt.",
+				nullable = true)
 		ReferenceResponse category,
 
+		@Schema(description = "Fakultaet (§3.8). Im DRAFT noch nicht gesetzt.",
+				nullable = true)
 		ReferenceResponse faculty,
 
+		@Schema(description = "Studiengang (§3.7). Im DRAFT noch nicht gesetzt.",
+				nullable = true)
 		ReferenceResponse studyProgram,
 
+		@Schema(description = "Fach oder Modul (§3.9). Dauerhaft freiwillig: anders als "
+				+ "die uebrigen Bezuege steht es nicht unter den Pflichtfeldern des "
+				+ "Einreichens (§3.3).", nullable = true)
 		ReferenceResponse module,
 
 		PersonResponse author,

@@ -1224,12 +1224,13 @@ export interface paths {
 export type webhooks = Record<string, never>
 export interface components {
   schemas: {
+    /** @description Vollstaendige neue Blockliste. Sie ersetzt den bisherigen Inhalt; [] loescht ihn. Bloecke mit id werden aktualisiert, Bloecke ohne id neu angelegt. */
     BlockRequest: {
       /**
        * Format: uuid
        * @description ID eines vorhandenen Blocks. Weglassen legt einen neuen an; die server-vergebene UUID steht in der Antwort.
        */
-      id?: string
+      id?: string | null
       /**
        * @description Blocktyp aus §2.5. Ein unbekannter Wert ergibt 400 BLOCK_TYPE_UNKNOWN.
        * @example TEXT
@@ -1241,14 +1242,13 @@ export interface components {
        * @example 0
        */
       orderIndex: number
-      /** @description Top-Level-Knoten des ProseMirror-Dokuments, unveraendert (§2.5). */
       content: components["schemas"]["JsonNode"]
       /**
        * Format: int32
        * @description Version des Editor-Schemas (§2.10). Fehlt sie, gilt die aktuelle Version.
        * @example 2
        */
-      schemaVersion?: number
+      schemaVersion?: number | null
     }
     BlocksUpdateRequest: {
       /**
@@ -1262,6 +1262,7 @@ export interface components {
     }
     /** @description Top-Level-Knoten des ProseMirror-Dokuments, unveraendert (§2.5). */
     JsonNode: Record<string, never>
+    /** @description Inhalt des Projekts, geordnet nach orderIndex. */
     BlockResponse: {
       /** Format: uuid */
       id?: string
@@ -1283,7 +1284,6 @@ export interface components {
         | "EMBED"
       /** Format: int32 */
       orderIndex?: number
-      /** @description Top-Level-Knoten des ProseMirror-Dokuments, unveraendert (§2.5). */
       content?: components["schemas"]["JsonNode"]
       /** Format: int32 */
       schemaVersion?: number
@@ -1298,6 +1298,7 @@ export interface components {
       /** @description Inhalt des Projekts, geordnet nach orderIndex. */
       blocks?: components["schemas"]["BlockResponse"][]
     }
+    /** @description Co-Autor:innen und Mitwirkende (§3.13). Null laesst die Liste unveraendert, [] leert sie. Die Autor:in gehoert nicht hinein. */
     MemberRequest: {
       /**
        * Format: uuid
@@ -1323,51 +1324,52 @@ export interface components {
        */
       title?: string
       /** @description Teaser fuer Kachel- und Listenansicht. Null loescht den Wert. */
-      summary?: string
+      summary?: string | null
       /** @description Kachelbild. Null loescht den Wert. */
-      coverImageUrl?: string
+      coverImageUrl?: string | null
       /**
        * @description Null loescht den Wert (§3.3).
-       * @enum {string}
+       * @enum {string|null}
        */
-      projectType?: "REGULAR" | "PAPER" | "THESIS"
+      projectType?: "REGULAR" | "PAPER" | "THESIS" | null
       /**
        * @description Null loescht den Wert (§3.3).
-       * @enum {string}
+       * @enum {string|null}
        */
-      degree?: "BACHELOR" | "MASTER" | "MBA"
+      degree?: "BACHELOR" | "MASTER" | "MBA" | null
       /**
        * Format: uuid
        * @description ID eines Semesters aus GET /api/semesters. Null loescht die Zuordnung; nur aktive Semester sind waehlbar (§3.18).
        */
-      semesterId?: string
+      semesterId?: string | null
       /**
        * Format: uuid
        * @description ID einer Kategorie. Null loescht die Zuordnung.
        */
-      categoryId?: string
+      categoryId?: string | null
       /**
        * Format: uuid
        * @description ID einer Fakultaet. Null loescht die Zuordnung.
        */
-      facultyId?: string
+      facultyId?: string | null
       /**
        * Format: uuid
        * @description ID eines Studiengangs. Null loescht die Zuordnung.
        */
-      studyProgramId?: string
+      studyProgramId?: string | null
       /**
        * Format: uuid
        * @description ID eines Moduls. Null loescht die Zuordnung.
        */
-      moduleId?: string
+      moduleId?: string | null
       /** @description Freie Schlagwoerter, hoechstens fuenf. Null laesst die vorhandenen unveraendert, [] loescht sie. */
-      tags?: string[]
+      tags?: string[] | null
       /** @description IDs der zustaendigen Redakteur:innen. Null laesst die Zuweisung unveraendert, [] hebt sie auf. Eine Aenderung ist nur der Autor:in und nur im Status DRAFT erlaubt, sonst 403 (§5, Fussnote 3). */
-      editorIds?: string[]
+      editorIds?: string[] | null
       /** @description Co-Autor:innen und Mitwirkende (§3.13). Null laesst die Liste unveraendert, [] leert sie. Die Autor:in gehoert nicht hinein. */
-      members?: components["schemas"]["MemberRequest"][]
+      members?: components["schemas"]["MemberRequest"][] | null
     }
+    /** @description Co-Autor:innen und Mitwirkende (§3.13). Nicht zu verwechseln mit der zugewiesenen Redaktion. */
     MemberResponse: {
       /** Format: uuid */
       userId?: string
@@ -1379,40 +1381,45 @@ export interface components {
        */
       projectRole?: string
     }
+    /** @description Zugewiesene Redakteur:innen (§3.3). Bei einem PUBLISHED-Projekt fuer alle sichtbar, auch ohne Anmeldung (seit Contract v55); in jedem anderen Status nur fuer die Projektseite, die zugewiesene Redaktion und Admins. In der Praxis damit immer gefuellt: wer ein nicht veroeffentlichtes Projekt ueberhaupt lesen darf, gehoert genau zu diesem Kreis. Eine leere Liste bedeutet, dass keine Redaktion zugewiesen ist. */
     PersonResponse: {
       /** Format: uuid */
       id?: string
       firstName?: string
       lastName?: string
       /** @description Profilbild als Referenz /api/files/{id} (§3.15.1). Kann fehlen: das Konto hat keines hinterlegt, oder die Antwort fuehrt es an dieser Stelle nicht mit. Gefuellt ist es an der Autor:in einer Projektkachel. */
-      avatarUrl?: string
+      avatarUrl?: string | null
     }
     ProjectDetailResponse: {
       /** Format: uuid */
       id?: string
       title?: string
       /** @description Teaser fuer Kachel- und Listenansicht. Kann fehlen. */
-      summary?: string
+      summary?: string | null
       /** @description Kachelbild. Kann fehlen. */
-      coverImageUrl?: string
+      coverImageUrl?: string | null
       /** @enum {string} */
       status?: "DRAFT" | "SUBMITTED" | "APPROVED" | "PUBLISHED" | "REVISION"
       /**
        * @description Im DRAFT noch nicht gesetzt; Pflicht erst beim Einreichen (§3.3).
-       * @enum {string}
+       * @enum {string|null}
        */
-      projectType?: "REGULAR" | "PAPER" | "THESIS"
+      projectType?: "REGULAR" | "PAPER" | "THESIS" | null
       /**
        * @description Im DRAFT noch nicht gesetzt; Pflicht erst beim Einreichen (§3.3).
-       * @enum {string}
+       * @enum {string|null}
        */
-      degree?: "BACHELOR" | "MASTER" | "MBA"
+      degree?: "BACHELOR" | "MASTER" | "MBA" | null
       /** @description Semester der Entstehung (§3.18). Im DRAFT noch nicht gesetzt. */
-      semester?: components["schemas"]["ReferenceResponse"]
-      category?: components["schemas"]["ReferenceResponse"]
-      faculty?: components["schemas"]["ReferenceResponse"]
-      studyProgram?: components["schemas"]["ReferenceResponse"]
-      module?: components["schemas"]["ReferenceResponse"]
+      semester?: components["schemas"]["ReferenceResponse"] | null
+      /** @description Kategorie (§3.6). Im DRAFT noch nicht gesetzt. */
+      category?: components["schemas"]["ReferenceResponse"] | null
+      /** @description Fakultaet (§3.8). Im DRAFT noch nicht gesetzt. */
+      faculty?: components["schemas"]["ReferenceResponse"] | null
+      /** @description Studiengang (§3.7). Im DRAFT noch nicht gesetzt. */
+      studyProgram?: components["schemas"]["ReferenceResponse"] | null
+      /** @description Fach oder Modul (§3.9). Dauerhaft freiwillig: anders als die uebrigen Bezuege steht es nicht unter den Pflichtfeldern des Einreichens (§3.3). */
+      module?: components["schemas"]["ReferenceResponse"] | null
       author?: components["schemas"]["PersonResponse"]
       /** @description Co-Autor:innen und Mitwirkende (§3.13). Nicht zu verwechseln mit der zugewiesenen Redaktion. */
       members?: components["schemas"]["MemberResponse"][]
@@ -1427,9 +1434,9 @@ export interface components {
        */
       reactionCount?: number
       /** @description Zugewiesene Redakteur:innen (§3.3). Bei einem PUBLISHED-Projekt fuer alle sichtbar, auch ohne Anmeldung (seit Contract v55); in jedem anderen Status nur fuer die Projektseite, die zugewiesene Redaktion und Admins. In der Praxis damit immer gefuellt: wer ein nicht veroeffentlichtes Projekt ueberhaupt lesen darf, gehoert genau zu diesem Kreis. Eine leere Liste bedeutet, dass keine Redaktion zugewiesen ist. */
-      editors?: components["schemas"]["PersonResponse"][]
+      editors?: components["schemas"]["PersonResponse"][] | null
       /** @description Aktivitaetsverlauf, aufsteigend nach Zeitpunkt (§3.12). Ausdruecklich null, wenn die anfragende Person ihn nicht sehen darf (§5, Fussnote 7); das Feld fehlt nicht, es steht auf null. Damit zugleich das Kennzeichen, an dem ein Client erkennt, dass die lesende Person die Interna sehen darf, also Projektseite, zugewiesene Redaktion oder Admin ist, ohne aus der Rolle zu raten. */
-      statusHistory?: components["schemas"]["StatusHistoryResponse"][]
+      statusHistory?: components["schemas"]["StatusHistoryResponse"][] | null
       /**
        * Format: int64
        * @description Stand fuer Optimistic Locking. Gehoert unveraendert in den Body jedes schreibenden Requests (§6.4).
@@ -1440,25 +1447,28 @@ export interface components {
        * Format: date-time
        * @description Zeitpunkt der Veroeffentlichung. Null, solange das Projekt nicht veroeffentlicht ist.
        */
-      publishedAt?: string
+      publishedAt?: string | null
       /** Format: date-time */
       createdAt?: string
       /** Format: date-time */
       updatedAt?: string
     }
+    /** @description Fach oder Modul (§3.9). Dauerhaft freiwillig: anders als die uebrigen Bezuege steht es nicht unter den Pflichtfeldern des Einreichens (§3.3). */
     ReferenceResponse: {
       /** Format: uuid */
       id?: string
       name?: string
       /** @description Kurzform, z. B. "FK4". Fehlt bei Kategorien und kann auch bei Studiengang und Modul null sein. */
-      abbreviation?: string
+      abbreviation?: string | null
     }
+    /** @description Aktivitaetsverlauf, aufsteigend nach Zeitpunkt (§3.12). Ausdruecklich null, wenn die anfragende Person ihn nicht sehen darf (§5, Fussnote 7); das Feld fehlt nicht, es steht auf null. Damit zugleich das Kennzeichen, an dem ein Client erkennt, dass die lesende Person die Interna sehen darf, also Projektseite, zugewiesene Redaktion oder Admin ist, ohne aus der Rolle zu raten. */
     StatusHistoryResponse: {
       /**
        * @description Ausgangsstatus. Beim ersten Eintrag null, weil es dann keinen Vorzustand gibt.
-       * @enum {string}
+       * @enum {string|null}
        */
-      fromStatus?: "DRAFT" | "SUBMITTED" | "APPROVED" | "PUBLISHED" | "REVISION"
+      fromStatus?:
+        "DRAFT" | "SUBMITTED" | "APPROVED" | "PUBLISHED" | "REVISION" | null
       /** @enum {string} */
       toStatus?: "DRAFT" | "SUBMITTED" | "APPROVED" | "PUBLISHED" | "REVISION"
       changedBy?: components["schemas"]["PersonResponse"]
@@ -1471,15 +1481,15 @@ export interface components {
     }
     PortfolioUpdateRequest: {
       /** @description Freitext zur eigenen Person. null oder weggelassen loescht die bisherige Biografie. */
-      biography?: string
+      biography?: string | null
       /** @description Adresse des Profilbilds. null oder weggelassen entfernt es. Wird mit KAN-23 durch eine Datei-ID ersetzt (§3.15). */
-      avatarUrl?: string
+      avatarUrl?: string | null
     }
     OwnPortfolioResponse: {
       /** @description Freitext zur eigenen Person. Kann fehlen. */
-      biography?: string
+      biography?: string | null
       /** @description Eigenes Profilbild. Kann fehlen; wird mit KAN-23 zu einer Datei-ID (§3.15). */
-      avatarUrl?: string
+      avatarUrl?: string | null
       /**
        * @description Ob dieses Profil bearbeitet werden darf (§5, Zeile "Eigenes Portfolio bearbeiten"). Heute fuer jede angemeldete Person true; mit der erzwungenen Passwortaenderung aus §6.7 kann der Wert false werden.
        * @example true
@@ -1509,7 +1519,8 @@ export interface components {
       /** Format: uuid */
       id?: string
       email?: string
-      pendingEmail?: string
+      /** @description Gewuenschte neue private E-Mail eines laufenden Adresswechsels (§3.1). Null, wenn kein Wechsel laeuft; daran erkennt die Oberflaeche den Zustand "Bestaetigung ausstehend". */
+      pendingEmail?: string | null
       hsbEmail?: string
       firstName?: string
       lastName?: string
@@ -1527,26 +1538,29 @@ export interface components {
       id?: string
       title?: string
       /** @description Teaser fuer Kachel- und Listenansicht. Kann fehlen. */
-      summary?: string
+      summary?: string | null
       /** @description Kachelbild. Kann fehlen. */
-      coverImageUrl?: string
+      coverImageUrl?: string | null
       /** @enum {string} */
       status?: "DRAFT" | "SUBMITTED" | "APPROVED" | "PUBLISHED" | "REVISION"
       /**
        * @description Im DRAFT noch nicht gesetzt; Pflicht erst beim Einreichen (§3.3).
-       * @enum {string}
+       * @enum {string|null}
        */
-      projectType?: "REGULAR" | "PAPER" | "THESIS"
+      projectType?: "REGULAR" | "PAPER" | "THESIS" | null
       /**
        * @description Im DRAFT noch nicht gesetzt; Pflicht erst beim Einreichen (§3.3).
-       * @enum {string}
+       * @enum {string|null}
        */
-      degree?: "BACHELOR" | "MASTER" | "MBA"
+      degree?: "BACHELOR" | "MASTER" | "MBA" | null
       /** @description Semester der Entstehung (§3.18). Im DRAFT noch nicht gesetzt. */
-      semester?: components["schemas"]["ReferenceResponse"]
-      category?: components["schemas"]["ReferenceResponse"]
-      faculty?: components["schemas"]["ReferenceResponse"]
-      studyProgram?: components["schemas"]["ReferenceResponse"]
+      semester?: components["schemas"]["ReferenceResponse"] | null
+      /** @description Kategorie (§3.6). Im DRAFT noch nicht gesetzt. */
+      category?: components["schemas"]["ReferenceResponse"] | null
+      /** @description Fakultaet (§3.8). Im DRAFT noch nicht gesetzt. */
+      faculty?: components["schemas"]["ReferenceResponse"] | null
+      /** @description Studiengang (§3.7). Im DRAFT noch nicht gesetzt. */
+      studyProgram?: components["schemas"]["ReferenceResponse"] | null
       author?: components["schemas"]["PersonResponse"]
       /** @description Freie Schlagwoerter, hoechstens fuenf. Alphabetisch sortiert, damit die Reihenfolge zwischen zwei Aufrufen stabil bleibt. */
       tags?: string[]
@@ -1560,7 +1574,7 @@ export interface components {
        * Format: date-time
        * @description Zeitpunkt der Veroeffentlichung. Null, solange das Projekt nicht veroeffentlicht ist.
        */
-      publishedAt?: string
+      publishedAt?: string | null
     }
     Top10EntryResponse: {
       /**
@@ -1583,44 +1597,44 @@ export interface components {
        */
       title?: string
       /** @description Teaser fuer Kachel- und Listenansicht. */
-      summary?: string
+      summary?: string | null
       /** @description Kachelbild. */
-      coverImageUrl?: string
+      coverImageUrl?: string | null
       /**
        * @description Im Entwurf noch nicht noetig, Pflicht erst beim Einreichen (§3.3).
-       * @enum {string}
+       * @enum {string|null}
        */
-      projectType?: "REGULAR" | "PAPER" | "THESIS"
+      projectType?: "REGULAR" | "PAPER" | "THESIS" | null
       /**
        * @description Im Entwurf noch nicht noetig, Pflicht erst beim Einreichen (§3.3).
-       * @enum {string}
+       * @enum {string|null}
        */
-      degree?: "BACHELOR" | "MASTER" | "MBA"
+      degree?: "BACHELOR" | "MASTER" | "MBA" | null
       /**
        * Format: uuid
        * @description ID eines Semesters aus GET /api/semesters. Nur aktive Semester sind waehlbar (§3.18).
        */
-      semesterId?: string
+      semesterId?: string | null
       /**
        * Format: uuid
        * @description ID einer Kategorie aus GET /api/categories.
        */
-      categoryId?: string
+      categoryId?: string | null
       /**
        * Format: uuid
        * @description ID einer Fakultaet aus GET /api/faculties.
        */
-      facultyId?: string
+      facultyId?: string | null
       /**
        * Format: uuid
        * @description ID eines Studiengangs aus GET /api/study-programs.
        */
-      studyProgramId?: string
+      studyProgramId?: string | null
       /**
        * Format: uuid
        * @description ID eines Moduls aus GET /api/modules.
        */
-      moduleId?: string
+      moduleId?: string | null
       /** @description Freie Schlagwoerter, hoechstens fuenf (§3.3). Doppelte Eintraege werden still zusammengefasst. */
       tags?: string[]
       /** @description IDs der zustaendigen Redakteur:innen aus GET /api/users/lookup?role=EDITOR. Die Autor:in legt sie bei der Anlage fest und kann sie aendern, solange das Projekt im Status DRAFT ist (§5, Fussnote 3). */
@@ -1634,7 +1648,7 @@ export interface components {
        * @description Unverbindlicher Platzvorschlag, 1 bis 10. Darf fehlen; ueber den tatsaechlichen Platz entscheidet die Administration beim Annehmen.
        * @example 3
        */
-      proposedPosition?: number
+      proposedPosition?: number | null
     }
     Top10NominationResponse: {
       /** Format: uuid */
@@ -1646,16 +1660,16 @@ export interface components {
        * @description Unverbindlicher Platzvorschlag der nominierenden Person. Kann fehlen (§3.11).
        * @example 3
        */
-      proposedPosition?: number
+      proposedPosition?: number | null
       /** @enum {string} */
       status?: "PENDING" | "ACCEPTED" | "REJECTED"
       /** @description Entscheidende:r Admin. Null, solange status = PENDING ist. */
-      decidedBy?: components["schemas"]["PersonResponse"]
+      decidedBy?: components["schemas"]["PersonResponse"] | null
       /**
        * Format: date-time
        * @description Zeitpunkt der Entscheidung. Null, solange status = PENDING ist.
        */
-      decidedAt?: string
+      decidedAt?: string | null
       /** Format: date-time */
       createdAt?: string
     }
@@ -1704,9 +1718,9 @@ export interface components {
       text?: string
       /**
        * @description Erledigungsstand eines Aenderungswunsches (OPEN oder RESOLVED). Nur bei type = CHANGE_REQUEST gesetzt, bei REPLY und NOTE null (§2.4).
-       * @enum {string}
+       * @enum {string|null}
        */
-      status?: "OPEN" | "RESOLVED"
+      status?: "OPEN" | "RESOLVED" | null
       /** Format: date-time */
       createdAt?: string
       /** Format: date-time */
@@ -1892,7 +1906,7 @@ export interface components {
        * @description Kurzform des Studiengangs. Darf fehlen.
        * @example MI
        */
-      abbreviation?: string
+      abbreviation?: string | null
       /**
        * Format: uuid
        * @description ID der Fakultaet aus GET /api/faculties.
@@ -1904,7 +1918,7 @@ export interface components {
       id?: string
       name?: string
       /** @description Kurzform des Studiengangs. Kann fehlen. */
-      abbreviation?: string
+      abbreviation?: string | null
       /**
        * Format: uuid
        * @description Fakultaet, zu der der Studiengang gehoert. Derselbe Wert dient als Filter: GET /api/study-programs?faculty={id}.
@@ -1921,7 +1935,7 @@ export interface components {
        * @description Steht das Semester bei der Projektanlage zur Auswahl? Fehlt das Feld, ist es aktiv.
        * @example true
        */
-      active?: boolean
+      active?: boolean | null
     }
     SemesterResponse: {
       /** Format: uuid */
@@ -1966,6 +1980,7 @@ export interface components {
       /** @description Ein Ergebnis je angefragter Projekt-ID, in der Reihenfolge des Bodys. */
       results?: components["schemas"]["ProjectBulkStatusResult"][]
     }
+    /** @description Ein Ergebnis je angefragter Projekt-ID, in der Reihenfolge des Bodys. */
     ProjectBulkStatusResult: {
       /**
        * Format: uuid
@@ -1978,7 +1993,7 @@ export interface components {
        * @description Fehlercode aus §6.2, wenn dieses Projekt den Uebergang nicht durchlaufen hat; sonst null.
        * @example PROJECT_STATUS_TRANSITION_INVALID
        */
-      errorCode?: string
+      errorCode?: string | null
     }
     ModuleCreateRequest: {
       /**
@@ -1990,7 +2005,7 @@ export interface components {
        * @description Kurzform des Moduls. Darf fehlen.
        * @example MCI
        */
-      abbreviation?: string
+      abbreviation?: string | null
       /**
        * Format: uuid
        * @description ID des Studiengangs aus GET /api/study-programs.
@@ -2002,7 +2017,7 @@ export interface components {
       id?: string
       name?: string
       /** @description Kurzform des Moduls. Kann fehlen. */
-      abbreviation?: string
+      abbreviation?: string | null
       /**
        * Format: uuid
        * @description Studiengang, zu dem das Modul gehoert. Derselbe Wert dient als Filter: GET /api/modules?studyProgram={id}.
@@ -2084,7 +2099,12 @@ export interface components {
        * @example DEACTIVATED
        * @enum {string}
        */
-      status?: "ACTIVE" | "DEACTIVATED"
+      status?:
+        | "REGISTRATION_PENDING"
+        | "ACTIVE"
+        | "DEACTIVATED"
+        | "ACTIVE"
+        | "DEACTIVATED"
     }
     StudyProgramUpdateRequest: {
       /**
@@ -2096,7 +2116,7 @@ export interface components {
        * @description Neue Kurzform. Fehlt das Feld, bleibt sie unveraendert; eine leere Zeichenkette loescht sie.
        * @example MI
        */
-      abbreviation?: string
+      abbreviation?: string | null
       /**
        * Format: uuid
        * @description Neue Fakultaet. Fehlt das Feld, bleibt die Zuordnung unveraendert.
@@ -2108,12 +2128,12 @@ export interface components {
        * @description Neuer Anzeigename. Fehlt das Feld, bleibt er unveraendert.
        * @example WiSe 2026/27
        */
-      name?: string
+      name?: string | null
       /**
        * @description Steht das Semester bei der Projektanlage zur Auswahl? Fehlt das Feld, bleibt der Zustand unveraendert.
        * @example false
        */
-      active?: boolean
+      active?: boolean | null
     }
     ModuleUpdateRequest: {
       /**
@@ -2125,7 +2145,7 @@ export interface components {
        * @description Neue Kurzform. Fehlt das Feld, bleibt sie unveraendert; eine leere Zeichenkette loescht sie.
        * @example MCI
        */
-      abbreviation?: string
+      abbreviation?: string | null
       /**
        * Format: uuid
        * @description Neuer Studiengang. Fehlt das Feld, bleibt die Zuordnung unveraendert.
@@ -2199,9 +2219,9 @@ export interface components {
     PortfolioResponse: {
       user?: components["schemas"]["PortfolioUserResponse"]
       /** @description Freitext zur Person. Kann fehlen. */
-      biography?: string
+      biography?: string | null
       /** @description Profilbild. Kann fehlen; wird mit KAN-23 zu einer Datei-ID (§3.15). */
-      avatarUrl?: string
+      avatarUrl?: string | null
       /** @description Ausschliesslich veroeffentlichte Projekte dieser Person, per Abfrage ermittelt (§3.2). Neueste Veroeffentlichung zuerst. */
       projects?: components["schemas"]["ProjectCardResponse"][]
     }

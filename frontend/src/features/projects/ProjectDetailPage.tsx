@@ -101,13 +101,13 @@ export default function ProjectDetailPage() {
    * {@code "statusHistory": null} (Jackson steht auf Include.ALWAYS). Eine
    * Pruefung auf undefined waere fuer jede unbeteiligte Person wahr, also im
    * Regelfall dieser Seite, und reichte {@code null} an den Dialog weiter.
-   * Die generierte schema.d.ts traegt das nicht, und zwar nicht wegen des
-   * Generators: springdoc liefert das Dokument als OpenAPI 3.1, dort ist
-   * {@code nullable} kein Schluesselwort mehr, und swagger-core verwirft
-   * {@code @Schema(nullable = true)} ersatzlos. Das Wort steht in
-   * {@code /v3/api-docs} kein einziges Mal, folglich entsteht nirgends ein
-   * {@code | null} und der Typecheck kann den Fehler nicht sehen. Behoben
-   * wird das in KAN-74; bis dahin traegt diese Pruefung die Last.
+   *
+   * <p>Seit KAN-74 steht der Unterschied auch im Typ: {@code statusHistory}
+   * ist {@code StatusHistoryResponse[] | null}, weil das Dokument unter
+   * {@code /v3/api-docs} als OpenAPI 3.0 ausgeliefert wird und
+   * {@code nullable} dort ein Schluesselwort ist. Bis dahin trug diese
+   * Pruefung die Last allein, ohne dass der Typecheck sie haette
+   * nachhalten koennen.
    */
   const statusHistory = data?.statusHistory ?? null
   const participates = statusHistory !== null
