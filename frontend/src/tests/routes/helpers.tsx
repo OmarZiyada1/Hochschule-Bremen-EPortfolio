@@ -39,6 +39,8 @@ export function signInAs(role: Role): void {
     /* Die eigene HSB-Adresse steht seit Contract v50 in den Auth-Antworten
        an die Person selbst (§3.1, KAN-69). */
     hsbEmail: "mira.beispiel@stud.hs-bremen.de",
+    /* Kein Adresswechsel angestossen (§3.1.1). */
+    pendingEmail: null,
     firstName: "Mira",
     lastName: "Beispiel",
     role,

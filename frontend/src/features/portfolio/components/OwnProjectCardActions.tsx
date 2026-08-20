@@ -90,7 +90,7 @@ export function OwnProjectCardActions({
     return null
   }
 
-  const title = project.title ?? ""
+  const title = project.title
 
   /**
    * Fuehrt eine bestaetigte Handlung aus. Der Dialog schliesst in jedem

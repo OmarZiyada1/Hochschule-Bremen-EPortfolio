@@ -330,7 +330,7 @@ Sortierbare Felder bei `GET /projects`: `title`, `semester`, `status`,
 | `Top10ProtokollService` | `Top10AuditService` |
 | `Top10Platzierung` | `Top10Placement` |
 | `KategorieZusammenfuehrenAnfrage` | `CategoryMergeRequest` |
-| `ProjektSammelStatusAnfrage` · `…Antwort` · `…Ergebnis` | `ProjectBulkStatusRequest` · `ProjectBulkStatusResponse` · `ProjectBulkStatusResult` |
+| `ProjektSammelStatusAnfrage` · `…Antwort` · `…Ergebnis` | `ProjectBulkStatusRequest` · `ProjectBulkStatusResponse` · `ProjectBulkStatusResultResponse` |
 | `ProjektAdminService` · `ProjektAdminController` | `ProjectAdminService` · `ProjectAdminController` |
 | `darfMitgliederPflegen` | `mayManageMembers` |
 | `RegistrierungService` | `RegistrationService` |

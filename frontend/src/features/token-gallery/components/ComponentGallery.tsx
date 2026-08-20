@@ -28,7 +28,7 @@ import { LanguageToggle } from "@/components/common/LanguageToggle"
 import { Pill, type PillTone } from "@/components/common/Pill"
 import { ProjectCard } from "@/components/common/ProjectCard"
 import { ProjectTableRow } from "@/components/common/ProjectTableRow"
-import type { ProjectStatus, Role } from "@/api/types"
+import type { ProjectCardResponse, ProjectStatus, Role } from "@/api/types"
 import { RoleBadge } from "@/components/common/RoleBadge"
 import { SearchInput } from "@/components/common/SearchInput"
 import { StatusBadge } from "@/components/common/StatusBadge"
@@ -997,7 +997,33 @@ function DomainDemos() {
 function ProjectCardDemos() {
   const { t } = useTranslation()
   const person = useDemoPerson()
+  const demoCard = (
+    overrides: Partial<ProjectCardResponse>
+  ): ProjectCardResponse => ({
+    id: "demo",
+    title: t("tokens.components.demo.projectTitle"),
+    summary: t("tokens.components.demo.projectSummary"),
+    coverImageUrl: null,
+    status: "PUBLISHED",
+    projectType: null,
+    degree: null,
+    semester: {
+      id: "demo-semester",
+      name: t("tokens.components.demo.semester"),
+      abbreviation: null,
+    },
+    category: null,
+    faculty,
+    studyProgram: null,
+    author: { ...person, id: "demo-person", avatarUrl: null },
+    tags: [],
+    reactionCount: 142,
+    publishedAt: null,
+    ...overrides,
+  })
+
   const faculty = {
+    id: "demo-faculty",
     name: t("tokens.components.demo.faculty"),
     abbreviation: t("tokens.components.demo.facultyAbbreviation"),
   }
@@ -1010,35 +1036,15 @@ function ProjectCardDemos() {
     <>
       <ProjectCard
         className="w-full max-w-xs"
-        project={{
-          id: "demo",
-          title: t("tokens.components.demo.projectTitle"),
-          summary: t("tokens.components.demo.projectSummary"),
-          projectType: "THESIS",
-          faculty,
-          author: person,
-          semester: {
-            id: "demo-semester",
-            name: t("tokens.components.demo.semester"),
-          },
-          reactionCount: 142,
-        }}
+        project={demoCard({ projectType: "THESIS" })}
       />
       <ProjectCard
         className="w-full max-w-xs"
-        project={{
-          title: t("tokens.components.demo.projectTitle"),
-          summary: t("tokens.components.demo.projectSummary"),
+        project={demoCard({
           projectType: "REGULAR",
-          faculty,
-          author: person,
-          semester: {
-            id: "demo-semester",
-            name: t("tokens.components.demo.semester"),
-          },
           reactionCount: 7,
           status: "PUBLISHED",
-        }}
+        })}
         showStatus
       />
     </>
@@ -1053,7 +1059,9 @@ function Top10CardDemos() {
    * als optionales Feld, eine fehlende Kurzform heisst also weglassen.
    */
   const studyProgram = {
+    id: "demo-program",
     name: t("tokens.components.demo.program"),
+    abbreviation: null,
   }
 
   return (
@@ -1172,7 +1180,9 @@ function AdminDemos() {
                 title={t("tokens.components.demo.projectTitle")}
                 author={person}
                 studyProgram={{
+                  id: "demo-program",
                   name: t("tokens.components.demo.program"),
+                  abbreviation: null,
                 }}
                 semester={t("tokens.components.demo.semester")}
                 status={status}

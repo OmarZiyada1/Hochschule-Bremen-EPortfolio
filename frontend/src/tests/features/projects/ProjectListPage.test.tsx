@@ -4,16 +4,23 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { getAuthState } from "@/api/auth/authStore"
+import type { ProjectCardResponse } from "@/api/types"
 import { setAuthNavigate } from "@/api/auth/redirect"
 import ProjectListPage from "@/features/projects/ProjectListPage"
 import i18n from "@/i18n"
+import { projectCard, reference } from "@/tests/fixtures"
 import { apiErrorResponse } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
 import { signInAs } from "@/tests/routes/helpers"
 
+/*
+ * Typisiert und nicht unknown[]: seit KAN-76 fuehrt ProjectCardResponse
+ * seine Pflichtfelder, und eine unvollstaendige Antwort im Mock soll hier
+ * auffallen und nicht erst als TypeError in der Kachel.
+ */
 function pageOf(
-  content: unknown[],
+  content: ProjectCardResponse[],
   totalElements = content.length,
   page = 0,
   size = 20
@@ -83,7 +90,12 @@ describe("ProjectListPage", () => {
       ),
       http.get("*/api/semesters", () =>
         HttpResponse.json([
-          { id: SEMESTER_WISE, name: "WiSe 2025/26", active: true, sortOrder: 1 },
+          {
+            id: SEMESTER_WISE,
+            name: "WiSe 2025/26",
+            active: true,
+            sortOrder: 1,
+          },
           { id: SEMESTER_SOSE, name: "SoSe 2025", active: true, sortOrder: 2 },
         ])
       )
@@ -95,20 +107,21 @@ describe("ProjectListPage", () => {
       http.get("*/api/projects", () =>
         HttpResponse.json(
           pageOf([
-            {
+            projectCard({
               id: "10000000-0000-0000-0000-000000000001",
               title: "Campus-Garten an der Werderstraße",
               summary: "Freifläche als offener Lernort.",
-              status: "PUBLISHED",
-              semester: { id: "s-1", name: "SoSe 2026" },
+              semester: reference({
+                id: "s-1",
+                name: "SoSe 2026",
+                abbreviation: null,
+              }),
               reactionCount: 3,
-              author: { firstName: "Mira", lastName: "Beispiel" },
-            },
-            {
+            }),
+            projectCard({
               id: "10000000-0000-0000-0000-000000000002",
               title: "Barrierefreie Navigation im Hochschulportal",
-              status: "PUBLISHED",
-            },
+            }),
           ])
         )
       )
@@ -153,11 +166,10 @@ describe("ProjectListPage", () => {
         requestedStatus = new URL(request.url).searchParams.get("status")
         return HttpResponse.json(
           pageOf([
-            {
+            projectCard({
               id: "10000000-0000-0000-0000-000000000003",
               title: "Veröffentlichtes Projekt",
-              status: "PUBLISHED",
-            },
+            }),
           ])
         )
       })
@@ -175,9 +187,7 @@ describe("ProjectListPage", () => {
   })
 
   it("zeigt den Leerzustand statt einer leeren Flaeche", async () => {
-    server.use(
-      http.get("*/api/projects", () => HttpResponse.json(pageOf([])))
-    )
+    server.use(http.get("*/api/projects", () => HttpResponse.json(pageOf([]))))
     renderWithProviders(<ProjectListPage />)
 
     expect(
@@ -187,7 +197,9 @@ describe("ProjectListPage", () => {
       })
     ).toBeInTheDocument()
     expect(
-      screen.getByText("Sobald Projekte veröffentlicht sind, erscheinen sie hier.")
+      screen.getByText(
+        "Sobald Projekte veröffentlicht sind, erscheinen sie hier."
+      )
     ).toBeInTheDocument()
   })
 
@@ -237,11 +249,10 @@ describe("ProjectListPage", () => {
         return HttpResponse.json(
           pageOf(
             [
-              {
+              projectCard({
                 id: "10000000-0000-0000-0000-000000000004",
                 title: "Campus-Garten an der Werderstraße",
-                status: "PUBLISHED",
-              },
+              }),
             ],
             21,
             1
@@ -284,8 +295,9 @@ describe("ProjectListPage", () => {
     )
     /* Kein Request je Tastenanschlag: zwischen leerem Start und fertigem
        Begriff liegen keine Teilbegriffe fuer jeden Buchstaben. */
-    expect(requestedQ.filter((value) => value !== null && value !== "garten"))
-      .toHaveLength(0)
+    expect(
+      requestedQ.filter((value) => value !== null && value !== "garten")
+    ).toHaveLength(0)
   })
 
   it("findet Projekte ueber den Namen der Autor:in, Platzhalter im Template-Wortlaut", async () => {
@@ -300,12 +312,10 @@ describe("ProjectListPage", () => {
           pageOf(
             matchesAuthor
               ? [
-                  {
+                  projectCard({
                     id: "10000000-0000-0000-0000-000000000007",
                     title: "Campus-Garten an der Werderstraße",
-                    status: "PUBLISHED",
-                    author: { firstName: "Mira", lastName: "Beispiel" },
-                  },
+                  }),
                 ]
               : []
           )
@@ -342,11 +352,10 @@ describe("ProjectListPage", () => {
         return HttpResponse.json(
           pageOf(
             [
-              {
+              projectCard({
                 id: "10000000-0000-0000-0000-000000000005",
                 title: "Barrierefreie Navigation im Hochschulportal",
-                status: "PUBLISHED",
-              },
+              }),
             ],
             40,
             url.searchParams.get("page") === "1" ? 1 : 0
@@ -374,9 +383,7 @@ describe("ProjectListPage", () => {
   })
 
   it("zeigt die sechs Filtergruppen als aufklappbare Checkbox-Gruppen", async () => {
-    server.use(
-      http.get("*/api/projects", () => HttpResponse.json(pageOf([])))
-    )
+    server.use(http.get("*/api/projects", () => HttpResponse.json(pageOf([]))))
     renderWithProviders(<ProjectListPage />)
 
     expect(
@@ -401,7 +408,9 @@ describe("ProjectListPage", () => {
         name: "Fakultät Elektrotechnik und Informatik",
       })
     ).not.toBeChecked()
-    expect(screen.getByRole("checkbox", { name: "Bachelor" })).toBeInTheDocument()
+    expect(
+      screen.getByRole("checkbox", { name: "Bachelor" })
+    ).toBeInTheDocument()
     expect(
       screen.getByRole("checkbox", { name: "WiSe 2025/26" })
     ).toBeInTheDocument()
@@ -480,13 +489,8 @@ describe("ProjectListPage", () => {
   })
 
   it("schraenkt die Studiengang-Optionen auf die gewaehlten Fakultaeten ein", async () => {
-    server.use(
-      http.get("*/api/projects", () => HttpResponse.json(pageOf([])))
-    )
-    renderWithProviders(
-      <ProjectListPage />,
-      `/projects?faculty=${FACULTY_FK4}`
-    )
+    server.use(http.get("*/api/projects", () => HttpResponse.json(pageOf([]))))
+    renderWithProviders(<ProjectListPage />, `/projects?faculty=${FACULTY_FK4}`)
 
     await userEvent.click(
       await screen.findByRole("button", { name: "Studiengang" })
@@ -527,9 +531,7 @@ describe("ProjectListPage", () => {
   })
 
   it("oeffnet eine per Template zugeklappte Gruppe, wenn die URL eine Auswahl traegt", async () => {
-    server.use(
-      http.get("*/api/projects", () => HttpResponse.json(pageOf([])))
-    )
+    server.use(http.get("*/api/projects", () => HttpResponse.json(pageOf([]))))
     renderWithProviders(
       <ProjectListPage />,
       `/projects?category=${CATEGORY_WEB}`
@@ -606,11 +608,10 @@ describe("ProjectListPage", () => {
           new URL(request.url).searchParams.get("page") === null
             ? pageOf(
                 [
-                  {
+                  projectCard({
                     id: "10000000-0000-0000-0000-000000000006",
                     title: "Campus-Garten an der Werderstraße",
-                    status: "PUBLISHED",
-                  },
+                  }),
                 ],
                 40
               )
@@ -653,9 +654,7 @@ describe("ProjectListPage", () => {
   })
 
   it("nennt eine leere Treffermenge bei aktiver Suche Keine Treffer", async () => {
-    server.use(
-      http.get("*/api/projects", () => HttpResponse.json(pageOf([])))
-    )
+    server.use(http.get("*/api/projects", () => HttpResponse.json(pageOf([]))))
     renderWithProviders(<ProjectListPage />, "/projects?q=unbekannt")
 
     expect(

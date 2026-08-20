@@ -61,22 +61,13 @@ export function ProjectCard({
   const { t } = useTranslation()
   const Heading = `h${headingLevel}` as "h2" | "h3"
 
-  /* springdoc markiert kein required; ein Konto ohne Namen gibt es fachlich
-     nicht, die Kachel zeigt dann nichts statt "undefined". */
-  const author = project.author
-    ? {
-        firstName: project.author.firstName ?? "",
-        lastName: project.author.lastName ?? "",
-      }
-    : null
   /* Das Profilbild kommt seit Contract v49 an der Kachel mit (§6.1); es
      haengt am Portfolio und nicht am Projekt, der Lesedienst holt es fuer
      die ganze Seite in einer Abfrage. Ohne hinterlegtes Bild bleibt es bei
      den Initialen. */
-  const authorAvatarUrl = project.author?.avatarUrl
+  const authorAvatarUrl = project.author.avatarUrl
     ? resolveApiUrl(project.author.avatarUrl)
     : null
-  const href = project.id ? `/projects/${project.id}` : undefined
 
   /* gap-0 und py-0 heben den Innenabstand der Registry-Karte auf: das Cover
      liegt randlos, den Abstand setzt erst der Inhalt darunter. Beides laeuft
@@ -149,27 +140,28 @@ export function ProjectCard({
           {/* Router-Link statt rohem Anker: ein roher href laedt die ganze
               Anwendung neu und wirft Query-Cache und Scrollposition weg
               (Review zu KAN-31, analog Top10Card). */}
-          {href ? (
-            <Link to={href} className="hover:underline focus-visible:underline">
-              {project.title ?? ""}
-            </Link>
-          ) : (
-            (project.title ?? "")
-          )}
+          <Link
+            to={`/projects/${project.id}`}
+            className="hover:underline focus-visible:underline"
+          >
+            {project.title}
+          </Link>
         </Heading>
       </div>
 
       <CardContent className="flex flex-col gap-2.5 px-5 py-4">
-        {author && (
-          <p className="flex items-center gap-2">
-            {/* 24px nach Template (Figma-Knoten "Avatar" der ProjectCard);
-                die Groesse der Initialen bringt die Stufe mit. */}
-            <UserAvatar person={author} imageUrl={authorAvatarUrl} size="sm" />
-            <span className="type-body-sm font-medium text-muted-foreground">
-              {fullNameOf(author)}
-            </span>
-          </p>
-        )}
+        <p className="flex items-center gap-2">
+          {/* 24px nach Template (Figma-Knoten "Avatar" der ProjectCard);
+              die Groesse der Initialen bringt die Stufe mit. */}
+          <UserAvatar
+            person={project.author}
+            imageUrl={authorAvatarUrl}
+            size="sm"
+          />
+          <span className="type-body-sm font-medium text-muted-foreground">
+            {fullNameOf(project.author)}
+          </span>
+        </p>
 
         {project.summary && (
           <p className="type-body-sm line-clamp-3 text-muted-foreground">
@@ -177,46 +169,42 @@ export function ProjectCard({
           </p>
         )}
 
-        {showStatus && project.status && (
+        {showStatus && (
           <StatusBadge status={project.status} className="self-start" />
         )}
 
-        {(project.semester ||
-          project.reactionCount !== undefined ||
-          action !== undefined) && (
-          <>
-            {/* Ohne Klasse: die Grundregel in tokens.css gibt jedem Element
+        {/* Ohne Bedingung: reactionCount kommt immer mit (§6.1), die
+            Fusszeile steht also an jeder Kachel. */}
+        <>
+          {/* Ohne Klasse: die Grundregel in tokens.css gibt jedem Element
                 border-color: var(--border), und genau das ist die Rolle fuer
                 eine Linie. muted ist eine Flaechenrolle und hier falsch
                 (Skill frontend-design, Abschnitt 1). */}
-            <hr />
-            <div className="flex items-center justify-between gap-2">
-              <span className="type-label-xs text-muted-foreground">
-                {project.semester?.name}
-              </span>
-              {action !== undefined ? (
-                action
-              ) : (
-                project.reactionCount !== undefined && (
-                  <span className="type-caption flex items-center gap-1 text-muted-foreground">
-                    {/* Klatschen, nicht Herz: die Reaktion ist ein Applaus
+          <hr />
+          <div className="flex items-center justify-between gap-2">
+            <span className="type-label-xs text-muted-foreground">
+              {project.semester?.name}
+            </span>
+            {action !== undefined ? (
+              action
+            ) : (
+              <span className="type-caption flex items-center gap-1 text-muted-foreground">
+                {/* Klatschen, nicht Herz: die Reaktion ist ein Applaus
                         wie im Figma-Template und auf der Referenzplattform,
                         keine Gefaellt-mir-Angabe. */}
-                    <ClapIcon className="size-3.5" />
-                    {/* Die Zahl allein sagt nicht, was sie zaehlt. Sichtbar
+                <ClapIcon className="size-3.5" />
+                {/* Die Zahl allein sagt nicht, was sie zaehlt. Sichtbar
                         bleibt sie knapp, vorgelesen wird der ganze Satz. */}
-                    <span className="sr-only">
-                      {t("project.card.reactions", {
-                        count: project.reactionCount,
-                      })}
-                    </span>
-                    <span aria-hidden="true">{project.reactionCount}</span>
-                  </span>
-                )
-              )}
-            </div>
-          </>
-        )}
+                <span className="sr-only">
+                  {t("project.card.reactions", {
+                    count: project.reactionCount,
+                  })}
+                </span>
+                <span aria-hidden="true">{project.reactionCount}</span>
+              </span>
+            )}
+          </div>
+        </>
       </CardContent>
     </Card>
   )

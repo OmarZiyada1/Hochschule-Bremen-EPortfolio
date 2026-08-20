@@ -18,10 +18,7 @@ import type { ApiSchemas } from "@/api/types"
  * Die Stammdaten-Endpoints (/categories, /faculties, /study-programs,
  * /modules) liefern bewusst keine Seite, sondern vollstaendige Listen.
  */
-export type PageResponse<T> = Omit<
-  Required<ApiSchemas["PageResponse"]>,
-  "content"
-> & {
+export type PageResponse<T> = Omit<ApiSchemas["PageResponse"], "content"> & {
   content: T[]
 }
 

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest"
 import { renderWithProviders } from "@/tests/render"
 
 import { Top10Card } from "@/components/common/Top10Card"
+import { reference } from "@/tests/fixtures"
 
 const author = { firstName: "Mira", lastName: "Beispiel" }
 
@@ -50,7 +51,10 @@ describe("Top10Card", () => {
         position={1}
         title="Campus-Garten"
         author={author}
-        studyProgram={{ name: "Medieninformatik" }}
+        studyProgram={reference({
+          name: "Medieninformatik",
+          abbreviation: null,
+        })}
         href="/projects/1"
       />
     )
@@ -73,7 +77,10 @@ describe("Top10Card", () => {
         position={7}
         title="Campus-Garten"
         author={author}
-        studyProgram={{ name: "Medieninformatik" }}
+        studyProgram={reference({
+          name: "Medieninformatik",
+          abbreviation: null,
+        })}
       />
     )
 

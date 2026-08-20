@@ -51,7 +51,8 @@ export type PreviousBlock = { id?: string; type?: BlockType }
 
 /** Ein Block, der nicht dargestellt werden kann, samt Grund. */
 export type DroppedBlock = {
-  id?: string
+  /* Immer gesetzt: BlockResponse.id ist Pflicht (Contract 3.4, KAN-76). */
+  id: string
   orderIndex: number
   /** Knotenname aus {@code content.type}, soweit lesbar. */
   nodeType: string | null
@@ -146,7 +147,7 @@ export function docToBlocks(
       content: node,
       schemaVersion: BLOCK_SCHEMA_VERSION,
     }
-    if (carried?.id !== undefined && carried.type === type) {
+    if (carried !== undefined && carried.type === type) {
       request.id = carried.id
     }
     return request
@@ -175,7 +176,7 @@ export function blocksToDoc(
   blocks: readonly ContentBlockResponse[]
 ): BlocksToDocResult {
   const sorted = [...blocks].sort(
-    (left, right) => (left.orderIndex ?? 0) - (right.orderIndex ?? 0)
+    (left, right) => left.orderIndex - right.orderIndex
   )
 
   const entries: BlockEntry[] = []
@@ -183,21 +184,22 @@ export function blocksToDoc(
   const normalized: NormalizedBlock[] = []
 
   for (const block of sorted) {
-    const orderIndex = block.orderIndex ?? 0
-    /* Ein fehlendes schemaVersion gilt als 1 (Contract 6.1). */
-    const schemaVersion = block.schemaVersion ?? 1
+    const orderIndex = block.orderIndex
+    const schemaVersion = block.schemaVersion
 
     const drop = (
       reason: DropReason,
       nodeType: string | null,
       detail?: string
     ) => {
-      const entry: DroppedBlock = { orderIndex, nodeType, reason }
+      const entry: DroppedBlock = {
+        orderIndex,
+        nodeType,
+        reason,
+        id: block.id,
+      }
       if (detail !== undefined) {
         entry.detail = detail
-      }
-      if (block.id !== undefined) {
-        entry.id = block.id
       }
       dropped.push(entry)
       entries.push({ kind: "dropped", dropped: entry })

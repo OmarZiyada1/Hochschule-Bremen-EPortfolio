@@ -1,12 +1,12 @@
 import { screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
+import { projectCard, reference } from "@/tests/fixtures"
 import { renderWithProviders } from "@/tests/render"
 
 import { ProjectCard } from "@/components/common/ProjectCard"
 
-const faculty = { name: "Fakultät 4", abbreviation: "FK4" }
-const author = { firstName: "Mira", lastName: "Beispiel" }
+const faculty = reference({ name: "Fakultät 4", abbreviation: "FK4" })
 
 describe("ProjectCard", () => {
   /*
@@ -19,9 +19,7 @@ describe("ProjectCard", () => {
    * Rueckfall, den die Oberflaeche selbst verantwortet.
    */
   it("kommt ohne hinterlegtes Bild mit den Initialen aus", () => {
-    renderWithProviders(
-      <ProjectCard project={{ id: "1", title: "Campus-Garten", author }} />
-    )
+    renderWithProviders(<ProjectCard project={projectCard()} />)
 
     expect(screen.getByText("MB")).toBeInTheDocument()
   })
@@ -29,16 +27,17 @@ describe("ProjectCard", () => {
   it("zeigt Cover, Projektart, Fakultaet, Autor, Teaser, Semester und Reaktionen", () => {
     renderWithProviders(
       <ProjectCard
-        project={{
-          id: "1",
-          title: "Campus-Garten",
+        project={projectCard({
           summary: "Ein offener Lernort hinter dem AB-Gebäude.",
           projectType: "THESIS",
           faculty,
-          author,
-          semester: { id: "s-1", name: "SoSe 2026" },
+          semester: reference({
+            id: "s-1",
+            name: "SoSe 2026",
+            abbreviation: null,
+          }),
           reactionCount: 142,
-        }}
+        })}
       />
     )
 
@@ -65,9 +64,7 @@ describe("ProjectCard", () => {
   })
 
   it("zeigt das Fakultaetskuerzel und sagt den vollen Namen an", () => {
-    renderWithProviders(
-      <ProjectCard project={{ title: "Campus-Garten", faculty }} />
-    )
+    renderWithProviders(<ProjectCard project={projectCard({ faculty })} />)
 
     /* Sichtbar das Kuerzel, vorgelesen der volle Name. Beides ueber die
        Erreichbarkeit geprueft und nicht ueber ein title-Attribut: das
@@ -83,7 +80,9 @@ describe("ProjectCard", () => {
   it("faellt ohne Kuerzel auf den ausgeschriebenen Namen zurueck", () => {
     renderWithProviders(
       <ProjectCard
-        project={{ title: "Campus-Garten", faculty: { name: "Fakultät 4" } }}
+        project={projectCard({
+          faculty: reference({ name: "Fakultät 4", abbreviation: null }),
+        })}
       />
     )
 
@@ -92,7 +91,7 @@ describe("ProjectCard", () => {
 
   it("zeigt ohne Coverbild den Platzhalter statt eines leeren Bildes", () => {
     const { container } = renderWithProviders(
-      <ProjectCard project={{ title: "Campus-Garten" }} />
+      <ProjectCard project={projectCard()} />
     )
 
     expect(container.querySelector("img")).toBeNull()
@@ -100,9 +99,7 @@ describe("ProjectCard", () => {
 
   it("zeigt mit Coverbild ein Bild ohne eigenen Namen", () => {
     const { container } = renderWithProviders(
-      <ProjectCard
-        project={{ title: "Campus-Garten", coverImageUrl: "/cover.webp" }}
-      />
+      <ProjectCard project={projectCard({ coverImageUrl: "/cover.webp" })} />
     )
 
     const image = container.querySelector("img")
@@ -112,19 +109,26 @@ describe("ProjectCard", () => {
     expect(image).toHaveAttribute("alt", "")
   })
 
-  it("kommt ohne id, Status und optionale Felder aus", () => {
-    renderWithProviders(<ProjectCard project={{ title: "Campus-Garten" }} />)
+  it("kommt ohne die nullbaren Felder aus", () => {
+    /* Ein Entwurf traegt weder Teaser noch Fakultaet noch Semester (§3.3).
+       Die Kachel laesst die Stellen dann leer, statt etwas zu erfinden.
+       Titel, id, Autor:in und Reaktionszahl kommen dagegen immer mit, seit
+       KAN-76 sagt der Typ das auch. */
+    renderWithProviders(<ProjectCard project={projectCard()} />)
 
     expect(
       screen.getByRole("heading", { level: 3, name: "Campus-Garten" })
     ).toBeVisible()
-    /* Ohne id gibt es kein Linkziel, also auch keinen Link. */
-    expect(screen.queryByRole("link")).not.toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Campus-Garten" })).toHaveAttribute(
+      "href",
+      "/projects/1"
+    )
+    expect(screen.queryByText("Fakultät 4")).not.toBeInTheDocument()
     expect(screen.queryByText("Veröffentlicht")).not.toBeInTheDocument()
   })
 
   it("zeigt den Status nur, wenn die Seite showStatus setzt", () => {
-    const project = { title: "Campus-Garten", status: "DRAFT" } as const
+    const project = projectCard({ status: "DRAFT" })
 
     const { unmount } = renderWithProviders(
       <ProjectCard project={project} showStatus />

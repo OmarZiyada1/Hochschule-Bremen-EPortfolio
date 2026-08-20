@@ -56,8 +56,8 @@ export function ProjectMetaSidebar({
 
   const author = project.author
     ? {
-        firstName: project.author.firstName ?? "",
-        lastName: project.author.lastName ?? "",
+        firstName: project.author.firstName,
+        lastName: project.author.lastName,
       }
     : null
 
@@ -130,8 +130,8 @@ export function ProjectMetaSidebar({
             {members.map((member, index) => (
               <li key={member.userId ?? index}>
                 {fullNameOf({
-                  firstName: member.firstName ?? "",
-                  lastName: member.lastName ?? "",
+                  firstName: member.firstName,
+                  lastName: member.lastName,
                 })}
                 {member.projectRole && (
                   <span className="type-body-sm font-normal text-muted-foreground">
@@ -150,8 +150,8 @@ export function ProjectMetaSidebar({
             {editors.map((editor, index) => (
               <li key={editor.id ?? index}>
                 {fullNameOf({
-                  firstName: editor.firstName ?? "",
-                  lastName: editor.lastName ?? "",
+                  firstName: editor.firstName,
+                  lastName: editor.lastName,
                 })}
               </li>
             ))}

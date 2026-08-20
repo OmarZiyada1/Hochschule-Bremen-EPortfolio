@@ -30,6 +30,7 @@ function fileUrl(fileId: string): string {
 function blocksOf(...contents: unknown[]): BlockResponse[] {
   return contents.map((content, index) => ({
     id: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+    type: "TEXT",
     orderIndex: index,
     schemaVersion: 1,
     content: content as BlockResponse["content"],

@@ -12,17 +12,13 @@ import { isApiError } from "@/api/errors"
 import { createQueryClient } from "@/api/queryClient"
 import { apiErrorResponse } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
+import { user } from "@/tests/fixtures"
 
 function seedSession() {
   startSession({
     token: "test-token",
     expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
-    user: {
-      id: "u1",
-      email: "erika@example.org",
-      role: "STUDENT",
-      status: "ACTIVE",
-    },
+    user: user({ id: "u1", email: "erika@example.org" }),
     passwordChangeRequired: false,
   })
 }

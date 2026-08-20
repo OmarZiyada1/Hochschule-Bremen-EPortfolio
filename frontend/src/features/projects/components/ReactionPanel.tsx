@@ -57,7 +57,7 @@ export function ReactionPanel({
 }: {
   projectId: string
   /** Zaehler aus der Detailantwort (§3.10). Fehlt er, zeigt die Seite 0. */
-  reactionCount: number | undefined
+  reactionCount: number
   /** Projektstatus (§2.2); reagieren laesst sich nur auf PUBLISHED (§3.10). */
   status: ProjectStatus | undefined
 }) {
@@ -137,7 +137,7 @@ export function ReactionPanel({
       .to(burst, { scale: 1, duration: 0.26, ease: "power2.out" }, "<")
   }
 
-  const count = reactionCount ?? 0
+  const count = reactionCount
   const pending = add.isPending || remove.isPending
 
   /*

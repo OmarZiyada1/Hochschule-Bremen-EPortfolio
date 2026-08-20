@@ -7,6 +7,14 @@ import java.util.UUID;
  * Eine Zeile der Ergebnisliste von {@code POST /api/admin/projects/status}
  * (§6.1, KAN-46): was aus <em>diesem</em> Projekt geworden ist.
  *
+ * <p><strong>Warum die Endung {@code Response} und nicht {@code Result}.</strong>
+ * Der Name entscheidet mit, was im erzeugten Frontend-Typ ankommt: der
+ * Customizer in {@code OpenApiConfig} traegt die Pflichtfelder je Schema mit
+ * dieser Endung nach (KAN-76). Als {@code ProjectBulkStatusResult} war dies das
+ * einzige antwortseitige Schema, das durchs Raster fiel; seine drei
+ * Eigenschaften blieben in {@code schema.d.ts} optional, obwohl der Server sie
+ * immer sendet.
+ *
  * <p><strong>Warum je Zeile berichtet wird und die Anfrage nicht als Ganzes
  * fehlschlaegt.</strong> Die Regeln aus §4.1 gelten weiterhin je Projekt: in
  * einer Auswahl von zwanzig kann ein einzelnes in einem Status stehen, der den
@@ -37,7 +45,7 @@ import java.util.UUID;
  * @param success   ob der Uebergang stattgefunden hat
  * @param errorCode Grund des Scheiterns nach §6.2, sonst {@code null}
  */
-public record ProjectBulkStatusResult(
+public record ProjectBulkStatusResultResponse(
 
 		@Schema(description = "ID des Projekts, wie angefragt.")
 		UUID projectId,
@@ -52,12 +60,12 @@ public record ProjectBulkStatusResult(
 		String errorCode) {
 
 	/** Der Uebergang hat stattgefunden. */
-	public static ProjectBulkStatusResult success(UUID projectId) {
-		return new ProjectBulkStatusResult(projectId, true, null);
+	public static ProjectBulkStatusResultResponse success(UUID projectId) {
+		return new ProjectBulkStatusResultResponse(projectId, true, null);
 	}
 
 	/** Der Uebergang ist an diesem Projekt gescheitert, mit dem Code aus §6.2. */
-	public static ProjectBulkStatusResult failure(UUID projectId, String errorCode) {
-		return new ProjectBulkStatusResult(projectId, false, errorCode);
+	public static ProjectBulkStatusResultResponse failure(UUID projectId, String errorCode) {
+		return new ProjectBulkStatusResultResponse(projectId, false, errorCode);
 	}
 }

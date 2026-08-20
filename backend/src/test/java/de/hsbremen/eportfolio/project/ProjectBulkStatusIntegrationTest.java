@@ -146,7 +146,7 @@ class ProjectBulkStatusIntegrationTest {
 				.getContentAsString();
 
 		// Die Form ist ueber alle Zeilen dieselbe: errorCode steht auch bei
-		// Erfolg im JSON, nur eben als null (siehe ProjectBulkStatusResult).
+		// Erfolg im JSON, nur eben als null (siehe ProjectBulkStatusResultResponse).
 		JsonNode successRow = objectMapper.readTree(response).get("results").get(0);
 		assertThat(successRow.has("errorCode")).isTrue();
 		assertThat(successRow.get("errorCode").isNull()).isTrue();

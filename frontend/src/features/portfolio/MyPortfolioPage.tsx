@@ -93,8 +93,8 @@ export default function MyPortfolioPage() {
   }
 
   const person = {
-    firstName: user.firstName ?? "",
-    lastName: user.lastName ?? "",
+    firstName: user.firstName,
+    lastName: user.lastName,
   }
 
   return (

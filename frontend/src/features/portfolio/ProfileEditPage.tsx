@@ -111,7 +111,7 @@ export default function ProfileEditPage() {
                 <Separator />
 
                 <PasswordChangeSection
-                  email={person.email ?? ""}
+                  email={person.email}
                   unsavedChanges={profileDirty}
                 />
               </>

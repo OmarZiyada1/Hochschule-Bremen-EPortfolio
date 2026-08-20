@@ -1265,9 +1265,9 @@ export interface components {
     /** @description Inhalt des Projekts, geordnet nach orderIndex. */
     BlockResponse: {
       /** Format: uuid */
-      id?: string
+      id: string
       /** @enum {string} */
-      type?:
+      type:
         | "HEADING"
         | "TEXT"
         | "LIST"
@@ -1283,10 +1283,10 @@ export interface components {
         | "DOCUMENT"
         | "EMBED"
       /** Format: int32 */
-      orderIndex?: number
-      content?: components["schemas"]["JsonNode"]
+      orderIndex: number
+      content: components["schemas"]["JsonNode"]
       /** Format: int32 */
-      schemaVersion?: number
+      schemaVersion: number
     }
     BlocksResponse: {
       /**
@@ -1294,9 +1294,9 @@ export interface components {
        * @description Stand des Projekts fuer den naechsten schreibenden Request (§6.4).
        * @example 4
        */
-      version?: number
+      version: number
       /** @description Inhalt des Projekts, geordnet nach orderIndex. */
-      blocks?: components["schemas"]["BlockResponse"][]
+      blocks: components["schemas"]["BlockResponse"][]
     }
     /** @description Co-Autor:innen und Mitwirkende (§3.13). Null laesst die Liste unveraendert, [] leert sie. Die Autor:in gehoert nicht hinein. */
     MemberRequest: {
@@ -1372,94 +1372,94 @@ export interface components {
     /** @description Co-Autor:innen und Mitwirkende (§3.13). Nicht zu verwechseln mit der zugewiesenen Redaktion. */
     MemberResponse: {
       /** Format: uuid */
-      userId?: string
-      firstName?: string
-      lastName?: string
+      userId: string
+      firstName: string
+      lastName: string
       /**
        * @description Freie Funktionsbezeichnung im Projekt, z. B. "Frontend". Nicht die System-Rolle aus §2.1.
        * @example Frontend
        */
-      projectRole?: string
+      projectRole: string
     }
     /** @description Zugewiesene Redakteur:innen (§3.3). Bei einem PUBLISHED-Projekt fuer alle sichtbar, auch ohne Anmeldung (seit Contract v55); in jedem anderen Status nur fuer die Projektseite, die zugewiesene Redaktion und Admins. In der Praxis damit immer gefuellt: wer ein nicht veroeffentlichtes Projekt ueberhaupt lesen darf, gehoert genau zu diesem Kreis. Eine leere Liste bedeutet, dass keine Redaktion zugewiesen ist. */
     PersonResponse: {
       /** Format: uuid */
-      id?: string
-      firstName?: string
-      lastName?: string
+      id: string
+      firstName: string
+      lastName: string
       /** @description Profilbild als Referenz /api/files/{id} (§3.15.1). Kann fehlen: das Konto hat keines hinterlegt, oder die Antwort fuehrt es an dieser Stelle nicht mit. Gefuellt ist es an der Autor:in einer Projektkachel. */
-      avatarUrl?: string | null
+      avatarUrl: string | null
     }
     ProjectDetailResponse: {
       /** Format: uuid */
-      id?: string
-      title?: string
+      id: string
+      title: string
       /** @description Teaser fuer Kachel- und Listenansicht. Kann fehlen. */
-      summary?: string | null
+      summary: string | null
       /** @description Kachelbild. Kann fehlen. */
-      coverImageUrl?: string | null
+      coverImageUrl: string | null
       /** @enum {string} */
-      status?: "DRAFT" | "SUBMITTED" | "APPROVED" | "PUBLISHED" | "REVISION"
+      status: "DRAFT" | "SUBMITTED" | "APPROVED" | "PUBLISHED" | "REVISION"
       /**
        * @description Im DRAFT noch nicht gesetzt; Pflicht erst beim Einreichen (§3.3).
        * @enum {string|null}
        */
-      projectType?: "REGULAR" | "PAPER" | "THESIS" | null
+      projectType: "REGULAR" | "PAPER" | "THESIS" | null
       /**
        * @description Im DRAFT noch nicht gesetzt; Pflicht erst beim Einreichen (§3.3).
        * @enum {string|null}
        */
-      degree?: "BACHELOR" | "MASTER" | "MBA" | null
+      degree: "BACHELOR" | "MASTER" | "MBA" | null
       /** @description Semester der Entstehung (§3.18). Im DRAFT noch nicht gesetzt. */
-      semester?: components["schemas"]["ReferenceResponse"] | null
+      semester: components["schemas"]["ReferenceResponse"] | null
       /** @description Kategorie (§3.6). Im DRAFT noch nicht gesetzt. */
-      category?: components["schemas"]["ReferenceResponse"] | null
+      category: components["schemas"]["ReferenceResponse"] | null
       /** @description Fakultaet (§3.8). Im DRAFT noch nicht gesetzt. */
-      faculty?: components["schemas"]["ReferenceResponse"] | null
+      faculty: components["schemas"]["ReferenceResponse"] | null
       /** @description Studiengang (§3.7). Im DRAFT noch nicht gesetzt. */
-      studyProgram?: components["schemas"]["ReferenceResponse"] | null
+      studyProgram: components["schemas"]["ReferenceResponse"] | null
       /** @description Fach oder Modul (§3.9). Dauerhaft freiwillig: anders als die uebrigen Bezuege steht es nicht unter den Pflichtfeldern des Einreichens (§3.3). */
-      module?: components["schemas"]["ReferenceResponse"] | null
-      author?: components["schemas"]["PersonResponse"]
+      module: components["schemas"]["ReferenceResponse"] | null
+      author: components["schemas"]["PersonResponse"]
       /** @description Co-Autor:innen und Mitwirkende (§3.13). Nicht zu verwechseln mit der zugewiesenen Redaktion. */
-      members?: components["schemas"]["MemberResponse"][]
+      members: components["schemas"]["MemberResponse"][]
       /** @description Freie Schlagwoerter, hoechstens fuenf. Alphabetisch sortiert, damit die Reihenfolge zwischen zwei Aufrufen stabil bleibt. */
-      tags?: string[]
+      tags: string[]
       /** @description Inhalt des Projekts, nach orderIndex aufsteigend geordnet. Ein frischer DRAFT hat keine Bloecke. */
-      blocks?: components["schemas"]["BlockResponse"][]
+      blocks: components["schemas"]["BlockResponse"][]
       /**
        * Format: int64
        * @description Zahl der Reaktionen auf dieses Projekt (§3.10).
        * @example 12
        */
-      reactionCount?: number
+      reactionCount: number
       /** @description Zugewiesene Redakteur:innen (§3.3). Bei einem PUBLISHED-Projekt fuer alle sichtbar, auch ohne Anmeldung (seit Contract v55); in jedem anderen Status nur fuer die Projektseite, die zugewiesene Redaktion und Admins. In der Praxis damit immer gefuellt: wer ein nicht veroeffentlichtes Projekt ueberhaupt lesen darf, gehoert genau zu diesem Kreis. Eine leere Liste bedeutet, dass keine Redaktion zugewiesen ist. */
-      editors?: components["schemas"]["PersonResponse"][] | null
+      editors: components["schemas"]["PersonResponse"][] | null
       /** @description Aktivitaetsverlauf, aufsteigend nach Zeitpunkt (§3.12). Ausdruecklich null, wenn die anfragende Person ihn nicht sehen darf (§5, Fussnote 7); das Feld fehlt nicht, es steht auf null. Damit zugleich das Kennzeichen, an dem ein Client erkennt, dass die lesende Person die Interna sehen darf, also Projektseite, zugewiesene Redaktion oder Admin ist, ohne aus der Rolle zu raten. */
-      statusHistory?: components["schemas"]["StatusHistoryResponse"][] | null
+      statusHistory: components["schemas"]["StatusHistoryResponse"][] | null
       /**
        * Format: int64
        * @description Stand fuer Optimistic Locking. Gehoert unveraendert in den Body jedes schreibenden Requests (§6.4).
        * @example 3
        */
-      version?: number
+      version: number
       /**
        * Format: date-time
        * @description Zeitpunkt der Veroeffentlichung. Null, solange das Projekt nicht veroeffentlicht ist.
        */
-      publishedAt?: string | null
+      publishedAt: string | null
       /** Format: date-time */
-      createdAt?: string
+      createdAt: string
       /** Format: date-time */
-      updatedAt?: string
+      updatedAt: string
     }
     /** @description Fach oder Modul (§3.9). Dauerhaft freiwillig: anders als die uebrigen Bezuege steht es nicht unter den Pflichtfeldern des Einreichens (§3.3). */
     ReferenceResponse: {
       /** Format: uuid */
-      id?: string
-      name?: string
+      id: string
+      name: string
       /** @description Kurzform, z. B. "FK4". Fehlt bei Kategorien und kann auch bei Studiengang und Modul null sein. */
-      abbreviation?: string | null
+      abbreviation: string | null
     }
     /** @description Aktivitaetsverlauf, aufsteigend nach Zeitpunkt (§3.12). Ausdruecklich null, wenn die anfragende Person ihn nicht sehen darf (§5, Fussnote 7); das Feld fehlt nicht, es steht auf null. Damit zugleich das Kennzeichen, an dem ein Client erkennt, dass die lesende Person die Interna sehen darf, also Projektseite, zugewiesene Redaktion oder Admin ist, ohne aus der Rolle zu raten. */
     StatusHistoryResponse: {
@@ -1467,13 +1467,13 @@ export interface components {
        * @description Ausgangsstatus. Beim ersten Eintrag null, weil es dann keinen Vorzustand gibt.
        * @enum {string|null}
        */
-      fromStatus?:
+      fromStatus:
         "DRAFT" | "SUBMITTED" | "APPROVED" | "PUBLISHED" | "REVISION" | null
       /** @enum {string} */
-      toStatus?: "DRAFT" | "SUBMITTED" | "APPROVED" | "PUBLISHED" | "REVISION"
-      changedBy?: components["schemas"]["PersonResponse"]
+      toStatus: "DRAFT" | "SUBMITTED" | "APPROVED" | "PUBLISHED" | "REVISION"
+      changedBy: components["schemas"]["PersonResponse"]
       /** Format: date-time */
-      timestamp?: string
+      timestamp: string
     }
     ProjectEditorsRequest: {
       /** @description IDs der zustaendigen Redakteur:innen aus GET /api/users/lookup?role=EDITOR. Die Liste ersetzt die bisherige vollstaendig; [] hebt die Zuweisung auf. Anders als bei PUT /api/projects/{id} ist das Feld hier Pflicht, weil dieser Endpoint nichts anderes tut. */
@@ -1487,14 +1487,14 @@ export interface components {
     }
     OwnPortfolioResponse: {
       /** @description Freitext zur eigenen Person. Kann fehlen. */
-      biography?: string | null
+      biography: string | null
       /** @description Eigenes Profilbild. Kann fehlen; wird mit KAN-23 zu einer Datei-ID (§3.15). */
-      avatarUrl?: string | null
+      avatarUrl: string | null
       /**
        * @description Ob dieses Profil bearbeitet werden darf (§5, Zeile "Eigenes Portfolio bearbeiten"). Heute fuer jede angemeldete Person true; mit der erzwungenen Passwortaenderung aus §6.7 kann der Wert false werden.
        * @example true
        */
-      mayEditPortfolio?: boolean
+      mayEditPortfolio: boolean
     }
     PasswordChangeRequest: {
       /** @description Das bisherige Passwort; bei erzwungener Aenderung das Initialpasswort. */
@@ -1517,17 +1517,17 @@ export interface components {
     }
     UserResponse: {
       /** Format: uuid */
-      id?: string
-      email?: string
+      id: string
+      email: string
       /** @description Gewuenschte neue private E-Mail eines laufenden Adresswechsels (§3.1). Null, wenn kein Wechsel laeuft; daran erkennt die Oberflaeche den Zustand "Bestaetigung ausstehend". */
-      pendingEmail?: string | null
-      hsbEmail?: string
-      firstName?: string
-      lastName?: string
+      pendingEmail: string | null
+      hsbEmail: string
+      firstName: string
+      lastName: string
       /** @enum {string} */
-      role?: "STUDENT" | "EDITOR" | "ADMIN"
+      role: "STUDENT" | "EDITOR" | "ADMIN"
       /** @enum {string} */
-      status?: "REGISTRATION_PENDING" | "ACTIVE" | "DEACTIVATED"
+      status: "REGISTRATION_PENDING" | "ACTIVE" | "DEACTIVATED"
     }
     Top10OrderRequest: {
       /** @description Projekte in der gewuenschten Reihenfolge; der Index bestimmt den Platz, das erste Element steht auf Platz 1. Hoechstens zehn Eintraege, keine Wiederholungen, ausschliesslich veroeffentlichte Projekte. Eine leere Liste leert die Top-10. */
@@ -1535,46 +1535,46 @@ export interface components {
     }
     ProjectCardResponse: {
       /** Format: uuid */
-      id?: string
-      title?: string
+      id: string
+      title: string
       /** @description Teaser fuer Kachel- und Listenansicht. Kann fehlen. */
-      summary?: string | null
+      summary: string | null
       /** @description Kachelbild. Kann fehlen. */
-      coverImageUrl?: string | null
+      coverImageUrl: string | null
       /** @enum {string} */
-      status?: "DRAFT" | "SUBMITTED" | "APPROVED" | "PUBLISHED" | "REVISION"
+      status: "DRAFT" | "SUBMITTED" | "APPROVED" | "PUBLISHED" | "REVISION"
       /**
        * @description Im DRAFT noch nicht gesetzt; Pflicht erst beim Einreichen (§3.3).
        * @enum {string|null}
        */
-      projectType?: "REGULAR" | "PAPER" | "THESIS" | null
+      projectType: "REGULAR" | "PAPER" | "THESIS" | null
       /**
        * @description Im DRAFT noch nicht gesetzt; Pflicht erst beim Einreichen (§3.3).
        * @enum {string|null}
        */
-      degree?: "BACHELOR" | "MASTER" | "MBA" | null
+      degree: "BACHELOR" | "MASTER" | "MBA" | null
       /** @description Semester der Entstehung (§3.18). Im DRAFT noch nicht gesetzt. */
-      semester?: components["schemas"]["ReferenceResponse"] | null
+      semester: components["schemas"]["ReferenceResponse"] | null
       /** @description Kategorie (§3.6). Im DRAFT noch nicht gesetzt. */
-      category?: components["schemas"]["ReferenceResponse"] | null
+      category: components["schemas"]["ReferenceResponse"] | null
       /** @description Fakultaet (§3.8). Im DRAFT noch nicht gesetzt. */
-      faculty?: components["schemas"]["ReferenceResponse"] | null
+      faculty: components["schemas"]["ReferenceResponse"] | null
       /** @description Studiengang (§3.7). Im DRAFT noch nicht gesetzt. */
-      studyProgram?: components["schemas"]["ReferenceResponse"] | null
-      author?: components["schemas"]["PersonResponse"]
+      studyProgram: components["schemas"]["ReferenceResponse"] | null
+      author: components["schemas"]["PersonResponse"]
       /** @description Freie Schlagwoerter, hoechstens fuenf. Alphabetisch sortiert, damit die Reihenfolge zwischen zwei Aufrufen stabil bleibt. */
-      tags?: string[]
+      tags: string[]
       /**
        * Format: int64
        * @description Zahl der Reaktionen auf dieses Projekt (§3.10).
        * @example 12
        */
-      reactionCount?: number
+      reactionCount: number
       /**
        * Format: date-time
        * @description Zeitpunkt der Veroeffentlichung. Null, solange das Projekt nicht veroeffentlicht ist.
        */
-      publishedAt?: string | null
+      publishedAt: string | null
     }
     Top10EntryResponse: {
       /**
@@ -1582,13 +1582,13 @@ export interface components {
        * @description Platz in der Top-10, 1 bis 10. Nicht der Index in dieser Liste: unbesetzte Plaetze fehlen, es kann also eine Luecke geben.
        * @example 1
        */
-      position?: number
+      position: number
       /**
        * Format: date-time
        * @description Zeitpunkt der Aufnahme in die Liste, nicht der letzten Umsortierung.
        */
-      addedAt?: string
-      project?: components["schemas"]["ProjectCardResponse"]
+      addedAt: string
+      project: components["schemas"]["ProjectCardResponse"]
     }
     ProjectCreateRequest: {
       /**
@@ -1652,26 +1652,26 @@ export interface components {
     }
     Top10NominationResponse: {
       /** Format: uuid */
-      id?: string
-      project?: components["schemas"]["ProjectCardResponse"]
-      nominatedBy?: components["schemas"]["PersonResponse"]
+      id: string
+      project: components["schemas"]["ProjectCardResponse"]
+      nominatedBy: components["schemas"]["PersonResponse"]
       /**
        * Format: int32
        * @description Unverbindlicher Platzvorschlag der nominierenden Person. Kann fehlen (§3.11).
        * @example 3
        */
-      proposedPosition?: number | null
+      proposedPosition: number | null
       /** @enum {string} */
-      status?: "PENDING" | "ACCEPTED" | "REJECTED"
+      status: "PENDING" | "ACCEPTED" | "REJECTED"
       /** @description Entscheidende:r Admin. Null, solange status = PENDING ist. */
-      decidedBy?: components["schemas"]["PersonResponse"] | null
+      decidedBy: components["schemas"]["PersonResponse"] | null
       /**
        * Format: date-time
        * @description Zeitpunkt der Entscheidung. Null, solange status = PENDING ist.
        */
-      decidedAt?: string | null
+      decidedAt: string | null
       /** Format: date-time */
-      createdAt?: string
+      createdAt: string
     }
     RevisionRequest: {
       /**
@@ -1686,7 +1686,7 @@ export interface components {
        * @description Zahl der Reaktionen dieses Projekts, gezaehlt nach der Aenderung (§3.10). Derselbe Wert steht als reactionCount in Kachel und Detail.
        * @example 42
        */
-      count?: number
+      count: number
     }
     CommentCreateRequest: {
       /**
@@ -1703,38 +1703,38 @@ export interface components {
     }
     CommentAuthorResponse: {
       /** Format: uuid */
-      id?: string
-      firstName?: string
-      lastName?: string
+      id: string
+      firstName: string
+      lastName: string
       /** @enum {string} */
-      role?: "STUDENT" | "EDITOR" | "ADMIN"
+      role: "STUDENT" | "EDITOR" | "ADMIN"
     }
     CommentResponse: {
       /** Format: uuid */
-      id?: string
-      author?: components["schemas"]["CommentAuthorResponse"]
+      id: string
+      author: components["schemas"]["CommentAuthorResponse"]
       /** @enum {string} */
-      type?: "REPLY" | "NOTE" | "CHANGE_REQUEST"
-      text?: string
+      type: "REPLY" | "NOTE" | "CHANGE_REQUEST"
+      text: string
       /**
        * @description Erledigungsstand eines Aenderungswunsches (OPEN oder RESOLVED). Nur bei type = CHANGE_REQUEST gesetzt, bei REPLY und NOTE null (§2.4).
        * @enum {string|null}
        */
-      status?: "OPEN" | "RESOLVED" | null
+      status: "OPEN" | "RESOLVED" | null
       /** Format: date-time */
-      createdAt?: string
+      createdAt: string
       /** Format: date-time */
-      updatedAt?: string
+      updatedAt: string
     }
     StoredFileResponse: {
       /** Format: uuid */
-      id?: string
-      fileName?: string
-      mimeType?: string
+      id: string
+      fileName: string
+      mimeType: string
       /** Format: int64 */
-      size?: number
+      size: number
       /** @description Relativer Abrufpfad /api/files/{id}. Es gibt keine zweite Adresse fuer eine Datei (§3.15.1). */
-      url?: string
+      url: string
     }
     VerifyRequest: {
       /**
@@ -1755,10 +1755,10 @@ export interface components {
       code?: string
     }
     VerificationStatusResponse: {
-      emailVerified?: boolean
-      hsbEmailVerified?: boolean
+      emailVerified: boolean
+      hsbEmailVerified: boolean
       /** @enum {string} */
-      status?: "REGISTRATION_PENDING" | "ACTIVE" | "DEACTIVATED"
+      status: "REGISTRATION_PENDING" | "ACTIVE" | "DEACTIVATED"
     }
     ResendVerificationRequest: {
       /**
@@ -1818,11 +1818,11 @@ export interface components {
       password?: string
     }
     LoginResponse: {
-      token?: string
+      token: string
       /** Format: date-time */
-      expiresAt?: string
-      passwordChangeRequired?: boolean
-      user?: components["schemas"]["UserResponse"]
+      expiresAt: string
+      passwordChangeRequired: boolean
+      user: components["schemas"]["UserResponse"]
     }
     ForgotPasswordRequest: {
       /**
@@ -1858,35 +1858,35 @@ export interface components {
     /** @description Ein Konto in der Nutzerverwaltung. Der einzige Antworttyp, der hsbEmail fremder Konten enthaelt; die eigene Adresse fuehren seit v50 auch die Auth-Antworten an die Person selbst (§3.1). passwordHash kommt nirgends vor. */
     AdminUserResponse: {
       /** Format: uuid */
-      id?: string
+      id: string
       /**
        * @description Private E-Mail-Adresse, zugleich die Login-Kennung (§3.1).
        * @example erika@example.org
        */
-      email?: string
+      email: string
       /**
        * @description Hochschuladresse. Wird ausschliesslich hier ausgegeben (§3.1).
        * @example emusterfrau@stud.hs-bremen.de
        */
-      hsbEmail?: string
-      emailVerified?: boolean
-      hsbEmailVerified?: boolean
+      hsbEmail: string
+      emailVerified: boolean
+      hsbEmailVerified: boolean
       /** @description Das Konto traegt noch ein administrativ gesetztes Initialpasswort und ist bis zur Aenderung gesperrt (§6.7). */
-      passwordChangeRequired?: boolean
-      firstName?: string
-      lastName?: string
+      passwordChangeRequired: boolean
+      firstName: string
+      lastName: string
       /** @enum {string} */
-      role?: "STUDENT" | "EDITOR" | "ADMIN"
+      role: "STUDENT" | "EDITOR" | "ADMIN"
       /** @enum {string} */
-      status?: "REGISTRATION_PENDING" | "ACTIVE" | "DEACTIVATED"
+      status: "REGISTRATION_PENDING" | "ACTIVE" | "DEACTIVATED"
       /** Format: date-time */
-      createdAt?: string
+      createdAt: string
       /** Format: date-time */
-      updatedAt?: string
+      updatedAt: string
     }
     AdminPasswordResetResponse: {
       /** @description Das erzeugte Initialpasswort. Erscheint nur in dieser einen Antwort und muss bei der ersten Anmeldung geaendert werden (§6.7). */
-      initialPassword?: string
+      initialPassword: string
     }
     Top10AcceptRequest: {
       /**
@@ -1915,15 +1915,15 @@ export interface components {
     }
     StudyProgramResponse: {
       /** Format: uuid */
-      id?: string
-      name?: string
+      id: string
+      name: string
       /** @description Kurzform des Studiengangs. Kann fehlen. */
-      abbreviation?: string | null
+      abbreviation: string | null
       /**
        * Format: uuid
        * @description Fakultaet, zu der der Studiengang gehoert. Derselbe Wert dient als Filter: GET /api/study-programs?faculty={id}.
        */
-      facultyId?: string
+      facultyId: string
     }
     SemesterCreateRequest: {
       /**
@@ -1939,19 +1939,19 @@ export interface components {
     }
     SemesterResponse: {
       /** Format: uuid */
-      id?: string
-      name?: string
+      id: string
+      name: string
       /**
        * @description Nur aktive Semester stehen beim Anlegen und Bearbeiten eines Projekts zur Auswahl. Ein inaktives bleibt an bestehenden Projekten und als Filterwert erhalten.
        * @example true
        */
-      active?: boolean
+      active: boolean
       /**
        * Format: int32
        * @description Reihenfolge in Liste und Auswahl, von der Administration gesetzt. Kleiner heisst weiter oben.
        * @example 3
        */
-      sortOrder?: number
+      sortOrder: number
     }
     SemesterMoveRequest: {
       /**
@@ -1978,22 +1978,22 @@ export interface components {
     }
     ProjectBulkStatusResponse: {
       /** @description Ein Ergebnis je angefragter Projekt-ID, in der Reihenfolge des Bodys. */
-      results?: components["schemas"]["ProjectBulkStatusResult"][]
+      results: components["schemas"]["ProjectBulkStatusResultResponse"][]
     }
     /** @description Ein Ergebnis je angefragter Projekt-ID, in der Reihenfolge des Bodys. */
-    ProjectBulkStatusResult: {
+    ProjectBulkStatusResultResponse: {
       /**
        * Format: uuid
        * @description ID des Projekts, wie angefragt.
        */
-      projectId?: string
+      projectId: string
       /** @description true, wenn der Uebergang stattgefunden hat. */
-      success?: boolean
+      success: boolean
       /**
        * @description Fehlercode aus §6.2, wenn dieses Projekt den Uebergang nicht durchlaufen hat; sonst null.
        * @example PROJECT_STATUS_TRANSITION_INVALID
        */
-      errorCode?: string | null
+      errorCode: string | null
     }
     ModuleCreateRequest: {
       /**
@@ -2014,15 +2014,15 @@ export interface components {
     }
     ModuleResponse: {
       /** Format: uuid */
-      id?: string
-      name?: string
+      id: string
+      name: string
       /** @description Kurzform des Moduls. Kann fehlen. */
-      abbreviation?: string | null
+      abbreviation: string | null
       /**
        * Format: uuid
        * @description Studiengang, zu dem das Modul gehoert. Derselbe Wert dient als Filter: GET /api/modules?studyProgram={id}.
        */
-      studyProgramId?: string
+      studyProgramId: string
     }
     FacultyCreateRequest: {
       /**
@@ -2038,9 +2038,9 @@ export interface components {
     }
     FacultyResponse: {
       /** Format: uuid */
-      id?: string
-      name?: string
-      abbreviation?: string
+      id: string
+      name: string
+      abbreviation: string
     }
     CategoryCreateRequest: {
       /**
@@ -2051,8 +2051,8 @@ export interface components {
     }
     CategoryResponse: {
       /** Format: uuid */
-      id?: string
-      name?: string
+      id: string
+      name: string
     }
     CategoryMergeRequest: {
       /**
@@ -2173,68 +2173,68 @@ export interface components {
     }
     UserLookupResponse: {
       /** Format: uuid */
-      id?: string
-      firstName?: string
-      lastName?: string
+      id: string
+      firstName: string
+      lastName: string
     }
     TagResponse: {
       /** Format: uuid */
-      id?: string
-      name?: string
+      id: string
+      name: string
       /**
        * Format: int64
        * @description Zahl der Projekte mit diesem Tag, ueber alle Projektstatus gezaehlt. Bestimmt die Reihenfolge der Vorschlaege; ein Tag, dessen letztes Projekt geloescht wurde, bleibt mit 0 stehen.
        * @example 12
        */
-      usageCount?: number
+      usageCount: number
     }
     /** @description Seite eines paginierten Ergebnisses (§6.6). */
     PageResponse: {
-      content?: components["schemas"]["ProjectCardResponse"][]
+      content: components["schemas"]["ProjectCardResponse"][]
       /**
        * Format: int32
        * @description 0-basierte Seitennummer.
        * @example 0
        */
-      page?: number
+      page: number
       /**
        * Format: int32
        * @description Angeforderte Seitengroesse. Die letzte Seite enthaelt in der Regel weniger Elemente.
        * @example 20
        */
-      size?: number
+      size: number
       /**
        * Format: int64
        * @description Zahl der Treffer ueber alle Seiten.
        * @example 137
        */
-      totalElements?: number
+      totalElements: number
       /**
        * Format: int32
        * @description Zahl der Seiten bei dieser Groesse.
        * @example 7
        */
-      totalPages?: number
+      totalPages: number
     }
     PortfolioResponse: {
-      user?: components["schemas"]["PortfolioUserResponse"]
+      user: components["schemas"]["PortfolioUserResponse"]
       /** @description Freitext zur Person. Kann fehlen. */
-      biography?: string | null
+      biography: string | null
       /** @description Profilbild. Kann fehlen; wird mit KAN-23 zu einer Datei-ID (§3.15). */
-      avatarUrl?: string | null
+      avatarUrl: string | null
       /** @description Ausschliesslich veroeffentlichte Projekte dieser Person, per Abfrage ermittelt (§3.2). Neueste Veroeffentlichung zuerst. */
-      projects?: components["schemas"]["ProjectCardResponse"][]
+      projects: components["schemas"]["ProjectCardResponse"][]
     }
     PortfolioUserResponse: {
       /** Format: uuid */
-      id?: string
-      firstName?: string
-      lastName?: string
+      id: string
+      firstName: string
+      lastName: string
       /**
        * @description Private E-Mail als Kontaktweg des oeffentlichen Profils (§3.2). Die HSB-Adresse erscheint hier nie.
        * @example vorname.nachname@example.org
        */
-      email?: string
+      email: string
     }
     /** @description Kennzahlen der Administrationsseite (§6.1). Jede Aufschluesselung enthaelt alle Werte ihres Enums, auch die mit dem Wert 0. */
     DashboardResponse: {
@@ -2248,7 +2248,7 @@ export interface components {
        *       "REVISION": 2
        *     }
        */
-      projectsByStatus?: {
+      projectsByStatus: {
         [key: string]: number
       }
       /**
@@ -2256,7 +2256,7 @@ export interface components {
        * @description Zahl aller Konten, einschliesslich deaktivierter und noch nicht abgeschlossener Registrierungen.
        * @example 128
        */
-      usersTotal?: number
+      usersTotal: number
       /**
        * @description Konten je Rolle (§2.1).
        * @example {
@@ -2265,7 +2265,7 @@ export interface components {
        *       "ADMIN": 2
        *     }
        */
-      usersByRole?: {
+      usersByRole: {
         [key: string]: number
       }
       /**
@@ -2276,7 +2276,7 @@ export interface components {
        *       "DEACTIVATED": 3
        *     }
        */
-      usersByStatus?: {
+      usersByStatus: {
         [key: string]: number
       }
       /**
@@ -2284,9 +2284,9 @@ export interface components {
        * @description Top-10-Vorschlaege, ueber die noch nicht entschieden wurde (Stand PENDING, §2.8).
        * @example 5
        */
-      openNominations?: number
+      openNominations: number
       /** @description Inhaltsbloecke je Blocktyp (§2.5), ueber alle Projekte. */
-      blocksByType?: {
+      blocksByType: {
         [key: string]: number
       }
     }

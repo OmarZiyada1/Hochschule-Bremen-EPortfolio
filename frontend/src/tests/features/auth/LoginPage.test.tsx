@@ -15,6 +15,7 @@ import {
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
 import { AppUnderTest, LocationProbe } from "@/tests/routes/helpers"
+import { projectCard } from "@/tests/fixtures"
 
 /**
  * Login-Flow des Durchstichs (Ticket KAN-8): zod-Validierung vor dem
@@ -139,11 +140,10 @@ describe("LoginPage", () => {
       http.get("*/api/projects", () =>
         HttpResponse.json({
           content: [
-            {
+            projectCard({
               id: "10000000-0000-0000-0000-000000000001",
               title: "Campus-Garten an der Werderstraße",
-              status: "PUBLISHED",
-            },
+            }),
           ],
           page: 0,
           size: 20,

@@ -310,7 +310,14 @@ describe("blocksToDoc", () => {
     content: unknown,
     overrides: Partial<ContentBlockResponse> = {}
   ): ContentBlockResponse {
-    return { orderIndex: 0, content, schemaVersion: 1, ...overrides }
+    return {
+      id: "00000000-0000-4000-8000-000000000000",
+      type: "TEXT",
+      orderIndex: 0,
+      content,
+      schemaVersion: 1,
+      ...overrides,
+    }
   }
 
   it("sortiert nach orderIndex und glaubt der Reihenfolge des Arrays nicht", () => {
@@ -320,15 +327,6 @@ describe("blocksToDoc", () => {
     ])
 
     expect(doc.content).toEqual([paragraph("erster"), paragraph("zweiter")])
-  })
-
-  it("nimmt ein fehlendes schemaVersion als 1", () => {
-    const { doc, dropped } = blocksToDoc([
-      { orderIndex: 0, content: paragraph("ohne Version") },
-    ])
-
-    expect(dropped).toEqual([])
-    expect(doc.content).toHaveLength(1)
   })
 
   it("nimmt die aktuelle Schemaversion an", () => {
@@ -363,7 +361,12 @@ describe("blocksToDoc", () => {
 
     expect(doc.content).toEqual([])
     expect(dropped).toEqual([
-      { orderIndex: 0, nodeType: "taskList", reason: "NODE_TYPE_UNKNOWN" },
+      {
+        id: "00000000-0000-4000-8000-000000000000",
+        orderIndex: 0,
+        nodeType: "taskList",
+        reason: "NODE_TYPE_UNKNOWN",
+      },
     ])
     /* Das Loch steht an der Stelle des Blocks, damit der Platzhalter im
        Renderer dort erscheint und nicht am Ende der Seite. */

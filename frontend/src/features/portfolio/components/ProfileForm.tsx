@@ -97,14 +97,14 @@ export function ProfileForm({
 
   /* Die Login-Kennung. Waehrend eines laufenden Wechsels bleibt sie die
      alte; die Wunschadresse steht allein in pendingEmail (§3.1). */
-  const currentEmail = user.email ?? ""
+  const currentEmail = user.email
   const pendingEmail = user.pendingEmail ?? null
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema(currentEmail)),
     defaultValues: {
-      firstName: user.firstName ?? "",
-      lastName: user.lastName ?? "",
+      firstName: user.firstName,
+      lastName: user.lastName,
       email: currentEmail,
       currentPassword: "",
       biography: portfolio?.biography ?? "",
@@ -274,8 +274,8 @@ export function ProfileForm({
   })
 
   const person = {
-    firstName: user.firstName ?? "",
-    lastName: user.lastName ?? "",
+    firstName: user.firstName,
+    lastName: user.lastName,
   }
   const bothSaved = result?.profileSaved === true && result.portfolioSaved
   const noneSaved =
@@ -491,7 +491,7 @@ export function ProfileForm({
             <Input
               id="profile-hsbEmail"
               type="email"
-              value={user.hsbEmail ?? ""}
+              value={user.hsbEmail}
               readOnly
               disabled
               aria-describedby="profile-hsbEmail-hint"

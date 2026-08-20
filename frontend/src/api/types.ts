@@ -6,9 +6,10 @@ import type { components } from "@/api/schema"
  * Skill frontend-api Abschnitt 1). Neue Aliase entstehen hier, nie als
  * eigene Interfaces in Komponenten.
  *
- * NonNullable, weil springdoc Felder nicht als required markiert und die
- * Enum-Eigenschaften deshalb optional generiert werden: der Alias meint den
- * Wert, nicht "Wert oder undefined".
+ * Die Aliase greifen unveraendert auf die generierten Typen zu. Seit KAN-76
+ * fuehrt jedes Antwortschema seine Pflichtfelder, deshalb meint etwa
+ * ProjectCardResponse["status"] bereits den Wert und nicht "Wert oder
+ * undefined"; eine Huelle darum waere wirkungslos.
  */
 export type ApiSchemas = components["schemas"]
 
@@ -46,23 +47,28 @@ export type PortfolioUpdateRequest = ApiSchemas["PortfolioUpdateRequest"]
 export type StoredFileResponse = ApiSchemas["StoredFileResponse"]
 
 /** Rollen nach Contract 2.1: genau drei Werte. PUBLIC ist keine Rolle. */
-export type Role = NonNullable<UserResponse["role"]>
+export type Role = UserResponse["role"]
 
 /** Kontostatus nach Contract 2.7. */
-export type UserStatus = NonNullable<UserResponse["status"]>
+export type UserStatus = UserResponse["status"]
 
 /** Projektstatus nach Contract 2.2. */
-export type ProjectStatus = NonNullable<
-  ApiSchemas["ProjectCardResponse"]["status"]
+export type ProjectStatus = ApiSchemas["ProjectCardResponse"]["status"]
+
+/**
+ * Projektart nach Contract 2.6: genau drei Werte.
+ *
+ * Exclude<..., null>, weil das Feld am Projekt bis zum Einreichen leer bleibt
+ * (Contract 3.3) und der Alias die Werteliste meint, nicht den Feldinhalt.
+ * Anders waere Record<ProjectType, ...> in projectFilters.ts nicht bildbar.
+ */
+export type ProjectType = Exclude<
+  ApiSchemas["ProjectCardResponse"]["projectType"],
+  null
 >
 
-/** Projektart nach Contract 2.6. */
-export type ProjectType = NonNullable<
-  ApiSchemas["ProjectCardResponse"]["projectType"]
->
-
-/** Angestrebter Abschluss nach Contract 2.7. */
-export type Degree = NonNullable<ApiSchemas["ProjectCardResponse"]["degree"]>
+/** Angestrebter Abschluss nach Contract 2.7: genau drei Werte, wie oben. */
+export type Degree = Exclude<ApiSchemas["ProjectCardResponse"]["degree"], null>
 
 /** Stammdatenbezug, wie ihn ReferenceResponse liefert (Contract 3.6 bis 3.9). */
 export type ProjectReference = ApiSchemas["ReferenceResponse"]
@@ -98,7 +104,7 @@ export type BlockRequest = ApiSchemas["BlockRequest"]
 export type BlocksUpdateRequest = ApiSchemas["BlocksUpdateRequest"]
 
 /** Blocktyp nach Contract 2.5: genau vierzehn Werte. */
-export type BlockType = NonNullable<BlockResponse["type"]>
+export type BlockType = BlockResponse["type"]
 
 /**
  * Bausteine der Projektdetailseite (Contract 3.12, 6.1; KAN-32).

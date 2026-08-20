@@ -7,6 +7,7 @@ import {
   type AuthSession,
 } from "@/api/auth/authStore"
 import { setAuthNavigate } from "@/api/auth/redirect"
+import { user } from "@/tests/fixtures"
 
 const STORAGE_KEY = "eportfolio.session"
 
@@ -14,12 +15,7 @@ function sessionWithExpiry(expiresAt: string): AuthSession {
   return {
     token: "test-token",
     expiresAt,
-    user: {
-      id: "u1",
-      email: "erika@example.org",
-      role: "STUDENT",
-      status: "ACTIVE",
-    },
+    user: user({ id: "u1", email: "erika@example.org" }),
     passwordChangeRequired: false,
   }
 }

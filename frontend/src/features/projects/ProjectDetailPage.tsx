@@ -259,7 +259,7 @@ export default function ProjectDetailPage() {
                     </div>
 
                     <h1 className="type-title min-w-0 text-primary">
-                      {data.title ?? ""}
+                      {data.title}
                     </h1>
                   </div>
 
@@ -441,8 +441,8 @@ function EditorialNote({ project }: { project: ProjectDetailResponse }) {
   const editors = (project.editors ?? [])
     .map((editor) =>
       fullNameOf({
-        firstName: editor.firstName ?? "",
-        lastName: editor.lastName ?? "",
+        firstName: editor.firstName,
+        lastName: editor.lastName,
       })
     )
     .filter((name) => name !== "")

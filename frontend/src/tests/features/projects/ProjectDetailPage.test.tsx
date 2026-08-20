@@ -9,6 +9,7 @@ import type {
   StatusHistoryResponse,
 } from "@/api/types"
 import ProjectDetailPage from "@/features/projects/ProjectDetailPage"
+import { person, reference } from "@/tests/fixtures"
 import { apiErrorResponse } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
@@ -116,6 +117,7 @@ const ALL_BLOCK_NODES: unknown[] = [
 function blocksOf(contents: unknown[]): BlockResponse[] {
   return contents.map((content, index) => ({
     id: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+    type: "TEXT",
     orderIndex: index,
     schemaVersion: 2,
     content: content as BlockResponse["content"],
@@ -124,14 +126,16 @@ function blocksOf(contents: unknown[]): BlockResponse[] {
 
 const HISTORY: StatusHistoryResponse[] = [
   {
+    /* Erster Eintrag, deshalb ohne Vorzustand (§3.12). */
+    fromStatus: null,
     toStatus: "DRAFT",
-    changedBy: { id: "u-1", firstName: "Mira", lastName: "Beispiel" },
+    changedBy: person({ id: "u-1" }),
     timestamp: "2026-03-01T09:00:00Z",
   },
   {
     fromStatus: "SUBMITTED",
     toStatus: "PUBLISHED",
-    changedBy: { id: "u-2", firstName: "Jo", lastName: "Schmidt" },
+    changedBy: person({ id: "u-2", firstName: "Jo", lastName: "Schmidt" }),
     timestamp: "2026-05-02T10:30:00Z",
   },
 ]
@@ -152,19 +156,32 @@ function projectResponse(
     id: PROJECT_ID,
     title: "SmartCampus: IoT-gestuetztes Gebaeudemanagement",
     summary: "Ein verteiltes Sensornetzwerk mit Edge-Inferenz.",
+    coverImageUrl: null,
     status: "PUBLISHED",
     projectType: "THESIS",
     degree: "BACHELOR",
-    semester: { id: "s-1", name: "WiSe 2025/26" },
-    category: { id: "c-1", name: "Digitalisierung" },
+    semester: reference({
+      id: "s-1",
+      name: "WiSe 2025/26",
+      abbreviation: null,
+    }),
+    category: reference({
+      id: "c-1",
+      name: "Digitalisierung",
+      abbreviation: null,
+    }),
     faculty: {
       id: "f-1",
       name: "Elektrotechnik und Informatik",
       abbreviation: "FK4",
     },
     studyProgram: { id: "p-1", name: "Informatik", abbreviation: "INF" },
-    module: { id: "m-1", name: "Bachelorarbeit" },
-    author: { id: "u-1", firstName: "Lena", lastName: "Mueller" },
+    module: reference({
+      id: "m-1",
+      name: "Bachelorarbeit",
+      abbreviation: null,
+    }),
+    author: person({ id: "u-1", firstName: "Lena", lastName: "Mueller" }),
     members: [
       {
         userId: "u-3",
@@ -187,6 +204,8 @@ function projectResponse(
     statusHistory: null,
     version: 3,
     publishedAt: "2025-10-15T08:00:00Z",
+    createdAt: "2025-09-01T08:00:00Z",
+    updatedAt: "2025-10-15T08:00:00Z",
     ...overrides,
   }
 }
@@ -516,7 +535,9 @@ describe("Sichtbarkeitsunterschiede", () => {
     server.use(
       detailHandler(
         projectResponse({
-          editors: [{ id: "u-9", firstName: "Jo", lastName: "Schmidt" }],
+          editors: [
+            person({ id: "u-9", firstName: "Jo", lastName: "Schmidt" }),
+          ],
         })
       )
     )
