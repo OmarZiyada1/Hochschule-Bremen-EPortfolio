@@ -11,7 +11,8 @@
       "toLight": "Hellen Modus einschalten"
     },
     "action": {
-      "close": "Schließen"
+      "close": "Schließen",
+      "cancel": "Abbrechen"
     },
     "breadcrumb": {
       "label": "Seitenpfad",
@@ -258,6 +259,25 @@
     },
     "currentPassword": {
       "requiredForEmailChange": "Bitte geben Sie Ihr aktuelles Passwort ein, um die E-Mail-Adresse zu ändern."
+    },
+    "title": {
+      "required": "Bitte geben Sie einen Projekttitel ein.",
+      "tooLong": "Der Titel darf höchstens 100 Zeichen lang sein."
+    },
+    "summary": {
+      "tooLong": "Die Kurzbeschreibung darf höchstens 200 Zeichen lang sein."
+    },
+    "tags": {
+      "tooMany": "Es sind höchstens fünf Schlagwörter möglich."
+    },
+    "projectType": {
+      "unknown": "Dieser Projekttyp ist unbekannt."
+    },
+    "degree": {
+      "unknown": "Dieser Abschluss ist unbekannt."
+    },
+    "projectRole": {
+      "required": "Bitte geben Sie eine Funktionsbezeichnung an."
     }
   },
   "placeholder": {
@@ -545,6 +565,131 @@
         "description": "Dieses Projekt ist noch nicht veröffentlicht. Es können nur die Beteiligten, die zuständige Redaktion und die Administration darauf zugreifen.",
         "action": "Zur Projektbibliothek"
       }
+    },
+    "people": {
+      "placeholder": "Nach Namen suchen …",
+      "loading": "Vorschläge werden geladen …",
+      "empty": "Keine Person gefunden.",
+      "hits_one": "{{count}} Treffer",
+      "hits_other": "{{count}} Treffer"
+    },
+    "metadata": {
+      "breadcrumb": "Projekt-Metadaten",
+      "heading": "Projekt-Metadaten",
+      "backToPortfolio": "Zurück zum Portfolio",
+      "submit": "Speichern & weiter zum Editor",
+      "submitCreate": "Projekt anlegen",
+      "submitPending": "Wird gespeichert …",
+      "readOnly": "Dieses Projekt ist im Status {{status}} nicht bearbeitbar. Änderungen sind nur im Entwurf und in der Überarbeitung möglich.",
+      "preview": {
+        "heading": "Vorschau",
+        "hint": "Diese Angaben bestimmen, wie das Projekt in Listen und auf Karten erscheint, nicht den Projektinhalt selbst."
+      },
+      "title": {
+        "label": "Projekttitel",
+        "placeholder": "Titel des Projekts"
+      },
+      "summary": {
+        "label": "Kurzbeschreibung",
+        "placeholder": "Kurz, was das Projekt ausmacht"
+      },
+      "cover": {
+        "empty": "Kein Titelbild",
+        "choose": "Titelbild wählen",
+        "replace": "Titelbild ersetzen",
+        "remove": "Titelbild entfernen",
+        "pending": "Wird hochgeladen …",
+        "lockedUntilCreated": "Ein Titelbild lässt sich hinzufügen, sobald das Projekt angelegt ist.",
+        "typeNotAllowed": "Erlaubt sind die Formate PNG, JPEG und WebP.",
+        "tooLarge": "Die Datei ist größer als {{max}} MB."
+      },
+      "classification": {
+        "heading": "Klassifikation",
+        "description": "Damit Lesende Ihr Projekt finden können."
+      },
+      "requiredForSubmit": {
+        "legend": "Mit * markierte Angaben brauchen Sie erst zum Einreichen, nicht zum Speichern.",
+        "marker": "erforderlich zum Einreichen"
+      },
+      "select": {
+        "empty": "Bitte wählen"
+      },
+      "faculty": {
+        "label": "Fakultät"
+      },
+      "studyProgram": {
+        "label": "Studiengang",
+        "needsFaculty": "Erst Fakultät wählen"
+      },
+      "degree": {
+        "label": "Abschluss"
+      },
+      "semester": {
+        "label": "Semester"
+      },
+      "projectType": {
+        "label": "Typ"
+      },
+      "category": {
+        "label": "Kategorie"
+      },
+      "module": {
+        "label": "Fach",
+        "needsStudyProgram": "Erst Studiengang wählen"
+      },
+      "cascade": {
+        "facultyChanged": "Die Fakultät wurde geändert. Studiengang und Fach wurden zurückgesetzt.",
+        "studyProgramChanged": "Der Studiengang wurde geändert. Das Fach wurde zurückgesetzt."
+      },
+      "tags": {
+        "heading": "Tags",
+        "description": "Bis zu 5 Tags, die Ihr Projekt beschreiben."
+      },
+      "editors": {
+        "heading": "Redaktion",
+        "label": "Redakteur:in",
+        "placeholder": "Nach Namen suchen …",
+        "hint": "Gesucht wird über Vor- und Nachname.",
+        "chosen": "Zugewiesene Redaktion",
+        "remove": "{{name}} aus der Redaktion entfernen",
+        "none": "Keine Redaktion zugewiesen.",
+        "lockedAfterDraft": "Die Redaktion lässt sich nur im Entwurf ändern. Danach nimmt die Administration die Zuweisung vor.",
+        "lockedForEditorRole": "Wer selbst zur Redaktion gehört, legt die Zuständigkeit am eigenen Projekt nicht fest. Die Administration nimmt die Zuweisung vor.",
+        "lockedForMembers": "Die zuständige Redaktion bestimmt die Autor:in des Projekts."
+      },
+      "members": {
+        "heading": "Projektmitglieder",
+        "description": "Co-Autor:innen und Mitwirkende.",
+        "person": "Name",
+        "personPlaceholder": "Nach Namen suchen …",
+        "role": "Rolle",
+        "rolePlaceholder": "z. B. Frontend",
+        "add": "{{name}} als Projektmitglied aufnehmen",
+        "remove": "{{name}} aus den Projektmitgliedern entfernen",
+        "clearPerson": "Auswahl {{name}} zurücknehmen",
+        "chosen": "Aufgenommene Projektmitglieder",
+        "addNeedsPerson": "Projektmitglied aufnehmen, dafür erst eine Person wählen",
+        "addNeedsRole": "{{name}} aufnehmen, dafür erst eine Funktionsbezeichnung angeben",
+        "roleRequired": "Geben Sie eine Funktionsbezeichnung an, zum Beispiel Frontend.",
+        "invalid": "Bitte prüfen Sie die Angaben zu den Projektmitgliedern.",
+        "pending": "Gewählt"
+      },
+      "notFound": {
+        "title": "Projekt nicht gefunden",
+        "description": "Unter dieser Adresse gibt es kein Projekt, oder es ist für Ihr Konto nicht sichtbar."
+      },
+      "forbidden": {
+        "title": "Kein Zugriff",
+        "description": "Für die Metadaten dieses Projekts fehlt Ihrem Konto die Berechtigung."
+      },
+      "invalid": "Bitte prüfen Sie die markierten Angaben.",
+      "leave": {
+        "title": "Ungespeicherte Angaben verwerfen?",
+        "description": "Die Angaben zu „{{title}}“ sind noch nicht gespeichert. Wenn Sie die Seite verlassen, gehen sie verloren.",
+        "untitled": "diesem Projekt",
+        "stay": "Weiter bearbeiten",
+        "discard": "Verwerfen und zurück"
+      }
     }
   },
   "portfolio": {
@@ -735,5 +880,11 @@
     "PROJECT_NOT_PUBLISHED": "Diese Aktion setzt ein veröffentlichtes Projekt voraus.",
     "NOMINATION_ALREADY_DECIDED": "Über diese Nominierung wurde bereits entschieden.",
     "INTERNAL_ERROR": "Etwas ist schiefgelaufen. Bitte versuchen Sie es später erneut."
+  },
+  "versionConflict": {
+    "title": "Das Projekt wurde inzwischen geändert",
+    "description": "Jemand anders hat dieses Projekt gespeichert, während Ihre Fassung offen war. Sie können den Serverstand laden und Ihre Eingaben verwerfen, oder Ihre Fassung stehen lassen; gespeichert wird sie dann nicht.",
+    "reload": "Serverstand laden",
+    "keepEditing": "Eigene Fassung behalten"
   }
 }

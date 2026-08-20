@@ -4,10 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest"
 
 import { setPasswordChangeRequired } from "@/api/auth/authStore"
 import i18n from "@/i18n"
-import {
-  emptyProjectsHandler,
-  ownPortfolioHandler,
-} from "@/tests/msw/handlers"
+import { emptyProjectsHandler, ownPortfolioHandler } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
 import { AppUnderTest, LocationProbe, signInAs } from "@/tests/routes/helpers"
@@ -18,6 +15,23 @@ import { AppUnderTest, LocationProbe, signInAs } from "@/tests/routes/helpers"
  * Navigation je Ebene anbietet, prueft AppLayout.test.tsx; hier geht es um
  * den direkten Aufruf der Routen.
  */
+/**
+ * Die Quellen, die das Metadatenformular auf /projects/new beim Aufbau
+ * zieht (KAN-35): Stammdaten fuer die Klassifikation, Schlagwortvorschlaege
+ * und die Personensuche. Studiengaenge und Module bleiben aus, solange die
+ * uebergeordnete Wahl fehlt. Hier zaehlt nur, dass die Route erreichbar ist,
+ * deshalb antworten alle leer.
+ */
+function projectMetadataHandlers() {
+  return [
+    http.get("*/api/faculties", () => HttpResponse.json([])),
+    http.get("*/api/categories", () => HttpResponse.json([])),
+    http.get("*/api/semesters", () => HttpResponse.json([])),
+    http.get("*/api/tags", () => HttpResponse.json([])),
+    http.get("*/api/users/lookup", () => HttpResponse.json([])),
+  ]
+}
+
 describe("Routenbaum", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("de")
@@ -76,11 +90,14 @@ describe("Routenbaum", () => {
   })
 
   it("EDITOR erreicht /projects/new", () => {
+    /* Seit KAN-35 steht dort das Metadatenformular; die Seitenueberschrift
+       heisst nach Template "Projekt-Metadaten", auch beim Anlegen. */
+    server.use(ownPortfolioHandler(), ...projectMetadataHandlers())
     signInAs("EDITOR")
     renderWithProviders(<AppUnderTest />, "/projects/new")
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Neues Projekt" })
+      screen.getByRole("heading", { level: 1, name: "Projekt-Metadaten" })
     ).toBeInTheDocument()
   })
 
@@ -149,7 +166,10 @@ describe("Routenbaum", () => {
     /* Contract 5, Zeile "Eigenes Portfolio bearbeiten": das eigene Profil
        pflegt jede angemeldete Rolle, auch ADMIN. */
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Profil bearbeiten" })
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "Profil bearbeiten",
+      })
     ).toBeInTheDocument()
   })
 
@@ -168,11 +188,12 @@ describe("Routenbaum", () => {
   })
 
   it("liest /projects/new nicht als Projekt-ID", () => {
+    server.use(ownPortfolioHandler(), ...projectMetadataHandlers())
     signInAs("STUDENT")
     renderWithProviders(<AppUnderTest />, "/projects/new")
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Neues Projekt" })
+      screen.getByRole("heading", { level: 1, name: "Projekt-Metadaten" })
     ).toBeInTheDocument()
     expect(
       screen.queryByRole("heading", { name: "Projektdetail" })
@@ -204,7 +225,10 @@ describe("Routenbaum", () => {
   it("zeigt die Passwort-Seiten ohne NavBar und Footer", () => {
     /* Klaerungsrunde KAN-33: die drei Passwort-Seiten haben kein eigenes
        Template und folgen dem rahmenlosen Kartenstil der Auth-Seiten. */
-    const { unmount } = renderWithProviders(<AppUnderTest />, "/forgot-password")
+    const { unmount } = renderWithProviders(
+      <AppUnderTest />,
+      "/forgot-password"
+    )
     expect(
       screen.getByRole("heading", { level: 1, name: "Passwort vergessen" })
     ).toBeInTheDocument()
@@ -239,9 +263,7 @@ describe("Routenbaum", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Passwort ändern" })
     ).toBeInTheDocument()
-    expect(screen.getByTestId("pathname")).toHaveTextContent(
-      "/change-password"
-    )
+    expect(screen.getByTestId("pathname")).toHaveTextContent("/change-password")
   })
 
   it("zeigt Anmeldung und Registrierung ohne NavBar und Footer", () => {

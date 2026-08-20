@@ -21,8 +21,15 @@ import type { ProjectDetailResponse } from "@/api/types"
  * dar; entschieden wird ueber errorCode, nie ueber den Meldungstext
  * (Frontend-Regel 3).
  */
-export function useProjectDetail(projectId: string) {
-  return useQuery(projectQueries.detail(projectId))
+export function useProjectDetail(projectId: string, enabled = true) {
+  /*
+   * enabled, weil das Metadatenformular auf /projects/new dieselbe Seite
+   * ist, dort aber noch kein Projekt existiert (KAN-35). Ohne die Schranke
+   * liefe ein GET auf /api/projects/ hinaus, also auf die Listenadresse mit
+   * angehaengtem Schraegstrich: im Testlauf ein unbehandelter Request, im
+   * Betrieb ein 404 ohne Anlass.
+   */
+  return useQuery({ ...projectQueries.detail(projectId), enabled })
 }
 
 /**

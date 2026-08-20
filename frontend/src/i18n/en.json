@@ -11,7 +11,8 @@
       "toLight": "Switch to light mode"
     },
     "action": {
-      "close": "Close"
+      "close": "Close",
+      "cancel": "Cancel"
     },
     "breadcrumb": {
       "label": "Breadcrumb",
@@ -258,6 +259,25 @@
     },
     "currentPassword": {
       "requiredForEmailChange": "Please enter your current password to change the email address."
+    },
+    "title": {
+      "required": "Please enter a project title.",
+      "tooLong": "The title may be at most 100 characters long."
+    },
+    "summary": {
+      "tooLong": "The summary may be at most 200 characters long."
+    },
+    "tags": {
+      "tooMany": "At most five tags are possible."
+    },
+    "projectType": {
+      "unknown": "This project type is unknown."
+    },
+    "degree": {
+      "unknown": "This degree is unknown."
+    },
+    "projectRole": {
+      "required": "Please state a role in the project."
     }
   },
   "placeholder": {
@@ -545,6 +565,131 @@
         "description": "This project has not been published yet. Only the people involved, the assigned editors and the administration can access it.",
         "action": "To the project library"
       }
+    },
+    "people": {
+      "placeholder": "Search by name …",
+      "loading": "Loading suggestions …",
+      "empty": "No person found.",
+      "hits_one": "{{count}} match",
+      "hits_other": "{{count}} matches"
+    },
+    "metadata": {
+      "breadcrumb": "Project metadata",
+      "heading": "Project metadata",
+      "backToPortfolio": "Back to portfolio",
+      "submit": "Save & continue to editor",
+      "submitCreate": "Create project",
+      "submitPending": "Saving …",
+      "readOnly": "This project cannot be edited in status {{status}}. Changes are only possible in draft and revision.",
+      "preview": {
+        "heading": "Preview",
+        "hint": "These entries determine how the project appears in lists and on cards, not the project content itself."
+      },
+      "title": {
+        "label": "Project title",
+        "placeholder": "Title of the project"
+      },
+      "summary": {
+        "label": "Summary",
+        "placeholder": "Briefly, what the project is about"
+      },
+      "cover": {
+        "empty": "No cover image",
+        "choose": "Choose cover image",
+        "replace": "Replace cover image",
+        "remove": "Remove cover image",
+        "pending": "Uploading …",
+        "lockedUntilCreated": "A cover image can be added as soon as the project has been created.",
+        "typeNotAllowed": "Allowed formats are PNG, JPEG and WebP.",
+        "tooLarge": "The file is larger than {{max}} MB."
+      },
+      "classification": {
+        "heading": "Classification",
+        "description": "So that readers can find your project."
+      },
+      "requiredForSubmit": {
+        "legend": "Entries marked with * are only needed for submission, not for saving.",
+        "marker": "required for submission"
+      },
+      "select": {
+        "empty": "Please choose"
+      },
+      "faculty": {
+        "label": "Faculty"
+      },
+      "studyProgram": {
+        "label": "Study programme",
+        "needsFaculty": "Choose a faculty first"
+      },
+      "degree": {
+        "label": "Degree"
+      },
+      "semester": {
+        "label": "Semester"
+      },
+      "projectType": {
+        "label": "Type"
+      },
+      "category": {
+        "label": "Category"
+      },
+      "module": {
+        "label": "Module",
+        "needsStudyProgram": "Choose a study programme first"
+      },
+      "cascade": {
+        "facultyChanged": "The faculty has changed. Study programme and module have been reset.",
+        "studyProgramChanged": "The study programme has changed. The module has been reset."
+      },
+      "tags": {
+        "heading": "Tags",
+        "description": "Up to 5 tags that describe your project."
+      },
+      "editors": {
+        "heading": "Editorial",
+        "label": "Editor",
+        "placeholder": "Search by name …",
+        "hint": "The search covers first and last name.",
+        "chosen": "Assigned editors",
+        "remove": "Remove {{name}} from the editorial assignment",
+        "none": "No editorial assignment.",
+        "lockedAfterDraft": "The editorial assignment can only be changed in draft. After that, administration takes it over.",
+        "lockedForEditorRole": "Anyone who belongs to the editorial team does not set the assignment on their own project. Administration takes it over.",
+        "lockedForMembers": "The editorial assignment is set by the author of the project."
+      },
+      "members": {
+        "heading": "Project members",
+        "description": "Co-authors and contributors.",
+        "person": "Name",
+        "personPlaceholder": "Search by name …",
+        "role": "Role",
+        "rolePlaceholder": "e.g. frontend",
+        "add": "Add {{name}} as a project member",
+        "remove": "Remove {{name}} from the project members",
+        "clearPerson": "Undo the selection of {{name}}",
+        "chosen": "Added project members",
+        "addNeedsPerson": "Add project member, choose a person first",
+        "addNeedsRole": "Add {{name}}, state a role in the project first",
+        "roleRequired": "State a role in the project, for example frontend.",
+        "invalid": "Please check the project member entries.",
+        "pending": "Chosen"
+      },
+      "notFound": {
+        "title": "Project not found",
+        "description": "There is no project at this address, or it is not visible to your account."
+      },
+      "forbidden": {
+        "title": "No access",
+        "description": "Your account is not permitted to see the metadata of this project."
+      },
+      "invalid": "Please check the marked entries.",
+      "leave": {
+        "title": "Discard unsaved entries?",
+        "description": "The entries for “{{title}}” have not been saved yet. If you leave the page, they will be lost.",
+        "untitled": "this project",
+        "stay": "Continue editing",
+        "discard": "Discard and go back"
+      }
     }
   },
   "portfolio": {
@@ -735,5 +880,11 @@
     "PROJECT_NOT_PUBLISHED": "This action requires a published project.",
     "NOMINATION_ALREADY_DECIDED": "This nomination has already been decided.",
     "INTERNAL_ERROR": "Something went wrong. Please try again later."
+  },
+  "versionConflict": {
+    "title": "The project has changed in the meantime",
+    "description": "Someone else saved this project while your version was open. You can load the server version and discard your input, or keep your version; it will then not be saved.",
+    "reload": "Load server version",
+    "keepEditing": "Keep my version"
   }
 }

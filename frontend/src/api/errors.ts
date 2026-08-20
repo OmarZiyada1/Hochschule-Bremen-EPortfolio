@@ -10,7 +10,7 @@
  */
 
 /*
- * Die Fehlercodes aus Contract 6.2 (v58), deckungsgleich mit
+ * Die Fehlercodes aus Contract 6.2 (v60), deckungsgleich mit
  * common/error/ErrorCodes.java im Backend. Als const-Tupel gefuehrt, damit
  * errorCode eine String-Union traegt: ein Tippfehler in einem Code faellt
  * beim Typecheck auf und nicht erst zur Laufzeit in einer Verzweigung, die
@@ -182,8 +182,24 @@ export function applyValidationErrors(
   for (const part of error.message.split("; ")) {
     const separator = part.indexOf(": ")
     const field = separator > 0 ? part.slice(0, separator) : null
-    if (field !== null && fields.includes(field)) {
-      setError(field, { type: "server", message: part.slice(separator + 2) })
+    const target =
+      field === null
+        ? null
+        : fields.includes(field)
+          ? field
+          : /*
+             * Bean Validation nennt verschachtelte Felder mit Pfad und
+             * Index, etwa "members[0].projectRole". Kein Formular fuehrt
+             * einen solchen Namen in seiner Feldliste, und ohne diesen
+             * Rueckfall landete jeder Fehler an einer Liste als anonyme
+             * Meldung am Formular. Zugeordnet wird dann das Wurzelsegment,
+             * hier also "members": genauer geht es nicht, ohne dass das
+             * Formular seine Zeilen durchnummeriert (Befund des
+             * frontend-reviewers zu KAN-35).
+             */
+            (fields.find((known) => known === field.split(/[[.]/)[0]) ?? null)
+    if (target !== null) {
+      setError(target, { type: "server", message: part.slice(separator + 2) })
     } else {
       unassigned.push(part)
     }

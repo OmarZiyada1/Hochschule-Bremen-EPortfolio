@@ -14,6 +14,7 @@ import NotFoundPage from "@/features/not-found/NotFoundPage"
 import ProfileEditPage from "@/features/portfolio/ProfileEditPage"
 import ProjectDetailPage from "@/features/projects/ProjectDetailPage"
 import ProjectListPage from "@/features/projects/ProjectListPage"
+import ProjectMetadataPage from "@/features/projects/ProjectMetadataPage"
 import PublicPortfolioPage from "@/features/portfolio/PublicPortfolioPage"
 import RegisterDetailsPage from "@/features/auth/RegisterDetailsPage"
 import RegisterDonePage from "@/features/auth/RegisterDonePage"
@@ -67,22 +68,17 @@ export const routes: RouteObject[] = [
         element: <RequireRole roles={["STUDENT", "EDITOR"]} />,
         children: [
           {
+            /* Anlegen und Bearbeiten zeigen dasselbe Formular nach dem
+               Template "Projekt-Metadaten" (KAN-35). Auf /projects/new gibt
+               es noch keine projectId, deshalb ist dort die Titelbildflaeche
+               gesperrt; Absenden legt das Projekt an und fuehrt hierher
+               zurueck, nur mit ID. */
             path: "/projects/new",
-            element: (
-              <PlaceholderPage
-                titleKey="placeholder.title.projectNew"
-                ticket="KAN-35"
-              />
-            ),
+            element: <ProjectMetadataPage />,
           },
           {
             path: "/projects/:projectId/metadata",
-            element: (
-              <PlaceholderPage
-                titleKey="placeholder.title.projectMetadata"
-                ticket="KAN-35"
-              />
-            ),
+            element: <ProjectMetadataPage />,
           },
           {
             path: "/projects/:projectId/editor",
