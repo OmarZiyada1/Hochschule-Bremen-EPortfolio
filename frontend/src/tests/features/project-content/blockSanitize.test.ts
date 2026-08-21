@@ -174,7 +174,18 @@ describe("Marks", () => {
   })
 
   it("nimmt bei textStyle und highlight nur bekannte Rollennamen", () => {
-    for (const color of ["neutral", "blue", "green", "amber", "red"]) {
+    /* Neun seit Contract v63; brown, orange, purple und pink kamen dazu. */
+    for (const color of [
+      "neutral",
+      "brown",
+      "orange",
+      "amber",
+      "green",
+      "blue",
+      "purple",
+      "pink",
+      "red",
+    ]) {
       const { node } = sanitized(
         textNode([{ type: "textStyle", attrs: { color } }])
       )
@@ -197,7 +208,9 @@ describe("Marks", () => {
       "rgb(255,0,0)",
       primitiveAusdruck,
       "url(x)",
-      "orange",
+      /* Bis v62 stand hier "orange" als Gegenprobe. Der Name ist seit v63
+         eine gueltige Rolle; "teal" steht in keiner Fassung der Palette. */
+      "teal",
       "",
       null,
       12,
@@ -231,12 +244,27 @@ describe("Marks", () => {
 })
 
 describe("Attribute und Knotengrammatik", () => {
-  it("verschiebt eine Ueberschriftenebene ausserhalb von 2 bis 3", () => {
+  it("laesst die Ebenen 1 bis 6 unveraendert (2.5 seit v63)", () => {
+    for (const level of [1, 2, 3, 4, 5, 6] as const) {
+      const result = sanitized({
+        type: "heading",
+        attrs: { level },
+        content: [],
+      })
+      const node = result.node.type === "heading" ? result.node : null
+      expect(node?.attrs.level, String(level)).toBe(level)
+      expect(result.normalizations, String(level)).not.toContain(
+        "HEADING_LEVEL_CLAMPED"
+      )
+    }
+  })
+
+  it("klemmt eine Ueberschriftenebene ausserhalb von 1 bis 6", () => {
     for (const [given, expected] of [
-      [1, 2],
-      [0, 2],
-      [4, 3],
-      [5, 3],
+      [0, 1],
+      [-3, 1],
+      [7, 6],
+      [12, 6],
     ] as const) {
       const result = sanitized({
         type: "heading",
@@ -247,6 +275,46 @@ describe("Attribute und Knotengrammatik", () => {
       expect(node?.attrs.level, String(given)).toBe(expected)
       expect(result.normalizations).toContain("HEADING_LEVEL_CLAMPED")
     }
+  })
+
+  it("verwirft justify an der Ueberschrift und vermerkt es", () => {
+    const result = sanitized({
+      type: "heading",
+      attrs: { level: 2, textAlign: "justify" },
+      content: [],
+    })
+    const node = result.node.type === "heading" ? result.node : null
+
+    expect(node?.attrs.textAlign).toBeNull()
+    expect(result.normalizations).toContain("HEADING_ALIGN_DROPPED")
+  })
+
+  it("laesst links, zentriert und rechts an der Ueberschrift stehen", () => {
+    for (const textAlign of ["left", "center", "right"] as const) {
+      const result = sanitized({
+        type: "heading",
+        attrs: { level: 2, textAlign },
+        content: [],
+      })
+      const node = result.node.type === "heading" ? result.node : null
+
+      expect(node?.attrs.textAlign, textAlign).toBe(textAlign)
+      expect(result.normalizations, textAlign).not.toContain(
+        "HEADING_ALIGN_DROPPED"
+      )
+    }
+  })
+
+  it("laesst justify am Absatz stehen: die Schranke gilt nur an der Ueberschrift", () => {
+    const result = sanitized({
+      type: "paragraph",
+      attrs: { textAlign: "justify" },
+      content: [],
+    })
+    const node = result.node.type === "paragraph" ? result.node : null
+
+    expect(node?.attrs?.textAlign).toBe("justify")
+    expect(result.normalizations).not.toContain("HEADING_ALIGN_DROPPED")
   })
 
   it("nimmt textAlign nur mit einem der vier Werte", () => {

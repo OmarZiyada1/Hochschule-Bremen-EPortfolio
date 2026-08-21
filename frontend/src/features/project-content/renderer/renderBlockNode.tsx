@@ -19,6 +19,10 @@ import type {
   TableRowNode,
   VideoBlockNode,
 } from "@/features/project-content/blockTypes"
+import {
+  ariaLevelFor,
+  headingTagFor,
+} from "@/features/project-content/headingRendering"
 import { embedUrlFor } from "@/features/project-content/providers"
 import { LazyMathBlock } from "@/features/project-content/renderer/LazyMathBlock"
 import { MediaFigure } from "@/features/project-content/renderer/MediaFigure"
@@ -150,12 +154,42 @@ function namedBy(
 /* ------------------------------------------------------------------ */
 
 /**
- * Nie ein {@code h1}: die einzige Ebene 1 der Seite ist der Projekttitel,
- * den die verwendende Seite setzt (2.5, 3.3, SC 1.3.1).
+ * Die Ebenen 1 bis 6 aus 2.5, um genau eine Stufe versetzt gerendert.
+ *
+ * <p><strong>Nie ein {@code h1}:</strong> die einzige Ebene 1 der Seite ist
+ * der Projekttitel, den die verwendende Seite setzt (2.5, 3.3, SC 1.3.1).
+ * Ein HEADING-Block ist deshalb immer eine Zwischenueberschrift, und der
+ * gespeicherte Wert beschreibt die Gliederung des Beitrags statt des
+ * Elements, in dem er landet.
+ *
+ * <p><strong>Ebene 6 ist kein {@code h7}:</strong> die Elementreihe endet
+ * bei {@code h6}. WAI-ARIA sieht fuer tiefere Ebenen ausdruecklich
+ * {@code role="heading"} mit {@code aria-level} vor; ein weiteres {@code h6}
+ * an dieser Stelle machte die sechste Stufe von der fuenften ununterscheidbar.
+ *
+ * <p>Die Groesse kommt aus der Inhaltsskala und nicht aus der UI-Skala
+ * ({@code styles/tokens/typography-tokens.css}): {@code --fs-h3} liegt auf
+ * Fliesstextgroesse, die tiefen Ebenen waeren dort kleiner als der Text, den
+ * sie ueberschreiben. Gesetzt wird sie ueber das Element beziehungsweise
+ * ueber {@code data-level} in {@code styles/project-content.css}, weil
+ * dieselben Regeln auch das DOM der Schreibflaeche treffen muessen.
  */
 function renderHeading(node: HeadingNode): ReactNode {
-  const children = renderInline(node.content)
-  return node.attrs.level === 2 ? <h2>{children}</h2> : <h3>{children}</h3>
+  /* Die Abbildung steht in headingRendering.ts und nicht hier: die
+     Schreibflaeche faehrt dieselbe ueber ihre Knotenansicht, und zwei
+     Aufschreibungen liefen auseinander (Befund des Contract-Abgleichs). */
+  const Tag = headingTagFor(node.attrs.level)
+  const ariaLevel = ariaLevelFor(node.attrs.level)
+  return (
+    <Tag
+      role={ariaLevel === undefined ? undefined : "heading"}
+      aria-level={ariaLevel}
+      /* Wie am Absatz: textAlign als Datenattribut, gestylt ueber CSS. */
+      data-text-align={node.attrs.textAlign ?? undefined}
+    >
+      {renderInline(node.content)}
+    </Tag>
+  )
 }
 
 function renderParagraph(node: ParagraphNode): ReactNode {

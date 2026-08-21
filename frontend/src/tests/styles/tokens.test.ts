@@ -83,8 +83,11 @@ const themeInline = declarationsOf(blocksOf(tokensCss, "@theme inline")[0])
 const radius = declarationsOf(blocksOf(tokensCss, "@theme static")[0])
 
 describe("Primitives (Foundation, Abschnitt 2)", () => {
-  it("fuehrt 38 Stufen: 36 aus dem Abgleich vom 07.08.2026 plus die zwei transparenten", () => {
-    expect(primitives.size).toBe(38)
+  it("fuehrt 54 Stufen: 38 wie bisher plus die vier Inhaltsrampen", () => {
+    /* 36 aus dem Abgleich vom 07.08.2026, dazu die zwei transparenten aus
+       Foundation 2.5 und seit KAN-36 die vier Inhaltsrampen mit je vier
+       Stufen (braun, orange, violett, pink; 100, 400, 700, 950). */
+    expect(primitives.size).toBe(54)
   })
 
   it("enthaelt ausschliesslich Rohwerte, keine Aliase", () => {
@@ -141,11 +144,12 @@ describe("Primitives (Foundation, Abschnitt 2)", () => {
 const gradientRoles = ["cover", "nav"]
 
 describe("Semantic-Rollen (Foundation, Abschnitt 3)", () => {
-  it("fuehrt 80 Rollen je Modus", () => {
-    /* 70 seit KAN-29, dazu die zehn Inhaltsfarb-Rollen aus KAN-10
-       (API-Contract 2.5): fuenf Textfarben und fuenf Hervorhebungen. */
-    expect(semanticLight.size).toBe(80)
-    expect(semanticDark.size).toBe(80)
+  it("fuehrt 88 Rollen je Modus", () => {
+    /* 70 seit KAN-29, dazu die achtzehn Inhaltsfarb-Rollen: zehn aus KAN-10
+       und acht aus KAN-36 (API-Contract 2.5, neun Rollen seit v63, je eine
+       Textfarbe und eine Hervorhebung). */
+    expect(semanticLight.size).toBe(88)
+    expect(semanticDark.size).toBe(88)
   })
 
   it("nutzt in beiden Modi dieselben Rollennamen", () => {

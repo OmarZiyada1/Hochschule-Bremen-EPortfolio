@@ -3,7 +3,7 @@
  *
  * Diese Datei traegt die Klasse .project-content und damit alles, was ein
  * Beitrag aussieht: Schrift, Abstaende, Bildbreiten, Galerieraster,
- * Tabellen und die zehn Inhaltsfarb-Rollen.
+ * Tabellen und die neun Inhaltsfarb-Rollen.
  *
  * Drei Festlegungen, aus denen sich fast jede Regel unten erklaert:
  *
@@ -53,41 +53,98 @@
   }
 
   /* ============================================================
-   * Ueberschriften
+   * Ueberschriften: sechs Ebenen, um eine Stufe versetzt
    *
-   * Der Renderer gibt nur h2 und h3 aus; die einzige h1 ist der Projekttitel
-   * der verwendenden Seite (Contract 2.5, 3.3, SC 1.3.1).
+   * Contract 2.5 gibt HEADING.level seit v63 den Bereich 1 bis 6 und
+   * schreibt die Renderabbildung fest: Ebene 1 wird h2, 2 wird h3, 3 wird
+   * h4, 4 wird h5, 5 wird h6, und Ebene 6 wird ein div mit role="heading"
+   * und aria-level="7", weil die Elementreihe bei h6 endet. Die einzige h1
+   * der Seite bleibt der Projekttitel (3.3, SC 1.3.1).
    *
-   * Die Tokennamen --fs-h1 und --fs-h2 benennen die Figma-Textstile und
-   * nicht die HTML-Ebene: der Seitentitel traegt --fs-title, die
-   * Zwischenueberschrift darunter --fs-h1, die naechste Stufe --fs-h2. Wer
-   * hier auf die gleichnamige Ebene ginge, saehe eine Gliederung, deren
-   * zweite Stufe kleiner ist als der Fliesstext.
+   * Zwei Wege erzeugen dieses DOM, und seit dem Contract-Abgleich zu KAN-36
+   * erzeugen beide dasselbe: der Renderer ueber renderBlockNode.tsx, die
+   * Schreibflaeche ueber die Knotenansicht aus headingNodeView.ts. Beide
+   * lesen die Abbildung aus headingRendering.ts. Deshalb genuegt je Stufe
+   * eine Regel, und deshalb greift keine ueber Utility-Klassen: das DOM aus
+   * ProseMirror kennt sie nicht.
+   *
+   * Die Groessen kommen aus der Inhaltsskala und nicht aus der UI-Skala:
+   * --fs-h3 liegt bei 16px und damit auf Fliesstextgroesse, die tiefen
+   * Ebenen waeren dort kleiner als der Text, den sie ueberschreiben
+   * (typography-tokens.css, Abschnitt Inhaltsskala).
    * ============================================================ */
   .project-content h2,
-  .project-content h3 {
+  .project-content h3,
+  .project-content h4,
+  .project-content h5,
+  .project-content h6,
+  .project-content [role="heading"] {
     font-family: var(--font-heading);
     font-weight: 600;
   }
 
+  /* Ebene 1. */
   .project-content h2 {
-    font-size: var(--fs-h1);
+    font-size: var(--fs-content-h1);
     line-height: var(--lh-h1);
   }
 
+  /* Ebene 2 bis 5. Ab hier gilt --lh-content-heading: --lh-h2 (1,8) laesst
+     eine umbrechende Zwischenueberschrift wie zwei Absaetze wirken. */
   .project-content h3 {
-    font-size: var(--fs-h2);
-    line-height: var(--lh-h2);
+    font-size: var(--fs-content-h2);
+    line-height: var(--lh-content-heading);
   }
 
-  .project-content > h2 + *,
-  .project-content > h3 + * {
+  .project-content h4 {
+    font-size: var(--fs-content-h3);
+    line-height: var(--lh-content-heading);
+  }
+
+  .project-content h5 {
+    font-size: var(--fs-content-h4);
+    line-height: var(--lh-content-heading);
+  }
+
+  .project-content h6 {
+    font-size: var(--fs-content-h5);
+    line-height: var(--lh-content-heading);
+  }
+
+  /* Ebene 6. Sie liegt auf Fliesstextgroesse, weil 16px die Untergrenze
+     bleibt (SC 1.4.4): sechs Stufen darueber allein ueber die Groesse zu
+     trennen, geht nicht auf. Die Unterscheidung kommt aus Familie und
+     Schnitt, Fliesstextschrift in Bold statt Zilla Slab in SemiBold. */
+  .project-content [role="heading"][aria-level="7"] {
+    font-family: var(--font-body);
+    font-size: var(--fs-content-h6);
+    font-weight: 700;
+    line-height: var(--lh-content-heading);
+  }
+
+  .project-content > :is(h2, h3, h4, h5, h6, [role="heading"]) + * {
     margin-block-start: 0.5rem;
   }
 
-  .project-content > * + h2,
-  .project-content > * + h3 {
+  .project-content > * + :is(h2, h3, h4, h5, h6, [role="heading"]) {
     margin-block-start: 2rem;
+  }
+
+  /* Ausrichtung der Ueberschrift (2.5 seit v63): dieselben drei Werte wie
+     am Absatz, ohne Blocksatz. Ein gespeichertes justify erreicht die
+     Anzeige nicht, weil die Whitelist es beim Lesen verwirft. */
+  .project-content :is(h2, h3, h4, h5, h6, [role="heading"])[data-text-align="left"] {
+    text-align: start;
+  }
+
+  .project-content
+    :is(h2, h3, h4, h5, h6, [role="heading"])[data-text-align="center"] {
+    text-align: center;
+  }
+
+  .project-content
+    :is(h2, h3, h4, h5, h6, [role="heading"])[data-text-align="right"] {
+    text-align: end;
   }
 
   /* ============================================================
@@ -176,23 +233,42 @@
    * Inhaltsfarben (Contract 2.5): Rollenname am data-color, Wert aus der
    * Tokenschicht. Die Schrift auf einer Hervorhebung bleibt foreground;
    * trifft eine Textfarbe auf eine Hervorhebung, ist der Kontrast nicht
-   * zugesichert, und die Werkzeugleiste aus KAN-70 setzt deshalb je Auswahl
-   * entweder das eine oder das andere.
+   * zugesichert, und die Auswahlleiste setzt deshalb je Auswahl entweder
+   * das eine oder das andere.
+   *
+   * Neun Rollen seit Contract v63; brown, orange, purple und pink sind
+   * dazugekommen. Die Reihenfolge hier folgt der des Farbwaehlers.
    * ============================================================ */
   .project-content span[data-color="neutral"] {
     color: var(--content-text-neutral);
   }
 
-  .project-content span[data-color="blue"] {
-    color: var(--content-text-blue);
+  .project-content span[data-color="brown"] {
+    color: var(--content-text-brown);
+  }
+
+  .project-content span[data-color="orange"] {
+    color: var(--content-text-orange);
+  }
+
+  .project-content span[data-color="amber"] {
+    color: var(--content-text-amber);
   }
 
   .project-content span[data-color="green"] {
     color: var(--content-text-green);
   }
 
-  .project-content span[data-color="amber"] {
-    color: var(--content-text-amber);
+  .project-content span[data-color="blue"] {
+    color: var(--content-text-blue);
+  }
+
+  .project-content span[data-color="purple"] {
+    color: var(--content-text-purple);
+  }
+
+  .project-content span[data-color="pink"] {
+    color: var(--content-text-pink);
   }
 
   .project-content span[data-color="red"] {
@@ -209,16 +285,32 @@
     background-color: var(--content-highlight-neutral);
   }
 
-  .project-content mark[data-color="blue"] {
-    background-color: var(--content-highlight-blue);
+  .project-content mark[data-color="brown"] {
+    background-color: var(--content-highlight-brown);
+  }
+
+  .project-content mark[data-color="orange"] {
+    background-color: var(--content-highlight-orange);
+  }
+
+  .project-content mark[data-color="amber"] {
+    background-color: var(--content-highlight-amber);
   }
 
   .project-content mark[data-color="green"] {
     background-color: var(--content-highlight-green);
   }
 
-  .project-content mark[data-color="amber"] {
-    background-color: var(--content-highlight-amber);
+  .project-content mark[data-color="blue"] {
+    background-color: var(--content-highlight-blue);
+  }
+
+  .project-content mark[data-color="purple"] {
+    background-color: var(--content-highlight-purple);
+  }
+
+  .project-content mark[data-color="pink"] {
+    background-color: var(--content-highlight-pink);
   }
 
   .project-content mark[data-color="red"] {

@@ -35,7 +35,7 @@ function everyNode(): BlockNode[] {
   return [
     {
       type: "heading",
-      attrs: { level: 2 },
+      attrs: { level: 2, textAlign: null },
       content: [{ type: "text", text: "Zwischenueberschrift" }],
     },
     paragraph("Ein Absatz mit Text."),
@@ -241,6 +241,96 @@ describe("docToBlocks", () => {
   })
 })
 
+describe("Schemaversion und Migration (Contract 2.10)", () => {
+  it("schreibt mit Version 3", () => {
+    expect(BLOCK_SCHEMA_VERSION).toBe(3)
+  })
+
+  it("haengt die Version an jeden geschriebenen Block", () => {
+    const requests = docToBlocks(documentOf([paragraph("Text")]))
+
+    expect(requests[0].schemaVersion).toBe(3)
+  })
+
+  /*
+   * Der Kern des Schritts 2 nach 3: seit v63 rendert die Anzeige um eine
+   * Stufe versetzt, dieselbe Zahl bedeutet also etwas anderes als vorher.
+   * Ohne die Abbildung rutschte jede vorhandene Ueberschrift eine Stufe
+   * nach unten.
+   */
+  it("bildet aus Version 2 die Ebene 2 auf 1 und 3 auf 2 ab", () => {
+    expect(headingLevelAfterMigration(2, 2)).toBe(1)
+    expect(headingLevelAfterMigration(3, 2)).toBe(2)
+  })
+
+  it("laesst eine Ebene ausserhalb von 2 und 3 unveraendert", () => {
+    expect(headingLevelAfterMigration(1, 2)).toBe(1)
+    expect(headingLevelAfterMigration(6, 2)).toBe(6)
+  })
+
+  it("fasst einen anderen Knotentyp nicht an, auch nicht mit level in attrs", () => {
+    const content = { type: "paragraph", attrs: { level: 2 } }
+
+    expect(migrateBlockContent(content, 2)).toEqual(content)
+  })
+
+  it("laesst ein Dokument der aktuellen Version unveraendert", () => {
+    const content = { type: "heading", attrs: { level: 2 } }
+
+    expect(migrateBlockContent(content, 3)).toBe(content)
+  })
+
+  it("veraendert das Original nicht", () => {
+    const content = { type: "heading", attrs: { level: 3 } }
+
+    migrateBlockContent(content, 2)
+
+    expect(content).toEqual({ type: "heading", attrs: { level: 3 } })
+  })
+
+  it("bricht an einem entarteten Inhalt nicht", () => {
+    expect(migrateBlockContent(null, 2)).toBeNull()
+    expect(migrateBlockContent("nicht objekt", 2)).toBe("nicht objekt")
+    expect(migrateBlockContent({ type: "heading" }, 2)).toEqual({
+      type: "heading",
+    })
+  })
+
+  /**
+   * Ein Block der Version 2 laeuft im echten Betrieb nie hier vorbei: der
+   * Server migriert beim Lesen. Der Weg ueber blocksToDoc wird trotzdem
+   * geprueft, denn genau er traegt den Fall, dass Frontend und Backend
+   * nicht im selben Zug ausgerollt werden.
+   */
+  it("greift auch auf dem Weg ueber blocksToDoc", () => {
+    const { doc, dropped } = blocksToDoc([
+      {
+        id: "00000000-0000-4000-8000-000000000001",
+        type: "HEADING",
+        orderIndex: 0,
+        schemaVersion: 2,
+        content: {
+          type: "heading",
+          attrs: { level: 2 },
+          content: [{ type: "text", text: "Alt" }],
+        },
+      },
+    ])
+
+    expect(dropped).toEqual([])
+    const heading = doc.content[0]
+    expect(heading.type === "heading" ? heading.attrs.level : null).toBe(1)
+  })
+})
+
+function headingLevelAfterMigration(level: number, schemaVersion: number) {
+  const migrated = migrateBlockContent(
+    { type: "heading", attrs: { level } },
+    schemaVersion
+  ) as { attrs: { level: number } }
+  return migrated.attrs.level
+}
+
 describe("Round-Trip ueber alle Blocktypen", () => {
   it("gibt denselben Baum zurueck", () => {
     const nodes = everyNode()
@@ -249,6 +339,21 @@ describe("Round-Trip ueber alle Blocktypen", () => {
     expect(dropped).toEqual([])
     expect(normalized).toEqual([])
     expect(doc.content).toEqual(nodes)
+  })
+
+  it("traegt alle sechs Ueberschriftenebenen unveraendert durch", () => {
+    const headings: BlockNode[] = ([1, 2, 3, 4, 5, 6] as const).map(
+      (level) => ({
+        type: "heading",
+        attrs: { level, textAlign: null },
+        content: [{ type: "text", text: `Ebene ${level}` }],
+      })
+    )
+    const { doc, dropped, normalized } = roundTrip(headings)
+
+    expect(dropped).toEqual([])
+    expect(normalized).toEqual([])
+    expect(doc.content).toEqual(headings)
   })
 
   it("haelt die Galerie mit beiden alt-Texten in ihrer Reihenfolge", () => {

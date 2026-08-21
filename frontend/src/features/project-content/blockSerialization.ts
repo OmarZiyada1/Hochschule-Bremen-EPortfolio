@@ -29,18 +29,21 @@ import {
  * Bei jeder Aenderung der Knotentypen wird sie erhoeht und
  * {@link migrateBlockContent} um einen Schritt ergaenzt.
  *
- * <p><strong>2 seit Contract v51</strong>, im Backend
+ * <p><strong>3 seit Contract v63</strong>, im Backend
  * {@code BlockSchemaMigration.CURRENT_VERSION}. Die Formen, die dieses Modul
- * und der Renderer erwarten, sind genau die der Version 2: die Galerie
+ * und der Renderer erwarten, sind genau die der Version 3: die Galerie
  * fuehrt {@code items} statt {@code fileIds}, AUDIO kennt kein {@code src},
- * und HEADING beginnt bei Ebene 2. Die Konstante stand bis KAN-32
- * gleichwohl auf 1, und weil {@link blocksToDoc} alles verwirft, was eine
- * hoehere Version traegt, fiel jeder real gespeicherte Block durch: der
- * Server liefert seit KAN-72 immer mindestens 2 (BlockResponse.from
- * migriert beim Lesen). Auf der Detailseite waeren damit nur Platzhalter
- * erschienen.
+ * und HEADING zaehlt die Ebenen 1 bis 6 mit einer um eine Stufe versetzten
+ * Renderabbildung.
+ *
+ * <p>Die Konstante stand bis KAN-32 auf 1, und weil {@link blocksToDoc}
+ * alles verwirft, was eine hoehere Version traegt, fiel jeder real
+ * gespeicherte Block durch: der Server liefert immer mindestens die aktuelle
+ * Version (BlockResponse.from migriert beim Lesen). Auf der Detailseite
+ * waeren damit nur Platzhalter erschienen. Deshalb wird sie hier zusammen
+ * mit dem Backend gehoben und nie danach.
  */
-export const BLOCK_SCHEMA_VERSION = 2
+export const BLOCK_SCHEMA_VERSION = 3
 
 /**
  * Die letzte Serverantwort, auf das reduziert, was fuer stabile IDs noetig
@@ -269,31 +272,72 @@ function readNodeType(content: unknown): string | null {
 }
 
 /**
- * Der benannte Ort der Migrationsfunktion, die Contract 2.10 zusagt
- * ("bei jeder Aenderung der Node-Typen wird die Version erhoeht und eine
- * Migrationsfunktion ergaenzt"), die aber bis KAN-10 nirgends verortet war.
+ * Der benannte Ort der Migrationsfunktion, die Contract 2.10 zusagt: "bei
+ * jeder Aenderung der Node-Typen wird die Version erhoeht und eine
+ * Migrationsfunktion ergaenzt".
  *
- * <p>Sie ist fuer jede Version die Identitaet, und das bleibt sie
- * absichtlich: den Schritt von 1 nach 2 (Contract v51) geht der Server
- * bereits beim Lesen, {@code BlockResponse.from} geht jeden gespeicherten
- * Knoten durch {@code BlockSchemaMigration} und meldet danach mindestens
- * {@link BLOCK_SCHEMA_VERSION}. Ein Dokument der Version 1 erreicht diese
- * Funktion also gar nicht. Ihn hier ein zweites Mal auszuformulieren hiesse,
- * Serverlogik ohne Verwender nachzubauen, und zwei Fassungen derselben
- * Migration liefen frueher oder spaeter auseinander.
+ * <p><strong>Seit Contract v63 ist sie nicht mehr die Identitaet.</strong>
+ * Der Schritt 2 nach 3 bildet {@code HEADING.level} 2 auf 1 und 3 auf 2 ab.
+ * Ohne ihn rutschte jede vorhandene Ueberschrift eine Stufe nach unten,
+ * denn seit v63 rendert die Anzeige um eine Stufe versetzt: ein
+ * gespeichertes {@code level: 2} war bis v62 die oberste
+ * Zwischenueberschrift und waere danach die zweite.
  *
- * <p>Der benannte Ort bleibt trotzdem stehen: der Aufrufer in
- * {@link blocksToDoc} ist die einzige Stelle, an der ein alter Bestand
- * vorbeikaeme, und ihn nachtraeglich zu suchen waere teurer, als ihn zu
- * halten. Die naechste Schemaaenderung traegt ihren Schritt hier ein.
+ * <p><strong>Warum der Schritt hier steht, obwohl der Server ihn
+ * geht.</strong> Der Server migriert beim Lesen und meldet danach
+ * mindestens {@link BLOCK_SCHEMA_VERSION}; ein Dokument der Version 2
+ * erreicht diese Funktion im laufenden Betrieb also nicht. Sie ist die
+ * zweite Verteidigungslinie fuer den Fall, dass Frontend und Backend nicht
+ * im selben Zug ausgerollt werden: ein Frontend mit Version 3 gegen ein
+ * Backend mit Version 2 zeigte sonst jeden Beitrag mit verschobener
+ * Gliederung, ohne dass es auffiele. Der Schritt 1 nach 2 bleibt dagegen
+ * ausformuliert beim Server: er aendert Attributformen und nicht bloss eine
+ * Zahl, und zwei Fassungen davon liefen frueher oder spaeter auseinander.
+ *
+ * <p>Die Schritte stehen als aufeinanderfolgende Bedingungen und nicht als
+ * Verzweigung: ein Dokument der Version 1 durchlaeuft jeden davon bis zur
+ * aktuellen Version, so wie die Kette im Backend. Der naechste Schritt
+ * kommt als weiteres {@code if} darunter.
  */
 export function migrateBlockContent(
   content: unknown,
   schemaVersion: number
 ): unknown {
-  switch (schemaVersion) {
-    case 1:
-    default:
-      return content
+  let migrated = content
+  if (schemaVersion < 3) {
+    migrated = migrateTwoToThree(migrated)
   }
+  return migrated
+}
+
+/**
+ * Der Schritt 2 nach 3 (Contract v63): die Ueberschriftenebene wandert um
+ * eine Stufe nach oben.
+ *
+ * <p>Ein {@code level} ausserhalb von 2 und 3 bleibt stehen. Es kann aus
+ * keinem gueltigen Bestand der Version 2 stammen, und ein geratener Ersatz
+ * waere schlechter als der Wert, den die Whitelist gleich danach klemmt und
+ * vermerkt.
+ *
+ * <p>Gearbeitet wird auf einer flachen Kopie des Knotens und seiner
+ * {@code attrs}. Das Original ist die Serverantwort im Cache von TanStack
+ * Query; sie an Ort und Stelle zu aendern hiesse, einen fremden Zustand zu
+ * beschreiben, den ein zweiter Leser unveraendert erwartet.
+ */
+function migrateTwoToThree(content: unknown): unknown {
+  if (typeof content !== "object" || content === null) {
+    return content
+  }
+  const node = content as { type?: unknown; attrs?: unknown }
+  if (node.type !== "heading") {
+    return content
+  }
+  if (typeof node.attrs !== "object" || node.attrs === null) {
+    return content
+  }
+  const attrs = node.attrs as { level?: unknown }
+  if (attrs.level !== 2 && attrs.level !== 3) {
+    return content
+  }
+  return { ...node, attrs: { ...attrs, level: attrs.level - 1 } }
 }

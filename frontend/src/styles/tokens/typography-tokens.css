@@ -118,6 +118,40 @@
 
   /* Laufweite der Overline, 4px (Foundation 5.2). */
   --ls-overline: 0.25rem;
+
+  /* ----------------------------------------------------------
+   * Inhaltsskala (Foundation 4 "Inhaltsskala", KAN-36)
+   *
+   * Sechs Groessen fuer die Ueberschriftenebenen eines Beitrags, getrennt
+   * von der UI-Skala darueber. Der Grund ist eine Kollision, kein
+   * Geschmack: --fs-h3 liegt bei 16px und damit genau auf Fliesstextgroesse,
+   * die Ebenen 4 bis 6 waeren in der UI-Skala also kleiner als der Text,
+   * den sie ueberschreiben. Eine Gliederung, deren tiefe Stufen kleiner
+   * sind als der Absatz, liest sich nicht mehr als Gliederung.
+   *
+   * Die Skala gilt fuer HEADING-Bloecke (Contract 2.5), nie fuer die
+   * Oberflaeche: Kopfzeilen, Karten und Dialoge bleiben bei --fs-h1 bis
+   * --fs-h3. Anker der clamp()-Formeln wie oben, 360px und 1280px.
+   *
+   * --fs-content-h1 traegt bewusst dieselben Werte wie --fs-h1. Die
+   * oberste Zwischenueberschrift bestehender Beitraege sieht damit nach der
+   * Umstellung auf sechs Ebenen genauso aus wie vorher; zusammen mit der
+   * Schemamigration aus Contract 2.10 bleibt der Bestand unveraendert.
+   * ---------------------------------------------------------- */
+  --fs-content-h1: clamp(1.5rem, 1.402rem + 0.435vw, 1.75rem); /* 24 bis 28 */
+  --fs-content-h2: clamp(1.25rem, 1.201rem + 0.217vw, 1.375rem); /* 20 bis 22 */
+  --fs-content-h3: clamp(1.125rem, 1.076rem + 0.217vw, 1.25rem); /* 18 bis 20 */
+  --fs-content-h4: clamp(1.0625rem, 1.038rem + 0.109vw, 1.125rem); /* 17 bis 18 */
+  --fs-content-h5: clamp(1rem, 0.976rem + 0.109vw, 1.0625rem); /* 16 bis 17 */
+  --fs-content-h6: 1rem; /* 16, mobil wie Desktop */
+
+  /* Zeilenhoehe der Ebenen 2 bis 6. --lh-h2 (1,8) ist fuer eine
+     Zwischenueberschrift zu luftig, sobald sie umbricht: bei 20px Schrift
+     sind das 36px Zeilenabstand, und zwei Zeilen wirken wie zwei Absaetze.
+     1,3 haelt eine umbrechende Ueberschrift als einen Block zusammen und
+     liegt weiterhin ueber dem, was SC 1.4.12 fuer Ueberschriften verlangt.
+     Ebene 1 behaelt --lh-h1, damit sie sich nicht veraendert. */
+  --lh-content-heading: 1.3;
 }
 
 /*
@@ -256,6 +290,61 @@
     letter-spacing: var(--ls-overline);
     line-height: var(--lh-body);
     text-transform: uppercase;
+  }
+
+  /* Die sechs Ebenen der Inhaltsskala (KAN-36). Sie werden nicht an
+     Komponenten gesetzt, sondern von project-content.css auf die Elemente
+     gelegt, die der Renderer und Tiptap erzeugen: das DOM der
+     Schreibflaeche kommt aus ProseMirror und kennt keine
+     Utility-Klassen. Als Klassen stehen sie hier trotzdem, damit die
+     Zuordnung Ebene zu Groesse an genau einer Stelle liegt und die
+     Token-Pruefflaeche sie zeigen kann. */
+  .type-content-h1 {
+    font-family: var(--font-heading);
+    font-size: var(--fs-content-h1);
+    font-weight: 600;
+    line-height: var(--lh-h1);
+  }
+
+  .type-content-h2 {
+    font-family: var(--font-heading);
+    font-size: var(--fs-content-h2);
+    font-weight: 600;
+    line-height: var(--lh-content-heading);
+  }
+
+  .type-content-h3 {
+    font-family: var(--font-heading);
+    font-size: var(--fs-content-h3);
+    font-weight: 600;
+    line-height: var(--lh-content-heading);
+  }
+
+  .type-content-h4 {
+    font-family: var(--font-heading);
+    font-size: var(--fs-content-h4);
+    font-weight: 600;
+    line-height: var(--lh-content-heading);
+  }
+
+  .type-content-h5 {
+    font-family: var(--font-heading);
+    font-size: var(--fs-content-h5);
+    font-weight: 600;
+    line-height: var(--lh-content-heading);
+  }
+
+  /* Ausnahme, und sie ist begruendet: Ebene 6 liegt auf Fliesstextgroesse,
+     weil 16px die Untergrenze bleibt (SC 1.4.4 verlangt, dass die
+     Vergroesserung der Nutzer:in nicht untergraben wird). Sechs Stufen
+     ueber einer Untergrenze allein ueber die Groesse zu trennen, geht
+     deshalb nicht auf. Die Unterscheidung kommt hier aus Familie und
+     Schnitt: Fliesstextschrift in Bold statt Zilla Slab in SemiBold. */
+  .type-content-h6 {
+    font-family: var(--font-body);
+    font-size: var(--fs-content-h6);
+    font-weight: 700;
+    line-height: var(--lh-content-heading);
   }
 }
 
