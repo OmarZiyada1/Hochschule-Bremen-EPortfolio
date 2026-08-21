@@ -206,105 +206,80 @@ async function requestBlob(
 }
 
 /**
- * Fortschritt eines Uploads. {@code total} ist {@code null}, solange die
- * Gesamtgroesse nicht feststeht: das Ereignis meldet sie als "nicht
- * berechenbar", und dann gibt es keinen Prozentwert, den die Anzeige
- * behaupten koennte.
- */
-export type UploadProgress = { loaded: number; total: number | null }
-
-export type UploadOptions = {
-  signal?: AbortSignal
-  onProgress?: (progress: UploadProgress) => void
-}
-
-/**
- * Ein Upload mit Fortschritt und Abbruch.
+ * Laedt eine Datei hoch und meldet dabei den Fortschritt.
  *
- * <p><strong>Warum hier XMLHttpRequest steht und nicht fetch.</strong> Die
- * Fetch-API kennt keinen Upload-Fortschritt: {@code Response.body} ist ein
- * Lesestrom der <em>Antwort</em>, und der Weg ueber einen
- * {@code ReadableStream} im Request-Body verlangt HTTP/2 und wird von den
- * Browsern uneinheitlich unterstuetzt. Ein Medienblock mit einer
- * hundertfach groesseren Datei als ein Titelbild braucht aber beides: eine
- * sichtbare Fortschrittsanzeige und eine Abbruchmoeglichkeit, sonst steht
- * die Person vor einem Dialog, der sich nicht mehr schliessen laesst
- * (KAN-36, Umfangspunkt 6). {@code XMLHttpRequest} liefert
- * {@code upload.onprogress} seit jeher.
+ * <p><strong>Die einzige Stelle im Frontend, die nicht ueber fetch
+ * laeuft</strong>, und der Grund ist keine Bequemlichkeit: fetch kennt
+ * keinen Fortschritt beim <em>Senden</em>. {@code ReadableStream} als Body
+ * waere die Alternative, ist aber ohne HTTP/2 nicht zuverlaessig und
+ * verlangt {@code duplex: "half"}, das nicht jeder Browser kennt. Ein
+ * Upload von 10 MB ueber eine Mobilverbindung ohne jede Rueckmeldung sieht
+ * aus wie ein Stillstand, und genau davor steht SC 3.2.1 nicht, aber die
+ * Zusage aus dem Skill frontend-design: was laenger dauert, sagt, dass es
+ * laeuft.
  *
- * <p>Das bleibt die einzige Ausnahme, und sie ist eingehegt: sie steht in
- * {@code src/api/} wie jeder andere Request (Frontend-Regel 3), traegt
- * dasselbe Token, und jeder Fehler verlaesst sie als {@link ApiError}. Fuer
- * alles ohne Fortschritt bleibt {@link request} zustaendig; zwei
- * Transportwege nebeneinander waeren sonst zwei Fehlerbehandlungen.
+ * <p>Die Regel „kein fetch ausserhalb von {@code src/api/}"
+ * (Frontend-Regel 3) bleibt unberuehrt: dies ist {@code src/api/}, und
+ * jeder Fehler verlaesst die Funktion als {@link ApiError} wie ueberall.
  *
- * <p>Ein Abbruch wirft eine {@code DOMException} mit dem Namen
- * {@code AbortError}, genau wie bei fetch. Die aufrufende Stelle
- * unterscheidet damit weiterhin einen Abbruch von einem Fehlschlag, ohne zu
- * wissen, welcher Transport darunter liegt.
+ * @param onProgress Anteil zwischen 0 und 1, oder {@code null}, solange die
+ *                   Gesamtgroesse nicht bekannt ist
+ * @param signal     bricht den laufenden Upload ab; der Aufrufer bekommt
+ *                   dieselbe {@code AbortError}-Ausnahme wie bei fetch
  */
 function upload<T>(
   path: string,
   body: FormData,
-  options: UploadOptions = {}
+  options: {
+    onProgress?: (progress: number | null) => void
+    signal?: AbortSignal
+  } = {}
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    if (options.signal?.aborted === true) {
-      reject(new DOMException("Abgebrochen", "AbortError"))
-      return
-    }
-
     const xhr = new XMLHttpRequest()
     xhr.open("POST", buildUrl(path))
-    xhr.responseType = "text"
 
     const token = getToken()
     if (token !== null) {
       xhr.setRequestHeader("Authorization", `Bearer ${token}`)
     }
-    /* Content-Type bleibt ungesetzt: die Grenzmarke des multipart-Koerpers
-       kennt nur der Browser, und ein von Hand gesetzter Header liesse sie
-       weg (derselbe Grund wie in request()). */
+    /* Kein Content-Type: die Grenzmarke des multipart-Rumpfes setzt der
+       Browser selbst, genau wie bei fetch. */
 
     const abort = () => xhr.abort()
-    options.signal?.addEventListener("abort", abort, { once: true })
+    options.signal?.addEventListener("abort", abort)
     const done = () => options.signal?.removeEventListener("abort", abort)
 
-    if (options.onProgress !== undefined) {
-      const onProgress = options.onProgress
-      xhr.upload.onprogress = (event) => {
-        onProgress({
-          loaded: event.loaded,
-          total: event.lengthComputable ? event.total : null,
-        })
-      }
-    }
+    xhr.upload.addEventListener("progress", (event) => {
+      options.onProgress?.(
+        event.lengthComputable ? event.loaded / event.total : null
+      )
+    })
 
-    xhr.onabort = () => {
+    xhr.addEventListener("abort", () => {
       done()
-      reject(new DOMException("Abgebrochen", "AbortError"))
-    }
+      reject(new DOMException("Der Upload wurde abgebrochen.", "AbortError"))
+    })
 
-    xhr.onerror = () => {
+    xhr.addEventListener("error", () => {
       done()
       reject(transportError(path))
-    }
+    })
 
-    xhr.onload = () => {
+    xhr.addEventListener("load", () => {
       done()
       let parsed: unknown = null
       try {
-        parsed = xhr.responseText === "" ? null : JSON.parse(xhr.responseText)
+        parsed = JSON.parse(xhr.responseText)
       } catch {
-        /* Kein JSON: parsed bleibt null, und apiErrorFromBody faellt auf den
-           Transportfehler zurueck, wie im fetch-Weg auch. */
+        /* kein JSON: apiErrorFromBody faellt auf den Transportfehler zurueck */
       }
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve(parsed as T)
         return
       }
       reject(apiErrorFromBody(parsed, xhr.status, path))
-    }
+    })
 
     xhr.send(body)
   })
@@ -314,19 +289,9 @@ export const api = {
   get<T>(path: string, options?: Omit<RequestOptions, "body">): Promise<T> {
     return request<T>("GET", path, options)
   },
+  upload,
   getBlob(path: string, options?: { signal?: AbortSignal }): Promise<Blob> {
     return requestBlob(path, options)
-  },
-  /**
-   * POST eines {@code FormData} mit Fortschritt und Abbruch. Fuer einen
-   * Upload ohne beides genuegt {@link api.post}; der laeuft ueber fetch.
-   */
-  upload<T>(
-    path: string,
-    body: FormData,
-    options?: UploadOptions
-  ): Promise<T> {
-    return upload<T>(path, body, options)
   },
   post<T>(
     path: string,

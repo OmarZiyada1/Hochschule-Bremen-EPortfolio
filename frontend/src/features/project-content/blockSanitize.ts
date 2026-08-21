@@ -91,7 +91,7 @@ export type DropReason =
  */
 export type NormalizationReason =
   | "HEADING_LEVEL_CLAMPED"
-  | "HEADING_ALIGN_DROPPED"
+  | "HEADING_JUSTIFY_REMOVED"
   | "IMAGE_WIDTH_DEFAULTED"
   | "GALLERY_COLUMNS_DEFAULTED"
   | "GALLERY_ITEM_DROPPED"
@@ -116,19 +116,6 @@ const TEXT_ALIGNMENTS: readonly ContentTextAlign[] = [
   "center",
   "right",
   "justify",
-]
-
-/**
- * Dieselben Werte ohne {@code justify} (Contract 2.5 seit v63). Ein
- * Blocksatz am {@code heading} wird beim Lesen verworfen und vermerkt, nicht
- * geklemmt: es gibt keinen naechstbesten Wert, denn "links" waere eine
- * Entscheidung, die niemand getroffen hat, und der Server weist ihn beim
- * naechsten Speichern ohnehin mit 400 ab.
- */
-const HEADING_TEXT_ALIGNMENTS: readonly HeadingTextAlign[] = [
-  "left",
-  "center",
-  "right",
 ]
 
 /**
@@ -852,51 +839,47 @@ function toPositiveInteger(value: unknown): number | null {
 }
 
 /**
- * Ueberschriftenebene 1 bis 6 (2.5 seit v63). Eine Ebene ausserhalb wird auf
- * den naechsten erlaubten Wert geklemmt und vermerkt, nicht verworfen: der
- * Text der Ueberschrift ist Inhalt, ihre Ebene ist Gliederung, und eine
+ * Ueberschriftenebene 1 bis 6 (2.5 seit v63). Eine Ebene ausserhalb wird
+ * auf den naechsten erlaubten Wert geklemmt und vermerkt, nicht verworfen:
+ * der Text der Ueberschrift ist Inhalt, ihre Ebene ist Gliederung, und eine
  * verworfene Ueberschrift naehme dem Beitrag mehr als eine verschobene.
- *
- * <p>Geklemmt wird nach oben wie nach unten: {@code 0} wird {@code 1},
- * {@code 7} wird {@code 6}. Ein Bestand aus der Zeit vor v63 erreicht diese
- * Funktion mit bereits verschobenen Werten, weil
- * {@code migrateBlockContent} davor laeuft.
  */
 function toHeadingLevel(
   value: unknown,
   context: SanitizeContext
 ): HeadingLevel {
   if (
-    typeof value === "number" &&
-    Number.isInteger(value) &&
-    value >= 1 &&
-    value <= 6
+    value === 1 ||
+    value === 2 ||
+    value === 3 ||
+    value === 4 ||
+    value === 5 ||
+    value === 6
   ) {
-    return value as HeadingLevel
+    return value
   }
   context.normalizations.push("HEADING_LEVEL_CLAMPED")
   return typeof value === "number" && value > 6 ? 6 : 1
 }
 
 /**
- * Ausrichtung einer Ueberschrift (2.5 seit v63): {@code left},
- * {@code center} oder {@code right}, sonst nichts.
+ * Ausrichtung einer Ueberschrift (2.5 seit v63): {@code justify} faellt
+ * weg und wird vermerkt, alles Unbekannte wird still zu {@code null}.
  *
- * <p>Ein {@code justify} wird verworfen und ausdruecklich vermerkt, weil es
- * das einzige ist, was der Absatz darf und die Ueberschrift nicht: es kann
- * aus einem Bestand stammen, in dem beide Knoten dieselbe Wertemenge
- * hatten, und still verschwinden soll es nicht. Jeder andere unbekannte
- * Wert faellt ohne Vermerk weg, wie am Absatz auch: er war nie zulaessig.
+ * <p>Der Unterschied ist gewollt. Ein {@code justify} ist ein Wert, den die
+ * Autor:in einmal gesetzt hat und der seit v63 nicht mehr zulaessig ist;
+ * ihn zu verschweigen hiesse, eine sichtbare Aenderung zu verschweigen.
+ * Eine Zeichenkette, die gar keine Ausrichtung ist, war nie Inhalt.
  */
 function toHeadingTextAlign(
   value: unknown,
   context: SanitizeContext
 ): HeadingTextAlign | null {
-  if (HEADING_TEXT_ALIGNMENTS.includes(value as HeadingTextAlign)) {
-    return value as HeadingTextAlign
+  if (value === "left" || value === "center" || value === "right") {
+    return value
   }
   if (value === "justify") {
-    context.normalizations.push("HEADING_ALIGN_DROPPED")
+    context.normalizations.push("HEADING_JUSTIFY_REMOVED")
   }
   return null
 }

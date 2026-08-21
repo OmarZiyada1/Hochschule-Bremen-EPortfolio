@@ -6,13 +6,12 @@ import { Skeleton } from "@/components/ui/skeleton"
  * Der Editor als eigener Chunk (KAN-36).
  *
  * <p><strong>Die einzige nachgeladene Route, und das hat einen Grund.</strong>
- * Der Editor zieht ueber {@code createBlockExtensions} das gesamte
+ * Der Editor zieht ueber {@code createEditorExtensions} das gesamte
  * ProseMirror-Buendel mit, die groesste einzelne Abhaengigkeit des
  * Frontends. Stuende er im Hauptbuendel, luede jede Besucherin der
  * oeffentlichen Startseite ihn mit, obwohl sie ihn nie oeffnet. Genau davor
  * bewahrt schon der eigene JSON-Renderer des Lesepfads (KAN-10); ein
- * statischer Import im Routenbaum machte das wieder zunichte. Gemessen:
- * ohne die Trennung 1,74 MB im Hauptbuendel, mit ihr 0,59 MB.
+ * statischer Import im Routenbaum machte das wieder zunichte.
  *
  * <p>Eigene Datei, weil {@code routes/index.tsx} den Routenbaum ausgibt und
  * keine Komponente; beides in einer Datei bricht das Fast Refresh der

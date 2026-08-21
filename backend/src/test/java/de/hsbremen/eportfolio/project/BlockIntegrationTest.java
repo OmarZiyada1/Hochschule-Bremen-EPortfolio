@@ -234,19 +234,14 @@ class BlockIntegrationTest {
 				+ "mitgeschickter Wert wird uebernommen")
 		void schemaVersionDefaultsToCurrent() throws Exception {
 			Map<String, Object> withVersion = blockEntry(null, BlockType.TEXT, 1);
-			// Bewusst ueber CURRENT_VERSION: der Fall prueft, dass ein hoeherer
-			// Wert uebernommen und nicht auf den Default gezogen wird. Stuende
-			// hier die aktuelle Version, ginge er mit jeder Erhoehung von
-			// CURRENT_VERSION still in den Default ueber und pruefte nichts mehr.
-			withVersion.put("schemaVersion", BlockSchemaMigration.CURRENT_VERSION + 1);
+			withVersion.put("schemaVersion", 4);
 
 			JsonNode saved = save(author, draft, 0L,
 					List.of(blockEntry(null, BlockType.HEADING, 0), withVersion));
 
 			assertThat(saved.get("blocks").get(0).get("schemaVersion").asInt())
 					.isEqualTo(BlockSchemaMigration.CURRENT_VERSION);
-			assertThat(saved.get("blocks").get(1).get("schemaVersion").asInt())
-					.isEqualTo(BlockSchemaMigration.CURRENT_VERSION + 1);
+			assertThat(saved.get("blocks").get(1).get("schemaVersion").asInt()).isEqualTo(4);
 		}
 
 		/**

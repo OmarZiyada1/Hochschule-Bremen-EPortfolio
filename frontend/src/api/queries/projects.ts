@@ -217,16 +217,21 @@ export function removeReaction(projectId: string): Promise<ReactionResponse> {
 }
 
 /**
- * POST /projects/{id}/submit (§4.1 Zeile „Einreichen", KAN-36): die
- * Autor:in gibt das Projekt aus DRAFT oder REVISION in die Redaktion.
+ * POST /projects/{id}/submit (§4.1, §6.1, KAN-36): die Autor:in reicht
+ * ihren Beitrag zur Begutachtung ein, aus DRAFT oder REVISION nach
+ * SUBMITTED.
  *
- * <p><strong>Zwei Fehlerfaelle, die die Oberflaeche unterscheiden
- * muss.</strong> 400 PROJECT_INCOMPLETE nennt die Pflichtfelder aus §3.3,
- * die noch fehlen, einschliesslich der Redaktionszuweisung (seit Contract
- * v60); dort fuehrt der Weg auf die Metadatenseite und nicht in den Editor.
- * 409 PROJECT_STATUS_TRANSITION_INVALID heisst, dass das Projekt gar nicht
- * in einem einreichbaren Status steht, etwa weil es in einem zweiten Tab
- * bereits eingereicht wurde.
+ * <p><strong>Vollstaendig heisst hier mehr als „hat einen Titel".</strong>
+ * §3.3 verlangt zum Einreichen Projekttyp, Fakultaet, Studiengang,
+ * Abschluss, Kategorie, Semester und mindestens eine Redaktionszuweisung;
+ * fehlt davon etwas, antwortet der Server 400 {@code PROJECT_INCOMPLETE}
+ * und nennt die fehlenden Felder <em>vollstaendig</em>, nicht das erste.
+ * Der Editor fuehrt deshalb vor dem Aufruf durch die Metadaten, statt den
+ * Fehler abzuwarten.
+ *
+ * <p>Der Inhalt wird nicht geprueft: ein Beitrag ohne Bloecke laesst sich
+ * einreichen. Ob er genug hergibt, ist eine redaktionelle Beurteilung und
+ * keine Formalie.
  */
 export function submitProject(
   projectId: string

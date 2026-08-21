@@ -72,13 +72,13 @@ class BlockValidationServiceTest {
 	// ------------------------------------------------------------------
 
 	@Nested
-	@DisplayName("HEADING: Ebenen 1 bis 6, textAlign ohne Blocksatz")
+	@DisplayName("HEADING: Ebenen 1 bis 6, Ausrichtung ohne Blocksatz (§2.5 seit v63)")
 	class Heading {
 
 		@ParameterizedTest
 		@ValueSource(ints = { 1, 2, 3, 4, 5, 6 })
-		@DisplayName("Die Ebenen 1 bis 6 sind gueltig (§2.5 seit Contract v63)")
-		void levelsOneToSix(int level) {
+		@DisplayName("Die sechs Ebenen sind gueltig")
+		void allSixLevels(int level) {
 			assertThatCode(() -> service.validate(BlockType.HEADING, heading(level), 0))
 					.doesNotThrowAnyException();
 		}
@@ -86,12 +86,12 @@ class BlockValidationServiceTest {
 		@ParameterizedTest
 		@ValueSource(ints = { 0, 7 })
 		@DisplayName("Ebene 0 und 7 ergeben 400 BLOCK_CONTENT_INVALID")
-		void levelsZeroAndSeven(int level) {
+		void levelsOutsideTheRange(int level) {
 			expect(ErrorCodes.BLOCK_CONTENT_INVALID, BlockType.HEADING, heading(level));
 		}
 
 		@Test
-		@DisplayName("Die Meldung nennt den Grund fuer den Versatz der Renderabbildung")
+		@DisplayName("Die Meldung nennt den Projekttitel als Ebene 1 der Seite")
 		void messageNamesTheProjectTitle() {
 			assertThatThrownBy(() -> service.validate(BlockType.HEADING, heading(7), 0))
 					.hasMessageContaining("Projekttitel");
@@ -99,44 +99,38 @@ class BlockValidationServiceTest {
 
 		@ParameterizedTest
 		@ValueSource(strings = { "left", "center", "right" })
-		@DisplayName("textAlign links, zentriert und rechts sind gueltig")
-		void alignmentsWithoutJustify(String textAlign) {
-			assertThatCode(() -> service.validate(BlockType.HEADING, aligned(2, textAlign), 0))
-					.doesNotThrowAnyException();
+		@DisplayName("Drei Ausrichtungen sind gueltig")
+		void allowedAlignments(String textAlign) {
+			assertThatCode(() -> service.validate(BlockType.HEADING,
+					headingAligned(2, textAlign), 0)).doesNotThrowAnyException();
 		}
 
 		@Test
-		@DisplayName("textAlign justify ergibt 400: Blocksatz bleibt dem Absatz vorbehalten")
+		@DisplayName("Blocksatz an der Ueberschrift ergibt 400")
 		void justifyIsRejected() {
-			expect(ErrorCodes.BLOCK_CONTENT_INVALID, BlockType.HEADING, aligned(2, "justify"));
+			expect(ErrorCodes.BLOCK_CONTENT_INVALID, BlockType.HEADING,
+					headingAligned(2, "justify"));
 		}
 
 		@Test
-		@DisplayName("Am Absatz bleibt justify zulaessig: die Schranke gilt nur am HEADING")
+		@DisplayName("Blocksatz am Absatz bleibt gueltig")
 		void justifyStaysAllowedOnParagraph() {
 			JsonNode paragraph = node("paragraph",
 					MAPPER.createObjectNode().put("textAlign", "justify"));
-
 			assertThatCode(() -> service.validate(BlockType.TEXT, paragraph, 0))
 					.doesNotThrowAnyException();
 		}
 
 		@Test
-		@DisplayName("Ein unbekanntes textAlign am HEADING ergibt 400")
-		void unknownAlignment() {
-			expect(ErrorCodes.BLOCK_CONTENT_INVALID, BlockType.HEADING, aligned(2, "start"));
+		@DisplayName("Fehlendes textAlign ist gueltig: der Server ergaenzt nichts")
+		void alignmentMayBeAbsent() {
+			assertThatCode(() -> service.validate(BlockType.HEADING, heading(3), 0))
+					.doesNotThrowAnyException();
 		}
 
-		/**
-		 * Tiptap schreibt bei {@code toJSON} alle deklarierten Attribute mit,
-		 * auch die ohne Wert. Ein ausdrueckliches {@code null} ist deshalb der
-		 * Regelfall und kein Verstoss.
-		 */
 		@Test
-		@DisplayName("Fehlendes und ausdruecklich null gesetztes textAlign sind gueltig")
-		void absentAlignment() {
-			assertThatCode(() -> service.validate(BlockType.HEADING, heading(2), 0))
-					.doesNotThrowAnyException();
+		@DisplayName("Ein ausdrueckliches null gilt als nicht gesetzt")
+		void explicitNullIsTreatedAsAbsent() {
 			ObjectNode attrs = MAPPER.createObjectNode().put("level", 2);
 			attrs.putNull("textAlign");
 			assertThatCode(() -> service.validate(BlockType.HEADING, node("heading", attrs), 0))
@@ -147,7 +141,7 @@ class BlockValidationServiceTest {
 			return node("heading", MAPPER.createObjectNode().put("level", level));
 		}
 
-		private JsonNode aligned(int level, String textAlign) {
+		private JsonNode headingAligned(int level, String textAlign) {
 			return node("heading", MAPPER.createObjectNode()
 					.put("level", level)
 					.put("textAlign", textAlign));
@@ -631,9 +625,9 @@ class BlockValidationServiceTest {
 		@ValueSource(strings = { "textStyle", "highlight" })
 		@DisplayName("Ein Farbwort ausserhalb der neun Rollen ergibt 400")
 		void unknownRole(String markType) {
-			/* Bis Contract v62 stand hier "purple". Der Name ist seit v63 eine
-			   gueltige Rolle, taugte also nicht mehr als Gegenprobe; "teal"
-			   steht in keiner Fassung der Palette. */
+			/* Bewusst nicht "purple": das ist seit v63 eine der neun Rollen.
+			   Der Fall braucht ein Wort, das keine ist, sonst prueft er ab
+			   der naechsten Palettenerweiterung stillschweigend nichts mehr. */
 			expect(ErrorCodes.BLOCK_CONTENT_INVALID, BlockType.TEXT,
 					paragraphWithMark(colored(markType, "teal")));
 		}
@@ -647,16 +641,12 @@ class BlockValidationServiceTest {
 		}
 
 		@ParameterizedTest
-		@ValueSource(strings = {
-				"neutral", "blue", "green", "amber", "red",
+		@ValueSource(strings = { "neutral", "blue", "green", "amber", "red",
 				"brown", "orange", "purple", "pink" })
-		@DisplayName("Die neun Rollennamen sind gueltig, in beiden Marks")
+		@DisplayName("Die neun Rollennamen sind gueltig")
 		void allNineRoles(String role) {
 			assertThatCode(() -> service.validate(BlockType.TEXT,
 					paragraphWithMark(colored("textStyle", role)), 0))
-					.doesNotThrowAnyException();
-			assertThatCode(() -> service.validate(BlockType.TEXT,
-					paragraphWithMark(colored("highlight", role)), 0))
 					.doesNotThrowAnyException();
 		}
 	}

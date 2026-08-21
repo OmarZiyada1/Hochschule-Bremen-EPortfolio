@@ -70,21 +70,20 @@
   --gruen-800: #065f46;
   --gruen-950: #052e16;
 
-  /* Inhaltsrampen (Foundation 5 "Inhaltsfarben", KAN-36). Vier Familien
-     ausschliesslich fuer die Farbauswahl im Editor, mit Contract v63
-     dazugekommen.
+  /* Inhaltsrampen (Foundation "5 Inhaltsfarben", KAN-36, Contract v63).
+     Vier Familien ausschliesslich fuer die Farbauswahl im Editor.
 
      Sie stehen bewusst neben den funktionalen Rampen und nicht in ihnen:
      rot, bernstein und gruen tragen eine feste Bedeutung (Fehler, Warnung,
      Erfolg) und erscheinen in Meldungen, Pillen und Statusbadges. Diese
-     vier bedeuten nichts, sie sind Auszeichnung im Text einer Autor:in. Ein
-     Semantic-Token ausserhalb der Inhaltsfarben greift deshalb nie auf sie
-     zu; taete es das, truege eine Oberflaechenrolle ploetzlich eine Farbe,
-     die fuer Fliesstext auf card gemessen ist.
+     vier bedeuten nichts, sie sind Auszeichnung im Text einer Autor:in.
+     Ein Semantic-Token ausserhalb der Inhaltsfarben greift deshalb nie auf
+     sie zu; taete es das, truege eine Oberflaechenrolle ploetzlich eine
+     Farbe, die fuer Fliesstext gemessen ist.
 
      Vier Stufen je Familie, genau die, die die Inhaltsrollen brauchen: 700
-     als Textfarbe hell, 400 als Textfarbe dunkel, 100 als Flaeche hell, 950
-     als Flaeche dunkel. Weitere Stufen entstuenden auf Vorrat. */
+     als Textfarbe hell, 400 als Textfarbe dunkel, 100 als Flaeche hell,
+     950 als Flaeche dunkel. Weitere Stufen entstuenden auf Vorrat. */
   --braun-100: #ede0d4;
   --braun-400: #c9ab91;
   --braun-700: #5d4037;
@@ -246,15 +245,11 @@
   --content-highlight-amber: var(--bernstein-100);
   --content-highlight-red: var(--rot-100);
 
-  /* Vier weitere Rollen mit Contract v63 (KAN-36), nach derselben Bauart:
-     700 als Textfarbe, 100 als Hervorhebungsflaeche. Gemessen wie die
-     fuenf darueber, zusaetzlich gegen card (basis/weiss), weil ein Beitrag
-     auf der Karte steht und nicht auf dem Seitenhintergrund: Textrollen
-     gegen card 9,3 / 5,2 / 7,0 / 6,0:1, gegen background 8,9 / 5,0 / 6,7 /
-     5,8:1, Hervorhebungen mit foreground darauf 13,2 bis 14,9:1. Der
-     niedrigste Wert ueber alle neun Rollen und beide Modi ist damit 4,95:1
-     (orange als Textfarbe auf background) und liegt ueber der Schwelle aus
-     SC 1.4.3. */
+  /* Vier weitere Rollen mit Contract v63 (KAN-36), nach derselben Bauart
+     wie die fuenf darueber: 700 als Textfarbe, 100 als
+     Hervorhebungsflaeche. Gemessen gegen card (basis/weiss), weil ein
+     Beitrag auf der Karte steht und nicht auf dem Seitenhintergrund, und
+     zusaetzlich gegen background. */
   --content-text-brown: var(--braun-700);
   --content-text-orange: var(--orange-700);
   --content-text-purple: var(--violett-700);
@@ -407,10 +402,8 @@
   --content-highlight-amber: var(--bernstein-950);
   --content-highlight-red: var(--rot-950);
 
-  /* Die vier Rollen aus Contract v63 (KAN-36), dunkler Modus: 400 als
-     Textfarbe, 950 als Hervorhebungsflaeche. Textrollen 7,9 / 7,6 / 6,5 /
-     6,5:1 gegen card (neutral/900), Hervorhebungen 15,4 / 14,3 / 13,7 /
-     13,7:1 mit foreground darauf. */
+  /* Die vier Rollen aus Contract v63 (KAN-36) im dunklen Modus: 400 als
+     Textfarbe, 950 als Hervorhebungsflaeche, wie bei den fuenf darueber. */
   --content-text-brown: var(--braun-400);
   --content-text-orange: var(--orange-400);
   --content-text-purple: var(--violett-400);

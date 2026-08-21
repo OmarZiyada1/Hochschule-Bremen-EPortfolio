@@ -1,15 +1,18 @@
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { EditorContent, useEditor } from "@tiptap/react"
-import { FileQuestionIcon, LockIcon } from "lucide-react"
+import { LockIcon, TriangleAlertIcon } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import { blockQueries } from "@/api/queries/blocks"
-import { EmptyState } from "@/components/common/EmptyState"
+import { uploadProjectFile } from "@/api/queries/files"
+import { projectQueries, withdrawProject } from "@/api/queries/projects"
+import type { ProjectDetailResponse } from "@/api/types"
 import { VersionConflictDialog } from "@/components/common/VersionConflictDialog"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,221 +23,99 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { EditorFileUrlProvider } from "@/features/project-content/EditorFileUrlContext"
-import {
-  insertBlockAfter,
-  moveBlock,
-  removeBlock,
-} from "@/features/project-content/blockCommands"
-import { createBlockExtensions } from "@/features/project-content/blockSchema"
-import {
-  blocksToDoc,
-  docToBlocks,
-} from "@/features/project-content/blockSerialization"
-import type {
-  BlockNode,
-  ProjectDocument,
-} from "@/features/project-content/blockTypes"
+import { EditorContextProvider } from "@/features/project-content/EditorContext"
 import { BlockControls } from "@/features/project-content/components/BlockControls"
-import {
-  BlockInsertHost,
-  directNodeFor,
-} from "@/features/project-content/components/BlockInsertHost"
+import type { InsertKind } from "@/features/project-content/components/BlockInsertBar"
 import { EditorHeader } from "@/features/project-content/components/EditorHeader"
 import { EditorSidebar } from "@/features/project-content/components/EditorSidebar"
-import type { InsertKind } from "@/features/project-content/components/InsertMenu"
 import { SelectionToolbar } from "@/features/project-content/components/SelectionToolbar"
+import { SubmitSheet } from "@/features/project-content/components/SubmitSheet"
 import { TableControls } from "@/features/project-content/components/TableControls"
+import { blocksToDoc } from "@/features/project-content/blockSerialization"
+import type { ProjectDocument } from "@/features/project-content/blockTypes"
+import { createEditorExtensions } from "@/features/project-content/editorSchema"
+import {
+  deleteBlock,
+  insertBlockAfter,
+  moveBlock,
+} from "@/features/project-content/editorCommands"
 import { useActiveBlock } from "@/features/project-content/hooks/useActiveBlock"
 import { useAutosave } from "@/features/project-content/hooks/useAutosave"
-import {
-  useSubmitProject,
-  useWithdrawFromEditor,
-} from "@/features/project-content/hooks/useEditorWorkflow"
-import {
-  collectFileIds,
-  useProjectFileUrls,
-} from "@/features/project-content/hooks/useProjectFileUrls"
-import { ProjectContent } from "@/features/project-content/renderer/ProjectContent"
-import { useProjectDetail } from "@/features/projects/hooks/useProjectDetail"
 
 /**
- * Der blockbasierte Editor (KAN-36), Route
- * {@code /projects/:projectId/editor}.
+ * Die Schreibflaeche des Editors auf {@code /projects/:projectId/editor}
+ * (Figma {@code Template / Studierende · Editor}).
  *
- * <p>Aufbau nach Figma {@code Template / Studierende · Editor ·
- * Auswahlleiste}: Kopfzeile, links die Schreibflaeche unter dem
- * Projekttitel, rechts die Seitenleiste mit Vorschau-Schalter,
- * Statusbadge, Historie und Projektinformationen.
- *
- * <p><strong>Zwei Ressourcen, zwei Anfragen</strong> (Contract 6.1). Die
- * Metadaten kommen aus {@code GET /api/projects/{id}}, der Inhalt aus
- * {@code GET /api/projects/{id}/blocks}. Zusammengefasst wird das im
- * Client nicht: der Autosave schreibt Bloecke und darf die Metadatenkarte
- * nicht anfassen.
+ * <p><strong>Aufbau nach dem Template:</strong> Kopfzeile mit Zurueck,
+ * Rueckgaengig, Speicherzustand und Workflow-Aktion; darunter links die
+ * Schreibflaeche unter dem Projekttitel, rechts die Seitenleiste mit dem
+ * Vorschau-Schalter und den Projektinformationen.
  *
  * <p><strong>Die Schreibflaeche traegt dieselbe Klasse wie der
  * Renderer</strong> ({@code .project-content}), damit ein Beitrag beim
- * Schreiben aussieht wie danach. Das Schema kommt ausschliesslich aus
- * {@code createBlockExtensions()}; eine zweite Extension-Liste waere ein
- * Befund.
+ * Schreiben aussieht wie danach. Das Schema kommt aus
+ * {@code createEditorExtensions()}, also aus derselben einen Liste wie im
+ * Lesepfad, nur um die Knotenansichten ergaenzt.
  *
- * <p><strong>Nicht gespeichert wird in zwei Faellen.</strong> Erstens,
- * wenn der Status die Inhaltsbearbeitung sperrt (4.1): die Flaeche ist dann
- * read-only und sagt sichtbar warum. Zweitens, wenn beim Lesen Bloecke
- * verworfen werden mussten ({@code canSave === false}): der PUT ersetzt die
- * Liste vollstaendig und loeschte genau die Bloecke, die der Client nicht
- * darstellen konnte.
+ * <p><strong>Gelesen wird ueber {@code GET /projects/{id}/blocks}.</strong>
+ * Solange {@code canSave} falsch ist, also Bloecke nicht dargestellt werden
+ * konnten, wird <em>nicht</em> gespeichert: der PUT ersetzt die Liste
+ * vollstaendig und loeschte genau die Bloecke, die diese Ansicht nicht
+ * lesen kann. Stattdessen steht eine Meldung mit ihrer Zahl und ihren
+ * Positionen auf der Seite.
+ *
+ * <p><strong>Inhaltsbearbeitung nur in {@code DRAFT} und
+ * {@code REVISION}</strong> (§4.1). In jedem anderen Status ist die Flaeche
+ * read-only und sagt sichtbar, warum.
  */
-
-/** Inhaltsbearbeitung nur in diesen beiden Status (4.1). */
-function isEditable(status: string): boolean {
-  return status === "DRAFT" || status === "REVISION"
-}
-
 export default function EditorPage() {
   const { t } = useTranslation()
   const { projectId = "" } = useParams()
-  const { user } = useAuth()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
 
-  const detail = useProjectDetail(projectId)
-  const blocks = useQuery(blockQueries.list(projectId))
-  const submit = useSubmitProject(projectId)
-  const withdraw = useWithdrawFromEditor(projectId)
+  const surfaceRef = useRef<HTMLDivElement>(null)
+  const workflowButtonRef = useRef<HTMLButtonElement>(null)
+  const backButtonRef = useRef<HTMLButtonElement>(null)
 
-  const [conflict, setConflict] = useState(false)
-  const [previewing, setPreviewing] = useState(false)
-  const [insertKind, setInsertKind] = useState<InsertKind | null>(null)
   const [announcement, setAnnouncement] = useState("")
-  const [workflowError, setWorkflowError] = useState<string | null>(null)
-  /**
-   * Die Aktion, nach der gerade gefragt wird.
-   *
-   * <p>Einreichen und Zurueckziehen aendern, was andere sehen, und werden
-   * deshalb erst nach einer Rueckfrage abgeschickt (Skill
-   * {@code frontend-design}, Abschnitt 5). Ein Fehlklick schickte den
-   * Beitrag sonst in die Redaktion, und das Zurueckholen ginge nur ueber den
-   * zweiten Uebergang und stuende in der Statushistorie (3.12).
-   */
-  const [pendingAction, setPendingAction] = useState<
-    "submit" | "withdraw" | null
-  >(null)
-  /**
-   * Der zuletzt gezeigte Aktionsname, unabhaengig davon, ob der Dialog noch
-   * offen ist.
-   *
-   * <p>Beim Abbrechen wird {@code pendingAction} sofort null, waehrend der
-   * Inhalt noch die Ausblendung lang steht. Ohne den gehaltenen Wert saehe
-   * man „Einreichung zurueckziehen?" fuer einen Wimpernschlag als „Projekt
-   * einreichen?" verschwinden.
-   */
-  const [shownAction, setShownAction] = useState<"submit" | "withdraw">(
-    "submit"
-  )
-  const openWorkflowDialog = (action: "submit" | "withdraw") => {
-    setShownAction(action)
-    setPendingAction(action)
-  }
-  /** Der Weg zurueck, wenn noch Ungespeichertes offen ist. */
-  const [confirmLeave, setConfirmLeave] = useState(false)
-  /**
-   * Ob der Konfliktdialog bewusst weggeklickt wurde.
-   *
-   * <p>Ohne diesen Zustand liesse er sich nicht schliessen: er haengt auch
-   * an {@code autosave.state === "conflict"}, und den loest allein
-   * {@code reset()} im Neuladen-Zweig. „Eigene Fassung behalten" und Escape
-   * traefen also auf einen modalen Dialog, der sofort wieder aufginge, und
-   * aus der Sackgasse des 409 wuerde eine schlimmere: der Fokus bliebe
-   * gefangen, und der eigene Text waere unerreichbar.
-   */
-  const [conflictDismissed, setConflictDismissed] = useState(false)
-  /**
-   * Ein Statuswechsel laeuft, einschliesslich des vorgezogenen
-   * Speichertakts.
-   *
-   * <p>{@code submit.isPending} allein genuegt nicht: waehrend
-   * {@code flush()} laeuft, ist die Mutation noch gar nicht gestartet, die
-   * Schaltflaeche waere wieder bedienbar, und ein zweiter Durchlauf endete
-   * in 409 {@code PROJECT_STATUS_TRANSITION_INVALID} fuer eine Aktion, die
-   * in Wahrheit geklappt hat.
-   */
-  const [workflowRunning, setWorkflowRunning] = useState(false)
-  const canvasRef = useRef<HTMLDivElement | null>(null)
-  /*
-   * Rueckgabeziele des Fokus: ein gesteuerter Dialog ohne Trigger laesst
-   * den Fokus beim Schliessen sonst auf body fallen, und die
-   * Tastaturbedienung begaenne wieder am Seitenanfang (SC 2.4.3).
-   */
-  const workflowButtonRef = useRef<HTMLButtonElement | null>(null)
-  const backButtonRef = useRef<HTMLButtonElement | null>(null)
+  const [submitOpen, setSubmitOpen] = useState(false)
+  const [withdrawOpen, setWithdrawOpen] = useState(false)
+  const [conflictOpen, setConflictOpen] = useState(false)
+  /* Der Konflikt wurde gezeigt und weggedrueckt; der Takt bleibt trotzdem
+     angehalten, bis die Seite neu gelesen hat. */
+  const [conflictSeen, setConflictSeen] = useState(false)
 
-  /*
-   * Der Editor entsteht vor dem Speichertakt, sein onUpdate braucht ihn
-   * aber. Der Ref ist die Bruecke: er wird gleich nach useAutosave gesetzt
-   * und ist zu dem Zeitpunkt gefuellt, an dem die erste Aenderung
-   * eintrifft. Ohne ihn stuende in onUpdate eine Bindung, die es beim
-   * ersten Rendern noch nicht gibt.
-   */
-  const scheduleRef = useRef<() => void>(() => undefined)
+  const project = useQuery(projectQueries.detail(projectId))
+  const blocks = useQuery(blockQueries.list(projectId))
+
+  const announce = useCallback((message: string) => {
+    setAnnouncement(message)
+  }, [])
 
   /*
    * Die gelesene Fassung: Dokument, Loecher und die Zusage, ob sie
    * zurueckgeschrieben werden darf. Einmal gerechnet und nicht bei jedem
-   * Rendern erneut; die Serverantwort aendert sich nur beim Speichern.
+   * Rendern erneut; sie aendert sich nur mit einer neuen Serverantwort.
    */
   const read = useMemo(
     () => (blocks.data === undefined ? null : blocksToDoc(blocks.data.blocks)),
     [blocks.data]
   )
 
-  const project = detail.data
+  const status = project.data?.status ?? "DRAFT"
+  const statusEditable = status === "DRAFT" || status === "REVISION"
+  const mayWrite = statusEditable && (read?.canSave ?? false)
 
-  /**
-   * Wer hier was darf, entscheidet §5 und nicht der Status allein.
-   *
-   * <p><strong>Inhalt bearbeiten</strong> duerfen Autor:in und
-   * Projektmitglieder (§5, Zeile „Inhalt bearbeiten"), und auch die nur in
-   * {@code DRAFT} und {@code REVISION} (§4.1).
-   * <strong>Einreichen und Zurueckziehen</strong> stehen dagegen allein der
-   * Autor:in zu: §5 fuehrt beide als eigene Ressource, und §4.1 nennt in
-   * der Spalte „Ausfuehrende Rolle" die Autor:in.
-   *
-   * <p><strong>Ohne diese Enge zeigte die Oberflaeche Wege, die der Server
-   * verweigert.</strong> Ein Projektmitglied saehe „Einreichen" und liefe in
-   * 403 {@code NO_PERMISSION}; die zugewiesene Redaktion, die ein Projekt in
-   * {@code REVISION} lesen darf, saehe eine beschreibbare Flaeche, und jeder
-   * Autosave endete im Fehlerzustand. Die Schranke liegt weiterhin im
-   * Server; die Oberflaeche spiegelt sie nur (Befund des Contract-Abgleichs
-   * zu KAN-36).
-   */
-  const isAuthor =
-    project !== undefined && user !== null && project.author.id === user.id
-  const isMember =
-    project !== undefined &&
-    user !== null &&
-    project.members.some((member) => member.userId === user.id)
-  const mayEditContent = isAuthor || isMember
-
-  const statusEditable = project !== undefined && isEditable(project.status)
-  const canSave =
-    statusEditable && mayEditContent && read !== null && read.canSave
-
-  /**
-   * Der Inhalt fuer den Editor, mit einem leeren Absatz statt eines leeren
-   * Dokuments.
-   *
-   * <p><strong>Sonst speichert schon das Oeffnen.</strong> Das Schema
-   * verlangt {@code block+}; ein Dokument ohne Kinder ergaenzt ProseMirror
-   * beim Aufbau um einen Absatz, und das ist eine Aenderung wie jede andere:
-   * {@code onUpdate} feuert, der Speichertakt laeuft an, und ein frisch
-   * angelegter Entwurf bekaeme allein vom Ansehen eine neue
-   * {@code Project.version} (6.4). Mit dem Absatz von vornherein gibt es
-   * nichts zu ergaenzen. Gespeichert wird er ohnehin nicht:
-   * {@code docToBlocks} laesst den leeren Schlussabsatz weg.
+  /*
+   * Ein Dokument ohne Kinder ergaenzt ProseMirror beim Aufbau um einen
+   * Absatz, und das ist eine Aenderung wie jede andere: onUpdate feuert,
+   * der Speichertakt liefe an, und ein frisch angelegter Entwurf bekaeme
+   * allein vom Ansehen eine neue Project.version (§6.4). Mit dem Absatz von
+   * vornherein gibt es nichts zu ergaenzen; gespeichert wird er ohnehin
+   * nicht, docToBlocks laesst den leeren Schlussabsatz weg.
    */
   const initialContent = useMemo(() => {
     if (read === null) {
@@ -242,33 +123,33 @@ export default function EditorPage() {
     }
     return read.doc.content.length > 0
       ? read.doc
-      : { type: "doc" as const, content: [{ type: "paragraph" as const }] }
+      : ({ type: "doc", content: [{ type: "paragraph" }] } as ProjectDocument)
   }, [read])
+
+  const scheduleRef = useRef<() => void>(() => undefined)
 
   const editor = useEditor(
     {
-      extensions: createBlockExtensions(),
+      extensions: createEditorExtensions(),
       content: initialContent,
-      editable: canSave && !previewing,
+      editable: mayWrite,
       editorProps: {
         attributes: {
-          /*
-           * Rolle und Name der Schreibflaeche (SC 4.1.2). Beides
-           * ausdruecklich: ProseMirror setzt von sich aus nur
-           * contenteditable, und ohne Namen meldete ein Screenreader bloss
-           * "Bearbeitungsbereich". aria-multiline sagt, dass Enter einen
-           * Absatz macht und nicht absendet.
-           *
-           * Die Renderabbildung der Ueberschriften steht nicht hier,
-           * sondern als HeadingNodeView in createBlockExtensions(): Tiptap
-           * ueberschreibt editorProps.nodeViews mit der Sammlung seines
-           * Extension-Managers, ein Eintrag an dieser Stelle bliebe also
-           * wirkungslos.
-           */
-          role: "textbox",
-          "aria-multiline": "true",
-          "aria-label": t("projectContent.canvas.label"),
           class: "outline-none",
+        },
+        handleKeyDown: (_view, event) => {
+          /* Alt+F10 fuehrt aus dem Text in die Auswahlleiste (WAI-ARIA
+             Authoring Practices fuer toolbar). Escape fuehrt dort zurueck. */
+          if (event.altKey && event.key === "F10") {
+            event.preventDefault()
+            surfaceRef.current
+              ?.querySelector<HTMLElement>(
+                "[data-selection-toolbar] [data-toolbar-item]"
+              )
+              ?.focus()
+            return true
+          }
+          return false
         },
       },
       onUpdate: () => scheduleRef.current(),
@@ -276,186 +157,64 @@ export default function EditorPage() {
     /* Neu aufgebaut, sobald eine andere Fassung gelesen wurde: nach einem
        Neuladen im Konfliktfall traegt sie eine neue version und andere IDs.
        Der Editor uebernimmt Inhalt nur beim Anlegen. */
-    [read]
+    [read, mayWrite]
   )
 
   const readDocument = useCallback(
     (): ProjectDocument | null =>
-      editor === null ? null : (editor.getJSON() as ProjectDocument),
+      editor === null || editor.isDestroyed
+        ? null
+        : (editor.getJSON() as ProjectDocument),
     [editor]
-  )
-
-  const previousBlocks = useMemo(
-    () =>
-      (blocks.data?.blocks ?? []).map((block) => ({
-        id: block.id,
-        type: block.type,
-      })),
-    [blocks.data]
   )
 
   const autosave = useAutosave({
     projectId,
-    enabled: canSave,
+    enabled: mayWrite,
     version: blocks.data?.version ?? 0,
-    blocks: previousBlocks,
+    blocks: blocks.data?.blocks ?? [],
     readDocument,
   })
 
-  /* Nach dem Rendern gesetzt und nicht waehrend: ein Ref waehrend des
-     Renderns zu beschreiben ist ein Seiteneffekt, den React bei einem
-     abgebrochenen Rendern nicht zuruecknimmt. */
+  /*
+   * Der Editor entsteht vor dem Speichertakt, sein onUpdate braucht ihn
+   * aber. Der Ref ist die Bruecke, und er wird im Effekt gesetzt und nicht
+   * beim Rendern: waehrend des Renderns ist eine Ref-Zuweisung eine
+   * Nebenwirkung, die React zu Recht beanstandet. Bis zum ersten Effekt
+   * kann onUpdate nicht gefeuert haben, denn dafuer muesste die
+   * Schreibflaeche schon im DOM stehen.
+   */
   useEffect(() => {
     scheduleRef.current = autosave.schedule
   }, [autosave.schedule])
 
-  /* Die Dateien des Dokuments, ueber den Token geholt: ein img schickt
-     keinen Authorization-Header, und ein Entwurf ist nicht oeffentlich. */
-  const fileIds = useMemo(
-    () => collectFileIds(blocks.data?.blocks ?? []),
-    [blocks.data]
-  )
-  const resolveFileUrl = useProjectFileUrls(fileIds)
+  const activeBlock = useActiveBlock(editor, surfaceRef)
 
-  const active = useActiveBlock(editor, canvasRef)
+  const withdraw = useMutation({
+    mutationFn: () => withdrawProject(projectId),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(projectQueries.detail(projectId).queryKey, updated)
+      announce(t("projectContent.withdraw.done"))
+    },
+  })
 
-  const applyInsert = (node: BlockNode) => {
-    if (editor === null || active === null) {
+  /** Vor jedem Weg aus der Seite heraus wird der Speichertakt geleert. */
+  const leaveTo = async (path: string) => {
+    await autosave.flush()
+    void navigate(path)
+  }
+
+  const onInsert = (kind: InsertKind) => {
+    if (editor === null || activeBlock === null) {
       return
     }
-    insertBlockAfter(editor, active.index, node)
-    setInsertKind(null)
+    insertBlockAfter(editor, activeBlock.index, contentFor(kind))
+    announce(t("projectContent.insert.inserted", {
+      block: t(`projectContent.insert.type.${kind}`),
+    }))
   }
 
-  /**
-   * Der Weg zurueck auf die Metadatenseite.
-   *
-   * <p>Steht noch etwas aus, wird gefragt statt gegangen: ein Klick
-   * innerhalb des Entprellfensters nimmt den Zeitgeber beim Verlassen mit,
-   * der Takt feuert nie, und die letzten Aenderungen sind verloren (Skill
-   * frontend-design, Abschnitt 5; Befund des Frontend-Reviews zu KAN-36).
-   */
-  const leaveEditor = () => {
-    if (autosave.hasUnsavedChanges) {
-      setConfirmLeave(true)
-      return
-    }
-    void navigate(`/projects/${projectId}/metadata`)
-  }
-
-  const onInsertChosen = (kind: InsertKind) => {
-    const direct = directNodeFor(kind)
-    if (direct !== null) {
-      applyInsert(direct)
-      return
-    }
-    setInsertKind(kind)
-  }
-
-  /**
-   * Einreichen oder Zurueckziehen, nach der Rueckfrage.
-   *
-   * <p>Erst wird der offene Speichertakt abgewartet: {@code flush} kehrt
-   * seit dem Review zu KAN-36 auch dann erst zurueck, wenn ein bereits
-   * laufender Takt fertig ist. Sonst traefe der Statuswechsel den Server vor
-   * dem letzten Speichervorgang, und eingereicht waere ein Stand, den
-   * niemand so gesehen hat.
-   */
-  const runWorkflow = async (action: "submit" | "withdraw") => {
-    setWorkflowError(null)
-    setPendingAction(null)
-    setWorkflowRunning(true)
-    try {
-      /*
-       * Erst weiter, wenn der Takt wirklich durchgekommen ist. {@code flush}
-       * wirft nicht, sondern meldet das Ergebnis zurueck; ueber den Zustand
-       * ginge es nicht, weil der nach dem Warten noch nicht im Rendern
-       * steht. Ohne diese Schranke ginge der Beitrag nach einem 400, 409
-       * oder 500 des PUT mit dem <em>alten</em> Serverinhalt an die
-       * Redaktion, sichtbar fuer andere: eingereicht waere ein Stand, den
-       * niemand so gesehen hat.
-       */
-      const result = await autosave.flush()
-      if (!result.saved) {
-        /* Beim Konflikt steht der Dialog ohnehin schon; er ist die
-           Entscheidung, die hier fehlt. Sonst braucht es die Meldung. */
-        if (!result.conflict) {
-          setWorkflowError(t("projectContent.workflow.saveFirst"))
-        }
-        return
-      }
-
-      await (action === "submit"
-        ? submit.mutateAsync()
-        : withdraw.mutateAsync())
-      await Promise.all([detail.refetch(), blocks.refetch()])
-    } catch (caught) {
-      if (isApiError(caught)) {
-        if (caught.errorCode === "PROJECT_VERSION_CONFLICT") {
-          setConflict(true)
-          setConflictDismissed(false)
-        } else {
-          setWorkflowError(
-            t(apiErrorMessageKey(caught), { defaultValue: caught.message })
-          )
-        }
-      } else {
-        setWorkflowError(t("apiError.INTERNAL_ERROR"))
-      }
-    } finally {
-      setWorkflowRunning(false)
-    }
-  }
-
-  const error = detail.error ?? blocks.error
-  const forbidden =
-    error !== null && isApiError(error) && error.errorCode === "NO_PERMISSION"
-  const notFound =
-    error !== null &&
-    isApiError(error) &&
-    error.errorCode === "PROJECT_NOT_FOUND"
-
-  const backToPortfolio = (
-    <Link to="/my-portfolio" className={buttonVariants({ variant: "secondary" })}>
-      {t("projectContent.editor.backToPortfolio")}
-    </Link>
-  )
-
-  if (notFound || forbidden) {
-    return (
-      <div className="mx-auto w-full max-w-6xl px-4 py-8">
-        <EmptyState
-          headingLevel={1}
-          icon={
-            notFound ? (
-              <FileQuestionIcon aria-hidden="true" />
-            ) : (
-              <LockIcon aria-hidden="true" />
-            )
-          }
-          title={t(
-            notFound
-              ? "projectContent.editor.notFound.title"
-              : "projectContent.editor.forbidden.title"
-          )}
-          description={t(
-            notFound
-              ? "projectContent.editor.notFound.description"
-              : "projectContent.editor.forbidden.description"
-          )}
-          action={backToPortfolio}
-        />
-      </div>
-    )
-  }
-
-  if (
-    detail.isPending ||
-    blocks.isPending ||
-    project === undefined ||
-    blocks.data === undefined ||
-    read === null
-  ) {
+  if (project.isPending || blocks.isPending) {
     return (
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8">
         <Skeleton className="h-12 w-1/2 rounded-control" />
@@ -467,316 +226,273 @@ export default function EditorPage() {
     )
   }
 
+  const loadError = project.error ?? blocks.error
+  if (loadError !== null || project.data === undefined) {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-4 py-8">
+        <h1 className="type-h2 mb-4">{t("projectContent.load.errorTitle")}</h1>
+        <Alert variant="destructive">
+          <TriangleAlertIcon aria-hidden="true" />
+          <AlertTitle>{t("projectContent.load.errorTitle")}</AlertTitle>
+          <AlertDescription>
+            {isApiError(loadError)
+              ? t(apiErrorMessageKey(loadError), {
+                  defaultValue: loadError.message,
+                })
+              : t("projectContent.load.errorDescription")}
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
+  const detail: ProjectDetailResponse = project.data
+  const isAuthor = user !== null && detail.author?.id === user.id
+
   return (
-    <>
-      <EditorHeader
-        editor={editor}
-        status={project.status}
-        autosaveState={autosave.state}
-        submitting={workflowRunning}
-        workflowButtonRef={workflowButtonRef}
-        backButtonRef={backButtonRef}
-        /* Nur die Autor:in reicht ein und zieht zurueck (§5, §4.1). */
-        mayRunWorkflow={isAuthor}
-        onSubmit={() => openWorkflowDialog("submit")}
-        onWithdraw={() => openWorkflowDialog("withdraw")}
-        onBack={leaveEditor}
-      />
+    <EditorContextProvider
+      value={{ projectId, editable: mayWrite, announce }}
+    >
+      <div className="flex flex-col">
+        <EditorHeader
+          editor={editor}
+          status={detail.status}
+          autosaveState={autosave.state}
+          busy={withdraw.isPending}
+          mayRunWorkflow={isAuthor}
+          onSubmit={() => {
+            void autosave.flush().then((saved) => {
+              if (saved) {
+                setSubmitOpen(true)
+              }
+            })
+          }}
+          onWithdraw={() => setWithdrawOpen(true)}
+          onBack={() => void leaveTo("/my-portfolio")}
+          workflowButtonRef={workflowButtonRef}
+          backButtonRef={backButtonRef}
+        />
 
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 lg:flex-row lg:px-8">
-        <div className="flex min-w-0 flex-1 flex-col gap-4">
-          {/* Die einzige h1 der Seite ist der Projekttitel (2.5, 3.3); ein
-              HEADING-Block ist deshalb immer eine Zwischenueberschrift. */}
-          <h1 className="type-title font-semibold text-primary">
-            {project.title}
-          </h1>
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 lg:flex-row">
+          <div className="flex min-w-0 flex-1 flex-col gap-4">
+            <h1 className="type-h1">{detail.title}</h1>
 
-          {!statusEditable && (
-            <Alert>
-              <AlertTitle>
-                {t("projectContent.editor.locked.title")}
-              </AlertTitle>
-              <AlertDescription>
-                {t("projectContent.editor.locked.description", {
-                  status: t(`project.status.${project.status}`),
-                })}
-              </AlertDescription>
-            </Alert>
-          )}
+            {!statusEditable && (
+              <Alert>
+                <LockIcon aria-hidden="true" />
+                <AlertTitle>
+                  {t("projectContent.readOnly.title")}
+                </AlertTitle>
+                <AlertDescription>
+                  {t("projectContent.readOnly.description", {
+                    status: t(`project.status.${detail.status}`),
+                  })}
+                </AlertDescription>
+              </Alert>
+            )}
 
-          {/*
-           * Die zweite Sperre aus §5: der Status laesst das Bearbeiten zu,
-           * die anfragende Person gehoert aber nicht zum Projekt. Ohne
-           * diesen Hinweis stuende dort eine stumme, nicht beschreibbare
-           * Flaeche, und niemand erfuehre warum. Das trifft vor allem die
-           * zugewiesene Redaktion, die ein Projekt in REVISION lesen darf.
-           */}
-          {statusEditable && !mayEditContent && (
-            <Alert>
-              <AlertTitle>
-                {t("projectContent.editor.readOnly.title")}
-              </AlertTitle>
-              <AlertDescription>
-                {t("projectContent.editor.readOnly.description")}
-              </AlertDescription>
-            </Alert>
-          )}
+            {read !== null && !read.canSave && (
+              <Alert variant="destructive">
+                <TriangleAlertIcon aria-hidden="true" />
+                <AlertTitle>{t("projectContent.dropped.title")}</AlertTitle>
+                <AlertDescription>
+                  {t("projectContent.dropped.description", {
+                    count: read.dropped.length,
+                    positions: read.dropped
+                      .map((entry) => entry.orderIndex + 1)
+                      .join(", "),
+                  })}
+                </AlertDescription>
+              </Alert>
+            )}
 
-          {read !== null && read.dropped.length > 0 && (
-            <Alert variant="destructive">
-              <AlertTitle>
-                {t("projectContent.editor.dropped.title", {
-                  count: read.dropped.length,
-                })}
-              </AlertTitle>
-              <AlertDescription>
-                {t("projectContent.editor.dropped.description", {
-                  positions: read.dropped
-                    .map((entry) => entry.orderIndex + 1)
-                    .join(", "),
-                })}
-              </AlertDescription>
-            </Alert>
-          )}
+            {autosave.state === "error" && autosave.error !== null && (
+              <Alert variant="destructive">
+                <TriangleAlertIcon aria-hidden="true" />
+                <AlertTitle>{t("projectContent.autosave.error")}</AlertTitle>
+                <AlertDescription>
+                  {t(apiErrorMessageKey(autosave.error), {
+                    defaultValue: autosave.error.message,
+                  })}
+                </AlertDescription>
+              </Alert>
+            )}
 
-          {workflowError !== null && (
-            <Alert variant="destructive">
-              <AlertTitle>{workflowError}</AlertTitle>
-            </Alert>
-          )}
-
-          {autosave.state === "error" && autosave.error !== null && (
-            <Alert variant="destructive">
-              <AlertTitle>{t("projectContent.autosave.errorTitle")}</AlertTitle>
-              <AlertDescription>
-                {t(apiErrorMessageKey(autosave.error), {
-                  defaultValue: autosave.error.message,
-                })}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <EditorFileUrlProvider resolveFileUrl={resolveFileUrl}>
-            {previewing ? (
-              /* Die Vorschau laeuft ueber denselben Renderer wie die
-                 oeffentliche Detailseite (KAN-10). Ein zweiter Renderer
-                 zeigte frueher oder spaeter etwas anderes als die Seite,
-                 die am Ende erscheint. */
-              <ProjectContent
-                blocks={documentToBlocks(readDocument(), blocks.data.blocks)}
-                resolveFileUrl={resolveFileUrl}
-              />
-            ) : (
-              <div ref={canvasRef} className="project-content relative pl-16">
-                {editor !== null && (
-                  <>
-                    <SelectionToolbar editor={editor} />
-                    <TableControls editor={editor} />
-                    {active !== null && (
-                      <BlockControls
-                        index={active.index}
-                        count={active.count}
-                        name={active.name}
-                        top={active.top}
-                        disabled={!canSave}
-                        onInsert={onInsertChosen}
-                        onMove={(delta) =>
-                          moveBlock(editor, active.index, active.index + delta)
-                        }
-                        onMoveTo={(target) =>
-                          moveBlock(editor, active.index, target)
-                        }
-                        onDelete={() => removeBlock(editor, active.index)}
-                        onAnnounce={setAnnouncement}
-                      />
-                    )}
-                  </>
-                )}
-                <EditorContent editor={editor} />
+            {editor !== null && editor.isActive("table") && (
+              <div className="flex">
+                <TableControls editor={editor} disabled={!mayWrite} />
               </div>
             )}
-          </EditorFileUrlProvider>
 
-          {/* Die Live-Region der Blockbewegungen. Sie steht immer im DOM,
-              auch leer: eine erst beim Ereignis eingehaengte Region wird von
-              manchen Screenreadern nicht mehr vorgelesen. */}
-          <p role="status" aria-live="polite" className="sr-only">
-            {announcement}
-          </p>
+            {/*
+             * Die Bedienung liegt absolut ueber der Flaeche, deshalb ist der
+             * Rahmen relativ und laesst links Platz fuer sie.
+             */}
+            <div ref={surfaceRef} className="project-content relative pl-10">
+              {editor !== null && activeBlock !== null && mayWrite && (
+                <BlockControls
+                  editor={editor}
+                  index={activeBlock.index}
+                  count={activeBlock.count}
+                  name={activeBlock.name}
+                  top={activeBlock.top}
+                  disabled={!mayWrite}
+                  onInsert={onInsert}
+                  onMove={(delta) =>
+                    moveBlock(
+                      editor,
+                      activeBlock.index,
+                      activeBlock.index + delta
+                    )
+                  }
+                  onMoveTo={(target) =>
+                    moveBlock(editor, activeBlock.index, target)
+                  }
+                  onDelete={() => deleteBlock(editor, activeBlock.index)}
+                  onAnnounce={announce}
+                />
+              )}
+
+              {editor !== null && (
+                <SelectionToolbar editor={editor} disabled={!mayWrite} />
+              )}
+
+              <EditorContent editor={editor} />
+            </div>
+          </div>
+
+          <EditorSidebar
+            project={detail}
+            onPreview={() => void leaveTo(`/projects/${projectId}`)}
+          />
         </div>
-
-        <EditorSidebar
-          project={project}
-          previewing={previewing}
-          onPreviewingChange={setPreviewing}
-        />
       </div>
 
-      {editor !== null && (
-        <BlockInsertHost
-          editor={editor}
-          projectId={projectId}
-          kind={insertKind}
-          onClose={() => setInsertKind(null)}
-          onInsert={applyInsert}
-        />
-      )}
-
       {/*
-       * Der Konflikt des Speichertakts fuehrt in denselben Dialog wie der
-       * eines Statuswechsels. Ohne das waere ein 409 im Autosave eine
-       * Sackgasse: der Takt haelt an, in der Kopfzeile stuenden zwei Woerter,
-       * und jeder weitere Tastenanschlag liefe ins Nichts, ohne dass jemand
-       * die Wahl bekaeme (Befund des Frontend-Reviews zu KAN-36).
+       * Eine Live-Region fuer die ganze Seite. Sie ist immer im DOM und
+       * wechselt nur ihren Inhalt; erschiene sie erst mit der Meldung,
+       * laese ein Screenreader sie unter Umstaenden gar nicht vor.
        */}
-      <VersionConflictDialog
-        open={(conflict || autosave.state === "conflict") && !conflictDismissed}
-        finalFocus={workflowButtonRef}
-        onKeepEditing={() => {
-          setConflict(false)
-          /*
-           * Die eigene Fassung bleibt stehen, wird aber nicht mehr
-           * gespeichert: der Takt bleibt angehalten, und der Zustand sagt
-           * das sichtbar weiter (AutosaveStatus). Der Dialog schliesst
-           * trotzdem, sonst waere der eigene Text unerreichbar.
-           */
-          setConflictDismissed(true)
+      <p aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
+
+      <SubmitSheet
+        open={submitOpen}
+        onOpenChange={setSubmitOpen}
+        project={detail}
+        onUploadCoverImage={async (file) => {
+          const stored = await uploadProjectFile(file, projectId)
+          return stored.url
         }}
-        onReload={() => {
-          setConflict(false)
-          setConflictDismissed(false)
-          void detail.refetch()
-          void blocks.refetch().then((result) => {
-            if (result.data !== undefined) {
-              autosave.reset({
-                version: result.data.version,
-                blocks: result.data.blocks.map((block) => ({
-                  id: block.id,
-                  type: block.type,
-                })),
-              })
-            }
-          })
+        onSubmitted={(submitted) => {
+          queryClient.setQueryData(
+            projectQueries.detail(projectId).queryKey,
+            submitted
+          )
+          announce(t("projectContent.submit.done"))
         }}
+        onVersionConflict={() => setConflictOpen(true)}
       />
 
-      {/*
-       * Rueckfrage vor jedem Statuswechsel (Skill frontend-design,
-       * Abschnitt 5): Titel als Frage, der Gegenstand im Text beim Namen,
-       * Abbrechen zuerst, die Handlung mit ihrem eigenen Verb. Kein
-       * variant="destructive": beide Uebergaenge sind umkehrbar.
-       */}
-      <AlertDialog
-        open={pendingAction !== null}
-        onOpenChange={(next) => {
-          if (!next) {
-            setPendingAction(null)
-          }
-        }}
-      >
-        <AlertDialogContent
-          className="rounded-modal"
-          finalFocus={workflowButtonRef}
-        >
+      <AlertDialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
+        <AlertDialogContent className="rounded-modal">
           <AlertDialogHeader>
-            {/* Die Texte lesen shownAction und nicht pendingAction; warum,
-                steht oben an dessen Erklaerung. */}
             <AlertDialogTitle>
-              {t(`projectContent.workflow.${shownAction}.title`)}
+              {t("projectContent.withdraw.title")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {t(`projectContent.workflow.${shownAction}.description`, {
-                title: project.title,
-              })}
+              {t("projectContent.withdraw.description")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>
-              {t("projectContent.workflow.cancel")}
-            </AlertDialogCancel>
+            <AlertDialogCancel>{t("common.action.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                const action = pendingAction
-                if (action !== null) {
-                  void runWorkflow(action)
-                }
+                setWithdrawOpen(false)
+                withdraw.mutate()
               }}
             >
-              {t(`projectContent.workflow.${shownAction}.confirm`)}
+              {t("projectContent.header.withdraw")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       {/*
-       * Der Weg zurueck, den diese Seite selbst anbietet, wird bewacht:
-       * innerhalb des Entprellfensters waeren bis zu anderthalb Sekunden
-       * Arbeit noch nicht beim Server, und der Zeitgeber verschwindet beim
-       * Verlassen. Brotkrume und Zurueck-Knopf des Browsers laufen
-       * ungehindert weiter; dafuer braeuchte es useBlocker und einen
-       * Data-Router in Anwendung und Testhuelle (dieselbe Grenze wie auf der
-       * Metadatenseite).
+       * Der Konflikt kommt aus zwei Richtungen: vom Speichertakt und vom
+       * Einreichweg. „Weiter bearbeiten" muss beide wegdruecken koennen,
+       * und der Zustand des Takts bleibt dabei stehen: er ist angehalten,
+       * und das soll er auch (§6.4). Ohne das eigene Merkmal ginge der
+       * Dialog im selben Augenblick wieder auf.
        */}
-      <AlertDialog open={confirmLeave} onOpenChange={setConfirmLeave}>
-        <AlertDialogContent
-          className="rounded-modal"
-          finalFocus={backButtonRef}
-        >
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("projectContent.leave.title")}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("projectContent.leave.description")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>
-              {t("projectContent.leave.stay")}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setConfirmLeave(false)
-                /* Erst speichern, dann gehen: verwerfen will hier niemand,
-                   und der Takt ist ohnehin nur Sekundenbruchteile entfernt. */
-                void autosave.flush().finally(() => {
-                  void navigate(`/projects/${projectId}/metadata`)
-                })
-              }}
-            >
-              {t("projectContent.leave.saveAndLeave")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+      <VersionConflictDialog
+        open={(conflictOpen || autosave.state === "conflict") && !conflictSeen}
+        onReload={() => {
+          setConflictOpen(false)
+          setConflictSeen(false)
+          void queryClient.invalidateQueries({ queryKey: ["projects"] })
+        }}
+        onKeepEditing={() => {
+          setConflictOpen(false)
+          setConflictSeen(true)
+        }}
+        finalFocus={workflowButtonRef}
+      />
+    </EditorContextProvider>
   )
 }
 
-/**
- * Das Dokument des Editors als Blockliste fuer die Vorschau.
- *
- * <p>Sie laeuft ueber {@code docToBlocks} und damit ueber genau denselben
- * Weg wie der Speichervorgang: die Vorschau zeigt, was gespeichert wuerde,
- * und nicht eine zweite Ableitung daneben. Fehlt der Editor noch, bleibt es
- * bei der zuletzt gelesenen Serverfassung.
- *
- * <p>Die IDs kommen aus der letzten Antwort; die Vorschau braucht sie nur
- * als Schluessel, aber eine erfundene ID waere in einer Ansicht, die auch
- * kommentiert werden soll, eine schlechte Angewohnheit.
- */
-function documentToBlocks(
-  document: ProjectDocument | null,
-  fallback: Parameters<typeof ProjectContent>[0]["blocks"]
-): Parameters<typeof ProjectContent>[0]["blocks"] {
-  if (document === null) {
-    return fallback
+/** Der Knoten, den ein Eintrag der Einfuegeleiste anlegt (Contract 2.5). */
+function contentFor(kind: InsertKind): Record<string, unknown> {
+  switch (kind) {
+    case "image":
+      return { type: "imageBlock" }
+    case "gallery":
+      return { type: "galleryBlock" }
+    case "video":
+      return { type: "videoBlock" }
+    case "audio":
+      return { type: "audioBlock" }
+    case "document":
+      return { type: "documentBlock" }
+    case "embed":
+      return { type: "embedBlock" }
+    case "formula":
+      return { type: "mathBlock" }
+    case "code":
+      return { type: "codeBlock" }
+    case "divider":
+      return { type: "horizontalRule" }
+    case "table":
+      /* Drei mal drei mit Kopfzeile, wie im Template. */
+      return {
+        type: "table",
+        content: [
+          headerRow(3),
+          bodyRow(3),
+          bodyRow(3),
+        ],
+      }
   }
-  return docToBlocks(document, fallback).map((request, index) => ({
-    id: request.id ?? `preview-${index}`,
-    type: request.type,
-    orderIndex: request.orderIndex,
-    content: request.content as never,
-    schemaVersion: request.schemaVersion ?? 0,
-  }))
+}
+
+function headerRow(cells: number): Record<string, unknown> {
+  return {
+    type: "tableRow",
+    content: Array.from({ length: cells }, () => ({
+      type: "tableHeader",
+      content: [{ type: "paragraph" }],
+    })),
+  }
+}
+
+function bodyRow(cells: number): Record<string, unknown> {
+  return {
+    type: "tableRow",
+    content: Array.from({ length: cells }, () => ({
+      type: "tableCell",
+      content: [{ type: "paragraph" }],
+    })),
+  }
 }

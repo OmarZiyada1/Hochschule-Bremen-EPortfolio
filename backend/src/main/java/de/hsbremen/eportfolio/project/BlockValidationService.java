@@ -115,13 +115,10 @@ public class BlockValidationService {
 	 * ausserhalb der Tokenschicht und waere nachtraeglich nur per Migration
 	 * aenderbar.
 	 *
-	 * <p><strong>Vier Rollen sind mit Contract v63 dazugekommen</strong>
-	 * ({@code brown}, {@code orange}, {@code purple}, {@code pink}). Eine
-	 * erweiterte Palette laesst nur mehr zu und entwertet nichts: gespeicherte
-	 * Dokumente sind nicht betroffen, und es braucht dafuer keine
-	 * Schemamigration. Ohne die Erweiterung waere die Auswahlleiste aus KAN-36
-	 * unbenutzbar, weil jeder Griff zu einer der vier neuen Farben den
-	 * naechsten Autosave des ganzen Projekts mit 400 beendete.
+	 * <p>Die vier Rollen {@code brown}, {@code orange}, {@code purple} und
+	 * {@code pink} sind mit v63 hinzugekommen. Der Bestand ist davon nicht
+	 * betroffen: eine erweiterte Palette laesst nur mehr zu und entwertet
+	 * nichts, deshalb braucht sie auch keine Schemaversion.
 	 */
 	private static final Set<String> COLOR_ROLES = Set.of(
 			"neutral", "blue", "green", "amber", "red",
@@ -134,35 +131,26 @@ public class BlockValidationService {
 	private static final Set<String> ALLOWED_LINK_SCHEMES = Set.of("http", "https", "mailto");
 
 	/**
-	 * Zulaessige Ueberschriftenebenen: 1 bis 6 (§2.5, seit Contract v63).
+	 * Zulaessige Ueberschriftenebenen (§2.5 seit v63): 1 bis 6.
 	 *
-	 * <p><strong>Der gespeicherte Wert ist die Gliederung, nicht das
-	 * Element.</strong> Die einzige {@code h1} einer Projektseite bleibt der
-	 * Projekttitel aus {@code Project.title} (§3.3); die Anzeige schiebt jede
-	 * Ebene um genau eine Stufe nach unten, und Ebene 6 wird ein {@code div}
-	 * mit {@code role="heading"} und {@code aria-level="7"}.
-	 *
-	 * <p>Die bis v62 hier gefuehrte Verengung auf 2 und 3 sollte
-	 * uebersprungene Stufen verhindern, hat das aber nie getan: sie
-	 * verhinderte allein, dass ein laengerer Beitrag ueberhaupt gegliedert
-	 * werden kann, und draengte Autor:innen zu fett ausgezeichneten
-	 * Absaetzen, die fuer einen Screenreader gar keine Ueberschrift sind
-	 * (SC 1.3.1). Der Schutz vor Spruengen liegt jetzt in der Auswahlleiste,
-	 * die die Ebenen lueckenlos anbietet, und in der festgeschriebenen
-	 * Renderabbildung.
+	 * <p>Der gespeicherte Wert beschreibt die <em>Gliederung des Beitrags</em>
+	 * und nicht das HTML-Element, in dem er landet. Die Ebene 1 der Seite
+	 * bleibt der Projekttitel aus {@code Project.title} (§3.3); die Anzeige
+	 * schiebt jede gespeicherte Ebene um genau eine Stufe nach unten (1 wird
+	 * {@code h2} und so fort). Die frueher gueltige Verengung auf 2 und 3
+	 * verhinderte keinen uebersprungenen Sprung, sie verhinderte nur die
+	 * Gliederung laengerer Beitraege.
 	 */
 	private static final Set<Integer> HEADING_LEVELS = Set.of(1, 2, 3, 4, 5, 6);
 
 	/**
-	 * Zulaessige Werte von {@code textAlign} am {@code HEADING} (§2.5, seit
-	 * Contract v63). {@code justify} bleibt dem Absatz vorbehalten: Blocksatz
-	 * an einer ein- oder zweizeiligen Ueberschrift erzeugt Wortabstaende, die
-	 * den Zeilenfall zerreissen, ohne einen Satzspiegel zu gewinnen.
+	 * Zulaessige Ausrichtungen am {@code HEADING} (§2.5 seit v63).
 	 *
-	 * <p>Am {@code TEXT} wird {@code textAlign} weiterhin nicht geprueft: dort
-	 * sind alle vier Werte zulaessig, und §2.5 verlangt fuer den Absatz keine
-	 * serverseitige Pruefung. Eine hier ergaenzte waere eine Regel ohne
-	 * Grundlage im Contract.
+	 * <p>{@code justify} fehlt bewusst und bleibt dem Absatz vorbehalten:
+	 * Blocksatz an einer ein- oder zweizeiligen Ueberschrift erzeugt
+	 * Wortabstaende, die den Zeilenfall zerreissen, ohne einen Satzspiegel zu
+	 * gewinnen. Am {@code paragraph} bleibt {@code textAlign} dagegen freie
+	 * Anzeigeinformation und wird hier nicht geprueft.
 	 */
 	private static final Set<String> HEADING_TEXT_ALIGNMENTS = Set.of("left", "center", "right");
 
@@ -224,24 +212,19 @@ public class BlockValidationService {
 
 	/**
 	 * Die typabhaengigen {@code attrs} des Wurzelknotens (§2.5). Was hier nicht
-	 * genannt ist, prueft der Server nicht: {@code caption} und {@code alt} am
-	 * Bild sind freie Anzeigeinformation.
-	 *
-	 * <p><strong>{@code textAlign} ist seit Contract v63 zweigeteilt.</strong>
-	 * Am {@code TEXT} bleibt es ungeprueft, dort sind alle vier Werte
-	 * zulaessig. Am {@code HEADING} laesst §2.5 nur {@code left},
-	 * {@code center} und {@code right} zu, und genau das setzt
-	 * {@link #requireHeadingTextAlign} durch; ein {@code justify} ergibt dort
-	 * 400 {@code BLOCK_CONTENT_INVALID}.
+	 * genannt ist, prueft der Server nicht: {@code caption}, {@code alt} am
+	 * Bild und {@code textAlign} sind freie Anzeigeinformation.
 	 */
 	private void validateRootAttributes(BlockType type, JsonNode attrs, int index) {
 		switch (type) {
 			case HEADING -> {
 				requireIntFrom(index, attrs, "level", HEADING_LEVELS,
-						"HEADING braucht attrs.level 1 bis 6 (§2.5); gerendert wird um eine "
-								+ "Stufe versetzt, weil die Ebene 1 der Seite der Projekttitel "
-								+ "ist (§3.3)");
-				requireHeadingTextAlign(index, attrs);
+						"HEADING braucht attrs.level 1 bis 6: gespeichert wird die Gliederungsebene, "
+								+ "angezeigt eine Stufe tiefer, weil die Ebene 1 der Seite der "
+								+ "Projekttitel ist (§2.5, §3.3)");
+				requireOptionalTextFrom(index, attrs, "textAlign", HEADING_TEXT_ALIGNMENTS,
+						"HEADING: attrs.textAlign kennt left, center und right, aber kein justify "
+								+ "(§2.5)");
 			}
 			case FORMULA -> requireText(index, type, attrs, "latex");
 			case IMAGE -> {
@@ -275,28 +258,6 @@ public class BlockValidationService {
 			}
 			// TEXT, LIST, QUOTE, CODE, TABLE, DIVIDER haben keine Pflicht-Attribute.
 			default -> { /* nichts zu pruefen */ }
-		}
-	}
-
-	/**
-	 * {@code textAlign} am {@code HEADING}: wenn gesetzt, dann {@code left},
-	 * {@code center} oder {@code right} (§2.5 seit Contract v63).
-	 *
-	 * <p>Nicht gesetzt ist zulaessig und der Regelfall. Geprueft wird deshalb
-	 * ueber {@code hasNonNull}: Tiptap schreibt bei {@code toJSON} alle
-	 * deklarierten Attribute mit, auch die ohne Wert, ein ausdrueckliches
-	 * {@code null} gilt also wie abwesend. Dieselbe Feinheit traegt schon
-	 * {@link #validateVideo}.
-	 */
-	private void requireHeadingTextAlign(int index, JsonNode attrs) {
-		if (!attrs.hasNonNull("textAlign")) {
-			return;
-		}
-		String value = attrs.path("textAlign").asText("");
-		if (!HEADING_TEXT_ALIGNMENTS.contains(value)) {
-			throw error(index, "HEADING: attrs.textAlign kennt left, center und right (§2.5); "
-					+ "Blocksatz bleibt dem Absatz vorbehalten, weil er an einer kurzen "
-					+ "Ueberschrift den Zeilenfall zerreisst");
 		}
 	}
 
@@ -529,13 +490,8 @@ public class BlockValidationService {
 
 	/**
 	 * {@code textStyle} und {@code highlight} fuehren in {@code attrs.color}
-	 * einen Rollennamen aus {@link #COLOR_ROLES} (§2.5).
-	 *
-	 * <p>Die Liste steht bewusst nur an der Konstante und nicht noch einmal
-	 * hier: sie ist mit Contract v63 von fuenf auf neun Rollen gewachsen, und
-	 * eine zweite Aufzaehlung im Javadoc waere beim naechsten Mal wieder die
-	 * veraltete. Die Fehlermeldung baut sie ohnehin zur Laufzeit aus der
-	 * Konstante.
+	 * einen Rollennamen aus {@code neutral}, {@code blue}, {@code green},
+	 * {@code amber} und {@code red} (§2.5).
 	 *
 	 * <p>Dass ein fehlendes {@code color} abgewiesen wird, folgt woertlich aus
 	 * §2.5: „Keine Farbe heisst: das Mark fehlt." Der Renderer verwirft
@@ -682,6 +638,27 @@ public class BlockValidationService {
 			return;
 		}
 		if (!value.isIntegralNumber() || !allowed.contains(value.asInt())) {
+			throw error(index, reason);
+		}
+	}
+
+	/**
+	 * Optionales Attribut mit fester Werteliste aus Zeichenketten, etwa
+	 * {@code HEADING.textAlign}.
+	 *
+	 * <p>Wie {@link #requireOptionalIntFrom}: fehlt es, ergaenzt der Server
+	 * nichts (§3.4). Ein ausdrueckliches {@code null} gilt als nicht gesetzt,
+	 * denn Tiptap serialisiert bei {@code toJSON} alle im Node-Spec
+	 * deklarierten Attribute, auch die ohne Wert. Ohne diese Zeile scheiterte
+	 * jeder Autosave einer Ueberschrift ohne gewaehlte Ausrichtung.
+	 */
+	private void requireOptionalTextFrom(int index, JsonNode attrs, String field,
+			Set<String> allowed, String reason) {
+		JsonNode value = attrs.path(field);
+		if (value.isMissingNode() || value.isNull()) {
+			return;
+		}
+		if (!value.isTextual() || !allowed.contains(value.asText())) {
 			throw error(index, reason);
 		}
 	}

@@ -1,5 +1,4 @@
 import type { Editor } from "@tiptap/react"
-import { useEditorState } from "@tiptap/react"
 import { ArrowLeftIcon, Redo2Icon, Undo2Icon } from "lucide-react"
 import type { RefObject } from "react"
 import { useTranslation } from "react-i18next"
@@ -16,20 +15,21 @@ import type { AutosaveState } from "@/features/project-content/hooks/useAutosave
 
 /**
  * Die Kopfzeile des Editors (Figma, Knoten {@code Topbar}): Zurueck links,
- * Rueckgaengig und Wiederholen mittig, die Workflow-Aktion rechts.
+ * Rueckgaengig und Wiederholen mittig, rechts der Speicherzustand und die
+ * Workflow-Aktion.
  *
  * <p><strong>Ohne PDF-Schaltflaeche.</strong> Das Template zeichnet sie,
- * aber den Export gibt es nicht: KAN-41 ist offen, und einen Endpoint
- * dafuer fuehrt Contract 6.1 nicht. Eine Schaltflaeche, die nichts tut,
- * waere eine Attrappe im ausgelieferten Code (Frontend-Regel 10). Sie kommt
- * mit KAN-41 an genau diese Stelle.
+ * aber den Export gibt es nicht: KAN-41 ist offen, und einen Endpoint dafuer
+ * fuehrt Contract §6.1 nicht. Eine Schaltflaeche, die nichts tut, waere eine
+ * Attrappe im ausgelieferten Code (Frontend-Regel 10). Sie kommt mit KAN-41
+ * an genau diese Stelle.
  *
- * <p><strong>Einreichen und Zurueckziehen sind derselbe Platz.</strong>
- * Welche der beiden erscheint, entscheidet der Status (4.1): aus
+ * <p><strong>Einreichen und Zurueckziehen teilen sich den Platz.</strong>
+ * Welche der beiden erscheint, entscheidet der Status (§4.1): aus
  * {@code DRAFT} und {@code REVISION} wird eingereicht, aus
  * {@code SUBMITTED} zurueckgezogen. In {@code APPROVED} und
- * {@code PUBLISHED} steht dort nichts: beide Uebergaenge liegen dann bei
- * der Redaktion.
+ * {@code PUBLISHED} steht dort nichts, beide Uebergaenge liegen dann bei der
+ * Redaktion.
  *
  * <p><strong>Und nur die Autor:in sieht sie ueberhaupt.</strong> §5 fuehrt
  * beide Aktionen als eigene Ressource, §4.1 nennt in der Spalte
@@ -37,19 +37,17 @@ import type { AutosaveState } from "@/features/project-content/hooks/useAutosave
  * bearbeiten, aber nicht einreichen; ihm eine Schaltflaeche zu zeigen, die
  * mit 403 endet, waere ein Weg ins Leere.
  *
- * <p><strong>Beide fragen nach, bevor etwas geschieht.</strong> Diese
- * Komponente meldet nur die Absicht; die Rueckfrage und den Aufruf fuehrt
- * {@code EditorPage} (Skill frontend-design, Abschnitt 5).
- *
- * <p>Der Speicherzustand steht neben der Aktion und nicht in der
- * Seitenleiste: er gehoert zu dem, was gerade geschrieben wird, und wandert
- * beim Blaettern nicht aus dem Blick.
+ * <p><strong>Einreichen fuehrt zuerst in die Metadaten.</strong> §3.3
+ * verlangt sieben Angaben, die im Editor gar nicht sichtbar sind; blind zu
+ * senden hiesse, die Autor:in mit einer Liste fehlender Felder
+ * zurueckzuschicken, statt sie dorthin zu fuehren, wo sie sie eintraegt.
+ * Diese Komponente meldet nur die Absicht; den Weg fuehrt {@code EditorPage}.
  */
 export function EditorHeader({
   editor,
   status,
   autosaveState,
-  submitting,
+  busy,
   mayRunWorkflow,
   onSubmit,
   onWithdraw,
@@ -60,57 +58,35 @@ export function EditorHeader({
   editor: Editor | null
   status: ProjectStatus
   autosaveState: AutosaveState
-  submitting: boolean
+  busy: boolean
   /** Ob die anfragende Person die Autor:in ist (§5, §4.1). */
   mayRunWorkflow: boolean
   onSubmit: () => void
   onWithdraw: () => void
   /**
    * Der Weg zurueck. Als Handler und nicht als Link, weil die Seite vorher
-   * fragen muss, ob noch etwas Ungespeichertes offen ist.
+   * den Speichertakt leeren muss.
    */
   onBack: () => void
-  /*
-   * Rueckgabeziele des Fokus fuer die Dialoge der Seite. Ein gesteuerter
-   * Dialog ohne Trigger laesst den Fokus beim Schliessen sonst auf body
-   * fallen (SC 2.4.3).
-   */
   workflowButtonRef?: RefObject<HTMLButtonElement | null>
   backButtonRef?: RefObject<HTMLButtonElement | null>
 }) {
   const { t } = useTranslation()
 
   /*
-   * useEditorState liefert null, solange kein Editor da ist; der
-   * Standardwert steht deshalb hier und nicht nur im Selektor.
-   *
-   * Auf isDestroyed geprueft und nicht nur auf null: der Selektor laeuft
-   * noch einmal, nachdem die Seite den Editor abgeraeumt hat (etwa beim
-   * Neuladen im Konfliktfall oder beim Verlassen der Route). Zu diesem
-   * Zeitpunkt gibt es das Editor-Objekt noch, aber seine View nicht mehr,
-   * und can() greift auf sie zu.
+   * can().undo() greift auf die View zu. Nach dem Abraeumen des Editors
+   * gibt es das Objekt noch, seine View aber nicht mehr, deshalb die
+   * Pruefung auf isDestroyed und nicht nur auf null.
    */
-  const history = useEditorState({
-    editor,
-    selector: ({ editor: current }) =>
-      current === null || current.isDestroyed
-        ? { canUndo: false, canRedo: false }
-        : {
-            canUndo: current.can().undo(),
-            canRedo: current.can().redo(),
-          },
-  }) ?? { canUndo: false, canRedo: false }
+  const alive = editor !== null && !editor.isDestroyed
+  const canUndo = alive && editor.can().undo()
+  const canRedo = alive && editor.can().redo()
 
   const canSubmit = status === "DRAFT" || status === "REVISION"
   const canWithdraw = status === "SUBMITTED"
 
   return (
-    <header className="flex items-center justify-between gap-4 border-b border-border bg-card px-4 py-3 sm:px-8">
-      {/*
-       * Eine Schaltflaeche und kein Link: der Weg zurueck wird bewacht,
-       * solange der Speichertakt noch etwas offen hat. Damit entfaellt auch
-       * das nativeButton={false}, das ein Link-Button braeuchte.
-       */}
+    <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-card px-4 py-3 sm:px-8">
       <Button ref={backButtonRef} variant="ghost" size="sm" onClick={onBack}>
         <ArrowLeftIcon aria-hidden="true" />
         {t("projectContent.header.back")}
@@ -123,7 +99,7 @@ export function EditorHeader({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                disabled={!history.canUndo}
+                disabled={!canUndo}
                 onClick={() => editor?.chain().focus().undo().run()}
               />
             }
@@ -139,7 +115,7 @@ export function EditorHeader({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                disabled={!history.canRedo}
+                disabled={!canRedo}
                 onClick={() => editor?.chain().focus().redo().run()}
               />
             }
@@ -154,11 +130,7 @@ export function EditorHeader({
       <div className="flex items-center gap-4">
         <AutosaveStatus state={autosaveState} />
         {mayRunWorkflow && canSubmit && (
-          <Button
-            ref={workflowButtonRef}
-            onClick={onSubmit}
-            disabled={submitting}
-          >
+          <Button ref={workflowButtonRef} onClick={onSubmit} disabled={busy}>
             {t("projectContent.header.submit")}
           </Button>
         )}
@@ -167,7 +139,7 @@ export function EditorHeader({
             ref={workflowButtonRef}
             variant="secondary"
             onClick={onWithdraw}
-            disabled={submitting}
+            disabled={busy}
           >
             {t("projectContent.header.withdraw")}
           </Button>

@@ -9,11 +9,12 @@ import type {
   StatusHistoryResponse,
 } from "@/api/types"
 import ProjectDetailPage from "@/features/projects/ProjectDetailPage"
+import i18n from "@/i18n"
 import { person, reference } from "@/tests/fixtures"
 import { apiErrorResponse } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
-import { signInAs } from "@/tests/routes/helpers"
+import { LocationProbe, signInAs } from "@/tests/routes/helpers"
 
 /*
  * Die Detailtiefe der Blockdarstellung (data-width, data-columns, beide
@@ -215,7 +216,15 @@ function detailHandler(body: ProjectDetailResponse) {
 }
 
 function renderPage() {
-  return renderWithProviders(<ProjectDetailPage />, `/projects/${PROJECT_ID}`)
+  return renderWithProviders(
+    <>
+      <ProjectDetailPage />
+      {/* Die Adresse bleibt ablesbar, wenn die Seite weiterleitet
+          (Umschalter in den Editor, KAN-36). */}
+      <LocationProbe />
+    </>,
+    `/projects/${PROJECT_ID}`
+  )
 }
 
 /**
@@ -242,6 +251,24 @@ vi.mock("react-router-dom", async () => {
     await vi.importActual<typeof import("react-router-dom")>("react-router-dom")
   return { ...actual, useParams: () => ({ projectId: PROJECT_ID }) }
 })
+
+/**
+ * Der Veroeffentlichungsmonat in der Schreibweise, die die Seitenleiste
+ * selbst benutzt.
+ *
+ * <p><strong>Ausgerechnet und nicht hingeschrieben.</strong> Die Zeile
+ * entsteht ueber {@code Intl.DateTimeFormat} mit der Sprache der
+ * Oberflaeche; deutsch trennt sie mit einem Punkt, englisch mit einem
+ * Schraegstrich. Ein festes „10/2025" im Test prueft deshalb nicht die
+ * Seite, sondern die Sprache, in der sie zufaellig gerendert wurde, und
+ * faellt um, sobald die ICU-Daten der Laufzeit vollstaendig sind.
+ */
+function publishedMonth(): string {
+  return new Intl.DateTimeFormat(i18n.language, {
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date("2025-10-15T08:00:00Z"))
+}
 
 describe("Inhalt und Gliederung", () => {
   beforeEach(() => {
@@ -322,7 +349,7 @@ describe("Inhalt und Gliederung", () => {
     expect(within(drawer).getByText("Projektdaten")).toBeInTheDocument()
     expect(within(drawer).getByText("Digitalisierung")).toBeInTheDocument()
     expect(within(drawer).getByText("WiSe 2025/26")).toBeInTheDocument()
-    expect(within(drawer).getByText("10/2025")).toBeInTheDocument()
+    expect(within(drawer).getByText(publishedMonth())).toBeInTheDocument()
     /* Nicht nur die Metadaten: die Reaktionen sind Teil desselben Panels
        und waeren schmal sonst gar nicht erreichbar. */
     expect(within(drawer).getByText("Reaktionen")).toBeInTheDocument()
@@ -335,7 +362,7 @@ describe("Inhalt und Gliederung", () => {
 
     expect(screen.getByText("Digitalisierung")).toBeInTheDocument()
     expect(screen.getByText("WiSe 2025/26")).toBeInTheDocument()
-    expect(screen.getByText("10/2025")).toBeInTheDocument()
+    expect(screen.getByText(publishedMonth())).toBeInTheDocument()
 
     /* Der Studiengang steht mit vollem Namen und ohne Kuerzel: das Kuerzel
        wiederholte ihn nur in kurz (Vorgabe zur Abnahme von KAN-32). Auf der
@@ -496,7 +523,7 @@ describe("Sichtbarkeitsunterschiede", () => {
     /* Oeffentlich ist ohnehin alles PUBLISHED, dort unterschiede der Badge
        nichts (Klaerungsrunde zu KAN-32). Gesucht wird der Badge, nicht der
        Text: "Veroeffentlicht" ist zugleich die Beschriftung der Zeile
-       "Veroeffentlicht 10/2025" in der Seitenleiste. */
+       "Veroeffentlicht 10.2025" in der Seitenleiste. */
     expect(statusBadge()).toBeNull()
   })
 
@@ -602,5 +629,68 @@ describe("Fehlerfaelle", () => {
     expect(
       screen.getByRole("button", { name: "Zur Projektbibliothek" })
     ).toBeInTheDocument()
+  })
+})
+
+describe("Weg zurueck in den Editor (KAN-36)", () => {
+  /*
+   * Die zweite Haelfte des Umschalters: im Editor fuehrt er auf diese
+   * Seite, hier zurueck. Eine Vorschau ohne Weg zurueck waere eine
+   * Sackgasse.
+   */
+  const SIGNED_IN_ID = "00000000-0000-0000-0000-000000000001"
+
+  it("zeigt der Autor:in im Entwurf den Schalter und fuehrt in den Editor", async () => {
+    const user = userEvent.setup()
+    server.use(
+      detailHandler(
+        projectResponse({
+          status: "DRAFT",
+          author: person({ id: SIGNED_IN_ID, firstName: "Mira" }),
+        })
+      )
+    )
+    signInAs("STUDENT")
+    renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    await user.click(screen.getByRole("switch", { name: "Bearbeiten" }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId("pathname")).toHaveTextContent(
+        `/projects/${PROJECT_ID}/editor`
+      )
+    )
+  })
+
+  it("zeigt ihn nicht bei einem veroeffentlichten Projekt", async () => {
+    /* Inhaltsbearbeitung gibt es nur in DRAFT und REVISION (§4.1); ein
+       Schalter „Bearbeiten" waere hier ein Weg, der mit 409 endet. */
+    server.use(
+      detailHandler(
+        projectResponse({
+          status: "PUBLISHED",
+          author: person({ id: SIGNED_IN_ID, firstName: "Mira" }),
+        })
+      )
+    )
+    signInAs("STUDENT")
+    renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    expect(
+      screen.queryByRole("switch", { name: "Bearbeiten" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("zeigt ihn einer unbeteiligten Person nicht", async () => {
+    server.use(detailHandler(projectResponse({ status: "DRAFT" })))
+    signInAs("STUDENT")
+    renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    expect(
+      screen.queryByRole("switch", { name: "Bearbeiten" })
+    ).not.toBeInTheDocument()
   })
 })

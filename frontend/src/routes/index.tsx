@@ -82,7 +82,7 @@ export const routes: RouteObject[] = [
           },
           {
             /* Der blockbasierte Editor (KAN-36). Er liegt unter derselben
-               Rollenschranke wie die Metadatenseite: die Ressourcenebene
+               Rollenschranke wie die Metadatenseite; die Ressourcenebene
                (Autor:in oder Projektmitglied) prueft der Server (§5). */
             path: "/projects/:projectId/editor",
             element: <EditorRoute />,

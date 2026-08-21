@@ -1246,6 +1246,7 @@ export interface components {
       /**
        * Format: int32
        * @description Version des Editor-Schemas (§2.10). Fehlt sie, gilt die aktuelle Version.
+       * @example 2
        */
       schemaVersion?: number | null
     }

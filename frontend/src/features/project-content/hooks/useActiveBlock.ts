@@ -1,104 +1,190 @@
-import { useEditorState, type Editor } from "@tiptap/react"
-import { useCallback, useLayoutEffect, useState, type RefObject } from "react"
+import type { Editor } from "@tiptap/react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react"
 
 import {
   activeBlockIndex,
   blockNameAt,
   offsetOfBlock,
-} from "@/features/project-content/blockCommands"
+} from "@/features/project-content/editorCommands"
 import type { BlockNodeName } from "@/features/project-content/blockTypes"
 
 /**
- * Welcher Block steht unter dem Cursor, wie heisst er, und wo liegt er auf
- * dem Bildschirm.
+ * Welcher Block die Bedienung bekommt und wo sie steht.
  *
- * <p>Die Blockbedienung steht links <em>neben</em> dem aktiven Block
- * (Figma {@code BlockControls}). Sie kann deshalb nicht im Fluss der
- * Schreibflaeche liegen: ProseMirror verwaltet das DOM dort selbst, und ein
- * eingehaengter React-Knoten waere beim naechsten Tastenanschlag wieder
- * weg. Sie liegt stattdessen absolut ueber der Flaeche, und diese Datei
- * liefert ihr die senkrechte Position.
+ * <p><strong>Zwei Quellen, und beide sind noetig.</strong> Der Zeiger sagt,
+ * worauf jemand gerade zielt, die Textmarke sagt, wo geschrieben wird. Nur
+ * auf die Textmarke zu hoeren hiesse, dass die Bedienung beim Ueberfahren
+ * eines anderen Blocks nicht mitgeht: man sieht das Plus neben dem Absatz,
+ * an dem der Cursor steht, und nicht neben dem, auf den man zeigt. Nur auf
+ * den Zeiger zu hoeren liesse die Bedienung fuer Tastaturbedienung ganz
+ * verschwinden.
  *
- * <p><strong>Gemessen wird nach dem Rendern</strong>
- * ({@code useLayoutEffect}), damit die Bedienung nicht eine Bildwiederholung
- * lang an der alten Stelle steht. Neu gemessen wird bei jeder Transaktion,
- * denn schon ein eingefuegtes Zeichen kann den Block umbrechen lassen und
- * damit alles darunter verschieben.
+ * <p><strong>Gemessen wird nur, wenn sich etwas geaendert hat.</strong>
+ * {@code getBoundingClientRect} erzwingt einen Layoutdurchlauf; bei jeder
+ * Transaktion aufgerufen, also bei jedem Tastenanschlag, kostet das
+ * spuerbar Zeit und macht das Tippen zaeh. Neu gemessen wird deshalb, wenn
+ * der Block wechselt, und ausserdem, wenn sich die Hoehe der Schreibflaeche
+ * aendert: das faengt den Umbruch beim Tippen und das nachtraeglich
+ * geladene Bild mit ab, ohne an jeder Taste zu haengen.
+ *
+ * <p>Die Zeigerbewegung laeuft ueber {@code requestAnimationFrame}: bei
+ * schnellem Ziehen feuert {@code mousemove} oefter als der Bildschirm neu
+ * zeichnet.
  */
-
 export type ActiveBlock = {
-  /** Position in der Blockliste, gezaehlt ab 0. */
+  /** Position in der Blockliste, ab 0. */
   index: number
-  /** Knotenname aus 2.5, fuer die Beschriftung der Rueckfrage. */
+  /** Knotenname aus 2.5, fuer Beschriftungen. */
   name: BlockNodeName | null
-  /** Abstand von der Oberkante der Schreibflaeche, in CSS-Pixeln. */
-  top: number
   /** Gesamtzahl der Bloecke, fuer die Ansage „Block 3 von 7". */
   count: number
+  /** Abstand von der Oberkante der Schreibflaeche, in CSS-Pixeln. */
+  top: number
 }
 
 export function useActiveBlock(
   editor: Editor | null,
   containerRef: RefObject<HTMLElement | null>
 ): ActiveBlock | null {
-  /*
-   * Der abgeleitete Zustand traegt nur Index und Anzahl. Die Position ist
-   * eine DOM-Messung und gehoert nicht in den Vergleich: sie aendert sich
-   * auch ohne Transaktion, etwa wenn ein Bild fertig laedt.
-   */
-  const selection = useEditorState({
-    editor,
-    selector: ({ editor: current }) =>
-      /* isDestroyed mitgeprueft: nach dem Abraeumen laeuft der Selektor
-         noch einmal, und state greift dann auf eine View zu, die es nicht
-         mehr gibt. */
-      current === null || current.isDestroyed
-        ? null
-        : {
-            index: activeBlockIndex(current),
-            count: current.state.doc.childCount,
-            /* Der Knotenname wandert mit in den Vergleich: ohne ihn bliebe
-               die Beschriftung stehen, wenn sich der Typ desselben Blocks
-               aendert (Absatz wird Ueberschrift). */
-            name: blockNameAt(current, activeBlockIndex(current) ?? -1),
-          },
-  })
-
+  const [chosen, setChosen] = useState<number | null>(null)
   const [top, setTop] = useState(0)
+  const frameRef = useRef<number | null>(null)
+
+  /*
+   * Solange niemand gezielt hat, gilt der erste Block. Abgeleitet und nicht
+   * im Effekt gesetzt: ein setState im Effekt loeste eine zweite
+   * Renderrunde aus, und der Wert steht schon beim ersten fest.
+   *
+   * <p>Ohne diesen Rueckfall erschiene die Bedienung erst, wenn jemand die
+   * Maus bewegt oder in den Text klickt: wer mit der Tastatur arbeitet,
+   * saehe das Plus nie, und wer zum ersten Mal auf der Seite steht, saehe
+   * gar nicht, dass es eine Blockbedienung gibt.
+   */
+  const index =
+    chosen ??
+    (editor !== null && !editor.isDestroyed && editor.state.doc.childCount > 0
+      ? 0
+      : null)
+
+  /* Beim Ziehen bleibt die Bedienung an ihrem Block: der Zeiger faehrt
+     waehrenddessen ueber alle anderen hinweg. */
+  const draggingRef = useRef(false)
 
   const measure = useCallback(() => {
-    if (
-      editor === null ||
-      selection === null ||
-      selection.index === null ||
-      containerRef.current === null
-    ) {
+    const container = containerRef.current
+    if (editor === null || editor.isDestroyed || index === null || container === null) {
       return
     }
-    const position = offsetOfBlock(editor.state.doc, selection.index)
+    const doc = editor.state.doc
+    if (index >= doc.childCount) {
+      return
+    }
     /* nodeDOM liefert das Element des Knotens selbst; domAtPos gaebe den
        Textknoten darin und damit die Zeile statt des Blocks. */
-    const dom = editor.view.nodeDOM(position)
+    const dom = editor.view.nodeDOM(offsetOfBlock(doc, index))
     if (!(dom instanceof HTMLElement)) {
       return
     }
     setTop(
-      dom.getBoundingClientRect().top -
-        containerRef.current.getBoundingClientRect().top
+      dom.getBoundingClientRect().top - container.getBoundingClientRect().top
     )
-  }, [containerRef, editor, selection])
+  }, [containerRef, editor, index])
 
+  /* Zeiger */
+  useEffect(() => {
+    const container = containerRef.current
+    if (editor === null || container === null) {
+      return
+    }
+    const onMove = (event: MouseEvent) => {
+      if (draggingRef.current) {
+        return
+      }
+      if (frameRef.current !== null) {
+        return
+      }
+      frameRef.current = window.requestAnimationFrame(() => {
+        frameRef.current = null
+        if (editor.isDestroyed) {
+          return
+        }
+        const hit = editor.view.posAtCoords({
+          left: event.clientX,
+          top: event.clientY,
+        })
+        if (hit === null) {
+          return
+        }
+        const resolved = editor.state.doc.resolve(hit.pos)
+        setChosen(resolved.depth === 0 ? resolved.index() : resolved.index(1))
+      })
+    }
+    const onDragStart = () => {
+      draggingRef.current = true
+    }
+    const onDragEnd = () => {
+      draggingRef.current = false
+    }
+
+    container.addEventListener("mousemove", onMove)
+    container.addEventListener("dragstart", onDragStart)
+    container.addEventListener("dragend", onDragEnd)
+    container.addEventListener("drop", onDragEnd)
+    return () => {
+      container.removeEventListener("mousemove", onMove)
+      container.removeEventListener("dragstart", onDragStart)
+      container.removeEventListener("dragend", onDragEnd)
+      container.removeEventListener("drop", onDragEnd)
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current)
+        frameRef.current = null
+      }
+    }
+  }, [containerRef, editor])
+
+  /* Textmarke */
+  useEffect(() => {
+    if (editor === null) {
+      return
+    }
+    const update = () => setChosen(activeBlockIndex(editor))
+    editor.on("selectionUpdate", update)
+    editor.on("focus", update)
+    return () => {
+      editor.off("selectionUpdate", update)
+      editor.off("focus", update)
+    }
+  }, [editor])
+
+  /* Messen: beim Wechsel des Blocks und bei jeder Hoehenaenderung. */
   useLayoutEffect(() => {
     measure()
   }, [measure])
 
-  if (selection === null || selection.index === null) {
+  useEffect(() => {
+    const container = containerRef.current
+    if (container === null || typeof ResizeObserver === "undefined") {
+      return
+    }
+    const observer = new ResizeObserver(() => measure())
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [containerRef, measure])
+
+  if (editor === null || index === null || index >= editor.state.doc.childCount) {
     return null
   }
   return {
-    index: selection.index,
-    name: selection.name,
-    count: selection.count,
+    index,
+    name: blockNameAt(editor, index),
+    count: editor.state.doc.childCount,
     top,
   }
 }

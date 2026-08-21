@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
 
-import { api, type UploadOptions } from "@/api/client"
+import { api } from "@/api/client"
 import { apiPaths } from "@/api/endpoints"
 import type { StoredFileResponse } from "@/api/types"
 
@@ -70,22 +70,25 @@ export function uploadAvatar(file: File): Promise<StoredFileResponse> {
  * {@code PROJECT_STATUS_NOT_EDITABLE} (§4.1). Weitere Fehlerfaelle wie bei
  * {@link uploadAvatar}: 400 FILE_TYPE_NOT_ALLOWED und 400 FILE_TOO_LARGE.
  *
- * <p><strong>Mit Fortschritt und Abbruch seit KAN-36</strong>, und genau an
- * dieser Funktion statt an einer zweiten daneben. Beides laeuft ueber
- * {@code api.upload}, das den Weg ueber {@code XMLHttpRequest} nimmt, weil
- * fetch keinen Upload-Fortschritt kennt (Begruendung dort). Werden weder
- * {@code onProgress} noch {@code signal} uebergeben, verhaelt sich der
- * Aufruf wie zuvor.
+ * <p><strong>Mit Fortschritt und Abbruch seit KAN-36</strong>, wie hier
+ * angekuendigt: der Editor legt Bilder, Ton, Video und Dokumente unmittelbar
+ * in den Beitrag, und ein Upload von zehn Megabyte ohne Rueckmeldung sieht
+ * aus wie ein Stillstand. Beides braucht einen anderen Transport als fetch
+ * ({@code api.upload}); eine zweite Upload-Funktion ist dafuer nicht
+ * entstanden. Wer den Fortschritt nicht braucht, laesst die Optionen weg
+ * und merkt keinen Unterschied.
  *
- * <p>Ein Abbruch wirft eine {@code DOMException} mit dem Namen
- * {@code AbortError} und ist kein Fehlerfall des Servers: die
- * Medien-Dialoge (KAN-36) schliessen dann still, statt eine Meldung zu
- * zeigen.
+ * @param onProgress Anteil zwischen 0 und 1, oder {@code null}, solange die
+ *                   Gesamtgroesse unbekannt ist
+ * @param signal     bricht den laufenden Upload ab
  */
 export function uploadProjectFile(
   file: File,
   projectId: string,
-  options?: UploadOptions
+  options: {
+    onProgress?: (progress: number | null) => void
+    signal?: AbortSignal
+  } = {}
 ): Promise<StoredFileResponse> {
   const body = new FormData()
   body.append("file", file)

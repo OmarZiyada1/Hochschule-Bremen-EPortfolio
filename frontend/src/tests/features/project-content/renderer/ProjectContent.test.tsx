@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest"
 import { resolveApiUrl } from "@/api/client"
 import { apiPaths } from "@/api/endpoints"
 import type { BlockResponse } from "@/api/types"
-import { BLOCK_SCHEMA_VERSION } from "@/features/project-content/blockSerialization"
 import { ProjectContent } from "@/features/project-content/renderer/ProjectContent"
 import { renderWithProviders } from "@/tests/render"
 
@@ -33,13 +32,7 @@ function blocksOf(...contents: unknown[]): BlockResponse[] {
     id: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
     type: "TEXT",
     orderIndex: index,
-    /*
-     * Die aktuelle Version, und das ist seit Contract v63 keine Nebensache
-     * mehr: der Lesepfad migriert Ueberschriften aus Version 2, ein
-     * niedrigerer Wert hier verschoebe also jede Ebene um eine Stufe und
-     * pruefte etwas anderes als die Anzeige.
-     */
-    schemaVersion: BLOCK_SCHEMA_VERSION,
+    schemaVersion: 1,
     content: content as BlockResponse["content"],
   }))
 }
@@ -57,105 +50,48 @@ function render(...contents: unknown[]) {
 }
 
 describe("Ueberschriften und Fliesstext", () => {
-  /**
-   * Die Abbildung aus Contract 2.5 (v63), abschliessend: Ebene 1 wird h2, 2
-   * wird h3, 3 wird h4, 4 wird h5, 5 wird h6. Der gespeicherte Wert ist die
-   * Gliederung und nicht das Element; die einzige h1 der Seite bleibt der
-   * Projekttitel (3.3).
-   */
-  it("rendert die Ebenen 1 bis 5 um genau eine Stufe versetzt", () => {
+  it("rendert die sechs Ebenen um eine Stufe versetzt, nie als h1", () => {
+    /*
+     * Contract 2.5 seit v63: gespeichert wird die Gliederungsebene 1 bis 6,
+     * angezeigt eine Stufe tiefer, weil die einzige Ebene 1 der Seite der
+     * Projekttitel ist (§3.3). Ebene 6 hat in HTML keine Entsprechung und
+     * wird als role="heading" mit aria-level 7 ausgezeichnet.
+     */
     render(
-      ...([1, 2, 3, 4, 5] as const).map((level) => ({
+      ...[1, 2, 3, 4, 5, 6].map((level) => ({
         type: "heading",
         attrs: { level },
         content: [{ type: "text", text: `Ebene ${level}` }],
       }))
     )
 
-    for (const level of [1, 2, 3, 4, 5] as const) {
+    for (const [level, ariaLevel] of [
+      [1, 2],
+      [2, 3],
+      [3, 4],
+      [4, 5],
+      [5, 6],
+      [6, 7],
+    ] as const) {
       expect(
-        screen.getByRole("heading", { level: level + 1 })
+        screen.getByRole("heading", { level: ariaLevel }),
+        `Ebene ${level}`
       ).toHaveTextContent(`Ebene ${level}`)
     }
+
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull()
   })
 
-  /**
-   * Ebene 6 hat in HTML keine Entsprechung, weil die Elementreihe bei h6
-   * endet. WAI-ARIA sieht dafuer role="heading" mit aria-level vor; ein
-   * zweites h6 machte die sechste Stufe von der fuenften ununterscheidbar.
-   */
-  it("gibt Ebene 6 als role=heading mit aria-level 7 aus", () => {
-    render({
-      type: "heading",
-      attrs: { level: 6 },
-      content: [{ type: "text", text: "Tiefste Stufe" }],
-    })
-
-    const heading = screen.getByRole("heading", { level: 7 })
-    expect(heading).toHaveTextContent("Tiefste Stufe")
-    expect(heading.tagName).toBe("DIV")
-  })
-
-  it("traegt die Ausrichtung der Ueberschrift als Datenattribut", () => {
-    render({
+  it("gibt die Ausrichtung auch an der Ueberschrift als Datenattribut aus", () => {
+    const { container } = render({
       type: "heading",
       attrs: { level: 1, textAlign: "center" },
-      content: [{ type: "text", text: "Mittig" }],
+      content: [{ type: "text", text: "mittig" }],
     })
 
-    expect(screen.getByRole("heading", { level: 2 })).toHaveAttribute(
-      "data-text-align",
-      "center"
-    )
-  })
-
-  /**
-   * Ein Beitrag aus der Zeit vor v63 sieht danach unveraendert aus: die
-   * Migration 2 nach 3 bildet die oberste Zwischenueberschrift (damals
-   * level 2) auf level 1 ab, und die Anzeige macht daraus wieder ein h2.
-   */
-  it("laesst einen Bestand der Schemaversion 2 gleich aussehen", () => {
-    renderWithProviders(
-      <ProjectContent
-        blocks={[
-          {
-            id: "00000000-0000-4000-8000-00000000000a",
-            type: "HEADING",
-            orderIndex: 0,
-            schemaVersion: 2,
-            content: {
-              type: "heading",
-              attrs: { level: 2 },
-              content: [{ type: "text", text: "Wie frueher" }],
-            } as unknown as BlockResponse["content"],
-          },
-        ]}
-      />
-    )
-
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
-      "Wie frueher"
-    )
-  })
-
-  it("gibt nie ein h1 aus", () => {
-    render(
-      {
-        type: "heading",
-        attrs: { level: 2 },
-        content: [{ type: "text", text: "Zwei" }],
-      },
-      {
-        type: "heading",
-        attrs: { level: 3 },
-        content: [{ type: "text", text: "Drei" }],
-      }
-    )
-
-    expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent("Zwei")
-    expect(screen.getByRole("heading", { level: 4 })).toHaveTextContent("Drei")
-    expect(screen.queryByRole("heading", { level: 1 })).toBeNull()
+    const element = container.querySelector("h2")
+    expect(element).toHaveAttribute("data-text-align", "center")
+    expect(element).not.toHaveAttribute("style")
   })
 
   it("setzt die Ausrichtung als Datenattribut und nicht als Inline-Stil", () => {

@@ -6,8 +6,9 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Link, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams } from "react-router-dom"
 
+import { useAuth } from "@/api/auth/AuthContext"
 import { resolveApiUrl } from "@/api/client"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import type { ProjectDetailResponse } from "@/api/types"
@@ -24,6 +25,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ViewModeSwitch } from "@/features/project-content/components/ViewModeSwitch"
 import { ProjectContent } from "@/features/project-content/renderer/ProjectContent"
 import { ProjectMetaSidebar } from "@/features/projects/components/ProjectMetaSidebar"
 import { ReactionPanel } from "@/features/projects/components/ReactionPanel"
@@ -373,8 +375,38 @@ export default function ProjectDetailPage() {
  * Aufbaus liefen auseinander, sobald eine Zeile dazukommt.
  */
 function ProjectInfoPanel({ project }: { project: ProjectDetailResponse }) {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+
+  /*
+   * Der Weg zurueck in den Editor, die zweite Haelfte des Umschalters aus
+   * KAN-36. Er erscheint nur, wenn diese Seite fuer die anfragende Person
+   * wirklich eine Vorschau ist: im Arbeitszustand des Projekts (§4.1) und
+   * fuer die Autor:in oder ein Projektmitglied (§5). Fuer alle anderen ist
+   * sie die Seite selbst, und ein Schalter „Bearbeiten" waere ein Weg, der
+   * mit 403 endet.
+   *
+   * Verbindlich bleibt der Server; diese Bedingung entscheidet nur, ob der
+   * Schalter sichtbar ist.
+   */
+  const editable = project.status === "DRAFT" || project.status === "REVISION"
+  const participates =
+    user !== null &&
+    (project.author?.id === user.id ||
+      (project.members ?? []).some((member) => member.userId === user.id))
+
   return (
     <div className="flex flex-col gap-6">
+      {editable && participates && (
+        <ViewModeSwitch
+          mode="preview"
+          onModeChange={(mode) => {
+            if (mode === "edit") {
+              void navigate(`/projects/${project.id}/editor`)
+            }
+          }}
+        />
+      )}
       {project.id !== undefined && (
         <>
           <ReactionPanel

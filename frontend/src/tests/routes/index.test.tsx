@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it } from "vitest"
 
 import { setPasswordChangeRequired } from "@/api/auth/authStore"
 import i18n from "@/i18n"
-import { projectDetail } from "@/tests/fixtures"
 import {
   emptyProjectsHandler,
   ownPortfolioHandler,
@@ -116,28 +115,30 @@ describe("Routenbaum", () => {
   })
 
   it("EDITOR erreicht den Editor", async () => {
-    /* Seit KAN-36 steht dort die echte Seite und kein Platzhalter mehr: sie
-       zieht Metadaten und Inhalt getrennt (§6.1). Die einzige h1 ist der
-       Projekttitel, denn ein HEADING-Block ist immer eine
-       Zwischenueberschrift (§2.5, §3.3). */
-    server.use(projectDetailHandler(), projectBlocksHandler())
     signInAs("EDITOR")
+    /* Bloecke vor dem Detail: sonst faengt das Muster /projects/:projectId
+       den laengeren Pfad zuerst ab. */
+    server.use(
+      ownPortfolioHandler(),
+      projectBlocksHandler(),
+      projectDetailHandler({ title: "Beitrag im Entwurf", status: "DRAFT" })
+    )
     renderWithProviders(
       <AppUnderTest />,
       "/projects/1f9d7a10-0000-0000-0000-000000000000/editor"
     )
 
+    /* findBy, weil die Route nachgeladen wird (React.lazy) und die Seite
+       erst nach zwei Abrufen steht. Die einzige h1 ist der Projekttitel
+       (§3.3); der Editor gibt selbst keine aus. */
     expect(
       await screen.findByRole(
         "heading",
-        { level: 1, name: projectDetail().title },
-        /*
-         * Laenger als die Voreinstellung von einer Sekunde: der Editor ist
-         * die einzige nachgeladene Route (routes/EditorRoute.tsx), und bis
-         * die Ueberschrift steht, liegen drei Wartezeiten hintereinander,
-         * naemlich der Chunk, die Metadaten und der Inhalt.
-         */
-        { timeout: 5000 }
+        { level: 1, name: "Beitrag im Entwurf" },
+        /* Der Editor-Chunk zieht das ganze ProseMirror-Buendel nach, und
+           im vollstaendigen Lauf teilen sich alle Dateien den Rechner. Die
+           Standardgrenze von einer Sekunde reicht dafuer bei weitem nicht. */
+        { timeout: 60000 }
       )
     ).toBeInTheDocument()
   })

@@ -39,36 +39,26 @@ import type {
 /**
  * Ueberschriftenebenen 1 bis 6 (Contract 2.5 seit v63).
  *
- * <p><strong>Der gespeicherte Wert ist die Gliederung, nicht das
- * Element.</strong> Die einzige Ebene 1 einer Projektseite bleibt der
- * Projekttitel aus {@code Project.title} (3.3); die Anzeige schiebt jede
- * Ebene um genau eine Stufe nach unten, Ebene 6 wird ein {@code div} mit
- * {@code role="heading"} und {@code aria-level="7"}. Die Abbildung steht
- * abschliessend in {@code renderer/renderBlockNode.tsx}.
- *
- * <p>Die Verengung auf 2 und 3 aus v51 ist mit v63 aufgehoben: sie
- * verhinderte keinen Ebenensprung, sondern nur, dass ein laengerer Beitrag
- * ueberhaupt gegliedert werden kann. Ein Bestand mit den alten Werten kommt
- * ueber die Schemamigration 2 nach 3 herein ({@code blockSerialization.ts}).
+ * <p>Der gespeicherte Wert ist die <strong>Gliederungsebene des
+ * Beitrags</strong> und nicht das HTML-Element: die einzige Ebene 1 einer
+ * Projektseite bleibt der Projekttitel aus {@code Project.title} (3.3),
+ * deshalb schiebt die Anzeige jede Ebene um genau eine Stufe nach unten
+ * ({@code headingRendering.ts}). Eine zweite Ebene 1 im selben Dokument
+ * machte die Gliederung fuer Screenreader mehrdeutig (SC 1.3.1).
  */
 export type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6
 
-/** Ausrichtung eines Absatzes: alle vier Werte (Contract 2.5). */
+/** Ausrichtung eines Absatzes (Contract 2.5). */
 export type ContentTextAlign = "left" | "center" | "right" | "justify"
 
 /**
- * Ausrichtung einer Ueberschrift: dieselben Werte ohne {@code justify}
- * (Contract 2.5 seit v63). Blocksatz an einer ein- oder zweizeiligen
+ * Ausrichtung einer Ueberschrift (Contract 2.5 seit v63): dieselben Werte
+ * ohne {@code justify}. Blocksatz an einer ein- oder zweizeiligen
  * Ueberschrift erzeugt Wortabstaende, die den Zeilenfall zerreissen, ohne
  * einen Satzspiegel zu gewinnen; serverseitig ergibt er 400
  * {@code BLOCK_CONTENT_INVALID}.
- *
- * <p>Ein eigener Typ statt {@code Exclude<ContentTextAlign, "justify">}:
- * die Auswahlleiste zaehlt beide Wertemengen auf, und ein benannter Typ
- * laesst sich dort lesen. Die Schaltflaeche verschwindet bei markierter
- * Ueberschrift nicht, sondern wird deaktiviert (SC 3.2.4).
  */
-export type HeadingTextAlign = "left" | "center" | "right"
+export type HeadingTextAlign = Exclude<ContentTextAlign, "justify">
 
 /** Bildbreite in Prozent der Textspalte: genau drei Stufen (Contract 2.5). */
 export type ImageWidth = 100 | 75 | 50

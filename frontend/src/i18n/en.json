@@ -278,36 +278,6 @@
     },
     "projectRole": {
       "required": "Please state a role in the project."
-    },
-    "blockFile": {
-      "required": "Please upload a file."
-    },
-    "blockAlt": {
-      "required": "Please describe the image or mark it as decorative."
-    },
-    "blockGallery": {
-      "empty": "Please add at least one image."
-    },
-    "blockVideoId": {
-      "required": "Please enter the video ID.",
-      "invalid": "This ID does not match the selected provider."
-    },
-    "blockEmbedUrl": {
-      "required": "Please enter the embed address.",
-      "notAllowed": "This address is not among the provider's allowed hosts."
-    },
-    "blockEmbedHeight": {
-      "outOfRange": "The height is outside the allowed range."
-    },
-    "blockLatex": {
-      "required": "Please enter a formula."
-    },
-    "blockLink": {
-      "required": "Please enter an address.",
-      "scheme": "Only http, https and mailto are allowed."
-    },
-    "blockTable": {
-      "outOfRange": "Please enter a number within the allowed range."
     }
   },
   "placeholder": {
@@ -317,7 +287,6 @@
       "portfolio": "Portfolio",
       "projectNew": "New project",
       "projectMetadata": "Project metadata",
-      "projectEditor": "Editor",
       "myPortfolio": "My portfolio",
       "profile": "Edit profile",
       "reviews": "My reviews",
@@ -842,35 +811,70 @@
     "formula": {
       "errorTitle": "Formula cannot be displayed",
       "errorDescription": "The formula contains an error in its LaTeX notation. The expression entered is:",
-      "regionLabel": "Formula, scrollable horizontally"
+      "regionLabel": "Formula, scrollable horizontally",
+      "incomplete": "No formula entered yet. The block is saved as soon as it holds one.",
+      "label": "Formula in KaTeX notation",
+      "placeholder": "e^{i\\pi} + 1 = 0",
+      "hint": "KaTeX notation, Ctrl or Cmd and Enter renders",
+      "render": "Render"
     },
     "table": {
       "regionLabel": "Table, scrollable horizontally",
       "controls": "Table",
-      "addRowBefore": "Insert row above",
-      "addRowAfter": "Insert row below",
-      "deleteRow": "Delete row",
-      "addColumnBefore": "Insert column before",
-      "addColumnAfter": "Insert column after",
-      "deleteColumn": "Delete column",
-      "toggleHeaderRow": "Toggle header row",
-      "toggleHeaderColumn": "Toggle header column",
-      "mergeCells": "Merge cells",
-      "splitCell": "Split cell",
-      "deleteTable": "Delete table"
+      "action": {
+        "addRowBefore": "Insert row above",
+        "addRowAfter": "Insert row below",
+        "deleteRow": "Delete row",
+        "addColumnBefore": "Insert column left",
+        "addColumnAfter": "Insert column right",
+        "deleteColumn": "Delete column",
+        "toggleHeaderRow": "Toggle header row",
+        "mergeCells": "Merge cells",
+        "splitCell": "Split cell",
+        "deleteTable": "Delete table"
+      }
     },
     "video": {
       "label": "Video from this contribution",
-      "embedTitle": "Embedded video from {{provider}}"
+      "embedTitle": "Embedded video from {{provider}}",
+      "incomplete": "No video chosen yet. The block is saved as soon as one is set.",
+      "caption": "Caption",
+      "replace": "Replace video",
+      "embedDetail": "{{provider}}, video {{videoId}}",
+      "fileDetail": "Uploaded file",
+      "dropzone": "Upload a video or drop it here",
+      "dropzoneHint": "MP4 or WebM up to {{max}} MB",
+      "urlLabel": "Or paste a video address",
+      "urlPlaceholder": "YouTube or Vimeo address",
+      "urlHint": "Only the provider and the video id are stored, never the address itself.",
+      "urlInvalid": "No YouTube or Vimeo video can be read from this address.",
+      "embedAction": "Embed"
     },
     "audio": {
-      "label": "Audio recording from this contribution"
+      "label": "Audio recording from this contribution",
+      "incomplete": "No recording chosen yet. The block is saved as soon as it holds one.",
+      "caption": "Caption",
+      "replace": "Replace recording",
+      "fileDetail": "Uploaded file",
+      "dropzone": "Upload audio or drop it here",
+      "dropzoneHint": "MP3, WAV or OGG up to {{max}} MB"
     },
     "embed": {
-      "title": "Embedded content from {{provider}}"
+      "title": "Embedded content from {{provider}}",
+      "incomplete": "No address entered yet. The block is saved as soon as one is set.",
+      "replace": "Replace embed",
+      "urlLabel": "Address of the embed",
+      "urlPlaceholder": "https://",
+      "urlHint": "YouTube, Vimeo, Figma, CodePen and GitHub Gist are allowed.",
+      "urlInvalid": "This address does not belong to any allowed provider ({{providers}}).",
+      "action": "Embed"
     },
     "document": {
-      "accessibleName": "Download {{fileName}}, PDF, {{size}}"
+      "accessibleName": "Download {{fileName}}, PDF, {{size}}",
+      "incomplete": "No document chosen yet. The block is saved as soon as it holds one.",
+      "replace": "Replace document",
+      "dropzone": "Upload a document or drop it here",
+      "dropzoneHint": "PDF up to {{max}} MB"
     },
     "provider": {
       "youtube": "YouTube",
@@ -879,162 +883,47 @@
       "codepen": "CodePen",
       "gist": "GitHub Gist"
     },
-    "canvas": {
-      "label": "Edit project content"
-    },
-    "editor": {
-      "backToPortfolio": "To my portfolio",
-      "notFound": {
-        "title": "This project does not exist",
-        "description": "The link leads nowhere, or the project has been deleted."
-      },
-      "forbidden": {
-        "title": "No access to this project",
-        "description": "Only the author, the project members and the assigned editorial team may edit this content."
-      },
-      "locked": {
-        "title": "The content is locked",
-        "description": "While the project is in status “{{status}}” its content cannot be changed. You can edit it in draft and in revision."
-      },
-      "dropped": {
-        "title_one": "One block could not be read",
-        "title_other": "{{count}} blocks could not be read",
-        "description": "Nothing is saved for that reason: saving replaces the entire content and would delete exactly these blocks. Affected positions: {{positions}}."
-      },
-      "readOnly": {
-        "title": "You can only read this content",
-        "description": "The author and the project members may edit the content. As the assigned editorial team you can see the entry, but not change it here."
-      }
-    },
-    "header": {
-      "back": "Back",
-      "undo": "Undo",
-      "redo": "Redo",
-      "submit": "Submit",
-      "withdraw": "Withdraw"
-    },
-    "sidebar": {
-      "label": "Project information and preview",
-      "preview": "Preview",
-      "edit": "Edit",
-      "previewToggle": "Show preview",
-      "history": "History",
-      "projectInfo": "Project information"
-    },
-    "history": {
-      "title": "Project history",
-      "description": "Every status change with time and person.",
-      "entry": "{{person}} · {{timestamp}}",
-      "empty": {
-        "title": "No status change yet",
-        "description": "The first entry appears as soon as the project is submitted."
-      },
-      "hidden": {
-        "title": "The history is not visible",
-        "description": "It is shown to the author, the project members, the assigned editorial team and the administration."
-      }
-    },
-    "autosave": {
-      "pending": "Not saved",
-      "saving": "Saving",
-      "saved": "Saved",
-      "error": "Not saved",
-      "conflict": "Changed elsewhere",
-      "errorTitle": "The content could not be saved"
-    },
-    "toolbar": {
-      "label": "Text formatting",
-      "blockType": {
-        "label": "Block type",
-        "paragraph": "Text",
-        "heading": "Heading {{level}}"
-      },
-      "marks": {
-        "group": "Character formatting",
-        "bold": "Bold",
-        "italic": "Italic",
-        "underline": "Underline",
-        "strike": "Strikethrough",
-        "code": "Inline code",
-        "superscript": "Superscript",
-        "subscript": "Subscript",
-        "link": "Link"
-      },
-      "blockFormat": {
-        "group": "Block format",
-        "bulletList": "Bulleted list",
-        "orderedList": "Numbered list",
-        "blockquote": "Quote"
-      },
-      "align": {
-        "label": "Alignment",
-        "left": "Left",
-        "center": "Centered",
-        "right": "Right",
-        "justify": "Justified",
-        "justifyBlockedOnHeading": "Justification is for paragraphs only: on a heading it tears the line breaks apart."
-      },
-      "color": {
-        "label": "Colour",
-        "textGroup": "Text colour",
-        "highlightGroup": "Background",
-        "none": "Default",
-        "role": {
-          "neutral": "Grey",
-          "brown": "Brown",
-          "orange": "Orange",
-          "amber": "Amber",
-          "green": "Green",
-          "blue": "Blue",
-          "purple": "Purple",
-          "pink": "Pink",
-          "red": "Red"
-        }
-      }
+    "blockName": {
+      "heading": "Heading",
+      "paragraph": "Paragraph",
+      "bulletList": "Bulleted list",
+      "orderedList": "Numbered list",
+      "blockquote": "Quote",
+      "codeBlock": "Code",
+      "horizontalRule": "Divider",
+      "table": "Table",
+      "imageBlock": "Image",
+      "galleryBlock": "Gallery",
+      "videoBlock": "Video",
+      "audioBlock": "Audio",
+      "documentBlock": "Document",
+      "embedBlock": "Embed",
+      "mathBlock": "Formula"
     },
     "blockControls": {
       "blockFallback": "Block",
-      "blockName": {
-        "heading": "Heading",
-        "paragraph": "Paragraph",
-        "bulletList": "Bulleted list",
-        "orderedList": "Numbered list",
-        "blockquote": "Quote",
-        "codeBlock": "Code",
-        "horizontalRule": "Divider",
-        "table": "Table",
-        "imageBlock": "Image",
-        "galleryBlock": "Gallery",
-        "videoBlock": "Video",
-        "audioBlock": "Audio",
-        "documentBlock": "Document",
-        "embedBlock": "Embed",
-        "mathBlock": "Formula"
-      },
       "pickUp": "Pick up {{block}} to move it",
       "drop": "Drop {{block}} here",
-      "moveHint": "Enter picks the block up, arrow up and down move it, Enter drops it, Escape cancels.",
+      "moveHint": "Drag, or pick up and move with the arrow keys",
       "delete": "Delete {{block}}",
       "confirmDelete": {
-        "title": "Delete this block?",
-        "description": "{{block}} at position {{position}} is removed from the entry. This can only be undone while you stay on the page.",
-        "cancel": "Cancel",
+        "title": "Delete block?",
+        "description": "{{block}} at position {{position}} will be removed from the contribution. Only undo can bring it back.",
         "confirm": "Delete"
       },
       "announce": {
-        "pickedUp": "{{block}} picked up, position {{position}} of {{count}}.",
-        "position": "{{block}} at position {{position}} of {{count}}.",
-        "dropped": "{{block}} dropped at position {{position}} of {{count}}.",
-        "cancelled": "Moving cancelled, {{block}} back at position {{position}} of {{count}}.",
-        "edge": "{{block}} is already at the edge.",
-        "deleted": "{{block}} deleted."
+        "position": "{{block}} at position {{position}} of {{count}}",
+        "pickedUp": "{{block}} picked up, position {{position}} of {{count}}",
+        "dropped": "{{block}} dropped at position {{position}} of {{count}}",
+        "cancelled": "Move cancelled, {{block}} is back at position {{position}} of {{count}}",
+        "edge": "{{block}} is already at the edge",
+        "deleted": "{{block}} deleted"
       }
     },
     "insert": {
       "label": "Insert block",
-      "search": "Search block type",
-      "empty": "No block type found.",
-      "group": "Block types",
+      "close": "Close insert bar",
+      "inserted": "{{block}} inserted",
       "type": {
         "image": "Image",
         "gallery": "Gallery",
@@ -1048,125 +937,149 @@
         "divider": "Divider"
       }
     },
-    "upload": {
-      "started": "{{fileName}} is uploading.",
-      "done": "{{fileName}} has been uploaded.",
-      "cancelled": "The upload was cancelled.",
-      "cancel": "Cancel upload",
-      "replace": "Different file",
-      "progressLabel": "Upload"
-    },
-    "nodeView": {
-      "image": "Image",
-      "loading": "loading",
-      "video": "Video",
-      "videoFile": "Uploaded file",
-      "videoEmbed": "{{provider}} · {{videoId}}",
-      "audio": "Audio",
-      "audioFile": "Uploaded file",
-      "document": "Document",
-      "embed": "Embed"
-    },
-    "dialogs": {
-      "insert": "Insert",
-      "caption": "Caption",
-      "captionHint": "Optional. It describes the context and never replaces the alternative text.",
-      "alt": "Alternative text",
-      "altHint": "Describes what the image shows, for everyone who cannot see it.",
-      "altDecorative": "This image is decorative and needs no description.",
-      "link": {
-        "title": "Set link",
-        "description": "The selected text gets an address.",
-        "href": "Address",
-        "hint": "Allowed are http, https and mailto.",
-        "submit": "Apply",
-        "remove": "Remove link"
+    "toolbar": {
+      "label": "Text formatting",
+      "blockType": "Block type",
+      "text": "Text",
+      "heading": "Heading {{level}}",
+      "color": "Colour",
+      "textColor": "Text colour",
+      "highlightColor": "Background",
+      "colorDefault": "Default",
+      "colorRole": {
+        "neutral": "Neutral",
+        "brown": "Brown",
+        "orange": "Orange",
+        "amber": "Amber",
+        "green": "Green",
+        "blue": "Blue",
+        "purple": "Purple",
+        "pink": "Pink",
+        "red": "Red"
       },
-      "image": {
-        "title": "Insert image",
-        "description": "Upload an image and describe it.",
-        "file": "Image file",
-        "fileHint": "PNG, JPEG, WebP, GIF or AVIF.",
-        "width": "Width",
-        "widthOption": "{{width}} %"
+      "mark": {
+        "bold": "Bold",
+        "italic": "Italic",
+        "underline": "Underline",
+        "strike": "Strikethrough",
+        "code": "Code",
+        "superscript": "Superscript",
+        "subscript": "Subscript",
+        "link": "Link",
+        "bulletList": "Bulleted list",
+        "orderedList": "Numbered list",
+        "blockquote": "Quote"
       },
-      "gallery": {
-        "title": "Insert gallery",
-        "description": "Upload several images. Each one needs its own description.",
-        "file": "Add image",
-        "fileHint": "PNG, JPEG, WebP, GIF or AVIF. Every uploaded image is appended.",
-        "item": "Image {{position}}",
-        "removeItem": "Remove image {{position}}",
-        "columns": "Columns",
-        "columnsOption": "{{columns}} columns"
-      },
-      "video": {
-        "title": "Insert video",
-        "description": "Either an uploaded file or an embed, never both.",
-        "source": "Source",
-        "sourceFile": "Upload file",
-        "sourceEmbed": "Embed",
-        "file": "Video file",
-        "fileHint": "MP4, WebM or OGG.",
-        "provider": "Provider",
-        "videoId": "Video ID",
-        "videoIdHint": "Only the ID, not the whole address. On YouTube the part after v=, on Vimeo the number."
-      },
-      "audio": {
-        "title": "Insert audio",
-        "description": "An uploaded audio file. An external address is not possible.",
-        "file": "Audio file",
-        "fileHint": "MP3, WAV or OGG."
-      },
-      "document": {
-        "title": "Insert document",
-        "description": "A file to download. Name and size come from the upload.",
-        "file": "Document",
-        "fileHint": "PDF."
-      },
-      "embed": {
-        "title": "Embed content",
-        "description": "External content in a frame. Only the listed providers are allowed.",
-        "provider": "Provider",
-        "url": "Embed address",
-        "urlHint": "https only, and only these hosts: {{hosts}}.",
-        "height": "Height in pixels",
-        "heightHint": "Between {{min}} and {{max}}."
-      },
-      "formula": {
-        "title": "Insert formula",
-        "description": "A formula in KaTeX notation.",
-        "latex": "Formula",
-        "latexHint": "KaTeX syntax, for example e^{i\\pi} + 1 = 0.",
-        "render": "Render"
-      },
-      "table": {
-        "title": "Insert table",
-        "description": "Rows and columns can be changed later.",
-        "rows": "Rows",
-        "columns": "Columns",
-        "withHeaderRow": "First row is a header row"
+      "align": {
+        "label": "Alignment",
+        "left": "Align left",
+        "center": "Centre",
+        "right": "Align right",
+        "justify": "Justify",
+        "justifyBlocked": "Justified text is not available on a heading"
       }
     },
-    "workflow": {
-      "cancel": "Cancel",
-      "submit": {
-        "title": "Submit project?",
-        "description": "“{{title}}” goes to the assigned editorial team and becomes visible to them. As long as they have not decided, you can withdraw the submission again.",
-        "confirm": "Submit"
-      },
-      "withdraw": {
-        "title": "Withdraw submission?",
-        "description": "“{{title}}” returns to draft and is no longer visible to the editorial team. You can keep editing it and submit it again.",
-        "confirm": "Withdraw"
-      },
-      "saveFirst": "The last save failed. Nothing was submitted; please check the message and try again."
+    "mediaShell": {
+      "settings": "Details for the {{block}} block"
     },
-    "leave": {
-      "title": "There are unsaved changes",
-      "description": "The latest input has not been saved yet. It will be saved before you leave.",
-      "stay": "Stay here",
-      "saveAndLeave": "Save and leave"
+    "upload": {
+      "typeNotAllowed": "This file format is not allowed.",
+      "tooLarge": "The file is larger than {{max}} MB.",
+      "started": "Uploading {{fileName}}",
+      "done": "{{fileName}} has been uploaded",
+      "failed": "{{fileName}} could not be uploaded"
+    },
+    "image": {
+      "incomplete": "No image chosen yet. The block is saved as soon as it holds one.",
+      "alt": "Alternative text",
+      "altDescription": "Describes the image for people who cannot see it. Leave empty if it is purely decorative.",
+      "caption": "Caption",
+      "width": "Width",
+      "widthOption": "{{width}} per cent",
+      "replace": "Replace image",
+      "dropzone": "Upload an image or drop it here",
+      "dropzoneHint": "PNG, JPG or WebP up to {{max}} MB"
+    },
+    "gallery": {
+      "incomplete": "No image in the gallery yet. The block is saved as soon as it holds one.",
+      "altGroup": "Alternative texts",
+      "altFor": "Image {{position}}",
+      "caption": "Gallery caption",
+      "columns": "Columns",
+      "columnsOption": "{{columns}} columns",
+      "remove": "Remove image {{position}}",
+      "dropzone": "Add an image to the gallery"
+    },
+    "link": {
+      "title": "Set link",
+      "description": "http, https and mailto are allowed.",
+      "label": "Address",
+      "required": "Please enter an address.",
+      "invalid": "Only http, https and mailto are allowed.",
+      "apply": "Apply",
+      "remove": "Remove link"
+    },
+    "header": {
+      "back": "Back",
+      "undo": "Undo",
+      "redo": "Redo",
+      "submit": "Submit",
+      "withdraw": "Withdraw"
+    },
+    "autosave": {
+      "saving": "Saving",
+      "saved": "Saved",
+      "error": "Not saved",
+      "conflict": "Conflict"
+    },
+    "sidebar": {
+      "label": "Project details",
+      "preview": "Preview",
+      "edit": "Edit",
+      "previewToggle": "Edit",
+      "history": "History",
+      "projectInfo": "Project information"
+    },
+    "history": {
+      "title": "History",
+      "description": "Every status change of this project, the most recent first.",
+      "empty": "There has been no status change yet.",
+      "entry": "Changed by {{person}}"
+    },
+    "submit": {
+      "title": "Submit contribution",
+      "description": "Before submitting, the project details are completed. They are saved first, then the contribution goes to the editorial team.",
+      "missingTitle": "Some details are still missing",
+      "missingDescription": "Submitting requires: {{fields}}.",
+      "pending": "Submitting",
+      "done": "The contribution has been submitted.",
+      "field": {
+        "projectType": "Type of work",
+        "facultyId": "Faculty",
+        "studyProgramId": "Study programme",
+        "degree": "Degree",
+        "categoryId": "Category",
+        "semesterId": "Semester",
+        "editorIds": "Editorial assignment"
+      }
+    },
+    "withdraw": {
+      "title": "Withdraw submission?",
+      "description": "The contribution returns to draft and is no longer visible to the editorial team. It can be submitted again afterwards.",
+      "done": "The submission has been withdrawn."
+    },
+    "readOnly": {
+      "title": "This contribution cannot be edited right now",
+      "description": "Content can only be changed in draft and revision. The contribution is in {{status}}."
+    },
+    "dropped": {
+      "title": "The contribution is not being saved",
+      "description_one": "One block at position {{positions}} cannot be displayed in this view. Nothing is saved, because saving replaces the entire content and would delete it.",
+      "description_other": "{{count}} blocks at positions {{positions}} cannot be displayed in this view. Nothing is saved, because saving replaces the entire content and would delete them."
+    },
+    "load": {
+      "errorTitle": "The contribution could not be loaded",
+      "errorDescription": "Please reload the page."
     }
   },
   "apiError": {

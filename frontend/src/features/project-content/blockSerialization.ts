@@ -29,19 +29,22 @@ import {
  * Bei jeder Aenderung der Knotentypen wird sie erhoeht und
  * {@link migrateBlockContent} um einen Schritt ergaenzt.
  *
- * <p><strong>3 seit Contract v63</strong>, im Backend
- * {@code BlockSchemaMigration.CURRENT_VERSION}. Die Formen, die dieses Modul
- * und der Renderer erwarten, sind genau die der Version 3: die Galerie
- * fuehrt {@code items} statt {@code fileIds}, AUDIO kennt kein {@code src},
- * und HEADING zaehlt die Ebenen 1 bis 6 mit einer um eine Stufe versetzten
- * Renderabbildung.
+ * <p><strong>3 seit Contract v63</strong> (§2.10): {@code HEADING.level}
+ * kennt die Ebenen 1 bis 6, und die Anzeige schiebt sie um eine Stufe.
+ * Dieselbe gespeicherte Zahl bedeutet damit etwas anderes als vorher,
+ * weshalb es eine Version braucht und nicht bloss eine erweiterte
+ * Werteliste; {@link migrateBlockContent} traegt den Schritt.
  *
- * <p>Die Konstante stand bis KAN-32 auf 1, und weil {@link blocksToDoc}
- * alles verwirft, was eine hoehere Version traegt, fiel jeder real
- * gespeicherte Block durch: der Server liefert immer mindestens die aktuelle
- * Version (BlockResponse.from migriert beim Lesen). Auf der Detailseite
- * waeren damit nur Platzhalter erschienen. Deshalb wird sie hier zusammen
- * mit dem Backend gehoben und nie danach.
+ * <p><strong>2 seit Contract v51</strong>, im Backend
+ * {@code BlockSchemaMigration.CURRENT_VERSION}. Die Formen, die dieses Modul
+ * und der Renderer erwarten, sind genau die der Version 2: die Galerie
+ * fuehrt {@code items} statt {@code fileIds}, AUDIO kennt kein {@code src},
+ * und HEADING beginnt bei Ebene 2. Die Konstante stand bis KAN-32
+ * gleichwohl auf 1, und weil {@link blocksToDoc} alles verwirft, was eine
+ * hoehere Version traegt, fiel jeder real gespeicherte Block durch: der
+ * Server liefert seit KAN-72 immer mindestens 2 (BlockResponse.from
+ * migriert beim Lesen). Auf der Detailseite waeren damit nur Platzhalter
+ * erschienen.
  */
 export const BLOCK_SCHEMA_VERSION = 3
 
@@ -139,7 +142,7 @@ export function docToBlocks(
   if (last !== undefined && isEmptyParagraph(last)) {
     nodes.pop()
   }
-  return nodes.map((node, index) => {
+  return nodes.filter(isReadyToSave).map((node, index) => {
     const type = NODE_TYPE_TO_BLOCK_TYPE[node.type]
     const carried = previous[index]
     const request: ContentBlockRequest = {
@@ -162,6 +165,66 @@ function isEmptyParagraph(node: BlockNode): boolean {
     node.type === "paragraph" &&
     (node.content === undefined || node.content.length === 0)
   )
+}
+
+/**
+ * Ob ein Knoten in den PUT gehoert.
+ *
+ * <p><strong>Ein Medienblock entsteht auf der Schreibflaeche leer.</strong>
+ * Die Autor:in fuegt ihn ein und fuellt ihn dort, wo er steht: sie legt das
+ * Bild in die Ablageflaeche, tippt die Formel, fuegt die Videoadresse ein.
+ * Zwischen dem Einfuegen und dem Fuellen liegen Sekunden, und in diesen
+ * Sekunden laeuft der Speichertakt weiter.
+ *
+ * <p>Ohne diese Zeile waere das ein Sackgasse: {@code BlockService.replace}
+ * prueft die <em>gesamte</em> Liste, bevor es die erste Zeile schreibt, ein
+ * einziger Knoten ohne {@code fileId} ergaebe also 400
+ * {@code BLOCK_CONTENT_INVALID} fuer den ganzen Beitrag. Nicht der neue
+ * Block bliebe ungespeichert, sondern jede weitere Aenderung am gesamten
+ * Text, bis jemand den Platzhalter wieder loescht.
+ *
+ * <p>Der Platzhalter bleibt deshalb auf der Schreibflaeche stehen und geht
+ * nur nicht mit. Er ist Bedienzustand und kein Inhalt: gespeichert wird ein
+ * Medienblock in dem Moment, in dem er seine Pflichtattribute hat. Genau so
+ * faellt schon heute der leere Schlussabsatz weg.
+ *
+ * <p>Ein Absatz, eine Ueberschrift oder eine Tabelle koennen dagegen leer
+ * sein und trotzdem Inhalt tragen; sie haben keine Pflichtattribute und
+ * laufen hier immer durch.
+ */
+function isReadyToSave(node: BlockNode): boolean {
+  switch (node.type) {
+    case "imageBlock":
+    case "audioBlock":
+      return hasText(node.attrs.fileId)
+    case "documentBlock":
+      return hasText(node.attrs.fileId) && hasText(node.attrs.fileName)
+    case "galleryBlock":
+      return node.attrs.items.length > 0
+    case "videoBlock":
+      /* Entweder die hochgeladene Datei oder die Einbettung (2.5); ein
+         Block ohne beides ist der frisch eingefuegte Platzhalter. */
+      return hasText(node.attrs.fileId) || hasText(node.attrs.videoId)
+    case "embedBlock":
+      return hasText(node.attrs.embedUrl)
+    case "mathBlock":
+      return hasText(node.attrs.latex)
+    default:
+      return true
+  }
+}
+
+/**
+ * Ob ein Attribut wirklich belegt ist.
+ *
+ * <p>Bewusst gegen {@code unknown} und nicht gegen den deklarierten Typ:
+ * ein frisch eingefuegter Knoten traegt den Standardwert seines Node-Spec,
+ * und der ist {@code null}. Der Typ sagt {@code string}, weil ein
+ * <em>gespeicherter</em> Block das Attribut immer traegt; auf der
+ * Schreibflaeche gilt das erst, wenn die Autor:in den Block gefuellt hat.
+ */
+function hasText(value: unknown): boolean {
+  return typeof value === "string" && value.trim() !== ""
 }
 
 /* ------------------------------------------------------------------ */
@@ -272,72 +335,59 @@ function readNodeType(content: unknown): string | null {
 }
 
 /**
- * Der benannte Ort der Migrationsfunktion, die Contract 2.10 zusagt: "bei
- * jeder Aenderung der Node-Typen wird die Version erhoeht und eine
- * Migrationsfunktion ergaenzt".
+ * Der benannte Ort der Migrationsfunktion, die Contract 2.10 zusagt
+ * ("bei jeder Aenderung der Node-Typen wird die Version erhoeht und eine
+ * Migrationsfunktion ergaenzt"), die aber bis KAN-10 nirgends verortet war.
  *
- * <p><strong>Seit Contract v63 ist sie nicht mehr die Identitaet.</strong>
- * Der Schritt 2 nach 3 bildet {@code HEADING.level} 2 auf 1 und 3 auf 2 ab.
- * Ohne ihn rutschte jede vorhandene Ueberschrift eine Stufe nach unten,
- * denn seit v63 rendert die Anzeige um eine Stufe versetzt: ein
- * gespeichertes {@code level: 2} war bis v62 die oberste
- * Zwischenueberschrift und waere danach die zweite.
+ * <p><strong>Den Schritt von 1 nach 2 gibt es hier bewusst nicht.</strong>
+ * Ihn geht der Server bereits beim Lesen: {@code BlockResponse.from} gibt
+ * jeden gespeicherten Knoten durch {@code BlockSchemaMigration} und meldet
+ * danach mindestens {@link BLOCK_SCHEMA_VERSION}. Ein Dokument der Version 1
+ * erreicht diese Funktion also gar nicht, und zwei Fassungen derselben
+ * Migration liefen frueher oder spaeter auseinander.
  *
- * <p><strong>Warum der Schritt hier steht, obwohl der Server ihn
- * geht.</strong> Der Server migriert beim Lesen und meldet danach
- * mindestens {@link BLOCK_SCHEMA_VERSION}; ein Dokument der Version 2
- * erreicht diese Funktion im laufenden Betrieb also nicht. Sie ist die
- * zweite Verteidigungslinie fuer den Fall, dass Frontend und Backend nicht
- * im selben Zug ausgerollt werden: ein Frontend mit Version 3 gegen ein
- * Backend mit Version 2 zeigte sonst jeden Beitrag mit verschobener
- * Gliederung, ohne dass es auffiele. Der Schritt 1 nach 2 bleibt dagegen
- * ausformuliert beim Server: er aendert Attributformen und nicht bloss eine
- * Zahl, und zwei Fassungen davon liefen frueher oder spaeter auseinander.
- *
- * <p>Die Schritte stehen als aufeinanderfolgende Bedingungen und nicht als
- * Verzweigung: ein Dokument der Version 1 durchlaeuft jeden davon bis zur
- * aktuellen Version, so wie die Kette im Backend. Der naechste Schritt
- * kommt als weiteres {@code if} darunter.
+ * <p><strong>Der Schritt von 2 nach 3 steht trotzdem hier</strong>, und das
+ * ist kein Widerspruch: er kostet vier Zeilen, und er ist die Stelle, an der
+ * ein Bestand aus einer Antwort ankaeme, die die Serverfassung noch nicht
+ * kennt, etwa waehrend eines Rollouts, in dem Backend und Frontend nicht
+ * gleichzeitig getauscht werden. Ohne ihn rutschte in genau diesem Fenster
+ * jede Ueberschrift eine Stufe nach unten, und zwar sichtbar und dauerhaft,
+ * weil der naechste Autosave die verschobene Ebene zurueckschriebe.
  */
 export function migrateBlockContent(
   content: unknown,
   schemaVersion: number
 ): unknown {
-  let migrated = content
-  if (schemaVersion < 3) {
-    migrated = migrateTwoToThree(migrated)
+  if (schemaVersion >= BLOCK_SCHEMA_VERSION) {
+    return content
   }
-  return migrated
+  return schemaVersion === 2 ? shiftHeadingLevel(content) : content
 }
 
 /**
- * Der Schritt 2 nach 3 (Contract v63): die Ueberschriftenebene wandert um
- * eine Stufe nach oben.
+ * Version 2 nach 3 (Contract 2.10): am {@code heading} wird aus Ebene 2 die
+ * 1 und aus 3 die 2. Wortgleich mit
+ * {@code BlockSchemaMigration.migrateTwoToThree} im Backend.
  *
- * <p>Ein {@code level} ausserhalb von 2 und 3 bleibt stehen. Es kann aus
- * keinem gueltigen Bestand der Version 2 stammen, und ein geratener Ersatz
- * waere schlechter als der Wert, den die Whitelist gleich danach klemmt und
- * vermerkt.
- *
- * <p>Gearbeitet wird auf einer flachen Kopie des Knotens und seiner
- * {@code attrs}. Das Original ist die Serverantwort im Cache von TanStack
- * Query; sie an Ort und Stelle zu aendern hiesse, einen fremden Zustand zu
- * beschreiben, den ein zweiter Leser unveraendert erwartet.
+ * <p>Abgebildet wird genau diese Menge: andere Werte hat der Schreibweg bis
+ * v62 nicht durchgelassen, und jeder von ihnen ist unter v63 fuer sich
+ * gueltig.
  */
-function migrateTwoToThree(content: unknown): unknown {
-  if (typeof content !== "object" || content === null) {
+function shiftHeadingLevel(content: unknown): unknown {
+  if (
+    typeof content !== "object" ||
+    content === null ||
+    (content as { type?: unknown }).type !== "heading"
+  ) {
     return content
   }
-  const node = content as { type?: unknown; attrs?: unknown }
-  if (node.type !== "heading") {
+  const node = content as { attrs?: { level?: unknown } }
+  const level = node.attrs?.level
+  if (level !== 2 && level !== 3) {
     return content
   }
-  if (typeof node.attrs !== "object" || node.attrs === null) {
-    return content
+  return {
+    ...node,
+    attrs: { ...node.attrs, level: level - 1 },
   }
-  const attrs = node.attrs as { level?: unknown }
-  if (attrs.level !== 2 && attrs.level !== 3) {
-    return content
-  }
-  return { ...node, attrs: { ...attrs, level: attrs.level - 1 } }
 }

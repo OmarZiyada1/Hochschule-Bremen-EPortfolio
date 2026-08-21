@@ -14,16 +14,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 /**
- * Die Schemamigration aus §2.10: ein gespeichertes Dokument wird beim Lesen in
- * die aktuelle Form gebracht (KAN-72, um den zweiten Schritt erweitert mit
- * KAN-36).
- *
- * <p>Zwei Schritte, die eine Kette bilden: Version 1 nach 2 sind die
- * Formaenderungen aus Contract v51, Version 2 nach 3 ist die Ebenenumstellung
- * aus v63. Ein Dokument der Version 1 laeuft durch beide, und deshalb pruefen
- * die Faelle unter "Version 1 nach 2" das Ergebnis der ganzen Kette. Die
- * Ueberschriftenebene wandert dabei durch beide Schritte und wird eigens unter
- * "Version 2 nach 3" gefuehrt.
+ * Die Schemamigration aus §2.10: ein Dokument der Version 1 wird beim Lesen in
+ * die Form aus Contract v51 gebracht (KAN-72).
  *
  * <p><strong>Der Test schliesst den Kreis zur Validierung.</strong> Jedes
  * migrierte Ergebnis wird zusaetzlich durch den {@link BlockValidationService}
@@ -48,8 +40,66 @@ class BlockSchemaMigrationTest {
 		assertThat(BlockSchemaMigration.CURRENT_VERSION).isEqualTo(3);
 	}
 
+	/**
+	 * Die Ebenenverschiebung aus v63 (§2.5, §2.10). Sie ist der Grund fuer die
+	 * Schemaversion 3: dieselbe gespeicherte Zahl bedeutet vorher und nachher
+	 * etwas anderes, weil die Anzeige seit v63 eine Stufe tiefer rendert.
+	 */
 	@Nested
-	@DisplayName("Version 1 nach 2")
+	@DisplayName("Version 2 nach 3: Ebenen verschieben sich um eine Stufe")
+	class TwoToThree {
+
+		@Test
+		@DisplayName("Ebene 2 wird 1 und Ebene 3 wird 2")
+		void levelsShiftDown() {
+			assertThat(levelAfter(2, 2)).isEqualTo(1);
+			assertThat(levelAfter(3, 2)).isEqualTo(2);
+		}
+
+		@Test
+		@DisplayName("Ein Beitrag sieht danach unveraendert aus")
+		void appearanceIsUnchanged() {
+			/* Bis v62 wurde level 2 als h2 gerendert. Ab v63 rendert die
+			   Anzeige eine Stufe tiefer, aus level 1 wird also wieder h2. */
+			JsonNode migrated = migrateFrom(BlockType.HEADING,
+					node("heading", MAPPER.createObjectNode().put("level", 2)), 2);
+
+			assertThat(migrated.path("attrs").path("level").asInt() + 1).isEqualTo(2);
+			assertValid(BlockType.HEADING, migrated);
+		}
+
+		@Test
+		@DisplayName("Die Kette aus Version 1 ergibt dieselbe oberste Zwischenueberschrift")
+		void chainFromVersionOne() {
+			/* 1 nach 2 hebt die alte h1 auf 2, 2 nach 3 macht daraus die 1:
+			   der Sache nach dieselbe oberste Zwischenueberschrift. */
+			assertThat(levelAfter(1, 1)).isEqualTo(1);
+		}
+
+		@Test
+		@DisplayName("Ein Dokument der Version 3 bleibt unberuehrt")
+		void versionThreeIsNotShifted() {
+			assertThat(levelAfter(2, 3)).isEqualTo(2);
+		}
+
+		@Test
+		@DisplayName("Andere Blocktypen bleiben unberuehrt")
+		void otherTypesAreUntouched() {
+			JsonNode paragraph = node("paragraph",
+					MAPPER.createObjectNode().put("textAlign", "center"));
+
+			assertThat(migrateFrom(BlockType.TEXT, paragraph, 2)).isEqualTo(paragraph);
+		}
+
+		private int levelAfter(int level, int fromVersion) {
+			return migrateFrom(BlockType.HEADING,
+					node("heading", MAPPER.createObjectNode().put("level", level)),
+					fromVersion).path("attrs").path("level").asInt();
+		}
+	}
+
+	@Nested
+	@DisplayName("Version 1 nach 2: die Formaenderungen aus v51")
 	class OneToTwo {
 
 		@Test
@@ -144,113 +194,18 @@ class BlockSchemaMigrationTest {
 				BlockSchemaMigration.CURRENT_VERSION)).isSameAs(content);
 	}
 
-	@Nested
-	@DisplayName("Version 2 nach 3: die Ebenenumstellung aus Contract v63")
-	class TwoToThree {
-
-		/**
-		 * Der Kern des Schritts. Ohne ihn saehe die oberste
-		 * Zwischenueberschrift eines bestehenden Beitrags eine Stufe kleiner
-		 * aus als am Tag ihrer Entstehung, weil die Anzeige seit v63 um eine
-		 * Stufe versetzt rendert.
-		 */
-		@Test
-		@DisplayName("Ebene 2 wird 1 und Ebene 3 wird 2")
-		void levelsShiftUp() {
-			assertThat(levelFrom(2, 2)).isEqualTo(1);
-			assertThat(levelFrom(3, 2)).isEqualTo(2);
-		}
-
-		/**
-		 * Die Kette bleibt zusammenhaengend: der erste Schritt hebt ein vor
-		 * v51 geschriebenes {@code level: 1} auf 2, der zweite macht daraus
-		 * wieder 1. Der Sache nach ist das dieselbe oberste
-		 * Zwischenueberschrift wie am Anfang.
-		 */
-		@Test
-		@DisplayName("Die Kette aus Version 1 ergibt dasselbe")
-		void chainFromVersionOne() {
-			assertThat(levelFrom(1, 1)).isEqualTo(1);
-			assertThat(levelFrom(2, 1)).isEqualTo(1);
-			assertThat(levelFrom(3, 1)).isEqualTo(2);
-		}
-
-		@Test
-		@DisplayName("Jedes Ergebnis ist wieder speicherbar")
-		void resultsStayValid() {
-			for (int fromVersion : new int[] { 1, 2 }) {
-				for (int level : new int[] { 1, 2, 3 }) {
-					assertValid(BlockType.HEADING, BlockSchemaMigration.toCurrent(
-							BlockType.HEADING, heading(level), fromVersion));
-				}
-			}
-		}
-
-		/**
-		 * Eine Ebene ausserhalb von 2 und 3 kann aus keinem gueltigen Bestand
-		 * der Version 2 stammen. Sie bleibt deshalb stehen, statt auf einen
-		 * geratenen Wert gezogen zu werden; die anschliessende Pruefung weist
-		 * sie mit 400 ab, und das ist die ehrlichere Antwort.
-		 */
-		@Test
-		@DisplayName("Eine Ebene ausserhalb von 2 und 3 bleibt unveraendert")
-		void unexpectedLevelStays() {
-			assertThat(levelFrom(5, 2)).isEqualTo(5);
-			assertThat(levelFrom(0, 2)).isZero();
-		}
-
-		@Test
-		@DisplayName("Ein anderer Blocktyp bleibt unberuehrt, auch mit einem level in attrs")
-		void otherTypesUntouched() {
-			JsonNode paragraph = node("paragraph", MAPPER.createObjectNode().put("level", 2));
-
-			assertThat(BlockSchemaMigration.toCurrent(BlockType.TEXT, paragraph, 2))
-					.isEqualTo(paragraph);
-		}
-
-		@Test
-		@DisplayName("Die uebrigen Attribute der Ueberschrift bleiben stehen")
-		void otherAttributesStay() {
-			ObjectNode attrs = MAPPER.createObjectNode().put("level", 3).put("textAlign", "center");
-
-			JsonNode migrated = BlockSchemaMigration.toCurrent(BlockType.HEADING,
-					node("heading", attrs), 2);
-
-			assertThat(migrated.path("attrs").path("level").asInt()).isEqualTo(2);
-			assertThat(migrated.path("attrs").path("textAlign").asText()).isEqualTo("center");
-			assertValid(BlockType.HEADING, migrated);
-		}
-
-		@Test
-		@DisplayName("Das Original bleibt auch in diesem Schritt unangetastet")
-		void originalIsNotMutated() {
-			JsonNode original = heading(2);
-			JsonNode before = original.deepCopy();
-
-			BlockSchemaMigration.toCurrent(BlockType.HEADING, original, 2);
-
-			assertThat(original).isEqualTo(before);
-		}
-
-		private int levelFrom(int level, int fromVersion) {
-			return BlockSchemaMigration.toCurrent(BlockType.HEADING, heading(level), fromVersion)
-					.path("attrs").path("level").asInt();
-		}
-
-		private JsonNode heading(int level) {
-			return node("heading", MAPPER.createObjectNode().put("level", level));
-		}
-	}
-
 	/**
 	 * Der Vorrat aus {@link BlockValidationServiceTest} liegt bereits in der
 	 * aktuellen Form. Durch die Migration geschickt, als kaeme er aus Version 1,
 	 * darf er sich nicht veraendern: die Migration fasst nur an, was das alte
 	 * Format wirklich traegt.
 	 *
-	 * <p>{@code HEADING} ist ausgenommen und steht eine Gruppe hoeher.
-	 * Dieselbe Zahl bedeutet dort vor und nach v63 etwas Verschiedenes, weshalb
-	 * ein unveraendertes Ergebnis gerade der Fehler waere.
+	 * <p><strong>HEADING ist ausgenommen, und das ist keine Luecke.</strong>
+	 * Seine Ebene ist der eine Fall, in dem dieselbe Zahl je Version etwas
+	 * anderes bedeutet; genau dafuer gibt es die Version. Ein {@code level: 2},
+	 * das als Version 1 hereingereicht wird, <em>muss</em> als 1 herauskommen,
+	 * sonst rutschte der Beitrag in der Anzeige eine Stufe. Der Fall steht in
+	 * {@link TwoToThree}.
 	 */
 	@ParameterizedTest
 	@EnumSource(value = BlockType.class, names = "HEADING", mode = EnumSource.Mode.EXCLUDE)
@@ -291,7 +246,11 @@ class BlockSchemaMigrationTest {
 	// ------------------------------------------------------------------
 
 	private JsonNode migrate(BlockType type, JsonNode content) {
-		return BlockSchemaMigration.toCurrent(type, content, 1);
+		return migrateFrom(type, content, 1);
+	}
+
+	private JsonNode migrateFrom(BlockType type, JsonNode content, int fromVersion) {
+		return BlockSchemaMigration.toCurrent(type, content, fromVersion);
 	}
 
 	/** Der Zweck der Migration: das Ergebnis muss wieder speicherbar sein. */

@@ -79,22 +79,27 @@ export function emptyProjectsHandler() {
 }
 
 /**
- * GET /api/projects/{id} mit der Detailantwort aus den Fixtures (§3.3).
- * Der Pfad ist enger gefasst als die uebrigen, damit er die
- * Unterressourcen wie /blocks nicht mitfaengt.
+ * GET /api/projects/{id} (§6.1). Ohne Argument ein Entwurf mit Titel und
+ * ohne Bloecke, also der Zustand, in dem der Editor gewoehnlich geoeffnet
+ * wird.
  */
 export function projectDetailHandler(
   overrides: Partial<ProjectDetailResponse> = {}
 ) {
-  return http.get("*/api/projects/:projectId", () =>
-    HttpResponse.json(projectDetail(overrides))
+  return http.get("*/api/projects/:projectId", ({ params }) =>
+    HttpResponse.json(
+      projectDetail({ id: String(params.projectId), ...overrides })
+    )
   )
 }
 
 /**
- * GET /api/projects/{id}/blocks (§6.1): Bloecke und die version fuer den
- * naechsten schreibenden Request (§6.4). Ohne Argument ein leerer Inhalt,
- * also das, was ein frischer Entwurf hat.
+ * GET /api/projects/{id}/blocks (§6.1, KAN-36). Die Antwort traegt neben
+ * den Bloecken die {@code version} des Projekts; sie ist der Stand fuer den
+ * naechsten schreibenden Request (§6.4).
+ *
+ * <p>Steht vor {@link projectDetailHandler} in einer Liste, sonst faengt
+ * dessen Muster {@code /projects/:projectId} den Pfad zuerst ab.
  */
 export function projectBlocksHandler(
   blocks: BlockResponse[] = [],

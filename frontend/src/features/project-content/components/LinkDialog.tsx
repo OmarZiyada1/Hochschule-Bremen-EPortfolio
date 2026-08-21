@@ -1,155 +1,129 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Controller, useForm } from "react-hook-form"
+import type { Editor } from "@tiptap/react"
+import { useEffect } from "react"
+import { useForm } from "react-hook-form"
 import { useTranslation } from "react-i18next"
 import { z } from "zod"
 
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldLabel,
-} from "@/components/ui/field"
+import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { isSafeHref } from "@/features/project-content/blockSanitize"
 
 /**
- * Die Adresse eines Links (Contract 2.5: {@code link} ist eine Mark, kein
- * Block).
+ * Der Link der Auswahlleiste (Contract 2.5).
  *
- * <p><strong>Ein Dialog und kein {@code window.prompt}.</strong> Der native
- * Dialog laesst sich nicht beschriften, nicht gestalten und in einem
- * Testlauf nicht bedienen; jsdom kennt ihn gar nicht. Vor allem aber traegt
- * er keinen Fehlertext am Feld: eine abgelehnte Adresse muesste als zweiter
- * Dialog danebengesetzt werden.
+ * <p><strong>Drei Schemata und keines mehr:</strong> {@code http},
+ * {@code https} und {@code mailto}. Geprueft wird ueber dieselbe Funktion
+ * wie im Lesepfad und im Schema, damit es keine zweite, abweichende Liste
+ * gibt; verbindlich bleibt der Server mit 400
+ * {@code BLOCK_CONTENT_INVALID}. Ein {@code javascript:}-Link liefe nach
+ * einem gewoehnlichen Klick im Ursprung des Portals, mit der Sitzung der
+ * klickenden Person.
  *
- * <p><strong>Die Textauswahl ueberlebt das Oeffnen.</strong> Der Dialog
- * nimmt den Fokus und damit die sichtbare Markierung im Editor; die
- * aufrufende Stelle merkt sich deshalb die Positionen und setzt sie beim
- * Anwenden wieder ({@code SelectionToolbar}). Ohne das traefe
- * {@code setLink} den Cursor statt der Auswahl.
+ * <p>Die Pruefung laeuft ueber {@code zod} mit {@code react-hook-form}
+ * (Frontend-Regel 12); handgeschriebene Validierung daneben gibt es nicht.
+ *
+ * <p>Der Dialog ist gesteuert und ohne eigenen Auslöser, weil die
+ * Schaltflaeche in der Leiste sitzt. Der Fokus geht beim Schliessen an sie
+ * zurueck (SC 2.4.3); dafuer sorgt die aufrufende Leiste.
  */
-
-const linkFormSchema = z.object({
-  href: z
-    .string()
-    .min(1, "validation.blockLink.required")
-    .refine((value) => isSafeHref(value.trim()), "validation.blockLink.scheme"),
-})
-
-type LinkFormValues = z.infer<typeof linkFormSchema>
-
 export function LinkDialog({
+  editor,
   open,
-  initialHref,
   onOpenChange,
-  onSubmit,
-  onRemove,
 }: {
+  editor: Editor
   open: boolean
-  /** Vorhandene Adresse, wenn die Auswahl bereits verlinkt ist. */
-  initialHref: string
   onOpenChange: (open: boolean) => void
-  onSubmit: (href: string) => void
-  /** Nur angeboten, wenn die Auswahl bereits einen Link traegt. */
-  onRemove?: () => void
 }) {
   const { t } = useTranslation()
 
-  const form = useForm<LinkFormValues>({
-    resolver: zodResolver(linkFormSchema),
-    defaultValues: { href: initialHref === "" ? "https://" : initialHref },
+  const schema = z.object({
+    href: z
+      .string()
+      .trim()
+      .min(1, { message: t("projectContent.link.required") })
+      .refine(isSafeHref, { message: t("projectContent.link.invalid") }),
   })
 
-  const submit = form.handleSubmit((values) => {
-    onSubmit(values.href.trim())
-    onOpenChange(false)
+  const form = useForm<z.infer<typeof schema>>({
+    resolver: zodResolver(schema),
+    defaultValues: { href: "" },
   })
+
+  /* Beim Oeffnen den bestehenden Link uebernehmen: wer eine Adresse
+     korrigieren will, soll sie nicht neu tippen muessen. */
+  const current = (editor.getAttributes("link").href as string | undefined) ?? ""
+  useEffect(() => {
+    if (open) {
+      form.reset({ href: current })
+    }
+    /* form.reset ist stabil; current soll nur beim Oeffnen gelesen werden. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  const apply = ({ href }: z.infer<typeof schema>) => {
+    editor
+      .chain()
+      .focus()
+      .extendMarkRange("link")
+      .setLink({ href: href.trim() })
+      .run()
+    onOpenChange(false)
+  }
+
+  const remove = () => {
+    editor.chain().focus().extendMarkRange("link").unsetLink().run()
+    onOpenChange(false)
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-modal sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{t("projectContent.dialogs.link.title")}</DialogTitle>
-          <DialogDescription>
-            {t("projectContent.dialogs.link.description")}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="rounded-modal">
+        <form onSubmit={form.handleSubmit(apply)}>
+          <DialogHeader>
+            <DialogTitle>{t("projectContent.link.title")}</DialogTitle>
+            <DialogDescription>
+              {t("projectContent.link.description")}
+            </DialogDescription>
+          </DialogHeader>
 
-        <form onSubmit={submit} noValidate className="flex flex-col gap-4">
-          <Controller
-            name="href"
-            control={form.control}
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                <FieldLabel
-                  htmlFor={field.name}
-                  className="type-label-xs text-muted-foreground uppercase"
-                >
-                  {t("projectContent.dialogs.link.href")}
-                </FieldLabel>
-                <Input
-                  {...field}
-                  id={field.name}
-                  type="url"
-                  inputMode="url"
-                  autoComplete="url"
-                  aria-invalid={fieldState.invalid}
-                  aria-describedby={
-                    fieldState.invalid ? "link-href-hint link-href-error" : "link-href-hint"
-                  }
-                />
-                <FieldDescription id="link-href-hint">
-                  {t("projectContent.dialogs.link.hint")}
-                </FieldDescription>
-                {fieldState.invalid && (
-                  <FieldError
-                    id="link-href-error"
-                    errors={[
-                      {
-                        message:
-                          fieldState.error?.message === undefined
-                            ? undefined
-                            : t(fieldState.error.message),
-                      },
-                    ]}
-                  />
-                )}
-              </Field>
+          <Field className="py-4">
+            <FieldLabel htmlFor="project-content-link-href">
+              {t("projectContent.link.label")}
+            </FieldLabel>
+            <Input
+              id="project-content-link-href"
+              autoFocus
+              placeholder="https://"
+              aria-invalid={form.formState.errors.href !== undefined}
+              {...form.register("href")}
+            />
+            {form.formState.errors.href !== undefined && (
+              <FieldError>{form.formState.errors.href.message}</FieldError>
             )}
-          />
+          </Field>
 
           <DialogFooter>
-            {onRemove !== undefined && (
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => {
-                  onRemove()
-                  onOpenChange(false)
-                }}
-              >
-                {t("projectContent.dialogs.link.remove")}
+            {current !== "" && (
+              <Button type="button" variant="ghost" onClick={remove}>
+                {t("projectContent.link.remove")}
               </Button>
             )}
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => onOpenChange(false)}
-            >
+            <DialogClose render={<Button type="button" variant="ghost" />}>
               {t("common.action.cancel")}
-            </Button>
-            <Button type="submit">
-              {t("projectContent.dialogs.link.submit")}
-            </Button>
+            </DialogClose>
+            <Button type="submit">{t("projectContent.link.apply")}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

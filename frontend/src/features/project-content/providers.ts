@@ -110,6 +110,88 @@ export function embedUrlFor(provider: VideoProvider, videoId: string): string {
 }
 
 /**
+ * Liest Anbieter und {@code videoId} aus einer eingefuegten Adresse
+ * (KAN-36).
+ *
+ * <p><strong>Warum der Editor eine Adresse annimmt und trotzdem keine
+ * speichert.</strong> Eine Autor:in hat die Adresse ihres Videos in der
+ * Zwischenablage, nicht dessen ID; nach der ID zu fragen hiesse, sie aus
+ * der Adresse heraussuchen zu lassen. Gespeichert werden gleichwohl nur
+ * {@code provider} und {@code videoId} (Contract 2.5): die Adresse wird
+ * hier zerlegt und danach fallengelassen.
+ *
+ * <p>Erkannt werden die Formen, die Menschen tatsaechlich kopieren:
+ * {@code youtube.com/watch?v=…}, {@code youtu.be/…},
+ * {@code youtube.com/embed/…} und {@code vimeo.com/…}, jeweils mit oder
+ * ohne {@code www}. {@code youtu.be} steht bewusst nicht in
+ * {@link ALLOWED_EMBED_HOSTS}: diese Liste gilt fuer die gespeicherte
+ * {@code embedUrl} eines EMBED-Blocks, hier wird die Adresse nur gelesen
+ * und ihre ID danach gegen {@link VIDEO_ID_PATTERNS} geprueft.
+ *
+ * @returns Anbieter und ID, oder {@code null}, wenn beides nicht sicher
+ *          ablesbar ist
+ */
+export function parseVideoUrl(
+  value: string
+): { provider: VideoProvider; videoId: string } | null {
+  let parsed: URL
+  try {
+    parsed = new URL(value.trim())
+  } catch {
+    return null
+  }
+  if (parsed.protocol.toLowerCase() !== "https:") {
+    return null
+  }
+
+  const host = parsed.hostname.toLowerCase().replace(/^www\./, "")
+  const segments = parsed.pathname.split("/").filter((part) => part !== "")
+
+  if (host === "youtu.be") {
+    return videoIdOrNull("youtube", segments[0])
+  }
+  if (host === "youtube.com" || host === "youtube-nocookie.com") {
+    if (segments[0] === "embed" || segments[0] === "shorts") {
+      return videoIdOrNull("youtube", segments[1])
+    }
+    return videoIdOrNull("youtube", parsed.searchParams.get("v") ?? undefined)
+  }
+  if (host === "vimeo.com" || host === "player.vimeo.com") {
+    /* player.vimeo.com/video/123456 und vimeo.com/123456 */
+    const candidate = segments[0] === "video" ? segments[1] : segments[0]
+    return videoIdOrNull("vimeo", candidate)
+  }
+  return null
+}
+
+function videoIdOrNull(
+  provider: VideoProvider,
+  candidate: string | undefined
+): { provider: VideoProvider; videoId: string } | null {
+  return isValidVideoId(provider, candidate)
+    ? { provider, videoId: candidate }
+    : null
+}
+
+/**
+ * Liest den Anbieter aus der Adresse einer Einbettung (KAN-36).
+ *
+ * <p>Der EMBED-Block speichert {@code provider} <em>und</em>
+ * {@code embedUrl} (Contract 2.5). Nach dem Anbieter zusaetzlich zu fragen
+ * waere eine Angabe, die schon in der Adresse steht: er ergibt sich
+ * eindeutig aus dem Host, und genau diese Zuordnung prueft der Server
+ * anschliessend noch einmal.
+ */
+export function embedProviderFor(value: string): EmbedProvider | null {
+  for (const provider of EMBED_PROVIDERS) {
+    if (isAllowedEmbedUrl(provider, value.trim())) {
+      return provider
+    }
+  }
+  return null
+}
+
+/**
  * Prueft eine mitgelieferte {@code embedUrl} eines EMBED-Blocks gegen
  * Schema und Host seines Anbieters. Eine unlesbare Adresse gilt als nicht
  * erlaubt; im Lesepfad entsteht dann kein iframe, sondern ein Platzhalter

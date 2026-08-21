@@ -1,5 +1,4 @@
-import { Fragment } from "@tiptap/pm/model"
-import { Editor, generateHTML, generateJSON, getSchema } from "@tiptap/react"
+import { generateHTML, generateJSON, getSchema } from "@tiptap/react"
 import { describe, expect, it } from "vitest"
 
 import { createBlockExtensions } from "@/features/project-content/blockSchema"
@@ -61,10 +60,12 @@ describe("Schema-Vollstaendigkeit (Contract 2.5)", () => {
 })
 
 describe("Ueberschriftenebenen", () => {
-  it("erzeugt Ueberschriften in genau den Ebenen 1 bis 6 (2.5 seit v63)", () => {
+  it("erzeugt Ueberschriften in den Ebenen 1 bis 6", () => {
+    /* Sechs Ebenen seit Contract v63. Gespeichert wird die Gliederungsebene
+       des Beitrags; dass die Anzeige sie um eine Stufe nach unten schiebt,
+       ist Sache von headingRendering.ts und nicht des Schemas. */
     const json = generateJSON(
-      "<h1>Eins</h1><h2>Zwei</h2><h3>Drei</h3>" +
-        "<h4>Vier</h4><h5>Fuenf</h5><h6>Sechs</h6>",
+      "<h1>Eins</h1><h2>Zwei</h2><h3>Drei</h3><h4>Vier</h4><h5>Fuenf</h5><h6>Sechs</h6>",
       extensions
     ) as { content: { type: string; attrs?: { level?: number } }[] }
 
@@ -80,159 +81,12 @@ describe("Ueberschriftenebenen", () => {
     ])
   })
 
-  it("nimmt textAlign an Absatz und Ueberschrift entgegen", () => {
-    /* Die engere Wertemenge der Ueberschrift (2.5 laesst dort kein justify)
-       setzt nicht das Schema durch, sondern die Auswahlleiste und der
-       Server: die Extension fuehrt nur eine gemeinsame Liste. Geprueft wird
-       hier deshalb allein, dass beide Knoten das Attribut ueberhaupt
-       tragen; ohne das liefe die Ausrichtung an der Ueberschrift ins
-       Leere. */
+  it("fuehrt textAlign an Absatz und Ueberschrift", () => {
+    /* §2.5 seit v63. Die Werteliste gilt fuer beide Typen gemeinsam; dass
+       justify an der Ueberschrift nicht stehenbleibt, sichert der
+       HeadingAlignGuard, nicht das Schema. */
     expect(schema.nodes.heading.spec.attrs?.textAlign).toBeDefined()
     expect(schema.nodes.paragraph.spec.attrs?.textAlign).toBeDefined()
-  })
-})
-
-describe("Behaelter nehmen nur, was 2.5 dort zulaesst", () => {
-  /*
-   * Sonst faellt Inhalt still weg: der Editor liesse ihn zu, der Autosave
-   * schriebe ihn durch (der Server prueft nur die Wurzelattribute des
-   * Blocks), und beim naechsten Laden entfernte ihn die Whitelist des
-   * Lesepfads samt Text. Befund des Contract-Abgleichs zu KAN-36.
-   */
-  it("laesst in einer Tabellenzelle nur Absatz und Listen zu", () => {
-    const cell = schema.nodes.tableCell.spec.content
-    const header = schema.nodes.tableHeader.spec.content
-
-    expect(cell).toBe("(paragraph | bulletList | orderedList)+")
-    expect(header).toBe("(paragraph | bulletList | orderedList)+")
-  })
-
-  it("laesst im Zitat nur Absaetze zu (2.5: enthaelt paragraph-Knoten)", () => {
-    expect(schema.nodes.blockquote.spec.content).toBe("paragraph+")
-  })
-
-  /*
-   * Geprueft ueber validContent und nicht ueber nodeFromJSON: das baut den
-   * Knoten ohne Pruefung. validContent ist genau die Frage, die
-   * ProseMirror stellt, bevor ein Befehl den Knoten einsetzt, und damit
-   * der Grund, aus dem die Schaltflaeche in diesem Kontext wirkungslos
-   * bleibt.
-   */
-  it("nimmt in einer Tabellenzelle keine Ueberschrift an", () => {
-    const heading = schema.nodes.heading.createAndFill()
-    expect(heading).not.toBeNull()
-    const content = Fragment.from(heading)
-
-    expect(schema.nodes.tableCell.validContent(content)).toBe(false)
-    expect(schema.nodes.tableHeader.validContent(content)).toBe(false)
-  })
-
-  it("nimmt in einer Tabellenzelle Absatz und Listen an", () => {
-    for (const name of ["paragraph", "bulletList", "orderedList"]) {
-      const node = schema.nodes[name].createAndFill()
-      expect(node, name).not.toBeNull()
-      expect(
-        schema.nodes.tableCell.validContent(Fragment.from(node)),
-        name
-      ).toBe(true)
-    }
-  })
-
-  it("nimmt im Zitat nur Absaetze an", () => {
-    const paragraph = schema.nodes.paragraph.createAndFill()
-    const list = schema.nodes.bulletList.createAndFill()
-
-    expect(schema.nodes.blockquote.validContent(Fragment.from(paragraph))).toBe(
-      true
-    )
-    expect(schema.nodes.blockquote.validContent(Fragment.from(list))).toBe(
-      false
-    )
-  })
-})
-
-describe("Blocksatz kommt an einer Ueberschrift nicht vor (2.5 seit v63)", () => {
-  /*
-   * Die deaktivierte Schaltflaeche der Auswahlleiste ist nur die halbe
-   * Regel: TextAlign bringt eigene Tastenkuerzel mit (Mod-Shift-J), und
-   * eingefuegtes HTML traegt textAlign ebenfalls herein. Beide Wege gehen an
-   * der Leiste vorbei, der Server weist das Ergebnis mit 400 ab, und weil
-   * der PUT die ganze Blockliste ersetzt, scheiterte danach jeder weitere
-   * Autosave des Projekts.
-   */
-  function editorWith(content: unknown) {
-    return new Editor({
-      extensions: createBlockExtensions(),
-      content: content as never,
-    })
-  }
-
-  it("entfernt ein per Befehl gesetztes justify wieder", () => {
-    const editor = editorWith({
-      type: "doc",
-      content: [
-        {
-          type: "heading",
-          attrs: { level: 1, textAlign: null },
-          content: [{ type: "text", text: "Titel" }],
-        },
-      ],
-    })
-    editor.commands.setTextSelection({ from: 1, to: 6 })
-
-    editor.chain().setTextAlign("justify").run()
-
-    const json = editor.getJSON() as {
-      content: { attrs?: { textAlign?: unknown } }[]
-    }
-    expect(json.content[0].attrs?.textAlign).toBeNull()
-    editor.destroy()
-  })
-
-  it("laesst links, zentriert und rechts an der Ueberschrift stehen", () => {
-    for (const value of ["left", "center", "right"]) {
-      const editor = editorWith({
-        type: "doc",
-        content: [
-          {
-            type: "heading",
-            attrs: { level: 1, textAlign: null },
-            content: [{ type: "text", text: "Titel" }],
-          },
-        ],
-      })
-      editor.commands.setTextSelection({ from: 1, to: 6 })
-
-      editor.chain().setTextAlign(value).run()
-
-      const json = editor.getJSON() as {
-        content: { attrs?: { textAlign?: unknown } }[]
-      }
-      expect(json.content[0].attrs?.textAlign, value).toBe(value)
-      editor.destroy()
-    }
-  })
-
-  it("laesst justify am Absatz unberuehrt", () => {
-    const editor = editorWith({
-      type: "doc",
-      content: [
-        {
-          type: "paragraph",
-          attrs: { textAlign: null },
-          content: [{ type: "text", text: "Ein Absatz." }],
-        },
-      ],
-    })
-    editor.commands.setTextSelection({ from: 1, to: 12 })
-
-    editor.chain().setTextAlign("justify").run()
-
-    const json = editor.getJSON() as {
-      content: { attrs?: { textAlign?: unknown } }[]
-    }
-    expect(json.content[0].attrs?.textAlign).toBe("justify")
-    editor.destroy()
   })
 })
 

@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import { isApiError, type ApiError } from "@/api/errors"
 import { replaceBlocks } from "@/api/queries/blocks"
-import type { BlocksResponse } from "@/api/types"
+import { isApiError, type ApiError } from "@/api/errors"
 import {
   docToBlocks,
   type PreviousBlock,
@@ -10,49 +9,29 @@ import {
 import type { ProjectDocument } from "@/features/project-content/blockTypes"
 
 /**
- * Der Speichertakt des Editors: entprellt, immer nur einer gleichzeitig,
- * und mit sichtbarem Zustand (Contract 6.1, 6.4).
+ * Der Speichertakt des Editors (Contract 6.1, 6.4).
  *
- * <p><strong>Vier Zusagen, und jede hat ihren Grund.</strong>
+ * <p><strong>Entprellt, und immer nur einer.</strong> Zwei ueberlappende
+ * Takte erzeugen zuverlaessig einen Versionskonflikt gegen sich selbst: der
+ * zweite geht mit der Version los, die der erste gerade veraltet hat.
+ * Waehrend ein Lauf offen ist, wird deshalb nur gemerkt, dass es wieder
+ * etwas zu tun gibt, und danach genau einmal nachgesetzt.
  *
- * <ol>
- *   <li><strong>Entprellt.</strong> Bei jedem Tastenanschlag zu senden
- *   erzeugte eine Anfrage je Zeichen und mit ihr eine neue
- *   {@code Project.version}; das Optimistic Locking aus 6.4 liefe damit
- *   staendig gegen sich selbst.</li>
- *   <li><strong>Nur einer gleichzeitig.</strong> Zwei ueberlappende Takte
- *   erzeugen zuverlaessig einen Versionskonflikt gegen die eigene Sitzung:
- *   der zweite tritt mit der Version an, die der erste gerade erhoeht. Ein
- *   laufender Takt setzt deshalb ein Flag, und die Aenderungen waehrend
- *   seiner Laufzeit gehen im naechsten mit.</li>
- *   <li><strong>{@code version} und IDs kommen aus der Antwort.</strong>
- *   Ohne die IDs schickt der naechste Takt dieselben Bloecke wieder ohne
- *   {@code id}, der Server legt sie neu an, und blockbezogene Kommentare
- *   waeren dauerhaft unmoeglich. Der Client zaehlt die Version nie selbst
- *   hoch.</li>
- *   <li><strong>409 wird nie automatisch wiederholt</strong>
- *   (Frontend-Regel 4, 6.4). Ein zweiter Versuch mit der frischen Version
- *   ueberschriebe genau die fremde Aenderung, vor der das Locking schuetzt.
- *   Der Takt haelt an und ueberlaesst die Entscheidung der Person.</li>
- * </ol>
+ * <p><strong>Die Antwort wird uebernommen.</strong> Sie traegt die neue
+ * {@code version} und die IDs der angelegten Bloecke. Ohne beides schickte
+ * der naechste Takt dieselben Bloecke wieder ohne {@code id}, der Server
+ * legte sie neu an, und blockbezogene Kommentare waeren dauerhaft
+ * unmoeglich.
  *
- * <p><strong>Ein stiller Fehlschlag ist Datenverlust mit Ansage.</strong>
- * Deshalb traegt jeder Zustand eine sichtbare Entsprechung
- * ({@code AutosaveStatus} mit {@code role="status"}), und deshalb meldet
- * dieser Hook den Fehler, statt ihn zu verschlucken.
+ * <p><strong>409 wird nie wiederholt</strong> (§6.4). Ein zweiter Versuch
+ * mit der neuen Version ueberschriebe genau die fremde Aenderung, vor der
+ * das Locking schuetzt. Der Takt bleibt danach stehen, bis die Seite neu
+ * geladen hat; alles Weitere entscheidet die Person am Bildschirm.
+ *
+ * <p><strong>Ein Fehlschlag ist sichtbar.</strong> Ein stiller ist
+ * Datenverlust mit Ansage: wer weiterschreibt, glaubt, es sei gespeichert.
  */
 
-/** Wartezeit nach der letzten Aenderung, bevor gesendet wird. */
-const DEBOUNCE_MS = 1500
-
-/**
- * Die Zustaende des Speichertakts.
- *
- * <p>{@code idle} heisst „seit dem Laden nichts geaendert" und zeigt nichts
- * an; erst ab der ersten Aenderung gibt es etwas zu melden.
- * {@code conflict} ist bewusst kein {@code error}: er verlangt eine
- * Entscheidung und nicht bloss einen weiteren Versuch.
- */
 export type AutosaveState =
   | "idle"
   | "pending"
@@ -61,42 +40,23 @@ export type AutosaveState =
   | "error"
   | "conflict"
 
-/**
- * Wie ein {@link Autosave.flush} ausgegangen ist.
- *
- * <p>{@code saved} heisst „nichts steht mehr aus". {@code conflict}
- * unterscheidet den Fall, in dem eine Entscheidung ansteht, von dem, in dem
- * ein weiterer Versuch hilft.
- */
-export type FlushResult = { saved: boolean; conflict: boolean }
+/** Eine Dreiviertelsekunde: lang genug, dass ein Wort nicht drei Takte ausloest. */
+const DEBOUNCE_MS = 1200
 
 export type Autosave = {
   state: AutosaveState
-  /** Der Fehler des letzten Fehlschlags, fuer die Meldung an der Seite. */
   error: ApiError | null
-  /**
-   * Es gibt Aenderungen, die noch nicht beim Server sind.
-   *
-   * <p>Auch nach einem Fehlschlag: dort ist der Verlust sogar
-   * wahrscheinlicher als im Normalfall, weil der letzte Speichervorgang
-   * gerade misslungen ist.
-   */
-  hasUnsavedChanges: boolean
-  /** Nach einer Aenderung im Dokument aufrufen. */
+  /** Meldet eine Aenderung an; der Takt entscheidet, wann gesendet wird. */
   schedule: () => void
   /**
-   * Sofort senden, ohne auf die Entprellung zu warten, und melden, wie es
-   * ausgegangen ist.
+   * Speichert sofort und wartet ab.
    *
-   * <p><strong>Das Ergebnis ist kein Beiwerk.</strong> Der Aufrufer reicht
-   * danach den Statuswechsel ein, und dafuer muss er wissen, ob wirklich
-   * alles beim Server ist. Ueber den Zustand ginge das nicht: der kommt
-   * ueber {@code setState} und steht nach dem Warten noch nicht im Rendern
-   * des Aufrufers.
+   * <p>Das Ergebnis kommt als Rueckgabewert und nicht ueber den Zustand:
+   * wer danach einreicht oder die Seite verlaesst, muss <em>wissen</em>, ob
+   * der letzte Stand drin ist, und ein Zustand aus dem vorigen Rendern
+   * beantwortet das nicht.
    */
-  flush: () => Promise<FlushResult>
-  /** Nach dem Neuladen im Konfliktfall: Version und IDs neu setzen. */
-  reset: (response: { version: number; blocks: PreviousBlock[] }) => void
+  flush: () => Promise<boolean>
 }
 
 export function useAutosave({
@@ -107,22 +67,13 @@ export function useAutosave({
   readDocument,
 }: {
   projectId: string
-  /**
-   * Ob ueberhaupt gespeichert werden darf. Falsch, solange der Status die
-   * Inhaltsbearbeitung sperrt (4.1) oder {@code dropped} nicht leer ist:
-   * der PUT ersetzt die Liste vollstaendig und loeschte die Bloecke, die
-   * der Client nicht lesen konnte.
-   */
+  /** Falsch heisst: nicht speichern (read-only Status oder Loecher im Bestand). */
   enabled: boolean
-  /** Stand aus der letzten Antwort (6.4). */
+  /** Version aus dem letzten Lesen; danach fuehrt der Hook sie selbst. */
   version: number
-  /** IDs und Typen aus der letzten Antwort, fuer den Upsert ueber die Position. */
+  /** Blockliste aus dem letzten Lesen, fuer die stabilen IDs. */
   blocks: readonly PreviousBlock[]
-  /**
-   * Liefert das aktuelle Dokument. Als Funktion und nicht als Wert, damit
-   * der Hook nicht bei jedem Tastenanschlag neu gerendert wird: der Editor
-   * meldet die Aenderung, gelesen wird sie erst beim Senden.
-   */
+  /** Liefert den aktuellen Stand der Schreibflaeche. */
   readDocument: () => ProjectDocument | null
 }): Autosave {
   const [state, setState] = useState<AutosaveState>("idle")
@@ -131,242 +82,157 @@ export function useAutosave({
   const versionRef = useRef(version)
   const previousRef = useRef<readonly PreviousBlock[]>(blocks)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const inFlightRef = useRef(false)
-  /* Waehrend eines laufenden Takts eingegangene Aenderungen. Sie gehen im
-     naechsten mit, statt einen zweiten Takt daneben zu starten. */
-  const dirtyRef = useRef(false)
-  /* Nach einem Konflikt wird nicht mehr von selbst gesendet, bis die Person
-     entschieden hat. */
-  const haltedRef = useRef(false)
+  const runningRef = useRef<Promise<boolean> | null>(null)
+  const againRef = useRef(false)
+  const stoppedRef = useRef(false)
+  /* Was zuletzt tatsaechlich beim Server ankam. Verhindert einen Takt, der
+     nichts aendert, etwa nach einer blossen Auswahlbewegung. */
+  const savedRef = useRef<string | null>(null)
+
   /*
-   * Der laufende Takt als Versprechen. {@link Autosave.flush} braucht ihn:
-   * ohne ihn kaeme es aus einem Aufruf zurueck, waehrend noch etwas
-   * unterwegs ist, und das Einreichen liefe gegen den eigenen Speichervorgang.
+   * Die zuletzt gelesene Blockliste, in jedem Rendern nachgefuehrt. Sie
+   * darf nicht in den Abhaengigkeiten des Ruecksetzers stehen: der
+   * Aufrufer reicht sie mit einem Rueckfall auf die leere Liste herein,
+   * und der ist bei jedem Rendern ein neues Array. Der Ruecksetzer liefe
+   * dann dauernd, wuerfe die uebernommene Version wieder weg und schickte
+   * den naechsten Takt mit einer veralteten Version los.
    */
-  const runningRef = useRef<Promise<void> | null>(null)
-  /** Laufende Nummer der Takte, siehe finally in {@link send}. */
-  const runCounterRef = useRef(0)
+  const latestBlocks = useRef(blocks)
+  useEffect(() => {
+    latestBlocks.current = blocks
+  })
 
-  /* Die zuletzt gesehene Requisite, um eine frisch gelesene Serverfassung
-     von einem blossen Rendern zu unterscheiden. */
-  const lastPropVersionRef = useRef(version)
-
-  /**
-   * Eine <em>frisch gelesene</em> Serverfassung gewinnt gegen den Ref.
+  /*
+   * Ein neues Lesen (erster Abruf, Neuladen nach Konflikt) setzt den Takt
+   * zurueck: Version und IDs sind danach andere.
    *
-   * <p><strong>Erkannt wird sie an der Version</strong>, und das ist der
-   * Kern der Sache. Nach dem ersten Takt traegt der Ref die Version aus der
-   * Antwort, waehrend die Requisite noch die alte aus der Query traegt: der
-   * Takt laedt die Query bewusst nicht neu, weil das die Schreibflaeche
-   * unter den Fingern austauschte. Liefe die Zuweisung bei jedem Rendern,
-   * fiele der Ref auf die veraltete Version zurueck, und der naechste Takt
-   * liefe mit ihr in einen Versionskonflikt gegen die eigene Sitzung.
-   *
-   * <p>Ueber die Identitaet der Blockliste laesst sich das nicht
-   * entscheiden: sie ist je nach Aufrufer bei jedem Rendern ein neues
-   * Array. Die Version dagegen wechselt genau dann, wenn wirklich etwas
-   * gelesen wurde: beim ersten Eintreffen der Antwort und nach jedem
-   * Neuladen.
+   * <p>Erkannt wird es an der {@code version} und nicht an der Liste. Sie
+   * ist der Stand des Projekts (§6.4): eine andere Version heisst eine
+   * andere Antwort, und dieselbe Version heisst dieselbe Liste. Effekte
+   * laufen in der Reihenfolge ihrer Deklaration, die Liste oben ist also
+   * bereits nachgefuehrt.
    */
   useEffect(() => {
-    if (lastPropVersionRef.current === version) {
-      return
-    }
-    lastPropVersionRef.current = version
-    if (!inFlightRef.current) {
-      versionRef.current = version
-      previousRef.current = blocks
-    }
-  }, [version, blocks])
+    versionRef.current = version
+    previousRef.current = latestBlocks.current
+    savedRef.current = null
+    stoppedRef.current = false
+  }, [version])
 
-  /**
-   * Ein Takt, und danach so lange weitere, wie waehrenddessen geschrieben
-   * wurde.
-   *
-   * <p><strong>Die Schleife ersetzt einen Nachlauf-Aufruf</strong>, und das
-   * ist kein Umbau um seiner selbst willen: nur so gibt es <em>ein</em>
-   * Versprechen, das den gesamten ausstehenden Stand abdeckt.
-   * {@link Autosave.flush} wartet darauf, bevor eingereicht wird. Mit einem
-   * Nachlauf-Aufruf haette jeder Durchgang sein eigenes Versprechen, und das
-   * Einreichen liefe gegen den zweiten.
-   *
-   * <p>{@code dirtyRef} wird <strong>vor</strong> dem Warten
-   * zurueckgesetzt, damit eine Aenderung waehrend der Anfrage nicht
-   * verlorengeht, sondern den naechsten Durchgang ausloest.
-   */
-  const send = useCallback(async (): Promise<FlushResult> => {
-    if (inFlightRef.current) {
-      /* Es laeuft schon einer, und der nimmt den frischen Stand mit. */
-      dirtyRef.current = true
-      await runningRef.current
-      return {
-        saved: !dirtyRef.current && !haltedRef.current,
-        conflict: haltedRef.current,
+  const save = useCallback(async (): Promise<boolean> => {
+    const document = readDocument()
+    if (document === null || !enabled || stoppedRef.current) {
+      return false
+    }
+
+    const payload = docToBlocks(document, previousRef.current)
+    const fingerprint = JSON.stringify(payload)
+    if (fingerprint === savedRef.current) {
+      setState("saved")
+      return true
+    }
+
+    setState("saving")
+    try {
+      const response = await replaceBlocks(
+        projectId,
+        versionRef.current,
+        payload
+      )
+      versionRef.current = response.version
+      previousRef.current = response.blocks
+      savedRef.current = fingerprint
+      setError(null)
+      setState("saved")
+      return true
+    } catch (saveError) {
+      if (!isApiError(saveError)) {
+        throw saveError
       }
-    }
-    if (haltedRef.current) {
-      return { saved: false, conflict: true }
-    }
-    if (!enabled) {
-      /* Es gibt nichts zu speichern, weil nichts geschrieben werden darf. */
-      return { saved: true, conflict: false }
-    }
-
-    inFlightRef.current = true
-    /*
-     * Eine laufende Nummer statt eines Vergleichs mit dem Versprechen
-     * selbst: das finally soll den Ref nur aufraeumen, wenn seither kein
-     * neuer Lauf begonnen hat. Endet der Lauf synchron, liefe sein finally
-     * sonst vor der Zuweisung unten, und der Ref behauptete danach, es
-     * laufe etwas.
-     */
-    const runId = (runCounterRef.current += 1)
-    let outcome: FlushResult = { saved: true, conflict: false }
-    const run = (async () => {
-      try {
-        do {
-          const document = readDocument()
-          if (document === null || !enabled || haltedRef.current) {
-            outcome = {
-              saved: !haltedRef.current,
-              conflict: haltedRef.current,
-            }
-            return
-          }
-          dirtyRef.current = false
-          setState("saving")
-
-          try {
-            const response: BlocksResponse = await replaceBlocks(projectId, {
-              version: versionRef.current,
-              blocks: docToBlocks(document, previousRef.current),
-            })
-            versionRef.current = response.version
-            previousRef.current = response.blocks.map((block) => ({
-              id: block.id,
-              type: block.type,
-            }))
-            setError(null)
-          } catch (caught) {
-            const apiError = isApiError(caught) ? caught : null
-            setError(apiError)
-            if (apiError?.errorCode === "PROJECT_VERSION_CONFLICT") {
-              /* Nicht wiederholen (6.4). Der Takt haelt an; weiter geht es
-                 erst nach dem Neuladen ueber reset(). */
-              haltedRef.current = true
-              setState("conflict")
-              outcome = { saved: false, conflict: true }
-            } else {
-              setState("error")
-              outcome = { saved: false, conflict: false }
-            }
-            return
-          }
-        } while (dirtyRef.current && !haltedRef.current)
-
-        setState("saved")
-        outcome = { saved: true, conflict: false }
-      } finally {
-        inFlightRef.current = false
-        if (runCounterRef.current === runId) {
-          runningRef.current = null
-        }
+      setError(saveError)
+      if (saveError.errorCode === "PROJECT_VERSION_CONFLICT") {
+        /* Kein zweiter Versuch, und auch kein weiterer Takt: jeder
+           folgende traefe denselben Konflikt (§6.4). */
+        stoppedRef.current = true
+        setState("conflict")
+      } else {
+        setState("error")
       }
-    })()
-
-    runningRef.current = run
-    await run
-    return outcome
+      return false
+    }
   }, [enabled, projectId, readDocument])
 
+  const run = useCallback((): Promise<boolean> => {
+    if (runningRef.current !== null) {
+      /* Waehrend eines Laufs wird nur gemerkt, dass danach noch einmal
+         gesendet werden muss. */
+      againRef.current = true
+      return runningRef.current
+    }
+    /*
+     * Als Schleife und nicht als Rekursion: „waehrenddessen kam noch etwas
+     * dazu" kann beliebig oft eintreten, und ein Aufruf, der sich selbst
+     * aus seinem eigenen finally heraus startet, waechst mit jeder Runde um
+     * eine Ebene im Stapel.
+     */
+    const execute = async (): Promise<boolean> => {
+      let result = await save()
+      while (againRef.current && !stoppedRef.current) {
+        againRef.current = false
+        result = await save()
+      }
+      return result
+    }
+    const running = execute().finally(() => {
+      runningRef.current = null
+    })
+    runningRef.current = running
+    return running
+  }, [save])
+
   const schedule = useCallback(() => {
-    if (!enabled || haltedRef.current) {
+    if (!enabled || stoppedRef.current) {
       return
     }
-    dirtyRef.current = true
     setState((current) => (current === "saving" ? current : "pending"))
     if (timerRef.current !== null) {
       clearTimeout(timerRef.current)
     }
     timerRef.current = setTimeout(() => {
       timerRef.current = null
-      void send()
+      void run()
     }, DEBOUNCE_MS)
-  }, [enabled, send])
+  }, [enabled, run])
 
-  /**
-   * Sofort senden und abwarten, dass nichts mehr aussteht.
-   *
-   * <p><strong>Auch dann, wenn gerade schon gesendet wird.</strong> Genau
-   * daran haengt das Einreichen: {@code EditorPage} ruft {@code flush} und
-   * schickt danach den Statuswechsel. Kaeme {@code flush} zurueck, waehrend
-   * noch ein Takt unterwegs ist, traefe der Statuswechsel den Server
-   * womoeglich vor dem letzten Speichervorgang, und der schluege dann mit
-   * 409 {@code PROJECT_STATUS_NOT_EDITABLE} fehl: eingereicht waere ein
-   * Stand, den niemand so gesehen hat.
-   */
-  const flush = useCallback(async (): Promise<FlushResult> => {
+  const flush = useCallback(async (): Promise<boolean> => {
     if (timerRef.current !== null) {
       clearTimeout(timerRef.current)
       timerRef.current = null
     }
-    /*
-     * Nichts zu tun heisst nichts zu senden. Ohne diese Schranke schriebe
-     * jedes Einreichen die komplette Blockliste neu und erhoehte
-     * Project.version ohne fachlichen Anlass (6.4).
-     */
-    if (!dirtyRef.current && !inFlightRef.current) {
-      return { saved: !haltedRef.current, conflict: haltedRef.current }
+    if (!enabled || stoppedRef.current) {
+      /* Nichts zu speichern ist kein Fehlschlag: eine read-only Flaeche hat
+         keinen offenen Stand. */
+      return !stoppedRef.current
     }
-    return send()
-  }, [send])
+    return run()
+  }, [enabled, run])
 
-
-  const reset = useCallback(
-    (response: { version: number; blocks: PreviousBlock[] }) => {
-      /* Ein noch offener Zeitgeber schickte sonst gleich nach dem Neuladen
-         den verworfenen Stand hinterher. */
-      if (timerRef.current !== null) {
-        clearTimeout(timerRef.current)
-        timerRef.current = null
-      }
-      versionRef.current = response.version
-      previousRef.current = response.blocks
-      lastPropVersionRef.current = response.version
-      haltedRef.current = false
-      dirtyRef.current = false
-      setError(null)
-      setState("idle")
-    },
-    []
-  )
-
-  /* Ein laufender Zeitgeber ueberlebt die Komponente nicht: sonst schickt
-     eine verlassene Seite noch einen Takt hinterher. */
+  /*
+   * Ein offener Takt wird beim Abraeumen noch angestossen. Ob er den Server
+   * erreicht, haengt daran, ob die Schreibflaeche zu diesem Zeitpunkt noch
+   * steht; darauf verlaesst sich niemand. Die Wege aus der Seite heraus
+   * (Zurueck, Vorschau, Einreichen) rufen vorher ausdruecklich flush() und
+   * warten dessen Ergebnis ab.
+   */
   useEffect(() => {
     return () => {
       if (timerRef.current !== null) {
         clearTimeout(timerRef.current)
+        timerRef.current = null
+        void run()
       }
     }
-  }, [])
+  }, [run])
 
-  return {
-    state,
-    error,
-    /*
-     * "error" zaehlt mit: dirtyRef steht dort weiter auf true, und der
-     * bewachte Weg zurueck soll gerade dann fragen. "conflict" zaehlt
-     * bewusst nicht mit: der Takt ist angehalten, ein Speichern gaebe es
-     * nicht mehr, und ein Dialog mit der Schaltflaeche "Speichern und
-     * verlassen" verspraeche etwas, das er nicht halten kann. Diesen Fall
-     * traegt der Konfliktdialog, der ausdruecklich sagt, dass die eigene
-     * Fassung nicht gespeichert wird.
-     */
-    hasUnsavedChanges:
-      state === "pending" || state === "saving" || state === "error",
-    schedule,
-    flush,
-    reset,
-  }
+  return { state, error, schedule, flush }
 }

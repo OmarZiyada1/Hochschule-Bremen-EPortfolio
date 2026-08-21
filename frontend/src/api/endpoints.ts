@@ -28,20 +28,18 @@ export const apiPaths = {
     list: "/api/projects",
     detail: (projectId: string) => `/api/projects/${projectId}`,
     /*
-     * Inhalt eines Projekts lesen (GET) und vollstaendig ersetzen (PUT),
-     * §6.1, eingetragen mit ihrem ersten Verwender KAN-36.
+     * Der Inhalt des Projekts (§6.1, KAN-36). GET liest die Blockliste, PUT
+     * ersetzt sie vollstaendig und antwortet mit { version, blocks }.
      *
-     * Ein Pfad fuer beide Richtungen, und getrennt von detail: Metadaten und
-     * Inhalt bleiben zwei Ressourcen (§6.1). Wer den Titel aendert, schickt
-     * nicht den ganzen Beitrag mit, und der Autosave des Editors laesst die
-     * Metadatenkarte unberuehrt. Die Antwort beider Richtungen traegt die
-     * version fuer den naechsten schreibenden Request (§6.4).
+     * Bewusst ein eigener Pfad neben detail: Metadaten und Inhalt bleiben
+     * getrennt (§6.1), im Server wie im Client. Ein gemeinsamer Endpoint
+     * machte aus jedem Tastenanschlag im Editor eine Metadatenaenderung.
      */
     blocks: (projectId: string) => `/api/projects/${projectId}/blocks`,
     /*
-     * Einreichen (§4.1 Zeile „Einreichen", KAN-36). DRAFT und REVISION
-     * gehen nach SUBMITTED; ein unvollstaendiges Projekt ergibt 400
-     * PROJECT_INCOMPLETE mit den fehlenden Feldern aus §3.3.
+     * Einreichen (§4.1, §6.1). Die Gegenrichtung ist withdraw; beide sind
+     * Statuswechsel und stehen deshalb hier und nicht unter einem
+     * gemeinsamen "workflow"-Schluessel: der Pfad ist die Aktion.
      */
     submit: (projectId: string) => `/api/projects/${projectId}/submit`,
     /*

@@ -174,7 +174,8 @@ describe("Marks", () => {
   })
 
   it("nimmt bei textStyle und highlight nur bekannte Rollennamen", () => {
-    /* Neun seit Contract v63; brown, orange, purple und pink kamen dazu. */
+    /* Neun seit Contract v63; brown, orange, purple und pink sind mit
+       KAN-36 dazugekommen. */
     for (const color of [
       "neutral",
       "brown",
@@ -208,8 +209,9 @@ describe("Marks", () => {
       "rgb(255,0,0)",
       primitiveAusdruck,
       "url(x)",
-      /* Bis v62 stand hier "orange" als Gegenprobe. Der Name ist seit v63
-         eine gueltige Rolle; "teal" steht in keiner Fassung der Palette. */
+      /* Bewusst nicht "orange" oder "purple": beide sind seit v63 Rollen.
+         Der Fall braucht ein Farbwort, das keine ist, sonst prueft er ab
+         der naechsten Palettenerweiterung stillschweigend nichts mehr. */
       "teal",
       "",
       null,
@@ -244,25 +246,12 @@ describe("Marks", () => {
 })
 
 describe("Attribute und Knotengrammatik", () => {
-  it("laesst die Ebenen 1 bis 6 unveraendert (2.5 seit v63)", () => {
-    for (const level of [1, 2, 3, 4, 5, 6] as const) {
-      const result = sanitized({
-        type: "heading",
-        attrs: { level },
-        content: [],
-      })
-      const node = result.node.type === "heading" ? result.node : null
-      expect(node?.attrs.level, String(level)).toBe(level)
-      expect(result.normalizations, String(level)).not.toContain(
-        "HEADING_LEVEL_CLAMPED"
-      )
-    }
-  })
-
   it("klemmt eine Ueberschriftenebene ausserhalb von 1 bis 6", () => {
+    /* Sechs Ebenen seit Contract v63. Geklemmt und nicht verworfen: der
+       Text der Ueberschrift ist Inhalt, ihre Ebene ist Gliederung. */
     for (const [given, expected] of [
       [0, 1],
-      [-3, 1],
+      [-1, 1],
       [7, 6],
       [12, 6],
     ] as const) {
@@ -275,46 +264,6 @@ describe("Attribute und Knotengrammatik", () => {
       expect(node?.attrs.level, String(given)).toBe(expected)
       expect(result.normalizations).toContain("HEADING_LEVEL_CLAMPED")
     }
-  })
-
-  it("verwirft justify an der Ueberschrift und vermerkt es", () => {
-    const result = sanitized({
-      type: "heading",
-      attrs: { level: 2, textAlign: "justify" },
-      content: [],
-    })
-    const node = result.node.type === "heading" ? result.node : null
-
-    expect(node?.attrs.textAlign).toBeNull()
-    expect(result.normalizations).toContain("HEADING_ALIGN_DROPPED")
-  })
-
-  it("laesst links, zentriert und rechts an der Ueberschrift stehen", () => {
-    for (const textAlign of ["left", "center", "right"] as const) {
-      const result = sanitized({
-        type: "heading",
-        attrs: { level: 2, textAlign },
-        content: [],
-      })
-      const node = result.node.type === "heading" ? result.node : null
-
-      expect(node?.attrs.textAlign, textAlign).toBe(textAlign)
-      expect(result.normalizations, textAlign).not.toContain(
-        "HEADING_ALIGN_DROPPED"
-      )
-    }
-  })
-
-  it("laesst justify am Absatz stehen: die Schranke gilt nur an der Ueberschrift", () => {
-    const result = sanitized({
-      type: "paragraph",
-      attrs: { textAlign: "justify" },
-      content: [],
-    })
-    const node = result.node.type === "paragraph" ? result.node : null
-
-    expect(node?.attrs?.textAlign).toBe("justify")
-    expect(result.normalizations).not.toContain("HEADING_ALIGN_DROPPED")
   })
 
   it("nimmt textAlign nur mit einem der vier Werte", () => {
@@ -332,6 +281,47 @@ describe("Attribute und Knotengrammatik", () => {
       const paragraph = node.type === "paragraph" ? node : null
       expect(paragraph?.attrs?.textAlign, given).toBe(expected)
     }
+  })
+
+  it("nimmt textAlign an der Ueberschrift ohne Blocksatz", () => {
+    /* §2.5 seit v63: left, center und right, aber kein justify. Blocksatz
+       an einer ein- oder zweizeiligen Ueberschrift zerreisst den Zeilenfall,
+       ohne einen Satzspiegel zu gewinnen. */
+    for (const [given, expected] of [
+      ["left", "left"],
+      ["center", "center"],
+      ["right", "right"],
+      ["justify", null],
+      ["middle", null],
+    ] as const) {
+      const { node } = sanitized({
+        type: "heading",
+        attrs: { level: 2, textAlign: given },
+        content: [],
+      })
+      const heading = node.type === "heading" ? node : null
+      expect(heading?.attrs.textAlign, given).toBe(expected)
+    }
+  })
+
+  it("vermerkt den entfernten Blocksatz an der Ueberschrift", () => {
+    /* Der Wert war einmal gesetzt und ist seit v63 unzulaessig; ihn
+       stillschweigend fallen zu lassen hiesse, eine sichtbare Aenderung zu
+       verschweigen. Ein Wort, das gar keine Ausrichtung ist, war dagegen
+       nie Inhalt und wird nicht vermerkt. */
+    const removed = sanitized({
+      type: "heading",
+      attrs: { level: 2, textAlign: "justify" },
+      content: [],
+    })
+    expect(removed.normalizations).toContain("HEADING_JUSTIFY_REMOVED")
+
+    const nonsense = sanitized({
+      type: "heading",
+      attrs: { level: 2, textAlign: "middle" },
+      content: [],
+    })
+    expect(nonsense.normalizations).not.toContain("HEADING_JUSTIFY_REMOVED")
   })
 
   it("entfernt colwidth an Tabellenzellen und behaelt colspan und rowspan", () => {

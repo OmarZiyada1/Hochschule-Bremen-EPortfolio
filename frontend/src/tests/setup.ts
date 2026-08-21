@@ -64,40 +64,6 @@ if (!document.elementFromPoint) {
   document.elementFromPoint = () => null
 }
 
-/*
- * jsdom kennt getClientRects nicht. ProseMirror fragt es bei jeder
- * Auswahlaenderung ab, um die Blase der Auswahlleiste zu setzen; ohne
- * diesen Ersatz wirft ein Editor, dessen View wirklich im Dokument haengt,
- * beim ersten Fokus einen unbehandelten TypeError. Der bricht keinen
- * einzelnen Testfall, laesst aber den ganzen Lauf mit Exit-Code 1 enden.
- * Der Ersatz meldet "kein Rechteck": Layoutmasse liefert jsdom ohnehin
- * nicht, und keine Zusage dieses Projekts haengt daran.
- */
-if (!Element.prototype.getClientRects) {
-  Element.prototype.getClientRects = function getClientRects() {
-    return Object.assign([], { item: () => null }) as unknown as DOMRectList
-  }
-}
-if (!Range.prototype.getClientRects) {
-  Range.prototype.getClientRects = function getClientRects() {
-    return Object.assign([], { item: () => null }) as unknown as DOMRectList
-  }
-}
-if (!Range.prototype.getBoundingClientRect) {
-  Range.prototype.getBoundingClientRect = () =>
-    ({
-      x: 0,
-      y: 0,
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      width: 0,
-      height: 0,
-      toJSON: () => ({}),
-    }) as DOMRect
-}
-
 /* Testing Library raeumt nur automatisch auf, wenn die globalen Hooks
    aktiv sind. Dieses Projekt importiert die Testfunktionen ausdruecklich,
    also wird auch das Aufraeumen ausdruecklich angemeldet. */

@@ -729,7 +729,7 @@ class ProjectReadIntegrationTest {
 					.andExpect(jsonPath("$.blocks.length()").value(2))
 					.andExpect(jsonPath("$.blocks[0].type").value("HEADING"))
 					.andExpect(jsonPath("$.blocks[0].orderIndex").value(0))
-					// Seit Contract v63 die 3 (§2.10, KAN-36): der Lesepfad meldet
+					// Seit Contract v63 die 3 (§2.10): der Lesepfad meldet
 					// die aktuelle Schemaversion, in die er den Inhalt bringt.
 					.andExpect(jsonPath("$.blocks[0].schemaVersion")
 							.value(BlockSchemaMigration.CURRENT_VERSION))

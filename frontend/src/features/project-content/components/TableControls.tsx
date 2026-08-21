@@ -1,8 +1,8 @@
-import { useEditorState, type Editor } from "@tiptap/react"
-import { BubbleMenu } from "@tiptap/react/menus"
+import type { Editor } from "@tiptap/react"
 import { TableIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,125 +12,95 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 /**
- * Die Tabellenbedienung: Zeilen und Spalten, Kopfzeile, Zellen verbinden
- * und teilen (Contract 2.5, Blocktyp TABLE).
+ * Die Tabellenbedienung (Contract 2.5).
  *
- * <p>Sie erscheint als eigene Blase, sobald der Cursor in einer Tabelle
- * steht, und verschwindet danach. Die Auswahlleiste bleibt daneben
- * zustaendig: eine Tabellenzelle traegt Absaetze und Listen und darf alle
- * Marks aus 2.5, also ist das Formatieren dort dasselbe wie im Fliesstext.
+ * <p><strong>Sie erscheint nur, wenn der Cursor in einer Tabelle
+ * steht</strong>, und dann an einer festen Stelle ueber der Schreibflaeche.
+ * Eine Bedienung, die an der Tabelle klebt, muesste bei jedem
+ * Zellenwechsel neu vermessen werden und stuende bei einer breiten Tabelle
+ * ausserhalb des Sichtfelds.
  *
- * <p><strong>{@code resizable: false} bleibt.</strong> Die Einstellung
- * steht in {@code blockSchema.ts}; mit {@code true} schriebe Tiptap
- * {@code colwidth} in jede Zelle, und ein Umschalten braeuchte danach eine
- * weitere Schemamigration nach 2.10. Deshalb gibt es hier keine
- * Spaltenbreite.
+ * <p>Es ist ein Menue und keine Leiste: zehn Vorgaenge nebeneinander als
+ * Symbole waeren zehn Symbole, die niemand auseinanderhaelt. Im Menue steht
+ * neben jedem Eintrag, was er tut.
  *
- * <p><strong>Kopfzellen sind {@code th} mit {@code scope}</strong>, und das
- * ist keine Kosmetik: ohne die Zuordnung liest ein Screenreader eine
- * Tabelle als Folge zusammenhangloser Zellen (SC 1.3.1). Der Renderer setzt
- * {@code scope} aus der Stellung der Zelle; die Bedienung hier schaltet nur
- * um, welche Zeile beziehungsweise Spalte eine Kopfzeile ist.
+ * <p>Kopfzellen sind {@code th} mit {@code scope}, {@code colspan} und
+ * {@code rowspan} laufen unveraendert durch das Schema. Die Groesse der
+ * Spalten wird nicht gespeichert ({@code resizable: false}), sonst schriebe
+ * Tiptap {@code colwidth} in jede Zelle, und das braeuchte eine weitere
+ * Schemaversion.
  */
-export function TableControls({ editor }: { editor: Editor }) {
+export function TableControls({
+  editor,
+  disabled,
+}: {
+  editor: Editor
+  disabled: boolean
+}) {
   const { t } = useTranslation()
 
-  const inTable = useEditorState({
-    editor,
-    selector: ({ editor: current }) =>
-      current !== null && !current.isDestroyed && current.isActive("table"),
-  })
-
-  const run = (action: (chain: ReturnType<Editor["chain"]>) => void) => () => {
-    const chain = editor.chain().focus()
-    action(chain)
-  }
+  const actions: readonly {
+    key: string
+    run: () => void
+    separated?: boolean
+  }[] = [
+    {
+      key: "addRowBefore",
+      run: () => editor.chain().focus().addRowBefore().run(),
+    },
+    {
+      key: "addRowAfter",
+      run: () => editor.chain().focus().addRowAfter().run(),
+    },
+    { key: "deleteRow", run: () => editor.chain().focus().deleteRow().run() },
+    {
+      key: "addColumnBefore",
+      run: () => editor.chain().focus().addColumnBefore().run(),
+      separated: true,
+    },
+    {
+      key: "addColumnAfter",
+      run: () => editor.chain().focus().addColumnAfter().run(),
+    },
+    {
+      key: "deleteColumn",
+      run: () => editor.chain().focus().deleteColumn().run(),
+    },
+    {
+      key: "toggleHeaderRow",
+      run: () => editor.chain().focus().toggleHeaderRow().run(),
+      separated: true,
+    },
+    {
+      key: "mergeCells",
+      run: () => editor.chain().focus().mergeCells().run(),
+    },
+    { key: "splitCell", run: () => editor.chain().focus().splitCell().run() },
+    {
+      key: "deleteTable",
+      run: () => editor.chain().focus().deleteTable().run(),
+      separated: true,
+    },
+  ]
 
   return (
-    <BubbleMenu
-      editor={editor}
-      pluginKey="tableControls"
-      shouldShow={({ editor: current }) =>
-        current.isEditable && current.isActive("table")
-      }
-      options={{ placement: "top-start", offset: 8 }}
-    >
-      {inTable && (
-        <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-control border border-border bg-popover px-2 py-1 text-sm font-medium shadow-md outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/50">
-            <TableIcon aria-hidden="true" className="size-3.5" />
-            {t("projectContent.table.controls")}
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-auto min-w-56">
-            <DropdownMenuItem
-              onClick={run((chain) => chain.addRowBefore().run())}
-            >
-              {t("projectContent.table.addRowBefore")}
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={<Button variant="outline" size="sm" disabled={disabled} />}
+      >
+        <TableIcon aria-hidden="true" />
+        {t("projectContent.table.controls")}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-auto min-w-56">
+        {actions.map((action) => (
+          <div key={action.key}>
+            {action.separated === true && <DropdownMenuSeparator />}
+            <DropdownMenuItem onClick={action.run}>
+              {t(`projectContent.table.action.${action.key}`)}
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={run((chain) => chain.addRowAfter().run())}
-            >
-              {t("projectContent.table.addRowAfter")}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={run((chain) => chain.deleteRow().run())}>
-              {t("projectContent.table.deleteRow")}
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem
-              onClick={run((chain) => chain.addColumnBefore().run())}
-            >
-              {t("projectContent.table.addColumnBefore")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={run((chain) => chain.addColumnAfter().run())}
-            >
-              {t("projectContent.table.addColumnAfter")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={run((chain) => chain.deleteColumn().run())}
-            >
-              {t("projectContent.table.deleteColumn")}
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem
-              onClick={run((chain) => chain.toggleHeaderRow().run())}
-            >
-              {t("projectContent.table.toggleHeaderRow")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={run((chain) => chain.toggleHeaderColumn().run())}
-            >
-              {t("projectContent.table.toggleHeaderColumn")}
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem
-              onClick={run((chain) => chain.mergeCells().run())}
-            >
-              {t("projectContent.table.mergeCells")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={run((chain) => chain.splitCell().run())}
-            >
-              {t("projectContent.table.splitCell")}
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={run((chain) => chain.deleteTable().run())}
-            >
-              {t("projectContent.table.deleteTable")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-    </BubbleMenu>
+          </div>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

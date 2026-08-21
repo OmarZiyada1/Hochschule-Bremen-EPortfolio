@@ -1,10 +1,9 @@
-import { Node, ReactNodeViewRenderer, mergeAttributes } from "@tiptap/react"
+import { mergeAttributes, Node } from "@tiptap/react"
 
 import {
   numberAttribute,
   textAttribute,
 } from "@/features/project-content/extensions/attributes"
-import { MediaNodeView } from "@/features/project-content/extensions/MediaNodeView"
 
 /**
  * EMBED (Contract 2.5): eine Einbettung eines der fuenf zugelassenen
@@ -45,18 +44,5 @@ export const EmbedBlock = Node.create({
       "div",
       mergeAttributes(HTMLAttributes, { "data-type": "embed-block" }),
     ]
-  },
-
-  /**
-   * Die Ansicht auf der Schreibflaeche (KAN-36).
-   *
-   * <p>Ohne sie stuende hier ein leeres Element: {@link renderHTML} gibt die
-   * Attribute aus, aber keinen Inhalt, weil die Anzeige im Lesepfad ueber
-   * einen eigenen JSON-Renderer laeuft. Beim Schreiben waere der Block damit
-   * unsichtbar. Was die Ansicht zeigt und was bewusst nicht, steht in
-   * {@code MediaNodeView}.
-   */
-  addNodeView() {
-    return ReactNodeViewRenderer(MediaNodeView)
   },
 })

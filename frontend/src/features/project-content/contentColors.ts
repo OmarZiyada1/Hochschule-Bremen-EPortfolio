@@ -9,37 +9,28 @@
  * sich nachtraeglich nur per Migration aendern.
  *
  * <p>Diese Datei ist die einzige Stelle, an der Rollenname und Token
- * zusammenstehen. Der Farbwaehler der Auswahlleiste (KAN-36) und der
- * Renderer lesen sie von hier; eine gleichnamige Datei unter einem anderen
- * Pfad waere eine zweite Wahrheit. Sichtbar wird die Farbe ueber das
- * Attribut {@code data-color} und die Regeln in
- * {@code styles/project-content.css}: dieselbe Regel traegt den Renderer und
- * die Schreibflaeche des Editors, deren DOM aus Tiptap kommt und keine
- * Utility-Klassen kennt.
+ * zusammenstehen. Der Farbwaehler der Auswahlleiste und der Renderer lesen
+ * sie von hier; eine gleichnamige Datei unter einem anderen Pfad waere eine
+ * zweite Wahrheit. Sichtbar wird die Farbe ueber das Attribut
+ * {@code data-color} und die Regeln in {@code styles/project-content.css}:
+ * dieselbe Regel traegt den Renderer und die Schreibflaeche des Editors,
+ * deren DOM aus Tiptap kommt und keine Utility-Klassen kennt.
  *
- * <p><strong>Achtzehn Token und nicht siebenundzwanzig:</strong> die Schrift
- * auf einer Hervorhebung bleibt {@code --foreground}. Trifft eine Textfarbe
- * auf eine Hervorhebung, ist der Kontrast nicht zugesichert; die
- * Auswahlleiste setzt je Auswahl entweder Farbe oder Hervorhebung und
- * entfernt die andere Mark.
- *
- * <p><strong>Vier Rollen sind mit Contract v63 dazugekommen</strong>
- * ({@code brown}, {@code orange}, {@code purple}, {@code pink}). Eine
- * erweiterte Palette laesst nur mehr zu und entwertet nichts: gespeicherte
- * Dokumente sind nicht betroffen, und es braucht dafuer keine
- * Schemamigration. Die vier neuen Rampen stehen in
- * {@code styles/tokens/tokens.css}, ihre gemessenen Kontraste im Kommentar
- * dort.
+ * <p>Achtzehn Rollen und nicht siebenundzwanzig: die Schrift auf einer
+ * Hervorhebung bleibt {@code --foreground}. Trifft eine Textfarbe auf eine
+ * Hervorhebung, ist der Kontrast nicht zugesichert; die Auswahlleiste setzt
+ * je Auswahl entweder Farbe oder Hervorhebung und entfernt die andere Mark.
  */
 
 /**
  * Die neun Rollennamen aus Contract 2.5, abschliessend.
  *
  * <p><strong>Die Reihenfolge ist die des Farbwaehlers</strong> (Figma
- * {@code ColorMenu}, Raster fuenf mal zwei je Gruppe): sie laeuft von warm
- * nach kalt und nicht alphabetisch. Der zehnte Platz jeder Gruppe ist
- * „Standard", also das Fehlen des Marks; er steht bewusst nicht in dieser
- * Liste, weil es dafuer nichts zu setzen und kein Token zu fuehren gibt.
+ * {@code SelectionToolbar/ColorMenu}, fuenf mal zwei Felder je Gruppe) und
+ * nicht die Aufzaehlung im Contract: §2.5 nennt eine Menge, keine Abfolge.
+ * Sie steht hier und nicht im Menue, damit Anzeige und Typ dieselbe Quelle
+ * haben; das zehnte Feld <strong>Standard</strong> ist keine Rolle, sondern
+ * das Fehlen des Marks, und bekommt deshalb bewusst keinen Eintrag.
  */
 export const CONTENT_COLOR_ROLES = [
   "neutral",

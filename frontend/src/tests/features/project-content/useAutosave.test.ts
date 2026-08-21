@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { HttpResponse, http } from "msw"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { ProjectDocument } from "@/features/project-content/blockTypes"
 import { useAutosave } from "@/features/project-content/hooks/useAutosave"
@@ -8,438 +8,246 @@ import { apiErrorResponse } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 
 /**
- * Der Speichertakt (KAN-36), unmittelbar am Hook geprueft.
- *
- * <p><strong>Warum nicht ueber die Seite.</strong> Die vier Zusagen des
- * Takts haengen an Zeit und Reihenfolge: entprellt, immer nur einer
- * gleichzeitig, version und IDs aus der Antwort, und nach 409 kein zweiter
- * Versuch. Ueber die Oberflaeche liefen sie durch die Schreibflaeche von
- * ProseMirror, und die haengt in jsdom an {@code beforeinput} und einem
- * MutationObserver, die dort nur teilweise vorhanden sind: ein Testfall
- * scheiterte dann an der Umgebung und nicht an der Zusage. Dass die Seite
- * den Hook richtig verdrahtet, prueft {@code EditorPage.test.tsx} an den
- * sichtbaren Zustaenden.
+ * Der Speichertakt gegen einen echten Endpoint (MSW), nicht gegen einen
+ * nachgebauten Client: geprueft wird, was ueber die Leitung geht.
  */
 
 const PROJECT_ID = "1f9d7a10-0000-0000-0000-000000000000"
-const PATH = `/api/projects/${PROJECT_ID}/blocks`
+const BLOCK_ID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
 
-const DOCUMENT: ProjectDocument = {
-  type: "doc",
-  content: [
-    {
-      type: "paragraph",
-      attrs: { textAlign: null },
-      content: [{ type: "text", text: "Ein Absatz." }],
-    },
-  ],
+const PATH = "*/api/projects/:projectId/blocks"
+
+function documentWith(text: string): ProjectDocument {
+  return {
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        attrs: { textAlign: null },
+        content: [{ type: "text", text }],
+      },
+      /* Der leere Schlussabsatz, den Tiptap anhaengt; docToBlocks laesst
+         ihn weg, und genau das soll der Takt nicht als Aenderung sehen. */
+      { type: "paragraph", attrs: { textAlign: null } },
+    ],
+  }
 }
 
-type PutBody = {
-  version: number
-  blocks: { id?: string | null; type: string }[]
-}
-
-function setup(options: { enabled?: boolean; version?: number } = {}) {
-  return renderHook(() =>
+/** Der Hook mit einem Dokument, das der Test von aussen wechseln kann. */
+function setUp(initial = "erste Fassung") {
+  const state = { text: initial }
+  const view = renderHook(() =>
     useAutosave({
       projectId: PROJECT_ID,
-      enabled: options.enabled ?? true,
-      version: options.version ?? 4,
-      blocks: [{ id: "00000000-0000-4000-8000-000000000001", type: "TEXT" }],
-      readDocument: () => DOCUMENT,
+      enabled: true,
+      version: 3,
+      blocks: [{ id: BLOCK_ID, type: "TEXT" }],
+      readDocument: () => documentWith(state.text),
     })
   )
+  return { view, state }
 }
 
-beforeEach(() => {
-  vi.useFakeTimers({ shouldAdvanceTime: true })
-})
+describe("useAutosave", () => {
+  beforeEach(() => {
+    vi.useRealTimers()
+  })
 
-afterEach(() => {
-  vi.useRealTimers()
-})
-
-describe("Entprellung", () => {
-  it("sendet erst nach der Wartezeit und nur einmal", async () => {
-    const bodies: PutBody[] = []
+  it("sendet entprellt und nicht bei jedem Anschlag", async () => {
+    const requests: unknown[] = []
     server.use(
-      http.put(`*${PATH}`, async ({ request }) => {
-        bodies.push((await request.json()) as PutBody)
-        return HttpResponse.json({ version: 5, blocks: [] })
+      http.put(PATH, async ({ request }) => {
+        requests.push(await request.json())
+        return HttpResponse.json({ version: 4, blocks: [] })
       })
     )
-    const { result } = setup()
+
+    const { view, state } = setUp()
 
     act(() => {
-      result.current.schedule()
-      result.current.schedule()
-      result.current.schedule()
+      state.text = "a"
+      view.result.current.schedule()
+      state.text = "ab"
+      view.result.current.schedule()
+      state.text = "abc"
+      view.result.current.schedule()
     })
 
-    expect(result.current.state).toBe("pending")
-    expect(bodies).toHaveLength(0)
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1600)
-    })
-
-    /* Drei Aenderungen, ein Takt: genau das ist der Zweck der Entprellung. */
-    await waitFor(() => expect(bodies).toHaveLength(1))
-    await waitFor(() => expect(result.current.state).toBe("saved"))
+    await waitFor(() => expect(requests).toHaveLength(1), { timeout: 20000 })
+    expect(view.result.current.state).toBe("saved")
   })
 
-  it("sendet nichts, solange enabled falsch ist", async () => {
-    let calls = 0
+  it("uebernimmt version und IDs aus der Antwort", async () => {
+    const sent: { version: number; blocks: { id?: string }[] }[] = []
     server.use(
-      http.put(`*${PATH}`, () => {
-        calls += 1
-        return HttpResponse.json({ version: 5, blocks: [] })
+      http.put(PATH, async ({ request }) => {
+        const body = (await request.json()) as {
+          version: number
+          blocks: { id?: string }[]
+        }
+        sent.push(body)
+        return HttpResponse.json({
+          version: 4 + sent.length,
+          blocks: [{ id: BLOCK_ID, type: "TEXT", orderIndex: 0, content: {}, schemaVersion: 3 }],
+        })
       })
     )
-    const { result } = setup({ enabled: false })
 
-    act(() => result.current.schedule())
+    const { view, state } = setUp()
+
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(5000)
+      state.text = "erste Aenderung"
+      await view.result.current.flush()
+    })
+    await act(async () => {
+      state.text = "zweite Aenderung"
+      await view.result.current.flush()
     })
 
-    expect(calls).toBe(0)
-    expect(result.current.state).toBe("idle")
+    expect(sent).toHaveLength(2)
+    /* Die zweite Runde geht mit der Version aus der ersten Antwort los;
+       ohne das ergaebe der naechste Takt 409 gegen sich selbst. */
+    expect(sent[0].version).toBe(3)
+    expect(sent[1].version).toBe(5)
+    /* Und mit der ID, sonst legte der Server bei jedem Takt neue Bloecke
+       an, und blockbezogene Kommentare waeren dauerhaft unmoeglich. */
+    expect(sent[1].blocks[0].id).toBe(BLOCK_ID)
   })
-})
 
-describe("version und IDs kommen aus der Antwort", () => {
-  it("schickt die zuletzt bekannte version und uebernimmt die neue", async () => {
-    const bodies: PutBody[] = []
+  it("laesst nur einen Takt gleichzeitig laufen", async () => {
+    let open = 0
+    let maxOpen = 0
     server.use(
-      http.put(`*${PATH}`, async ({ request }) => {
-        bodies.push((await request.json()) as PutBody)
+      http.put(PATH, async () => {
+        open = open + 1
+        maxOpen = Math.max(maxOpen, open)
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        open = open - 1
+        return HttpResponse.json({ version: 4, blocks: [] })
+      })
+    )
+
+    const { view, state } = setUp()
+
+    await act(async () => {
+      state.text = "eins"
+      const first = view.result.current.flush()
+      state.text = "zwei"
+      const second = view.result.current.flush()
+      await Promise.all([first, second])
+    })
+
+    expect(maxOpen).toBe(1)
+  })
+
+  it("wiederholt einen Versionskonflikt nicht und haelt danach an", async () => {
+    let calls = 0
+    server.use(
+      http.put(PATH, () => {
+        calls = calls + 1
+        return apiErrorResponse(
+          409,
+          "PROJECT_VERSION_CONFLICT",
+          `/api/projects/${PROJECT_ID}/blocks`
+        )
+      })
+    )
+
+    const { view, state } = setUp()
+
+    await act(async () => {
+      state.text = "Aenderung"
+      await view.result.current.flush()
+    })
+
+    expect(calls).toBe(1)
+    expect(view.result.current.state).toBe("conflict")
+    expect(view.result.current.error?.errorCode).toBe(
+      "PROJECT_VERSION_CONFLICT"
+    )
+
+    /* Jeder weitere Takt traefe denselben Konflikt (§6.4). */
+    await act(async () => {
+      state.text = "noch eine Aenderung"
+      await view.result.current.flush()
+    })
+    expect(calls).toBe(1)
+  })
+
+  it("macht einen Fehlschlag sichtbar, statt ihn zu verschlucken", async () => {
+    server.use(
+      http.put(PATH, () =>
+        apiErrorResponse(
+          409,
+          "PROJECT_STATUS_NOT_EDITABLE",
+          `/api/projects/${PROJECT_ID}/blocks`
+        )
+      )
+    )
+
+    const { view, state } = setUp()
+
+    await act(async () => {
+      state.text = "Aenderung"
+      await view.result.current.flush()
+    })
+
+    expect(view.result.current.state).toBe("error")
+    expect(view.result.current.error?.errorCode).toBe(
+      "PROJECT_STATUS_NOT_EDITABLE"
+    )
+  })
+
+  it("meldet das Ergebnis von flush zurueck", async () => {
+    server.use(
+      http.put(PATH, () => HttpResponse.json({ version: 4, blocks: [] }))
+    )
+    const { view, state } = setUp()
+
+    let result = false
+    await act(async () => {
+      state.text = "Aenderung"
+      result = await view.result.current.flush()
+    })
+
+    /* Ueber den Rueckgabewert und nicht ueber den Zustand: wer danach
+       einreicht, muss wissen, ob der letzte Stand drin ist. */
+    expect(result).toBe(true)
+  })
+
+  it("sendet nichts, wenn sich am Dokument nichts geaendert hat", async () => {
+    let calls = 0
+    server.use(
+      http.put(PATH, () => {
+        calls = calls + 1
+        /* Die Antwort traegt die gespeicherte Liste, wie der echte
+           Endpoint: der naechste Takt baut aus ihr dieselben Bloecke mit
+           denselben IDs, und genau dieser Vergleich haelt ihn an. */
         return HttpResponse.json({
-          version: 9,
+          version: 4,
           blocks: [
             {
-              id: "00000000-0000-4000-8000-0000000000aa",
+              id: BLOCK_ID,
               type: "TEXT",
               orderIndex: 0,
-              schemaVersion: 3,
               content: {},
+              schemaVersion: 3,
             },
           ],
         })
       })
     )
-    const { result } = setup({ version: 4 })
 
-    act(() => result.current.schedule())
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1600)
-    })
-    await waitFor(() => expect(bodies).toHaveLength(1))
-
-    expect(bodies[0].version).toBe(4)
-    /* Die ID des vorhandenen Blocks geht mit: ohne sie legte der Server ihn
-       neu an, und blockbezogene Kommentare waeren dauerhaft unmoeglich. */
-    expect(bodies[0].blocks[0].id).toBe(
-      "00000000-0000-4000-8000-000000000001"
-    )
-
-    act(() => result.current.schedule())
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1600)
-    })
-    await waitFor(() => expect(bodies).toHaveLength(2))
-
-    /* Der zweite Takt tritt mit der Version aus der ersten Antwort an, und
-       mit der ID, die der Server vergeben hat. */
-    expect(bodies[1].version).toBe(9)
-    expect(bodies[1].blocks[0].id).toBe("00000000-0000-4000-8000-0000000000aa")
-  })
-})
-
-describe("Nur ein Takt gleichzeitig", () => {
-  /*
-   * Zwei ueberlappende Takte erzeugen zuverlaessig einen Versionskonflikt
-   * gegen die eigene Sitzung: der zweite traete mit der Version an, die der
-   * erste gerade erhoeht.
-   */
-  it("startet waehrend eines laufenden Takts keinen zweiten", async () => {
-    let inFlight = 0
-    let maxInFlight = 0
-    server.use(
-      http.put(`*${PATH}`, async () => {
-        inFlight += 1
-        maxInFlight = Math.max(maxInFlight, inFlight)
-        await new Promise((resolve) => setTimeout(resolve, 50))
-        inFlight -= 1
-        return HttpResponse.json({ version: 5, blocks: [] })
-      })
-    )
-    const { result } = setup()
-
-    act(() => result.current.schedule())
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1600)
-    })
-    /* Waehrend der erste laeuft, kommt eine weitere Aenderung herein. */
-    act(() => result.current.schedule())
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(3000)
-    })
-
-    await waitFor(() => expect(result.current.state).toBe("saved"))
-    expect(maxInFlight).toBe(1)
-  })
-})
-
-describe("409 PROJECT_VERSION_CONFLICT", () => {
-  /*
-   * §6.4 und Frontend-Regel 4: ein zweiter Versuch mit der frischen Version
-   * ueberschriebe genau die fremde Aenderung, vor der das Locking schuetzt.
-   */
-  it("wird nie automatisch wiederholt und haelt den Takt an", async () => {
-    let calls = 0
-    server.use(
-      http.put(`*${PATH}`, () => {
-        calls += 1
-        return apiErrorResponse(409, "PROJECT_VERSION_CONFLICT", PATH)
-      })
-    )
-    const { result } = setup()
-
-    act(() => result.current.schedule())
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1600)
-    })
-
-    await waitFor(() => expect(result.current.state).toBe("conflict"))
-    expect(calls).toBe(1)
-
-    /* Weiterschreiben startet keinen neuen Takt. */
-    act(() => result.current.schedule())
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(5000)
-    })
-    expect(calls).toBe(1)
-
-    /* Erst das Neuladen ueber reset() gibt den Takt wieder frei. */
-    act(() =>
-      result.current.reset({
-        version: 12,
-        blocks: [{ id: "00000000-0000-4000-8000-0000000000bb", type: "TEXT" }],
-      })
-    )
-    expect(result.current.state).toBe("idle")
-
-    act(() => result.current.schedule())
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1600)
-    })
-    expect(calls).toBe(2)
-  })
-})
-
-describe("reset nach dem Neuladen", () => {
-  /*
-   * Ein noch offener Zeitgeber schickte sonst gleich nach dem Neuladen den
-   * verworfenen Stand hinterher und erzeugte eine ueberfluessige neue
-   * Project.version (6.4).
-   */
-  it("loescht einen offenen Entprell-Timer", async () => {
-    let calls = 0
-    server.use(
-      http.put(`*${PATH}`, () => {
-        calls += 1
-        return HttpResponse.json({ version: 5, blocks: [] })
-      })
-    )
-    const { result } = setup()
-
-    /* Takt armiert, aber noch nicht gefeuert. */
-    act(() => result.current.schedule())
-    expect(calls).toBe(0)
-
-    act(() =>
-      result.current.reset({
-        version: 12,
-        blocks: [{ id: "00000000-0000-4000-8000-0000000000bb", type: "TEXT" }],
-      })
-    )
+    const { view, state } = setUp()
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(5000)
+      state.text = "einmal"
+      await view.result.current.flush()
     })
-
-    expect(calls).toBe(0)
-    expect(result.current.state).toBe("idle")
-  })
-})
-
-describe("hasUnsavedChanges", () => {
-  /*
-   * Der bewachte Weg zurueck haengt daran. Nach einem Fehlschlag ist der
-   * Verlust wahrscheinlicher als im Normalfall, denn der letzte
-   * Speichervorgang ist gerade misslungen.
-   */
-  it("meldet nach einem Fehlschlag weiterhin Ungespeichertes", async () => {
-    server.use(
-      http.put(`*${PATH}`, () =>
-        apiErrorResponse(400, "BLOCK_CONTENT_INVALID", PATH)
-      )
-    )
-    const { result } = setup()
-
-    act(() => result.current.schedule())
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(1600)
-    })
-
-    await waitFor(() => expect(result.current.state).toBe("error"))
-    expect(result.current.hasUnsavedChanges).toBe(true)
-  })
-
-  it("meldet nach einem erfolgreichen Takt nichts Offenes", async () => {
-    server.use(
-      http.put(`*${PATH}`, () => HttpResponse.json({ version: 5, blocks: [] }))
-    )
-    const { result } = setup()
-
-    act(() => result.current.schedule())
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1600)
-    })
-
-    await waitFor(() => expect(result.current.state).toBe("saved"))
-    expect(result.current.hasUnsavedChanges).toBe(false)
-  })
-})
-
-describe("Sonstige Fehlschlaege", () => {
-  it("meldet den Fehler und laesst einen weiteren Versuch zu", async () => {
-    let calls = 0
-    server.use(
-      http.put(`*${PATH}`, () => {
-        calls += 1
-        return apiErrorResponse(400, "BLOCK_CONTENT_INVALID", PATH)
-      })
-    )
-    const { result } = setup()
-
-    act(() => result.current.schedule())
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1600)
-    })
-
-    await waitFor(() => expect(result.current.state).toBe("error"))
-    expect(result.current.error?.errorCode).toBe("BLOCK_CONTENT_INVALID")
-
-    /* Anders als beim Konflikt haelt der Takt hier nicht an: ein 400 kann
-       an einem Block liegen, der gerade berichtigt wird. */
-    act(() => result.current.schedule())
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1600)
-    })
-    await waitFor(() => expect(calls).toBe(2))
-  })
-})
-
-describe("flush", () => {
-  /*
-   * Daran haengt das Einreichen: EditorPage ruft flush und schickt danach
-   * den Statuswechsel. Kaeme flush zurueck, waehrend noch ein Takt unterwegs
-   * ist, traefe der Statuswechsel den Server womoeglich vor dem letzten
-   * Speichervorgang, und eingereicht waere ein Stand, den niemand so gesehen
-   * hat (Befund des Frontend-Reviews zu KAN-36).
-   */
-  it("wartet einen bereits laufenden Takt ab", async () => {
-    let started = 0
-    let finished = 0
-    /* Ein Tor statt einer Wartezeit: mit gefaelschten Zeitgebern liefe ein
-       setTimeout im Handler mit dem Vorspulen mit, und der erste Takt waere
-       schon fertig, bevor der Fall ueberhaupt beginnt. */
-    let openGate: (() => void) | null = null
-    const gate = new Promise<void>((resolve) => {
-      openGate = resolve
-    })
-    server.use(
-      http.put(`*${PATH}`, async () => {
-        started += 1
-        if (started === 1) {
-          await gate
-        }
-        finished += 1
-        return HttpResponse.json({ version: 5, blocks: [] })
-      })
-    )
-    const { result } = setup()
-
-    /* Erster Takt laeuft los und haengt am Tor. */
-    act(() => result.current.schedule())
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1600)
-    })
-    await waitFor(() => expect(started).toBe(1))
-    expect(finished).toBe(0)
-
-    /* Waehrenddessen wird weitergeschrieben und dann eingereicht. */
-    act(() => result.current.schedule())
-
-    let resolved = false
-    await act(async () => {
-      const pending = result.current.flush().then(() => {
-        resolved = true
-      })
-      /* Solange das Tor zu ist, kommt flush nicht zurueck. */
-      await vi.advanceTimersByTimeAsync(50)
-      expect(resolved).toBe(false)
-
-      openGate?.()
-      await pending
-    })
-
-    expect(resolved).toBe(true)
-    /* Der zweite Takt ist mitgelaufen und ebenfalls fertig. */
-    expect(started).toBeGreaterThanOrEqual(2)
-    expect(finished).toBe(started)
-  })
-
-  /*
-   * Sonst schriebe jedes Einreichen die komplette Blockliste neu und
-   * erhoehte Project.version ohne fachlichen Anlass (6.4).
-   */
-  it("sendet nichts, wenn seit dem Laden nichts geaendert wurde", async () => {
-    let calls = 0
-    server.use(
-      http.put(`*${PATH}`, () => {
-        calls += 1
-        return HttpResponse.json({ version: 5, blocks: [] })
-      })
-    )
-    const { result } = setup()
-
-    await act(async () => {
-      await result.current.flush()
-    })
-
-    expect(calls).toBe(0)
-  })
-
-  it("sendet sofort, ohne auf die Entprellung zu warten", async () => {
-    let calls = 0
-    server.use(
-      http.put(`*${PATH}`, () => {
-        calls += 1
-        return HttpResponse.json({ version: 5, blocks: [] })
-      })
-    )
-    const { result } = setup()
-
-    act(() => result.current.schedule())
-    await act(async () => {
-      await result.current.flush()
+      await view.result.current.flush()
     })
 
     expect(calls).toBe(1)
-    await waitFor(() => expect(result.current.state).toBe("saved"))
   })
 })

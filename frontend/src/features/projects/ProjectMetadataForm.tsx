@@ -89,6 +89,8 @@ export function ProjectMetadataForm({
   onUploadCoverImage,
   disabled = false,
   headingLevel = 2,
+  submitLabel,
+  submitPendingLabel,
 }: {
   /** Zuletzt bekannter Stand; Ausgangswerte und Quelle der {@code version}. */
   project: ProjectDetailResponse
@@ -123,6 +125,18 @@ export function ProjectMetadataForm({
    * frontend-design, Abschnitt 4).
    */
   headingLevel?: 2 | 3
+  /**
+   * Beschriftung der Absendeschaltflaeche. Ohne Angabe „Speichern".
+   *
+   * <p>Der Editor oeffnet dasselbe Formular auf dem Weg ins Einreichen
+   * (KAN-36); dort speichert die Schaltflaeche nicht nur, sie reicht
+   * anschliessend ein, und „Speichern" waere an dieser Stelle eine falsche
+   * Zusage. Die Beschriftung ist das Einzige, was sich unterscheidet:
+   * Felder, Pruefung und Schreibweg sind dieselben.
+   */
+  submitLabel?: string
+  /** Beschriftung waehrend des Absendens; ohne Angabe „Wird gespeichert". */
+  submitPendingLabel?: string
 }) {
   const { t } = useTranslation()
   /* Die Rolle kommt aus dem Kontext und nicht aus dem Token (§6.5); der
@@ -801,8 +815,8 @@ export function ProjectMetadataForm({
               disabled={disabled || form.formState.isSubmitting || uploading}
             >
               {form.formState.isSubmitting
-                ? t("project.metadata.submitPending")
-                : t("project.metadata.submit")}
+                ? (submitPendingLabel ?? t("project.metadata.submitPending"))
+                : (submitLabel ?? t("project.metadata.submit"))}
             </Button>
             <Button type="button" variant="ghost" onClick={onCancel}>
               {t("common.action.cancel")}
