@@ -6,8 +6,11 @@ import { describe, expect, it, vi } from "vitest"
 import type {
   ProjectDetailResponse,
   ProjectUpdateRequest,
+  Role,
   TagResponse,
+  UserLookupResponse,
 } from "@/api/types"
+import { ApiError } from "@/api/errors"
 import { ProjectMetadataForm } from "@/features/projects/ProjectMetadataForm"
 import { projectDetail } from "@/tests/fixtures"
 import { server } from "@/tests/msw/server"
@@ -48,10 +51,11 @@ function renderForm(
   onSubmit: (
     request: ProjectUpdateRequest
   ) => Promise<ProjectDetailResponse> = (request) =>
-    Promise.resolve(projectDetail({ ...overrides, version: request.version }))
+    Promise.resolve(projectDetail({ ...overrides, version: request.version })),
+  role: Role = "STUDENT"
 ) {
   server.use(...masterDataHandlers())
-  signInAs("STUDENT")
+  signInAs(role)
   const project = projectDetail({
     id: "p-1",
     title: "Campus-Garten",
@@ -218,5 +222,226 @@ describe("ProjectMetadataForm", () => {
     expect(
       screen.getByRole("button", { name: "Speichern & weiter zum Editor" })
     ).toBeEnabled()
+  })
+
+  it("laesst auch eine Autor:in mit der Rolle EDITOR ihre Redaktion waehlen", async () => {
+    /*
+     * §5 Fussnote 3 in der Fassung von Contract v60 (KAN-77): die eigene
+     * Systemrolle sperrt die Zuweisung am eigenen Entwurf nicht. Bis dahin
+     * stand hier ein Hinweis statt eines Suchfelds, und weil editorIds seit
+     * v59 zum Einreichen gehoert, waere ihr Projekt unzustellbar gewesen.
+     */
+    renderForm({}, undefined, "EDITOR")
+
+    expect(await screen.findByLabelText(/^Redakteur:in/)).toBeEnabled()
+    expect(
+      screen.queryByText(
+        /Die zuständige Redaktion wird von der Autor:in|Die Redaktion lässt sich nur während der Bearbeitung ändern/
+      )
+    ).toBeNull()
+  })
+
+  it("blendet die Projektseite aus der Vorschlagsliste der Redaktion aus", async () => {
+    /*
+     * §5 Fussnote 3 seit v61: zugewiesene Redaktion und Projektseite
+     * schliessen einander aus. Der Server weist einen solchen Schreibvorgang
+     * mit 400 ab; ein Vorschlag, der dort endet, gehoert nicht in die Liste.
+     * Die Oberflaeche ersetzt die Pruefung nicht, sie nimmt ihr die
+     * Ueberraschung.
+     */
+    const user = userEvent.setup()
+    const candidates: UserLookupResponse[] = [
+      /* Die Autor:in, hier zugleich die angemeldete Person. */
+      { id: SIGNED_IN_ID, firstName: "Mira", lastName: "Beispiel" },
+      { id: "m-1", firstName: "Jonas", lastName: "Kern" },
+      { id: "e-1", firstName: "Rana", lastName: "Adler" },
+    ]
+    renderForm(
+      {
+        members: [
+          {
+            userId: "m-1",
+            firstName: "Jonas",
+            lastName: "Kern",
+            projectRole: "Frontend",
+          },
+        ],
+      },
+      undefined,
+      "EDITOR"
+    )
+    /* Nach renderForm: dessen masterDataHandlers legen eine leere
+       Auswahlliste an, und MSW nimmt den zuletzt registrierten Handler. */
+    server.use(
+      http.get("*/api/users/lookup", () => HttpResponse.json(candidates))
+    )
+
+    /* Getippt statt nur geklickt: die leere Suche steht schon im Cache, und
+       erst ein neues q laesst die Abfrage erneut laufen. */
+    await user.type(await screen.findByLabelText(/^Redakteur:in/), "e")
+
+    expect(
+      await screen.findByRole(
+        "option",
+        { name: "Rana Adler" },
+        { timeout: 3000 }
+      )
+    ).toBeVisible()
+    expect(screen.queryByRole("option", { name: "Mira Beispiel" })).toBeNull()
+    expect(screen.queryByRole("option", { name: "Jonas Kern" })).toBeNull()
+  })
+
+  it("blendet auch eine fremde Autor:in aus, nicht nur die eigene Person", async () => {
+    /*
+     * Gegenprobe zum Test darueber: dort sind Autor:in und angemeldete Person
+     * dieselbe, die Ausblendung koennte also allein an currentUserId haengen.
+     * Ein Admin-Konto sieht das Feld unabhaengig vom Autorschaftsverhaeltnis
+     * bedienbar, damit bleibt authorId die einzige moegliche Ursache.
+     */
+    const user = userEvent.setup()
+    renderForm(
+      {
+        author: {
+          id: "a-fremd",
+          firstName: "Lea",
+          lastName: "Fremd",
+          avatarUrl: null,
+        },
+      },
+      undefined,
+      "ADMIN"
+    )
+    server.use(
+      http.get("*/api/users/lookup", () =>
+        HttpResponse.json([
+          { id: "a-fremd", firstName: "Lea", lastName: "Fremd" },
+          { id: "e-1", firstName: "Rana", lastName: "Adler" },
+        ] satisfies UserLookupResponse[])
+      )
+    )
+
+    await user.type(await screen.findByLabelText(/^Redakteur:in/), "e")
+
+    expect(
+      await screen.findByRole(
+        "option",
+        { name: "Rana Adler" },
+        { timeout: 3000 }
+      )
+    ).toBeVisible()
+    expect(screen.queryByRole("option", { name: "Lea Fremd" })).toBeNull()
+  })
+
+  it("blendet die zugewiesene Redaktion aus der Mitgliedersuche aus", async () => {
+    /*
+     * Die Gegenrichtung derselben Trennung (§5 Fussnote 3): der Server weist
+     * auch den Weg ab, auf dem ein Redaktionskonto neu zum Mitglied wird, und
+     * antwortet mit 400 am Feld members. Hier waere der Preis besonders hoch,
+     * weil der Fehler den gesamten PUT verwirft.
+     */
+    const user = userEvent.setup()
+    renderForm({
+      editors: [
+        { id: "e-1", firstName: "Rana", lastName: "Adler", avatarUrl: null },
+      ],
+    })
+    server.use(
+      http.get("*/api/users/lookup", () =>
+        HttpResponse.json([
+          { id: "e-1", firstName: "Rana", lastName: "Adler" },
+          { id: "s-1", firstName: "Jonas", lastName: "Kern" },
+        ] satisfies UserLookupResponse[])
+      )
+    )
+
+    await user.type(await screen.findByLabelText(/^Mitglied/), "e")
+
+    expect(
+      await screen.findByRole(
+        "option",
+        { name: "Jonas Kern" },
+        { timeout: 3000 }
+      )
+    ).toBeVisible()
+    expect(screen.queryByRole("option", { name: "Rana Adler" })).toBeNull()
+  })
+
+  it("sperrt die Redaktionszuweisung fuer ein Projektmitglied (§5, Fussnote 3)", async () => {
+    /*
+     * Der einzige verbliebene Sperrgrund im DRAFT, seit die Rollensperre mit
+     * v60 entfallen ist: §3.13.1 nimmt Mitgliedern editorIds ausdruecklich
+     * weg. Ein bedienbares Feld verwuerfe hier den gesamten PUT mit 403.
+     */
+    renderForm({
+      author: {
+        id: "a-fremd",
+        firstName: "Lea",
+        lastName: "Fremd",
+        avatarUrl: null,
+      },
+      /* Die angemeldete Person ist hier wirklich Mitglied und nicht nur
+         irgendjemand Fremdes: nur so kommt sie überhaupt auf die Seite. */
+      members: [
+        {
+          userId: SIGNED_IN_ID,
+          firstName: "Mira",
+          lastName: "Beispiel",
+          projectRole: "Frontend",
+        },
+      ],
+    })
+
+    expect(
+      await screen.findByText(
+        "Die zuständige Redaktion wird von der Autor:in des Projekts bestimmt."
+      )
+    ).toBeVisible()
+    expect(screen.queryByLabelText(/^Redakteur:in/)).not.toBeInTheDocument()
+  })
+
+  it("zeigt den Fachfehler der Trennung am Feld und nicht am Formularfuss", async () => {
+    /*
+     * Die Servermeldung beginnt mit "editorIds: ", damit
+     * applyValidationErrors sie genau diesem Feld zuordnet; im Formular
+     * heisst es "editors", die Bruecke dafuer steht in der Komponente.
+     * Ohne das Praefix laege die Meldung als anonymer Text am Formularende.
+     */
+    const user = userEvent.setup()
+    const message =
+      "editorIds: Zugewiesene Redaktion und Projektseite schliessen einander " +
+      "aus, die angegebene Person gehoert bereits zur anderen Seite desselben " +
+      "Projekts (§5, Fussnote 3)."
+    renderForm({}, () =>
+      Promise.reject(
+        new ApiError({
+          timestamp: "2026-08-20T12:00:00Z",
+          status: 400,
+          errorCode: "VALIDATION_FAILED",
+          message,
+          path: "/api/projects/p-1",
+        })
+      )
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Speichern & weiter zum Editor",
+      })
+    )
+
+    const shown = await screen.findByText(message.slice("editorIds: ".length))
+    expect(shown).toBeVisible()
+    /* Am Feld heisst: in derselben Gruppe wie die Redaktionsauswahl. */
+    expect(shown.closest("div")?.parentElement?.textContent).toContain(
+      "Redakteur:in"
+    )
+    /* Und programmatisch verbunden, nicht nur raeumlich daneben: sonst ist
+       die Meldung beim Zuruecknavigieren zum Feld nicht mehr auffindbar
+       (SC 3.3.1). */
+    const search = screen.getByLabelText(/^Redakteur:in/)
+    expect(search).toHaveAttribute("aria-invalid", "true")
+    expect(search).toHaveAccessibleDescription(
+      message.slice("editorIds: ".length)
+    )
   })
 })

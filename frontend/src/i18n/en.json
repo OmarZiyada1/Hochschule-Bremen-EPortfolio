@@ -644,8 +644,7 @@
         "chosen": "Assigned editors",
         "remove": "Remove {{name}} from the editorial assignment",
         "none": "No editorial assignment.",
-        "lockedAfterDraft": "The editorial assignment can only be changed in draft. After that, administration takes it over.",
-        "lockedForEditorRole": "Anyone who belongs to the editorial team does not set the assignment on their own project. Administration takes it over.",
+        "lockedAfterSubmit": "The editorial assignment can only be changed while you are working on the project, that is in draft and in revision. From submission onwards, administration takes it over.",
         "lockedForMembers": "The editorial assignment is set by the author of the project."
       },
       "members": {

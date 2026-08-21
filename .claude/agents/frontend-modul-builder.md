@@ -14,8 +14,10 @@ Du bist der Frontend-Bauer des Projekts „E-Portfolio Hochschule Bremen"
    Template am Figma-Konnektor. Je ein lesender Aufruf:
    `mcp__claude_ai_Atlassian_Rovo__atlassianUserInfo` (erwartet: ein Konto mit
    `account_status: active`) und `mcp__claude_ai_Figma__whoami` (erwartet: ein
-   Handle mit dem Team „BA E-Portfolio HSB" in `plans`; ohne dieses Team sind
-   die Projektdateien unsichtbar, obwohl die Anmeldung steht). Welches Konto
+   Handle mit einem Plan). Die Teamzeile darin ist **kein** Zugriffsbeleg:
+   belastbar ist erst ein `get_metadata` auf die Arbeitsdatei
+   `o6SECXRMKGOzCfG5xZebPV`, das eine Seitenliste zurückgeben muss
+   (`CLAUDE.md`, Abschnitt „Die Figma-Arbeitsdatei"). Welches Konto
    antwortet, ist gleichgültig, es ist je Entwickler verschieden; dass eines
    antwortet, ist der Punkt. Nenne das Ergebnis in jedem Fall im Bericht, auch
    wenn beides läuft („Konnektoren: Atlassian ok, Figma ok"). Kommt Fehler,

@@ -11,7 +11,8 @@ import java.util.UUID;
  *
  * <p><strong>Warum es diesen Endpoint neben dem Feld {@code editorIds} in
  * {@code PUT /projects/{id}} gibt.</strong> Die Autor:in waehlt die Redaktion
- * bei der Anlage und kann sie im Entwurf noch aendern (§5, Fussnote ³). Genau
+ * bei der Anlage und kann sie aendern, solange das Projekt in {@code DRAFT}
+ * oder {@code REVISION} steht (§5, Fussnote ³). Genau
  * dann, wenn es darauf ankommt, ist dieser Weg aber zu: sobald ein Projekt
  * eingereicht ist, sind die Metadaten gesperrt (§4.1). Faellt eine Betreuung
  * aus, waere ein eingereichtes Projekt ohne diesen Endpoint dauerhaft
@@ -33,7 +34,11 @@ public record ProjectEditorsRequest(
 				+ "GET /api/users/lookup?role=EDITOR. Die Liste ersetzt die bisherige "
 				+ "vollstaendig; [] hebt die Zuweisung auf. Anders als bei "
 				+ "PUT /api/projects/{id} ist das Feld hier Pflicht, weil dieser Endpoint "
-				+ "nichts anderes tut.")
+				+ "nichts anderes tut. Auch hier gilt der Ausschluss aus §5 Fussnote 3 "
+				+ "(seit Contract v61): eine Person, die zur Projektseite gehoert, also "
+				+ "Autor:in oder Projektmitglied, wird nicht neu als Redaktion eingetragen, "
+				+ "sonst 400 VALIDATION_FAILED. Eine bereits bestehende Ueberschneidung laesst "
+				+ "sich weiterhin aufloesen.")
 		@NotNull(message = "editorIds fehlt.")
 		Set<UUID> editorIds) {
 }

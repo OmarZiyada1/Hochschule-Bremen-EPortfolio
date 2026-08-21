@@ -45,6 +45,16 @@ import {
 } from "@/features/projects/projectFilters"
 import { useQuery } from "@tanstack/react-query"
 
+/*
+ * Feste IDs der beiden Feldfehler, die zu einer Combobox gehoeren. Die
+ * Meldung steht als Geschwister neben dem Feld und nicht darin; ohne
+ * aria-describedby waere sie zwar als Live-Region einmal zu hoeren, beim
+ * Zuruecknavigieren zum Feld aber nicht mehr auffindbar (SC 3.3.1). Fest
+ * statt ueber useId, weil das Formular je Seite genau einmal steht.
+ */
+const EDITORS_ERROR_ID = "project-metadata-editors-error"
+const MEMBERS_ERROR_ID = "project-metadata-members-error"
+
 /**
  * Das Metadatenformular (KAN-35), Template "Projekt-Metadaten".
  *
@@ -150,6 +160,19 @@ export function ProjectMetadataForm({
     name: "studyProgramId",
   })
 
+  /* Die Mitgliederliste wird mitgelesen, weil sie die Vorschlagsliste der
+     Redaktion einschraenkt: Projektseite und Redaktion schliessen einander
+     aus (§5 Fussnote 3). Gelesen wird der Formularstand und nicht der
+     gespeicherte, sonst bekaeme eine gerade eingetragene Person erst nach dem
+     Speichern ihre Sperre. */
+  const members = useWatch({ control: form.control, name: "members" })
+  const memberIds = useMemo(() => members.map((member) => member.id), [members])
+
+  /* Die Gegenrichtung derselben Regel: die zugewiesene Redaktion gehoert
+     nicht in die Mitgliedersuche. Der Server weist beide Richtungen ab. */
+  const editors = useWatch({ control: form.control, name: "editors" })
+  const editorIds = useMemo(() => editors.map((editor) => editor.id), [editors])
+
   const faculties = useQuery(masterDataQueries.faculties())
   const categories = useQuery(masterDataQueries.categories())
   /* Nur aktive Semester sind waehlbar (§3.18); ein inaktives ergaebe 400
@@ -202,13 +225,21 @@ export function ProjectMetadataForm({
    * {@code undefined}, wenn sie es ist.
    *
    * <p>Gespiegelt wird {@code ProjectPermissionService.mayAssignEditors},
-   * und zwar vollstaendig: ADMIN darf immer, die Rolle EDITOR nie, sonst
-   * nur die Autor:in und nur im {@code DRAFT} (§5 Fussnote 3, §3.13.1).
-   * Die beiden mittleren Faelle fehlten zunaechst, und das war kein
-   * Schoenheitsfehler: ein Projektmitglied und eine Autor:in mit der Rolle
-   * EDITOR haetten ein bedienbares Feld vorgefunden, dessen Aenderung den
-   * <em>gesamten</em> PUT mit 403 verwirft, also auch Titel, Tags und
-   * Mitglieder (Befund des contract-pruefers).
+   * und zwar vollstaendig: ADMIN darf immer, sonst nur die Autor:in und nur
+   * in {@code DRAFT} und {@code REVISION} (§5 Fussnote 3, §3.13.1). Der Fall des Mitglieds fehlte
+   * zunaechst, und das war kein Schoenheitsfehler: es haette ein bedienbares
+   * Feld vorgefunden, dessen Aenderung den <em>gesamten</em> PUT mit 403
+   * verwirft, also auch Titel, Tags und Mitglieder (Befund des
+   * contract-pruefers).
+   *
+   * <p><strong>Die eigene Systemrolle sperrt nicht mehr</strong> (§5
+   * Fussnote 3 in der Fassung von Contract v60, KAN-77). Bis dahin stand hier
+   * ein Zweig fuer die Rolle EDITOR, weil der Server die Zuweisung auch am
+   * eigenen Entwurf abwies. Damit war ein Projekt, dessen Autor:in selbst
+   * Redakteur:in ist, unzustellbar: die Zuweisung war ihr verwehrt, und ohne
+   * sie greift seit v59 das Pflichtfeld aus §3.3. Jetzt weist auch sie ihrem
+   * eigenen Entwurf die Redaktion zu; nur sich selbst kann sie nicht
+   * eintragen, und darum kuemmert sich die Vorschlagsliste des Feldes.
    *
    * <p>Die Oberflaeche ersetzt die Serverpruefung damit nicht, sie nimmt
    * ihr nur die Ueberraschung.
@@ -217,15 +248,16 @@ export function ProjectMetadataForm({
     if (role === "ADMIN") {
       return undefined
     }
-    if (role === "EDITOR") {
-      return t("project.metadata.editors.lockedForEditorRole")
-    }
     if (user !== null && user.id !== project.author.id) {
       return t("project.metadata.editors.lockedForMembers")
     }
-    return project.status === "DRAFT"
+    /* Seit Contract v62 dieselbe Schranke wie jede andere
+       Metadatenaenderung: die beiden Arbeitszustaende des Projekts (§4.1).
+       Bis v61 endete das Recht mit dem DRAFT, und ein zurueckgegebenes
+       Projekt ohne Redaktion hing an der Administration fest. */
+    return project.status === "DRAFT" || project.status === "REVISION"
       ? undefined
-      : t("project.metadata.editors.lockedAfterDraft")
+      : t("project.metadata.editors.lockedAfterSubmit")
   })()
 
   const messageOf = (
@@ -677,12 +709,19 @@ export function ProjectMetadataForm({
                     value={field.value}
                     onChange={field.onChange}
                     currentUserId={user?.id}
+                    authorId={project.author.id}
+                    memberIds={memberIds}
                     disabled={disabled}
+                    invalid={fieldState.invalid}
+                    describedBy={
+                      fieldState.invalid ? EDITORS_ERROR_ID : undefined
+                    }
                     labelSuffix={requiredForSubmit}
                     readOnlyReason={editorsReadOnlyReason}
                   />
                   {fieldState.invalid && (
                     <FieldError
+                      id={EDITORS_ERROR_ID}
                       errors={[{ message: messageOf(fieldState.error) }]}
                     />
                   )}
@@ -701,7 +740,12 @@ export function ProjectMetadataForm({
                     value={field.value}
                     onChange={field.onChange}
                     authorId={project.author.id}
+                    editorIds={editorIds}
                     disabled={disabled}
+                    invalid={fieldState.invalid}
+                    describedBy={
+                      fieldState.invalid ? MEMBERS_ERROR_ID : undefined
+                    }
                     labelSuffix={memberRequired}
                   />
                   {/* Ein Schemafehler an einem Array-Pfad traegt keine eigene
@@ -710,7 +754,7 @@ export function ProjectMetadataForm({
                       leerer Funktionsbezeichnung (Befund des
                       frontend-reviewers). */}
                   {fieldState.invalid && (
-                    <FieldError>
+                    <FieldError id={MEMBERS_ERROR_ID}>
                       {messageOf(fieldState.error) ??
                         t("project.metadata.members.invalid")}
                     </FieldError>

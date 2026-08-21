@@ -394,7 +394,7 @@ describe("ProjectMetadataPage", () => {
     ).toBeDisabled()
   })
 
-  it("zeigt die Redaktion nach dem Verlassen von DRAFT schreibgeschuetzt und nennt den Grund", async () => {
+  it("laesst die Redaktion in REVISION weiterhin aendern (§5, Fussnote 3 seit v62)", async () => {
     renderEditRoute(
       draft({
         status: "REVISION",
@@ -404,11 +404,35 @@ describe("ProjectMetadataPage", () => {
       })
     )
 
+    /*
+     * REVISION ist wie DRAFT ein Arbeitszustand des Projekts (§4.1). Bis v61
+     * endete das Recht mit dem DRAFT, und weil editorIds seit v59 zum
+     * Einreichen gehoert, hing ein zurueckgegebenes Projekt ohne Redaktion an
+     * der Administration fest.
+     */
+    expect(await screen.findByLabelText(/^Redakteur:in/)).toBeEnabled()
+    expect(
+      screen.getByRole("button", {
+        name: "Rana Adler aus der Redaktion entfernen",
+      })
+    ).toBeVisible()
+  })
+
+  it("zeigt die Redaktion ab der Einreichung schreibgeschuetzt und nennt den Grund", async () => {
+    renderEditRoute(
+      draft({
+        status: "SUBMITTED",
+        editors: [
+          { id: "e-1", firstName: "Rana", lastName: "Adler", avatarUrl: null },
+        ],
+      })
+    )
+
     expect(await screen.findByText("Rana Adler")).toBeVisible()
-    /* §5, Fussnote 3: danach nimmt die Administration die Zuweisung vor. */
+    /* §5, Fussnote 3: ab da nimmt die Administration die Zuweisung vor. */
     expect(
       screen.getByText(
-        "Die Redaktion lässt sich nur im Entwurf ändern. Danach nimmt die Administration die Zuweisung vor."
+        "Die Redaktion lässt sich nur während der Bearbeitung ändern, also im Entwurf und in der Überarbeitung. Ab der Einreichung nimmt die Administration die Zuweisung vor."
       )
     ).toBeVisible()
     expect(screen.queryByLabelText(/Redakteur:in/)).not.toBeInTheDocument()
@@ -585,22 +609,24 @@ describe("ProjectMetadataPage", () => {
     await waitFor(() => expect(add).toBeEnabled())
   })
 
-  it("sperrt die Redaktionszuweisung fuer eine Autor:in mit der Rolle EDITOR (§5, Fussnote 3)", async () => {
+  it("oeffnet die Redaktionszuweisung auch fuer eine Autor:in mit der Rolle EDITOR (§5, Fussnote 3 seit v60)", async () => {
     server.use(detailHandler(draft()), ...masterDataHandlers())
     signInAs("EDITOR")
     renderPage(`/projects/${PROJECT_ID}/metadata`)
 
     /*
-     * mayAssignEditors gibt der Rolle EDITOR nie recht, auch nicht am
-     * eigenen Entwurf. Ein bedienbares Feld verwuerfe hier den gesamten PUT
-     * mit 403, also auch Titel, Tags und Mitglieder.
+     * mayAssignEditors sperrt seit Contract v60 nicht mehr an der eigenen
+     * Systemrolle. Bis dahin stand hier ein Hinweis statt eines Suchfelds,
+     * und weil editorIds seit v59 zum Einreichen gehoert, waere ihr Projekt
+     * damit unzustellbar gewesen: die Zuweisung verwehrt, das Einreichen an
+     * der fehlenden Zuweisung gescheitert (§3.3).
      */
+    expect(await screen.findByLabelText(/^Redakteur:in/)).toBeEnabled()
     expect(
-      await screen.findByText(
-        "Wer selbst zur Redaktion gehört, legt die Zuständigkeit am eigenen Projekt nicht fest. Die Administration nimmt die Zuweisung vor."
+      screen.queryByText(
+        /Die zuständige Redaktion wird von der Autor:in|Die Redaktion lässt sich nur während der Bearbeitung ändern/
       )
-    ).toBeVisible()
-    expect(screen.queryByLabelText(/Redakteur:in/)).not.toBeInTheDocument()
+    ).not.toBeInTheDocument()
   })
 
   it("fragt vor dem Verwerfen ungespeicherter Angaben nach", async () => {

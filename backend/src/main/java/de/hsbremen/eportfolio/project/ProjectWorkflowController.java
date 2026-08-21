@@ -73,8 +73,10 @@ public class ProjectWorkflowController {
 	@Operation(summary = "Projekt einreichen",
 			description = "DRAFT oder REVISION nach SUBMITTED, ausgeloest von der Autor:in (§4.1). "
 					+ "Geprueft werden dabei die Pflichtfelder aus §3.3: projectType, facultyId, "
-					+ "studyProgramId, degree, categoryId und semester. Ab SUBMITTED sind Inhalt "
-					+ "und Metadaten gesperrt.")
+					+ "studyProgramId, degree, categoryId, semesterId und editorIds. Ohne "
+					+ "zugewiesene Redaktion laesst sich seit Contract v59 nicht einreichen, weil "
+					+ "das Projekt sonst bei niemandem zur Begutachtung auftaucht. Ab SUBMITTED "
+					+ "sind Inhalt und Metadaten gesperrt.")
 	@ApiResponse(responseCode = "200", description = "Das eingereichte Projekt, mit neuem Status "
 			+ "und dem frischen Eintrag in statusHistory.")
 	@ApiResponse(responseCode = "400", description = "PROJECT_INCOMPLETE: mindestens ein "
@@ -130,12 +132,15 @@ public class ProjectWorkflowController {
 	@Operation(summary = "Projekt genehmigen",
 			description = "SUBMITTED nach APPROVED durch Redaktion oder Admin (§4.1). Genehmigt "
 					+ "heisst noch nicht oeffentlich: die fachliche Freigabe und die "
-					+ "Veroeffentlichung sind zwei Schritte (§2.2). Das Vier-Augen-Prinzip greift, "
-					+ "eine Redakteur:in genehmigt ihr eigenes Projekt also nicht.")
+					+ "Veroeffentlichung sind zwei Schritte (§2.2). Das Vier-Augen-Prinzip greift "
+					+ "und reicht seit Contract v61 ueber die gesamte Projektseite: wer an einem "
+					+ "Projekt mitgeschrieben hat, genehmigt es nicht, auch nicht als zugewiesene "
+					+ "Redaktion.")
 	@ApiResponse(responseCode = "200", description = "Das genehmigte Projekt.")
 	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
-	@ApiResponse(responseCode = "403", description = "Angemeldet, aber weder Redaktion noch Admin, "
-			+ "oder Redakteur:in des eigenen Projekts (Vier-Augen-Prinzip, §4.1).")
+	@ApiResponse(responseCode = "403", description = "Angemeldet, aber weder zugewiesene Redaktion "
+			+ "noch Admin, oder Teil der Projektseite dieses Projekts, also Autor:in oder "
+			+ "Projektmitglied (Vier-Augen-Prinzip, §4.1, §5 Fussnote 1).")
 	@ApiResponse(responseCode = "404", description = "Unter dieser ID gibt es kein Projekt.")
 	@ApiResponse(responseCode = "409", description = "PROJECT_STATUS_TRANSITION_INVALID: das "
 			+ "Projekt steht nicht in SUBMITTED.")
@@ -158,8 +163,9 @@ public class ProjectWorkflowController {
 	@ApiResponse(responseCode = "200", description = "Das veroeffentlichte Projekt, mit "
 			+ "publishedAt.")
 	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
-	@ApiResponse(responseCode = "403", description = "Angemeldet, aber weder Redaktion noch Admin, "
-			+ "oder Redakteur:in des eigenen Projekts (Vier-Augen-Prinzip, §4.1).")
+	@ApiResponse(responseCode = "403", description = "Angemeldet, aber weder zugewiesene Redaktion "
+			+ "noch Admin, oder Teil der Projektseite dieses Projekts, also Autor:in oder "
+			+ "Projektmitglied (Vier-Augen-Prinzip, §4.1, §5 Fussnote 1).")
 	@ApiResponse(responseCode = "404", description = "Unter dieser ID gibt es kein Projekt.")
 	@ApiResponse(responseCode = "409", description = "PROJECT_STATUS_TRANSITION_INVALID: das "
 			+ "Projekt steht nicht in APPROVED, ist also noch nicht genehmigt.")

@@ -505,6 +505,29 @@ class ProjectPermissionServiceTest {
 		}
 
 		@Test
+		@DisplayName("Fussnote ¹ seit v61: die Sperre reicht ueber die Autor:in hinaus auf die "
+				+ "Projektmitglieder (§3.13)")
+		void fourEyesCoversProjectMembers() {
+			// otherEditorUser hat am Projekt mitgeschrieben und ist ihm zugleich
+			// als Redaktion zugewiesen: genau der Weg, den v61 schliesst.
+			Project submitted = TestProject.withEditor(
+					TestProject.withMember(project(ProjectStatus.SUBMITTED), otherEditorUser),
+					otherEditorUser);
+
+			assertThat(service.mayApprove(otherEditor, submitted)).isFalse();
+			// Die unbeteiligte zugewiesene Redaktion entscheidet weiterhin: die
+			// Sperre haengt an der Person, nicht am Projekt.
+			assertThat(service.mayApprove(editor, submitted)).isTrue();
+
+			Project approved = TestProject.withEditor(
+					TestProject.withMember(project(ProjectStatus.APPROVED), otherEditorUser),
+					otherEditorUser);
+
+			assertThat(service.mayPublish(otherEditor, approved)).isFalse();
+			assertThat(service.mayPublish(editor, approved)).isTrue();
+		}
+
+		@Test
 		@DisplayName("Abgeschaltetes Vier-Augen-Prinzip erlaubt die eigene Freigabe")
 		void fourEyesSwitchable() {
 			ProjectPermissionService withoutFourEyes = withProperties(false, false);
@@ -512,6 +535,18 @@ class ProjectPermissionServiceTest {
 					TestProject.withAuthor(editorUser, ProjectStatus.SUBMITTED), editorUser);
 
 			assertThat(withoutFourEyes.mayApprove(editor, own)).isTrue();
+		}
+
+		@Test
+		@DisplayName("Der Schalter umfasst die erweiterte Reichweite: abgeschaltet gibt auch das "
+				+ "zugewiesene Projektmitglied frei")
+		void fourEyesSwitchableForMembersToo() {
+			ProjectPermissionService withoutFourEyes = withProperties(false, false);
+			Project submitted = TestProject.withEditor(
+					TestProject.withMember(project(ProjectStatus.SUBMITTED), otherEditorUser),
+					otherEditorUser);
+
+			assertThat(withoutFourEyes.mayApprove(otherEditor, submitted)).isTrue();
 		}
 
 		@Test
@@ -556,6 +591,21 @@ class ProjectPermissionServiceTest {
 					TestProject.withAuthor(editorUser, ProjectStatus.SUBMITTED), editorUser);
 
 			assertThat(service.mayRequestRevision(editor, own)).isTrue();
+		}
+
+		@Test
+		@DisplayName("Auch die erweiterte Reichweite aus v61 gilt hier nicht: ein zugewiesenes "
+				+ "Projektmitglied gibt zurueck, obwohl es nicht genehmigen darf")
+		void projectMemberMayStillRequestRevision() {
+			Project submitted = TestProject.withEditor(
+					TestProject.withMember(project(ProjectStatus.SUBMITTED), otherEditorUser),
+					otherEditorUser);
+
+			assertThat(service.mayRequestRevision(otherEditor, submitted)).isTrue();
+			// Die Gegenprobe steht in
+			// EditorialDecision.fourEyesCoversProjectMembers: dieselbe Person,
+			// dasselbe Projekt, aber kein Recht zum Genehmigen.
+			assertThat(service.mayApprove(otherEditor, submitted)).isFalse();
 		}
 	}
 
@@ -749,17 +799,39 @@ class ProjectPermissionServiceTest {
 	class Administration {
 
 		@Test
-		@DisplayName("Redakteur:innen zuweisen: Admin ✓, Autor:in im Entwurf (✓)³, EDITOR ✗")
+		@DisplayName("Redakteur:innen zuweisen: Admin ✓, Autor:in in DRAFT und REVISION (✓)³, "
+				+ "am fremden Projekt niemand sonst")
 		void assignEditors() {
 			Project draft = project(ProjectStatus.DRAFT);
 
 			assertThat(service.mayAssignEditors(admin, draft)).isTrue();
 			assertThat(service.mayAssignEditors(author, draft)).isTrue();
+			// Das Kreuz der EDITOR-Spalte meint fremde Projekte, und dieses ist
+			// eines: die Autor:in ist authorUser.
 			assertThat(service.mayAssignEditors(editor, draft)).isFalse();
 			assertThat(service.mayAssignEditors(otherStudent, draft)).isFalse();
-			// Nach dem Einreichen verteilt nur noch der Admin um.
+			assertThat(service.mayAssignEditors(PUBLIC, draft)).isFalse();
+			// REVISION zaehlt seit v62 dazu: beide Arbeitszustaende des Projekts.
+			assertThat(service.mayAssignEditors(author, project(ProjectStatus.REVISION))).isTrue();
+			// Ab dem Einreichen verteilt nur noch der Admin um.
 			assertThat(service.mayAssignEditors(author, project(ProjectStatus.SUBMITTED))).isFalse();
+			assertThat(service.mayAssignEditors(author, project(ProjectStatus.APPROVED))).isFalse();
+			assertThat(service.mayAssignEditors(author, project(ProjectStatus.PUBLISHED))).isFalse();
 			assertThat(service.mayAssignEditors(admin, project(ProjectStatus.SUBMITTED))).isTrue();
+		}
+
+		@Test
+		@DisplayName("Fussnote ³ seit v60: die eigene Systemrolle sperrt nicht, auch eine "
+				+ "Autor:in mit der Rolle EDITOR weist ihrem Entwurf die Redaktion zu")
+		void authorWithEditorRoleAssignsOnOwnDraft() {
+			Project ownDraft = TestProject.withAuthor(editorUser, ProjectStatus.DRAFT);
+
+			assertThat(service.mayAssignEditors(editor, ownDraft)).isTrue();
+			// Die Statusschranke gilt fuer sie wie fuer jede andere Autor:in.
+			assertThat(service.mayAssignEditors(editor,
+					TestProject.withAuthor(editorUser, ProjectStatus.REVISION))).isTrue();
+			assertThat(service.mayAssignEditors(editor,
+					TestProject.withAuthor(editorUser, ProjectStatus.SUBMITTED))).isFalse();
 		}
 
 		@Test

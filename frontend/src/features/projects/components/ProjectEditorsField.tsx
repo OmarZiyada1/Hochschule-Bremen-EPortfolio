@@ -10,6 +10,10 @@ import { PersonCombobox } from "@/features/projects/components/PersonCombobox"
 import type { PersonValue } from "@/features/projects/ProjectMetadataForm.schema"
 import { fullNameOf } from "@/lib/name"
 
+/* Modulweit und nicht als Literal im Default: ein frisches [] je Render wuerde
+   die Abhaengigkeit von excludedIds bei jedem Durchlauf wechseln lassen. */
+const NO_IDS: readonly string[] = []
+
 /**
  * Die Redaktionszuweisung des Metadatenformulars (§3.3, §5 Fussnote 3,
  * KAN-35): ein Suchfeld ueber {@code GET /api/users/lookup?role=EDITOR},
@@ -20,23 +24,29 @@ import { fullNameOf } from "@/lib/name"
  * das Template zeigt den einfachsten Fall. Entschieden in der
  * Klaerungsrunde zu KAN-35.
  *
- * <p><strong>Die eigene Person steht nicht zur Auswahl.</strong> Wer sein
- * Projekt selbst anlegt und dabei EDITOR ist, koennte sich sonst als
- * zustaendige Redaktion eintragen und danach feststellen, dass das
- * Vier-Augen-Prinzip aus §4.1 sie am Genehmigen hindert. Ein Feld, das eine
- * Wahl anbietet, die spaeter folgenlos bleibt, ist schlimmer als eines, das
- * sie gar nicht erst zeigt.
+ * <p><strong>Die Projektseite steht nicht zur Auswahl</strong> (§5, Fussnote 3
+ * seit Contract v61, KAN-77): weder die eigene Person noch die Autor:in noch
+ * die im Formular eingetragenen Projektmitglieder. Wer an einer Arbeit
+ * mitgeschrieben hat, beurteilt sie nicht; der Server weist einen solchen
+ * Schreibvorgang mit 400 {@code VALIDATION_FAILED} ab. Ein Vorschlag, der beim
+ * Speichern in einen Fehler laeuft, gehoert nicht in die Liste. Die Oberflaeche
+ * ersetzt die Serverpruefung damit nicht, sie nimmt ihr die Ueberraschung.
  *
- * <p><strong>Aenderbar nur im {@code DRAFT}</strong> (§5, Fussnote 3).
- * Danach fuehrt der Weg ueber die Administration, und das Feld steht
- * schreibgeschuetzt da und nennt den Grund. Der Server prueft das ohnehin;
+ * <p><strong>Aenderbar in {@code DRAFT} und {@code REVISION}</strong>
+ * (§5, Fussnote 3 seit Contract v62), also solange die Autor:in an ihrem
+ * Projekt arbeitet. Danach fuehrt der Weg ueber die Administration, und das
+ * Feld steht schreibgeschuetzt da und nennt den Grund. Der Server prueft das ohnehin;
  * die Oberflaeche spiegelt die Regel, sie ersetzt sie nicht.
  */
 export function ProjectEditorsField({
   value,
   onChange,
   currentUserId,
+  authorId,
+  memberIds = NO_IDS,
   disabled = false,
+  invalid = false,
+  describedBy,
   readOnlyReason,
   labelSuffix,
 }: {
@@ -44,7 +54,14 @@ export function ProjectEditorsField({
   onChange: (next: PersonValue[]) => void
   /** Eigenes Konto, wird aus der Vorschlagsliste ausgeblendet. */
   currentUserId?: string
+  /** Die Autor:in; sie gehoert zur Projektseite und steht nicht zur Wahl. */
+  authorId?: string
+  /** Die im Formular eingetragenen Projektmitglieder, aus demselben Grund. */
+  memberIds?: readonly string[]
   disabled?: boolean
+  /** Reicht {@code aria-invalid} und die Fehler-ID an das Suchfeld durch. */
+  invalid?: boolean
+  describedBy?: string
   /**
    * Warum das Feld nicht mehr aenderbar ist. Gesetzt heisst zugleich: keine
    * Suche, nur die Anzeige der bereits zugewiesenen Redaktion.
@@ -63,8 +80,10 @@ export function ProjectEditorsField({
     () => [
       ...value.map((person) => person.id),
       ...(currentUserId === undefined ? [] : [currentUserId]),
+      ...(authorId === undefined ? [] : [authorId]),
+      ...memberIds,
     ],
-    [value, currentUserId]
+    [value, currentUserId, authorId, memberIds]
   )
 
   function add(person: { id: string; firstName: string; lastName: string }) {
@@ -109,6 +128,8 @@ export function ProjectEditorsField({
           labelSuffix={labelSuffix}
           role="EDITOR"
           excludedIds={excludedIds}
+          invalid={invalid}
+          describedBy={describedBy}
           placeholder={t("project.metadata.editors.placeholder")}
           /* value bleibt null: die gewaehlte Person wandert sofort in die
              Pillenliste darunter, und das Feld ist wieder frei fuer die
