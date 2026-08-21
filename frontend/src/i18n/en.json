@@ -278,6 +278,36 @@
     },
     "projectRole": {
       "required": "Please state a role in the project."
+    },
+    "blockFile": {
+      "required": "Please upload a file."
+    },
+    "blockAlt": {
+      "required": "Please describe the image or mark it as decorative."
+    },
+    "blockGallery": {
+      "empty": "Please add at least one image."
+    },
+    "blockVideoId": {
+      "required": "Please enter the video ID.",
+      "invalid": "This ID does not match the selected provider."
+    },
+    "blockEmbedUrl": {
+      "required": "Please enter the embed address.",
+      "notAllowed": "This address is not among the provider's allowed hosts."
+    },
+    "blockEmbedHeight": {
+      "outOfRange": "The height is outside the allowed range."
+    },
+    "blockLatex": {
+      "required": "Please enter a formula."
+    },
+    "blockLink": {
+      "required": "Please enter an address.",
+      "scheme": "Only http, https and mailto are allowed."
+    },
+    "blockTable": {
+      "outOfRange": "Please enter a number within the allowed range."
     }
   },
   "placeholder": {
@@ -815,7 +845,19 @@
       "regionLabel": "Formula, scrollable horizontally"
     },
     "table": {
-      "regionLabel": "Table, scrollable horizontally"
+      "regionLabel": "Table, scrollable horizontally",
+      "controls": "Table",
+      "addRowBefore": "Insert row above",
+      "addRowAfter": "Insert row below",
+      "deleteRow": "Delete row",
+      "addColumnBefore": "Insert column before",
+      "addColumnAfter": "Insert column after",
+      "deleteColumn": "Delete column",
+      "toggleHeaderRow": "Toggle header row",
+      "toggleHeaderColumn": "Toggle header column",
+      "mergeCells": "Merge cells",
+      "splitCell": "Split cell",
+      "deleteTable": "Delete table"
     },
     "video": {
       "label": "Video from this contribution",
@@ -836,6 +878,295 @@
       "figma": "Figma",
       "codepen": "CodePen",
       "gist": "GitHub Gist"
+    },
+    "canvas": {
+      "label": "Edit project content"
+    },
+    "editor": {
+      "backToPortfolio": "To my portfolio",
+      "notFound": {
+        "title": "This project does not exist",
+        "description": "The link leads nowhere, or the project has been deleted."
+      },
+      "forbidden": {
+        "title": "No access to this project",
+        "description": "Only the author, the project members and the assigned editorial team may edit this content."
+      },
+      "locked": {
+        "title": "The content is locked",
+        "description": "While the project is in status “{{status}}” its content cannot be changed. You can edit it in draft and in revision."
+      },
+      "dropped": {
+        "title_one": "One block could not be read",
+        "title_other": "{{count}} blocks could not be read",
+        "description": "Nothing is saved for that reason: saving replaces the entire content and would delete exactly these blocks. Affected positions: {{positions}}."
+      },
+      "readOnly": {
+        "title": "You can only read this content",
+        "description": "The author and the project members may edit the content. As the assigned editorial team you can see the entry, but not change it here."
+      }
+    },
+    "header": {
+      "back": "Back",
+      "undo": "Undo",
+      "redo": "Redo",
+      "submit": "Submit",
+      "withdraw": "Withdraw"
+    },
+    "sidebar": {
+      "label": "Project information and preview",
+      "preview": "Preview",
+      "edit": "Edit",
+      "previewToggle": "Show preview",
+      "history": "History",
+      "projectInfo": "Project information"
+    },
+    "history": {
+      "title": "Project history",
+      "description": "Every status change with time and person.",
+      "entry": "{{person}} · {{timestamp}}",
+      "empty": {
+        "title": "No status change yet",
+        "description": "The first entry appears as soon as the project is submitted."
+      },
+      "hidden": {
+        "title": "The history is not visible",
+        "description": "It is shown to the author, the project members, the assigned editorial team and the administration."
+      }
+    },
+    "autosave": {
+      "pending": "Not saved",
+      "saving": "Saving",
+      "saved": "Saved",
+      "error": "Not saved",
+      "conflict": "Changed elsewhere",
+      "errorTitle": "The content could not be saved"
+    },
+    "toolbar": {
+      "label": "Text formatting",
+      "blockType": {
+        "label": "Block type",
+        "paragraph": "Text",
+        "heading": "Heading {{level}}"
+      },
+      "marks": {
+        "group": "Character formatting",
+        "bold": "Bold",
+        "italic": "Italic",
+        "underline": "Underline",
+        "strike": "Strikethrough",
+        "code": "Inline code",
+        "superscript": "Superscript",
+        "subscript": "Subscript",
+        "link": "Link"
+      },
+      "blockFormat": {
+        "group": "Block format",
+        "bulletList": "Bulleted list",
+        "orderedList": "Numbered list",
+        "blockquote": "Quote"
+      },
+      "align": {
+        "label": "Alignment",
+        "left": "Left",
+        "center": "Centered",
+        "right": "Right",
+        "justify": "Justified",
+        "justifyBlockedOnHeading": "Justification is for paragraphs only: on a heading it tears the line breaks apart."
+      },
+      "color": {
+        "label": "Colour",
+        "textGroup": "Text colour",
+        "highlightGroup": "Background",
+        "none": "Default",
+        "role": {
+          "neutral": "Grey",
+          "brown": "Brown",
+          "orange": "Orange",
+          "amber": "Amber",
+          "green": "Green",
+          "blue": "Blue",
+          "purple": "Purple",
+          "pink": "Pink",
+          "red": "Red"
+        }
+      }
+    },
+    "blockControls": {
+      "blockFallback": "Block",
+      "blockName": {
+        "heading": "Heading",
+        "paragraph": "Paragraph",
+        "bulletList": "Bulleted list",
+        "orderedList": "Numbered list",
+        "blockquote": "Quote",
+        "codeBlock": "Code",
+        "horizontalRule": "Divider",
+        "table": "Table",
+        "imageBlock": "Image",
+        "galleryBlock": "Gallery",
+        "videoBlock": "Video",
+        "audioBlock": "Audio",
+        "documentBlock": "Document",
+        "embedBlock": "Embed",
+        "mathBlock": "Formula"
+      },
+      "pickUp": "Pick up {{block}} to move it",
+      "drop": "Drop {{block}} here",
+      "moveHint": "Enter picks the block up, arrow up and down move it, Enter drops it, Escape cancels.",
+      "delete": "Delete {{block}}",
+      "confirmDelete": {
+        "title": "Delete this block?",
+        "description": "{{block}} at position {{position}} is removed from the entry. This can only be undone while you stay on the page.",
+        "cancel": "Cancel",
+        "confirm": "Delete"
+      },
+      "announce": {
+        "pickedUp": "{{block}} picked up, position {{position}} of {{count}}.",
+        "position": "{{block}} at position {{position}} of {{count}}.",
+        "dropped": "{{block}} dropped at position {{position}} of {{count}}.",
+        "cancelled": "Moving cancelled, {{block}} back at position {{position}} of {{count}}.",
+        "edge": "{{block}} is already at the edge.",
+        "deleted": "{{block}} deleted."
+      }
+    },
+    "insert": {
+      "label": "Insert block",
+      "search": "Search block type",
+      "empty": "No block type found.",
+      "group": "Block types",
+      "type": {
+        "image": "Image",
+        "gallery": "Gallery",
+        "video": "Video",
+        "audio": "Audio",
+        "document": "Document",
+        "embed": "Embed",
+        "formula": "Formula",
+        "table": "Table",
+        "code": "Code",
+        "divider": "Divider"
+      }
+    },
+    "upload": {
+      "started": "{{fileName}} is uploading.",
+      "done": "{{fileName}} has been uploaded.",
+      "cancelled": "The upload was cancelled.",
+      "cancel": "Cancel upload",
+      "replace": "Different file",
+      "progressLabel": "Upload"
+    },
+    "nodeView": {
+      "image": "Image",
+      "loading": "loading",
+      "video": "Video",
+      "videoFile": "Uploaded file",
+      "videoEmbed": "{{provider}} · {{videoId}}",
+      "audio": "Audio",
+      "audioFile": "Uploaded file",
+      "document": "Document",
+      "embed": "Embed"
+    },
+    "dialogs": {
+      "insert": "Insert",
+      "caption": "Caption",
+      "captionHint": "Optional. It describes the context and never replaces the alternative text.",
+      "alt": "Alternative text",
+      "altHint": "Describes what the image shows, for everyone who cannot see it.",
+      "altDecorative": "This image is decorative and needs no description.",
+      "link": {
+        "title": "Set link",
+        "description": "The selected text gets an address.",
+        "href": "Address",
+        "hint": "Allowed are http, https and mailto.",
+        "submit": "Apply",
+        "remove": "Remove link"
+      },
+      "image": {
+        "title": "Insert image",
+        "description": "Upload an image and describe it.",
+        "file": "Image file",
+        "fileHint": "PNG, JPEG, WebP, GIF or AVIF.",
+        "width": "Width",
+        "widthOption": "{{width}} %"
+      },
+      "gallery": {
+        "title": "Insert gallery",
+        "description": "Upload several images. Each one needs its own description.",
+        "file": "Add image",
+        "fileHint": "PNG, JPEG, WebP, GIF or AVIF. Every uploaded image is appended.",
+        "item": "Image {{position}}",
+        "removeItem": "Remove image {{position}}",
+        "columns": "Columns",
+        "columnsOption": "{{columns}} columns"
+      },
+      "video": {
+        "title": "Insert video",
+        "description": "Either an uploaded file or an embed, never both.",
+        "source": "Source",
+        "sourceFile": "Upload file",
+        "sourceEmbed": "Embed",
+        "file": "Video file",
+        "fileHint": "MP4, WebM or OGG.",
+        "provider": "Provider",
+        "videoId": "Video ID",
+        "videoIdHint": "Only the ID, not the whole address. On YouTube the part after v=, on Vimeo the number."
+      },
+      "audio": {
+        "title": "Insert audio",
+        "description": "An uploaded audio file. An external address is not possible.",
+        "file": "Audio file",
+        "fileHint": "MP3, WAV or OGG."
+      },
+      "document": {
+        "title": "Insert document",
+        "description": "A file to download. Name and size come from the upload.",
+        "file": "Document",
+        "fileHint": "PDF."
+      },
+      "embed": {
+        "title": "Embed content",
+        "description": "External content in a frame. Only the listed providers are allowed.",
+        "provider": "Provider",
+        "url": "Embed address",
+        "urlHint": "https only, and only these hosts: {{hosts}}.",
+        "height": "Height in pixels",
+        "heightHint": "Between {{min}} and {{max}}."
+      },
+      "formula": {
+        "title": "Insert formula",
+        "description": "A formula in KaTeX notation.",
+        "latex": "Formula",
+        "latexHint": "KaTeX syntax, for example e^{i\\pi} + 1 = 0.",
+        "render": "Render"
+      },
+      "table": {
+        "title": "Insert table",
+        "description": "Rows and columns can be changed later.",
+        "rows": "Rows",
+        "columns": "Columns",
+        "withHeaderRow": "First row is a header row"
+      }
+    },
+    "workflow": {
+      "cancel": "Cancel",
+      "submit": {
+        "title": "Submit project?",
+        "description": "“{{title}}” goes to the assigned editorial team and becomes visible to them. As long as they have not decided, you can withdraw the submission again.",
+        "confirm": "Submit"
+      },
+      "withdraw": {
+        "title": "Withdraw submission?",
+        "description": "“{{title}}” returns to draft and is no longer visible to the editorial team. You can keep editing it and submit it again.",
+        "confirm": "Withdraw"
+      },
+      "saveFirst": "The last save failed. Nothing was submitted; please check the message and try again."
+    },
+    "leave": {
+      "title": "There are unsaved changes",
+      "description": "The latest input has not been saved yet. It will be saved before you leave.",
+      "stay": "Stay here",
+      "saveAndLeave": "Save and leave"
     }
   },
   "apiError": {

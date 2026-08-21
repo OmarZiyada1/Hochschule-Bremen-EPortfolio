@@ -217,6 +217,24 @@ export function removeReaction(projectId: string): Promise<ReactionResponse> {
 }
 
 /**
+ * POST /projects/{id}/submit (§4.1 Zeile „Einreichen", KAN-36): die
+ * Autor:in gibt das Projekt aus DRAFT oder REVISION in die Redaktion.
+ *
+ * <p><strong>Zwei Fehlerfaelle, die die Oberflaeche unterscheiden
+ * muss.</strong> 400 PROJECT_INCOMPLETE nennt die Pflichtfelder aus §3.3,
+ * die noch fehlen, einschliesslich der Redaktionszuweisung (seit Contract
+ * v60); dort fuehrt der Weg auf die Metadatenseite und nicht in den Editor.
+ * 409 PROJECT_STATUS_TRANSITION_INVALID heisst, dass das Projekt gar nicht
+ * in einem einreichbaren Status steht, etwa weil es in einem zweiten Tab
+ * bereits eingereicht wurde.
+ */
+export function submitProject(
+  projectId: string
+): Promise<ProjectDetailResponse> {
+  return api.post<ProjectDetailResponse>(apiPaths.projects.submit(projectId))
+}
+
+/**
  * POST /projects/{id}/withdraw (§4.1, seit Contract v50, KAN-69): die
  * Autor:in holt die eigene Einreichung aus SUBMITTED nach DRAFT zurueck.
  * Aus jedem anderen Status antwortet der Server 409

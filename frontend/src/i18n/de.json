@@ -278,6 +278,36 @@
     },
     "projectRole": {
       "required": "Bitte geben Sie eine Funktionsbezeichnung an."
+    },
+    "blockFile": {
+      "required": "Bitte laden Sie eine Datei hoch."
+    },
+    "blockAlt": {
+      "required": "Bitte beschreiben Sie das Bild oder kennzeichnen Sie es als schmückend."
+    },
+    "blockGallery": {
+      "empty": "Bitte fügen Sie mindestens ein Bild hinzu."
+    },
+    "blockVideoId": {
+      "required": "Bitte geben Sie die Video-Kennung ein.",
+      "invalid": "Diese Kennung passt nicht zum gewählten Anbieter."
+    },
+    "blockEmbedUrl": {
+      "required": "Bitte geben Sie die Einbettungsadresse ein.",
+      "notAllowed": "Diese Adresse gehört nicht zu den erlaubten Hosts des Anbieters."
+    },
+    "blockEmbedHeight": {
+      "outOfRange": "Die Höhe liegt außerhalb des zulässigen Bereichs."
+    },
+    "blockLatex": {
+      "required": "Bitte geben Sie eine Formel ein."
+    },
+    "blockLink": {
+      "required": "Bitte geben Sie eine Adresse ein.",
+      "scheme": "Zulässig sind nur http, https und mailto."
+    },
+    "blockTable": {
+      "outOfRange": "Bitte geben Sie eine Zahl im zulässigen Bereich ein."
     }
   },
   "placeholder": {
@@ -815,7 +845,19 @@
       "regionLabel": "Formel, waagerecht scrollbar"
     },
     "table": {
-      "regionLabel": "Tabelle, waagerecht scrollbar"
+      "regionLabel": "Tabelle, waagerecht scrollbar",
+      "controls": "Tabelle",
+      "addRowBefore": "Zeile darüber einfügen",
+      "addRowAfter": "Zeile darunter einfügen",
+      "deleteRow": "Zeile löschen",
+      "addColumnBefore": "Spalte davor einfügen",
+      "addColumnAfter": "Spalte danach einfügen",
+      "deleteColumn": "Spalte löschen",
+      "toggleHeaderRow": "Kopfzeile umschalten",
+      "toggleHeaderColumn": "Kopfspalte umschalten",
+      "mergeCells": "Zellen verbinden",
+      "splitCell": "Zelle teilen",
+      "deleteTable": "Tabelle löschen"
     },
     "video": {
       "label": "Video aus diesem Beitrag",
@@ -836,6 +878,295 @@
       "figma": "Figma",
       "codepen": "CodePen",
       "gist": "GitHub Gist"
+    },
+    "canvas": {
+      "label": "Inhalt des Projekts bearbeiten"
+    },
+    "editor": {
+      "backToPortfolio": "Zu meinem Portfolio",
+      "notFound": {
+        "title": "Dieses Projekt gibt es nicht",
+        "description": "Der Link führt ins Leere, oder das Projekt wurde gelöscht."
+      },
+      "forbidden": {
+        "title": "Kein Zugriff auf dieses Projekt",
+        "description": "Den Inhalt dieses Projekts dürfen nur die Autor:in, die Projektmitglieder und die zuständige Redaktion bearbeiten."
+      },
+      "locked": {
+        "title": "Der Inhalt ist gesperrt",
+        "description": "Solange das Projekt im Status „{{status}}“ steht, lässt sich der Inhalt nicht ändern. Bearbeiten können Sie ihn im Entwurf und in der Überarbeitung."
+      },
+      "dropped": {
+        "title_one": "Ein Block konnte nicht gelesen werden",
+        "title_other": "{{count}} Blöcke konnten nicht gelesen werden",
+        "description": "Deshalb wird nichts gespeichert: Speichern ersetzt den gesamten Inhalt und würde genau diese Blöcke löschen. Betroffen sind die Positionen {{positions}}."
+      },
+      "readOnly": {
+        "title": "Sie können diesen Inhalt nur lesen",
+        "description": "Bearbeiten dürfen den Inhalt die Autor:in und die Projektmitglieder. Als zuständige Redaktion sehen Sie den Beitrag, ändern lässt er sich hier nicht."
+      }
+    },
+    "header": {
+      "back": "Zurück",
+      "undo": "Rückgängig",
+      "redo": "Wiederholen",
+      "submit": "Einreichen",
+      "withdraw": "Zurückziehen"
+    },
+    "sidebar": {
+      "label": "Projektinformationen und Vorschau",
+      "preview": "Vorschau",
+      "edit": "Bearbeiten",
+      "previewToggle": "Vorschau anzeigen",
+      "history": "Historie",
+      "projectInfo": "Projektinformationen"
+    },
+    "history": {
+      "title": "Verlauf des Projekts",
+      "description": "Jeder Statuswechsel mit Zeitpunkt und Person.",
+      "entry": "{{person}} · {{timestamp}}",
+      "empty": {
+        "title": "Noch kein Statuswechsel",
+        "description": "Sobald das Projekt eingereicht wird, erscheint hier der erste Eintrag."
+      },
+      "hidden": {
+        "title": "Der Verlauf ist nicht sichtbar",
+        "description": "Ihn sehen die Autor:in, die Projektmitglieder, die zuständige Redaktion und die Administration."
+      }
+    },
+    "autosave": {
+      "pending": "Nicht gespeichert",
+      "saving": "Wird gespeichert",
+      "saved": "Gespeichert",
+      "error": "Nicht gespeichert",
+      "conflict": "Gleichzeitig geändert",
+      "errorTitle": "Der Inhalt konnte nicht gespeichert werden"
+    },
+    "toolbar": {
+      "label": "Textformatierung",
+      "blockType": {
+        "label": "Blocktyp",
+        "paragraph": "Text",
+        "heading": "Überschrift {{level}}"
+      },
+      "marks": {
+        "group": "Zeichenauszeichnung",
+        "bold": "Fett",
+        "italic": "Kursiv",
+        "underline": "Unterstrichen",
+        "strike": "Durchgestrichen",
+        "code": "Inline-Code",
+        "superscript": "Hochgestellt",
+        "subscript": "Tiefgestellt",
+        "link": "Link"
+      },
+      "blockFormat": {
+        "group": "Blockformat",
+        "bulletList": "Aufzählungsliste",
+        "orderedList": "Nummerierte Liste",
+        "blockquote": "Zitat"
+      },
+      "align": {
+        "label": "Ausrichtung",
+        "left": "Linksbündig",
+        "center": "Zentriert",
+        "right": "Rechtsbündig",
+        "justify": "Blocksatz",
+        "justifyBlockedOnHeading": "Blocksatz gibt es nur im Absatz: an einer Überschrift zerreißt er den Zeilenfall."
+      },
+      "color": {
+        "label": "Farbe",
+        "textGroup": "Textfarbe",
+        "highlightGroup": "Hintergrund",
+        "none": "Standard",
+        "role": {
+          "neutral": "Grau",
+          "brown": "Braun",
+          "orange": "Orange",
+          "amber": "Bernstein",
+          "green": "Grün",
+          "blue": "Blau",
+          "purple": "Violett",
+          "pink": "Pink",
+          "red": "Rot"
+        }
+      }
+    },
+    "blockControls": {
+      "blockFallback": "Block",
+      "blockName": {
+        "heading": "Überschrift",
+        "paragraph": "Absatz",
+        "bulletList": "Aufzählungsliste",
+        "orderedList": "Nummerierte Liste",
+        "blockquote": "Zitat",
+        "codeBlock": "Quelltext",
+        "horizontalRule": "Trenner",
+        "table": "Tabelle",
+        "imageBlock": "Bild",
+        "galleryBlock": "Galerie",
+        "videoBlock": "Video",
+        "audioBlock": "Audio",
+        "documentBlock": "Dokument",
+        "embedBlock": "Einbettung",
+        "mathBlock": "Formel"
+      },
+      "pickUp": "{{block}} anheben und verschieben",
+      "drop": "{{block}} hier ablegen",
+      "moveHint": "Enter hebt den Block an, Pfeil hoch und runter verschieben ihn, Enter legt ihn ab, Escape bricht ab.",
+      "delete": "{{block}} löschen",
+      "confirmDelete": {
+        "title": "Diesen Block löschen?",
+        "description": "{{block}} an Position {{position}} wird aus dem Beitrag entfernt. Rückgängig machen lässt sich das nur, solange Sie die Seite nicht verlassen.",
+        "cancel": "Abbrechen",
+        "confirm": "Löschen"
+      },
+      "announce": {
+        "pickedUp": "{{block}} angehoben, Position {{position}} von {{count}}.",
+        "position": "{{block}} an Position {{position}} von {{count}}.",
+        "dropped": "{{block}} abgelegt an Position {{position}} von {{count}}.",
+        "cancelled": "Verschieben abgebrochen, {{block}} wieder an Position {{position}} von {{count}}.",
+        "edge": "{{block}} steht bereits am Rand.",
+        "deleted": "{{block}} gelöscht."
+      }
+    },
+    "insert": {
+      "label": "Block einfügen",
+      "search": "Blocktyp suchen",
+      "empty": "Kein Blocktyp gefunden.",
+      "group": "Blocktypen",
+      "type": {
+        "image": "Bild",
+        "gallery": "Galerie",
+        "video": "Video",
+        "audio": "Audio",
+        "document": "Dokument",
+        "embed": "Einbettung",
+        "formula": "Formel",
+        "table": "Tabelle",
+        "code": "Quelltext",
+        "divider": "Trenner"
+      }
+    },
+    "upload": {
+      "started": "{{fileName}} wird hochgeladen.",
+      "done": "{{fileName}} ist hochgeladen.",
+      "cancelled": "Der Upload wurde abgebrochen.",
+      "cancel": "Upload abbrechen",
+      "replace": "Andere Datei",
+      "progressLabel": "Upload"
+    },
+    "nodeView": {
+      "image": "Bild",
+      "loading": "wird geladen",
+      "video": "Video",
+      "videoFile": "Hochgeladene Datei",
+      "videoEmbed": "{{provider}} · {{videoId}}",
+      "audio": "Audio",
+      "audioFile": "Hochgeladene Datei",
+      "document": "Dokument",
+      "embed": "Einbettung"
+    },
+    "dialogs": {
+      "insert": "Einfügen",
+      "caption": "Unterschrift",
+      "captionHint": "Freiwillig. Sie beschreibt den Zusammenhang und ersetzt nie den Alternativtext.",
+      "alt": "Alternativtext",
+      "altHint": "Beschreibt, was auf dem Bild zu sehen ist, für alle, die es nicht sehen können.",
+      "altDecorative": "Dieses Bild ist schmückend und braucht keine Beschreibung.",
+      "link": {
+        "title": "Link setzen",
+        "description": "Die markierte Stelle bekommt eine Adresse.",
+        "href": "Adresse",
+        "hint": "Zulässig sind http, https und mailto.",
+        "submit": "Übernehmen",
+        "remove": "Link entfernen"
+      },
+      "image": {
+        "title": "Bild einfügen",
+        "description": "Laden Sie ein Bild hoch und beschreiben Sie es.",
+        "file": "Bilddatei",
+        "fileHint": "PNG, JPEG, WebP, GIF oder AVIF.",
+        "width": "Breite",
+        "widthOption": "{{width}} %"
+      },
+      "gallery": {
+        "title": "Galerie einfügen",
+        "description": "Laden Sie mehrere Bilder hoch. Jedes braucht eine eigene Beschreibung.",
+        "file": "Bild hinzufügen",
+        "fileHint": "PNG, JPEG, WebP, GIF oder AVIF. Jedes hochgeladene Bild wird angehängt.",
+        "item": "Bild {{position}}",
+        "removeItem": "Bild {{position}} entfernen",
+        "columns": "Spalten",
+        "columnsOption": "{{columns}} Spalten"
+      },
+      "video": {
+        "title": "Video einfügen",
+        "description": "Entweder eine hochgeladene Datei oder eine Einbettung, nie beides.",
+        "source": "Quelle",
+        "sourceFile": "Datei hochladen",
+        "sourceEmbed": "Einbetten",
+        "file": "Videodatei",
+        "fileHint": "MP4, WebM oder OGG.",
+        "provider": "Anbieter",
+        "videoId": "Video-Kennung",
+        "videoIdHint": "Nur die Kennung, nicht die ganze Adresse. Bei YouTube der Teil hinter v=, bei Vimeo die Zahl."
+      },
+      "audio": {
+        "title": "Audio einfügen",
+        "description": "Eine hochgeladene Tondatei. Eine fremde Adresse ist nicht möglich.",
+        "file": "Tondatei",
+        "fileHint": "MP3, WAV oder OGG."
+      },
+      "document": {
+        "title": "Dokument einfügen",
+        "description": "Eine Datei zum Herunterladen. Name und Größe kommen aus dem Upload.",
+        "file": "Dokument",
+        "fileHint": "PDF."
+      },
+      "embed": {
+        "title": "Inhalt einbetten",
+        "description": "Ein fremder Inhalt in einem Rahmen. Erlaubt sind nur die aufgeführten Anbieter.",
+        "provider": "Anbieter",
+        "url": "Einbettungsadresse",
+        "urlHint": "Nur https und nur diese Hosts: {{hosts}}.",
+        "height": "Höhe in Pixeln",
+        "heightHint": "Zwischen {{min}} und {{max}}."
+      },
+      "formula": {
+        "title": "Formel einfügen",
+        "description": "Eine Formel in KaTeX-Schreibweise.",
+        "latex": "Formel",
+        "latexHint": "KaTeX-Syntax, zum Beispiel e^{i\\pi} + 1 = 0.",
+        "render": "Rendern"
+      },
+      "table": {
+        "title": "Tabelle einfügen",
+        "description": "Zeilen und Spalten lassen sich später ändern.",
+        "rows": "Zeilen",
+        "columns": "Spalten",
+        "withHeaderRow": "Erste Zeile ist eine Kopfzeile"
+      }
+    },
+    "workflow": {
+      "cancel": "Abbrechen",
+      "submit": {
+        "title": "Projekt einreichen?",
+        "description": "„{{title}}“ geht damit an die zuständige Redaktion und ist für sie sichtbar. Solange die Redaktion nicht entschieden hat, können Sie die Einreichung wieder zurückziehen.",
+        "confirm": "Einreichen"
+      },
+      "withdraw": {
+        "title": "Einreichung zurückziehen?",
+        "description": "„{{title}}“ geht zurück in den Entwurf und ist für die Redaktion nicht mehr sichtbar. Sie können es danach weiter bearbeiten und erneut einreichen.",
+        "confirm": "Zurückziehen"
+      },
+      "saveFirst": "Der letzte Speichervorgang ist fehlgeschlagen. Es wurde deshalb nichts eingereicht; bitte prüfen Sie die Meldung und versuchen Sie es erneut."
+    },
+    "leave": {
+      "title": "Es sind noch Änderungen offen",
+      "description": "Die letzten Eingaben sind noch nicht gespeichert. Sie werden vor dem Verlassen gespeichert.",
+      "stay": "Hierbleiben",
+      "saveAndLeave": "Speichern und verlassen"
     }
   },
   "apiError": {

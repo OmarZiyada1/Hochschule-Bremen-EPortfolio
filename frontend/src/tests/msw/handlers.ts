@@ -2,8 +2,13 @@ import { http, HttpResponse } from "msw"
 
 import type { ErrorCode } from "@/api/errors"
 import { emptyPage } from "@/api/page"
-import type { OwnPortfolioResponse, UserResponse } from "@/api/types"
-import { ownPortfolio } from "@/tests/fixtures"
+import type {
+  BlockResponse,
+  OwnPortfolioResponse,
+  ProjectDetailResponse,
+  UserResponse,
+} from "@/api/types"
+import { ownPortfolio, projectDetail } from "@/tests/fixtures"
 
 /**
  * Baut eine Fehlerantwort im Envelope aus Contract 6.2, damit Tests nicht
@@ -71,4 +76,31 @@ export function currentUserHandler(overrides: Partial<UserResponse> = {}) {
  */
 export function emptyProjectsHandler() {
   return http.get("*/api/projects", () => HttpResponse.json(emptyPage()))
+}
+
+/**
+ * GET /api/projects/{id} mit der Detailantwort aus den Fixtures (§3.3).
+ * Der Pfad ist enger gefasst als die uebrigen, damit er die
+ * Unterressourcen wie /blocks nicht mitfaengt.
+ */
+export function projectDetailHandler(
+  overrides: Partial<ProjectDetailResponse> = {}
+) {
+  return http.get("*/api/projects/:projectId", () =>
+    HttpResponse.json(projectDetail(overrides))
+  )
+}
+
+/**
+ * GET /api/projects/{id}/blocks (§6.1): Bloecke und die version fuer den
+ * naechsten schreibenden Request (§6.4). Ohne Argument ein leerer Inhalt,
+ * also das, was ein frischer Entwurf hat.
+ */
+export function projectBlocksHandler(
+  blocks: BlockResponse[] = [],
+  version = 1
+) {
+  return http.get("*/api/projects/:projectId/blocks", () =>
+    HttpResponse.json({ version, blocks })
+  )
 }

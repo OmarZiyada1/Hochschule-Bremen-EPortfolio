@@ -25,6 +25,7 @@ import ResetPasswordPage from "@/features/auth/ResetPasswordPage"
 import TokenGalleryPage from "@/features/token-gallery/TokenGalleryPage"
 import { AppLayout } from "@/routes/AppLayout"
 import { AuthLayout } from "@/routes/AuthLayout"
+import { EditorRoute } from "@/routes/EditorRoute"
 import { PlaceholderPage } from "@/routes/PlaceholderPage"
 import { RequireAuth } from "@/routes/RequireAuth"
 import { RequireRole } from "@/routes/RequireRole"
@@ -80,13 +81,11 @@ export const routes: RouteObject[] = [
             element: <ProjectMetadataPage />,
           },
           {
+            /* Der blockbasierte Editor (KAN-36). Er liegt unter derselben
+               Rollenschranke wie die Metadatenseite: die Ressourcenebene
+               (Autor:in oder Projektmitglied) prueft der Server (§5). */
             path: "/projects/:projectId/editor",
-            element: (
-              <PlaceholderPage
-                titleKey="placeholder.title.projectEditor"
-                ticket="KAN-36"
-              />
-            ),
+            element: <EditorRoute />,
           },
         ],
       },

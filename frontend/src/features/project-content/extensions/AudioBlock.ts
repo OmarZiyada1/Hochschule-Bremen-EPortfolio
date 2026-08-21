@@ -1,6 +1,7 @@
-import { mergeAttributes, Node } from "@tiptap/react"
+import { Node, ReactNodeViewRenderer, mergeAttributes } from "@tiptap/react"
 
 import { textAttribute } from "@/features/project-content/extensions/attributes"
+import { MediaNodeView } from "@/features/project-content/extensions/MediaNodeView"
 
 /**
  * AUDIO (Contract 2.5, seit v51 ausschliesslich als Upload).
@@ -34,5 +35,18 @@ export const AudioBlock = Node.create({
       "figure",
       mergeAttributes(HTMLAttributes, { "data-type": "audio-block" }),
     ]
+  },
+
+  /**
+   * Die Ansicht auf der Schreibflaeche (KAN-36).
+   *
+   * <p>Ohne sie stuende hier ein leeres Element: {@link renderHTML} gibt die
+   * Attribute aus, aber keinen Inhalt, weil die Anzeige im Lesepfad ueber
+   * einen eigenen JSON-Renderer laeuft. Beim Schreiben waere der Block damit
+   * unsichtbar. Was die Ansicht zeigt und was bewusst nicht, steht in
+   * {@code MediaNodeView}.
+   */
+  addNodeView() {
+    return ReactNodeViewRenderer(MediaNodeView)
   },
 })

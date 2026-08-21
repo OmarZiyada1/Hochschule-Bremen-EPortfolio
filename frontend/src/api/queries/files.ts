@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
 
-import { api } from "@/api/client"
+import { api, type UploadOptions } from "@/api/client"
 import { apiPaths } from "@/api/endpoints"
 import type { StoredFileResponse } from "@/api/types"
 
@@ -70,16 +70,25 @@ export function uploadAvatar(file: File): Promise<StoredFileResponse> {
  * {@code PROJECT_STATUS_NOT_EDITABLE} (§4.1). Weitere Fehlerfaelle wie bei
  * {@link uploadAvatar}: 400 FILE_TYPE_NOT_ALLOWED und 400 FILE_TOO_LARGE.
  *
- * <p>Bewusst ohne Fortschritt und ohne Abbruch: beides braucht einen
- * anderen Transport als fetch und kommt mit KAN-73 an genau diese Funktion
- * dazu. Eine zweite Upload-Funktion entsteht dafuer nicht.
+ * <p><strong>Mit Fortschritt und Abbruch seit KAN-36</strong>, und genau an
+ * dieser Funktion statt an einer zweiten daneben. Beides laeuft ueber
+ * {@code api.upload}, das den Weg ueber {@code XMLHttpRequest} nimmt, weil
+ * fetch keinen Upload-Fortschritt kennt (Begruendung dort). Werden weder
+ * {@code onProgress} noch {@code signal} uebergeben, verhaelt sich der
+ * Aufruf wie zuvor.
+ *
+ * <p>Ein Abbruch wirft eine {@code DOMException} mit dem Namen
+ * {@code AbortError} und ist kein Fehlerfall des Servers: die
+ * Medien-Dialoge (KAN-36) schliessen dann still, statt eine Meldung zu
+ * zeigen.
  */
 export function uploadProjectFile(
   file: File,
-  projectId: string
+  projectId: string,
+  options?: UploadOptions
 ): Promise<StoredFileResponse> {
   const body = new FormData()
   body.append("file", file)
   body.append("projectId", projectId)
-  return api.post<StoredFileResponse>(apiPaths.files.upload, body)
+  return api.upload<StoredFileResponse>(apiPaths.files.upload, body, options)
 }

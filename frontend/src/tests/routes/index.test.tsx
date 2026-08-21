@@ -4,7 +4,13 @@ import { beforeEach, describe, expect, it } from "vitest"
 
 import { setPasswordChangeRequired } from "@/api/auth/authStore"
 import i18n from "@/i18n"
-import { emptyProjectsHandler, ownPortfolioHandler } from "@/tests/msw/handlers"
+import { projectDetail } from "@/tests/fixtures"
+import {
+  emptyProjectsHandler,
+  ownPortfolioHandler,
+  projectBlocksHandler,
+  projectDetailHandler,
+} from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
 import { AppUnderTest, LocationProbe, signInAs } from "@/tests/routes/helpers"
@@ -109,7 +115,12 @@ describe("Routenbaum", () => {
     ).toBeInTheDocument()
   })
 
-  it("EDITOR erreicht den Editor", () => {
+  it("EDITOR erreicht den Editor", async () => {
+    /* Seit KAN-36 steht dort die echte Seite und kein Platzhalter mehr: sie
+       zieht Metadaten und Inhalt getrennt (§6.1). Die einzige h1 ist der
+       Projekttitel, denn ein HEADING-Block ist immer eine
+       Zwischenueberschrift (§2.5, §3.3). */
+    server.use(projectDetailHandler(), projectBlocksHandler())
     signInAs("EDITOR")
     renderWithProviders(
       <AppUnderTest />,
@@ -117,7 +128,17 @@ describe("Routenbaum", () => {
     )
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Editor" })
+      await screen.findByRole(
+        "heading",
+        { level: 1, name: projectDetail().title },
+        /*
+         * Laenger als die Voreinstellung von einer Sekunde: der Editor ist
+         * die einzige nachgeladene Route (routes/EditorRoute.tsx), und bis
+         * die Ueberschrift steht, liegen drei Wartezeiten hintereinander,
+         * naemlich der Chunk, die Metadaten und der Inhalt.
+         */
+        { timeout: 5000 }
+      )
     ).toBeInTheDocument()
   })
 
