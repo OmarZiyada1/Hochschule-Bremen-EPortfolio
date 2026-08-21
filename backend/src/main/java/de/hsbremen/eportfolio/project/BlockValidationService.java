@@ -109,14 +109,23 @@ public class BlockValidationService {
 			BlockType.QUOTE, BlockType.TABLE);
 
 	/**
-	 * Die fuenf Farbrollen aus §2.5 fuer {@code textStyle} und
+	 * Die neun Farbrollen aus §2.5 fuer {@code textStyle} und
 	 * {@code highlight}. Ein Hex-Wert waere im Dunkelmodus derselbe Ton auf
 	 * dunklem Grund und verfehlte den Kontrast von 4,5:1; ausserdem laege er
 	 * ausserhalb der Tokenschicht und waere nachtraeglich nur per Migration
 	 * aenderbar.
+	 *
+	 * <p><strong>Vier Rollen sind mit Contract v63 dazugekommen</strong>
+	 * ({@code brown}, {@code orange}, {@code purple}, {@code pink}). Eine
+	 * erweiterte Palette laesst nur mehr zu und entwertet nichts: gespeicherte
+	 * Dokumente sind nicht betroffen, und es braucht dafuer keine
+	 * Schemamigration. Ohne die Erweiterung waere die Auswahlleiste aus KAN-36
+	 * unbenutzbar, weil jeder Griff zu einer der vier neuen Farben den
+	 * naechsten Autosave des ganzen Projekts mit 400 beendete.
 	 */
 	private static final Set<String> COLOR_ROLES = Set.of(
-			"neutral", "blue", "green", "amber", "red");
+			"neutral", "blue", "green", "amber", "red",
+			"brown", "orange", "purple", "pink");
 
 	/**
 	 * Zulaessige Schemata in {@code link.href}. Seit Contract v54 in §2.5
@@ -124,8 +133,38 @@ public class BlockValidationService {
 	 */
 	private static final Set<String> ALLOWED_LINK_SCHEMES = Set.of("http", "https", "mailto");
 
-	/** Zulaessige Ueberschriftenebenen (§2.5): die Ebene 1 der Seite ist der Projekttitel. */
-	private static final Set<Integer> HEADING_LEVELS = Set.of(2, 3);
+	/**
+	 * Zulaessige Ueberschriftenebenen: 1 bis 6 (§2.5, seit Contract v63).
+	 *
+	 * <p><strong>Der gespeicherte Wert ist die Gliederung, nicht das
+	 * Element.</strong> Die einzige {@code h1} einer Projektseite bleibt der
+	 * Projekttitel aus {@code Project.title} (§3.3); die Anzeige schiebt jede
+	 * Ebene um genau eine Stufe nach unten, und Ebene 6 wird ein {@code div}
+	 * mit {@code role="heading"} und {@code aria-level="7"}.
+	 *
+	 * <p>Die bis v62 hier gefuehrte Verengung auf 2 und 3 sollte
+	 * uebersprungene Stufen verhindern, hat das aber nie getan: sie
+	 * verhinderte allein, dass ein laengerer Beitrag ueberhaupt gegliedert
+	 * werden kann, und draengte Autor:innen zu fett ausgezeichneten
+	 * Absaetzen, die fuer einen Screenreader gar keine Ueberschrift sind
+	 * (SC 1.3.1). Der Schutz vor Spruengen liegt jetzt in der Auswahlleiste,
+	 * die die Ebenen lueckenlos anbietet, und in der festgeschriebenen
+	 * Renderabbildung.
+	 */
+	private static final Set<Integer> HEADING_LEVELS = Set.of(1, 2, 3, 4, 5, 6);
+
+	/**
+	 * Zulaessige Werte von {@code textAlign} am {@code HEADING} (§2.5, seit
+	 * Contract v63). {@code justify} bleibt dem Absatz vorbehalten: Blocksatz
+	 * an einer ein- oder zweizeiligen Ueberschrift erzeugt Wortabstaende, die
+	 * den Zeilenfall zerreissen, ohne einen Satzspiegel zu gewinnen.
+	 *
+	 * <p>Am {@code TEXT} wird {@code textAlign} weiterhin nicht geprueft: dort
+	 * sind alle vier Werte zulaessig, und §2.5 verlangt fuer den Absatz keine
+	 * serverseitige Pruefung. Eine hier ergaenzte waere eine Regel ohne
+	 * Grundlage im Contract.
+	 */
+	private static final Set<String> HEADING_TEXT_ALIGNMENTS = Set.of("left", "center", "right");
 
 	/** Zulaessige Bildbreiten in Prozent der Textspalte (§2.5). */
 	private static final Set<Integer> IMAGE_WIDTHS = Set.of(100, 75, 50);
@@ -185,14 +224,25 @@ public class BlockValidationService {
 
 	/**
 	 * Die typabhaengigen {@code attrs} des Wurzelknotens (§2.5). Was hier nicht
-	 * genannt ist, prueft der Server nicht: {@code caption}, {@code alt} am
-	 * Bild und {@code textAlign} sind freie Anzeigeinformation.
+	 * genannt ist, prueft der Server nicht: {@code caption} und {@code alt} am
+	 * Bild sind freie Anzeigeinformation.
+	 *
+	 * <p><strong>{@code textAlign} ist seit Contract v63 zweigeteilt.</strong>
+	 * Am {@code TEXT} bleibt es ungeprueft, dort sind alle vier Werte
+	 * zulaessig. Am {@code HEADING} laesst §2.5 nur {@code left},
+	 * {@code center} und {@code right} zu, und genau das setzt
+	 * {@link #requireHeadingTextAlign} durch; ein {@code justify} ergibt dort
+	 * 400 {@code BLOCK_CONTENT_INVALID}.
 	 */
 	private void validateRootAttributes(BlockType type, JsonNode attrs, int index) {
 		switch (type) {
-			case HEADING -> requireIntFrom(index, attrs, "level", HEADING_LEVELS,
-					"HEADING braucht attrs.level 2 oder 3: die Ebene 1 der Seite ist der "
-							+ "Projekttitel (§2.5, §3.3)");
+			case HEADING -> {
+				requireIntFrom(index, attrs, "level", HEADING_LEVELS,
+						"HEADING braucht attrs.level 1 bis 6 (§2.5); gerendert wird um eine "
+								+ "Stufe versetzt, weil die Ebene 1 der Seite der Projekttitel "
+								+ "ist (§3.3)");
+				requireHeadingTextAlign(index, attrs);
+			}
 			case FORMULA -> requireText(index, type, attrs, "latex");
 			case IMAGE -> {
 				requireFileId(index, type, attrs, "fileId");
@@ -225,6 +275,28 @@ public class BlockValidationService {
 			}
 			// TEXT, LIST, QUOTE, CODE, TABLE, DIVIDER haben keine Pflicht-Attribute.
 			default -> { /* nichts zu pruefen */ }
+		}
+	}
+
+	/**
+	 * {@code textAlign} am {@code HEADING}: wenn gesetzt, dann {@code left},
+	 * {@code center} oder {@code right} (§2.5 seit Contract v63).
+	 *
+	 * <p>Nicht gesetzt ist zulaessig und der Regelfall. Geprueft wird deshalb
+	 * ueber {@code hasNonNull}: Tiptap schreibt bei {@code toJSON} alle
+	 * deklarierten Attribute mit, auch die ohne Wert, ein ausdrueckliches
+	 * {@code null} gilt also wie abwesend. Dieselbe Feinheit traegt schon
+	 * {@link #validateVideo}.
+	 */
+	private void requireHeadingTextAlign(int index, JsonNode attrs) {
+		if (!attrs.hasNonNull("textAlign")) {
+			return;
+		}
+		String value = attrs.path("textAlign").asText("");
+		if (!HEADING_TEXT_ALIGNMENTS.contains(value)) {
+			throw error(index, "HEADING: attrs.textAlign kennt left, center und right (§2.5); "
+					+ "Blocksatz bleibt dem Absatz vorbehalten, weil er an einer kurzen "
+					+ "Ueberschrift den Zeilenfall zerreisst");
 		}
 	}
 
@@ -457,8 +529,13 @@ public class BlockValidationService {
 
 	/**
 	 * {@code textStyle} und {@code highlight} fuehren in {@code attrs.color}
-	 * einen Rollennamen aus {@code neutral}, {@code blue}, {@code green},
-	 * {@code amber} und {@code red} (§2.5).
+	 * einen Rollennamen aus {@link #COLOR_ROLES} (§2.5).
+	 *
+	 * <p>Die Liste steht bewusst nur an der Konstante und nicht noch einmal
+	 * hier: sie ist mit Contract v63 von fuenf auf neun Rollen gewachsen, und
+	 * eine zweite Aufzaehlung im Javadoc waere beim naechsten Mal wieder die
+	 * veraltete. Die Fehlermeldung baut sie ohnehin zur Laufzeit aus der
+	 * Konstante.
 	 *
 	 * <p>Dass ein fehlendes {@code color} abgewiesen wird, folgt woertlich aus
 	 * §2.5: „Keine Farbe heisst: das Mark fehlt." Der Renderer verwirft

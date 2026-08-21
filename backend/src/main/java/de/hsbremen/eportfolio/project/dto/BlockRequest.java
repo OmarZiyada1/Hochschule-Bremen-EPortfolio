@@ -54,13 +54,21 @@ public record BlockRequest(
 		@NotNull(message = "content fehlt.")
 		JsonNode content,
 
+		/*
+		 * Ohne example: die Zahl veraltet sonst bei jeder Schemaerhoehung ein
+		 * zweites Mal, und ein Client, der dem Beispiel folgt, schriebe eine
+		 * Version, die zu seinem Inhalt nicht passt. Was gilt, steht als
+		 * Default in DEFAULT_SCHEMA_VERSION und damit an einer Stelle.
+		 */
 		@Schema(description = "Version des Editor-Schemas (§2.10). Fehlt sie, gilt die "
-				+ "aktuelle Version.", example = "2", nullable = true)
+				+ "aktuelle Version.", nullable = true)
 		@Positive(message = "schemaVersion muss groesser als 0 sein.")
 		Integer schemaVersion) {
 
 	/**
-	 * Default aus §2.10, seit Contract v51 die Version 2 (KAN-72).
+	 * Default aus §2.10: immer die aktuelle Version aus
+	 * {@link BlockSchemaMigration#CURRENT_VERSION}, zuletzt mit Contract v63
+	 * auf 3 gehoben (KAN-72, KAN-36).
 	 *
 	 * <p>Bewusst die <em>aktuelle</em> Version und nicht mehr die 1 aus der
 	 * Spaltendefinition: was ueber diesen Endpoint hereinkommt, ist gerade

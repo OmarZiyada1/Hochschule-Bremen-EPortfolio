@@ -45,12 +45,21 @@ import java.util.List;
 public final class BlockSchemaMigration {
 
 	/**
-	 * Aktuelle Version des Editor-Schemas (§2.10). Mit Contract v51 von 1 auf 2
-	 * gehoben: {@code AUDIO.src} ist entfallen, {@code GALLERY.fileIds} heisst
-	 * jetzt {@code items} und traegt Objekte statt blosser IDs, und
-	 * {@code HEADING.level} kennt die Ebene 1 nicht mehr.
+	 * Aktuelle Version des Editor-Schemas (§2.10).
+	 *
+	 * <p><strong>1 auf 2 mit Contract v51:</strong> {@code AUDIO.src} ist
+	 * entfallen, {@code GALLERY.fileIds} heisst jetzt {@code items} und traegt
+	 * Objekte statt blosser IDs, und {@code HEADING.level} kannte die Ebene 1
+	 * nicht mehr.
+	 *
+	 * <p><strong>2 auf 3 mit Contract v63:</strong> {@code HEADING.level} deckt
+	 * wieder 1 bis 6 ab, und die Renderabbildung ist um eine Stufe versetzt.
+	 * Dieselbe Zahl bedeutet damit etwas anderes als vorher, weshalb es ohne
+	 * Migration nicht abgeht: ein gespeichertes {@code level: 2} war bis v62
+	 * die oberste Zwischenueberschrift und waere ab v63 die zweite, jeder
+	 * vorhandene Beitrag rutschte also eine Stufe nach unten.
 	 */
-	public static final int CURRENT_VERSION = 2;
+	public static final int CURRENT_VERSION = 3;
 
 	private BlockSchemaMigration() {
 		// Nur statische Funktionen, kein Zustand.
@@ -71,7 +80,52 @@ public final class BlockSchemaMigration {
 		if (fromVersion >= CURRENT_VERSION || content == null || !content.isObject()) {
 			return content;
 		}
-		return migrateOneToTwo(type, content);
+		JsonNode migrated = content;
+		if (fromVersion < 2) {
+			migrated = migrateOneToTwo(type, migrated);
+		}
+		if (fromVersion < 3) {
+			migrated = migrateTwoToThree(type, migrated);
+		}
+		return migrated;
+	}
+
+	/**
+	 * Version 2 nach 3, also die Ebenenumstellung aus Contract v63 (§2.5).
+	 *
+	 * <p><strong>Was hier passiert und warum genau das.</strong> Bis v62
+	 * reichte {@code HEADING.level} von 2 bis 3, und die Anzeige gab die Ebene
+	 * unveraendert als {@code h2} beziehungsweise {@code h3} aus. Seit v63
+	 * reicht sie von 1 bis 6, und die Anzeige schiebt sie um eine Stufe: aus
+	 * Ebene 1 wird {@code h2}. Bliebe der gespeicherte Wert stehen, saehe eine
+	 * bestehende oberste Zwischenueberschrift ({@code level: 2}) danach wie
+	 * ein {@code h3} aus, also eine Stufe kleiner als am Tag ihrer Entstehung.
+	 * Die Abbildung 2 nach 1 und 3 nach 2 haelt das Aussehen jedes vorhandenen
+	 * Beitrags unveraendert.
+	 *
+	 * <p><strong>Die Kette bleibt zusammenhaengend.</strong>
+	 * {@link #migrateOneToTwo} hebt ein vor v51 geschriebenes {@code level: 1}
+	 * auf 2, dieser Schritt macht daraus wieder 1, und das ist der Sache nach
+	 * dieselbe oberste Zwischenueberschrift. Ein Dokument der Version 1 laeuft
+	 * also durch beide Schritte und landet richtig.
+	 *
+	 * <p>Alles ausserhalb von {@code HEADING} bleibt unberuehrt, und innerhalb
+	 * bleibt jedes andere Attribut stehen. Ein {@code level} ausserhalb von 2
+	 * und 3 wird nicht angefasst: es kann aus keinem gueltigen Bestand
+	 * stammen, und ein geratener Ersatzwert waere schlechter als der Wert, den
+	 * die anschliessende Pruefung ohnehin mit 400 abweist.
+	 */
+	private static JsonNode migrateTwoToThree(BlockType type, JsonNode content) {
+		if (type != BlockType.HEADING) {
+			return content;
+		}
+		JsonNode level = content.path("attrs").path("level");
+		if (!level.isIntegralNumber() || level.asInt() < 2 || level.asInt() > 3) {
+			return content;
+		}
+		ObjectNode migrated = (ObjectNode) content.deepCopy();
+		((ObjectNode) migrated.path("attrs")).put("level", level.asInt() - 1);
+		return migrated;
 	}
 
 	/**
