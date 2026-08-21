@@ -10,6 +10,13 @@ Template-Seiten unter „Figma-Prototype (Embed)" im Confluence-Space BEH.
 Der Prototyp ist die Vorlage, nicht die Umsetzung: sein Code stammt aus
 einem separaten Repository mit abweichendem Stack und wird nicht übernommen.
 
+Beides liegt in **einer** Figma-Datei, File-Key `o6SECXRMKGOzCfG5xZebPV`:
+Seite `Foundation` ist Node-ID `0:1` (Farben, Typografie, Radius, Elevation),
+`Components` ist `1:2`, `Template` ist `4:611`. Die Seite `4:611` steht
+**nicht** in der Seitenliste von `get_metadata` und wird immer direkt
+angesteuert; Einzelheiten und Fallstricke in `CLAUDE.md`, Abschnitt „Die
+Figma-Arbeitsdatei".
+
 ## 1. Farben stehen genau einmal
 
 Alle Farbwerte liegen in `frontend/src/styles/tokens/tokens.css`

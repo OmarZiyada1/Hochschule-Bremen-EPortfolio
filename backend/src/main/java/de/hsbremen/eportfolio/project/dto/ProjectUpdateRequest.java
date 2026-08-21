@@ -34,10 +34,10 @@ import java.util.UUID;
  * oder {@code null} sind, und werden mit der leeren Liste {@code []} geleert.
  * Hier steht mit {@code []} bereits ein eigener Ausdruck fuer „leer" zur
  * Verfuegung, {@code null} ist also frei fuer „nicht anfassen". Das ist mehr als
- * Bequemlichkeit: {@code editorIds} darf nur die Autor:in und nur im Entwurf
- * aendern (§5, Fussnote ³). Bei ersetzender Semantik bekaeme ein Projektmitglied
- * schon dann <strong>403</strong>, wenn es nur den Titel korrigiert und das Feld
- * weglaesst.
+ * Bequemlichkeit: {@code editorIds} darf nur die Autor:in aendern, und sie nur
+ * in {@code DRAFT} und {@code REVISION} (§5, Fussnote ³). Bei ersetzender
+ * Semantik bekaeme ein Projektmitglied schon dann <strong>403</strong>, wenn es
+ * nur den Titel korrigiert und das Feld weglaesst.
  *
  * @param version        Stand aus {@code GET /projects/{id}}. Weicht er vom
  *                       Stand in der Datenbank ab, folgt <strong>409</strong>
@@ -56,7 +56,8 @@ import java.util.UUID;
  *                       laesst sie unveraendert
  * @param editorIds      zustaendige Redaktion; {@code null} laesst sie
  *                       unveraendert. Eine Aenderung darf nur die Autor:in und
- *                       nur im Status {@code DRAFT} (§5, Fussnote ³)
+ *                       nur in {@code DRAFT} und {@code REVISION}
+ *                       (§5, Fussnote ³, seit Contract v62)
  * @param members        Co-Autor:innen und Mitwirkende (§3.13.1); {@code null}
  *                       laesst sie unveraendert
  */
@@ -113,12 +114,17 @@ public record ProjectUpdateRequest(
 				String> tags,
 
 		@Schema(description = "IDs der zustaendigen Redakteur:innen. Null laesst die Zuweisung "
-				+ "unveraendert, [] hebt sie auf. Eine Aenderung ist nur der Autor:in und nur im "
-				+ "Status DRAFT erlaubt, sonst 403 (§5, Fussnote 3).", nullable = true)
+				+ "unveraendert, [] hebt sie auf. Eine Aenderung ist nur der Autor:in und nur in "
+				+ "DRAFT oder REVISION erlaubt, sonst 403 (§5, Fussnote 3); ihre eigene Systemrolle "
+				+ "spielt dabei keine Rolle. Wer zur Projektseite gehoert, laesst sich nicht neu "
+				+ "eintragen, also weder die anfragende Person selbst noch die Autor:in noch "
+				+ "jemand aus members: 400 VALIDATION_FAILED.", nullable = true)
 		Set<UUID> editorIds,
 
 		@Schema(description = "Co-Autor:innen und Mitwirkende (§3.13). Null laesst die Liste "
-				+ "unveraendert, [] leert sie. Die Autor:in gehoert nicht hinein.",
+				+ "unveraendert, [] leert sie. Die Autor:in gehoert nicht hinein, und wer dem "
+				+ "Projekt als Redaktion zugewiesen ist, laesst sich nicht neu aufnehmen "
+				+ "(§5, Fussnote 3).",
 				nullable = true)
 		@Valid
 		List<MemberRequest> members) implements ProjectMetadataRequest {

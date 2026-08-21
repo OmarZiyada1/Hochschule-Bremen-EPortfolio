@@ -170,8 +170,11 @@ public class ProjectWriteService {
 		project.setStatus(ProjectStatus.DRAFT);
 		applyMetadata(project, request);
 		applyTags(project, tags);
+
+		Separation before = separationOf(project);
 		applyMembers(user, project, request.members(), author);
 		applyEditors(user, project, request.editorIds());
+		requireProjectSideSeparateFromEditors(project, before);
 
 		Project saved = projectRepository.saveAndFlush(project);
 		recordCreation(saved, author);
@@ -214,8 +217,11 @@ public class ProjectWriteService {
 
 		applyMetadata(project, request);
 		applyTags(project, tags);
+
+		Separation before = separationOf(project);
 		applyMembers(user, project, request.members(), project.getAuthor());
 		applyEditors(user, project, request.editorIds());
+		requireProjectSideSeparateFromEditors(project, before);
 
 		projectRepository.saveAndFlush(project);
 
@@ -278,9 +284,17 @@ public class ProjectWriteService {
 	 * gerade fuer die Faelle, in denen die Metadaten gesperrt sind. Begruendung
 	 * in {@link ProjectEditorsRequest}.
 	 *
+	 * <p><strong>Die Trennung von Projektseite und Redaktion gilt auch
+	 * hier</strong> (§5, Fussnote ³ seit Contract v61, KAN-77). Die Berechtigung
+	 * bleibt unveraendert bei der Administration; ohne die Zustandspruefung
+	 * bliebe aber genau ein Weg offen, auf dem ein Projektmitglied doch noch zur
+	 * zustaendigen Redaktion des eigenen Projekts wuerde.
+	 *
 	 * @throws ResourceNotFoundException wenn es die ID nicht gibt (404)
 	 * @throws AccessDeniedException     wenn die Person kein Admin ist (403)
-	 * @throws ValidationException       bei unbekannten IDs im Body (400)
+	 * @throws ValidationException       bei unbekannten IDs im Body und bei einer
+	 *                                   neu entstehenden Ueberschneidung mit der
+	 *                                   Projektseite (400)
 	 */
 	public ProjectDetailResponse reassignEditors(AuthenticatedUser user, UUID projectId,
 			ProjectEditorsRequest request) {
@@ -291,7 +305,10 @@ public class ProjectWriteService {
 					"Die Redaktion umverteilen darf nur die Administration (§6.1).");
 		}
 
+		Separation before = separationOf(project);
 		replaceEditors(project, request.editorIds());
+		requireProjectSideSeparateFromEditors(project, before);
+
 		projectRepository.saveAndFlush(project);
 
 		return readService.detail(user, projectId);
@@ -702,8 +719,9 @@ public class ProjectWriteService {
 	 *
 	 * <p>Anders als bei der Mitgliederliste reicht die Zugehoerigkeit zum
 	 * Projekt hier nicht: nach §3.13.1 duerfen Mitglieder {@code editorIds}
-	 * nicht aendern, das bleibt der Autor:in im {@code DRAFT} vorbehalten. Wer
-	 * die Redaktion bestimmt, entscheidet darueber, wer das Ergebnis beurteilt.
+	 * nicht aendern, das bleibt der Autor:in in {@code DRAFT} und
+	 * {@code REVISION} vorbehalten. Wer die Redaktion bestimmt, entscheidet
+	 * darueber, wer das Ergebnis beurteilt.
 	 *
 	 * <p>Wie bei den Mitgliedern greift die Pruefung nur bei einer echten
 	 * Aenderung, damit ein durchgereichtes {@code GET}-Ergebnis kein 403 ergibt.
@@ -716,12 +734,141 @@ public class ProjectWriteService {
 			return;
 		}
 		if (!permissions.mayAssignEditors(user, project)) {
+			// Genannt wird der Grund, der hier tatsaechlich greift: die Rolle,
+			// nicht der Status. Wer zur Projektseite gehoert und in einem
+			// gesperrten Status schreibt, ist schon an requireEditable mit 409
+			// gescheitert und kommt gar nicht bis hierher.
 			throw new AccessDeniedException(
-					"Die Redaktionszuweisung darf nur die Autor:in aendern, und nur solange das "
-							+ "Projekt im Status DRAFT ist (§5, Fussnote 3). Danach fuehrt der Weg "
+					"Die Redaktionszuweisung aendert nur die Autor:in, nicht die "
+							+ "Projektmitglieder (§3.13.1). Ab der Einreichung fuehrt der Weg "
 							+ "ueber PUT /api/projects/{id}/editors.");
 		}
+		requireNotSelfAssigned(user, requested);
 		replaceEditors(project, requested);
+	}
+
+	/**
+	 * Niemand traegt sich selbst als Redaktion ein (§5, Fussnote ³):
+	 * <strong>400</strong> {@code VALIDATION_FAILED} am Feld {@code editorIds}.
+	 *
+	 * <p><strong>Warum ein eigener Satz, obwohl
+	 * {@link #requireProjectSideSeparateFromEditors} denselben Fall abdeckt.</strong>
+	 * Die Selbstzuweisung ist der haeufigste Fehlgriff am Metadatenformular und
+	 * verdient die klare Auskunft. Die allgemeine Meldung sagt nur, dass sich
+	 * Projektseite und Redaktion ausschliessen, und laesst die Person raten, wen
+	 * genau der Server meint. Fachlich bleibt es ein Sonderfall der Trennung und
+	 * keine zweite Regel.
+	 *
+	 * <p><strong>Warum im eingebetteten Weg und nicht in
+	 * {@link #loadEditorAccount}.</strong> Die Aussage betrifft die
+	 * <em>anfragende</em> Person, nicht das zugewiesene Konto. Auf
+	 * {@code PUT /projects/{id}/editors} verteilt die Administration fremde
+	 * Zustaendigkeiten, dort greift allein die Zustandspruefung: ein Admin-Konto
+	 * gehoert nicht zur Projektseite, seine Zuweisung ist nach §5 Fussnote ¹¹
+	 * ohnehin wirkungslos und keine Umgehung des Vier-Augen-Prinzips.
+	 *
+	 * <p><strong>Die Meldung beginnt mit dem Feldnamen und einem Doppelpunkt</strong>,
+	 * wie {@code semesterId: …} weiter oben. Das ist keine Kosmetik: das Formular
+	 * schneidet am ersten {@code ": "} und haengt den Rest an genau dieses Feld
+	 * ({@code applyValidationErrors}). Ohne das Praefix landet der Satz als
+	 * anonyme Meldung am Formularfuss, und §5 Fussnote ³ verlangt sie
+	 * ausdruecklich <em>am Feld</em> {@code editorIds}. Im Resttext steht deshalb
+	 * kein weiteres {@code ": "} und kein {@code "; "}.
+	 */
+	private void requireNotSelfAssigned(AuthenticatedUser user, Set<UUID> requested) {
+		if (requested.contains(user.getId())) {
+			throw new ValidationException(ErrorCodes.VALIDATION_FAILED,
+					"editorIds: Sich selbst kann niemand als Redaktion eintragen, denn ueber "
+							+ "eine Arbeit entscheidet die Redaktion und nicht, wer sie "
+							+ "verfasst hat (§5, Fussnote 3).");
+		}
+	}
+
+	// ------------------------------------------------------------------
+	// Trennung von Projektseite und Redaktion (§5, Fussnote 3 seit v61)
+	// ------------------------------------------------------------------
+
+	/**
+	 * Der Stand eines Projekts, soweit die Trennung von Projektseite und
+	 * Redaktion ihn braucht: die zugewiesene Redaktion und die Personen, die
+	 * zugleich auf beiden Seiten stehen.
+	 *
+	 * @param editorIds zugewiesene Redaktion zu diesem Zeitpunkt
+	 * @param overlap   Schnittmenge aus Projektseite und Redaktion
+	 */
+	private record Separation(Set<UUID> editorIds, Set<UUID> overlap) {
+	}
+
+	/**
+	 * Die „Projektseite" kommt aus dem {@link ProjectPermissionService} und wird
+	 * hier nicht ein zweites Mal definiert: wer zum Projekt gehoert, ist eine
+	 * Frage der Ressourcenebene und steht nach CLAUDE.md an genau einer Stelle.
+	 */
+	private Separation separationOf(Project project) {
+		Set<UUID> editorIds = currentEditorIds(project);
+		Set<UUID> overlap = new LinkedHashSet<>(permissions.projectSideIds(project));
+		overlap.retainAll(editorIds);
+		return new Separation(editorIds, overlap);
+	}
+
+	/**
+	 * Zugewiesene Redaktion und Projektseite schliessen einander aus (§5,
+	 * Fussnote ³ seit Contract v61, KAN-77). Was der Schreibvorgang an
+	 * Ueberschneidung neu erzeugt, ergibt <strong>400</strong>
+	 * {@code VALIDATION_FAILED}.
+	 *
+	 * <p><strong>Warum am Zustand und nicht am Schreibweg.</strong>
+	 * {@link #applyMembers} laeuft vor {@link #applyEditors}. Eine Pruefung im
+	 * Mitgliederpfad saehe die neuen Editoren noch nicht, eine im Editorenpfad
+	 * die neuen Mitglieder schon; beides liesse genau eine Reihenfolge offen und
+	 * waere im gemeinsamen {@code PUT} wirkungslos, wo {@code members} und
+	 * {@code editorIds} zusammen eintreffen. Der gemeinsame Schritt nach beiden
+	 * Zuweisungen ist reihenfolgeunabhaengig und beantwortet die Frage genau
+	 * einmal, fuer alle drei Schreibwege der Zuweisung.
+	 *
+	 * <p><strong>Warum nur neu Entstandenes.</strong> Ab {@code SUBMITTED} ist
+	 * die Redaktionszuweisung fuer die Autor:in gesperrt (§5, Fussnote ³). Eine
+	 * harte Pruefung wuerde ein Projekt mit bestehender Ueberschneidung
+	 * unspeicherbar machen, ohne dass es ausser dem Admin jemand aufloesen
+	 * koennte: dieselbe Sackgasse, die {@code mayAssignEditors} an anderer Stelle
+	 * beseitigt. Verglichen wird deshalb gegen den Stand vor der Aenderung, und
+	 * Bestandsdaten werden nicht rueckwirkend beanstandet, wie beim Pflichtfeld
+	 * aus §3.3 auch.
+	 *
+	 * <p><strong>Welches Feld die Meldung nennt.</strong> Stand die Person schon
+	 * vorher in der Redaktion, entsteht die Ueberschneidung ueber
+	 * {@code members}, sonst ueber {@code editorIds}. Treffen beide Aenderungen
+	 * zusammen ein, faellt die Person in den zweiten Fall und die Meldung nennt
+	 * {@code editorIds}: das ist das Feld, das die Zustaendigkeit vergibt.
+	 * Entstehen in einem Request mehrere Ueberschneidungen auf verschiedenen
+	 * Wegen, nennt sie ebenfalls {@code editorIds}, statt vom Zufall der
+	 * Mengenreihenfolge abzuhaengen.
+	 *
+	 * <p><strong>Die Meldung beginnt mit dem Feldnamen</strong>, aus demselben
+	 * Grund wie bei {@link #requireNotSelfAssigned}: nur so haengt sie im
+	 * Formular am betroffenen Feld und nicht am Formularfuss.
+	 *
+	 * <p><strong>Der Wurf sitzt nach beiden Zuweisungen</strong>, also nach
+	 * Mutationen am verwalteten Projekt. Anders als {@link #replaceMembers} und
+	 * {@link #replaceEditors}, die bewusst erst aufloesen und dann aendern, kann
+	 * diese Pruefung ihr Ergebnis konstruktionsbedingt nicht vorher kennen: sie
+	 * beurteilt genau den Zustand, den beide Schritte zusammen erzeugen. Dass
+	 * kein halb geaendertes Projekt zurueckbleibt, traegt hier deshalb das
+	 * Rollback der Transaktion: {@link ValidationException} ist eine
+	 * {@code RuntimeException}, und bis hierher hat nichts geflusht.
+	 */
+	private void requireProjectSideSeparateFromEditors(Project project, Separation before) {
+		Set<UUID> added = new LinkedHashSet<>(separationOf(project).overlap());
+		added.removeAll(before.overlap());
+		if (added.isEmpty()) {
+			return;
+		}
+		boolean onlyThroughMembers = before.editorIds().containsAll(added);
+		String field = onlyThroughMembers ? "members" : "editorIds";
+		throw new ValidationException(ErrorCodes.VALIDATION_FAILED,
+				field + ": Zugewiesene Redaktion und Projektseite schliessen einander aus, "
+						+ "die angegebene Person gehoert bereits zur anderen Seite desselben "
+						+ "Projekts (§5, Fussnote 3).");
 	}
 
 	/**

@@ -88,11 +88,16 @@ public record ProjectCreateRequest(
 
 		@Schema(description = "IDs der zustaendigen Redakteur:innen aus "
 				+ "GET /api/users/lookup?role=EDITOR. Die Autor:in legt sie bei der Anlage fest "
-				+ "und kann sie aendern, solange das Projekt im Status DRAFT ist (§5, Fussnote 3).")
+				+ "und kann sie aendern, solange das Projekt in DRAFT oder REVISION steht "
+				+ "(seit Contract v62), unabhaengig von "
+				+ "ihrer eigenen Systemrolle (§5, Fussnote 3). Nicht eintragen laesst sich, wer "
+				+ "zur Projektseite gehoert: weder die anfragende Person selbst noch die Autor:in "
+				+ "noch jemand aus members, sonst 400 VALIDATION_FAILED.")
 		Set<UUID> editorIds,
 
 		@Schema(description = "Co-Autor:innen und Mitwirkende (§3.13). Nicht zu verwechseln mit "
-				+ "der zugewiesenen Redaktion. Die Autor:in selbst gehoert nicht in diese Liste.")
+				+ "der zugewiesenen Redaktion. Die Autor:in selbst gehoert nicht in diese Liste, "
+				+ "und wer in editorIds steht, ebenso wenig (§5, Fussnote 3).")
 		@Valid
 		List<MemberRequest> members) implements ProjectMetadataRequest {
 }

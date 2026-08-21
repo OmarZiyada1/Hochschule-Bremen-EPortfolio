@@ -644,9 +644,8 @@
         "chosen": "Zugewiesene Redaktion",
         "remove": "{{name}} aus der Redaktion entfernen",
         "none": "Keine Redaktion zugewiesen.",
-        "lockedAfterDraft": "Die Redaktion lässt sich nur im Entwurf ändern. Danach nimmt die Administration die Zuweisung vor.",
-        "lockedForEditorRole": "Wer selbst zur Redaktion gehört, legt die Zuständigkeit am eigenen Projekt nicht fest. Die Administration nimmt die Zuweisung vor.",
-        "lockedForMembers": "Die zuständige Redaktion bestimmt die Autor:in des Projekts."
+        "lockedAfterSubmit": "Die Redaktion lässt sich nur während der Bearbeitung ändern, also im Entwurf und in der Überarbeitung. Ab der Einreichung nimmt die Administration die Zuweisung vor.",
+        "lockedForMembers": "Die zuständige Redaktion wird von der Autor:in des Projekts bestimmt."
       },
       "members": {
         "person": "Mitglied",

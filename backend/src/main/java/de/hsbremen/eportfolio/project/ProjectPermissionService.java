@@ -6,6 +6,7 @@ import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
 import de.hsbremen.eportfolio.config.PermissionProperties;
 import de.hsbremen.eportfolio.user.User;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -68,7 +69,31 @@ public class ProjectPermissionService {
 	 * Projektmitglieder, im Gegensatz zu Redaktion und Admin.
 	 */
 	public boolean isProjectSide(AuthenticatedUser user, Project project) {
-		return isAuthor(user, project) || isMember(user, project);
+		return isLoggedIn(user) && projectSideIds(project).contains(user.getId());
+	}
+
+	/**
+	 * Dieselbe Projektseite als Menge von Konten-IDs.
+	 *
+	 * <p><strong>Warum hier und nicht im Schreibdienst.</strong> „Wer gehoert zum
+	 * Projekt" ist eine Frage der Ressourcenebene und wird nach CLAUDE.md an
+	 * genau einer Stelle beantwortet. Der {@code ProjectWriteService} braucht sie
+	 * fuer die Trennung von Projektseite und Redaktion (§5, Fussnote ³ seit
+	 * Contract v61) nicht als Ja-Nein-Frage zu einer Person, sondern als ganze
+	 * Menge. Beides aus derselben Quelle zu speisen verhindert, dass die beiden
+	 * Fassungen auseinanderlaufen, sobald §3.13 sich aendert.
+	 */
+	public Set<UUID> projectSideIds(Project project) {
+		Set<UUID> ids = new LinkedHashSet<>();
+		if (project.getAuthor() != null) {
+			ids.add(project.getAuthor().getId());
+		}
+		for (ProjectMember member : project.getMembers()) {
+			if (member.getUser() != null) {
+				ids.add(member.getUser().getId());
+			}
+		}
+		return ids;
 	}
 
 	/**
@@ -468,6 +493,26 @@ public class ProjectPermissionService {
 	 * traegt einen unmarkierten Haken. Deshalb greift die Sperre hier nur fuer
 	 * EDITOR. Ob ein Admin sein eigenes Projekt freigeben koennen soll, ist mit
 	 * den Pruefern zu klaeren (§7, offener Punkt 7).
+	 *
+	 * <p><strong>Geprueft wird die gesamte Projektseite</strong> (Fussnote ¹ in
+	 * der Fassung von Contract v61, KAN-77), also {@link #isProjectSide} und
+	 * nicht mehr {@link #isAuthor} allein. Wer an einem Projekt mitgeschrieben
+	 * hat, entscheidet nicht ueber seine Freigabe, auch dann nicht, wenn es ihm
+	 * als Redaktion zugewiesen ist. Ohne diese Reichweite bliebe die Sperre
+	 * ueber zwei Ecken zu umgehen: eine Autor:in traegt ein Projektmitglied mit
+	 * der Rolle EDITOR als zustaendige Redaktion ein, und schon entscheidet eine
+	 * Beteiligte ueber das gemeinsame Ergebnis.
+	 *
+	 * <p><strong>Diese Pruefung ist die letzte Sicherung, nicht die
+	 * einzige.</strong> Vorgelagert verhindert der {@code ProjectWriteService}
+	 * den verbotenen Zustand schon beim Schreiben (§5, Fussnote ³). Hier faengt
+	 * er ab, was auf anderem Weg entstanden ist, etwa in Bestandsdaten, die
+	 * ausdruecklich nicht rueckwirkend beanstandet werden.
+	 *
+	 * <p><strong>{@code REQUEST_REVISION} bleibt aussen vor</strong> und laeuft
+	 * deshalb nicht ueber diese Methode: die Zeile „Zur Ueberarbeitung
+	 * zurueckgeben" traegt in §5 keine Fussnote ¹. Eine Ruecknahme ist keine
+	 * Freigabe, sie gibt die Arbeit an die Projektseite zurueck.
 	 */
 	private boolean mayDecideEditorially(AuthenticatedUser user, Project project) {
 		if (user.hasRole(Role.ADMIN)) {
@@ -476,7 +521,7 @@ public class ProjectPermissionService {
 		if (!user.hasRole(Role.EDITOR) || !isAssignedEditor(user, project)) {
 			return false;
 		}
-		return !properties.fourEyesPrinciple() || !isAuthor(user, project);
+		return !properties.fourEyesPrinciple() || !isProjectSide(user, project);
 	}
 
 	// ------------------------------------------------------------------
@@ -619,8 +664,9 @@ public class ProjectPermissionService {
 	 * Zeile „Redakteur:innen einem Projekt zuweisen": STUDENT (✓)³, EDITOR ✗,
 	 * ADMIN ✓.
 	 *
-	 * <p>Fussnote ³ meint die Auswahl der zustaendigen Redaktion beim Anlegen,
-	 * deshalb hier auf den eigenen Entwurf beschraenkt. Achtung: §6.1 fuehrt
+	 * <p>Fussnote ³ meint die Auswahl der zustaendigen Redaktion durch die
+	 * Autor:in, deshalb hier auf das eigene Projekt und dessen Arbeitszustaende
+	 * beschraenkt. Achtung: §6.1 fuehrt
 	 * {@code PUT /projects/{id}/editors} als reinen ADMIN-Endpoint. Beides
 	 * passt nur zusammen, wenn die studentische Auswahl ueber
 	 * {@code POST /projects} laeuft und nicht ueber diesen Endpoint. Siehe
@@ -633,6 +679,42 @@ public class ProjectPermissionService {
 	 * §3.13.1 nimmt ihnen {@code editorIds} ausdruecklich weg, obwohl sie sonst
 	 * dieselben Felder pflegen duerfen. Wer die Redaktion bestimmt, entscheidet
 	 * darueber, wer das Ergebnis beurteilt; das bleibt bei der Autor:in.
+	 *
+	 * <p><strong>Die eigene Systemrolle spielt keine Rolle</strong> (Fussnote ³
+	 * in der Fassung von Contract v60, KAN-77). Bis dahin stand hier ein Zweig,
+	 * der die Rolle EDITOR pauschal abwies, auch am eigenen Entwurf. Zusammen
+	 * mit dem Pflichtfeld aus §3.3 ergab das eine Sackgasse: eine Autor:in mit
+	 * der Rolle EDITOR konnte ihr Projekt weder mit einer Redaktion versehen
+	 * (403) noch ohne sie einreichen (400 {@code PROJECT_INCOMPLETE}), es waere
+	 * dauerhaft im Entwurf liegengeblieben, bis ein Admin
+	 * {@code PUT /projects/{id}/editors} bedient. Das Kreuz der EDITOR-Spalte in
+	 * §5 meint fremde Projekte, und die grenzt {@link #isAuthor} bereits ab.
+	 *
+	 * <p><strong>Wen die Autor:in eintragen darf, steht nicht hier.</strong>
+	 * Dass niemand sich selbst zuweist und niemand von der Projektseite als
+	 * Redaktion eingetragen wird (Fussnote ³ seit v61), ist keine Rechte-,
+	 * sondern eine Zustandsfrage: sie haengt am Ergebnis des Schreibvorgangs und
+	 * nicht an der anfragenden Rolle. Geprueft wird sie deshalb im
+	 * {@code ProjectWriteService} und mit 400, nicht hier und mit 403.
+	 *
+	 * <p><strong>Der ADMIN-Zweig kennt keine Statusschranke.</strong> Der Satz
+	 * „ab {@code SUBMITTED} nur noch der Admin" beschreibt den Weg der
+	 * Autor:in, nicht den des Admins: dessen Recht haengt an der Rolle und
+	 * nicht am Status, hier wie beim dedizierten Endpoint. Praktisch erreicht
+	 * er den eingebetteten Weg nur, wenn er selbst zur Projektseite gehoert,
+	 * denn sonst scheitert er vorher an {@code mayEditMetadata}.
+	 *
+	 * <p><strong>{@code REVISION} zaehlt seit Contract v62 dazu</strong>
+	 * (KAN-77). Bis v61 endete das Recht der Autor:in mit dem {@code DRAFT}, und
+	 * seit {@code editorIds} mit v59 Pflichtfeld des Einreichens ist, hing damit
+	 * ein Bestandsprojekt fest: eines, das vor v59 ohne Redaktion eingereicht und
+	 * spaeter zur Ueberarbeitung zurueckgegeben wurde, liess sich weder
+	 * einreichen (400 {@code PROJECT_INCOMPLETE}) noch mit einer Redaktion
+	 * versehen (403), und hinaus fuehrte allein der Weg ueber die Administration.
+	 * {@code DRAFT} und {@code REVISION} sind die beiden Arbeitszustaende, in
+	 * denen §4.1 ohnehin jede Metadatenaenderung erlaubt; die Zuweisung folgt
+	 * jetzt derselben Schranke. Ab {@code SUBMITTED} bleibt es unveraendert beim
+	 * Admin und seinem Endpoint, siehe {@link #mayReassignEditors}.
 	 */
 	public boolean mayAssignEditors(AuthenticatedUser user, Project project) {
 		if (!isLoggedIn(user)) {
@@ -641,10 +723,7 @@ public class ProjectPermissionService {
 		if (user.hasRole(Role.ADMIN)) {
 			return true;
 		}
-		if (user.hasRole(Role.EDITOR)) {
-			return false;
-		}
-		return isAuthor(user, project) && project.getStatus() == ProjectStatus.DRAFT;
+		return isAuthor(user, project) && isContentEditable(project);
 	}
 
 	/**
@@ -654,9 +733,10 @@ public class ProjectPermissionService {
 	 *
 	 * <p><strong>Warum getrennt von {@link #mayAssignEditors}:</strong> die
 	 * beiden beantworten verschiedene Fragen. Dort geht es um die Auswahl der
-	 * Autor:in am eigenen Entwurf, hier um den Eingriff der Administration in
-	 * ein beliebiges Projekt in beliebigem Status. Waere es eine Methode,
-	 * bekaeme entweder die Autor:in Zugriff auf den Admin-Endpoint oder der
+	 * Autor:in am eigenen Projekt, solange sie daran arbeitet, hier um den
+	 * Eingriff der Administration in ein beliebiges Projekt in beliebigem
+	 * Status. Waere es eine Methode, bekaeme entweder die Autor:in Zugriff auf
+	 * den Admin-Endpoint oder der
 	 * Admin verloere den Zugriff auf eingereichte Projekte, also genau die
 	 * Faelle, fuer die es diesen Endpoint gibt.
 	 *

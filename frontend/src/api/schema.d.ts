@@ -239,7 +239,7 @@ export interface paths {
     put?: never
     /**
      * Projekt einreichen
-     * @description DRAFT oder REVISION nach SUBMITTED, ausgeloest von der Autor:in (§4.1). Geprueft werden dabei die Pflichtfelder aus §3.3: projectType, facultyId, studyProgramId, degree, categoryId und semester. Ab SUBMITTED sind Inhalt und Metadaten gesperrt.
+     * @description DRAFT oder REVISION nach SUBMITTED, ausgeloest von der Autor:in (§4.1). Geprueft werden dabei die Pflichtfelder aus §3.3: projectType, facultyId, studyProgramId, degree, categoryId, semesterId und editorIds. Ohne zugewiesene Redaktion laesst sich seit Contract v59 nicht einreichen, weil das Projekt sonst bei niemandem zur Begutachtung auftaucht. Ab SUBMITTED sind Inhalt und Metadaten gesperrt.
      */
     post: operations["submit"]
     delete?: never
@@ -347,7 +347,7 @@ export interface paths {
     put?: never
     /**
      * Projekt genehmigen
-     * @description SUBMITTED nach APPROVED durch Redaktion oder Admin (§4.1). Genehmigt heisst noch nicht oeffentlich: die fachliche Freigabe und die Veroeffentlichung sind zwei Schritte (§2.2). Das Vier-Augen-Prinzip greift, eine Redakteur:in genehmigt ihr eigenes Projekt also nicht.
+     * @description SUBMITTED nach APPROVED durch Redaktion oder Admin (§4.1). Genehmigt heisst noch nicht oeffentlich: die fachliche Freigabe und die Veroeffentlichung sind zwei Schritte (§2.2). Das Vier-Augen-Prinzip greift und reicht seit Contract v61 ueber die gesamte Projektseite: wer an einem Projekt mitgeschrieben hat, genehmigt es nicht, auch nicht als zugewiesene Redaktion.
      */
     post: operations["approve"]
     delete?: never
@@ -1298,7 +1298,7 @@ export interface components {
       /** @description Inhalt des Projekts, geordnet nach orderIndex. */
       blocks: components["schemas"]["BlockResponse"][]
     }
-    /** @description Co-Autor:innen und Mitwirkende (§3.13). Null laesst die Liste unveraendert, [] leert sie. Die Autor:in gehoert nicht hinein. */
+    /** @description Co-Autor:innen und Mitwirkende (§3.13). Null laesst die Liste unveraendert, [] leert sie. Die Autor:in gehoert nicht hinein, und wer dem Projekt als Redaktion zugewiesen ist, laesst sich nicht neu aufnehmen (§5, Fussnote 3). */
     MemberRequest: {
       /**
        * Format: uuid
@@ -1364,9 +1364,9 @@ export interface components {
       moduleId?: string | null
       /** @description Freie Schlagwoerter, hoechstens fuenf. Null laesst die vorhandenen unveraendert, [] loescht sie. */
       tags?: string[] | null
-      /** @description IDs der zustaendigen Redakteur:innen. Null laesst die Zuweisung unveraendert, [] hebt sie auf. Eine Aenderung ist nur der Autor:in und nur im Status DRAFT erlaubt, sonst 403 (§5, Fussnote 3). */
+      /** @description IDs der zustaendigen Redakteur:innen. Null laesst die Zuweisung unveraendert, [] hebt sie auf. Eine Aenderung ist nur der Autor:in und nur in DRAFT oder REVISION erlaubt, sonst 403 (§5, Fussnote 3); ihre eigene Systemrolle spielt dabei keine Rolle. Wer zur Projektseite gehoert, laesst sich nicht neu eintragen, also weder die anfragende Person selbst noch die Autor:in noch jemand aus members: 400 VALIDATION_FAILED. */
       editorIds?: string[] | null
-      /** @description Co-Autor:innen und Mitwirkende (§3.13). Null laesst die Liste unveraendert, [] leert sie. Die Autor:in gehoert nicht hinein. */
+      /** @description Co-Autor:innen und Mitwirkende (§3.13). Null laesst die Liste unveraendert, [] leert sie. Die Autor:in gehoert nicht hinein, und wer dem Projekt als Redaktion zugewiesen ist, laesst sich nicht neu aufnehmen (§5, Fussnote 3). */
       members?: components["schemas"]["MemberRequest"][] | null
     }
     /** @description Co-Autor:innen und Mitwirkende (§3.13). Nicht zu verwechseln mit der zugewiesenen Redaktion. */
@@ -1476,7 +1476,7 @@ export interface components {
       timestamp: string
     }
     ProjectEditorsRequest: {
-      /** @description IDs der zustaendigen Redakteur:innen aus GET /api/users/lookup?role=EDITOR. Die Liste ersetzt die bisherige vollstaendig; [] hebt die Zuweisung auf. Anders als bei PUT /api/projects/{id} ist das Feld hier Pflicht, weil dieser Endpoint nichts anderes tut. */
+      /** @description IDs der zustaendigen Redakteur:innen aus GET /api/users/lookup?role=EDITOR. Die Liste ersetzt die bisherige vollstaendig; [] hebt die Zuweisung auf. Anders als bei PUT /api/projects/{id} ist das Feld hier Pflicht, weil dieser Endpoint nichts anderes tut. Auch hier gilt der Ausschluss aus §5 Fussnote 3 (seit Contract v61): eine Person, die zur Projektseite gehoert, also Autor:in oder Projektmitglied, wird nicht neu als Redaktion eingetragen, sonst 400 VALIDATION_FAILED. Eine bereits bestehende Ueberschneidung laesst sich weiterhin aufloesen. */
       editorIds: string[]
     }
     PortfolioUpdateRequest: {
@@ -1637,9 +1637,9 @@ export interface components {
       moduleId?: string | null
       /** @description Freie Schlagwoerter, hoechstens fuenf (§3.3). Doppelte Eintraege werden still zusammengefasst. */
       tags?: string[]
-      /** @description IDs der zustaendigen Redakteur:innen aus GET /api/users/lookup?role=EDITOR. Die Autor:in legt sie bei der Anlage fest und kann sie aendern, solange das Projekt im Status DRAFT ist (§5, Fussnote 3). */
+      /** @description IDs der zustaendigen Redakteur:innen aus GET /api/users/lookup?role=EDITOR. Die Autor:in legt sie bei der Anlage fest und kann sie aendern, solange das Projekt in DRAFT oder REVISION steht (seit Contract v62), unabhaengig von ihrer eigenen Systemrolle (§5, Fussnote 3). Nicht eintragen laesst sich, wer zur Projektseite gehoert: weder die anfragende Person selbst noch die Autor:in noch jemand aus members, sonst 400 VALIDATION_FAILED. */
       editorIds?: string[]
-      /** @description Co-Autor:innen und Mitwirkende (§3.13). Nicht zu verwechseln mit der zugewiesenen Redaktion. Die Autor:in selbst gehoert nicht in diese Liste. */
+      /** @description Co-Autor:innen und Mitwirkende (§3.13). Nicht zu verwechseln mit der zugewiesenen Redaktion. Die Autor:in selbst gehoert nicht in diese Liste, und wer in editorIds steht, ebenso wenig (§5, Fussnote 3). */
       members?: components["schemas"]["MemberRequest"][]
     }
     Top10NominationRequest: {
@@ -2496,7 +2496,7 @@ export interface operations {
           "*/*": components["schemas"]["ProjectDetailResponse"]
         }
       }
-      /** @description Titel oder version fehlen, mehr als fuenf Tags, oder eine im Body genannte ID gibt es nicht. */
+      /** @description Titel oder version fehlen, mehr als fuenf Tags, eine im Body genannte ID gibt es nicht, die anfragende Person steht selbst in editorIds, oder die Aenderung macht dieselbe Person zugleich zur Projektseite und zur zugewiesenen Redaktion (§5, Fussnote 3). Eine bereits bestehende Ueberschneidung wird nicht beanstandet, nur eine neu entstehende. */
       400: {
         headers: {
           [name: string]: unknown
@@ -2514,7 +2514,7 @@ export interface operations {
           "*/*": components["schemas"]["ProjectDetailResponse"]
         }
       }
-      /** @description Angemeldet, aber nicht Teil der Projektseite, oder es wurden editorIds geaendert, obwohl das nur der Autor:in im DRAFT zusteht. */
+      /** @description Angemeldet, aber nicht Teil der Projektseite, oder Projektmitglied und nicht Autor:in, waehrend der Body editorIds aendert: die Redaktionszuweisung bleibt der Autor:in vorbehalten (§3.13.1). Die Statusschranke steht dagegen in der 409-Zeile. */
       403: {
         headers: {
           [name: string]: unknown
@@ -2610,7 +2610,7 @@ export interface operations {
           "*/*": components["schemas"]["ProjectDetailResponse"]
         }
       }
-      /** @description editorIds fehlt, oder eine der IDs gehoert zu keinem Konto mit der Rolle EDITOR oder ADMIN. */
+      /** @description editorIds fehlt, eine der IDs gehoert zu keinem Konto mit der Rolle EDITOR oder ADMIN, oder eine der genannten Personen gehoert zur Projektseite dieses Projekts, also Autor:in oder Projektmitglied (§5, Fussnote 3). Eine bereits bestehende Ueberschneidung laesst sich weiterhin aufloesen. */
       400: {
         headers: {
           [name: string]: unknown
@@ -2996,7 +2996,7 @@ export interface operations {
           "*/*": components["schemas"]["ProjectDetailResponse"]
         }
       }
-      /** @description Titel fehlt, mehr als fuenf Tags, oder eine im Body genannte ID (Kategorie, Fakultaet, Studiengang, Modul, Mitglied, Redakteur:in) gibt es nicht. */
+      /** @description Titel fehlt, mehr als fuenf Tags, eine im Body genannte ID (Kategorie, Fakultaet, Studiengang, Modul, Mitglied, Redakteur:in) gibt es nicht, die anfragende Person steht selbst in editorIds, oder dieselbe Person steht in members und in editorIds: zugewiesene Redaktion und Projektseite schliessen einander aus (§5, Fussnote 3). */
       400: {
         headers: {
           [name: string]: unknown
@@ -3014,7 +3014,7 @@ export interface operations {
           "*/*": components["schemas"]["ProjectDetailResponse"]
         }
       }
-      /** @description Ein Admin-Konto darf grundsaetzlich nicht anlegen (§5, Fussnote 10); angemeldet, aber sonst ohne Recht zum Anlegen; oder es wurden editorIds gesetzt, obwohl die Rolle das nicht darf (§5, Fussnote 3). */
+      /** @description Ein Admin-Konto darf grundsaetzlich nicht anlegen (§5, Fussnote 10), oder angemeldet, aber sonst ohne Recht zum Anlegen. */
       403: {
         headers: {
           [name: string]: unknown
@@ -3426,7 +3426,7 @@ export interface operations {
           "*/*": components["schemas"]["ProjectDetailResponse"]
         }
       }
-      /** @description Angemeldet, aber weder Redaktion noch Admin, oder Redakteur:in des eigenen Projekts (Vier-Augen-Prinzip, §4.1). */
+      /** @description Angemeldet, aber weder zugewiesene Redaktion noch Admin, oder Teil der Projektseite dieses Projekts, also Autor:in oder Projektmitglied (Vier-Augen-Prinzip, §4.1, §5 Fussnote 1). */
       403: {
         headers: {
           [name: string]: unknown
@@ -3598,7 +3598,7 @@ export interface operations {
           "*/*": components["schemas"]["ProjectDetailResponse"]
         }
       }
-      /** @description Angemeldet, aber weder Redaktion noch Admin, oder Redakteur:in des eigenen Projekts (Vier-Augen-Prinzip, §4.1). */
+      /** @description Angemeldet, aber weder zugewiesene Redaktion noch Admin, oder Teil der Projektseite dieses Projekts, also Autor:in oder Projektmitglied (Vier-Augen-Prinzip, §4.1, §5 Fussnote 1). */
       403: {
         headers: {
           [name: string]: unknown

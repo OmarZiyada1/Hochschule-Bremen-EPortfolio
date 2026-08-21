@@ -211,13 +211,14 @@ public class ProjectController {
 					+ "Titel; die uebrigen Metadaten duerfen im Entwurf fehlen und werden erst "
 					+ "beim Einreichen verlangt (§3.3). Autor:in ist die angemeldete Person.")
 	@ApiResponse(responseCode = "201", description = "Das angelegte Projekt.")
-	@ApiResponse(responseCode = "400", description = "Titel fehlt, mehr als fuenf Tags, oder eine "
+	@ApiResponse(responseCode = "400", description = "Titel fehlt, mehr als fuenf Tags, eine "
 			+ "im Body genannte ID (Kategorie, Fakultaet, Studiengang, Modul, Mitglied, "
-			+ "Redakteur:in) gibt es nicht.")
+			+ "Redakteur:in) gibt es nicht, die anfragende Person steht selbst in editorIds, oder "
+			+ "dieselbe Person steht in members und in editorIds: zugewiesene Redaktion und "
+			+ "Projektseite schliessen einander aus (§5, Fussnote 3).")
 	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
 	@ApiResponse(responseCode = "403", description = "Ein Admin-Konto darf grundsaetzlich nicht "
-			+ "anlegen (§5, Fussnote 10); angemeldet, aber sonst ohne Recht zum Anlegen; oder es "
-			+ "wurden editorIds gesetzt, obwohl die Rolle das nicht darf (§5, Fussnote 3).")
+			+ "anlegen (§5, Fussnote 10), oder angemeldet, aber sonst ohne Recht zum Anlegen.")
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	public ProjectDetailResponse create(
@@ -243,10 +244,15 @@ public class ProjectController {
 					+ "werden mit [] geleert.")
 	@ApiResponse(responseCode = "200", description = "Das geaenderte Projekt.")
 	@ApiResponse(responseCode = "400", description = "Titel oder version fehlen, mehr als fuenf "
-			+ "Tags, oder eine im Body genannte ID gibt es nicht.")
+			+ "Tags, eine im Body genannte ID gibt es nicht, die anfragende Person steht selbst "
+			+ "in editorIds, oder die Aenderung macht dieselbe Person zugleich zur Projektseite "
+			+ "und zur zugewiesenen Redaktion (§5, Fussnote 3). Eine bereits bestehende "
+			+ "Ueberschneidung wird nicht beanstandet, nur eine neu entstehende.")
 	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
 	@ApiResponse(responseCode = "403", description = "Angemeldet, aber nicht Teil der Projektseite, "
-			+ "oder es wurden editorIds geaendert, obwohl das nur der Autor:in im DRAFT zusteht.")
+			+ "oder Projektmitglied und nicht Autor:in, waehrend der Body editorIds aendert: die "
+			+ "Redaktionszuweisung bleibt der Autor:in vorbehalten (§3.13.1). Die Statusschranke "
+			+ "steht dagegen in der 409-Zeile.")
 	@ApiResponse(responseCode = "404", description = "Unter dieser ID gibt es kein Projekt.")
 	@ApiResponse(responseCode = "409", description = "PROJECT_STATUS_NOT_EDITABLE, wenn der Status "
 			+ "die Bearbeitung sperrt (§4.1); PROJECT_VERSION_CONFLICT, wenn die mitgeschickte "
@@ -276,8 +282,11 @@ public class ProjectController {
 					+ "version-Feld, weil hier nichts ueberschrieben werden kann, woran die "
 					+ "Projektseite parallel arbeitet.")
 	@ApiResponse(responseCode = "200", description = "Das Projekt mit der neuen Zuweisung.")
-	@ApiResponse(responseCode = "400", description = "editorIds fehlt, oder eine der IDs gehoert zu "
-			+ "keinem Konto mit der Rolle EDITOR oder ADMIN.")
+	@ApiResponse(responseCode = "400", description = "editorIds fehlt, eine der IDs gehoert zu "
+			+ "keinem Konto mit der Rolle EDITOR oder ADMIN, oder eine der genannten Personen "
+			+ "gehoert zur Projektseite dieses Projekts, also Autor:in oder Projektmitglied "
+			+ "(§5, Fussnote 3). Eine bereits bestehende Ueberschneidung laesst sich weiterhin "
+			+ "aufloesen.")
 	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
 	@ApiResponse(responseCode = "403", description = "Angemeldet, aber kein Admin.")
 	@ApiResponse(responseCode = "404", description = "Unter dieser ID gibt es kein Projekt.")

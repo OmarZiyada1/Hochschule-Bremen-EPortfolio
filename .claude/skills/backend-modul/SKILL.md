@@ -18,8 +18,10 @@ aus KAN-14.
 1. **Konnektoren prüfen, vor allem anderen**: ein Aufruf
    `mcp__claude_ai_Atlassian_Rovo__atlassianUserInfo` (erwartet: ein Konto mit
    `account_status: active`) und ein Aufruf
-   `mcp__claude_ai_Figma__whoami` (erwartet: ein Handle mit dem Team
-   „BA E-Portfolio HSB"). Geprüft wird, dass ein Konto antwortet, nicht
+   `mcp__claude_ai_Figma__whoami` (erwartet: ein Handle mit einem Plan; die
+   Teamzeile darin ist **kein** Zugriffsbeleg, belastbar ist erst ein
+   `get_metadata` auf die Arbeitsdatei `o6SECXRMKGOzCfG5xZebPV`). Geprüft
+   wird, dass ein Konto antwortet, nicht
    welches: die Konten sind je Entwickler verschieden. Das Ergebnis wird
    immer genannt, auch wenn beides läuft („Konnektoren: Atlassian ok, Figma
    ok"). Fehler, Zeitüberschreitung oder Anmeldeaufforderung heißt: anhalten

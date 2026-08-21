@@ -69,6 +69,8 @@ export function PersonCombobox({
   excludedIds,
   placeholder,
   disabled = false,
+  invalid = false,
+  describedBy,
   className,
 }: {
   label: string
@@ -88,6 +90,14 @@ export function PersonCombobox({
   excludedIds?: readonly string[]
   placeholder?: string
   disabled?: boolean
+  /** Setzt {@code aria-invalid} am Eingabefeld, wie bei jedem anderen Feld. */
+  invalid?: boolean
+  /**
+   * ID der Fehlermeldung, die zu diesem Feld gehoert. Ohne sie steht die
+   * Meldung zwar als Live-Region da, ist aber beim Zuruecknavigieren zum
+   * Feld nicht mehr auffindbar (SC 3.3.1).
+   */
+  describedBy?: string
   className?: string
 }) {
   const { t } = useTranslation()
@@ -172,6 +182,8 @@ export function PersonCombobox({
           id={inputId}
           className="h-11"
           disabled={disabled}
+          aria-invalid={invalid}
+          aria-describedby={describedBy}
           /* Erst wenn eine Person feststeht: sonst stuende ein Kreuz an
              einem leeren Feld. */
           showClear={value !== null}

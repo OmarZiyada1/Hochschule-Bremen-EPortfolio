@@ -189,8 +189,8 @@ export function toProjectMetadataValues(
     tags: project.tags,
     /* editors ist null, wenn die anfragende Person die Zuweisung nicht sehen
        darf (§3.3). Fuer das Formular ist das dasselbe wie "keine": es kann
-       nur zeigen, was es kennt. Geschrieben wird die Liste ohnehin nur im
-       DRAFT, und wer dort schreibt, sieht sie auch. */
+       nur zeigen, was es kennt. Geschrieben wird die Liste ohnehin nur in
+       DRAFT und REVISION, und wer dort schreibt, sieht sie auch. */
     editors: (project.editors ?? []).map((editor) => ({
       id: editor.id,
       firstName: editor.firstName,

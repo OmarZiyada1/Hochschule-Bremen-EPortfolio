@@ -209,9 +209,10 @@ class ProjectWorkflowIntegrationTest {
 
 		@Test
 		@DisplayName("Ohne die Pflichtfelder aus §3.3: 400 PROJECT_INCOMPLETE, und die Meldung "
-				+ "nennt alle sechs")
+				+ "nennt alle sieben")
 		void incompleteDraft() throws Exception {
-			Project bare = saved(TestProject.withoutId(author, ProjectStatus.DRAFT, "Nur ein Titel"));
+			Project bare = savedWithoutEditor(
+					TestProject.withoutId(author, ProjectStatus.DRAFT, "Nur ein Titel"));
 
 			mockMvc.perform(as(author, action(bare, "submit")))
 					.andExpect(status().isBadRequest())
@@ -225,11 +226,36 @@ class ProjectWorkflowIntegrationTest {
 					.andExpect(jsonPath("$.message").value(containsString("studyProgramId")))
 					.andExpect(jsonPath("$.message").value(containsString("degree")))
 					.andExpect(jsonPath("$.message").value(containsString("categoryId")))
-					.andExpect(jsonPath("$.message").value(containsString("semesterId")));
+					.andExpect(jsonPath("$.message").value(containsString("semesterId")))
+					.andExpect(jsonPath("$.message").value(containsString("editorIds")));
 
 			// Der Status bleibt, wo er war: die Pruefung greift vor dem Schreiben.
 			assertThat(reload(bare).getStatus()).isEqualTo(ProjectStatus.DRAFT);
 			assertThat(history(bare)).isEmpty();
+		}
+
+		@Test
+		@DisplayName("Fehlt allein die Redaktionszuweisung: 400 PROJECT_INCOMPLETE, und die "
+				+ "Meldung nennt editorIds (§3.3, seit Contract v59)")
+		void withoutAssignedEditors() throws Exception {
+			Project complete = savedWithoutEditor(
+					complete(author, ProjectStatus.DRAFT, "Ohne Redaktion"));
+
+			mockMvc.perform(as(author, action(complete, "submit")))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.errorCode").value("PROJECT_INCOMPLETE"))
+					.andExpect(jsonPath("$.message").value(containsString("editorIds")))
+					.andExpect(jsonPath("$.message").value(not(containsString("semesterId"))));
+
+			assertThat(reload(complete).getStatus()).isEqualTo(ProjectStatus.DRAFT);
+
+			// Mit Zuweisung geht derselbe Entwurf durch: die Schranke gilt der
+			// fehlenden Angabe und nicht dem Projekt.
+			complete.getEditors().add(assignedEditor);
+			projectRepository.saveAndFlush(complete);
+
+			assertThat(ok(author, complete, "submit").get("status").asText())
+					.isEqualTo("SUBMITTED");
 		}
 
 		@Test
@@ -544,6 +570,28 @@ class ProjectWorkflowIntegrationTest {
 			// genehmigen: die Sperre haengt an der Person, nicht am Projekt.
 			assertThat(ok(otherEditor, ownProject, "approve").get("status").asText())
 					.isEqualTo("APPROVED");
+		}
+
+		@Test
+		@DisplayName("Reichweite seit v61: ein zugewiesenes Projektmitglied genehmigt nicht und "
+				+ "veroeffentlicht nicht, gibt aber zurueck (§4.1, §5 Fussnote 1)")
+		void fourEyesCoversProjectMembers() throws Exception {
+			Project submitted = withMemberAsEditor(ProjectStatus.SUBMITTED);
+
+			mockMvc.perform(as(otherEditor, action(submitted, "approve")))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+
+			Project approved = withMemberAsEditor(ProjectStatus.APPROVED);
+
+			mockMvc.perform(as(otherEditor, action(approved, "publish")))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+
+			// Die Ruecknahme traegt in §5 keine Fussnote ¹ und bleibt offen: sie
+			// gibt die Arbeit an die Projektseite zurueck, sie gibt nichts frei.
+			assertThat(revision(otherEditor, submitted, "Ich bessere mit nach.")
+					.get("status").asText()).isEqualTo("REVISION");
 		}
 
 		@Test
@@ -943,9 +991,37 @@ class ProjectWorkflowIntegrationTest {
 	}
 
 	private Project saved(Project project) {
-		Project stored = projectRepository.saveAndFlush(project);
+		Project stored = savedWithoutEditor(project);
 		stored.getEditors().add(assignedEditor);
 		return projectRepository.saveAndFlush(stored);
+	}
+
+	/**
+	 * Wie {@link #saved}, aber ohne Redaktionszuweisung: fuer die
+	 * Pflichtfeldpruefung, seit {@code editorIds} mit Contract v59 dazugehoert
+	 * (§3.3). Alle anderen Tests bekommen ihre Zuweisung ueber {@link #saved},
+	 * sonst scheiterte jedes Einreichen schon an dieser Angabe.
+	 */
+	private Project savedWithoutEditor(Project project) {
+		return projectRepository.saveAndFlush(project);
+	}
+
+	/**
+	 * Ein Projekt, an dem {@code otherEditor} zugleich mitgeschrieben hat und dem
+	 * er als Redaktion zugewiesen ist.
+	 *
+	 * <p><strong>Bewusst an den Schreibwegen vorbei aufgebaut.</strong> Seit
+	 * Contract v61 laesst der Server diesen Zustand gar nicht erst entstehen (§5,
+	 * Fussnote ³), Bestandsdaten koennen ihn aber tragen. Genau dafuer ist das
+	 * Vier-Augen-Prinzip die letzte Sicherung und nicht die einzige.
+	 */
+	private Project withMemberAsEditor(ProjectStatus status) {
+		Project project = saved(complete(author, status, "Mit Beteiligung " + status));
+		project.getEditors().add(otherEditor);
+		Project stored = projectRepository.saveAndFlush(project);
+		stored.getMembers().add(projectMemberRepository.saveAndFlush(
+				TestProject.memberWithoutId(stored, otherEditor, "Backend")));
+		return stored;
 	}
 
 	/** Ein eingereichtes Projekt der Autor:in, mit dem Uebergang in der Historie. */

@@ -2,6 +2,7 @@ package de.hsbremen.eportfolio.project;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -306,18 +307,73 @@ class ProjectWriteIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Eine Redakteur:in darf zwar anlegen, aber keine Redaktion zuweisen: 403 "
-				+ "(§5, Fussnote 3: EDITOR ✗)")
-		void editorMayNotAssign() throws Exception {
+		@DisplayName("Eine Autor:in mit der Rolle EDITOR weist ihrem eigenen Entwurf eine "
+				+ "Redaktion zu: 201 (§5, Fussnote 3 seit Contract v60)")
+		void editorAssignsOnOwnDraft() throws Exception {
 			mockMvc.perform(asUser(postRequest(json("title", "Projekt der Redaktion")),
 							assignedEditor))
 					.andExpect(status().isCreated());
 
+			JsonNode created = created(assignedEditor, json(
+					"title", "Mit Wunschredaktion",
+					"editorIds", List.of(otherEditor.getId().toString())));
+
+			assertThat(created.get("editors")).hasSize(1);
+			assertThat(created.get("editors").get(0).get("id").asText())
+					.isEqualTo(otherEditor.getId().toString());
+		}
+
+		@Test
+		@DisplayName("Sich selbst kann sie dabei nicht eintragen: 400 VALIDATION_FAILED mit "
+				+ "eigener Meldung (§5, Fussnote 3)")
+		void selfAssignmentRejected() throws Exception {
 			mockMvc.perform(asUser(postRequest(json(
-							"title", "Mit Wunschredaktion",
-							"editorIds", List.of(otherEditor.getId().toString()))), assignedEditor))
-					.andExpect(status().isForbidden())
-					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+							"title", "Ich beurteile mich selbst",
+							"editorIds", List.of(assignedEditor.getId().toString()))),
+							assignedEditor))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
+					.andExpect(jsonPath("$.message").value(containsString("selbst")))
+					// Das Praefix "feld: " ist Teil der Zusage: nur damit haengt die
+					// Meldung im Formular am Feld editorIds (§5, Fussnote 3).
+					.andExpect(jsonPath("$.message").value(startsWith("editorIds: ")));
+		}
+
+		@Test
+		@DisplayName("Projektseite und Redaktion schliessen einander aus: dasselbe Konto in "
+				+ "members und editorIds ergibt 400, in jeder Reihenfolge im Body (v61)")
+		void memberAndEditorInOneRequest() throws Exception {
+			// otherEditor traegt die Rolle EDITOR, waere als Redaktion also
+			// zulaessig. Ausschlaggebend ist allein, dass er zugleich auf der
+			// Projektseite steht.
+			String editorsFirst = json(
+					"title", "Beteiligt und zustaendig",
+					"editorIds", List.of(otherEditor.getId().toString()),
+					"members", List.of(memberEntry(otherEditor, "Frontend")));
+			String membersFirst = json(
+					"title", "Beteiligt und zustaendig",
+					"members", List.of(memberEntry(otherEditor, "Frontend")),
+					"editorIds", List.of(otherEditor.getId().toString()));
+
+			for (String body : List.of(editorsFirst, membersFirst)) {
+				mockMvc.perform(asUser(postRequest(body), author))
+						.andExpect(status().isBadRequest())
+						.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
+						.andExpect(jsonPath("$.message").value(startsWith("editorIds: ")));
+			}
+		}
+
+		@Test
+		@DisplayName("Ohne Ueberschneidung bleibt es beim 201: dieselbe Redaktion, aber ein "
+				+ "unbeteiligtes Mitglied")
+		void separateMemberAndEditorPass() throws Exception {
+			JsonNode created = created(author, json(
+					"title", "Sauber getrennt",
+					"editorIds", List.of(otherEditor.getId().toString()),
+					"members", List.of(memberEntry(member, "Frontend"))));
+
+			assertThat(created.get("editors")).hasSize(1);
+			assertThat(memberIds(created)).containsExactly(member.getId().toString());
 		}
 
 		@Test
@@ -606,24 +662,159 @@ class ProjectWriteIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("In REVISION nicht mehr: 403, ab da fuehrt der Weg ueber den Admin-Endpoint")
-		void authorMayNotAssignInRevision() throws Exception {
+		@DisplayName("Ein Entwurf ohne Redaktion laesst sich weiterhin speichern: die Schranke "
+				+ "aus §3.3 gilt dem Einreichen, nicht dem Speichern")
+		void draftWithoutEditorsStillSaves() throws Exception {
+			JsonNode updated = updated(author, draft, json(
+					"version", draft.getVersion(),
+					"title", draft.getTitle(),
+					"editorIds", List.of()));
+
+			assertThat(updated.get("editors")).isEmpty();
+		}
+
+		@Test
+		@DisplayName("Ein Projektmitglied laesst sich nicht zur Redaktion machen: 400 "
+				+ "VALIDATION_FAILED am Feld editorIds (§5, Fussnote 3 seit v61)")
+		void memberMayNotBecomeEditor() throws Exception {
+			// otherEditor wird erst Mitglied, dann als Redaktion angeboten.
+			JsonNode first = updated(author, draft, json(
+					"version", draft.getVersion(),
+					"title", draft.getTitle(),
+					"members", List.of(memberEntry(member, "Frontend"),
+							memberEntry(otherEditor, "Backend"))));
+
+			mockMvc.perform(asUser(putRequest(draft, json(
+							"version", first.get("version").asLong(),
+							"title", draft.getTitle(),
+							"editorIds", List.of(otherEditor.getId().toString()))), author))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
+					.andExpect(jsonPath("$.message").value(startsWith("editorIds: ")));
+
+			// Die Pruefung wirft nach beiden Zuweisungen, also nach Mutationen am
+			// verwalteten Projekt. In den Daten darf davon nichts stehen.
+			//
+			// Geprueft wird ausdruecklich gegen die Datenbank und nicht ueber ein
+			// GET: Test und Endpoint teilen sich hier einen Persistenzkontext, in
+			// dem die verworfene Aenderung noch als schmutziger Zustand haengt.
+			// In Produktion hat jede Anfrage ihren eigenen Kontext, dort raeumt
+			// das Rollback ihn ab. clear() loest genau diesen Unterschied auf: es
+			// verwirft den Sitzungszustand ohne zu flushen, die anschliessende
+			// Abfrage zeigt also, was tatsaechlich geschrieben wurde. Waere vor
+			// dem Wurf ein saveAndFlush, schlaege der Test hier fehl.
+			entityManager.clear();
+
+			Project reloaded = projectRepository.findWithReferencesById(draft.getId())
+					.orElseThrow();
+			assertThat(reloaded.getEditors()).extracting(User::getId)
+					.containsExactly(assignedEditor.getId());
+		}
+
+		@Test
+		@DisplayName("Und die Gegenrichtung ebenso: die zugewiesene Redaktion nachtraeglich als "
+				+ "Mitglied eintragen ergibt 400 am Feld members")
+		void editorMayNotBecomeMember() throws Exception {
+			mockMvc.perform(asUser(putRequest(draft, json(
+							"version", draft.getVersion(),
+							"title", draft.getTitle(),
+							"members", List.of(memberEntry(member, "Frontend"),
+									memberEntry(assignedEditor, "Backend")))), author))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
+					.andExpect(jsonPath("$.message").value(startsWith("members: ")));
+		}
+
+		@Test
+		@DisplayName("Entstehen mehrere Ueberschneidungen auf verschiedenen Wegen, nennt die "
+				+ "Meldung editorIds und nicht zufaellig eines der beiden Felder")
+		void mixedOverlapNamesEditorIds() throws Exception {
+			// Zwei Ueberschneidungen in einem Request, auf verschiedenen Wegen:
+			// otherEditor ist schon Redaktion und wird jetzt Mitglied (Weg
+			// members), das Admin-Konto ist schon Mitglied und wird jetzt
+			// Redaktion (Weg editorIds). Ein Admin darf als Redaktion zugewiesen
+			// werden (§3.3), taugt hier also als zweites Konto. Die
+			// Feldbestimmung darf nicht von der Mengenreihenfolge abhaengen.
+			draft.getEditors().add(otherEditor);
+			draft = projectRepository.saveAndFlush(draft);
+			draft.getMembers().add(projectMemberRepository.saveAndFlush(
+					TestProject.memberWithoutId(draft, admin, "Betreuung")));
+
+			mockMvc.perform(asUser(putRequest(draft, json(
+							"version", draft.getVersion(),
+							"title", draft.getTitle(),
+							"members", List.of(memberEntry(member, "Frontend"),
+									memberEntry(admin, "Betreuung"),
+									memberEntry(otherEditor, "Backend")),
+							"editorIds", List.of(assignedEditor.getId().toString(),
+									otherEditor.getId().toString(),
+									admin.getId().toString()))), author))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
+					.andExpect(jsonPath("$.message").value(startsWith("editorIds: ")));
+		}
+
+		@Test
+		@DisplayName("Eine bestehende Ueberschneidung blockiert kein Speichern, solange die "
+				+ "Aenderung sie nicht vergroessert (Bestandsdaten)")
+		void existingOverlapDoesNotBlock() throws Exception {
+			// Bewusst an den Endpoints vorbei aufgebaut: seit v61 laesst der
+			// Server diesen Zustand gar nicht erst entstehen. Bestandsdaten
+			// tragen ihn trotzdem, und sie sollen speicherbar bleiben.
+			draft.getEditors().add(otherEditor);
+			draft = projectRepository.saveAndFlush(draft);
+			draft.getMembers().add(projectMemberRepository.saveAndFlush(
+					TestProject.memberWithoutId(draft, otherEditor, "Backend")));
+
+			JsonNode updated = updated(author, draft, json(
+					"version", draft.getVersion(),
+					"title", "Nur der Titel"));
+
+			assertThat(updated.get("title").asText()).isEqualTo("Nur der Titel");
+			assertThat(updated.get("editors")).hasSize(2);
+		}
+
+		@Test
+		@DisplayName("In REVISION ebenfalls: beide Arbeitszustaende zaehlen (§5, Fussnote 3 "
+				+ "seit Contract v62)")
+		void authorAssignsInRevision() throws Exception {
 			Project revision = projectRepository.saveAndFlush(
 					newProject(author, ProjectStatus.REVISION, "Zurueckgegeben"));
 
-			// Metadaten aendern darf sie hier weiterhin.
+			// Metadaten aendern darf sie hier ohnehin.
 			JsonNode first = updated(author, revision, json(
 					"version", revision.getVersion(), "title", "Ueberarbeitet"));
 
 			// Die neue version kommt aus der Antwort und nicht aus der Entity:
 			// Test und Endpoint teilen sich den Persistenzkontext, die Instanz
 			// traegt also bereits den hochgezaehlten Stand.
-			mockMvc.perform(asUser(putRequest(revision, json(
-							"version", first.get("version").asLong(),
-							"title", "Ueberarbeitet",
+			JsonNode second = updated(author, revision, json(
+					"version", first.get("version").asLong(),
+					"title", "Ueberarbeitet",
+					"editorIds", List.of(otherEditor.getId().toString())));
+
+			assertThat(second.get("editors")).hasSize(1);
+			assertThat(second.get("editors").get(0).get("id").asText())
+					.isEqualTo(otherEditor.getId().toString());
+		}
+
+		@Test
+		@DisplayName("Ab SUBMITTED nicht mehr: der Weg fuehrt ueber den Admin-Endpoint")
+		void authorMayNotAssignAfterSubmit() throws Exception {
+			Project submitted = projectRepository.saveAndFlush(
+					newProject(author, ProjectStatus.SUBMITTED, "In Pruefung"));
+
+			// 409 und nicht 403: die Metadaten sind ab hier ohnehin gesperrt
+			// (§4.1), und der Statuskonflikt wird zuerst gemeldet. Dieser Test
+			// belegt damit die Sperre des ganzen PUT; dass die Zuweisungsregel
+			// selbst ab SUBMITTED zumacht, traegt
+			// ProjectPermissionServiceTest.assignEditors.
+			mockMvc.perform(asUser(putRequest(submitted, json(
+							"version", submitted.getVersion(),
+							"title", "In Pruefung",
 							"editorIds", List.of(otherEditor.getId().toString()))), author))
-					.andExpect(status().isForbidden())
-					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+					.andExpect(status().isConflict())
+					.andExpect(jsonPath("$.errorCode").value("PROJECT_STATUS_NOT_EDITABLE"));
 		}
 	}
 
@@ -672,6 +863,51 @@ class ProjectWriteIntegrationTest {
 						.andExpect(status().isForbidden())
 						.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
 			}
+		}
+
+		@Test
+		@DisplayName("Auch hier gilt die Trennung: ein Projektmitglied laesst sich nicht "
+				+ "zuweisen, 400 (§5, Fussnote 3 seit v61)")
+		void memberMayNotBeAssignedHereEither() throws Exception {
+			draft.getMembers().add(projectMemberRepository.saveAndFlush(
+					TestProject.memberWithoutId(draft, otherEditor, "Backend")));
+
+			mockMvc.perform(asUser(
+							editorsRequest(draft, List.of(otherEditor.getId().toString())), admin))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
+					.andExpect(jsonPath("$.message").value(startsWith("editorIds: ")));
+		}
+
+		@Test
+		@DisplayName("Die Autor:in ebenso wenig, auch wenn sie selbst die Rolle EDITOR traegt")
+		void authorMayNotBeAssignedHere() throws Exception {
+			Project ownDraft = projectRepository.saveAndFlush(
+					newProject(assignedEditor, ProjectStatus.DRAFT, "Projekt der Redaktion"));
+
+			mockMvc.perform(asUser(
+							editorsRequest(ownDraft, List.of(assignedEditor.getId().toString())),
+							admin))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
+					.andExpect(jsonPath("$.message").value(startsWith("editorIds: ")));
+		}
+
+		@Test
+		@DisplayName("Eine bestehende Ueberschneidung raeumt der Admin hier weiterhin auf: sie "
+				+ "wird nicht groesser, sondern kleiner")
+		void adminMayResolveAnExistingOverlap() throws Exception {
+			draft.getEditors().add(otherEditor);
+			draft = projectRepository.saveAndFlush(draft);
+			draft.getMembers().add(projectMemberRepository.saveAndFlush(
+					TestProject.memberWithoutId(draft, otherEditor, "Backend")));
+
+			JsonNode updated = objectMapper.readTree(body(asUser(
+					editorsRequest(draft, List.of(assignedEditor.getId().toString())), admin)));
+
+			assertThat(updated.get("editors")).hasSize(1);
+			assertThat(updated.get("editors").get(0).get("id").asText())
+					.isEqualTo(assignedEditor.getId().toString());
 		}
 
 		@Test

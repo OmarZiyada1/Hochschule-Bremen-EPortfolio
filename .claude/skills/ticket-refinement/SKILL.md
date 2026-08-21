@@ -77,8 +77,10 @@ Zwei Fälle bleiben ausdrücklich stehen:
 Noch davor steht die **Konnektorprüfung** (`CLAUDE.md`, Abschnitt „Konnektoren
 prüfen, bevor ein Ticket beginnt"): ein Aufruf
 `mcp__claude_ai_Atlassian_Rovo__atlassianUserInfo` und, sobald
-Frontend-Tickets im Satz sind, `mcp__claude_ai_Figma__whoami`. Das Ergebnis
-wird genannt, auch wenn beides läuft. Refinement ohne Atlassian ist
+Frontend-Tickets im Satz sind, `mcp__claude_ai_Figma__whoami` (die Teamzeile
+darin ist kein Zugriffsbeleg; belastbar ist erst ein `get_metadata` auf die
+Arbeitsdatei `o6SECXRMKGOzCfG5xZebPV`). Das Ergebnis wird genannt, auch wenn
+beides läuft. Refinement ohne Atlassian ist
 nicht möglich: weder Beschreibung noch Contract wären lesbar, und geschrieben
 wird die Beschreibung ohnehin über den Konnektor. Fällt er aus, hält Claude an
 und bittet darum, ihn auf claude.ai neu zu verbinden und die IDE neu zu

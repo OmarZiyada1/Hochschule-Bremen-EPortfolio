@@ -120,9 +120,11 @@ class ProjectWorkflowFourEyesDisabledTest {
 		project.setSemester(semesterRepository.findAllByOrderBySortOrderAsc().getFirst());
 		Project stored = projectRepository.saveAndFlush(project);
 		// Seit v42 entscheidet nur die zugewiesene Redaktion (§5 Fussnote 11);
-		// die Autor:in hat sich hier selbst gewaehlt, was §5 Fussnote 3 beim
-		// Anlegen erlaubt. Erst dadurch prueft der Test wirklich den
-		// Vier-Augen-Schalter und nicht die Zuweisungsregel.
+		// ohne die Zuweisung pruefte der Test die Zustaendigkeitsregel statt des
+		// Vier-Augen-Schalters. Die Zeile entsteht bewusst am Endpoint vorbei:
+		// seit v61 weist der Server eine Selbstzuweisung mit 400 ab (§5,
+		// Fussnote 3), und genau diesen Bestandsfall soll der Schalter greifen
+		// lassen.
 		stored.getEditors().add(editor);
 		return projectRepository.saveAndFlush(stored);
 	}

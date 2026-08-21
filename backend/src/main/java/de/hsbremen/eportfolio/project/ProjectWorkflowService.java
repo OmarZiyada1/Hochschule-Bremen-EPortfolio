@@ -69,12 +69,23 @@ public class ProjectWorkflowService {
 	 * <p>Die Namen sind die des Request-Bodys von {@code PUT /api/projects/{id}}
 	 * ({@code facultyId} und nicht {@code faculty}), weil die Meldung dem Client
 	 * sagen soll, welches Feld er nachzureichen hat, und nicht, wie die Spalte in
-	 * der Datenbank heisst.
+	 * der Datenbank heisst. Aus demselben Grund heisst der letzte Eintrag
+	 * {@code editorIds} und nicht {@code editors}.
 	 *
 	 * <p>{@code moduleId} steht bewusst nicht dabei: §3.3 fuehrt es als optionalen
 	 * Bezug und nennt es in der Aufzaehlung der Pflichtfelder nicht. Ein Beitrag
 	 * muss zu einem Studiengang gehoeren, aber nicht zu einer einzelnen
 	 * Lehrveranstaltung.
+	 *
+	 * <p><strong>Die Redaktionszuweisung gehoert seit Contract v59 dazu</strong>
+	 * (KAN-77). Bis v58 war sie freiwillig, ein Projekt ohne zugewiesene
+	 * Redaktion liess sich also einreichen. Danach blieb es liegen: §4.1 gibt die
+	 * Entscheidung ausschliesslich der zugewiesenen Redaktion und dem Admin, und
+	 * „Meine Reviews" ({@code GET /api/projects?editor=me}) fuehrt es bei
+	 * niemandem auf. Zurueck in den Ablauf kaeme es nur, wenn ein Admin die
+	 * Zuweisung von sich aus nachtraegt, und niemand erfaehrt von dem Vorgang.
+	 * Die Zuweisung ist damit dieselbe Art Rahmenangabe wie Fakultaet oder
+	 * Semester und wird zum selben Zeitpunkt geprueft.
 	 */
 	private static final List<RequiredField> REQUIRED_FOR_SUBMIT = List.of(
 			new RequiredField("projectType", project -> project.getProjectType() != null),
@@ -82,7 +93,8 @@ public class ProjectWorkflowService {
 			new RequiredField("studyProgramId", project -> project.getStudyProgram() != null),
 			new RequiredField("degree", project -> project.getDegree() != null),
 			new RequiredField("categoryId", project -> project.getCategory() != null),
-			new RequiredField("semesterId", project -> project.getSemester() != null));
+			new RequiredField("semesterId", project -> project.getSemester() != null),
+			new RequiredField("editorIds", project -> !project.getEditors().isEmpty()));
 
 	private final ProjectRepository projectRepository;
 
@@ -332,8 +344,8 @@ public class ProjectWorkflowService {
 	 * Felder.
 	 *
 	 * <p>Es wird die <em>gesamte</em> Liste gemeldet und nicht das erste
-	 * fehlende Feld. Sonst muesste die Person am Formular sechs Mal einreichen,
-	 * um zu erfahren, was ihr noch fehlt.
+	 * fehlende Feld. Sonst muesste die Person am Formular so oft einreichen, wie
+	 * ihr Angaben fehlen, um zu erfahren, was ihr noch fehlt.
 	 *
 	 * <p><strong>Der Inhalt wird nicht geprueft.</strong> Ein Projekt ohne
 	 * Bloecke laesst sich einreichen: §3.3 fuehrt die Pflichtfelder
@@ -461,7 +473,7 @@ public class ProjectWorkflowService {
 	 * Ein Pflichtfeld aus §3.3 mit dem Namen, unter dem der Client es kennt, und
 	 * der Pruefung, ob es gesetzt ist.
 	 *
-	 * <p>Ein eigener Typ statt sechs Bedingungen hintereinander, damit die Liste
+	 * <p>Ein eigener Typ statt einer Bedingung je Feld, damit die Liste
 	 * der Pflichtfelder als Liste lesbar bleibt und nicht als Kette von
 	 * {@code if}-Bloecken, in der leicht ein Feldname und seine Pruefung
 	 * auseinanderfallen.

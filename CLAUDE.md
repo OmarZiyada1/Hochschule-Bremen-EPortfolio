@@ -168,17 +168,22 @@ abgelaufen, Konnektor nach einem Update abgemeldet), meldet das niemand von
 selbst: es fällt erst auf, wenn die Ticketbeschreibung oder das Template
 gebraucht wird, und bis dahin ist womöglich aus dem Gedächtnis gebaut worden.
 Deshalb steht die Prüfung ganz vorn, vor jedem Lesen und vor jeder Codezeile.
-Zwei lesende Aufrufe genügen:
+Drei lesende Aufrufe genügen:
 
 | Konnektor | Prüfaufruf | Erwartete Antwort |
 | --- | --- | --- |
 | Atlassian (Jira, Confluence) | `mcp__claude_ai_Atlassian_Rovo__atlassianUserInfo` | ein Konto mit `account_status: active` |
-| Figma | `mcp__claude_ai_Figma__whoami` | ein Handle mit dem Team „BA E-Portfolio HSB" in `plans` |
+| Figma | `mcp__claude_ai_Figma__whoami`, danach `mcp__claude_ai_Figma__get_metadata` auf `o6SECXRMKGOzCfG5xZebPV` | ein Handle mit einem Plan, und danach eine Seitenliste statt einer Zugriffsmeldung |
 
 Geprüft wird, **dass** ein Konto antwortet, nicht welches: die Konten sind je
-Entwickler verschieden. Beim Figma-Konnektor zählt zusätzlich das Team
-„BA E-Portfolio HSB" in der Antwort, denn ohne dieses Team sind die
-Projektdateien nicht sichtbar, obwohl die Anmeldung funktioniert.
+Entwickler verschieden. Beim Figma-Konnektor sagt `whoami` allein zu wenig. Die
+Antwort nennt je nach Entwickler ein beliebiges eigenes Team, und aus einer
+fehlenden Teamzeile folgt **nicht**, dass die Projektdatei unlesbar wäre: die
+Konten dieses Projekts melden kein gemeinsames Projektteam und können die
+Datei trotzdem lesen und schreiben. Der belastbare Test ist deshalb der zweite
+Aufruf, ein `get_metadata` auf die Arbeitsdatei `o6SECXRMKGOzCfG5xZebPV`
+(nächster Abschnitt). Kommt eine Seitenliste zurück, ist der Konnektor
+brauchbar; kommt eine Zugriffsmeldung, ist er es nicht.
 
 Das Ergebnis wird **immer genannt**, auch wenn beides läuft: eine Zeile der
 Form „Konnektoren: Atlassian ok, Figma ok" vor dem ersten Arbeitsschritt.
@@ -205,6 +210,43 @@ läuft nicht über MCP, sondern über die REST-API aus `.env.atlassian`, kann al
 noch funktionieren, während der Konnektor tot ist. Das ersetzt die Prüfung
 nicht: Tickets lesen, kommentieren und Beschreibungen ändern hängt am
 Konnektor.
+
+## Die Figma-Arbeitsdatei: Kennung, Seiten, Fallstricke
+
+Der gesamte Prototyp liegt in **einer** Figma-Datei. Ihre Kennung stand bis
+jetzt nirgends im Repository, sondern nur auf Confluence-Seiten, und deshalb
+war Figma nur über den Umweg Atlassian erreichbar. Ab jetzt steht sie hier:
+
+**File-Key `o6SECXRMKGOzCfG5xZebPV`** („HSB_E-Portfolio"), drei Seiten:
+
+| Seite | Node-ID | Inhalt |
+| --- | --- | --- |
+| Foundation (veraltet, ersetzen) | `0:1` | Farben, Typografie, Radius, Elevation, dazu die Ergänzungen vom 02.07. und die Nutzungsreferenz vom 06.07. |
+| Components | `1:2` | Komponentenbibliothek, je ein `sec:`-Block pro Komponente, Button-Matrix über alle Varianten, Icon-Sammlung |
+| Template | `4:611` | 37 Screen-Frames: `Auth / …`, `Template / Öffentlich · …`, `Template / Studierende · …`, `Template / Admin · …`, `Template / Redakteur · …`, `Template / 404` |
+
+Drei Fallstricke, die sonst jedes Mal neu Zeit kosten:
+
+1. **Die Seitenliste ist unvollständig.** `get_metadata` ohne `nodeId` meldet
+   reproduzierbar nur `0:1` und `1:2`. Die Seite `Template` fehlt darin,
+   obwohl sie mit direkt angegebener ID einwandfrei lesbar ist. Wer „Seiten
+   auflisten, dann durchgehen" macht, sieht die Templates also nie und baut
+   anschließend doch wieder aus dem Gedächtnis. Deshalb wird `4:611`
+   **immer direkt angesteuert**, nie über die Liste gesucht.
+2. **Die Template-Seite passt nicht in einen Aufruf.** `get_metadata` auf
+   `4:611` liefert rund 372.000 Zeichen und bricht mit „exceeds maximum
+   allowed tokens" ab; die Ausgabe landet in einer Datei unter
+   `tool-results/`, aus der sich die Frame-Liste mit `grep` holen lässt. Der
+   sauberere Weg ist frameweise: Frame-ID des gesuchten Screens nachschlagen
+   (Confluence „Template-Abdeckung", Seiten-ID `53739521`, führt sie je
+   Template), dann `get_design_context` oder `get_screenshot` auf genau
+   diesen Frame. Foundation und Components passen dagegen in je einen Aufruf.
+3. **Es gibt eine zweite, falsche Datei.** Die Confluence-Seite „Components"
+   (Seiten-ID `28180481`) verlinkt oben `gB1v5Bhd22proZYXTDlJet`
+   („HSB E-Portfolio - Design System"). Diese Datei ist mit dem Konnektor
+   nicht zugänglich, und die tatsächlich verwendeten Komponenten liegen nicht
+   dort. Der Link ist irreführend; maßgeblich ist allein
+   `o6SECXRMKGOzCfG5xZebPV`.
 
 ## Arbeitsablauf je Ticket
 

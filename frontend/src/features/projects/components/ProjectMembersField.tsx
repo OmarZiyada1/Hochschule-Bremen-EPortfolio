@@ -19,6 +19,10 @@ import { PersonCombobox } from "@/features/projects/components/PersonCombobox"
 import type { MemberValue } from "@/features/projects/ProjectMetadataForm.schema"
 import { fullNameOf } from "@/lib/name"
 
+/* Modulweit und nicht als Literal im Default: ein frisches [] je Render wuerde
+   die Abhaengigkeit von excludedIds bei jedem Durchlauf wechseln lassen. */
+const NO_IDS: readonly string[] = []
+
 /**
  * Die Projektmitglieder des Metadatenformulars (§3.13, §3.13.1, KAN-35):
  * Co-Autor:innen und Mitwirkende, je Zeile eine Person und eine freie
@@ -45,6 +49,15 @@ import { fullNameOf } from "@/lib/name"
  * auf, ebenso wenig die Autor:in: sie steht in {@code Project.authorId} und
  * ist keine {@code ProjectMember}-Zeile (§3.13.1).
  *
+ * <p><strong>Und ebenso wenig die zugewiesene Redaktion</strong> (§5, Fussnote 3
+ * seit Contract v61, KAN-77). Zugewiesene Redaktion und Projektseite
+ * schliessen einander aus, und zwar in beide Richtungen: der Server antwortet
+ * mit 400 {@code VALIDATION_FAILED} am Feld {@code members}, sobald ein
+ * Schreibvorgang ein Redaktionskonto neu zum Mitglied macht. Das Gegenstueck
+ * steht im {@code ProjectEditorsField}. Der Preis waere hier besonders hoch:
+ * der Fehler verwuerfe den gesamten PUT, also auch Titel, Tags und
+ * Klassifikation.
+ *
  * <p>Pflegbar nur in {@code DRAFT} und {@code REVISION} (§3.13.1), dieselbe
  * Schranke wie fuer jede andere Inhaltsaenderung. Innerhalb dieser Schranke
  * duerfen auch bestehende Mitglieder weitere aufnehmen: Gruppenarbeiten
@@ -54,14 +67,22 @@ export function ProjectMembersField({
   value,
   onChange,
   authorId,
+  editorIds = NO_IDS,
   disabled = false,
+  invalid = false,
+  describedBy,
   labelSuffix,
 }: {
   value: MemberValue[]
   onChange: (next: MemberValue[]) => void
   /** Die Autor:in, sie wird aus der Vorschlagsliste ausgeblendet (§3.13.1). */
   authorId?: string
+  /** Die zugewiesene Redaktion, aus demselben Grund (§5 Fussnote 3). */
+  editorIds?: readonly string[]
   disabled?: boolean
+  /** Reicht {@code aria-invalid} und die Fehler-ID an die Personensuche durch. */
+  invalid?: boolean
+  describedBy?: string
   /** Pflichtkennzeichnung hinter beiden Beschriftungen. */
   labelSuffix?: ReactNode
 }) {
@@ -79,8 +100,9 @@ export function ProjectMembersField({
     () => [
       ...value.map((member) => member.id),
       ...(authorId === undefined ? [] : [authorId]),
+      ...editorIds,
     ],
-    [value, authorId]
+    [value, authorId, editorIds]
   )
 
   function add() {
@@ -118,6 +140,8 @@ export function ProjectMembersField({
           excludedIds={excludedIds}
           placeholder={t("project.metadata.members.personPlaceholder")}
           disabled={disabled}
+          invalid={invalid}
+          describedBy={describedBy}
         />
 
         <Field className="gap-2">

@@ -27,8 +27,10 @@ Entscheidung. Siehe Schritt 0b.
    Figma-Konnektor. Je ein lesender Aufruf,
    `mcp__claude_ai_Atlassian_Rovo__atlassianUserInfo` (erwartet: ein Konto mit
    `account_status: active`) und `mcp__claude_ai_Figma__whoami` (erwartet: ein
-   Handle mit dem Team „BA E-Portfolio HSB" in `plans`; ohne dieses Team sind
-   die Projektdateien unsichtbar, obwohl die Anmeldung steht). Geprüft wird,
+   Handle mit einem Plan). Die Teamzeile darin ist **kein** Zugriffsbeleg:
+   belastbar ist erst ein `get_metadata` auf die Arbeitsdatei
+   `o6SECXRMKGOzCfG5xZebPV`, das eine Seitenliste zurückgeben muss
+   (`CLAUDE.md`, Abschnitt „Die Figma-Arbeitsdatei"). Geprüft wird,
    dass ein Konto antwortet, nicht welches: die Konten sind je Entwickler
    verschieden. Das Ergebnis wird immer genannt, auch wenn beides
    läuft („Konnektoren: Atlassian ok, Figma ok"). Fehler, Zeitüberschreitung
@@ -79,6 +81,17 @@ danach nicht zugänglich, wird um Screenshots gebeten, statt aus dem Kopf zu
 bauen. Der Anlass ist ein Befund aus dem Review zu
 KAN-8: mehrere Ansichten sahen „ungefähr richtig" aus und mussten komplett
 nachgezogen werden.
+
+**Der direkte Weg in die Datei** (`CLAUDE.md`, Abschnitt „Die
+Figma-Arbeitsdatei"): File-Key `o6SECXRMKGOzCfG5xZebPV`, Seite `Foundation` ist
+`0:1`, `Components` ist `1:2`, `Template` ist `4:611`. Zwei Dinge dabei nie
+vergessen. Erstens zeigt die Seitenliste aus `get_metadata` ohne `nodeId` die
+Seite `4:611` **nicht** an, sie wird also immer direkt angesteuert und nie
+gesucht. Zweitens sprengt ein `get_metadata` auf die ganze Seite `4:611` das
+Token-Limit (rund 372.000 Zeichen); gearbeitet wird deshalb frameweise, also
+`get_design_context` oder `get_screenshot` auf den einzelnen Screen-Frame. Die
+Frame-ID je Template steht auf der Confluence-Seite „Template-Abdeckung"
+(Seiten-ID `53739521`).
 
 Verbindlich heißt: die fertige Seite wird Bereich für Bereich gegen das
 Template gehalten. Gleiche Anordnung, gleiche Bausteine, gleiche
