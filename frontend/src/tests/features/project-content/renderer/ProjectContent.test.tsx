@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import { resolveApiUrl } from "@/api/client"
@@ -500,5 +500,76 @@ describe("Unbekannter Block", () => {
     const { container } = render()
 
     expect(container.querySelector(".project-content")).not.toBeNull()
+  })
+})
+
+describe("Datei nicht abrufbar (KAN-36)", () => {
+  /*
+   * Bis hierher endete jeder fehlgeschlagene Abruf in einem stummen
+   * Rahmen: eine geloeschte Datei auf der oeffentlichen Seite, eine Datei
+   * ohne Leserecht in der Ansicht der Redaktion, ein abgebrochener Abruf in
+   * der Vorschau eines Entwurfs. Zu sehen war davon nichts, und wer den
+   * Beitrag vorlesen liess, erfuhr an dieser Stelle gar nichts.
+   */
+  const MEDIEN = blocksOf(
+    {
+      type: "imageBlock",
+      attrs: { fileId: FILE_A, alt: "Messaufbau", caption: "", width: 100 },
+    },
+    { type: "videoBlock", attrs: { fileId: FILE_A, caption: "" } },
+    { type: "audioBlock", attrs: { fileId: FILE_B, caption: "" } },
+    {
+      type: "documentBlock",
+      attrs: { fileId: FILE_B, fileName: "bericht.pdf", size: 1024 },
+    }
+  )
+
+  it("meldet einen gescheiterten Abruf, statt leer zu bleiben", () => {
+    const { container } = renderWithProviders(
+      <ProjectContent blocks={MEDIEN} fileState={() => "error"} />
+    )
+
+    expect(screen.getAllByRole("note")).toHaveLength(4)
+    expect(
+      screen.getAllByText("Diese Datei ist nicht verfügbar.")
+    ).toHaveLength(4)
+    /* Und kein halbes Element daneben: weder ein kaputtes Bild noch ein
+       stummer Player noch ein Link, der in einen 403 fuehrt. */
+    expect(container.querySelector("img")).toBeNull()
+    expect(container.querySelector("video")).toBeNull()
+    expect(container.querySelector("audio")).toBeNull()
+    expect(container.querySelector('[data-block="document"] a')).toBeNull()
+  })
+
+  it("sagt waehrend des Abrufs, dass geladen wird", () => {
+    const { container } = renderWithProviders(
+      <ProjectContent blocks={MEDIEN} fileState={() => "pending"} />
+    )
+
+    expect(screen.getAllByText("Wird geladen …")).toHaveLength(4)
+    expect(container.querySelectorAll('[aria-busy="true"]')).toHaveLength(4)
+    /* Ein Ladehinweis ist keine Meldung: sonst hoerte man mitten im Beitrag
+       viermal, dass etwas nicht geht, obwohl es gerade laeuft. */
+    expect(screen.queryAllByRole("note")).toHaveLength(0)
+  })
+
+  it("zeigt ohne eigenen Abruf die Elemente und meldet erst, wenn der Browser scheitert", () => {
+    /* Der oeffentliche Weg: die Seite reicht keinen Zustand herein, weil
+       sie nichts abruft. Ob unter der Adresse etwas liegt, merkt erst das
+       Element. */
+    const { container } = renderWithProviders(
+      <ProjectContent blocks={MEDIEN} />
+    )
+
+    const image = container.querySelector("img")
+    expect(image).not.toBeNull()
+    expect(screen.queryAllByRole("note")).toHaveLength(0)
+
+    fireEvent.error(image!)
+
+    expect(container.querySelector("img")).toBeNull()
+    expect(screen.getByRole("note")).toHaveTextContent(
+      "Diese Datei ist nicht verfügbar."
+    )
   })
 })

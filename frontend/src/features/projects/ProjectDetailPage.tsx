@@ -90,7 +90,7 @@ export default function ProjectDetailPage() {
    * oeffentlich und obendrein zwischenspeicherbar (§3.15).
    */
   const needsToken = data !== undefined && data.status !== "PUBLISHED"
-  const resolveFileUrl = useProjectFileUrls(
+  const { resolveFileUrl, fileState } = useProjectFileUrls(
     data?.blocks ?? EMPTY_BLOCKS,
     needsToken
   )
@@ -331,6 +331,7 @@ export default function ProjectDetailPage() {
                       <ProjectContent
                         blocks={data.blocks ?? EMPTY_BLOCKS}
                         resolveFileUrl={resolveFileUrl}
+                        fileState={fileState}
                       />
                     )}
                   </section>

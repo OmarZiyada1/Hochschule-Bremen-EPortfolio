@@ -23,6 +23,10 @@ import { headingRendering } from "@/features/project-content/headingRendering"
 import { embedUrlFor } from "@/features/project-content/providers"
 import { LazyMathBlock } from "@/features/project-content/renderer/LazyMathBlock"
 import { MediaFigure } from "@/features/project-content/renderer/MediaFigure"
+import {
+  MediaSlot,
+  type FileState,
+} from "@/features/project-content/renderer/MediaSlot"
 import { renderInline } from "@/features/project-content/renderer/renderInline"
 
 /**
@@ -73,6 +77,16 @@ export type RenderContext = {
    * mitschickt.
    */
   resolveFileUrl: (fileId: string) => string
+  /**
+   * Wie es um die Datei steht, wenn die Seite sie selbst abruft.
+   *
+   * <p>Nur die Vorschau eines nicht veroeffentlichten Beitrags holt Dateien
+   * mit Token; nur dort weiss die Seite vor dem Rendern, ob der Abruf
+   * laeuft oder gescheitert ist, und nur dort kann sie es sagen. Fehlt die
+   * Funktion, gilt jede Datei als abrufbar, und ob es stimmt, entscheidet
+   * der Browser am Element ({@code MediaSlot}).
+   */
+  fileState?: (fileId: string) => FileState
   /** Praefix erzeugter Kennungen, damit zwei Ansichten auf einer Seite sich nicht ins Gehege kommen. */
   idPrefix: string
 }
@@ -372,6 +386,14 @@ function renderTableRow(
 /* Medien                                                               */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Der Zustand einer Datei, mit dem Rueckfall fuer jede Ansicht, die keinen
+ * fuehrt: was niemand abruft, gilt als abrufbar.
+ */
+function stateOf(context: RenderContext, fileId: string): FileState {
+  return context.fileState?.(fileId) ?? "ready"
+}
+
 function renderImage(
   node: ImageBlockNode,
   nodeKey: string,
@@ -384,12 +406,20 @@ function renderImage(
       captionId={`${context.idPrefix}-${nodeKey}-caption`}
       width={width}
     >
-      <img
-        src={context.resolveFileUrl(fileId)}
-        alt={alt}
-        loading="lazy"
-        decoding="async"
-      />
+      <MediaSlot
+        key={context.resolveFileUrl(fileId)}
+        state={stateOf(context, fileId)}
+      >
+        {(fail) => (
+          <img
+            src={context.resolveFileUrl(fileId)}
+            alt={alt}
+            loading="lazy"
+            decoding="async"
+            onError={fail}
+          />
+        )}
+      </MediaSlot>
     </MediaFigure>
   )
 }
@@ -416,12 +446,20 @@ function renderGallery(
       <ul>
         {items.map((item, index) => (
           <li key={index}>
-            <img
-              src={context.resolveFileUrl(item.fileId)}
-              alt={item.alt}
-              loading="lazy"
-              decoding="async"
-            />
+            <MediaSlot
+              key={context.resolveFileUrl(item.fileId)}
+              state={stateOf(context, item.fileId)}
+            >
+              {(fail) => (
+                <img
+                  src={context.resolveFileUrl(item.fileId)}
+                  alt={item.alt}
+                  loading="lazy"
+                  decoding="async"
+                  onError={fail}
+                />
+              )}
+            </MediaSlot>
           </li>
         ))}
       </ul>
@@ -457,16 +495,24 @@ function renderVideo(
   if (attrs.fileId !== undefined) {
     return (
       <MediaFigure caption={caption} captionId={captionId}>
-        <video
-          controls
-          preload="metadata"
-          src={context.resolveFileUrl(attrs.fileId)}
-          {...namedBy(
-            captionId,
-            caption,
-            context.t("projectContent.video.label")
+        <MediaSlot
+          key={context.resolveFileUrl(attrs.fileId)}
+          state={stateOf(context, attrs.fileId)}
+        >
+          {(fail) => (
+            <video
+              controls
+              preload="metadata"
+              src={context.resolveFileUrl(attrs.fileId as string)}
+              onError={fail}
+              {...namedBy(
+                captionId,
+                caption,
+                context.t("projectContent.video.label")
+              )}
+            />
           )}
-        />
+        </MediaSlot>
       </MediaFigure>
     )
   }
@@ -495,16 +541,24 @@ function renderAudio(
   const caption = node.attrs.caption
   return (
     <MediaFigure caption={caption} captionId={captionId}>
-      <audio
-        controls
-        preload="metadata"
-        src={context.resolveFileUrl(node.attrs.fileId)}
-        {...namedBy(
-          captionId,
-          caption,
-          context.t("projectContent.audio.label")
+      <MediaSlot
+        key={context.resolveFileUrl(node.attrs.fileId)}
+        state={stateOf(context, node.attrs.fileId)}
+      >
+        {(fail) => (
+          <audio
+            controls
+            preload="metadata"
+            src={context.resolveFileUrl(node.attrs.fileId)}
+            onError={fail}
+            {...namedBy(
+              captionId,
+              caption,
+              context.t("projectContent.audio.label")
+            )}
+          />
         )}
-      />
+      </MediaSlot>
     </MediaFigure>
   )
 }
@@ -531,17 +585,27 @@ function renderDocument(
   const href = context.resolveFileUrl(fileId)
   return (
     <p data-block="document">
-      <a
-        href={href}
-        download={href.startsWith("blob:") ? fileName : undefined}
-        aria-label={context.t("projectContent.document.accessibleName", {
-          fileName,
-          size: formattedSize,
-        })}
-      >
-        {fileName}
-      </a>{" "}
-      <span aria-hidden="true">{formattedSize}</span>
+      {/* Ein Link hat kein onError: ob die Datei da ist, merkt der Browser
+          erst nach dem Klick. Beim angemeldeten Abruf weiss die Seite es
+          vorher, und dann steht hier die Meldung statt eines Links, der in
+          einen 403 fuehrt. */}
+      <MediaSlot state={stateOf(context, fileId)}>
+        {() => (
+          <>
+            <a
+              href={href}
+              download={href.startsWith("blob:") ? fileName : undefined}
+              aria-label={context.t("projectContent.document.accessibleName", {
+                fileName,
+                size: formattedSize,
+              })}
+            >
+              {fileName}
+            </a>{" "}
+            <span aria-hidden="true">{formattedSize}</span>
+          </>
+        )}
+      </MediaSlot>
     </p>
   )
 }

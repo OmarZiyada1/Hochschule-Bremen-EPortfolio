@@ -10,6 +10,7 @@ import {
   type RenderContext,
   type TranslateFn,
 } from "@/features/project-content/renderer/renderBlockNode"
+import type { FileState } from "@/features/project-content/renderer/MediaSlot"
 import { UnknownBlockNotice } from "@/features/project-content/renderer/UnknownBlockNotice"
 import { cn } from "@/lib/utils"
 
@@ -35,6 +36,7 @@ import { cn } from "@/lib/utils"
 export function ProjectContent({
   blocks,
   resolveFileUrl,
+  fileState,
   className,
 }: {
   blocks: readonly BlockResponse[]
@@ -45,6 +47,11 @@ export function ProjectContent({
    * oeffentlich ist.
    */
   resolveFileUrl?: (fileId: string) => string
+  /**
+   * Wie es um eine Datei steht, wenn die Seite sie selbst abruft. Ohne
+   * Angabe gilt jede als abrufbar; Naeheres an {@code MediaSlot}.
+   */
+  fileState?: (fileId: string) => FileState
   className?: string
 }) {
   const { t, i18n } = useTranslation()
@@ -67,9 +74,10 @@ export function ProjectContent({
       resolveFileUrl:
         resolveFileUrl ??
         ((fileId: string) => resolveApiUrl(apiPaths.files.detail(fileId))),
+      fileState,
       idPrefix,
     }),
-    [t, i18n.language, resolveFileUrl, idPrefix]
+    [t, i18n.language, resolveFileUrl, fileState, idPrefix]
   )
 
   return (

@@ -6,6 +6,7 @@ import { apiPaths } from "@/api/endpoints"
 import { fileQueries } from "@/api/queries/files"
 import type { BlockResponse } from "@/api/types"
 import { blocksToDoc } from "@/features/project-content/blockSerialization"
+import type { FileState } from "@/features/project-content/renderer/MediaSlot"
 
 /**
  * Loest die Dateiadressen eines <strong>noch nicht veroeffentlichten</strong>
@@ -50,39 +51,57 @@ import { blocksToDoc } from "@/features/project-content/blockSerialization"
 export function useProjectFileUrls(
   blocks: readonly BlockResponse[],
   enabled: boolean
-): (fileId: string) => string {
+): {
+  resolveFileUrl: (fileId: string) => string
+  fileState: (fileId: string) => FileState
+} {
   const fileIds = useMemo(
     () => (enabled ? blockFileIds(blocks) : []),
     [blocks, enabled]
   )
 
-  const urls = useQueries({
+  const ergebnisse = useQueries({
     queries: fileIds.map((fileId) =>
       fileQueries.objectUrl(apiPaths.files.detail(fileId))
     ),
-    /* Aus den Ergebnissen wird gleich hier eine schlichte Liste: sie laesst
-       sich strukturell teilen und behaelt damit ihre Identitaet, solange
-       sich nichts geaendert hat. Ein Objekt mit Funktionen taete das
-       nicht, und der Renderer baute dann bei jedem Rendern neu auf. */
+    /* Aus den Ergebnissen wird gleich hier eine schlichte Liste aus Adresse
+       und Zustand: sie laesst sich strukturell teilen und behaelt damit
+       ihre Identitaet, solange sich nichts geaendert hat. Ein Objekt mit
+       Funktionen taete das nicht, und der Renderer baute dann bei jedem
+       Rendern neu auf. */
     combine: (results) =>
-      results.map((result) =>
-        typeof result.data === "string" ? result.data : null
-      ),
+      results.map((result) => ({
+        url: typeof result.data === "string" ? result.data : null,
+        state: (result.isError
+          ? "error"
+          : result.isPending
+            ? "pending"
+            : "ready") as FileState,
+      })),
   })
 
   return useMemo(() => {
-    const byFileId = new Map<string, string>()
+    const byFileId = new Map<string, { url: string | null; state: FileState }>()
     fileIds.forEach((fileId, index) => {
-      const url = urls[index]
-      if (url != null) {
-        byFileId.set(fileId, url)
+      const eintrag = ergebnisse[index]
+      if (eintrag !== undefined) {
+        byFileId.set(fileId, eintrag)
       }
     })
-    /* Der Rueckfall ist der Standard der Detailseite: fuer alles, was hier
-       nicht aufgeloest wird, aendert sich nichts. */
-    return (fileId: string) =>
-      byFileId.get(fileId) ?? resolveApiUrl(apiPaths.files.detail(fileId))
-  }, [fileIds, urls])
+    return {
+      /* Der Rueckfall ist der Standard der Detailseite: fuer alles, was hier
+         nicht aufgeloest wird, aendert sich nichts. Solange der Abruf laeuft
+         oder gescheitert ist, kommt die Adresse nicht ins DOM, denn dann
+         zeigt MediaSlot Hinweis oder Meldung. */
+      resolveFileUrl: (fileId: string) =>
+        byFileId.get(fileId)?.url ??
+        resolveApiUrl(apiPaths.files.detail(fileId)),
+      /* Was hier nicht abgerufen wird, gilt als abrufbar: die oeffentliche
+         Adresse traegt sich selbst, und ob etwas dahinter liegt, merkt der
+         Browser. */
+      fileState: (fileId: string) => byFileId.get(fileId)?.state ?? "ready",
+    }
+  }, [fileIds, ergebnisse])
 }
 
 /**

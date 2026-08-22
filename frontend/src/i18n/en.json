@@ -1009,6 +1009,10 @@
     "mediaShell": {
       "settings": "Details for the {{block}} block"
     },
+    "media": {
+      "loading": "Loading …",
+      "unavailable": "This file is not available."
+    },
     "upload": {
       "typeNotAllowed": "This file format is not allowed.",
       "tooLarge": "The file is larger than {{max}} MB.",
