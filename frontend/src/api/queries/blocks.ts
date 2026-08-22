@@ -36,10 +36,21 @@ export const blockQueries = {
    * Schreibflaeche gegen den Serverstand tauschen und Eingaben verlieren.
    * Neu gelesen wird ausschliesslich auf Anforderung, also nach einem
    * Versionskonflikt.
+   *
+   * <p><strong>Und deshalb steht der Schluessel bewusst nicht unter
+   * {@code ["projects", …]}.</strong> Er lag dort einmal, und damit traf
+   * ihn jedes {@code invalidateQueries({ queryKey: ["projects"] })} mit:
+   * die Kartenaktionen unter „Mein Portfolio" und das Metadatenformular
+   * tun genau das, um Listen und Detailsatz nachzuziehen. Bei offenem
+   * Editor las der Abruf dann eine neue Antwort, {@code EditorPage} baute
+   * die Schreibflaeche daraufhin neu auf, und alles seit dem letzten
+   * Speichertakt Getippte war weg. Ein eigener Wurzelschluessel schliesst
+   * das dauerhaft aus, statt sich darauf zu verlassen, dass niemand einen
+   * weiteren breiten Aufruf ergaenzt.
    */
   list: (projectId: string) =>
     queryOptions({
-      queryKey: ["projects", "blocks", projectId] as const,
+      queryKey: ["blocks", projectId] as const,
       queryFn: ({ signal }) =>
         api.get<BlocksResponse>(apiPaths.projects.blocks(projectId), {
           signal,

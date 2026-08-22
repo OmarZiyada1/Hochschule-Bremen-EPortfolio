@@ -1,4 +1,4 @@
-import type { Editor } from "@tiptap/react"
+import { useEditorState, type Editor } from "@tiptap/react"
 import { ArrowLeftIcon, Redo2Icon, Undo2Icon } from "lucide-react"
 import type { RefObject } from "react"
 import { useTranslation } from "react-i18next"
@@ -74,13 +74,30 @@ export function EditorHeader({
   const { t } = useTranslation()
 
   /*
-   * can().undo() greift auf die View zu. Nach dem Abraeumen des Editors
-   * gibt es das Objekt noch, seine View aber nicht mehr, deshalb die
-   * Pruefung auf isDestroyed und nicht nur auf null.
+   * Ueber useEditorState und nicht durch blosses Lesen beim Rendern.
+   *
+   * <p><strong>Seit Tiptap v3 rendert der Editor die Seite bei einer
+   * Transaktion nicht mehr neu</strong> ({@code shouldRerenderOnTransaction}
+   * ist standardmaessig {@code false}). Ein {@code editor.can().undo()} im
+   * Rendern lieferte deshalb den Stand des letzten Renderns: die
+   * Schaltflaeche blieb waehrend des ganzen Tippens deaktiviert und wurde
+   * erst wieder richtig, wenn irgendetwas anderes ein Rendern ausloeste,
+   * in der Praxis der Speichertakt gut eine Sekunde spaeter. Genau das war
+   * das „es dauert, bis es richtig angezeigt wird".
+   *
+   * <p>{@code can()} greift ausserdem auf die View zu. Nach dem Abraeumen
+   * des Editors gibt es das Objekt noch, seine View aber nicht mehr, daher
+   * die Pruefung auf {@code isDestroyed}.
    */
-  const alive = editor !== null && !editor.isDestroyed
-  const canUndo = alive && editor.can().undo()
-  const canRedo = alive && editor.can().redo()
+  const history = useEditorState({
+    editor,
+    selector: ({ editor: current }) =>
+      current === null || current.isDestroyed
+        ? { canUndo: false, canRedo: false }
+        : { canUndo: current.can().undo(), canRedo: current.can().redo() },
+  })
+  const canUndo = history?.canUndo ?? false
+  const canRedo = history?.canRedo ?? false
 
   const canSubmit = status === "DRAFT" || status === "REVISION"
   const canWithdraw = status === "SUBMITTED"

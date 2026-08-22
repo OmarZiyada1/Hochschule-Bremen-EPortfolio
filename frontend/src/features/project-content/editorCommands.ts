@@ -32,7 +32,11 @@ import {
  */
 export function offsetOfBlock(doc: ProseMirrorNode, index: number): number {
   let offset = 0
-  for (let position = 0; position < index && position < doc.childCount; position++) {
+  for (
+    let position = 0;
+    position < index && position < doc.childCount;
+    position++
+  ) {
     offset += doc.child(position).nodeSize
   }
   return offset
@@ -42,15 +46,48 @@ export function offsetOfBlock(doc: ProseMirrorNode, index: number): number {
  * Index des Blocks, in dem die Auswahl steht, oder {@code null}, wenn es
  * keinen gibt (leeres Dokument).
  *
- * <p>Gerechnet wird ueber {@code $from.depth}: bei einer Textauswahl tief in
- * einer Tabelle ist der Block der Vorfahre auf Ebene 1, nicht die Zelle.
+ * <p><strong>Gerechnet wird mit {@code index(0)} und nicht mit
+ * {@code index(1)}.</strong> {@code ResolvedPos.index(depth)} zaehlt die
+ * Kinder des Vorfahren auf <em>dieser</em> Ebene: {@code index(0)} ist das
+ * wievielte Kind des Dokuments, {@code index(1)} das wievielte Kind
+ * innerhalb dieses Knotens. Steht die Textmarke in einem Absatz, ist
+ * {@code index(1)} also der Index des Inline-Kindes und damit fast immer
+ * {@code 0}. Genau das war der Fehler: die Blockbedienung zeigte
+ * unabhaengig von der Cursorstelle stets auf den ersten Block, und
+ * Einfuegen, Verschieben und Loeschen trafen ihn auch.
+ *
+ * <p>Ebene 0 ist zugleich die richtige Ebene: ein Block ist nach Contract
+ * 2.5 ein Knoten der obersten Ebene. Bei einer Textauswahl tief in einer
+ * Tabelle ist der Block die Tabelle, nicht die Zelle, und {@code index(0)}
+ * liefert genau sie.
  */
 export function activeBlockIndex(editor: Editor): number | null {
-  const { $from } = editor.state.selection
-  if (editor.state.doc.childCount === 0) {
+  const doc = editor.state.doc
+  if (doc.childCount === 0) {
     return null
   }
-  return $from.depth === 0 ? $from.index() : $from.index(1)
+  /* Am Dokumentende zeigt index(0) hinter den letzten Block; dort gilt der
+     letzte. */
+  return Math.min(editor.state.selection.$from.index(0), doc.childCount - 1)
+}
+
+/**
+ * Index des Blocks, in dem eine Dokumentposition liegt.
+ *
+ * <p>Die Bruecke zum Drag-Handle: {@code onNodeChange} meldet die Position
+ * des Knotens, unter dem der Zeiger steht, und die Blockbefehle rechnen in
+ * Kindern des Dokuments. Ohne diese Umrechnung an einer Stelle haette der
+ * Zeigerweg wieder eine eigene Rechnung neben dem Tastaturweg.
+ */
+export function blockIndexAtPos(
+  doc: ProseMirrorNode,
+  pos: number
+): number | null {
+  if (doc.childCount === 0) {
+    return null
+  }
+  const clamped = Math.max(0, Math.min(pos, doc.content.size))
+  return Math.min(doc.resolve(clamped).index(0), doc.childCount - 1)
 }
 
 /** Knotenname des Blocks an dieser Stelle, fuer Beschriftungen. */
@@ -199,4 +236,30 @@ export function insertBlockAfter(
       content
     )
     .run()
+}
+
+/**
+ * Fuegt einen Knoten anstelle eines Bereichs ein: der Weg des
+ * Slash-Befehls.
+ *
+ * <p>Zuerst faellt der getippte Befehl weg, danach entscheidet
+ * {@link insertBlockAfter} wie ueberall, ob der Knoten den nun leeren
+ * Absatz ersetzt oder dahinter kommt. Zwei Schritte und nicht einer, weil
+ * die Entscheidung ueber den leeren Absatz erst nach dem Loeschen faellt;
+ * fuer den Rueckgaengig-Verlauf ist das dank der Gruppierung von
+ * ProseMirror trotzdem ein Schritt.
+ */
+export function insertBlockAtRange(
+  editor: Editor,
+  range: { from: number; to: number },
+  content: Record<string, unknown>
+): boolean {
+  if (!editor.chain().focus().deleteRange(range).run()) {
+    return false
+  }
+  const index = activeBlockIndex(editor)
+  if (index === null) {
+    return editor.chain().focus().insertContent(content).run()
+  }
+  return insertBlockAfter(editor, index, content)
 }

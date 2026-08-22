@@ -33,15 +33,24 @@ import type { ProjectDocument } from "@/features/project-content/blockTypes"
  */
 
 export type AutosaveState =
-  | "idle"
-  | "pending"
-  | "saving"
-  | "saved"
-  | "error"
-  | "conflict"
+  "idle" | "pending" | "saving" | "saved" | "error" | "conflict"
 
 /** Eine Dreiviertelsekunde: lang genug, dass ein Wort nicht drei Takte ausloest. */
 const DEBOUNCE_MS = 1200
+
+/**
+ * Obergrenze zwischen erster ungespeicherter Aenderung und Senden.
+ *
+ * <p><strong>Ohne sie hat eine reine Entprellung eine Luecke</strong>, die
+ * beim Schreiben besonders leicht auftritt: jeder Tastendruck setzt den
+ * Wecker zurueck, und wer zehn Minuten am Stueck tippt, ohne eine Pause von
+ * 1,2 Sekunden zu machen, hat zehn Minuten lang nichts gespeichert. Ein
+ * Absturz, ein geschlossener Tab oder ein Netzwechsel kostet dann alles.
+ * Mit der Obergrenze wird spaetestens nach zehn Sekunden einmal gesendet;
+ * die Zahl der Requests steigt dadurch praktisch nicht, denn wer eine Pause
+ * macht, loest ohnehin vorher aus.
+ */
+const MAX_WAIT_MS = 10000
 
 export type Autosave = {
   state: AutosaveState
@@ -88,6 +97,9 @@ export function useAutosave({
   /* Was zuletzt tatsaechlich beim Server ankam. Verhindert einen Takt, der
      nichts aendert, etwa nach einer blossen Auswahlbewegung. */
   const savedRef = useRef<string | null>(null)
+  /* Wann die erste noch nicht gesendete Aenderung eintraf. Daraus rechnet
+     der Takt die Obergrenze; null heisst „nichts offen". */
+  const pendingSinceRef = useRef<number | null>(null)
 
   /*
    * Die zuletzt gelesene Blockliste, in jedem Rendern nachgefuehrt. Sie
@@ -117,6 +129,7 @@ export function useAutosave({
     previousRef.current = latestBlocks.current
     savedRef.current = null
     stoppedRef.current = false
+    pendingSinceRef.current = null
   }, [version])
 
   const save = useCallback(async (): Promise<boolean> => {
@@ -176,6 +189,9 @@ export function useAutosave({
      * eine Ebene im Stapel.
      */
     const execute = async (): Promise<boolean> => {
+      /* Ab hier ist der offene Stand unterwegs; die Obergrenze zaehlt erst
+         wieder ab der naechsten Aenderung. */
+      pendingSinceRef.current = null
       let result = await save()
       while (againRef.current && !stoppedRef.current) {
         againRef.current = false
@@ -195,13 +211,29 @@ export function useAutosave({
       return
     }
     setState((current) => (current === "saving" ? current : "pending"))
+    const now = Date.now()
+    pendingSinceRef.current ??= now
     if (timerRef.current !== null) {
       clearTimeout(timerRef.current)
     }
-    timerRef.current = setTimeout(() => {
-      timerRef.current = null
-      void run()
-    }, DEBOUNCE_MS)
+    /*
+     * Die Entprellung wird gekuerzt, sobald sie die Obergrenze
+     * ueberschreiten wuerde. Ein zweiter, parallel laufender Wecker fuer die
+     * Obergrenze waere die naheliegende, aber schlechtere Loesung: zwei
+     * Wecker koennen dicht hintereinander feuern, und dann liegt genau der
+     * Fall vor, den {@code run()} verhindern soll.
+     */
+    const untilDeadline = Math.max(
+      0,
+      pendingSinceRef.current + MAX_WAIT_MS - now
+    )
+    timerRef.current = setTimeout(
+      () => {
+        timerRef.current = null
+        void run()
+      },
+      Math.min(DEBOUNCE_MS, untilDeadline)
+    )
   }, [enabled, run])
 
   const flush = useCallback(async (): Promise<boolean> => {
@@ -223,16 +255,32 @@ export function useAutosave({
    * steht; darauf verlaesst sich niemand. Die Wege aus der Seite heraus
    * (Zurueck, Vorschau, Einreichen) rufen vorher ausdruecklich flush() und
    * warten dessen Ergebnis ab.
+   *
+   * <p><strong>Ohne Abhaengigkeiten, und {@code run} kommt ueber einen
+   * Ref.</strong> Stuende {@code run} in der Liste, liefe die
+   * Aufraeumfunktion bei jedem Identitaetswechsel von {@code run} und
+   * schickte den offenen Stand sofort los, statt ihn entprellt abzuwarten.
+   * {@code run} haengt ueber {@code save} an {@code readDocument}, und ein
+   * Aufrufer, der es nicht in {@code useCallback} fuehrt, reichte bei jedem
+   * Rendern eine neue Funktion herein: aus der Entprellung wuerde dann
+   * stillschweigend ein Request je Tastendruck. Die Seite fuehrt
+   * {@code readDocument} stabil, aber darauf darf sich der Takt nicht
+   * verlassen (aufgefallen beim Test zur Obergrenze).
    */
+  const runRef = useRef(run)
+  useEffect(() => {
+    runRef.current = run
+  })
+
   useEffect(() => {
     return () => {
       if (timerRef.current !== null) {
         clearTimeout(timerRef.current)
         timerRef.current = null
-        void run()
+        void runRef.current()
       }
     }
-  }, [run])
+  }, [])
 
   return { state, error, schedule, flush }
 }

@@ -1,4 +1,4 @@
-import type { Editor } from "@tiptap/react"
+import { useEditorState, type Editor } from "@tiptap/react"
 import {
   AlignCenterIcon,
   AlignJustifyIcon,
@@ -19,6 +19,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { ToolbarButton } from "@/components/ui/toolbar"
 import type { ContentTextAlign } from "@/features/project-content/blockTypes"
 
 const ALIGNMENTS: readonly { value: ContentTextAlign; icon: LucideIcon }[] = [
@@ -58,21 +59,33 @@ export function AlignMenu({
   disabled: boolean
 }) {
   const { t } = useTranslation()
-  const isHeading = editor.isActive("heading")
-
-  const current =
-    ALIGNMENTS.find((entry) => editor.isActive({ textAlign: entry.value }))
-      ?.value ?? "left"
+  /* Ueber useEditorState, weil eine Transaktion die Seite seit Tiptap v3
+     nicht mehr neu rendert. */
+  const state = useEditorState({
+    editor,
+    selector: ({ editor: current }) => ({
+      isHeading: current.isActive("heading"),
+      alignment:
+        ALIGNMENTS.find((entry) => current.isActive({ textAlign: entry.value }))
+          ?.value ?? "left",
+    }),
+  })
+  const isHeading = state?.isHeading ?? false
+  const current = state?.alignment ?? "left"
 
   return (
     <DropdownMenu>
       <Tooltip>
         <TooltipTrigger
           render={
-            <DropdownMenuTrigger
-              data-toolbar-item
-              disabled={disabled}
-              className="flex size-8 items-center justify-center rounded-control outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50"
+            <ToolbarButton
+              render={
+                <DropdownMenuTrigger
+                  data-toolbar-item
+                  disabled={disabled}
+                  className="flex size-8 items-center justify-center rounded-control outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50"
+                />
+              }
             />
           }
         >

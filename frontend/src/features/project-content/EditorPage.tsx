@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { EditorContent, useEditor } from "@tiptap/react"
+import { EditorContent, useEditor, useEditorState } from "@tiptap/react"
 import { LockIcon, TriangleAlertIcon } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -25,8 +25,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EditorContextProvider } from "@/features/project-content/EditorContext"
-import { BlockControls } from "@/features/project-content/components/BlockControls"
-import type { InsertKind } from "@/features/project-content/components/BlockInsertBar"
+import { BlockDragHandle } from "@/features/project-content/components/BlockDragHandle"
+import { BlockKeyboardBar } from "@/features/project-content/components/BlockKeyboardBar"
 import { EditorHeader } from "@/features/project-content/components/EditorHeader"
 import { EditorSidebar } from "@/features/project-content/components/EditorSidebar"
 import { SelectionToolbar } from "@/features/project-content/components/SelectionToolbar"
@@ -35,12 +35,6 @@ import { TableControls } from "@/features/project-content/components/TableContro
 import { blocksToDoc } from "@/features/project-content/blockSerialization"
 import type { ProjectDocument } from "@/features/project-content/blockTypes"
 import { createEditorExtensions } from "@/features/project-content/editorSchema"
-import {
-  deleteBlock,
-  insertBlockAfter,
-  moveBlock,
-} from "@/features/project-content/editorCommands"
-import { useActiveBlock } from "@/features/project-content/hooks/useActiveBlock"
 import { useAutosave } from "@/features/project-content/hooks/useAutosave"
 
 /**
@@ -77,6 +71,7 @@ export default function EditorPage() {
   const { user } = useAuth()
 
   const surfaceRef = useRef<HTMLDivElement>(null)
+  const keyboardBarRef = useRef<HTMLDivElement>(null)
   const workflowButtonRef = useRef<HTMLButtonElement>(null)
   const backButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -142,10 +137,23 @@ export default function EditorPage() {
              Authoring Practices fuer toolbar). Escape fuehrt dort zurueck. */
           if (event.altKey && event.key === "F10") {
             event.preventDefault()
-            surfaceRef.current
-              ?.querySelector<HTMLElement>(
+            document
+              .querySelector<HTMLElement>(
                 "[data-selection-toolbar] [data-toolbar-item]"
               )
+              ?.focus()
+            return true
+          }
+          /*
+           * Alt+F9 fuehrt in die Blockbedienung. Sie braucht einen eigenen
+           * Weg, weil der Griff am Zeiger ausgeblendet ist, solange niemand
+           * zeigt, und ein mit visibility versteckter Knopf keinen Fokus
+           * annimmt (SC 2.1.1).
+           */
+          if (event.altKey && event.key === "F9") {
+            event.preventDefault()
+            keyboardBarRef.current
+              ?.querySelector<HTMLElement>("button")
               ?.focus()
             return true
           }
@@ -188,12 +196,24 @@ export default function EditorPage() {
     scheduleRef.current = autosave.schedule
   }, [autosave.schedule])
 
-  const activeBlock = useActiveBlock(editor, surfaceRef)
+  /*
+   * Ob der Cursor in einer Tabelle steht. Ueber useEditorState und nicht
+   * durch Lesen beim Rendern: seit Tiptap v3 rendert eine Transaktion die
+   * Seite nicht mehr neu, die Tabellenleiste erschien und verschwand
+   * deshalb erst, wenn irgendetwas anderes ein Rendern ausloeste.
+   */
+  const inTable = useEditorState({
+    editor,
+    selector: ({ editor: current }) => current?.isActive("table") ?? false,
+  })
 
   const withdraw = useMutation({
     mutationFn: () => withdrawProject(projectId),
     onSuccess: (updated) => {
-      queryClient.setQueryData(projectQueries.detail(projectId).queryKey, updated)
+      queryClient.setQueryData(
+        projectQueries.detail(projectId).queryKey,
+        updated
+      )
       announce(t("projectContent.withdraw.done"))
     },
   })
@@ -202,16 +222,6 @@ export default function EditorPage() {
   const leaveTo = async (path: string) => {
     await autosave.flush()
     void navigate(path)
-  }
-
-  const onInsert = (kind: InsertKind) => {
-    if (editor === null || activeBlock === null) {
-      return
-    }
-    insertBlockAfter(editor, activeBlock.index, contentFor(kind))
-    announce(t("projectContent.insert.inserted", {
-      block: t(`projectContent.insert.type.${kind}`),
-    }))
   }
 
   if (project.isPending || blocks.isPending) {
@@ -250,9 +260,7 @@ export default function EditorPage() {
   const isAuthor = user !== null && detail.author?.id === user.id
 
   return (
-    <EditorContextProvider
-      value={{ projectId, editable: mayWrite, announce }}
-    >
+    <EditorContextProvider value={{ projectId, editable: mayWrite, announce }}>
       <div className="flex flex-col">
         <EditorHeader
           editor={editor}
@@ -280,9 +288,7 @@ export default function EditorPage() {
             {!statusEditable && (
               <Alert>
                 <LockIcon aria-hidden="true" />
-                <AlertTitle>
-                  {t("projectContent.readOnly.title")}
-                </AlertTitle>
+                <AlertTitle>{t("projectContent.readOnly.title")}</AlertTitle>
                 <AlertDescription>
                   {t("projectContent.readOnly.description", {
                     status: t(`project.status.${detail.status}`),
@@ -318,37 +324,35 @@ export default function EditorPage() {
               </Alert>
             )}
 
-            {editor !== null && editor.isActive("table") && (
+            {editor !== null && inTable === true && (
               <div className="flex">
                 <TableControls editor={editor} disabled={!mayWrite} />
               </div>
             )}
 
             {/*
-             * Die Bedienung liegt absolut ueber der Flaeche, deshalb ist der
-             * Rahmen relativ und laesst links Platz fuer sie.
+             * Die Blockbedienung am Zeiger haengt der Drag-Handle links
+             * neben den Block; der Platz dafuer steht als linke Innenkante
+             * der Schreibflaeche bereit. Drei Schaltflaechen zu 24 Pixeln
+             * mit Abstand brauchen 80, deshalb pl-20. Der Rahmen bleibt
+             * relativ: das Drag-Handle-Plugin haengt seinen Rahmen in das
+             * Elternelement der Schreibflaeche und positioniert darin
+             * absolut.
              */}
-            <div ref={surfaceRef} className="project-content relative pl-10">
-              {editor !== null && activeBlock !== null && mayWrite && (
-                <BlockControls
+            {editor !== null && mayWrite && (
+              <BlockKeyboardBar
+                editor={editor}
+                disabled={!mayWrite}
+                onAnnounce={announce}
+                barRef={keyboardBarRef}
+              />
+            )}
+
+            <div ref={surfaceRef} className="project-content relative pl-20">
+              {editor !== null && mayWrite && (
+                <BlockDragHandle
                   editor={editor}
-                  index={activeBlock.index}
-                  count={activeBlock.count}
-                  name={activeBlock.name}
-                  top={activeBlock.top}
                   disabled={!mayWrite}
-                  onInsert={onInsert}
-                  onMove={(delta) =>
-                    moveBlock(
-                      editor,
-                      activeBlock.index,
-                      activeBlock.index + delta
-                    )
-                  }
-                  onMoveTo={(target) =>
-                    moveBlock(editor, activeBlock.index, target)
-                  }
-                  onDelete={() => deleteBlock(editor, activeBlock.index)}
                   onAnnounce={announce}
                 />
               )}
@@ -431,7 +435,15 @@ export default function EditorPage() {
         onReload={() => {
           setConflictOpen(false)
           setConflictSeen(false)
+          /* Beide Schluessel ausdruecklich: der Inhalt liegt seit KAN-36
+             bewusst nicht mehr unter ["projects", …], damit ihn eine
+             fremde Invalidierung nicht mitreisst (api/queries/blocks.ts).
+             Das Neuladen hier ist die eine Stelle, die ihn wirklich neu
+             lesen soll. */
           void queryClient.invalidateQueries({ queryKey: ["projects"] })
+          void queryClient.invalidateQueries({
+            queryKey: blockQueries.list(projectId).queryKey,
+          })
         }}
         onKeepEditing={() => {
           setConflictOpen(false)
@@ -441,58 +453,4 @@ export default function EditorPage() {
       />
     </EditorContextProvider>
   )
-}
-
-/** Der Knoten, den ein Eintrag der Einfuegeleiste anlegt (Contract 2.5). */
-function contentFor(kind: InsertKind): Record<string, unknown> {
-  switch (kind) {
-    case "image":
-      return { type: "imageBlock" }
-    case "gallery":
-      return { type: "galleryBlock" }
-    case "video":
-      return { type: "videoBlock" }
-    case "audio":
-      return { type: "audioBlock" }
-    case "document":
-      return { type: "documentBlock" }
-    case "embed":
-      return { type: "embedBlock" }
-    case "formula":
-      return { type: "mathBlock" }
-    case "code":
-      return { type: "codeBlock" }
-    case "divider":
-      return { type: "horizontalRule" }
-    case "table":
-      /* Drei mal drei mit Kopfzeile, wie im Template. */
-      return {
-        type: "table",
-        content: [
-          headerRow(3),
-          bodyRow(3),
-          bodyRow(3),
-        ],
-      }
-  }
-}
-
-function headerRow(cells: number): Record<string, unknown> {
-  return {
-    type: "tableRow",
-    content: Array.from({ length: cells }, () => ({
-      type: "tableHeader",
-      content: [{ type: "paragraph" }],
-    })),
-  }
-}
-
-function bodyRow(cells: number): Record<string, unknown> {
-  return {
-    type: "tableRow",
-    content: Array.from({ length: cells }, () => ({
-      type: "tableCell",
-      content: [{ type: "paragraph" }],
-    })),
-  }
 }

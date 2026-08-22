@@ -4,10 +4,11 @@ import { EditorContent, useEditor, type Editor } from "@tiptap/react"
 import { useEffect } from "react"
 import { describe, expect, it } from "vitest"
 
+import { Toolbar } from "@/components/ui/toolbar"
 import { AlignMenu } from "@/features/project-content/components/AlignMenu"
 import { BlockTypeMenu } from "@/features/project-content/components/BlockTypeMenu"
 import { ColorMenu } from "@/features/project-content/components/ColorMenu"
-import { SelectionToolbar } from "@/features/project-content/components/SelectionToolbar"
+import { SelectionToolbarBar } from "@/features/project-content/components/SelectionToolbar"
 import { createEditorExtensions } from "@/features/project-content/editorSchema"
 import { renderWithProviders } from "@/tests/render"
 
@@ -34,17 +35,41 @@ function Harness({
   })
 
   useEffect(() => {
-    /* Alles markieren: die Leiste erscheint ueber markiertem Text, und die
-       Menues lesen den Zustand der Auswahl. */
-    editor?.commands.selectAll()
+    if (editor === null) {
+      return
+    }
+    /*
+     * Den Text des ersten Blocks markieren und nicht das ganze Dokument.
+     *
+     * <p><strong>selectAll war hier falsch</strong>, auch wenn es lange
+     * durchging: TrailingNode aus dem StarterKit haelt hinter einer
+     * Ueberschrift immer einen leeren Absatz bereit, eine Gesamtauswahl
+     * umfasst also Ueberschrift <em>und</em> Absatz, und
+     * {@code isActive("heading")} ist dann zu Recht falsch. Bemerkt wurde
+     * es nicht, weil die Menues ihren Zustand beim Rendern lasen und der
+     * Editor seit Tiptap v3 bei einer Transaktion nicht neu rendert: die
+     * Anzeige blieb beim Anfangszustand stehen, in dem die Textmarke noch
+     * in der Ueberschrift stand. Seit die Menues ueber useEditorState
+     * mitlaufen (KAN-36), zeigt der Test den echten Zustand, und der
+     * Aufbau muss die Lage nachstellen, um die es geht: markierter Text
+     * innerhalb eines Blocks.
+     */
+    const first = editor.state.doc.child(0)
+    editor.commands.setTextSelection({ from: 1, to: first.nodeSize - 1 })
   }, [editor])
 
   if (editor === null) {
     return null
   }
+  /*
+   * Die drei Menues sind Eintraege der Leiste: seit KAN-36 fuehrt Base UI
+   * den Roving-Tabindex, und Toolbar.Button verlangt seinen Wurzelkontext.
+   * Einzeln gerendert stuenden sie ausserhalb davon, was in der Anwendung
+   * gar nicht vorkommt.
+   */
   return (
     <div>
-      {children(editor)}
+      <Toolbar aria-label="Auswahlleiste">{children(editor)}</Toolbar>
       <EditorContent editor={editor} />
     </div>
   )
@@ -169,11 +194,7 @@ describe("Farbmenue", () => {
 
     await screen.findByRole("button", { name: "Farbe" }, WAIT)
     await waitFor(() => expect(seen.editor).toBeDefined(), WAIT)
-    seen.editor
-      ?.chain()
-      .focus()
-      .setMark("textStyle", { color: "purple" })
-      .run()
+    seen.editor?.chain().focus().setMark("textStyle", { color: "purple" }).run()
 
     await user.click(await screen.findByRole("button", { name: "Farbe" }, WAIT))
     await user.click(
@@ -214,13 +235,15 @@ describe("Farbmenue", () => {
 describe("Auswahlleiste", () => {
   it("ist ein einziger Tabstopp und wechselt innen mit den Pfeiltasten", async () => {
     const user = userEvent.setup()
+    /* Die Leiste ohne die Blase: sonst laege sie in einem versteckten
+       Teilbaum, und jsdom liesse sie gar nicht fokussieren. */
     renderMenus("<p>Ein Absatz</p>", (editor) => (
-      <SelectionToolbar editor={editor} disabled={false} />
+      <SelectionToolbarBar editor={editor} disabled={false} />
     ))
 
     const toolbar = await screen.findByRole(
       "toolbar",
-      { name: "Textauszeichnung", hidden: true },
+      { name: "Textauszeichnung" },
       WAIT
     )
     const items = Array.from(
@@ -230,6 +253,12 @@ describe("Auswahlleiste", () => {
     /* Zwoelf einzelne Tabstopps zwischen Text und Leiste waeren fuer
        Tastaturbedienung unbenutzbar (WAI-ARIA Authoring Practices). */
     expect(items.length).toBeGreaterThan(5)
+
+    /*
+     * Gefuehrt wird der Fokus seit KAN-36 von der Primitive Toolbar aus
+     * Base UI und nicht mehr von dieser Datei. Die Zusage bleibt dieselbe:
+     * genau ein Tabstopp, und die Pfeiltaste wandert darin weiter.
+     */
     expect(items.filter((item) => item.tabIndex === 0)).toHaveLength(1)
     expect(items[0].tabIndex).toBe(0)
 
@@ -240,6 +269,7 @@ describe("Auswahlleiste", () => {
       expect(items[1]).toHaveFocus()
       expect(items[1].tabIndex).toBe(0)
       expect(items[0].tabIndex).toBe(-1)
+      expect(items.filter((item) => item.tabIndex === 0)).toHaveLength(1)
     }, WAIT)
-  })
+  }, 30000)
 })

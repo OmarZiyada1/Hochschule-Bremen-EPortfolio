@@ -4,10 +4,14 @@ import {
   type Node,
   type ReactNodeViewProps,
 } from "@tiptap/react"
+import { Placeholder } from "@tiptap/extensions"
 import type { ComponentType } from "react"
+
+import i18n from "@/i18n"
 
 import { createBlockExtensions } from "@/features/project-content/blockSchema"
 import { HeadingNodeView } from "@/features/project-content/extensions/HeadingNodeView"
+import { SlashCommand } from "@/features/project-content/extensions/SlashCommand"
 import { AudioNodeView } from "@/features/project-content/components/nodeviews/AudioNodeView"
 import { DocumentNodeView } from "@/features/project-content/components/nodeviews/DocumentNodeView"
 import { EmbedNodeView } from "@/features/project-content/components/nodeviews/EmbedNodeView"
@@ -52,8 +56,53 @@ const NODE_VIEWS: Record<string, ComponentType<ReactNodeViewProps>> = {
   mathBlock: MathNodeView,
 }
 
+/**
+ * Zwei Erweiterungen, die es nur beim Schreiben gibt und die beide fertig
+ * aus dem Tiptap-Paket kommen statt von Hand.
+ *
+ * <p>{@code Placeholder} sagt in der leeren Zeile, was zu tun ist, und
+ * nennt dabei den Slash-Befehl: ohne diesen Hinweis findet ihn niemand.
+ * {@code SlashCommand} ist der zweite Weg zum Einfuegen, neben der Pille
+ * am Plus.
+ *
+ * <p><strong>Kein {@code TrailingNode} hier.</strong> Er waere die
+ * naheliegende Ergaenzung fuer „hinter dem letzten Bild weiterschreiben",
+ * steckt aber bereits im StarterKit und wuerde doppelt angemeldet
+ * ({@code Duplicate extension names}). Dass sich unter dem letzten Block
+ * noch klicken laesst, ist entsprechend keine Frage des Schemas, sondern
+ * der Flaeche: {@code project-content.css} gibt der Schreibflaeche eine
+ * Mindesthoehe und einen Fussraum.
+ *
+ * <p>Der Platzhaltertext wird bei jeder Neuberechnung der Dekorationen
+ * frisch uebersetzt und nicht beim Anlegen des Editors eingefroren: sonst
+ * bliebe nach einem Sprachwechsel der deutsche Satz stehen, bis die Seite
+ * neu geladen wird.
+ */
+function createEditorOnlyExtensions(): Extensions {
+  return [
+    Placeholder.configure({
+      /*
+       * Nur an der Zeile, in der die Textmarke steht, und im ganz leeren
+       * Beitrag. In jeder leeren Zeile stuende derselbe Satz mehrfach
+       * untereinander; das liest sich wie ein Fehler und nicht wie ein
+       * Hinweis.
+       */
+      placeholder: ({ editor, node, hasAnchor }) =>
+        node.type.name === "paragraph" && (hasAnchor || editor.isEmpty)
+          ? i18n.t("projectContent.editor.placeholder")
+          : "",
+      showOnlyWhenEditable: true,
+    }),
+    SlashCommand,
+  ]
+}
+
 export function createEditorExtensions(): Extensions {
-  return [...createBlockExtensions(), HeadingNodeView].map((extension) => {
+  return [
+    ...createEditorOnlyExtensions(),
+    ...createBlockExtensions(),
+    HeadingNodeView,
+  ].map((extension) => {
     const view = NODE_VIEWS[extension.name]
     if (view === undefined) {
       return extension

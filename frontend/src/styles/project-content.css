@@ -428,4 +428,66 @@
   .project-content [data-block="math"] {
     overflow-x: auto;
   }
+
+  /* ============================================================
+   * Nur auf der Schreibflaeche
+   *
+   * Der Lesepfad kennt weder Platzhalter noch Ziehgriff; beide entstehen
+   * erst im Editor (KAN-36). Sie stehen trotzdem hier, weil sie an
+   * .project-content haengen und die Datei die eine Stelle fuer das
+   * Aussehen eines Beitrags ist.
+   * ============================================================ */
+
+  /*
+   * Der Platzhalter der leeren Zeile kommt aus der Erweiterung Placeholder
+   * (@tiptap/extensions) und steht im Attribut data-placeholder. Er wird
+   * als ::before ausgegeben und aus dem Fluss genommen: als echter Inhalt
+   * verschoebe er die Zeile, und der Cursor stuende dahinter.
+   */
+  .project-content .is-empty[data-placeholder]::before {
+    content: attr(data-placeholder);
+    color: var(--muted-foreground);
+    float: inline-start;
+    block-size: 0;
+    pointer-events: none;
+    /* Ein Screenreader liest den Cursor und die leere Zeile vor; der
+       Platzhalter waere eine zweite, verwirrende Ansage (SC 1.3.1). */
+    speak: never;
+  }
+
+  /*
+   * Der Rahmen des Ziehgriffs. Die Erweiterung setzt Position, Sichtbarkeit
+   * und pointer-events selbst; hier steht nur, dass er beim Ziehen nicht im
+   * Weg ist und weich erscheint. Wer Bewegung reduziert haben will, bekommt
+   * keine (SC 2.3.3).
+   */
+  .project-content .drag-handle {
+    transition: opacity 120ms ease-out;
+  }
+
+  .project-content .drag-handle[data-dragging="true"] {
+    opacity: 0.4;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .project-content .drag-handle {
+      transition: none;
+    }
+  }
+
+  /*
+   * Platz unter dem letzten Block.
+   *
+   * <p>Ohne ihn endet die Schreibflaeche unmittelbar hinter dem letzten
+   * Absatz: wer darunter klickt, trifft die Seite und nicht den Editor,
+   * und der Cursor bleibt, wo er war. Mit Mindesthoehe und Fussraum liegt
+   * unter dem Text eine klickbare Flaeche, und ProseMirror setzt die
+   * Textmarke von selbst an die naechstgelegene Stelle. Den leeren
+   * Schlussabsatz dafuer haelt TrailingNode aus dem StarterKit bereit;
+   * gespeichert wird er nicht (docToBlocks laesst ihn weg).
+   */
+  .project-content .ProseMirror {
+    min-block-size: 24rem;
+    padding-block-end: 8rem;
+  }
 }

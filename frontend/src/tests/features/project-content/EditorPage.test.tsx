@@ -218,6 +218,35 @@ describe("EditorPage", () => {
     ).not.toBeInTheDocument()
   })
 
+  /*
+   * Der Zeigerweg laeuft seit KAN-36 ueber
+   * @tiptap/extension-drag-handle-react. Die Erweiterung blendet ihren
+   * Griff aus, solange niemand zeigt, und zwar mit visibility: hidden; ein
+   * so verstecktes Element nimmt keinen Fokus an. Ohne einen zweiten,
+   * erreichbaren Weg waeren Einfuegen, Verschieben und Loeschen fuer
+   * Tastatur- und Sprachbedienung unerreichbar (SC 2.1.1).
+   */
+  it("haelt die Blockbedienung auch ohne Zeiger erreichbar", async () => {
+    renderEditor(ownDraft(), [textBlock("Ein Absatz.")])
+
+    const bar = await screen.findByRole(
+      "group",
+      { name: /Blockbedienung, Block 1 von/ },
+      WAIT
+    )
+    /* Die drei Bedienelemente stehen darin und sind echte Schaltflaechen,
+       also mit Tab erreichbar. */
+    expect(
+      within(bar).getByRole("button", { name: "Block einfügen" })
+    ).toBeInTheDocument()
+    expect(
+      within(bar).getByRole("button", { name: /anheben|ablegen/i })
+    ).toBeInTheDocument()
+    expect(
+      within(bar).getByRole("button", { name: /löschen/i })
+    ).toBeInTheDocument()
+  })
+
   it("legt einen Medienblock als leeren Platzhalter im Text an", async () => {
     const user = userEvent.setup()
     renderEditor(ownDraft(), [textBlock("Ein Absatz.")])
@@ -225,9 +254,7 @@ describe("EditorPage", () => {
     await user.click(
       await screen.findByRole("button", { name: "Block einfügen" }, WAIT)
     )
-    await user.click(
-      await screen.findByRole("button", { name: "Bild" }, WAIT)
-    )
+    await user.click(await screen.findByRole("button", { name: "Bild" }, WAIT))
 
     /* Kein Dialog, sondern eine Ablageflaeche an Ort und Stelle. */
     expect(

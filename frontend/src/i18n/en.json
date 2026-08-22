@@ -901,6 +901,7 @@
       "mathBlock": "Formula"
     },
     "blockControls": {
+      "keyboardBar": "Block controls, block {{position}} of {{count}}",
       "blockFallback": "Block",
       "pickUp": "Pick up {{block}} to move it",
       "drop": "Drop {{block}} here",
@@ -920,9 +921,13 @@
         "deleted": "{{block}} deleted"
       }
     },
+    "editor": {
+      "placeholder": "Write something, or type “/” for image, table, formula and more"
+    },
     "insert": {
       "label": "Insert block",
       "close": "Close insert bar",
+      "noMatch": "No block type matches this input.",
       "inserted": "{{block}} inserted",
       "type": {
         "image": "Image",

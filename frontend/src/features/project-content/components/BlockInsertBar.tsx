@@ -1,17 +1,4 @@
-import {
-  BracesIcon,
-  CodeIcon,
-  FileTextIcon,
-  ImageIcon,
-  ImagePlusIcon,
-  MinusIcon,
-  MusicIcon,
-  SigmaIcon,
-  TableIcon,
-  VideoIcon,
-  XIcon,
-  type LucideIcon,
-} from "lucide-react"
+import { XIcon } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -20,6 +7,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  INSERT_ENTRIES,
+  type InsertKind,
+} from "@/features/project-content/blockInsert"
 
 /**
  * Die Einfuegeleiste am Plus der Blockbedienung (Figma
@@ -27,52 +18,25 @@ import {
  *
  * <p><strong>Eine Pille mit runden Symbolschaltflaechen</strong>, wie im
  * Template gezeichnet, und kein Auswahlmenue: die zehn Typen stehen
- * nebeneinander und sind mit einem Klick erreichbar. Ein Menue mit Suchfeld
- * verlangt fuer denselben Vorgang zwei Klicks oder eine Eingabe, und die
- * Symbole sind dieselben, die danach im Beitrag stehen.
+ * nebeneinander und sind mit einem Klick erreichbar. Die Symbole sind
+ * dieselben, die danach im Beitrag stehen.
  *
- * <p><strong>Jeder Typ entsteht unmittelbar</strong>, auch Bild, Galerie,
- * Video, Ton, Dokument, Einbettung und Formel. Sie kommen als leerer
- * Platzhalter in den Text und werden dort gefuellt; gespeichert werden sie
- * erst, wenn sie ihre Pflichtattribute haben
- * ({@code blockSerialization.docToBlocks}). Ohne diese Regel waere ein
- * leerer Medienknoten ein Sackgassenzustand, in dem sich der ganze Beitrag
- * nicht mehr speichern liesse.
+ * <p><strong>Sie liegt in einem Popover und nicht mehr im Fluss der
+ * Blockbedienung.</strong> Zuvor wurde sie in dieselbe absolut gesetzte
+ * Huelle gerendert, die mit {@code -translate-x-full} um ihre eigene Breite
+ * nach links geschoben wird. Fuer drei kleine Schaltflaechen ging das auf,
+ * fuer eine Pille von rund vierhundert Pixeln nicht: sie landete links
+ * ausserhalb des Sichtbereichs und war nicht mehr erreichbar. Das Popover
+ * kennt die Raender des Fensters und weicht ihnen aus.
  *
- * <p><strong>Keine Aufgabenliste.</strong> Der alte Prototyp zeichnet an
- * dieser Stelle ein Kaestchen-Symbol; {@code taskList} ist kein Teil des
- * Schemas (Contract 2.5, „Keine Aufgabenlisten"). Das Portal ist ein
- * Praesentationsportfolio.
+ * <p><strong>Derselbe Inhalt wie der Slash-Befehl.</strong> Beide Wege
+ * lesen {@code INSERT_ENTRIES} und legen ueber {@code contentFor} denselben
+ * Knoten an. Die Medienknoten entstehen als leerer Platzhalter im Text und
+ * werden dort gefuellt.
  *
- * <p>Der Fokus springt beim Oeffnen auf die erste Schaltflaeche, Escape
- * schliesst und gibt ihn an das Plus zurueck.
+ * <p>Der Fokus springt beim Oeffnen auf die erste Schaltflaeche; das
+ * Schliessen und die Rueckgabe des Fokus besorgt das Popover.
  */
-
-export type InsertKind =
-  | "image"
-  | "gallery"
-  | "video"
-  | "audio"
-  | "document"
-  | "embed"
-  | "formula"
-  | "table"
-  | "code"
-  | "divider"
-
-const ENTRIES: readonly { kind: InsertKind; icon: LucideIcon }[] = [
-  { kind: "image", icon: ImageIcon },
-  { kind: "gallery", icon: ImagePlusIcon },
-  { kind: "video", icon: VideoIcon },
-  { kind: "audio", icon: MusicIcon },
-  { kind: "document", icon: FileTextIcon },
-  { kind: "embed", icon: BracesIcon },
-  { kind: "formula", icon: SigmaIcon },
-  { kind: "table", icon: TableIcon },
-  { kind: "code", icon: CodeIcon },
-  { kind: "divider", icon: MinusIcon },
-]
-
 export function BlockInsertBar({
   onSelect,
   onClose,
@@ -89,28 +53,21 @@ export function BlockInsertBar({
 
   return (
     <div
-      contentEditable={false}
       role="group"
       aria-label={t("projectContent.insert.label")}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") {
-          event.preventDefault()
-          onClose()
-        }
-      }}
-      className="flex items-center gap-1.5 rounded-pill border border-border bg-popover px-2 py-1.5 shadow-md"
+      className="flex items-center gap-1.5"
     >
       <button
         type="button"
         ref={firstRef}
         onClick={onClose}
-        className="flex size-8 items-center justify-center rounded-pill border-2 border-border text-muted-foreground outline-none hover:border-foreground hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        className="flex size-8 shrink-0 items-center justify-center rounded-pill border-2 border-border text-muted-foreground outline-none hover:border-foreground hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
       >
         <XIcon aria-hidden="true" className="size-3.5" />
         <span className="sr-only">{t("projectContent.insert.close")}</span>
       </button>
 
-      {ENTRIES.map(({ kind, icon: Icon }) => {
+      {INSERT_ENTRIES.map(({ kind, icon: Icon }) => {
         const label = t(`projectContent.insert.type.${kind}`)
         return (
           <Tooltip key={kind}>
@@ -119,7 +76,7 @@ export function BlockInsertBar({
                 <button
                   type="button"
                   onClick={() => onSelect(kind)}
-                  className="flex size-8 items-center justify-center rounded-pill border-2 border-primary text-primary outline-none transition-colors hover:bg-primary/10 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-pill border-2 border-primary text-primary transition-colors outline-none hover:bg-primary/10 focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 />
               }
             >
@@ -133,3 +90,5 @@ export function BlockInsertBar({
     </div>
   )
 }
+
+export type { InsertKind }

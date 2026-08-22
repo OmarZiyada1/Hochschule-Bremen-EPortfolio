@@ -901,6 +901,7 @@
       "mathBlock": "Formel"
     },
     "blockControls": {
+      "keyboardBar": "Blockbedienung, Block {{position}} von {{count}}",
       "blockFallback": "Block",
       "pickUp": "{{block}} anheben, um ihn zu verschieben",
       "drop": "{{block}} an dieser Stelle ablegen",
@@ -920,9 +921,13 @@
         "deleted": "{{block}} gelöscht"
       }
     },
+    "editor": {
+      "placeholder": "Schreib etwas, oder tippe „/“ für Bild, Tabelle, Formel und mehr"
+    },
     "insert": {
       "label": "Block einfügen",
       "close": "Einfügeleiste schließen",
+      "noMatch": "Kein Blocktyp passt zu dieser Eingabe.",
       "inserted": "{{block}} eingefügt",
       "type": {
         "image": "Bild",

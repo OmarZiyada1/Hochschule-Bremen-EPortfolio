@@ -77,6 +77,51 @@ describe("useAutosave", () => {
     expect(view.result.current.state).toBe("saved")
   })
 
+  /*
+   * Eine reine Entprellung hat eine Luecke, die beim Schreiben leicht
+   * auftritt: jeder Anschlag setzt den Wecker zurueck, und wer ohne Pause
+   * tippt, speichert nie. Deshalb die Obergrenze von zehn Sekunden.
+   */
+  it("sendet spaetestens nach der Obergrenze, auch ohne jede Schreibpause", async () => {
+    const requests: unknown[] = []
+    server.use(
+      http.put(PATH, async ({ request }) => {
+        requests.push(await request.json())
+        return HttpResponse.json({ version: 4, blocks: [] })
+      })
+    )
+
+    vi.useFakeTimers()
+    const { view, state } = setUp()
+
+    /* Alle 900 ms ein Anschlag: die Entprellung von 1200 ms kommt damit
+       nie zum Zug. */
+    const anschlag = async (nummer: number) => {
+      act(() => {
+        state.text = `Fassung ${nummer}`
+        view.result.current.schedule()
+      })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(900)
+      })
+    }
+
+    for (let i = 0; i < 5; i += 1) {
+      await anschlag(i)
+    }
+    /* Nach viereinhalb Sekunden ist die Obergrenze noch nicht erreicht. */
+    expect(requests).toHaveLength(0)
+
+    for (let i = 5; i < 12; i += 1) {
+      await anschlag(i)
+    }
+
+    vi.useRealTimers()
+    await waitFor(() => expect(requests.length).toBeGreaterThanOrEqual(1), {
+      timeout: 20000,
+    })
+  })
+
   it("uebernimmt version und IDs aus der Antwort", async () => {
     const sent: { version: number; blocks: { id?: string }[] }[] = []
     server.use(
@@ -88,7 +133,15 @@ describe("useAutosave", () => {
         sent.push(body)
         return HttpResponse.json({
           version: 4 + sent.length,
-          blocks: [{ id: BLOCK_ID, type: "TEXT", orderIndex: 0, content: {}, schemaVersion: 3 }],
+          blocks: [
+            {
+              id: BLOCK_ID,
+              type: "TEXT",
+              orderIndex: 0,
+              content: {},
+              schemaVersion: 3,
+            },
+          ],
         })
       })
     )

@@ -1,4 +1,4 @@
-import type { Editor } from "@tiptap/react"
+import { useEditorState, type Editor } from "@tiptap/react"
 import { ChevronDownIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
@@ -14,6 +14,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { ToolbarButton } from "@/components/ui/toolbar"
 import {
   CONTENT_COLOR_ROLES,
   type ContentColorRole,
@@ -87,12 +88,24 @@ export function ColorMenu({
 }) {
   const { t } = useTranslation()
 
-  const activeText = CONTENT_COLOR_ROLES.find((role) =>
-    editor.isActive("textStyle", { color: role })
-  )
-  const activeHighlight = CONTENT_COLOR_ROLES.find((role) =>
-    editor.isActive("highlight", { color: role })
-  )
+  /* Ueber useEditorState, weil eine Transaktion die Seite seit Tiptap v3
+     nicht mehr neu rendert; ohne das zeigte das Feld im Auslöser die Farbe
+     der vorigen Auswahl. */
+  const active = useEditorState({
+    editor,
+    selector: ({ editor: current }) => ({
+      text:
+        CONTENT_COLOR_ROLES.find((role) =>
+          current.isActive("textStyle", { color: role })
+        ) ?? null,
+      highlight:
+        CONTENT_COLOR_ROLES.find((role) =>
+          current.isActive("highlight", { color: role })
+        ) ?? null,
+    }),
+  })
+  const activeText = active?.text ?? null
+  const activeHighlight = active?.highlight ?? null
 
   const setText = (role: ContentColorRole | null) => {
     const chain = editor.chain().focus().unsetMark("highlight")
@@ -117,10 +130,14 @@ export function ColorMenu({
       <Tooltip>
         <TooltipTrigger
           render={
-            <DropdownMenuTrigger
-              data-toolbar-item
-              disabled={disabled}
-              className="flex h-8 items-center gap-1 rounded-control px-2 outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50"
+            <ToolbarButton
+              render={
+                <DropdownMenuTrigger
+                  data-toolbar-item
+                  disabled={disabled}
+                  className="flex h-8 items-center gap-1 rounded-control px-2 outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50"
+                />
+              }
             />
           }
         >
@@ -128,8 +145,8 @@ export function ColorMenu({
             aria-hidden="true"
             className={cn(
               "flex size-5 items-center justify-center rounded-pill border border-border font-semibold",
-              activeText === undefined ? undefined : SWATCH[activeText].text,
-              activeHighlight === undefined
+              activeText === null ? undefined : SWATCH[activeText].text,
+              activeHighlight === null
                 ? undefined
                 : SWATCH[activeHighlight].highlight
             )}
@@ -155,7 +172,7 @@ export function ColorMenu({
           </DropdownMenuLabel>
           <Swatch
             label={t("projectContent.toolbar.colorDefault")}
-            active={activeText === undefined}
+            active={activeText === null}
             onSelect={() => setText(null)}
             className="text-muted-foreground line-through"
           />
@@ -176,7 +193,7 @@ export function ColorMenu({
           </DropdownMenuLabel>
           <Swatch
             label={t("projectContent.toolbar.colorDefault")}
-            active={activeHighlight === undefined}
+            active={activeHighlight === null}
             onSelect={() => setHighlight(null)}
             className="text-muted-foreground line-through"
           />
