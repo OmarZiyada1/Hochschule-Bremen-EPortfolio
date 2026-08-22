@@ -436,7 +436,11 @@ describe("Grenzen der Tokenschicht", () => {
            ("--gap": spacing in toggle-group.tsx). Wer nur die erste prueft,
            meldet die zweite faelschlich als Befund. */
         const setInFile = new RegExp(`["']?--${name}["']?\\s*:`).test(content)
-        if (setInFile || name.startsWith("tw-") || BASE_UI_POSITIONER_VARS.has(name))
+        if (
+          setInFile ||
+          name.startsWith("tw-") ||
+          BASE_UI_POSITIONER_VARS.has(name)
+        )
           continue
 
         expect(

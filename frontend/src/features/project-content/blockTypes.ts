@@ -81,8 +81,15 @@ export type GalleryItem = { fileId: string; alt: string }
  * 400 abweist.
  */
 export type VideoSource =
-  | { fileId: string; provider?: never; videoId?: never }
-  | { fileId?: never; provider: VideoProvider; videoId: string }
+  | { fileId: string; provider?: never; videoId?: never; hash?: never }
+  /* hash nur bei vimeo und nur bei nicht gelisteten Videos (2.5 seit
+     v64); ohne ihn antwortet der Player dort mit einer Fehlerseite. */
+  | {
+      fileId?: never
+      provider: VideoProvider
+      videoId: string
+      hash?: string | null
+    }
 
 /* ------------------------------------------------------------------ */
 /* Inline: Text und die zehn Marks                                      */

@@ -576,7 +576,21 @@
       "breadcrumb": "Project metadata",
       "heading": "Project metadata",
       "backToPortfolio": "Back to portfolio",
+      "authorRole": {
+        "label": "Role of {{name}} in the project",
+        "placeholder": "e.g. concept",
+        "hint": "Optional. The author is not a project member but the owner of the contribution; this only says what they did in it."
+      },
+      "people": {
+        "legend": "People involved and what they did",
+        "hint": "Who wrote the entry is fixed. This is where you state what the author did in it and who else contributed."
+      },
       "submit": "Save & continue to editor",
+      "saveAndSubmit": "Save and submit",
+      "saveAndSubmitPending": "Submitting …",
+      "saveOnly": "Save only, back to the editor",
+      "breadcrumbEditor": "Editor",
+      "breadcrumbSubmit": "Submit: required details",
       "submitCreate": "Create project",
       "submitPending": "Saving …",
       "readOnly": "This project cannot be edited in status {{status}}. Changes are only possible in draft and revision.",
@@ -651,6 +665,7 @@
         "personPlaceholder": "Search by name …",
         "role": "Role",
         "rolePlaceholder": "Role in the project, for example frontend",
+        "roleOf": "Role of {{name}} in the project",
         "remove": "Remove {{name}} from the project members",
         "chosen": "Added project members",
         "invalid": "Please check the project member entries.",
@@ -667,6 +682,7 @@
         "description": "Your account is not permitted to see the metadata of this project."
       },
       "invalid": "Please check the marked entries.",
+      "incomplete": "Still missing for submission: {{fields}}.",
       "leave": {
         "title": "Discard unsaved entries?",
         "description": "The entries for “{{title}}” have not been saved yet. If you leave the page, they will be lost.",
@@ -831,7 +847,19 @@
         "toggleHeaderRow": "Toggle header row",
         "mergeCells": "Merge cells",
         "splitCell": "Split cell",
-        "deleteTable": "Delete table"
+        "deleteTable": "Delete table",
+        "toggleHeaderColumn": "Toggle header column",
+        "toggleHeaderCell": "Toggle header cell",
+        "mergeOrSplit": "Merge or split cells"
+      },
+      "size": {
+        "title": "Size of the new table",
+        "rows": "Rows",
+        "cols": "Columns",
+        "headerRow": "With header row",
+        "headerRowHint": "The header row counts as a row: three rows with a header row give one header row and two content rows.",
+        "insert": "Insert table",
+        "back": "Back"
       }
     },
     "video": {
@@ -845,9 +873,9 @@
       "dropzone": "Upload a video or drop it here",
       "dropzoneHint": "MP4 or WebM up to {{max}} MB",
       "urlLabel": "Or paste a video address",
-      "urlPlaceholder": "YouTube or Vimeo address",
-      "urlHint": "Only the provider and the video id are stored, never the address itself.",
-      "urlInvalid": "No YouTube or Vimeo video can be read from this address.",
+      "urlPlaceholder": "Address, share link or embed snippet",
+      "urlHint": "Browser address, share link or embed snippet. Only the provider and the video id are stored, never the address itself.",
+      "urlInvalid": "No YouTube or Vimeo video can be read from this.",
       "embedAction": "Embed"
     },
     "audio": {
@@ -865,8 +893,8 @@
       "replace": "Replace embed",
       "urlLabel": "Address of the embed",
       "urlPlaceholder": "https://",
-      "urlHint": "YouTube, Vimeo, Figma, CodePen and GitHub Gist are allowed.",
-      "urlInvalid": "This address does not belong to any allowed provider ({{providers}}).",
+      "urlHint": "YouTube, Vimeo, Figma and CodePen. The browser address, the share link or the whole embed snippet: all three work.",
+      "urlInvalid": "No embed can be read from this. Allowed are {{providers}}; you can paste the browser address, the share link or the embed snippet.",
       "action": "Embed"
     },
     "document": {
@@ -880,8 +908,7 @@
       "youtube": "YouTube",
       "vimeo": "Vimeo",
       "figma": "Figma",
-      "codepen": "CodePen",
-      "gist": "GitHub Gist"
+      "codepen": "CodePen"
     },
     "blockName": {
       "heading": "Heading",
@@ -996,6 +1023,7 @@
     },
     "image": {
       "incomplete": "No image chosen yet. The block is saved as soon as it holds one.",
+      "loadFailed": "The image could not be loaded.",
       "alt": "Alternative text",
       "altDescription": "Describes the image for people who cannot see it. Leave empty if it is purely decorative.",
       "caption": "Caption",
@@ -1043,7 +1071,8 @@
       "edit": "Edit",
       "previewToggle": "Edit",
       "history": "History",
-      "projectInfo": "Project information"
+      "projectInfo": "Project information",
+      "editMetadata": "Edit metadata"
     },
     "history": {
       "title": "History",

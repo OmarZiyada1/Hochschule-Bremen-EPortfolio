@@ -57,6 +57,53 @@ if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {}
 }
 
+/*
+ * jsdom hat kein Layout und liefert deshalb an manchen Knoten kein
+ * getClientRects. ProseMirror fragt es beim Rollen zur Auswahl ab
+ * ({@code scrollToSelection}), und ohne Ersatz endet jede Tabellenaktion
+ * im Test in einem unbehandelten TypeError. Ein leeres Rechteck ist die
+ * ehrliche Antwort: es gibt keine Masse, zu rollen ist nichts.
+ */
+const emptyRect = {
+  x: 0,
+  y: 0,
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  width: 0,
+  height: 0,
+  toJSON: () => ({}),
+} as DOMRect
+
+const emptyRectList = {
+  length: 0,
+  item: () => null,
+  [Symbol.iterator]: function* () {},
+} as unknown as DOMRectList
+
+if (!Range.prototype.getClientRects) {
+  Range.prototype.getClientRects = () => emptyRectList
+  Range.prototype.getBoundingClientRect = () => emptyRect
+}
+if (!Element.prototype.getClientRects) {
+  Element.prototype.getClientRects = () => emptyRectList
+}
+
+/*
+ * jsdom kennt keine Object-URLs. Der Editor und die Vorschau eines
+ * Entwurfs holen jede Datei mit Token und machen daraus eine
+ * ({@code fileQueries.objectUrl}); ohne diesen Ersatz bricht jeder Test,
+ * der ein Bild zeigt. Er zaehlt schlicht hoch, damit sich im Test ablesen
+ * laesst, dass eine Adresse ueberhaupt entstanden ist, und merkt sich, was
+ * wieder freigegeben wurde.
+ */
+if (!URL.createObjectURL) {
+  let objectUrlCount = 0
+  URL.createObjectURL = () => `blob:test/${objectUrlCount++}`
+  URL.revokeObjectURL = () => {}
+}
+
 /* input-otp (Basis der mit KAN-33 erzeugten input-otp-Primitive) ortet in
    einem Timer das Element unter dem Zeiger; jsdom kennt elementFromPoint
    nicht und hat ohnehin kein Layout. Der Ersatz meldet "nichts". */

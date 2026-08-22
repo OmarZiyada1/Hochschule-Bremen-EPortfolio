@@ -8,7 +8,6 @@ import { useNavigate, useParams } from "react-router-dom"
 import { useAuth } from "@/api/auth/AuthContext"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import { blockQueries } from "@/api/queries/blocks"
-import { uploadProjectFile } from "@/api/queries/files"
 import { projectQueries, withdrawProject } from "@/api/queries/projects"
 import type { ProjectDetailResponse } from "@/api/types"
 import { VersionConflictDialog } from "@/components/common/VersionConflictDialog"
@@ -30,7 +29,6 @@ import { BlockKeyboardBar } from "@/features/project-content/components/BlockKey
 import { EditorHeader } from "@/features/project-content/components/EditorHeader"
 import { EditorSidebar } from "@/features/project-content/components/EditorSidebar"
 import { SelectionToolbar } from "@/features/project-content/components/SelectionToolbar"
-import { SubmitSheet } from "@/features/project-content/components/SubmitSheet"
 import { TableControls } from "@/features/project-content/components/TableControls"
 import { blocksToDoc } from "@/features/project-content/blockSerialization"
 import type { ProjectDocument } from "@/features/project-content/blockTypes"
@@ -76,9 +74,7 @@ export default function EditorPage() {
   const backButtonRef = useRef<HTMLButtonElement>(null)
 
   const [announcement, setAnnouncement] = useState("")
-  const [submitOpen, setSubmitOpen] = useState(false)
   const [withdrawOpen, setWithdrawOpen] = useState(false)
-  const [conflictOpen, setConflictOpen] = useState(false)
   /* Der Konflikt wurde gezeigt und weggedrueckt; der Takt bleibt trotzdem
      angehalten, bis die Seite neu gelesen hat. */
   const [conflictSeen, setConflictSeen] = useState(false)
@@ -268,12 +264,18 @@ export default function EditorPage() {
           autosaveState={autosave.state}
           busy={withdraw.isPending}
           mayRunWorkflow={isAuthor}
+          /*
+           * Einreichen fuehrt auf die Metadatenseite und nicht in ein
+           * Seitenpanel. §3.3 verlangt sieben Angaben, die im Editor nicht
+           * sichtbar sind; sie stehen auf genau einer Seite, und die ist
+           * es. Ein Panel daneben zeigte dasselbe Formular ein zweites Mal
+           * in schmalerer Spalte, mit eigener Brotkrume und eigenem
+           * Speicherweg. Der Stand wird vorher gesichert: ohne das ginge
+           * beim Seitenwechsel verloren, was seit dem letzten Takt
+           * geschrieben wurde.
+           */
           onSubmit={() => {
-            void autosave.flush().then((saved) => {
-              if (saved) {
-                setSubmitOpen(true)
-              }
-            })
+            void leaveTo(`/projects/${projectId}/metadata?submit=1`)
           }}
           onWithdraw={() => setWithdrawOpen(true)}
           onBack={() => void leaveTo("/my-portfolio")}
@@ -331,13 +333,21 @@ export default function EditorPage() {
             )}
 
             {/*
-             * Die Blockbedienung am Zeiger haengt der Drag-Handle links
-             * neben den Block; der Platz dafuer steht als linke Innenkante
-             * der Schreibflaeche bereit. Drei Schaltflaechen zu 24 Pixeln
-             * mit Abstand brauchen 80, deshalb pl-20. Der Rahmen bleibt
-             * relativ: das Drag-Handle-Plugin haengt seinen Rahmen in das
-             * Elternelement der Schreibflaeche und positioniert darin
-             * absolut.
+             * Der Rahmen bleibt relativ: das Drag-Handle-Plugin haengt
+             * seinen Rahmen in das Elternelement der Schreibflaeche und
+             * positioniert darin absolut.
+             *
+             * <p><strong>Der Platz fuer die Blockbedienung liegt an der
+             * Schreibflaeche selbst</strong> und nicht an diesem Rahmen
+             * (project-content.css, .ProseMirror). Lag er hier, endete das
+             * DOM des Editors am rechten Rand des Streifens, und zwei
+             * Dinge gingen verloren, die beide daran haengen: der
+             * Drag-Handle horcht auf mousemove ueber view.dom, der Griff
+             * erschien also nur ueber dem Text und nicht daneben; und
+             * prosemirror-dropcursor loescht seine Linie bei drop und
+             * dragleave auf view.dom, sonst erst nach seinem Notnagel von
+             * fuenf Sekunden. Wer im Streifen loslaesst, sah die Linie
+             * deshalb noch sekundenlang stehen.
              */}
             {editor !== null && mayWrite && (
               <BlockKeyboardBar
@@ -348,7 +358,7 @@ export default function EditorPage() {
               />
             )}
 
-            <div ref={surfaceRef} className="project-content relative pl-20">
+            <div ref={surfaceRef} className="project-content relative">
               {editor !== null && mayWrite && (
                 <BlockDragHandle
                   editor={editor}
@@ -368,6 +378,9 @@ export default function EditorPage() {
           <EditorSidebar
             project={detail}
             onPreview={() => void leaveTo(`/projects/${projectId}`)}
+            onEditMetadata={() =>
+              void leaveTo(`/projects/${projectId}/metadata`)
+            }
           />
         </div>
       </div>
@@ -380,24 +393,6 @@ export default function EditorPage() {
       <p aria-live="polite" className="sr-only">
         {announcement}
       </p>
-
-      <SubmitSheet
-        open={submitOpen}
-        onOpenChange={setSubmitOpen}
-        project={detail}
-        onUploadCoverImage={async (file) => {
-          const stored = await uploadProjectFile(file, projectId)
-          return stored.url
-        }}
-        onSubmitted={(submitted) => {
-          queryClient.setQueryData(
-            projectQueries.detail(projectId).queryKey,
-            submitted
-          )
-          announce(t("projectContent.submit.done"))
-        }}
-        onVersionConflict={() => setConflictOpen(true)}
-      />
 
       <AlertDialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
         <AlertDialogContent className="rounded-modal">
@@ -424,16 +419,15 @@ export default function EditorPage() {
       </AlertDialog>
 
       {/*
-       * Der Konflikt kommt aus zwei Richtungen: vom Speichertakt und vom
-       * Einreichweg. „Weiter bearbeiten" muss beide wegdruecken koennen,
-       * und der Zustand des Takts bleibt dabei stehen: er ist angehalten,
-       * und das soll er auch (§6.4). Ohne das eigene Merkmal ginge der
-       * Dialog im selben Augenblick wieder auf.
+       * Der Konflikt kommt seit dem Wegfall des Einreichpanels nur noch
+       * aus dem Speichertakt. „Weiter bearbeiten" druckt ihn weg, und der
+       * Zustand des Takts bleibt dabei stehen: er ist angehalten, und das
+       * soll er auch (§6.4). Ohne das eigene Merkmal ginge der Dialog im
+       * selben Augenblick wieder auf.
        */}
       <VersionConflictDialog
-        open={(conflictOpen || autosave.state === "conflict") && !conflictSeen}
+        open={autosave.state === "conflict" && !conflictSeen}
         onReload={() => {
-          setConflictOpen(false)
           setConflictSeen(false)
           /* Beide Schluessel ausdruecklich: der Inhalt liegt seit KAN-36
              bewusst nicht mehr unter ["projects", …], damit ihn eine
@@ -445,10 +439,7 @@ export default function EditorPage() {
             queryKey: blockQueries.list(projectId).queryKey,
           })
         }}
-        onKeepEditing={() => {
-          setConflictOpen(false)
-          setConflictSeen(true)
-        }}
+        onKeepEditing={() => setConflictSeen(true)}
         finalFocus={workflowButtonRef}
       />
     </EditorContextProvider>

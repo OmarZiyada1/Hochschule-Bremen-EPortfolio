@@ -63,7 +63,8 @@ export function LinkDialog({
 
   /* Beim Oeffnen den bestehenden Link uebernehmen: wer eine Adresse
      korrigieren will, soll sie nicht neu tippen muessen. */
-  const current = (editor.getAttributes("link").href as string | undefined) ?? ""
+  const current =
+    (editor.getAttributes("link").href as string | undefined) ?? ""
   useEffect(() => {
     if (open) {
       form.reset({ href: current })

@@ -73,9 +73,7 @@ export function UploadDropzone({
       return
     }
     if (file.size > constraint.maxBytes) {
-      setError(
-        t("projectContent.upload.tooLarge", { max: maxMebibytes(kind) })
-      )
+      setError(t("projectContent.upload.tooLarge", { max: maxMebibytes(kind) }))
       return
     }
 
@@ -123,7 +121,9 @@ export function UploadDropzone({
         }}
         className={cn(
           "rounded-card border-2 border-dashed px-6 py-8 text-center transition-colors",
-          over ? "border-primary bg-muted" : "border-border hover:border-primary"
+          over
+            ? "border-primary bg-muted"
+            : "border-border hover:border-primary"
         )}
       >
         <input

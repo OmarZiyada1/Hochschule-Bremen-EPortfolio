@@ -127,7 +127,13 @@ describe("Attribut-Serialisierung der sieben eigenen Nodes", () => {
       ],
       [
         "videoBlock",
-        { fileId: FILE_A, provider: null, videoId: null, caption: "Aufnahme" },
+        {
+          fileId: FILE_A,
+          provider: null,
+          videoId: null,
+          hash: null,
+          caption: "Aufnahme",
+        },
       ],
       [
         "videoBlock",
@@ -135,6 +141,7 @@ describe("Attribut-Serialisierung der sieben eigenen Nodes", () => {
           fileId: null,
           provider: "youtube",
           videoId: "dQw4w9WgXcQ",
+          hash: null,
           caption: "",
         },
       ],
@@ -146,8 +153,8 @@ describe("Attribut-Serialisierung der sieben eigenen Nodes", () => {
       [
         "embedBlock",
         {
-          provider: "gist",
-          embedUrl: "https://gist.github.com/a/b",
+          provider: "codepen",
+          embedUrl: "https://codepen.io/a/embed/b",
           height: 520,
         },
       ],

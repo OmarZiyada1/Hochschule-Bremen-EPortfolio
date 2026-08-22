@@ -141,7 +141,11 @@ describe("Routenbaum", () => {
         { timeout: 60000 }
       )
     ).toBeInTheDocument()
-  })
+    /* Die Grenze am findByRole allein genuegt nicht: der Testfall selbst
+       endet sonst nach der Standardsekunde von Vitest, waehrend das Warten
+       noch laeuft. Aufgefallen, als der Editor-Chunk mit KAN-36 groesser
+       wurde. */
+  }, 60000)
 
   it("EDITOR erreicht die Redaktionsebene", () => {
     signInAs("EDITOR")

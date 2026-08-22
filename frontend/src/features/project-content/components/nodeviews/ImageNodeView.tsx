@@ -1,5 +1,5 @@
 import type { ReactNodeViewProps } from "@tiptap/react"
-import { RefreshCwIcon } from "lucide-react"
+import { RefreshCwIcon, TriangleAlertIcon } from "lucide-react"
 import { useId } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -133,7 +133,15 @@ export function ImageNodeView({ node, updateAttributes }: ReactNodeViewProps) {
         />
       ) : (
         <figure data-width={attrs.width}>
-          {image.url === null ? (
+          {/* Ein Fehlschlag wird gesagt und nicht als Dauerladen gezeigt:
+              ohne die Meldung stand hier bis zum Neuladen der Seite ein
+              graues Feld, und niemand erfuhr, warum. */}
+          {image.isError ? (
+            <p className="type-caption flex items-center gap-1.5 rounded-card bg-muted px-4 py-6 text-muted-foreground">
+              <TriangleAlertIcon aria-hidden="true" className="size-3.5" />
+              {t("projectContent.image.loadFailed")}
+            </p>
+          ) : image.url === null ? (
             <Skeleton className="h-64 w-full rounded-card" />
           ) : (
             <img src={image.url} alt={attrs.alt ?? ""} />

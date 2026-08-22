@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input"
 import { MediaCard } from "@/features/project-content/components/nodeviews/MediaCard"
 import { MediaShell } from "@/features/project-content/components/MediaShell"
 import { UploadDropzone } from "@/features/project-content/components/UploadDropzone"
-import { parseVideoUrl } from "@/features/project-content/providers"
+import { parseVideoInput } from "@/features/project-content/providerInput"
 import type { VideoProvider } from "@/features/project-content/providers"
 import { maxMebibytes } from "@/features/project-content/uploadKinds"
 
@@ -46,6 +46,7 @@ export function VideoNodeView({ node, updateAttributes }: ReactNodeViewProps) {
     fileId: string | null
     provider: VideoProvider | null
     videoId: string | null
+    hash: string | null
     caption: string | null
   }
   const [url, setUrl] = useState("")
@@ -55,7 +56,13 @@ export function VideoNodeView({ node, updateAttributes }: ReactNodeViewProps) {
   const hasEmbed = attrs.videoId != null && attrs.videoId !== ""
 
   const applyUrl = () => {
-    const parsed = parseVideoUrl(url)
+    /*
+     * Angenommen wird alles, was in der Zwischenablage sein kann: die
+     * Adresszeile des Browsers, der Teilen-Link und der ganze
+     * Einbettungscode. Gespeichert wird daraus nur Anbieter, Kennung und
+     * gegebenenfalls der Freigabe-Hash (2.5).
+     */
+    const parsed = parseVideoInput(url)
     if (parsed === null) {
       setUrlError(t("projectContent.video.urlInvalid"))
       return
@@ -67,11 +74,17 @@ export function VideoNodeView({ node, updateAttributes }: ReactNodeViewProps) {
       fileId: null,
       provider: parsed.provider,
       videoId: parsed.videoId,
+      hash: parsed.hash ?? null,
     })
   }
 
   const reset = () =>
-    updateAttributes({ fileId: null, provider: null, videoId: null })
+    updateAttributes({
+      fileId: null,
+      provider: null,
+      videoId: null,
+      hash: null,
+    })
 
   return (
     <MediaShell

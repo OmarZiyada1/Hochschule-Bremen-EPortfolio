@@ -21,20 +21,21 @@ describe("Provider-Allowlist (Contract 2.5, seit v52 zweigeteilt)", () => {
     expect([...VIDEO_PROVIDERS]).toEqual(["youtube", "vimeo"])
   })
 
-  it("kennt fuer EMBED fuenf Anbieter, jeden mit eigener Hostliste", () => {
+  it("kennt fuer EMBED vier Anbieter, jeden mit eigener Hostliste", () => {
+    /* Seit v64 ohne gist: GitHub bietet fuer Gists keinen einbettbaren
+       Rahmen an. Und figma bettet ueber einen eigenen Host ein, weil die
+       Designseite selbst das Einbetten verbietet. */
     expect([...EMBED_PROVIDERS]).toEqual([
       "youtube",
       "vimeo",
       "figma",
       "codepen",
-      "gist",
     ])
     expect(ALLOWED_EMBED_HOSTS).toEqual({
       youtube: ["www.youtube.com", "youtube.com", "www.youtube-nocookie.com"],
       vimeo: ["player.vimeo.com"],
-      figma: ["www.figma.com"],
+      figma: ["embed.figma.com"],
       codepen: ["codepen.io"],
-      gist: ["gist.github.com"],
     })
   })
 })
@@ -74,39 +75,71 @@ describe("isValidVideoId", () => {
   })
 })
 
+const FIGMA_EMBED =
+  "https://embed.figma.com/design/o6SECXRMKGOzCfG5xZebPV/Name?embed-host=share"
+
 describe("isAllowedEmbedUrl", () => {
   it("laesst nur https und nur den Host des Anbieters durch", () => {
-    expect(isAllowedEmbedUrl("figma", "https://www.figma.com/embed?x=1")).toBe(
-      true
-    )
-    expect(isAllowedEmbedUrl("figma", "http://www.figma.com/embed")).toBe(false)
-    expect(isAllowedEmbedUrl("figma", "https://figma.com/embed")).toBe(false)
+    expect(isAllowedEmbedUrl("figma", FIGMA_EMBED)).toBe(true)
     expect(
-      isAllowedEmbedUrl("figma", "https://www.figma.com.fremde.tld/x")
+      isAllowedEmbedUrl("figma", FIGMA_EMBED.replace("https", "http"))
     ).toBe(false)
-    expect(isAllowedEmbedUrl("codepen", "https://www.figma.com/embed")).toBe(
+    expect(
+      isAllowedEmbedUrl(
+        "figma",
+        FIGMA_EMBED.replace("embed.figma.com", "figma.com")
+      )
+    ).toBe(false)
+    expect(
+      isAllowedEmbedUrl(
+        "figma",
+        FIGMA_EMBED.replace("embed.figma.com", "embed.figma.com.fremde.tld")
+      )
+    ).toBe(false)
+    expect(isAllowedEmbedUrl("codepen", FIGMA_EMBED)).toBe(false)
+  })
+
+  /*
+   * Seit v64 zaehlt auch der Pfad. Genau hier lag der haeufigste
+   * Fehlschlag: die Zuschauerseite traegt einen erlaubten Host, verbietet
+   * das Einbetten aber, und heraus kam ein leerer Rahmen ohne Meldung.
+   */
+  it("weist einen erlaubten Host mit fremdem Pfad ab", () => {
+    expect(
+      isAllowedEmbedUrl(
+        "youtube",
+        "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+      )
+    ).toBe(false)
+    expect(
+      isAllowedEmbedUrl("youtube", "https://www.youtube.com/embed/dQw4w9WgXcQ")
+    ).toBe(true)
+    expect(isAllowedEmbedUrl("codepen", "https://codepen.io/a/pen/b")).toBe(
       false
+    )
+    expect(isAllowedEmbedUrl("codepen", "https://codepen.io/a/embed/b")).toBe(
+      true
     )
   })
 
   it("vergleicht Schema und Host ohne Beachtung der Schreibweise", () => {
-    expect(isAllowedEmbedUrl("codepen", "HTTPS://CODEPEN.IO/pen/embed/a")).toBe(
+    expect(isAllowedEmbedUrl("codepen", "HTTPS://CODEPEN.IO/a/embed/b")).toBe(
       true
     )
   })
 
   it("laesst einen angehaengten Port nicht als Host durchgehen", () => {
-    expect(isAllowedEmbedUrl("codepen", "https://codepen.io:8443/pen")).toBe(
-      true
-    )
     expect(
-      isAllowedEmbedUrl("codepen", "https://codepen.io.fremde.tld/pen")
+      isAllowedEmbedUrl("codepen", "https://codepen.io:8443/a/embed/b")
+    ).toBe(true)
+    expect(
+      isAllowedEmbedUrl("codepen", "https://codepen.io.fremde.tld/a/embed/b")
     ).toBe(false)
   })
 
   it("weist eine unlesbare Adresse ab, statt zu werfen", () => {
     for (const url of ["", "nicht mal eine url", null, undefined, 7]) {
-      expect(isAllowedEmbedUrl("gist", url), String(url)).toBe(false)
+      expect(isAllowedEmbedUrl("codepen", url), String(url)).toBe(false)
     }
   })
 })

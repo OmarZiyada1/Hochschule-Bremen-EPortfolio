@@ -1,5 +1,5 @@
 import type { ReactNodeViewProps } from "@tiptap/react"
-import { XIcon } from "lucide-react"
+import { TriangleAlertIcon, XIcon } from "lucide-react"
 import { useId } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -159,7 +159,9 @@ export function GalleryNodeView({
         hint={t("projectContent.image.dropzoneHint", {
           max: maxMebibytes("image"),
         })}
-        onUploaded={(file) => setItems([...items, { fileId: file.id, alt: "" }])}
+        onUploaded={(file) =>
+          setItems([...items, { fileId: file.id, alt: "" }])
+        }
       />
     </MediaShell>
   )
@@ -183,7 +185,14 @@ function GalleryTile({
 
   return (
     <div className="group/tile relative">
-      {image.url === null ? (
+      {/* Wie beim einzelnen Bild: ein Fehlschlag wird gesagt, statt als
+          Dauerladen zu erscheinen. */}
+      {image.isError ? (
+        <p className="type-caption flex aspect-square w-full items-center justify-center gap-1.5 rounded-card bg-muted px-3 text-center text-muted-foreground">
+          <TriangleAlertIcon aria-hidden="true" className="size-3.5 shrink-0" />
+          {t("projectContent.image.loadFailed")}
+        </p>
+      ) : image.url === null ? (
         <Skeleton className="aspect-square w-full rounded-card" />
       ) : (
         <img src={image.url} alt={item.alt} />

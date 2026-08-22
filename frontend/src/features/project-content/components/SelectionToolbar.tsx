@@ -1,5 +1,6 @@
 import { BubbleMenu } from "@tiptap/react/menus"
 import { useEditorState, type Editor } from "@tiptap/react"
+import { NodeSelection } from "@tiptap/pm/state"
 import {
   BoldIcon,
   CodeIcon,
@@ -147,11 +148,38 @@ export function SelectionToolbar({
     <BubbleMenu
       editor={editor}
       options={{ placement: "top" }}
-      /* Nicht ueber einem Medienknoten: dort gibt es keinen Text
-         auszuzeichnen, und die Leiste verdeckte das Bild. */
-      shouldShow={({ editor: current, from, to }) =>
-        !disabled && from !== to && !current.state.selection.empty
-      }
+      /*
+       * Nicht ueber einem Medienknoten: dort gibt es keinen Text
+       * auszuzeichnen, und die Leiste verdeckt das Bild.
+       *
+       * <p><strong>Geprueft wird die Art der Auswahl und nicht nur ihre
+       * Laenge.</strong> Zuvor stand hier allein {@code from !== to}, und
+       * das trifft auf eine NodeSelection ebenso zu: sie umfasst den ganzen
+       * Knoten. Wer ein Bild einfuegte, bekam deshalb die Textleiste mit
+       * Fett, Farbe und Ueberschriftenebenen darueber, und sie blieb
+       * stehen, solange der Knoten ausgewaehlt war. Die Zusage im Kommentar
+       * stand also da, die Bedingung dazu fehlte.
+       */
+      shouldShow={({ editor: current, from, to }) => {
+        const { selection } = current.state
+        if (disabled || selection.empty || from === to) {
+          return false
+        }
+        /* Ein ausgewaehlter Knoten ist kein markierter Text. */
+        if (selection instanceof NodeSelection) {
+          return false
+        }
+        /* Und ebenso wenig eine Auswahl, die genau einen atomaren Knoten
+           umschliesst, etwa nach dem Einfuegen ueber die Pille. */
+        let onlyAtoms = true
+        current.state.doc.nodesBetween(from, to, (node) => {
+          if (node.isText) {
+            onlyAtoms = false
+          }
+          return onlyAtoms
+        })
+        return !onlyAtoms
+      }}
     >
       <SelectionToolbarBar editor={editor} disabled={disabled} />
     </BubbleMenu>

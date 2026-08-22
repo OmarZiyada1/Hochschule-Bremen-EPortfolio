@@ -264,10 +264,28 @@ describe("EditorPage", () => {
         WAIT
       )
     ).toBeInTheDocument()
+
+    /*
+     * Die Einfuegeleiste bleibt nach dem Einfuegen offen: wer zwei Bloecke
+     * untereinander setzt, soll nicht zweimal auf das Plus klicken.
+     * Geschlossen wird ueber Escape, das Kreuz oder einen Klick daneben.
+     */
+    expect(
+      screen.getByRole("group", { name: "Block einfügen" })
+    ).toBeInTheDocument()
+    await user.keyboard("{Escape}")
+    await waitFor(
+      () =>
+        expect(
+          screen.queryByRole("group", { name: "Block einfügen" })
+        ).not.toBeInTheDocument(),
+      WAIT
+    )
+    /* Und danach steht kein Dialog offen, der nach etwas fragt. */
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
-  it("fuehrt Einreichen zuerst in die Metadaten und nennt die fehlenden Angaben", async () => {
+  it("fuehrt Einreichen auf die Metadatenseite und nicht in ein Seitenpanel", async () => {
     const user = userEvent.setup()
     renderEditor(ownDraft(), [textBlock("Ein Absatz.")])
 
@@ -275,12 +293,37 @@ describe("EditorPage", () => {
       await screen.findByRole("button", { name: "Einreichen" }, WAIT)
     )
 
-    /* Statt eines 400 PROJECT_INCOMPLETE steht dort, was fehlt, und zwar
-       an der Stelle, an der es sich eintragen laesst (§3.3). */
-    expect(
-      await screen.findByText(/Es fehlen noch Angaben/i, undefined, WAIT)
-    ).toBeInTheDocument()
-    expect(screen.getByText(/Redaktionszuweisung/)).toBeInTheDocument()
+    /*
+     * §3.3 verlangt sieben Angaben, die im Editor nicht sichtbar sind. Sie
+     * stehen auf der Metadatenseite, und dorthin fuehrt der Weg: der
+     * Merker in der Adresse sagt ihr, dass danach eingereicht wird.
+     */
+    await waitFor(() => {
+      expect(screen.getByTestId("pathname")).toHaveTextContent(
+        `/projects/${PROJECT_ID}/metadata`
+      )
+      expect(screen.getByTestId("search")).toHaveTextContent("?submit=1")
+    }, WAIT)
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+
+  it("oeffnet aus der Seitenleiste die Metadaten, ohne einzureichen", async () => {
+    const user = userEvent.setup()
+    renderEditor(ownDraft(), [textBlock("Ein Absatz.")])
+
+    /* Die Karte zeigte die Angaben, bot aber keinen Weg, sie zu aendern:
+       dafuer musste man ins Portfolio zurueck. */
+    await user.click(
+      await screen.findByRole("button", { name: "Metadaten bearbeiten" }, WAIT)
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("pathname")).toHaveTextContent(
+        `/projects/${PROJECT_ID}/metadata`
+      )
+      /* Ohne den Merker: hier wird bearbeitet und nicht eingereicht. */
+      expect(screen.getByTestId("search")).toHaveTextContent("")
+    }, WAIT)
   })
 
   it("fuehrt der Vorschau-Schalter auf die oeffentliche Detailseite", async () => {

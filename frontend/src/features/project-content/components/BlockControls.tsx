@@ -1,6 +1,6 @@
 import type { Editor } from "@tiptap/react"
 import { GripVerticalIcon, PlusIcon, Trash2Icon } from "lucide-react"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -28,6 +28,7 @@ import { BlockInsertBar } from "@/features/project-content/components/BlockInser
 import {
   contentFor,
   type InsertKind,
+  type TableSize,
 } from "@/features/project-content/blockInsert"
 import {
   blockNameAt,
@@ -70,6 +71,17 @@ export type BlockControlsProps = {
   disabled: boolean
   /** Kleinere Schaltflaechen fuer den schmalen Streifen am Zeiger. */
   size?: "sm" | "default"
+  /**
+   * Meldet, ob gerade eine Flaeche dieser Bedienung offen steht: die
+   * Einfuegeleiste, die Loeschrueckfrage oder ein angehobener Block.
+   *
+   * <p><strong>Wofuer der Verwender das braucht.</strong> Am Zeiger haengt
+   * die Bedienung im Drag-Handle, und der blendet sich aus, sobald der
+   * Zeiger den Text verlaesst. Wer die Einfuegeleiste oeffnet und die Maus
+   * darauf zubewegt, verlaesst genau dabei den Text: der Griff verschwand,
+   * die Leiste mit ihm, und es liess sich nichts anklicken.
+   */
+  onBusyChange?: (busy: boolean) => void
   onAnnounce: (message: string) => void
 }
 
@@ -78,15 +90,31 @@ export function BlockControls({
   index,
   disabled,
   size = "sm",
+  onBusyChange,
   onAnnounce,
 }: BlockControlsProps) {
   const { t } = useTranslation()
   const [inserting, setInserting] = useState(false)
+  /* Die Einfuegeleiste zeigt entweder die zehn Typen oder die
+     Tabellengroesse. Der Zustand liegt hier und nicht in der Leiste, weil
+     das Popover darum herum seine Form danach richtet: eine Pille um zehn
+     runde Schaltflaechen, eine Karte um ein Formular. */
+  const [insertMode, setInsertMode] = useState<"types" | "table">("types")
   const [confirmDelete, setConfirmDelete] = useState(false)
   /* Die Position, an der der Block angehoben wurde. Nicht null heisst
      "angehoben"; Escape stellt sie wieder her. */
   const [pickedUpAt, setPickedUpAt] = useState<number | null>(null)
   const plusRef = useRef<HTMLButtonElement>(null)
+
+  /* Nach oben gemeldet und nicht selbst behandelt: wo die Bedienung haengt
+     und was das fuer sie bedeutet, weiss nur ihr Verwender. */
+  const busy = inserting || confirmDelete || pickedUpAt !== null
+  useEffect(() => {
+    onBusyChange?.(busy)
+    /* Beim Abraeumen zurueckmelden: verschwindet die Bedienung, waehrend
+       eine Flaeche offen steht, bliebe die Sperre sonst haengen. */
+    return () => onBusyChange?.(false)
+  }, [busy, onBusyChange])
 
   /* Erst beim Ansagen gelesen und nicht beim Rendern: die Zahl aendert
      sich mit jeder Transaktion, und der Editor rendert die Seite dabei
@@ -117,9 +145,15 @@ export function BlockControls({
     )
   }
 
-  const onInsert = (kind: InsertKind) => {
-    setInserting(false)
-    insertBlockAfter(editor, index, contentFor(kind))
+  const onInsert = (kind: InsertKind, table?: TableSize) => {
+    /*
+     * Die Leiste bleibt offen. Wer eine Galerie und darunter eine Formel
+     * einfuegt, klickt sonst zweimal auf das Plus, obwohl er beim ersten
+     * Mal schon dort war; geschlossen wird ueber das Kreuz, ueber Escape
+     * oder durch einen Klick daneben, also so, wie man es von jedem
+     * Popover erwartet.
+     */
+    insertBlockAfter(editor, index, contentFor(kind, table))
     onAnnounce(
       t("projectContent.insert.inserted", {
         block: t(`projectContent.insert.type.${kind}`),
@@ -184,7 +218,18 @@ export function BlockControls({
 
   return (
     <div className="flex items-center gap-0.5 text-muted-foreground">
-      <Popover open={inserting} onOpenChange={setInserting}>
+      <Popover
+        open={inserting}
+        onOpenChange={(open) => {
+          setInserting(open)
+          /* Geschlossen und wieder geoeffnet heisst: wieder bei den Typen
+             anfangen. Ohne das stuende beim naechsten Klick auf das Plus
+             das Tabellenformular da. */
+          if (!open) {
+            setInsertMode("types")
+          }
+        }}
+      >
         <Tooltip>
           <TooltipTrigger
             render={
@@ -210,10 +255,16 @@ export function BlockControls({
         <PopoverContent
           side="bottom"
           align="start"
-          className="w-auto max-w-[min(28rem,calc(100vw-2rem))] flex-row overflow-x-auto rounded-pill p-1.5"
+          className={
+            insertMode === "types"
+              ? "w-auto max-w-[min(28rem,calc(100vw-2rem))] flex-row overflow-x-auto rounded-pill p-1.5"
+              : "w-auto rounded-card p-3"
+          }
           finalFocus={plusRef}
         >
           <BlockInsertBar
+            mode={insertMode}
+            onModeChange={setInsertMode}
             onSelect={onInsert}
             onClose={() => setInserting(false)}
           />

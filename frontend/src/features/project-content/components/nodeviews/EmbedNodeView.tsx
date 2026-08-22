@@ -15,9 +15,9 @@ import { MediaCard } from "@/features/project-content/components/nodeviews/Media
 import { MediaShell } from "@/features/project-content/components/MediaShell"
 import {
   EMBED_PROVIDERS,
-  embedProviderFor,
   type EmbedProvider,
 } from "@/features/project-content/providers"
+import { parseEmbedInput } from "@/features/project-content/providerInput"
 
 /**
  * EMBED auf der Schreibflaeche (Contract 2.5).
@@ -50,8 +50,14 @@ export function EmbedNodeView({ node, updateAttributes }: ReactNodeViewProps) {
   const hasEmbed = attrs.embedUrl != null && attrs.embedUrl !== ""
 
   const applyUrl = () => {
-    const provider = embedProviderFor(url)
-    if (provider === null) {
+    /*
+     * Angenommen wird die Adresszeile des Browsers, der Teilen-Link und
+     * der ganze Einbettungscode; daraus entsteht die eine Adresse, die
+     * sich tatsaechlich einbetten laesst. Gespeichert wird nur diese
+     * kanonische Form, geprueft wird sie danach noch einmal am Server.
+     */
+    const parsed = parseEmbedInput(url)
+    if (parsed === null) {
       setUrlError(
         t("projectContent.embed.urlInvalid", {
           providers: EMBED_PROVIDERS.map((entry) =>
@@ -62,7 +68,7 @@ export function EmbedNodeView({ node, updateAttributes }: ReactNodeViewProps) {
       return
     }
     setUrlError(null)
-    updateAttributes({ provider, embedUrl: url.trim() })
+    updateAttributes({ provider: parsed.provider, embedUrl: parsed.embedUrl })
   }
 
   return (

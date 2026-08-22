@@ -186,8 +186,8 @@ public final class ErrorCodes {
 	/**
 	 * 400: der Provider eines VIDEO- oder EMBED-Blocks steht nicht in der
 	 * Allowlist aus §2.5 ({@code youtube}, {@code vimeo}, {@code figma},
-	 * {@code codepen}, {@code gist}), oder der Host der {@code embedUrl} gehoert
-	 * nicht zum angegebenen Provider.
+	 * {@code codepen}; {@code gist} entfiel mit v64), oder Host oder Pfad der
+	 * {@code embedUrl} gehoeren nicht zum angegebenen Provider.
 	 *
 	 * <p><strong>Warum ein eigener Code neben
 	 * {@link #BLOCK_CONTENT_INVALID}:</strong> die beiden verlangen von der

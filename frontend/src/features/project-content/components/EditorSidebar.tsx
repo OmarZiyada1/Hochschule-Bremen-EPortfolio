@@ -1,4 +1,9 @@
-import { ChevronDownIcon, HistoryIcon, InfoIcon } from "lucide-react"
+import {
+  ChevronDownIcon,
+  HistoryIcon,
+  InfoIcon,
+  SlidersHorizontalIcon,
+} from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -45,10 +50,20 @@ import { ProjectMetaSidebar } from "@/features/projects/components/ProjectMetaSi
 export function EditorSidebar({
   project,
   onPreview,
+  onEditMetadata,
 }: {
   project: ProjectDetailResponse
   /** Wechselt in die oeffentliche Ansicht; die Seite speichert vorher. */
   onPreview: () => void
+  /**
+   * Oeffnet die Metadatenseite zum Bearbeiten, ohne den Einreichweg.
+   *
+   * <p>Die Karte zeigt die Angaben, aber es gab von hier keinen Weg, sie
+   * zu aendern: dafuer musste man ins Portfolio zurueck und das Projekt
+   * dort wieder aufmachen. Die Seite speichert vorher den Text, wie bei
+   * jedem anderen Weg aus dem Editor heraus.
+   */
+  onEditMetadata: () => void
 }) {
   const { t } = useTranslation()
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -99,8 +114,18 @@ export function EditorSidebar({
               className="size-3.5 transition-transform group-data-[panel-open]/info:rotate-180"
             />
           </CollapsibleTrigger>
-          <CollapsibleContent className="pt-4">
+          <CollapsibleContent className="flex flex-col gap-4 pt-4">
             <ProjectMetaSidebar project={project} />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-fit"
+              onClick={onEditMetadata}
+            >
+              <SlidersHorizontalIcon aria-hidden="true" />
+              {t("projectContent.sidebar.editMetadata")}
+            </Button>
           </CollapsibleContent>
         </Collapsible>
       </div>

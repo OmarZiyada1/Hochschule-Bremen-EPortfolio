@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { ImageIcon } from "lucide-react"
-import { useEffect, useId, useMemo, useState } from "react"
+import { useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
@@ -79,27 +79,21 @@ export function CoverImageField({
   const errorId = `${inputId}-error`
   const [error, setError] = useState<string | null>(null)
 
+  /*
+   * Die Object-URL kommt aus dem Query-Cache und wird mit ihm freigegeben
+   * (fileQueries.objectUrl). Sie hier zu erzeugen und im Aufraeumen eines
+   * Effekts freizugeben, war unter StrictMode falsch: React ruft beim
+   * Montieren Aufbau, Abbau, Aufbau, und der Abbau gab genau die Adresse
+   * frei, die das img in derselben Runde schon trug. Sichtbar wurde das,
+   * sobald die Datei beim Montieren im Cache lag, also beim zweiten
+   * Aufschlagen der Metadatenseite: das Titelbild blieb leer, ohne Fehler
+   * und ohne Meldung (Befund aus KAN-36).
+   */
   const image = useQuery({
-    ...fileQueries.blob(value),
+    ...fileQueries.objectUrl(value),
     enabled: value !== "",
   })
-
-  /*
-   * Die Object-URL lebt so lange wie der Blob und wird beim Wechsel
-   * freigegeben. Ohne revokeObjectURL haelt der Browser jedes je gezeigte
-   * Bild bis zum Neuladen der Seite im Speicher.
-   */
-  const blob = image.data
-  const objectUrl = useMemo(
-    () => (blob === undefined ? null : URL.createObjectURL(blob)),
-    [blob]
-  )
-  useEffect(() => {
-    if (objectUrl === null) {
-      return
-    }
-    return () => URL.revokeObjectURL(objectUrl)
-  }, [objectUrl])
+  const objectUrl = image.data ?? null
 
   async function onFileSelected(file: File | undefined) {
     if (file === undefined) {

@@ -281,7 +281,11 @@ export function NavBar({
                       vollstaendig von Bild oder Initialenflaeche verdeckt,
                       eine Hintergrundfarbe dort ist nie zu sehen. 28px nach
                       Template (Figma-Knoten der NavBar). */}
-                  <UserAvatar person={user} imageUrl={user.avatarUrl} size="md" />
+                  <UserAvatar
+                    person={user}
+                    imageUrl={user.avatarUrl}
+                    size="md"
+                  />
                   <span>{fullNameOf(user)}</span>
                   <ChevronDownIcon aria-hidden="true" />
                 </DropdownMenuTrigger>
@@ -364,7 +368,11 @@ export function NavBar({
               {user && (
                 <div className="flex items-center gap-2.5 px-4">
                   {/* Dieselbe Stufe wie in der Leiste darueber. */}
-                  <UserAvatar person={user} imageUrl={user.avatarUrl} size="md" />
+                  <UserAvatar
+                    person={user}
+                    imageUrl={user.avatarUrl}
+                    size="md"
+                  />
                   <span className="flex flex-col">
                     <span className="type-body-sm font-medium">
                       {fullNameOf(user)}

@@ -74,7 +74,12 @@ describe("useAutosave", () => {
     })
 
     await waitFor(() => expect(requests).toHaveLength(1), { timeout: 20000 })
-    expect(view.result.current.state).toBe("saved")
+    /* Der Zustand wird abgewartet und nicht sofort gelesen: der Handler
+       zaehlt den Request, wenn er hereinkommt, der Takt setzt „saved" erst
+       nach der Antwort. Dazwischen liegt ein Rendern. */
+    await waitFor(() => expect(view.result.current.state).toBe("saved"), {
+      timeout: 20000,
+    })
   })
 
   /*

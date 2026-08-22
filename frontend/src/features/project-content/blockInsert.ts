@@ -56,13 +56,57 @@ export const INSERT_ENTRIES: readonly { kind: InsertKind; icon: LucideIcon }[] =
   ]
 
 /**
+ * Groesse einer neuen Tabelle.
+ *
+ * <p><strong>Sie wird beim Einfuegen gewaehlt und nicht danach
+ * zusammengeklickt.</strong> Zuvor entstand jede Tabelle als drei mal drei,
+ * und wer fuenf Spalten brauchte, fuegte zweimal einzeln eine Spalte an.
+ * Die Groesse ist die eine Angabe, die beim Anlegen feststeht; alles
+ * andere, also Zeilen und Spalten spaeter zu aendern, Kopfzeile und
+ * Kopfspalte umzuschalten, Zellen zu verbinden und zu teilen, steht in der
+ * Tabellenbedienung ({@code TableControls}).
+ */
+export type TableSize = {
+  rows: number
+  cols: number
+  withHeaderRow: boolean
+}
+
+/** Wie im Figma-Template: drei mal drei mit Kopfzeile. */
+export const DEFAULT_TABLE_SIZE: TableSize = {
+  rows: 3,
+  cols: 3,
+  withHeaderRow: true,
+}
+
+/**
+ * Grenzen der Eingabe.
+ *
+ * <p>Der Contract kennt fuer {@code TABLE} keine Obergrenze, und
+ * gespeichert wird auch eine grosse Tabelle anstandslos. Die Grenze steht
+ * trotzdem im Eingabefeld: eine versehentlich eingetippte Zahl mit vier
+ * Stellen legte den Browser lahm, bevor irgendetwas gespeichert waere.
+ * Zwanzig mal zwanzig sind vierhundert Zellen und fuer einen Beitrag
+ * reichlich; groesser wird die Tabelle danach ueber die Bedienung.
+ */
+export const TABLE_MIN = 1
+export const TABLE_MAX = 20
+
+/**
  * Der Knoten, den ein Eintrag anlegt.
  *
  * <p>Die Medienknoten entstehen leer und werden auf der Schreibflaeche
  * gefuellt; gespeichert werden sie erst mit ihren Pflichtattributen
  * ({@code blockSerialization.docToBlocks}).
+ *
+ * @param table Groesse einer neuen Tabelle; ohne Angabe
+ *              {@link DEFAULT_TABLE_SIZE}. Fuer jeden anderen Typ ohne
+ *              Wirkung.
  */
-export function contentFor(kind: InsertKind): Record<string, unknown> {
+export function contentFor(
+  kind: InsertKind,
+  table: TableSize = DEFAULT_TABLE_SIZE
+): Record<string, unknown> {
   switch (kind) {
     case "image":
       return { type: "imageBlock" }
@@ -83,11 +127,26 @@ export function contentFor(kind: InsertKind): Record<string, unknown> {
     case "divider":
       return { type: "horizontalRule" }
     case "table":
-      /* Drei mal drei mit Kopfzeile, wie im Template. */
-      return {
-        type: "table",
-        content: [headerRow(3), bodyRow(3), bodyRow(3)],
-      }
+      return tableNode(table)
+  }
+}
+
+function clamp(value: number): number {
+  return Math.min(TABLE_MAX, Math.max(TABLE_MIN, Math.round(value)))
+}
+
+function tableNode(size: TableSize): Record<string, unknown> {
+  const rows = clamp(size.rows)
+  const cols = clamp(size.cols)
+  /* Die Kopfzeile zaehlt als Zeile: „drei Zeilen mit Kopfzeile" ergibt eine
+     Kopfzeile und zwei Inhaltszeilen, so wie eine Tabelle gelesen wird. */
+  const bodyRows = size.withHeaderRow ? Math.max(0, rows - 1) : rows
+  return {
+    type: "table",
+    content: [
+      ...(size.withHeaderRow ? [headerRow(cols)] : []),
+      ...Array.from({ length: bodyRows }, () => bodyRow(cols)),
+    ],
   }
 }
 

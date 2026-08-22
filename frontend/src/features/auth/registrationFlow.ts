@@ -44,8 +44,7 @@ export function readRegistrationFlow(): RegistrationFlowState | null {
     typeof (parsed as Record<string, unknown>).email !== "string" ||
     typeof (parsed as Record<string, unknown>).hsbEmail !== "string" ||
     typeof (parsed as Record<string, unknown>).emailVerified !== "boolean" ||
-    typeof (parsed as Record<string, unknown>).hsbEmailVerified !==
-      "boolean" ||
+    typeof (parsed as Record<string, unknown>).hsbEmailVerified !== "boolean" ||
     typeof (parsed as Record<string, unknown>).status !== "string"
   ) {
     window.sessionStorage.removeItem(STORAGE_KEY)
@@ -64,7 +63,9 @@ export function saveRegistrationFlow(state: RegistrationFlowState): void {
  * hat dann bereits zur Angaben-Seite umgeleitet.
  */
 export function updateRegistrationFlow(
-  patch: Partial<Pick<RegistrationFlowState, "emailVerified" | "hsbEmailVerified" | "status">>
+  patch: Partial<
+    Pick<RegistrationFlowState, "emailVerified" | "hsbEmailVerified" | "status">
+  >
 ): void {
   const current = readRegistrationFlow()
   if (current !== null) {

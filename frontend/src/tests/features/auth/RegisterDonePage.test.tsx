@@ -38,9 +38,7 @@ describe("RegisterDonePage", () => {
       screen.getByRole("heading", { level: 1, name: "Konto aktiviert" })
     ).toBeInTheDocument()
     expect(screen.getByText("lena@example.org")).toBeInTheDocument()
-    expect(
-      screen.getByText("lmueller@stud.hs-bremen.de")
-    ).toBeInTheDocument()
+    expect(screen.getByText("lmueller@stud.hs-bremen.de")).toBeInTheDocument()
     /* Der Contract-Enum-Wert ACTIVE laeuft unveraendert durch den Code und
        wird nur fuer die Anzeige uebersetzt (Frontend-Regel 6). */
     expect(screen.getByText("Aktiv")).toBeInTheDocument()

@@ -11,7 +11,7 @@ import type {
 import ProjectDetailPage from "@/features/projects/ProjectDetailPage"
 import i18n from "@/i18n"
 import { person, reference } from "@/tests/fixtures"
-import { apiErrorResponse } from "@/tests/msw/handlers"
+import { apiErrorResponse, fileBlobHandler } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
 import { LocationProbe, signInAs } from "@/tests/routes/helpers"
@@ -109,7 +109,9 @@ const ALL_BLOCK_NODES: unknown[] = [
     type: "embedBlock",
     attrs: {
       provider: "codepen",
-      embedUrl: "https://codepen.io/pen/embed/abc",
+      /* Seit Contract v64 muss der Pfad die Einbettung sein:
+         /<user>/embed/<slug> und nicht die Pen-Seite. */
+      embedUrl: "https://codepen.io/a/embed/abc",
       height: 520,
     },
   },
@@ -183,6 +185,9 @@ function projectResponse(
       abbreviation: null,
     }),
     author: person({ id: "u-1", firstName: "Lena", lastName: "Mueller" }),
+    /* Die Autor:in ist kein Mitglied (§3.13.1), traegt aber seit Contract
+       v66 ihre eigene Funktionsbezeichnung. */
+    authorRole: "Konzept",
     members: [
       {
         userId: "u-3",
@@ -372,8 +377,11 @@ describe("Inhalt und Gliederung", () => {
 
     const members = screen.getByText("Projektmitglieder").parentElement
     const names = within(members as HTMLElement).getAllByRole("listitem")
-    expect(names[0]).toHaveTextContent("Lena Mueller")
-    expect(names[1]).toHaveTextContent("Tobias Lang")
+    expect(names).toHaveLength(2)
+    /* Die Autor:in steht vorn und traegt seit Contract v66 ihre eigene
+       Funktionsbezeichnung. */
+    expect(names[0]).toHaveTextContent("Lena Mueller · Konzept")
+    expect(names[1]).toHaveTextContent("Tobias Lang · Frontend")
   })
 })
 
@@ -643,6 +651,7 @@ describe("Weg zurueck in den Editor (KAN-36)", () => {
   it("zeigt der Autor:in im Entwurf den Schalter und fuehrt in den Editor", async () => {
     const user = userEvent.setup()
     server.use(
+      fileBlobHandler(),
       detailHandler(
         projectResponse({
           status: "DRAFT",
@@ -684,7 +693,7 @@ describe("Weg zurueck in den Editor (KAN-36)", () => {
   })
 
   it("zeigt ihn einer unbeteiligten Person nicht", async () => {
-    server.use(detailHandler(projectResponse({ status: "DRAFT" })))
+    server.use(fileBlobHandler(), detailHandler(projectResponse({ status: "DRAFT" })))
     signInAs("STUDENT")
     renderPage()
 
@@ -692,5 +701,45 @@ describe("Weg zurueck in den Editor (KAN-36)", () => {
     expect(
       screen.queryByRole("switch", { name: "Bearbeiten" })
     ).not.toBeInTheDocument()
+  })
+})
+
+describe("Bilder eines noch nicht veroeffentlichten Beitrags (KAN-36)", () => {
+  /*
+   * GET /api/files/{id} ist erst oeffentlich, wenn das Projekt PUBLISHED
+   * ist (§3.15, §5). Ein img weist nichts nach, das Token liegt im Store:
+   * in der Vorschau eines Entwurfs beantwortete der Server deshalb jede
+   * Bildanfrage mit 401, und die Seite zeigte leere Stellen, ohne Fehler
+   * und ohne Meldung. Seit KAN-36 loest die Seite Bilder eines nicht
+   * veroeffentlichten Beitrags ueber den angemeldeten Weg auf.
+   */
+  function firstImage(): HTMLImageElement {
+    return screen.getAllByRole("img")[0] as HTMLImageElement
+  }
+
+  it("holt die Bilder eines Entwurfs mit Token und zeigt sie", async () => {
+    server.use(
+      fileBlobHandler(),
+      detailHandler(projectResponse({ status: "DRAFT" }))
+    )
+    signInAs("STUDENT")
+    renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    await waitFor(() =>
+      expect(firstImage().getAttribute("src")).toMatch(/^blob:/)
+    )
+  })
+
+  it("laesst ein veroeffentlichtes Projekt beim blossen Pfad", async () => {
+    /* Dort ist die Datei oeffentlich und obendrein zwischenspeicherbar;
+       ein Blob-Abruf naehme dem Browser genau das. */
+    server.use(detailHandler(projectResponse({ status: "PUBLISHED" })))
+    renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    const src = firstImage().getAttribute("src") ?? ""
+    expect(src).not.toMatch(/^blob:/)
+    expect(src.endsWith(`/api/files/${FILE_A}`)).toBe(true)
   })
 })

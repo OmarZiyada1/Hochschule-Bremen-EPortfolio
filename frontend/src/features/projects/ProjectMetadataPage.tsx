@@ -1,7 +1,7 @@
-import { FileQuestionIcon, LockIcon } from "lucide-react"
+import { FileQuestionIcon, InfoIcon, LockIcon } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import type { ProjectDetailResponse, ProjectUpdateRequest } from "@/api/types"
@@ -18,7 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Alert, AlertTitle } from "@/components/ui/alert"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useProjectDetail } from "@/features/projects/hooks/useProjectDetail"
@@ -26,7 +26,12 @@ import {
   useUpdateProject,
   useUploadCoverImage,
 } from "@/features/projects/hooks/useProjectMetadataMutations"
-import { ProjectMetadataForm } from "@/features/projects/ProjectMetadataForm"
+import {
+  ProjectMetadataForm,
+  type SubmitIntent,
+} from "@/features/projects/ProjectMetadataForm"
+import { submitProject } from "@/api/queries/projects"
+import { missingForSubmit } from "@/features/project-content/submitRequirements"
 
 /** Wohin "Abbrechen" fuehrt: die eigene Projektliste. */
 const PORTFOLIO_PATH = "/my-portfolio"
@@ -76,6 +81,17 @@ export default function ProjectMetadataPage() {
   const { projectId = "" } = useParams()
   const navigate = useNavigate()
 
+  const [params] = useSearchParams()
+  /*
+   * Der Editor schickt mit ?submit=1 hierher, wenn jemand dort auf
+   * Einreichen geklickt hat (§3.3, §4.1). Die sieben Pflichtangaben stehen
+   * auf dieser Seite, und nur hier: ein Seitenpanel im Editor zeigte
+   * dasselbe Formular ein zweites Mal, in schmalerer Spalte und mit einem
+   * zweiten Speicherweg. Der Merker steht in der Adresse und nicht im
+   * Navigationszustand, damit ein Neuladen den Weg nicht vergisst.
+   */
+  const submitting = params.get("submit") === "1"
+
   const detail = useProjectDetail(projectId)
   const update = useUpdateProject(projectId)
   const uploadCover = useUploadCoverImage(projectId)
@@ -109,6 +125,19 @@ export default function ProjectMetadataPage() {
    * einen Data-Router in Anwendung und Testhuelle, und das ist eigene
    * Arbeit (Skill frontend-design, Abschnitt 5, Geltungsbereich).
    */
+  /**
+   * Zurueck in den Editor, ohne zu speichern. Auf dem Einreichweg ist das
+   * der richtige Abbruch: wer dort auf „Abbrechen" klickt, will zurueck an
+   * den Text und nicht ins Portfolio.
+   */
+  const leaveToEditor = () => {
+    if (dirty) {
+      setConfirmLeave(true)
+      return
+    }
+    void navigate(`/projects/${projectId}/editor`)
+  }
+
   const leaveToPortfolio = () => {
     if (dirty) {
       setConfirmLeave(true)
@@ -122,12 +151,30 @@ export default function ProjectMetadataPage() {
    * den Editor.
    */
   const submit = async (
-    request: ProjectUpdateRequest
+    request: ProjectUpdateRequest,
+    intent: SubmitIntent
   ): Promise<ProjectDetailResponse> => {
     try {
       const updated = await update.mutateAsync(request)
-      void navigate(`/projects/${updated.id}/editor`)
-      return updated
+      /*
+       * Auf dem Einreichweg gibt es zwei Enden, und die Schaltflaeche sagt
+       * welches: die zweite speichert nur und geht zurueck in den Editor.
+       * Zuvor stand dort „Speichern und weiter zum Editor" und reichte
+       * trotzdem ein, was eine falsche Zusage war.
+       */
+      if (!submitting || intent === "secondary") {
+        void navigate(`/projects/${updated.id}/editor`)
+        return updated
+      }
+      /*
+       * Zwei Aufrufe, in dieser Reihenfolge: erst die Metadatenkarte, dann
+       * der Uebergang (§6.1 trennt beides). Scheitert der zweite, sind die
+       * Angaben trotzdem gespeichert, und das ist die richtige Richtung;
+       * die Meldung dazu zeigt das Formular an sich selbst.
+       */
+      const submitted = await submitProject(updated.id)
+      void navigate(`/projects/${submitted.id}`)
+      return submitted
     } catch (saveError) {
       if (
         isApiError(saveError) &&
@@ -155,11 +202,29 @@ export default function ProjectMetadataPage() {
   return (
     <>
       <BreadcrumbBar
-        items={[
-          { label: t("common.nav.home"), to: "/" },
-          { label: t("common.nav.myPortfolio"), to: PORTFOLIO_PATH },
-          { label: t("project.metadata.breadcrumb") },
-        ]}
+        /*
+         * Der Weg unterscheidet sich, je nachdem woher man kommt: aus dem
+         * Portfolio zum Bearbeiten, oder aus dem Editor auf dem Weg ins
+         * Einreichen. Im zweiten Fall steht der Editor als Station davor,
+         * damit der Rueckweg dorthin sichtbar ist und nicht nur ueber die
+         * Schaltflaechen unten geht.
+         */
+        items={
+          submitting
+            ? [
+                { label: t("common.nav.myPortfolio"), to: PORTFOLIO_PATH },
+                {
+                  label: t("project.metadata.breadcrumbEditor"),
+                  to: `/projects/${projectId}/editor`,
+                },
+                { label: t("project.metadata.breadcrumbSubmit") },
+              ]
+            : [
+                { label: t("common.nav.home"), to: "/" },
+                { label: t("common.nav.myPortfolio"), to: PORTFOLIO_PATH },
+                { label: t("project.metadata.breadcrumb") },
+              ]
+        }
       />
 
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
@@ -182,8 +247,38 @@ export default function ProjectMetadataPage() {
         ) : (
           <>
             <h1 className="type-h2 font-semibold text-primary">
-              {t("project.metadata.heading")}
+              {submitting
+                ? t("projectContent.submit.title")
+                : t("project.metadata.heading")}
             </h1>
+
+            {/*
+             * Was zum Einreichen noch fehlt, steht ueber dem Formular und
+             * nicht erst in der Serverantwort. Der Server bleibt
+             * verbindlich mit 400 PROJECT_INCOMPLETE; diese Liste sagt es
+             * vorher, statt die Autor:in mit Feldnamen zurueckzuschicken.
+             */}
+            {submitting && project !== undefined && (
+              <Alert>
+                <InfoIcon aria-hidden="true" />
+                <AlertTitle>
+                  {missingForSubmit(project).length > 0
+                    ? t("projectContent.submit.missingTitle")
+                    : t("projectContent.submit.title")}
+                </AlertTitle>
+                <AlertDescription>
+                  {missingForSubmit(project).length > 0
+                    ? t("projectContent.submit.missingDescription", {
+                        fields: missingForSubmit(project)
+                          .map((field) =>
+                            t(`projectContent.submit.field.${field}`)
+                          )
+                          .join(", "),
+                      })
+                    : t("projectContent.submit.description")}
+                </AlertDescription>
+              </Alert>
+            )}
 
             {detail.isPending ? (
               <div className="grid gap-8 lg:grid-cols-[3fr_4fr]">
@@ -225,7 +320,20 @@ export default function ProjectMetadataPage() {
                 }}
                 onSubmit={submit}
                 onDirtyChange={setDirty}
-                onCancel={leaveToPortfolio}
+                submitLabel={
+                  submitting ? t("project.metadata.saveAndSubmit") : undefined
+                }
+                submitPendingLabel={
+                  submitting
+                    ? t("project.metadata.saveAndSubmitPending")
+                    : undefined
+                }
+                secondarySubmit={
+                  submitting
+                    ? { label: t("project.metadata.saveOnly") }
+                    : undefined
+                }
+                onCancel={submitting ? leaveToEditor : leaveToPortfolio}
               />
             )}
           </>
@@ -261,7 +369,11 @@ export default function ProjectMetadataPage() {
             <AlertDialogAction
               onClick={() => {
                 setConfirmLeave(false)
-                void navigate(PORTFOLIO_PATH)
+                /* Dorthin, wo „Abbrechen" hinfuehrt: auf dem Einreichweg
+                   zurueck an den Text, sonst ins Portfolio. */
+                void navigate(
+                  submitting ? `/projects/${projectId}/editor` : PORTFOLIO_PATH
+                )
               }}
             >
               {t("project.metadata.leave.discard")}

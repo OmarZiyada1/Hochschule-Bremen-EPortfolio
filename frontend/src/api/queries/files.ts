@@ -5,27 +5,66 @@ import { apiPaths } from "@/api/endpoints"
 import type { StoredFileResponse } from "@/api/types"
 
 /**
- * queryOptions-Fabrik fuer den Abruf einer Datei als Blob (§3.15.1).
+ * queryOptions-Fabrik fuer den Abruf einer Datei (§3.15.1).
  *
  * <p>Gebraucht ueberall dort, wo eine Datei zu einem <strong>nicht
  * veroeffentlichten</strong> Projekt angezeigt wird, also im
- * Metadatenformular und spaeter im Editor: dort entscheidet die
- * Berechtigung der anfragenden Person (§5, Zeile „Datei lesen"), und ein
+ * Metadatenformular und im Editor: dort entscheidet die Berechtigung der
+ * anfragenden Person (§5, Zeile „Datei lesen"), und ein
  * {@code <img src>} kann sie nicht nachweisen. Bei einem veroeffentlichten
  * Projekt genuegt weiterhin die blosse Adresse, dort ist die Datei
- * oeffentlich.
+ * oeffentlich und obendrein zwischenspeicherbar.
  *
  * <p>Der Schluessel ist die Referenz selbst, denn genau die steht am
  * Projekt (§3.15.1). {@code staleTime: Infinity}, weil eine Datei unter
  * ihrer ID unveraenderlich ist: ein neues Bild bekommt eine neue ID.
  */
 export const fileQueries = {
-  blob: (fileUrl: string) =>
+  /**
+   * Die Datei als anzeigbare Adresse, nicht als Blob.
+   *
+   * <p><strong>Warum die Object-URL im Cache liegt und nicht in einer
+   * Komponente.</strong> Sie ist eine Ressource des Browsers und kein
+   * Zustand: erzeugt mit {@code createObjectURL}, freigegeben mit
+   * {@code revokeObjectURL}, und dazwischen darf sie nicht verschwinden.
+   * In einer Komponente laesst sich dieses Paar nicht sauber fuehren. Wird
+   * sie im Rendern erzeugt und im Aufraeumen eines Effekts freigegeben,
+   * gibt {@code StrictMode} genau die Adresse frei, die das {@code img}
+   * gerade traegt (React ruft beim Montieren Aufbau, Abbau, Aufbau); das
+   * Bild bleibt leer, ohne Fehler und ohne Meldung. Wird beides in
+   * denselben Effekt gelegt, braucht es ein {@code setState} im Effekt,
+   * also eine zusaetzliche Renderrunde je Bild.
+   *
+   * <p>Im Cache passt beides zusammen: erzeugt wird in der
+   * {@code queryFn}, freigegeben, wenn der Eintrag aus dem Cache faellt
+   * (siehe {@code createQueryClient}). Dieselbe Datei an zwei Stellen
+   * teilt sich damit eine Adresse, ein Verschieben oder Neuaufbauen des
+   * Blocks laesst sie unberuehrt, und die Freigabe passiert genau einmal.
+   *
+   * <p>Der Eintrag wird nie neu geladen ({@code staleTime: Infinity}, kein
+   * Refetch bei Fensterwechsel, kein {@code invalidateQueries} auf diesen
+   * Wurzelschluessel); die Adresse im Cache bleibt deshalb gueltig, solange
+   * der Eintrag lebt.
+   */
+  objectUrl: (fileUrl: string) =>
     queryOptions({
-      queryKey: ["files", "blob", fileUrl] as const,
-      queryFn: ({ signal }) => api.getBlob(fileUrl, { signal }),
+      queryKey: ["files", "objectUrl", fileUrl] as const,
+      queryFn: async ({ signal }) =>
+        URL.createObjectURL(await api.getBlob(fileUrl, { signal })),
       staleTime: Infinity,
     }),
+}
+
+/**
+ * Ob ein Query-Key zu {@link fileQueries.objectUrl} gehoert, seine Daten
+ * also eine freizugebende Object-URL sind.
+ *
+ * <p>Steht hier und nicht im QueryClient, damit Schluessel und Bedeutung
+ * an einer Stelle stehen: wer den Schluessel aendert, sieht die Freigabe
+ * daneben.
+ */
+export function isObjectUrlQueryKey(queryKey: readonly unknown[]): boolean {
+  return queryKey[0] === "files" && queryKey[1] === "objectUrl"
 }
 
 /**

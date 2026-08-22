@@ -576,7 +576,21 @@
       "breadcrumb": "Projekt-Metadaten",
       "heading": "Projekt-Metadaten",
       "backToPortfolio": "Zurück zum Portfolio",
+      "authorRole": {
+        "label": "Funktion von {{name}} im Projekt",
+        "placeholder": "z. B. Konzept",
+        "hint": "Freiwillig. Die Autor:in ist kein Projektmitglied, sondern die Eigentümerin des Beitrags; hier steht nur, was sie darin gemacht hat."
+      },
+      "people": {
+        "legend": "Beteiligte und ihre Funktionen",
+        "hint": "Wer den Beitrag geschrieben hat, steht fest. Hier steht, was die Autor:in darin gemacht hat und wer sonst noch mitgewirkt hat."
+      },
       "submit": "Speichern & weiter zum Editor",
+      "saveAndSubmit": "Speichern und einreichen",
+      "saveAndSubmitPending": "Wird eingereicht …",
+      "saveOnly": "Nur speichern, zurück zum Editor",
+      "breadcrumbEditor": "Editor",
+      "breadcrumbSubmit": "Einreichen: Pflichtangaben",
       "submitCreate": "Projekt anlegen",
       "submitPending": "Wird gespeichert …",
       "readOnly": "Dieses Projekt ist im Status {{status}} nicht bearbeitbar. Änderungen sind nur im Entwurf und in der Überarbeitung möglich.",
@@ -651,6 +665,7 @@
         "personPlaceholder": "Nach Namen suchen …",
         "role": "Rolle",
         "rolePlaceholder": "Rolle im Projekt, etwa Frontend",
+        "roleOf": "Rolle von {{name}} im Projekt",
         "remove": "{{name}} aus den Projektmitgliedern entfernen",
         "chosen": "Aufgenommene Projektmitglieder",
         "invalid": "Bitte prüfen Sie die Angaben zu den Projektmitgliedern.",
@@ -667,6 +682,7 @@
         "description": "Für die Metadaten dieses Projekts fehlt Ihrem Konto die Berechtigung."
       },
       "invalid": "Bitte prüfen Sie die markierten Angaben.",
+      "incomplete": "Zum Einreichen fehlen noch: {{fields}}.",
       "leave": {
         "title": "Ungespeicherte Angaben verwerfen?",
         "description": "Die Angaben zu „{{title}}“ sind noch nicht gespeichert. Wenn Sie die Seite verlassen, gehen sie verloren.",
@@ -831,7 +847,19 @@
         "toggleHeaderRow": "Kopfzeile umschalten",
         "mergeCells": "Zellen verbinden",
         "splitCell": "Zelle teilen",
-        "deleteTable": "Tabelle löschen"
+        "deleteTable": "Tabelle löschen",
+        "toggleHeaderColumn": "Kopfspalte umschalten",
+        "toggleHeaderCell": "Zelle als Kopfzelle umschalten",
+        "mergeOrSplit": "Zellen verbinden oder teilen"
+      },
+      "size": {
+        "title": "Größe der neuen Tabelle",
+        "rows": "Zeilen",
+        "cols": "Spalten",
+        "headerRow": "Mit Kopfzeile",
+        "headerRowHint": "Die Kopfzeile zählt als Zeile: drei Zeilen mit Kopfzeile ergeben eine Kopfzeile und zwei Inhaltszeilen.",
+        "insert": "Tabelle einfügen",
+        "back": "Zurück"
       }
     },
     "video": {
@@ -845,9 +873,9 @@
       "dropzone": "Video hochladen oder hierher ziehen",
       "dropzoneHint": "MP4 oder WebM bis {{max}} MB",
       "urlLabel": "Oder Videoadresse einfügen",
-      "urlPlaceholder": "YouTube- oder Vimeo-Adresse",
-      "urlHint": "Gespeichert werden Anbieter und Video-Kennung, nie die Adresse selbst.",
-      "urlInvalid": "Aus dieser Adresse lässt sich kein YouTube- oder Vimeo-Video ablesen.",
+      "urlPlaceholder": "Adresse, Teilen-Link oder Einbettungscode",
+      "urlHint": "Adresszeile, Teilen-Link oder Einbettungscode. Gespeichert werden Anbieter und Video-Kennung, nie die Adresse selbst.",
+      "urlInvalid": "Daraus lässt sich kein YouTube- oder Vimeo-Video ablesen.",
       "embedAction": "Einbetten"
     },
     "audio": {
@@ -865,8 +893,8 @@
       "replace": "Einbettung ersetzen",
       "urlLabel": "Adresse der Einbettung",
       "urlPlaceholder": "https://",
-      "urlHint": "Zulässig sind YouTube, Vimeo, Figma, CodePen und GitHub Gist.",
-      "urlInvalid": "Diese Adresse gehört zu keinem der zulässigen Anbieter ({{providers}}).",
+      "urlHint": "YouTube, Vimeo, Figma und CodePen. Die Adresszeile des Browsers, der Teilen-Link oder der ganze Einbettungscode: alles drei geht.",
+      "urlInvalid": "Daraus lässt sich keine Einbettung ablesen. Zulässig sind {{providers}}; einfügen lässt sich die Adresszeile, der Teilen-Link oder der Einbettungscode.",
       "action": "Einbetten"
     },
     "document": {
@@ -880,8 +908,7 @@
       "youtube": "YouTube",
       "vimeo": "Vimeo",
       "figma": "Figma",
-      "codepen": "CodePen",
-      "gist": "GitHub Gist"
+      "codepen": "CodePen"
     },
     "blockName": {
       "heading": "Überschrift",
@@ -996,6 +1023,7 @@
     },
     "image": {
       "incomplete": "Noch kein Bild gewählt. Der Block wird gespeichert, sobald eines darin liegt.",
+      "loadFailed": "Das Bild konnte nicht geladen werden.",
       "alt": "Alternativtext",
       "altDescription": "Beschreibt das Bild für Menschen, die es nicht sehen. Leer lassen, wenn es rein schmückend ist.",
       "caption": "Bildunterschrift",
@@ -1043,7 +1071,8 @@
       "edit": "Bearbeiten",
       "previewToggle": "Bearbeiten",
       "history": "Historie",
-      "projectInfo": "Projektinformationen"
+      "projectInfo": "Projektinformationen",
+      "editMetadata": "Metadaten bearbeiten"
     },
     "history": {
       "title": "Historie",

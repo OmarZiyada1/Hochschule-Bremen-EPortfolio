@@ -9,9 +9,8 @@ import { useTranslation } from "react-i18next"
 import { Link, useNavigate, useParams } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
-import { resolveApiUrl } from "@/api/client"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
-import type { ProjectDetailResponse } from "@/api/types"
+import type { BlockResponse, ProjectDetailResponse } from "@/api/types"
 import { EmptyState } from "@/components/common/EmptyState"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { Alert, AlertTitle } from "@/components/ui/alert"
@@ -26,6 +25,8 @@ import {
 } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ViewModeSwitch } from "@/features/project-content/components/ViewModeSwitch"
+import { useProjectImageUrls } from "@/features/project-content/hooks/useProjectImageUrls"
+import { useFileUrl } from "@/api/useFileUrl"
 import { ProjectContent } from "@/features/project-content/renderer/ProjectContent"
 import { ProjectMetaSidebar } from "@/features/projects/components/ProjectMetaSidebar"
 import { ReactionPanel } from "@/features/projects/components/ReactionPanel"
@@ -70,10 +71,32 @@ import { cn } from "@/lib/utils"
  * Ein dauerhaft gesperrter Knopf ist fuer die Tastatur ein Ziel ohne Zweck
  * (Frontend-Regel 10).
  */
+/* Eine Liste, nicht bei jedem Rendern eine neue: sie steht in den
+   Abhaengigkeiten der Bildaufloesung. */
+const EMPTY_BLOCKS: readonly BlockResponse[] = []
+
 export default function ProjectDetailPage() {
   const { t } = useTranslation()
   const { projectId } = useParams()
   const { data, isPending, error } = useProjectDetail(projectId ?? "")
+
+  /*
+   * Bilder eines noch nicht veroeffentlichten Beitrags brauchen den
+   * angemeldeten Weg; ohne ihn beantwortet der Server jede Bildanfrage
+   * dieser Seite mit 401, und die Vorschau eines Entwurfs zeigt leere
+   * Stellen statt der Bilder (Begruendung an useProjectImageUrls).
+   * Bei PUBLISHED bleibt es beim blossen Pfad: dort ist die Datei
+   * oeffentlich und obendrein zwischenspeicherbar (§3.15).
+   */
+  const needsToken = data !== undefined && data.status !== "PUBLISHED"
+  const resolveFileUrl = useProjectImageUrls(
+    data?.blocks ?? EMPTY_BLOCKS,
+    needsToken
+  )
+  /* Dasselbe gilt fuer das Titelbild: nach dem Einreichen ist das Projekt
+     SUBMITTED und die Datei damit nicht mehr oeffentlich; ohne den
+     angemeldeten Weg verschwand das Bild an dieser Stelle. */
+  const cover = useFileUrl(data?.coverImageUrl, needsToken)
 
   /* Nur schmal gebraucht: ab lg steht das Panel dauerhaft daneben, und die
      Schublade wird dann gar nicht erst geoeffnet. */
@@ -224,10 +247,10 @@ export default function ProjectDetailPage() {
                 ein erstes img oben mit und nimmt dafuer das obere Polster
                 zurueck. In einen Rahmen gesetzt bliebe stattdessen ein
                 Polsterrand um das Bild stehen. */}
-              {data.coverImageUrl && (
+              {cover.url !== null && (
                 <>
                   <img
-                    src={resolveApiUrl(data.coverImageUrl)}
+                    src={cover.url}
                     alt=""
                     className="h-60 w-full object-cover sm:h-110"
                   />
@@ -253,9 +276,12 @@ export default function ProjectDetailPage() {
                       {participates && data.status && (
                         <StatusBadge status={data.status} />
                       )}
-                      {/* Ohne Titelbild fehlt die Flaeche fuer den schwebenden
-                        Knopf; dann steht er in dieser Zeile. */}
-                      {!data.coverImageUrl && (
+                      {/* Ohne sichtbares Titelbild fehlt die Flaeche fuer den
+                        schwebenden Knopf; dann steht er in dieser Zeile. Das
+                        gilt auch, solange das Bild eines Entwurfs noch
+                        geladen wird: sonst gaebe es kurz keinen Weg zu den
+                        Projektdaten. */}
+                      {cover.url === null && (
                         <InfoTrigger onOpen={() => setInfoOpen(true)} />
                       )}
                     </div>
@@ -301,7 +327,10 @@ export default function ProjectDetailPage() {
                       /* Der Renderer setzt .project-content selbst und bringt seine
                      Stilquelle mit (styles/project-content.css). Eine zweite
                      entsteht hier nicht. */
-                      <ProjectContent blocks={data.blocks ?? []} />
+                      <ProjectContent
+                        blocks={data.blocks ?? EMPTY_BLOCKS}
+                        resolveFileUrl={resolveFileUrl}
+                      />
                     )}
                   </section>
                 </article>

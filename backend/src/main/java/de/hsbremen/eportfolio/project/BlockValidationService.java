@@ -69,13 +69,41 @@ public class BlockValidationService {
 			Map.entry(BlockType.DOCUMENT, Set.of("documentBlock")),
 			Map.entry(BlockType.EMBED, Set.of("embedBlock")));
 
-	/** Erlaubte Embed-Hosts je Provider; nur https. Seit Contract v52 auch in §2.5. */
+	/**
+	 * Erlaubte Embed-Hosts je Provider; nur https. Seit Contract v52 auch in
+	 * §2.5, mit v64 zweimal geaendert: {@code figma} bettet ueber den eigenen
+	 * Host {@code embed.figma.com} ein, weil die Designseite selbst das
+	 * Einbetten per {@code X-Frame-Options} verbietet, und {@code gist}
+	 * entfaellt, weil GitHub fuer Gists ueberhaupt keinen einbettbaren Rahmen
+	 * anbietet, sondern nur ein nachgeladenes Skript.
+	 */
 	private static final Map<String, Set<String>> ALLOWED_EMBED_HOSTS = Map.of(
 			"youtube", Set.of("www.youtube.com", "youtube.com", "www.youtube-nocookie.com"),
 			"vimeo", Set.of("player.vimeo.com"),
-			"figma", Set.of("www.figma.com"),
-			"codepen", Set.of("codepen.io"),
-			"gist", Set.of("gist.github.com"));
+			"figma", Set.of("embed.figma.com"),
+			"codepen", Set.of("codepen.io"));
+
+	/**
+	 * Der Pfad, unter dem ein Provider tatsaechlich einbettet (§2.5 seit v64).
+	 *
+	 * <p>Der Host allein genuegte nicht, und genau daran scheiterte der
+	 * haeufigste Fall: {@code www.youtube.com/watch?v=…} traegt einen erlaubten
+	 * Host, ist aber die Zuschauerseite und verbietet das Einbetten. Sie wurde
+	 * angenommen und ergab danach einen leeren Rahmen, ohne dass irgendwo eine
+	 * Meldung entstand. Geprueft wird deshalb Host und Pfad.
+	 */
+	private static final Map<String, Pattern> EMBED_PATH_PATTERNS = Map.of(
+			"youtube", Pattern.compile("/embed/[A-Za-z0-9_-]{1,64}"),
+			"vimeo", Pattern.compile("/video/[0-9]{1,32}"),
+			"figma", Pattern.compile("/(design|file|board|proto|slides|deck)/[A-Za-z0-9]{10,128}(/.*)?"),
+			"codepen", Pattern.compile("/[^/]+/embed/[A-Za-z0-9]+/?"));
+
+	/**
+	 * Der Freigabe-Hash eines nicht gelisteten Vimeo-Videos (§2.5 seit v64).
+	 * Ebenso restriktiv wie die videoId, weil er in die Embed-URL eingesetzt
+	 * wird und kein URL-Metazeichen enthalten darf.
+	 */
+	private static final Pattern VIDEO_HASH_PATTERN = Pattern.compile("[A-Za-z0-9]{1,32}");
 
 	/**
 	 * Provider-Allowlist fuer VIDEO, enger als die fuer EMBED. §2.5 fuehrt sie
@@ -345,6 +373,19 @@ public class BlockValidationService {
 			throw error(index, "VIDEO: videoId hat ein ungueltiges Format fuer Provider '"
 					+ provider + "'");
 		}
+		// Der Freigabe-Hash ist optional und gibt es nur bei vimeo: ein nicht
+		// gelistetes Video ist ohne ihn nicht abspielbar (§2.5 seit v64). An
+		// einem youtube-Block waere er eine Angabe ohne Wirkung und deshalb
+		// ein Fehler und keine stille Nachsicht.
+		if (attrs.hasNonNull("hash")) {
+			if (!"vimeo".equals(provider)) {
+				throw error(index, "VIDEO: attrs.hash gibt es nur fuer Provider 'vimeo'");
+			}
+			String hash = attrs.path("hash").asText("");
+			if (!VIDEO_HASH_PATTERN.matcher(hash).matches()) {
+				throw error(index, "VIDEO: hash hat ein ungueltiges Format");
+			}
+		}
 	}
 
 	// ------------------------------------------------------------------
@@ -526,9 +567,21 @@ public class BlockValidationService {
 	 * Embed-URL und ruft sie nie.
 	 */
 	public String embedUrlForVideo(String provider, String videoId) {
+		return embedUrlForVideo(provider, videoId, null);
+	}
+
+	/**
+	 * Dieselbe Ableitung mit dem Freigabe-Hash eines nicht gelisteten
+	 * Vimeo-Videos (§2.5 seit v64). Der Hash ist zuvor gegen
+	 * {@link #VIDEO_HASH_PATTERN} validiert; ungeprueft eingesetzt waere er die
+	 * eine Stelle, an der Eingabetext in die Adresse gelangt.
+	 */
+	public String embedUrlForVideo(String provider, String videoId, String hash) {
 		return switch (provider) {
 			case "youtube" -> "https://www.youtube.com/embed/" + videoId;
-			case "vimeo" -> "https://player.vimeo.com/video/" + videoId;
+			case "vimeo" -> hash != null && VIDEO_HASH_PATTERN.matcher(hash).matches()
+					? "https://player.vimeo.com/video/" + videoId + "?h=" + hash
+					: "https://player.vimeo.com/video/" + videoId;
 			default -> throw new ValidationException(ErrorCodes.EMBED_PROVIDER_NOT_ALLOWED,
 					"VIDEO: provider '" + provider + "' ist nicht erlaubt (zulaessig: youtube, vimeo)");
 		};
@@ -570,6 +623,13 @@ public class BlockValidationService {
 					|| !ALLOWED_EMBED_HOSTS.get(provider).contains(host)) {
 				throw providerError(index,
 						type + ": embedUrl-Host passt nicht zum Provider '" + provider + "'");
+			}
+			// Seit v64 auch der Pfad: ein erlaubter Host mit der Zuschauerseite
+			// statt der Einbettung ergab bisher einen leeren Rahmen.
+			String path = uri.getPath() == null ? "" : uri.getPath();
+			if (!EMBED_PATH_PATTERNS.get(provider).matcher(path).matches()) {
+				throw providerError(index, type + ": embedUrl ist keine Einbettungsadresse von '"
+						+ provider + "'");
 			}
 		} catch (IllegalArgumentException e) {
 			throw error(index, type + ": embedUrl ist keine gueltige URL");

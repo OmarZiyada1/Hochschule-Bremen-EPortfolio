@@ -2,6 +2,7 @@ package de.hsbremen.eportfolio.project;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -197,8 +198,7 @@ class ProjectWriteIntegrationTest {
 			assertThat(texts(created.get("tags"))).containsExactly("react-test", "ux-test");
 			assertThat(created.get("editors")).hasSize(1);
 			assertThat(created.get("members")).hasSize(1);
-			assertThat(created.get("members").get(0).get("projectRole").asText())
-					.isEqualTo("Frontend");
+			assertThat(roleOf(created, member)).isEqualTo("Frontend");
 		}
 
 		@Test
@@ -269,6 +269,9 @@ class ProjectWriteIntegrationTest {
 		@Test
 		@DisplayName("Die Autor:in gehoert nicht in die Mitgliederliste: 400 (§3.13.1)")
 		void authorIsNoMember() throws Exception {
+			// Sie ist keine ProjectMember-Zeile, sondern steht in
+			// project.author_id; §5 haengt Rechte an dieser Unterscheidung.
+			// Ihre Funktionsbezeichnung traegt authorRole am Projekt.
 			mockMvc.perform(asUser(postRequest(json(
 							"title", "Autor:in doppelt",
 							"members", List.of(memberEntry(author, "Alles")))), author))
@@ -276,6 +279,23 @@ class ProjectWriteIntegrationTest {
 					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
 					.andExpect(jsonPath("$.message").value(
 							containsString("Autor:in")));
+		}
+
+		@Test
+		@DisplayName("Die Autor:in traegt ihre eigene Funktionsbezeichnung (§3.3 seit v66)")
+		void authorRoleIsStored() throws Exception {
+			// Freiwillig: sie kann spaeter eingetragen werden und ist keine
+			// Huerde beim Anlegen.
+			mockMvc.perform(asUser(postRequest(json("title", "Ohne Rolle")), author))
+					.andExpect(status().isCreated())
+					.andExpect(jsonPath("$.authorRole").doesNotExist());
+
+			mockMvc.perform(asUser(postRequest(json(
+							"title", "Mit Rolle", "authorRole", "Konzept")), author))
+					.andExpect(status().isCreated())
+					.andExpect(jsonPath("$.authorRole").value("Konzept"))
+					// Und sie bleibt dabei kein Mitglied.
+					.andExpect(jsonPath("$.members", hasSize(0)));
 		}
 
 		@Test
@@ -620,8 +640,7 @@ class ProjectWriteIntegrationTest {
 					"members", List.of(memberEntry(member, "Backend"))));
 
 			assertThat(updated.get("members")).hasSize(1);
-			assertThat(updated.get("members").get(0).get("projectRole").asText())
-					.isEqualTo("Backend");
+			assertThat(roleOf(updated, member)).isEqualTo("Backend");
 		}
 
 		@Test
@@ -1105,6 +1124,23 @@ class ProjectWriteIntegrationTest {
 				.andReturn()
 				.getResponse()
 				.getContentAsString(StandardCharsets.UTF_8);
+	}
+
+	/**
+	 * Die Funktionsbezeichnung einer bestimmten Person in der
+	 * Mitgliederliste, oder {@code null}, wenn sie keine traegt.
+	 *
+	 * <p>Ueber den Index zu greifen waere von der Reihenfolge abhaengig, die
+	 * der Server nicht zusichert.
+	 */
+	private String roleOf(JsonNode response, User person) {
+		for (JsonNode entry : response.get("members")) {
+			if (person.getId().toString().equals(entry.get("userId").asText())) {
+				JsonNode role = entry.get("projectRole");
+				return role == null || role.isNull() ? null : role.asText();
+			}
+		}
+		return null;
 	}
 
 	private List<String> texts(JsonNode array) {

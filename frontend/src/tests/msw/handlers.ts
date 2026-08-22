@@ -109,3 +109,21 @@ export function projectBlocksHandler(
     HttpResponse.json({ version, blocks })
   )
 }
+
+/**
+ * GET /api/files/{id}: die Bytes einer Datei (§3.15.1).
+ *
+ * <p>Gebraucht ueberall dort, wo ein Bild eines <strong>nicht
+ * veroeffentlichten</strong> Projekts erscheint, also im Editor und in der
+ * Vorschau eines Entwurfs: dort laeuft der Abruf mit Token ueber den
+ * Client und nicht ueber das {@code src} des {@code img} (§5, Zeile
+ * „Datei lesen"). Der Inhalt spielt keine Rolle, jsdom laedt ohnehin kein
+ * Bild; gebraucht wird, dass die Antwort ein Blob ist.
+ */
+export function fileBlobHandler() {
+  return http.get("*/api/files/:fileId", () =>
+    HttpResponse.arrayBuffer(new ArrayBuffer(8), {
+      headers: { "Content-Type": "image/png" },
+    })
+  )
+}

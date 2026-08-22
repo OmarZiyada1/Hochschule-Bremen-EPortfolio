@@ -71,9 +71,7 @@ describe("RegisterVerifyEmailPage", () => {
     ).toBeInTheDocument()
     expect(screen.getByText("lena@example.org")).toBeInTheDocument()
     /* Countdown nach Template: der Knopf entsteht erst nach Ablauf. */
-    expect(
-      screen.getByText("Neuen Code in 20s anfordern")
-    ).toBeInTheDocument()
+    expect(screen.getByText("Neuen Code in 20s anfordern")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Zurück" })).toHaveAttribute(
       "href",
       "/register/details"
@@ -149,11 +147,7 @@ describe("RegisterVerifyEmailPage", () => {
        Nachfordern (Ticket). */
     server.use(
       http.post("*/api/auth/verify", () =>
-        apiErrorResponse(
-          429,
-          "TOO_MANY_LOGIN_ATTEMPTS",
-          "/api/auth/verify"
-        )
+        apiErrorResponse(429, "TOO_MANY_LOGIN_ATTEMPTS", "/api/auth/verify")
       )
     )
     saveRegistrationFlow(flow)
@@ -185,7 +179,9 @@ describe("RegisterVerifyEmailPage", () => {
 
     const user = userEvent.setup()
     await user.click(
-      screen.getByRole("button", { name: "Diese Adresse ist bereits bestätigt" })
+      screen.getByRole("button", {
+        name: "Diese Adresse ist bereits bestätigt",
+      })
     )
 
     expect(

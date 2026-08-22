@@ -6,6 +6,7 @@ import { createBlockExtensions } from "@/features/project-content/blockSchema"
 import {
   activeBlockIndex,
   blockIndexAtPos,
+  setDragHandleLocked,
   deleteBlock,
   insertBlockAfter,
   insertBlockAtRange,
@@ -206,5 +207,32 @@ describe("insertBlockAtRange", () => {
        leere Zeile ueber dem neuen Knoten stehen zu bleiben. */
     expect(editor.state.doc.child(1).type.name).toBe("horizontalRule")
     expect(editor.state.doc.textContent).not.toContain("/tab")
+  })
+})
+
+describe("setDragHandleLocked", () => {
+  /*
+   * Der Regressionsfall: hier stand einmal
+   * {@code editor.commands.lockDragHandle()}. Das Kommando gehoert der
+   * Extension {@code DragHandle}, {@code DragHandleReact} bindet aber nur
+   * das Plugin ein; der Aufruf endete in „is not a function", und zwar erst
+   * zur Laufzeit, weil die Typdeklaration des Pakets es trotzdem anmeldet.
+   * Der Typecheck fand das nicht, ein Test findet es.
+   */
+  it("wirft nicht, auch ohne angemeldetes Drag-Handle-Plugin", () => {
+    const current = withParagraphs(3)
+    expect(() => setDragHandleLocked(current, true)).not.toThrow()
+    expect(() => setDragHandleLocked(current, false)).not.toThrow()
+  })
+
+  it("laesst den Beitrag unveraendert und den Rueckgaengig-Verlauf leer", () => {
+    const current = withParagraphs(3)
+    const before = JSON.stringify(current.getJSON())
+
+    setDragHandleLocked(current, true)
+
+    expect(JSON.stringify(current.getJSON())).toBe(before)
+    /* Das Oeffnen eines Menues ist keine Aenderung am Beitrag. */
+    expect(current.can().undo()).toBe(false)
   })
 })

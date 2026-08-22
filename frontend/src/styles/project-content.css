@@ -391,16 +391,53 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  /*
+   * Jede Zelle hat dieselbe feste Groesse, und das Bild wird
+   * hineingestellt, statt sie auszufuellen.
+   *
+   * <p><strong>contain und nicht cover.</strong> Mit {@code cover} fuellt
+   * jedes Bild seine Zelle und wird dafuer beschnitten: ein hochformatiges
+   * verliert oben und unten, ein breites links und rechts. In einer
+   * Galerie aus gemischten Formaten sieht das nicht nach Ordnung aus,
+   * sondern nach Zufall, und es nimmt der Autor:in die Entscheidung ueber
+   * ihren eigenen Bildausschnitt ab. Mit {@code contain} bleibt das
+   * Seitenverhaeltnis des Bildes erhalten, und die Zellen stehen trotzdem
+   * buendig nebeneinander, weil die Zelle die feste Groesse traegt und
+   * nicht das Bild.
+   *
+   * <p>Der Rahmen bekommt dafuer eine ruhige Flaeche: der freie Platz
+   * neben einem hochformatigen Bild soll wie Rahmen aussehen und nicht wie
+   * ein Loch.
+   */
   .project-content figure[data-columns] li {
     aspect-ratio: 4 / 3;
     margin-block-start: 0;
+    padding: 0.5rem;
+    background-color: var(--muted);
+    border-radius: var(--radius-card);
+  }
+
+  /*
+   * Die Zelle traegt die Groesse, das Bild fuellt sie und behaelt dabei sein
+   * Seitenverhaeltnis. Genau dafuer ist {@code contain} da: Breite und Hoehe
+   * auf 100 Prozent zu setzen ist kein Widerspruch dazu, sondern die
+   * Voraussetzung, denn erst damit hat das Bild eine Flaeche, in die es
+   * eingepasst werden kann. Ein {@code auto} mit {@code max-block-size: 100%}
+   * traege das nicht: die Prozentangabe braucht eine Hoehe am Elternteil,
+   * und die Ansicht auf der Schreibflaeche legt noch eine Huelle dazwischen.
+   *
+   * <p>Die Schreibflaeche haengt ihre eigene Huelle um das Bild (Knopf zum
+   * Entfernen); sie muss die Zelle deshalb ebenso ausfuellen.
+   */
+  .project-content figure[data-columns] li > * {
+    block-size: 100%;
   }
 
   .project-content figure[data-columns] img {
     inline-size: 100%;
     block-size: 100%;
-    object-fit: cover;
-    border-radius: var(--radius-card);
+    object-fit: contain;
+    border-radius: calc(var(--radius-card) - 0.25rem);
   }
 
   /* ------------------------------------------------------------
@@ -489,5 +526,25 @@
   .project-content .ProseMirror {
     min-block-size: 24rem;
     padding-block-end: 8rem;
+    /*
+     * Der Streifen fuer die Blockbedienung, und er gehoert an die
+     * Schreibflaeche und nicht an den Rahmen darum.
+     *
+     * <p>Beides sieht gleich aus und ist es nicht: der Drag-Handle horcht
+     * auf mousemove ueber view.dom, also ueber genau diesem Element. Lag
+     * der Streifen aussen, kam dort kein Ereignis an, und der Griff
+     * erschien nur, solange der Zeiger ueber dem Text stand. Notion zeigt
+     * ihn auch daneben, und die Erweiterung kann das ebenfalls: sie sucht
+     * mit findElementNextToCoords den Block rechts vom Zeiger.
+     *
+     * <p>Dasselbe gilt beim Ablegen. prosemirror-dropcursor loescht seine
+     * Linie 20 ms nach drop oder dragleave auf view.dom und sonst erst
+     * nach seinem Notnagel von fuenf Sekunden. Wer im Streifen loslaesst,
+     * sah die Linie deshalb noch stehen, obwohl der Block laengst
+     * verschoben war.
+     *
+     * <p>Drei Schaltflaechen zu 24 Pixeln mit Abstand brauchen 80.
+     */
+    padding-inline-start: 5rem;
   }
 }

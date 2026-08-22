@@ -126,7 +126,21 @@ export function ProjectMetaSidebar({
       {hasPeople && (
         <MetaRow label={t("project.detail.meta.members")}>
           <ul className="flex flex-col gap-1">
-            {author && <li>{fullNameOf(author)}</li>}
+            {/*
+             * Die Autor:in steht nicht in members (§3.13.1), traegt aber
+             * seit Contract v66 ihre eigene Funktionsbezeichnung (§3.3).
+             * Sie steht vorn: der Beitrag gehoert ihr.
+             */}
+            {author && (
+              <li>
+                {fullNameOf(author)}
+                {project.authorRole && (
+                  <span className="type-body-sm font-normal text-muted-foreground">
+                    {` · ${project.authorRole}`}
+                  </span>
+                )}
+              </li>
+            )}
             {members.map((member, index) => (
               <li key={member.userId ?? index}>
                 {fullNameOf({

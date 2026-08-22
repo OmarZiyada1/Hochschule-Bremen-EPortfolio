@@ -1,9 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 
-import {
-  projectQueries,
-  type ProjectListParams,
-} from "@/api/queries/projects"
+import { projectQueries, type ProjectListParams } from "@/api/queries/projects"
 
 /**
  * Projektliste aus GET /projects. Pfad, Typ und Key liegen in der Fabrik

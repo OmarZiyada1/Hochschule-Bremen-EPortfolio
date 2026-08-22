@@ -35,7 +35,7 @@ class BlockSchemaMigrationTest {
 	private final BlockValidationService validation = new BlockValidationService();
 
 	@Test
-	@DisplayName("Die aktuelle Version ist 3 (Contract v63, §2.10)")
+	@DisplayName("Die aktuelle Version ist 3 (Contract v66, §2.10)")
 	void currentVersionIsThree() {
 		assertThat(BlockSchemaMigration.CURRENT_VERSION).isEqualTo(3);
 	}

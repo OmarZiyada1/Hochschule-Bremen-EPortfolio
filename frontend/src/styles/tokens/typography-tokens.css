@@ -67,7 +67,11 @@
   --fs-content-h1: clamp(1.5rem, 1.402rem + 0.435vw, 1.75rem); /* 24 bis 28 */
   --fs-content-h2: clamp(1.25rem, 1.201rem + 0.217vw, 1.375rem); /* 20 bis 22 */
   --fs-content-h3: clamp(1.125rem, 1.076rem + 0.217vw, 1.25rem); /* 18 bis 20 */
-  --fs-content-h4: clamp(1.0625rem, 1.038rem + 0.109vw, 1.125rem); /* 17 bis 18 */
+  --fs-content-h4: clamp(
+    1.0625rem,
+    1.038rem + 0.109vw,
+    1.125rem
+  ); /* 17 bis 18 */
   --fs-content-h5: clamp(1rem, 0.976rem + 0.109vw, 1.0625rem); /* 16 bis 17 */
   --fs-content-h6: 1rem; /* 16, die Untergrenze */
 

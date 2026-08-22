@@ -107,7 +107,12 @@ function everyNode(): BlockNode[] {
     { type: "videoBlock", attrs: { fileId: FILE_A, caption: "Aufnahme" } },
     {
       type: "videoBlock",
-      attrs: { provider: "youtube", videoId: "dQw4w9WgXcQ", caption: "" },
+      attrs: {
+        provider: "youtube",
+        videoId: "dQw4w9WgXcQ",
+        hash: null,
+        caption: "",
+      },
     },
     { type: "audioBlock", attrs: { fileId: FILE_B, caption: "Interview" } },
     {
@@ -118,7 +123,8 @@ function everyNode(): BlockNode[] {
       type: "embedBlock",
       attrs: {
         provider: "figma",
-        embedUrl: "https://www.figma.com/embed?node-id=1",
+        embedUrl:
+          "https://embed.figma.com/design/o6SECXRMKGOzCfG5xZebPV/Name?embed-host=share",
         height: 460,
       },
     },
@@ -298,7 +304,14 @@ describe("Round-Trip ueber alle Blocktypen", () => {
       { type: "videoBlock", attrs: { fileId: FILE_A, caption: "Aufnahme" } },
       {
         type: "videoBlock",
-        attrs: { provider: "vimeo", videoId: "123456789", caption: "Vortrag" },
+        /* Nicht gelistet: ohne den Freigabe-Hash ist das Video im Rahmen
+           nicht abspielbar (2.5 seit v64). */
+        attrs: {
+          provider: "vimeo",
+          videoId: "123456789",
+          hash: "3ace684330",
+          caption: "Vortrag",
+        },
       },
     ]
     const { doc, dropped } = roundTrip(nodes)
@@ -544,7 +557,7 @@ describe("migrateBlockContent", () => {
     expect(migrateBlockContent(content, 1)).toBe(content)
   })
 
-  it("fuehrt die aktuelle Version 3 (Contract v63, 2.10)", () => {
+  it("fuehrt die aktuelle Version 3 (Contract v66, 2.10)", () => {
     expect(BLOCK_SCHEMA_VERSION).toBe(3)
   })
 
@@ -587,10 +600,16 @@ describe("docToBlocks laesst unfertige Medienknoten weg", () => {
       type: "doc",
       content: [
         paragraph("bleibt"),
-        { type: "imageBlock", attrs: { fileId: "", alt: "", caption: "", width: 100 } },
+        {
+          type: "imageBlock",
+          attrs: { fileId: "", alt: "", caption: "", width: 100 },
+        },
         { type: "galleryBlock", attrs: { items: [], columns: 2, caption: "" } },
         { type: "mathBlock", attrs: { latex: "   " } },
-        { type: "embedBlock", attrs: { provider: "figma", embedUrl: "", height: 460 } },
+        {
+          type: "embedBlock",
+          attrs: { provider: "figma", embedUrl: "", height: 460 },
+        },
       ] as BlockNode[],
     })
 

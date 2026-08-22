@@ -11,7 +11,6 @@ import {
   Item,
   ItemActions,
   ItemContent,
-  ItemDescription,
   ItemGroup,
   ItemTitle,
 } from "@/components/ui/item"
@@ -47,7 +46,13 @@ const NO_IDS: readonly string[] = []
  *
  * <p>Wer schon in der Liste steht, taucht in der Vorschlagsliste nicht mehr
  * auf, ebenso wenig die Autor:in: sie steht in {@code Project.authorId} und
- * ist keine {@code ProjectMember}-Zeile (§3.13.1).
+ * ist keine {@code ProjectMember}-Zeile (§3.13.1). Ihre eigene
+ * Funktionsbezeichnung traegt {@code authorRole} am Projekt und hat ein
+ * eigenes Feld daneben (§3.3 seit Contract v66).
+ *
+ * <p><strong>Die Bezeichnung laesst sich in der Liste nachtragen.</strong>
+ * Sie ist seit Contract v65 freiwillig, und eine Korrektur soll nicht
+ * Entfernen und erneutes Aufnehmen verlangen.
  *
  * <p><strong>Und ebenso wenig die zugewiesene Redaktion</strong> (§5, Fussnote 3
  * seit Contract v61, KAN-77). Zugewiesene Redaktion und Projektseite
@@ -83,7 +88,11 @@ export function ProjectMembersField({
   /** Reicht {@code aria-invalid} und die Fehler-ID an die Personensuche durch. */
   invalid?: boolean
   describedBy?: string
-  /** Pflichtkennzeichnung hinter beiden Beschriftungen. */
+  /**
+   * Pflichtkennzeichnung hinter der Personenauswahl. Die
+   * Funktionsbezeichnung traegt sie nicht: sie ist seit Contract v65
+   * freiwillig.
+   */
   labelSuffix?: ReactNode
 }) {
   const { t } = useTranslation()
@@ -94,7 +103,13 @@ export function ProjectMembersField({
   const [pending, setPending] = useState<UserLookupResponse | null>(null)
   const [pendingRole, setPendingRole] = useState("")
 
-  const complete = pending !== null && pendingRole.trim() !== ""
+  /*
+   * Nur die Person ist noetig. Die Funktionsbezeichnung ist seit Contract
+   * v65 freiwillig und laesst sich in der Liste jederzeit nachtragen; sie
+   * hier zu verlangen hiesse, beim Aufnehmen eine Angabe zu erzwingen, die
+   * das Datenmodell nicht verlangt.
+   */
+  const complete = pending !== null
 
   const excludedIds = useMemo(
     () => [
@@ -128,6 +143,15 @@ export function ProjectMembersField({
     onChange(value.filter((member) => member.id !== userId))
   }
 
+  /** Traegt eine Funktionsbezeichnung an einer vorhandenen Zeile nach. */
+  function setRole(userId: string, projectRole: string) {
+    onChange(
+      value.map((member) =>
+        member.id === userId ? { ...member, projectRole } : member
+      )
+    )
+  }
+
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-start">
       {/* Links: die beiden Felder untereinander. */}
@@ -149,8 +173,9 @@ export function ProjectMembersField({
             htmlFor={roleInputId}
             className="type-label-xs text-muted-foreground uppercase"
           >
+            {/* Ohne Pflichtkennzeichnung: die Bezeichnung ist seit Contract
+                v65 freiwillig und laesst sich in der Liste nachtragen. */}
             {t("project.metadata.members.role")}
-            {labelSuffix}
           </FieldLabel>
           <Input
             id={roleInputId}
@@ -186,28 +211,47 @@ export function ProjectMembersField({
           </p>
         ) : (
           <ItemGroup aria-labelledby={listLabelId} className="gap-2 md:mt-7">
-            {value.map((member) => (
-              <Item key={member.id} variant="outline" size="sm" role="listitem">
-                <ItemContent>
-                  <ItemTitle>{fullNameOf(member)}</ItemTitle>
-                  <ItemDescription>{member.projectRole}</ItemDescription>
-                </ItemContent>
-                <ItemActions>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    disabled={disabled}
-                    aria-label={t("project.metadata.members.remove", {
-                      name: fullNameOf(member),
-                    })}
-                    onClick={() => remove(member.id)}
-                  >
-                    <XIcon aria-hidden="true" />
-                  </Button>
-                </ItemActions>
-              </Item>
-            ))}
+            {value.map((member) => {
+              return (
+                <Item
+                  key={member.id}
+                  variant="outline"
+                  size="sm"
+                  role="listitem"
+                >
+                  <ItemContent>
+                    <ItemTitle>{fullNameOf(member)}</ItemTitle>
+                    <Input
+                      value={member.projectRole}
+                      disabled={disabled}
+                      placeholder={t(
+                        "project.metadata.members.rolePlaceholder"
+                      )}
+                      aria-label={t("project.metadata.members.roleOf", {
+                        name: fullNameOf(member),
+                      })}
+                      onChange={(event) =>
+                        setRole(member.id, event.target.value)
+                      }
+                    />
+                  </ItemContent>
+                  <ItemActions>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      disabled={disabled}
+                      aria-label={t("project.metadata.members.remove", {
+                        name: fullNameOf(member),
+                      })}
+                      onClick={() => remove(member.id)}
+                    >
+                      <XIcon aria-hidden="true" />
+                    </Button>
+                  </ItemActions>
+                </Item>
+              )
+            })}
           </ItemGroup>
         )}
       </div>

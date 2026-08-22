@@ -446,7 +446,7 @@ describe("Medienknoten", () => {
         type: "embedBlock",
         attrs: {
           provider: "codepen",
-          embedUrl: "https://codepen.io/pen/embed/abc",
+          embedUrl: "https://codepen.io/a/embed/abc",
           height: given,
         },
       })
@@ -466,7 +466,7 @@ describe("Medienknoten", () => {
     })
     const ohneHttps = sanitizeBlockNode({
       type: "embedBlock",
-      attrs: { provider: "codepen", embedUrl: "http://codepen.io/pen/embed/a" },
+      attrs: { provider: "codepen", embedUrl: "http://codepen.io/a/embed/b" },
     })
 
     expect(fremderProvider.ok === false && fremderProvider.reason).toBe(
@@ -564,5 +564,82 @@ describe("Medienknoten", () => {
     expect(fehlend.normalizations).toContain("GALLERY_ITEM_ALT_DEFAULTED")
     const node = fehlend.node
     expect(node.type === "galleryBlock" && node.attrs.items[0].alt).toBe("")
+  })
+})
+
+/*
+ * Contract v64 aendert, was eine gueltige Einbettung ist: Host und Pfad
+ * statt nur Host, embed.figma.com statt www.figma.com, und gist entfaellt
+ * ganz. Ein bereits gespeicherter Block darf daran nicht scheitern. Weil
+ * BlockService.replace die gesamte Liste prueft, waere ein einziger alter
+ * Block sonst eine Sackgasse: der Beitrag liesse sich nicht mehr speichern,
+ * und der Block nicht einmal loeschen.
+ */
+describe("Alte Einbettungen beim Lesen (Contract v64)", () => {
+  const embed = (provider: string, embedUrl: string) => ({
+    type: "embedBlock",
+    attrs: { provider, embedUrl, height: 460 },
+  })
+
+  it("rechnet die YouTube-Zuschauerseite in die Einbettung um", () => {
+    const result = sanitized(
+      embed("youtube", "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    )
+    expect(result.node).toEqual(
+      embed("youtube", "https://www.youtube.com/embed/dQw4w9WgXcQ")
+    )
+    expect(result.normalizations).toContain("EMBED_URL_NORMALIZED")
+  })
+
+  it("fuehrt eine alte Figma-Adresse auf den Einbettungshost", () => {
+    const result = sanitized(
+      embed(
+        "figma",
+        "https://www.figma.com/design/o6SECXRMKGOzCfG5xZebPV/HSB?node-id=839-3273"
+      )
+    )
+    const node = result.node
+    expect(node.type).toBe("embedBlock")
+    const url = new URL(
+      node.type === "embedBlock" ? node.attrs.embedUrl : "https://x.invalid"
+    )
+    expect(url.hostname).toBe("embed.figma.com")
+    expect(url.searchParams.get("embed-host")).toBe("share")
+    expect(result.normalizations).toContain("EMBED_URL_NORMALIZED")
+  })
+
+  it("rechnet die CodePen-Seite in die Einbettung um", () => {
+    const result = sanitized(embed("codepen", "https://codepen.io/a/pen/b"))
+    expect(result.node).toEqual(
+      embed("codepen", "https://codepen.io/a/embed/b")
+    )
+  })
+
+  it("macht aus einem Gist-Block einen Absatz mit Link", () => {
+    /* Umrechnen geht nicht: GitHub bietet fuer Gists keinen einbettbaren
+       Rahmen an. Verwerfen ginge auch nicht, das waere die Sackgasse. */
+    const url =
+      "https://gist.github.com/tomfun/d6f4f1faeac1aed9493c425e9cfe8fa5"
+    const result = sanitized(embed("gist", url))
+    expect(result.node).toEqual({
+      type: "paragraph",
+      attrs: { textAlign: null },
+      content: [
+        {
+          type: "text",
+          text: url,
+          marks: [{ type: "link", attrs: { href: url } }],
+        },
+      ],
+    })
+    expect(result.normalizations).toContain("EMBED_GIST_CONVERTED_TO_LINK")
+  })
+
+  it("verwirft, was sich auch nicht umrechnen laesst", () => {
+    const result = sanitizeBlockNode(
+      embed("youtube", "https://example.org/nichts")
+    )
+    expect(result.ok).toBe(false)
+    expect(result.ok === false && result.reason).toBe("EMBED_URL_NOT_ALLOWED")
   })
 })

@@ -24,7 +24,12 @@ public class ProjectMember extends BaseEntity {
 	@JoinColumn(name = "user_id", nullable = false)
 	private User user;
 
-	@Column(nullable = false, length = 255)
+	/**
+	 * Freie Funktionsbezeichnung, seit Contract v65 freiwillig (§3.13). Sie
+	 * kann spaeter eingetragen werden und ist keine Huerde beim Anlegen; die
+	 * Autor:in traegt anfangs gar keine.
+	 */
+	@Column(length = 255)
 	private String projectRole;
 
 	protected ProjectMember() {

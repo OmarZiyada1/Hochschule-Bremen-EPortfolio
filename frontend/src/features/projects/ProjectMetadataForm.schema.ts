@@ -96,18 +96,14 @@ export type PersonValue = z.infer<typeof personValueSchema>
  * Ein Projektmitglied im Formular: Person plus freie Funktionsbezeichnung
  * (§3.13).
  *
- * <p><strong>Die Bezeichnung ist Pflicht.</strong> §3.13 fuehrt
- * {@code projectRole String not null}, und {@code MemberRequest} setzt das
- * mit {@code @NotBlank} durch. Dass die generierte schema.d.ts das Feld
- * optional zeigt, ist ein springdoc-Artefakt der Request-Schemas: KAN-76 hat
- * die Pflichtfelder nur an den Antwortschemas nachgezogen. Ohne diese
- * Pruefung liefe ein Mitglied ohne Bezeichnung in ein 400
- * {@code VALIDATION_FAILED}, dessen Feldname
- * ({@code members[0].projectRole}) sich keiner Formularzeile zuordnen
- * laesst und deshalb als anonyme Meldung am Formular landete.
+ * <p><strong>Die Bezeichnung ist seit Contract v65 freiwillig.</strong> Sie
+ * kann spaeter eingetragen werden und ist keine Huerde beim Anlegen; die
+ * Autor:in, die seit derselben Version als Zeile in dieser Liste steht,
+ * traegt anfangs gar keine. Leerraum gilt als keine Angabe und wird zu
+ * einer leeren Zeichenkette getrimmt; der Server macht daraus {@code null}.
  */
 const memberValueSchema = personValueSchema.extend({
-  projectRole: z.string().trim().min(1, "validation.projectRole.required"),
+  projectRole: z.string().trim().max(255, "validation.projectRole.tooLong"),
 })
 
 export type MemberValue = z.infer<typeof memberValueSchema>
@@ -139,6 +135,9 @@ export const projectMetadataSchema = z.object({
   tags: z.array(z.string()).max(MAX_TAGS, "validation.tags.tooMany"),
   editors: z.array(personValueSchema),
   members: z.array(memberValueSchema),
+  /* Funktionsbezeichnung der Autor:in (§3.3 seit Contract v66), freiwillig.
+     Sie ist keine Mitgliedszeile: die Autor:in bleibt Autor:in (§3.13.1). */
+  authorRole: z.string().trim().max(255, "validation.projectRole.tooLong"),
 })
 
 export type ProjectMetadataValues = z.infer<typeof projectMetadataSchema>
@@ -196,11 +195,14 @@ export function toProjectMetadataValues(
       firstName: editor.firstName,
       lastName: editor.lastName,
     })),
+    authorRole: project.authorRole ?? "",
     members: project.members.map((member) => ({
       id: member.userId,
       firstName: member.firstName,
       lastName: member.lastName,
-      projectRole: member.projectRole,
+      /* Ohne Bezeichnung steht im Formular die leere Zeichenkette: ein
+         Eingabefeld kennt kein null. */
+      projectRole: member.projectRole ?? "",
     })),
   }
 }
@@ -252,10 +254,14 @@ export function toProjectUpdateRequest(
     categoryId: values.categoryId,
     semesterId: values.semesterId,
     tags: values.tags,
+    authorRole:
+      values.authorRole.trim() === "" ? undefined : values.authorRole.trim(),
     editorIds: values.editors.map((editor) => editor.id),
     members: values.members.map((member): MemberRequest => ({
       userId: member.id,
-      projectRole: member.projectRole,
+      /* Ohne Bezeichnung steht im Formular die leere Zeichenkette: ein
+         Eingabefeld kennt kein null. */
+      projectRole: member.projectRole ?? "",
     })),
   }
 }

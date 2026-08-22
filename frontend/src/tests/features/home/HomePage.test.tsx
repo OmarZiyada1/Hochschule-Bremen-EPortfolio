@@ -28,7 +28,10 @@ function entryAt(position: number, title: string) {
       status: "PUBLISHED",
       summary: "Ein Teaser.",
       author: { firstName: "Lena", lastName: "Müller" },
-      studyProgram: { id: "20000000-0000-0000-0000-000000000001", name: "Informatik" },
+      studyProgram: {
+        id: "20000000-0000-0000-0000-000000000001",
+        name: "Informatik",
+      },
     },
   }
 }
@@ -123,10 +126,7 @@ describe("HomePage", () => {
     ).toBeInTheDocument()
     expect(
       screen.getByRole("link", { name: /Projekt ansehen/ })
-    ).toHaveAttribute(
-      "href",
-      "/projects/10000000-0000-0000-0000-000000000001"
-    )
+    ).toHaveAttribute("href", "/projects/10000000-0000-0000-0000-000000000001")
 
     /* Platz 5 rueckt nicht auf Platz 4 nach: die Luecke bleibt frei. */
     expect(

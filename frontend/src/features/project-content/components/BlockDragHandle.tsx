@@ -1,9 +1,12 @@
 import DragHandle from "@tiptap/extension-drag-handle-react"
 import type { Editor } from "@tiptap/react"
-import { useState } from "react"
+import { useCallback, useState } from "react"
 
 import { BlockControls } from "@/features/project-content/components/BlockControls"
-import { blockIndexAtPos } from "@/features/project-content/editorCommands"
+import {
+  blockIndexAtPos,
+  setDragHandleLocked,
+} from "@/features/project-content/editorCommands"
 
 /**
  * Die Blockbedienung am Zeiger (KAN-36).
@@ -24,6 +27,15 @@ import { blockIndexAtPos } from "@/features/project-content/editorCommands"
  * ganze Seite samt Kopfzeile, Seitenleiste, Dialogen und allen
  * Knotenansichten bei jeder Zeigerbewegung ueber eine Blockgrenze neu.
  *
+ * <p><strong>Solange eine Flaeche offen steht, bleibt der Griff
+ * stehen.</strong> Die Erweiterung blendet ihn aus, sobald der Zeiger den
+ * Text verlaesst; wer die Einfuegeleiste oeffnet und die Maus darauf zu
+ * bewegt, tut genau das. Der Griff verschwand dann mitsamt der Leiste,
+ * bevor sich etwas anklicken liess. Dafuer gibt es die Kommandos
+ * {@code lockDragHandle} und {@code unlockDragHandle}: im gesperrten
+ * Zustand laesst die Erweiterung {@code mouseleave} unbeachtet und meldet
+ * auch keinen Knotenwechsel mehr.
+ *
  * <p><strong>Der Zeigerweg ersetzt den Tastaturweg nicht.</strong> Die
  * Erweiterung blendet den Griff mit {@code visibility: hidden} aus, solange
  * der Zeiger nicht ueber einem Block steht; ein so verstecktes Element ist
@@ -41,6 +53,11 @@ export function BlockDragHandle({
 }) {
   const [index, setIndex] = useState<number | null>(null)
 
+  const setBusy = useCallback(
+    (busy: boolean) => setDragHandleLocked(editor, busy),
+    [editor]
+  )
+
   return (
     <DragHandle
       editor={editor}
@@ -56,6 +73,7 @@ export function BlockDragHandle({
           editor={editor}
           index={index}
           disabled={disabled}
+          onBusyChange={setBusy}
           onAnnounce={onAnnounce}
         />
       )}

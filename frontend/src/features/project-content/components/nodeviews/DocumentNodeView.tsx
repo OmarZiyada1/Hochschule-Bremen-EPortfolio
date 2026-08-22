@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button"
 import { MediaCard } from "@/features/project-content/components/nodeviews/MediaCard"
 import { MediaShell } from "@/features/project-content/components/MediaShell"
 import { UploadDropzone } from "@/features/project-content/components/UploadDropzone"
-import { formatFileSize, maxMebibytes } from "@/features/project-content/uploadKinds"
+import {
+  formatFileSize,
+  maxMebibytes,
+} from "@/features/project-content/uploadKinds"
 
 /**
  * DOCUMENT auf der Schreibflaeche (Contract 2.5).

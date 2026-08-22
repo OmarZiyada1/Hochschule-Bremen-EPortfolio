@@ -1,7 +1,9 @@
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import { projectCard, reference } from "@/tests/fixtures"
+import { fileBlobHandler } from "@/tests/msw/handlers"
+import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
 
 import { ProjectCard } from "@/components/common/ProjectCard"
@@ -99,14 +101,43 @@ describe("ProjectCard", () => {
 
   it("zeigt mit Coverbild ein Bild ohne eigenen Namen", () => {
     const { container } = renderWithProviders(
-      <ProjectCard project={projectCard({ coverImageUrl: "/cover.webp" })} />
+      <ProjectCard
+        project={projectCard({
+          coverImageUrl: "/cover.webp",
+          status: "PUBLISHED",
+        })}
+      />
     )
 
+    /* Ueber resolveApiUrl und nicht als nackter Pfad: die Adresse landet im
+       src eines img und laeuft nie durch request(), sie muss die Basis-URL
+       also selbst tragen. */
     const image = container.querySelector("img")
-    expect(image).toHaveAttribute("src", "/cover.webp")
+    expect(image?.getAttribute("src")?.endsWith("/cover.webp")).toBe(true)
     /* Der Titel steht daneben; ein zweiter Name am Bild waere eine
        Dopplung fuer alle, die vorlesen lassen. */
     expect(image).toHaveAttribute("alt", "")
+  })
+
+  it("holt das Coverbild eines Entwurfs mit Token", async () => {
+    /* Die Datei ist erst bei PUBLISHED oeffentlich (§3.15, §5); ohne den
+       angemeldeten Weg antwortet der Server mit 401 und die Kachel zeigt
+       einen leeren Rahmen (Befund aus KAN-36). */
+    server.use(fileBlobHandler())
+    const { container } = renderWithProviders(
+      <ProjectCard
+        project={projectCard({
+          coverImageUrl: "/api/files/8f14e45f-ceea-467a-9c9e-1f1e3a3d4b5c",
+          status: "DRAFT",
+        })}
+      />
+    )
+
+    await waitFor(() =>
+      expect(container.querySelector("img")?.getAttribute("src")).toMatch(
+        /^blob:/
+      )
+    )
   })
 
   it("kommt ohne die nullbaren Felder aus", () => {

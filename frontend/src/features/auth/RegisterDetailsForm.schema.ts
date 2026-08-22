@@ -1,6 +1,9 @@
 import { z } from "zod"
 
-import { newPasswordSchema, withPasswordConfirmation } from "@/features/auth/password.schema"
+import {
+  newPasswordSchema,
+  withPasswordConfirmation,
+} from "@/features/auth/password.schema"
 
 /**
  * Eingabepruefung der Angaben-Seite (KAN-33, Frontend-Regel 12):
@@ -29,4 +32,6 @@ export const registerDetailsFormSchema = withPasswordConfirmation(
   "confirmPassword"
 )
 
-export type RegisterDetailsFormValues = z.infer<typeof registerDetailsFormSchema>
+export type RegisterDetailsFormValues = z.infer<
+  typeof registerDetailsFormSchema
+>

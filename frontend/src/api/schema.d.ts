@@ -1306,7 +1306,7 @@ export interface components {
        */
       userId: string
       /**
-       * @description Freie Funktionsbezeichnung im Projekt, z. B. "Frontend". Nicht die System-Rolle aus §2.1.
+       * @description Freie Funktionsbezeichnung im Projekt, z. B. "Frontend". Nicht die System-Rolle aus §2.1. Freiwillig seit Contract v65.
        * @example Frontend
        */
       projectRole?: string
@@ -1325,6 +1325,11 @@ export interface components {
       title?: string
       /** @description Teaser fuer Kachel- und Listenansicht. Null loescht den Wert. */
       summary?: string | null
+      /**
+       * @description Funktionsbezeichnung der Autor:in im Projekt, z. B. "Konzept". Freiwillig; die Autor:in bleibt Autor:in und wird kein Mitglied (§3.13.1).
+       * @example Konzept
+       */
+      authorRole?: string
       /** @description Kachelbild. Null loescht den Wert. */
       coverImageUrl?: string | null
       /**
@@ -1376,10 +1381,10 @@ export interface components {
       firstName: string
       lastName: string
       /**
-       * @description Freie Funktionsbezeichnung im Projekt, z. B. "Frontend". Nicht die System-Rolle aus §2.1.
+       * @description Freie Funktionsbezeichnung im Projekt, z. B. "Frontend". Nicht die System-Rolle aus §2.1. Freiwillig seit Contract v65: sie kann spaeter eingetragen werden, und die Autor:in traegt anfangs keine.
        * @example Frontend
        */
-      projectRole: string
+      projectRole: string | null
     }
     /** @description Zugewiesene Redakteur:innen (§3.3). Bei einem PUBLISHED-Projekt fuer alle sichtbar, auch ohne Anmeldung (seit Contract v55); in jedem anderen Status nur fuer die Projektseite, die zugewiesene Redaktion und Admins. In der Praxis damit immer gefuellt: wer ein nicht veroeffentlichtes Projekt ueberhaupt lesen darf, gehoert genau zu diesem Kreis. Eine leere Liste bedeutet, dass keine Redaktion zugewiesen ist. */
     PersonResponse: {
@@ -1421,6 +1426,11 @@ export interface components {
       /** @description Fach oder Modul (§3.9). Dauerhaft freiwillig: anders als die uebrigen Bezuege steht es nicht unter den Pflichtfeldern des Einreichens (§3.3). */
       module: components["schemas"]["ReferenceResponse"] | null
       author: components["schemas"]["PersonResponse"]
+      /**
+       * @description Funktionsbezeichnung der Autor:in im Projekt, z. B. "Konzept" (§3.3 seit Contract v66). Freiwillig; die Autor:in bleibt Autor:in und ist kein Mitglied (§3.13.1).
+       * @example Konzept
+       */
+      authorRole: string | null
       /** @description Co-Autor:innen und Mitwirkende (§3.13). Nicht zu verwechseln mit der zugewiesenen Redaktion. */
       members: components["schemas"]["MemberResponse"][]
       /** @description Freie Schlagwoerter, hoechstens fuenf. Alphabetisch sortiert, damit die Reihenfolge zwischen zwei Aufrufen stabil bleibt. */
@@ -1598,6 +1608,11 @@ export interface components {
       title?: string
       /** @description Teaser fuer Kachel- und Listenansicht. */
       summary?: string | null
+      /**
+       * @description Funktionsbezeichnung der Autor:in im Projekt, z. B. "Konzept". Freiwillig; die Autor:in bleibt Autor:in und wird kein Mitglied (§3.13.1).
+       * @example Konzept
+       */
+      authorRole?: string
       /** @description Kachelbild. */
       coverImageUrl?: string | null
       /**

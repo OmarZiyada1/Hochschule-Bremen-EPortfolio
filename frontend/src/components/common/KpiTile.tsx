@@ -41,7 +41,10 @@ export function KpiTile({
   if (variant === "plain") {
     return (
       <div
-        className={cn("flex flex-col items-center gap-1 text-center", className)}
+        className={cn(
+          "flex flex-col items-center gap-1 text-center",
+          className
+        )}
       >
         <p className="type-num-stat font-extrabold text-accent-foreground tabular-nums">
           {value}

@@ -148,51 +148,6 @@ export function moveBlock(
   return true
 }
 
-/**
- * Beginnt die Ziehbewegung an einem Block.
- *
- * <p>Der Knoten wird ausgewaehlt und als Schnipsel an ProseMirror
- * uebergeben; {@code move: true} sagt, dass er an der alten Stelle
- * verschwindet, statt kopiert zu werden. Ablegen, Cursor und
- * Rueckgaengig-Verlauf besorgt danach die Bibliothek. Ein eigener Ablauf
- * mit Zielberechnung waere ein zweites, schlechteres Drag-and-Drop neben
- * dem vorhandenen.
- *
- * <p>Die Funktion steht hier und nicht in der Komponente, weil sie
- * {@code view.dragging} setzt: in einer Komponente waere das eine Aenderung
- * an einem Prop, und die Regel {@code react-hooks/immutability} weist sie
- * zu Recht zurueck, ohne den Sonderfall zu kennen.
- *
- * @param dataTransfer das {@code dataTransfer} des Ereignisses
- * @returns ob die Bewegung beginnen konnte
- */
-export function startBlockDrag(
-  editor: Editor,
-  index: number,
-  dataTransfer: DataTransfer
-): boolean {
-  const doc = editor.state.doc
-  if (index < 0 || index >= doc.childCount) {
-    return false
-  }
-  const position = offsetOfBlock(doc, index)
-  const node = doc.nodeAt(position)
-  if (node === null) {
-    return false
-  }
-
-  editor.chain().setNodeSelection(position).run()
-  editor.view.dragging = {
-    slice: editor.state.doc.slice(position, position + node.nodeSize),
-    move: true,
-  }
-  dataTransfer.effectAllowed = "move"
-  /* Ohne einen gesetzten Datentyp startet Firefox die Ziehbewegung nicht;
-     der Inhalt selbst kommt aus view.dragging. */
-  dataTransfer.setData("text/plain", "")
-  return true
-}
-
 /** Loescht den Block mit diesem Index. */
 export function deleteBlock(editor: Editor, index: number): boolean {
   const doc = editor.state.doc
@@ -262,4 +217,38 @@ export function insertBlockAtRange(
     return editor.chain().focus().insertContent(content).run()
   }
   return insertBlockAfter(editor, index, content)
+}
+
+/**
+ * Haelt den Ziehgriff an seinem Platz, solange eine Flaeche der
+ * Blockbedienung offen steht.
+ *
+ * <p><strong>Warum nicht {@code editor.commands.lockDragHandle()}.</strong>
+ * Das Kommando gehoert der Extension {@code DragHandle};
+ * {@code DragHandleReact} bindet aber nur {@code DragHandlePlugin} ein und
+ * keine Extension. Der Aufruf endete deshalb in „is not a function", und
+ * zwar erst zur Laufzeit, weil die Typdeklaration des Pakets das Kommando
+ * trotzdem anmeldet. Das Plugin selbst liest die Sperre aus einem
+ * Transaktions-Meta, und genau das wird hier gesetzt: derselbe Weg, den
+ * das Kommando intern nimmt, nur ohne die Extension.
+ *
+ * <p>Ohne die Sperre blendet sich der Griff aus, sobald der Zeiger den
+ * Text verlaesst. Wer die Einfuegeleiste oeffnet und die Maus darauf zu
+ * bewegt, tut genau das: der Griff verschwand mitsamt der Leiste, bevor
+ * sich etwas anklicken liess.
+ *
+ * <p>Ohne angemeldetes Plugin, etwa in einem Test ohne Zeigerbedienung,
+ * bleibt das Meta wirkungslos und wirft nicht.
+ */
+export function setDragHandleLocked(editor: Editor, locked: boolean): void {
+  if (editor.isDestroyed) {
+    return
+  }
+  editor.view.dispatch(
+    editor.state.tr
+      .setMeta("lockDragHandle", locked)
+      /* Kein Schritt im Rueckgaengig-Verlauf: das Oeffnen eines Menues
+			   ist keine Aenderung am Beitrag. */
+      .setMeta("addToHistory", false)
+  )
 }

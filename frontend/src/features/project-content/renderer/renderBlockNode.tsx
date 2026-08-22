@@ -161,9 +161,12 @@ function namedBy(
  * sechste Ebene ist gar kein Ueberschriftenelement.
  */
 function renderHeading(node: HeadingNode): ReactNode {
-  const { tag: Tag, role, ariaLevel, className } = headingRendering(
-    node.attrs.level
-  )
+  const {
+    tag: Tag,
+    role,
+    ariaLevel,
+    className,
+  } = headingRendering(node.attrs.level)
   return (
     <Tag
       className={className}
@@ -475,7 +478,7 @@ function renderVideo(
           provider: context.t(`projectContent.provider.${attrs.provider}`),
         })}
         aria-describedby={caption.trim().length > 0 ? captionId : undefined}
-        src={embedUrlFor(attrs.provider, attrs.videoId)}
+        src={embedUrlFor(attrs.provider, attrs.videoId, attrs.hash)}
         loading="lazy"
         allowFullScreen
       />

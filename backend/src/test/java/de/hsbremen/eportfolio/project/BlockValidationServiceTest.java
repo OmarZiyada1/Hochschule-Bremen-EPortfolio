@@ -794,31 +794,70 @@ class BlockValidationServiceTest {
 		}
 
 		@Test
-		@DisplayName("vimeo, figma, codepen und gist mit je einem Host")
+		@DisplayName("vimeo, figma und codepen mit je einem Host")
 		void singleHostProviders() {
 			assertThatCode(() -> service.validate(BlockType.EMBED,
 					embed("vimeo", "https://player.vimeo.com/video/1"), 0))
 					.doesNotThrowAnyException();
 			assertThatCode(() -> service.validate(BlockType.EMBED,
-					embed("figma", "https://www.figma.com/embed?embed_host=share"), 0))
+					embed("figma", "https://embed.figma.com/design/o6SECXRMKGOzCfG5xZebPV/Name?embed-host=share"), 0))
 					.doesNotThrowAnyException();
 			assertThatCode(() -> service.validate(BlockType.EMBED,
-					embed("codepen", "https://codepen.io/pen/abc"), 0))
+					embed("codepen", "https://codepen.io/a/embed/abc"), 0))
 					.doesNotThrowAnyException();
+			// gist entfaellt mit v64: GitHub bietet fuer Gists keinen
+			// einbettbaren Rahmen an, sondern nur ein nachgeladenes Skript.
+			expect(ErrorCodes.EMBED_PROVIDER_NOT_ALLOWED, BlockType.EMBED,
+					embed("gist", "https://gist.github.com/a/b"));
+		}
+
+		@Test
+		@DisplayName("Seit v64 zaehlt auch der Pfad: die Zuschauerseite geht nicht mehr durch")
+		void pathMustBeAnEmbed() {
+			// Der haeufigste Fehlschlag: erlaubter Host, aber eine Seite, die
+			// das Einbetten per X-Frame-Options verbietet. Sie wurde
+			// angenommen und ergab einen leeren Rahmen ohne jede Meldung.
+			expect(ErrorCodes.EMBED_PROVIDER_NOT_ALLOWED, BlockType.EMBED,
+					embed("youtube", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"));
+			expect(ErrorCodes.EMBED_PROVIDER_NOT_ALLOWED, BlockType.EMBED,
+					embed("codepen", "https://codepen.io/a/pen/b"));
+			expect(ErrorCodes.EMBED_PROVIDER_NOT_ALLOWED, BlockType.EMBED,
+					embed("figma", "https://embed.figma.com/nichts/x"));
 			assertThatCode(() -> service.validate(BlockType.EMBED,
-					embed("gist", "https://gist.github.com/a/b"), 0))
+					embed("youtube", "https://www.youtube.com/embed/dQw4w9WgXcQ"), 0))
 					.doesNotThrowAnyException();
+		}
+
+		@Test
+		@DisplayName("Der Freigabe-Hash gehoert nur an ein vimeo-Video (v64)")
+		void vimeoShareHash() {
+			// Ein nicht gelistetes Vimeo-Video ist ohne den Hash nicht
+			// abspielbar; an einem youtube-Block waere er eine Angabe ohne
+			// Wirkung.
+			assertThatCode(() -> service.validate(BlockType.VIDEO,
+					node("videoBlock", MAPPER.createObjectNode()
+							.put("provider", "vimeo").put("videoId", "1212836492")
+							.put("hash", "3ace684330")), 0))
+					.doesNotThrowAnyException();
+			expect(ErrorCodes.BLOCK_CONTENT_INVALID, BlockType.VIDEO,
+					node("videoBlock", MAPPER.createObjectNode()
+							.put("provider", "youtube").put("videoId", "dQw4w9WgXcQ")
+							.put("hash", "3ace684330")));
+			expect(ErrorCodes.BLOCK_CONTENT_INVALID, BlockType.VIDEO,
+					node("videoBlock", MAPPER.createObjectNode()
+							.put("provider", "vimeo").put("videoId", "1212836492")
+							.put("hash", "a/b?c=1")));
 		}
 
 		@Test
 		@DisplayName("Nur https: eine http-Adresse ergibt EMBED_PROVIDER_NOT_ALLOWED")
 		void onlyHttps() {
 			expect(ErrorCodes.EMBED_PROVIDER_NOT_ALLOWED, BlockType.EMBED,
-					embed("codepen", "http://codepen.io/pen/abc"));
+					embed("codepen", "http://codepen.io/a/embed/abc"));
 		}
 
 		@Test
-		@DisplayName("VIDEO kennt nur youtube und vimeo, EMBED alle fuenf")
+		@DisplayName("VIDEO kennt nur youtube und vimeo, EMBED alle vier")
 		void listIsSplitInTwo() {
 			// Die VIDEO-Haelfte: die beiden Videoanbieter gehen durch, die drei
 			// uebrigen nicht.
@@ -830,19 +869,18 @@ class BlockValidationServiceTest {
 					node("videoBlock", MAPPER.createObjectNode()
 							.put("provider", "vimeo").put("videoId", "123456789")), 0))
 					.doesNotThrowAnyException();
-			for (String embedOnly : new String[] { "figma", "codepen", "gist" }) {
+			for (String embedOnly : new String[] { "figma", "codepen" }) {
 				expect(ErrorCodes.EMBED_PROVIDER_NOT_ALLOWED, BlockType.VIDEO,
 						node("videoBlock", MAPPER.createObjectNode()
 								.put("provider", embedOnly).put("videoId", "12345")));
 			}
 
-			// Die EMBED-Haelfte: alle fuenf gehen durch, ein sechster nicht.
+			// Die EMBED-Haelfte: alle vier gehen durch, ein fuenfter nicht.
 			for (String[] pair : new String[][] {
 					{ "youtube", "https://www.youtube.com/embed/x" },
 					{ "vimeo", "https://player.vimeo.com/video/1" },
-					{ "figma", "https://www.figma.com/embed?embed_host=share" },
-					{ "codepen", "https://codepen.io/pen/abc" },
-					{ "gist", "https://gist.github.com/a/b" } }) {
+					{ "figma", "https://embed.figma.com/design/o6SECXRMKGOzCfG5xZebPV/Name?embed-host=share" },
+					{ "codepen", "https://codepen.io/a/embed/abc" } }) {
 				assertThatCode(() -> service.validate(BlockType.EMBED,
 						embed(pair[0], pair[1]), 0)).doesNotThrowAnyException();
 			}
@@ -991,7 +1029,7 @@ class BlockValidationServiceTest {
 		samples.put(BlockType.EMBED,
 				node("embedBlock", MAPPER.createObjectNode()
 						.put("provider", "figma")
-						.put("embedUrl", "https://www.figma.com/embed?embed_host=share")
+						.put("embedUrl", "https://embed.figma.com/design/o6SECXRMKGOzCfG5xZebPV/Name?embed-host=share")
 						.put("height", 480)));
 
 		return Map.copyOf(samples);

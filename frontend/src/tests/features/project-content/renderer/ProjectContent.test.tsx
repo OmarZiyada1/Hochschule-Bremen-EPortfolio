@@ -358,8 +358,8 @@ describe("Video, Audio und Einbettung", () => {
       {
         type: "embedBlock",
         attrs: {
-          provider: "gist",
-          embedUrl: "https://gist.github.com/a/b",
+          provider: "codepen",
+          embedUrl: "https://codepen.io/a/embed/b",
           height: 5000,
         },
       },
@@ -367,7 +367,8 @@ describe("Video, Audio und Einbettung", () => {
         type: "embedBlock",
         attrs: {
           provider: "figma",
-          embedUrl: "https://www.figma.com/embed?x=1",
+          embedUrl:
+            "https://embed.figma.com/design/o6SECXRMKGOzCfG5xZebPV/Name?embed-host=share",
           height: 40,
         },
       }
