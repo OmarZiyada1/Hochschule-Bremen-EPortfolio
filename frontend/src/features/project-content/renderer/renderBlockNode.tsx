@@ -514,6 +514,13 @@ function renderAudio(
  * nennt zusaetzlich Dateityp und Groesse, damit vor dem Klick klar ist, was
  * geladen wird (SC 2.4.4). Der sichtbare Name steht im zugaenglichen Namen,
  * wie SC 2.5.3 es verlangt.
+ *
+ * <p><strong>{@code download} nur an einer Object-URL.</strong> In der
+ * Vorschau eines noch nicht veroeffentlichten Beitrags wird die Datei mit
+ * Token geholt, und die entstandene Adresse traegt keinen Dateinamen mehr:
+ * ohne das Attribut hiesse die gespeicherte Datei nach einer zufaelligen
+ * Kennung. An der oeffentlichen Adresse bleibt es weg, damit ein PDF wie
+ * bisher im Browser aufgeht, statt zwangsweise zu laden.
  */
 function renderDocument(
   node: DocumentBlockNode,
@@ -521,10 +528,12 @@ function renderDocument(
 ): ReactNode {
   const { fileId, fileName, size } = node.attrs
   const formattedSize = formatFileSize(size, context.locale)
+  const href = context.resolveFileUrl(fileId)
   return (
     <p data-block="document">
       <a
-        href={context.resolveFileUrl(fileId)}
+        href={href}
+        download={href.startsWith("blob:") ? fileName : undefined}
         aria-label={context.t("projectContent.document.accessibleName", {
           fileName,
           size: formattedSize,

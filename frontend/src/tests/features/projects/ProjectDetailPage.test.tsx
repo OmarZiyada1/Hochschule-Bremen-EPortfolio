@@ -704,14 +704,15 @@ describe("Weg zurueck in den Editor (KAN-36)", () => {
   })
 })
 
-describe("Bilder eines noch nicht veroeffentlichten Beitrags (KAN-36)", () => {
+describe("Medien eines noch nicht veroeffentlichten Beitrags (KAN-36)", () => {
   /*
    * GET /api/files/{id} ist erst oeffentlich, wenn das Projekt PUBLISHED
-   * ist (§3.15, §5). Ein img weist nichts nach, das Token liegt im Store:
-   * in der Vorschau eines Entwurfs beantwortete der Server deshalb jede
-   * Bildanfrage mit 401, und die Seite zeigte leere Stellen, ohne Fehler
-   * und ohne Meldung. Seit KAN-36 loest die Seite Bilder eines nicht
-   * veroeffentlichten Beitrags ueber den angemeldeten Weg auf.
+   * ist (§3.15, §5). Ein img, video oder audio weist nichts nach, das
+   * Token liegt im Store: in der Vorschau eines Entwurfs beantwortete der
+   * Server deshalb jede Medienanfrage mit 401, und die Seite zeigte leere
+   * Stellen, ohne Fehler und ohne Meldung. Seit KAN-36 loest die Seite
+   * jede Datei eines nicht veroeffentlichten Beitrags ueber den
+   * angemeldeten Weg auf.
    */
   function firstImage(): HTMLImageElement {
     return screen.getAllByRole("img")[0] as HTMLImageElement
@@ -729,6 +730,33 @@ describe("Bilder eines noch nicht veroeffentlichten Beitrags (KAN-36)", () => {
     await waitFor(() =>
       expect(firstImage().getAttribute("src")).toMatch(/^blob:/)
     )
+  })
+
+  it("holt auch Video, Ton und Dokument eines Entwurfs mit Token", async () => {
+    /* Die Vorschau ist die echte Seite und keine Nachbildung: ein Beitrag,
+       in dem das Video fehlt, beantwortet die Frage nicht, um derentwillen
+       jemand sie oeffnet. */
+    server.use(
+      fileBlobHandler(),
+      detailHandler(projectResponse({ status: "DRAFT" }))
+    )
+    signInAs("STUDENT")
+    const { container } = renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    await waitFor(() => {
+      expect(container.querySelector("video")?.getAttribute("src")).toMatch(
+        /^blob:/
+      )
+      expect(container.querySelector("audio")?.getAttribute("src")).toMatch(
+        /^blob:/
+      )
+      const link = container.querySelector('[data-block="document"] a')
+      expect(link?.getAttribute("href")).toMatch(/^blob:/)
+      /* Eine Object-URL traegt keinen Dateinamen; ohne download hiesse die
+         gespeicherte Datei nach einer zufaelligen Kennung. */
+      expect(link).toHaveAttribute("download")
+    })
   })
 
   it("laesst ein veroeffentlichtes Projekt beim blossen Pfad", async () => {

@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ViewModeSwitch } from "@/features/project-content/components/ViewModeSwitch"
-import { useProjectImageUrls } from "@/features/project-content/hooks/useProjectImageUrls"
+import { useProjectFileUrls } from "@/features/project-content/hooks/useProjectFileUrls"
 import { useFileUrl } from "@/api/useFileUrl"
 import { ProjectContent } from "@/features/project-content/renderer/ProjectContent"
 import { ProjectMetaSidebar } from "@/features/projects/components/ProjectMetaSidebar"
@@ -81,15 +81,16 @@ export default function ProjectDetailPage() {
   const { data, isPending, error } = useProjectDetail(projectId ?? "")
 
   /*
-   * Bilder eines noch nicht veroeffentlichten Beitrags brauchen den
-   * angemeldeten Weg; ohne ihn beantwortet der Server jede Bildanfrage
+   * Die Medien eines noch nicht veroeffentlichten Beitrags brauchen den
+   * angemeldeten Weg; ohne ihn beantwortet der Server jede Medienanfrage
    * dieser Seite mit 401, und die Vorschau eines Entwurfs zeigt leere
-   * Stellen statt der Bilder (Begruendung an useProjectImageUrls).
+   * Stellen statt Bild, Video, Ton und Dokument (Begruendung an
+   * useProjectFileUrls).
    * Bei PUBLISHED bleibt es beim blossen Pfad: dort ist die Datei
    * oeffentlich und obendrein zwischenspeicherbar (§3.15).
    */
   const needsToken = data !== undefined && data.status !== "PUBLISHED"
-  const resolveFileUrl = useProjectImageUrls(
+  const resolveFileUrl = useProjectFileUrls(
     data?.blocks ?? EMPTY_BLOCKS,
     needsToken
   )
