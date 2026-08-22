@@ -577,13 +577,8 @@
       "heading": "Projekt-Metadaten",
       "backToPortfolio": "Zurück zum Portfolio",
       "authorRole": {
-        "label": "Funktion von {{name}} im Projekt",
-        "placeholder": "z. B. Konzept",
-        "hint": "Freiwillig. Die Autor:in ist kein Projektmitglied, sondern die Eigentümerin des Beitrags; hier steht nur, was sie darin gemacht hat."
-      },
-      "people": {
-        "legend": "Beteiligte und ihre Funktionen",
-        "hint": "Wer den Beitrag geschrieben hat, steht fest. Hier steht, was die Autor:in darin gemacht hat und wer sonst noch mitgewirkt hat."
+        "label": "Funktion der Autor:in",
+        "placeholder": "z. B. Konzept"
       },
       "submit": "Speichern & weiter zum Editor",
       "saveAndSubmit": "Speichern und einreichen",

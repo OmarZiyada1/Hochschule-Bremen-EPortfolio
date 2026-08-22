@@ -577,13 +577,8 @@
       "heading": "Project metadata",
       "backToPortfolio": "Back to portfolio",
       "authorRole": {
-        "label": "Role of {{name}} in the project",
-        "placeholder": "e.g. concept",
-        "hint": "Optional. The author is not a project member but the owner of the contribution; this only says what they did in it."
-      },
-      "people": {
-        "legend": "People involved and what they did",
-        "hint": "Who wrote the entry is fixed. This is where you state what the author did in it and who else contributed."
+        "label": "Author's role",
+        "placeholder": "e.g. concept"
       },
       "submit": "Save & continue to editor",
       "saveAndSubmit": "Save and submit",

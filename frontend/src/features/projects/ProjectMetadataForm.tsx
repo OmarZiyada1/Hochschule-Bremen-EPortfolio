@@ -23,15 +23,12 @@ import {
   FieldDescription,
   FieldError,
   FieldLabel,
-  FieldLegend,
-  FieldSet,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { CoverImageField } from "@/features/projects/components/CoverImageField"
 import { ProjectEditorsField } from "@/features/projects/components/ProjectEditorsField"
 import { ProjectMembersField } from "@/features/projects/components/ProjectMembersField"
-import { fullNameOf } from "@/lib/name"
 import { missingForSubmit } from "@/features/project-content/submitRequirements"
 import { TagCombobox } from "@/features/projects/components/TagCombobox"
 import {
@@ -810,93 +807,78 @@ export function ProjectMetadataForm({
           </div>
 
           {/*
-           * Autor:in und Mitglieder stehen in einem Feldblock, obwohl sie
-           * zwei verschiedene Dinge sind.
-           *
-           * <p>Die Funktionsbezeichnung der Autor:in steht ueber der
+           * Die Funktionsbezeichnung der Autor:in steht ueber der
            * Mitgliederliste und nicht darin: sie ist kein Mitglied
            * (§3.13.1), traegt aber seit Contract v66 eine eigene
-           * Bezeichnung (§3.3). Freiwillig, sie kann spaeter eingetragen
-           * werden. Ohne die gemeinsame Beschriftung lasen sich die zwei
-           * Felder wie zweimal dieselbe Frage: oben eine Funktion, unten
-           * eine Rolle, beides ohne sichtbaren Zusammenhang. Die
-           * Ueberschrift sagt, worum es in beiden geht, und die
-           * Beschriftungen sagen, fuer wen.
+           * Bezeichnung (§3.3). Freiwillig, sie kann spaeter
+           * eingetragen werden.
+           *
+           * <p>Beschriftung und Feld, sonst nichts. Hier standen einmal
+           * eine Ueberschrift, ein Erklaerabsatz und eine Beschreibung
+           * unter dem Feld; drei Saetze fuer ein freiwilliges Textfeld
+           * sind mehr Text, als die Sache hergibt, und sie schoben die
+           * Mitgliederliste nach unten aus dem Blick.
            */}
-          <FieldSet className="gap-4">
-            <FieldLegend variant="label">
-              {t("project.metadata.people.legend")}
-            </FieldLegend>
-            <FieldDescription>
-              {t("project.metadata.people.hint")}
-            </FieldDescription>
+          <Controller
+            name="authorRole"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid} className="gap-2">
+                <FieldLabel
+                  htmlFor={field.name}
+                  className="type-label-xs text-muted-foreground uppercase"
+                >
+                  {t("project.metadata.authorRole.label")}
+                </FieldLabel>
+                <Input
+                  {...field}
+                  id={field.name}
+                  disabled={disabled}
+                  placeholder={t("project.metadata.authorRole.placeholder")}
+                  aria-invalid={fieldState.invalid}
+                />
+                {fieldState.invalid && (
+                  <FieldError
+                    errors={[{ message: messageOf(fieldState.error) }]}
+                  />
+                )}
+              </Field>
+            )}
+          />
 
+          <div className="flex flex-col gap-3">
             <Controller
-              name="authorRole"
+              name="members"
               control={form.control}
               render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid} className="gap-2">
-                  <FieldLabel
-                    htmlFor={field.name}
-                    className="type-label-xs text-muted-foreground uppercase"
-                  >
-                    {t("project.metadata.authorRole.label", {
-                      name: fullNameOf(project.author),
-                    })}
-                  </FieldLabel>
-                  <Input
-                    {...field}
-                    id={field.name}
+                <>
+                  <ProjectMembersField
+                    value={field.value}
+                    onChange={field.onChange}
+                    authorId={project.author.id}
+                    editorIds={editorIds}
                     disabled={disabled}
-                    placeholder={t("project.metadata.authorRole.placeholder")}
-                    aria-invalid={fieldState.invalid}
+                    invalid={fieldState.invalid}
+                    describedBy={
+                      fieldState.invalid ? MEMBERS_ERROR_ID : undefined
+                    }
+                    labelSuffix={memberRequired}
                   />
-                  <FieldDescription>
-                    {t("project.metadata.authorRole.hint")}
-                  </FieldDescription>
-                  {fieldState.invalid && (
-                    <FieldError
-                      errors={[{ message: messageOf(fieldState.error) }]}
-                    />
-                  )}
-                </Field>
-              )}
-            />
-
-            <div className="flex flex-col gap-3">
-              <Controller
-                name="members"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <>
-                    <ProjectMembersField
-                      value={field.value}
-                      onChange={field.onChange}
-                      authorId={project.author.id}
-                      editorIds={editorIds}
-                      disabled={disabled}
-                      invalid={fieldState.invalid}
-                      describedBy={
-                        fieldState.invalid ? MEMBERS_ERROR_ID : undefined
-                      }
-                      labelSuffix={memberRequired}
-                    />
-                    {/* Ein Schemafehler an einem Array-Pfad traegt keine eigene
+                  {/* Ein Schemafehler an einem Array-Pfad traegt keine eigene
                       message; ohne diese Zeile bliebe das Speichern
                       wirkungslos und stumm, etwa bei einem Altdatensatz mit
                       leerer Funktionsbezeichnung (Befund des
                       frontend-reviewers). */}
-                    {fieldState.invalid && (
-                      <FieldError id={MEMBERS_ERROR_ID}>
-                        {messageOf(fieldState.error) ??
-                          t("project.metadata.members.invalid")}
-                      </FieldError>
-                    )}
-                  </>
-                )}
-              />
-            </div>
-          </FieldSet>
+                  {fieldState.invalid && (
+                    <FieldError id={MEMBERS_ERROR_ID}>
+                      {messageOf(fieldState.error) ??
+                        t("project.metadata.members.invalid")}
+                    </FieldError>
+                  )}
+                </>
+              )}
+            />
+          </div>
 
           {disabled && (
             <Alert>
