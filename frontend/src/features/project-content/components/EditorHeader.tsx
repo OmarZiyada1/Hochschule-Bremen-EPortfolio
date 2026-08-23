@@ -5,18 +5,42 @@ import { useTranslation } from "react-i18next"
 
 import type { ProjectStatus } from "@/api/types"
 import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { AutosaveStatus } from "@/features/project-content/components/AutosaveStatus"
+import { SelectionToolbarBar } from "@/features/project-content/components/SelectionToolbar"
+import { ViewModeSwitch } from "@/features/project-content/components/ViewModeSwitch"
 import type { AutosaveState } from "@/features/project-content/hooks/useAutosave"
 
 /**
- * Die Kopfzeile des Editors (Figma, Knoten {@code Topbar}): Zurueck links,
- * Rueckgaengig und Wiederholen mittig, rechts der Speicherzustand und die
- * Workflow-Aktion.
+ * Die Kopfzeile des Editors: Zurueck ganz links, dann Rueckgaengig und
+ * Wiederholen, ein Trenner, die Formatierungsleiste, rechts Speicherzustand,
+ * der Umschalter Vorschau/Bearbeiten und die Workflow-Aktion.
+ *
+ * <p><strong>Die Formatierungsleiste steht dauerhaft hier</strong> statt als
+ * Blase ueber markiertem Text: die Werkzeuge sind immer sichtbar, die
+ * Funktionen und ihre aktiven Zustaende kommen unveraendert aus
+ * {@code SelectionToolbarBar} und folgen Textmarke und Auswahl. Ohne
+ * Schreibrecht (§4.1, dazu zaehlt der read-only Blick auf eingereichte und
+ * veroeffentlichte Beitraege) ist sie deaktiviert und nicht versteckt
+ * (SC 3.2.4). Alt+F10 fuehrt weiter aus dem Text in die Leiste, Escape
+ * zurueck; den Sprung faengt die Seite ab und trifft die Leiste ueber
+ * {@code data-selection-toolbar}, egal wo sie steht.
+ *
+ * <p><strong>Der Umschalter Vorschau/Bearbeiten stand in der
+ * Seitenleiste</strong> und steht jetzt hier, zwischen Formatierung und
+ * Workflow-Aktion: er gehoert zur Bedienung des Editors, nicht zu den
+ * Projektinformationen. Er fuehrt unveraendert auf die oeffentliche
+ * Detailseite; die Seite leert vorher den Speichertakt.
+ *
+ * <p><strong>Der Speicherzustand bleibt in der Kopfzeile.</strong> Die
+ * gewuenschte Reihenfolge nennt ihn nicht, aber er muss sichtbar bleiben
+ * (ein stiller Fehlschlag des Autosave waere Datenverlust mit Ansage);
+ * sein Platz ist vor dem Umschalter im rechten Block.
  *
  * <p><strong>Ohne PDF-Schaltflaeche.</strong> Das Template zeichnet sie,
  * aber den Export gibt es nicht: KAN-41 ist offen, und einen Endpoint dafuer
@@ -49,9 +73,11 @@ export function EditorHeader({
   autosaveState,
   busy,
   mayRunWorkflow,
+  mayWrite,
   onSubmit,
   onWithdraw,
   onBack,
+  onPreview,
   workflowButtonRef,
   backButtonRef,
 }: {
@@ -61,6 +87,8 @@ export function EditorHeader({
   busy: boolean
   /** Ob die anfragende Person die Autor:in ist (§5, §4.1). */
   mayRunWorkflow: boolean
+  /** Ob die Schreibflaeche beschreibbar ist; sonst ist die Leiste gesperrt. */
+  mayWrite: boolean
   onSubmit: () => void
   onWithdraw: () => void
   /**
@@ -68,6 +96,8 @@ export function EditorHeader({
    * den Speichertakt leeren muss.
    */
   onBack: () => void
+  /** Wechselt in die oeffentliche Ansicht; die Seite speichert vorher. */
+  onPreview: () => void
   workflowButtonRef?: RefObject<HTMLButtonElement | null>
   backButtonRef?: RefObject<HTMLButtonElement | null>
 }) {
@@ -103,7 +133,7 @@ export function EditorHeader({
   const canWithdraw = status === "SUBMITTED"
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-card px-4 py-3 sm:px-8">
+    <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-card px-4 py-3 sm:px-8">
       <Button ref={backButtonRef} variant="ghost" size="sm" onClick={onBack}>
         <ArrowLeftIcon aria-hidden="true" />
         {t("projectContent.header.back")}
@@ -144,8 +174,38 @@ export function EditorHeader({
         </Tooltip>
       </div>
 
-      <div className="flex items-center gap-4">
+      {/* Dieselbe Leiste wie zuvor in der Blase, nur ohne Rahmen und
+          Flaeche: Rand und Schatten gehoeren zur schwebenden Fassung, in
+          der Kopfzeile traegt der Header beides. flex-wrap, weil die
+          Primitive selbst nicht umbricht und die Leiste sonst unterhalb
+          von rund 600 px die Seite quer scrollen liesse (SC 1.4.10). Der
+          Trenner steht bei der Leiste und entfaellt mit ihr. */}
+      {editor !== null && (
+        <>
+          <Separator
+            orientation="vertical"
+            className="h-5 self-center"
+            aria-hidden="true"
+          />
+          <SelectionToolbarBar
+            editor={editor}
+            disabled={!mayWrite}
+            className="flex-wrap rounded-none border-0 bg-transparent p-0 shadow-none"
+          />
+        </>
+      )}
+
+      <div className="ms-auto flex flex-wrap items-center gap-3">
         <AutosaveStatus state={autosaveState} />
+        <ViewModeSwitch
+          mode="edit"
+          onModeChange={(mode) => {
+            if (mode === "preview") {
+              onPreview()
+            }
+          }}
+          className="rounded-none border-0 bg-transparent p-0"
+        />
         {mayRunWorkflow && canSubmit && (
           <Button ref={workflowButtonRef} onClick={onSubmit} disabled={busy}>
             {t("projectContent.header.submit")}

@@ -16,30 +16,16 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import { HistoryDialog } from "@/features/project-content/components/HistoryDialog"
-import { ViewModeSwitch } from "@/features/project-content/components/ViewModeSwitch"
 import { ProjectMetaSidebar } from "@/features/projects/components/ProjectMetaSidebar"
 
 /**
  * Die rechte Spalte des Editors (Figma, Knoten {@code Right}).
  *
- * <p>Zwei Karten: oben der Umschalter zwischen Vorschau und Bearbeiten,
- * darunter die Karte mit Statusbadge, Historie und den ausklappbaren
- * Projektinformationen.
- *
- * <p><strong>Vorschau heisst: die oeffentliche Seite.</strong> Der
- * Umschalter fuehrt auf {@code /projects/:id}, also genau in die Ansicht,
- * die auch Externe sehen, und dort steht derselbe Schalter fuer den Weg
- * zurueck. Eine eingebaute Vorschau zeigte denselben Renderer in einem
- * anderen Rahmen, mit anderer Breite und ohne die Umgebung der Seite; die
- * Frage „sieht das nachher so aus?" beantwortet nur die Seite selbst.
- * Vor dem Wechsel leert die Seite den Speichertakt, damit die Vorschau den
- * eben geschriebenen Stand zeigt.
- *
- * <p><strong>Der Umschalter ist ein {@code switch} mit ausdruecklichem
- * Namen.</strong> Die beiden Woerter links und rechts sind Zierat und
- * werden nicht vorgelesen; sie sagen nicht, welcher Zustand gerade gilt.
- * Der zugaengliche Name nennt deshalb genau eine Sache, und
- * {@code aria-checked} sagt ein oder aus.
+ * <p>Eine Karte mit Statusbadge, Historie und den ausklappbaren
+ * Projektinformationen. Der Umschalter zwischen Vorschau und Bearbeiten
+ * stand hier als eigene Karte darueber und steht seit dem Umzug der
+ * Formatierungsleiste in der Kopfzeile ({@code EditorHeader}): er gehoert
+ * zur Bedienung des Editors, nicht zu den Projektinformationen.
  *
  * <p><strong>Die Projektinformationen kommen aus
  * {@code ProjectMetaSidebar}</strong>, also aus derselben Komponente wie
@@ -49,12 +35,9 @@ import { ProjectMetaSidebar } from "@/features/projects/components/ProjectMetaSi
  */
 export function EditorSidebar({
   project,
-  onPreview,
   onEditMetadata,
 }: {
   project: ProjectDetailResponse
-  /** Wechselt in die oeffentliche Ansicht; die Seite speichert vorher. */
-  onPreview: () => void
   /**
    * Oeffnet die Metadatenseite zum Bearbeiten, ohne den Einreichweg.
    *
@@ -73,15 +56,6 @@ export function EditorSidebar({
       aria-label={t("projectContent.sidebar.label")}
       className="flex w-full flex-col gap-4 lg:w-90"
     >
-      <ViewModeSwitch
-        mode="edit"
-        onModeChange={(mode) => {
-          if (mode === "preview") {
-            onPreview()
-          }
-        }}
-      />
-
       <div className="flex flex-col gap-4 rounded-card border border-border bg-card p-5">
         <div className="flex items-center justify-between gap-2">
           <StatusBadge status={project.status} />

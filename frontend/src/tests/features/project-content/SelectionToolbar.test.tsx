@@ -235,8 +235,8 @@ describe("Farbmenue", () => {
 describe("Auswahlleiste", () => {
   it("ist ein einziger Tabstopp und wechselt innen mit den Pfeiltasten", async () => {
     const user = userEvent.setup()
-    /* Die Leiste ohne die Blase: sonst laege sie in einem versteckten
-       Teilbaum, und jsdom liesse sie gar nicht fokussieren. */
+    /* Die Leiste steht seit dem Umzug in die Kopfzeile dauerhaft da; hier
+       wird sie fuer sich gerendert, ohne den Header darum. */
     renderMenus("<p>Ein Absatz</p>", (editor) => (
       <SelectionToolbarBar editor={editor} disabled={false} />
     ))

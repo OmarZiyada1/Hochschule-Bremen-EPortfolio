@@ -1,6 +1,4 @@
-import { BubbleMenu } from "@tiptap/react/menus"
 import { useEditorState, type Editor } from "@tiptap/react"
-import { NodeSelection } from "@tiptap/pm/state"
 import {
   BoldIcon,
   CodeIcon,
@@ -33,10 +31,12 @@ import { AlignMenu } from "@/features/project-content/components/AlignMenu"
 import { BlockTypeMenu } from "@/features/project-content/components/BlockTypeMenu"
 import { ColorMenu } from "@/features/project-content/components/ColorMenu"
 import { LinkDialog } from "@/features/project-content/components/LinkDialog"
+import { cn } from "@/lib/utils"
 
 /**
- * Die Auswahlleiste ueber markiertem Text (Figma
- * {@code sec:Selection Toolbar}).
+ * Die Formatierungsleiste des Editors (Figma {@code sec:Selection Toolbar};
+ * sie stand dort als Blase ueber markiertem Text und steht seit dem Umzug
+ * dauerhaft in der Kopfzeile, siehe {@code EditorHeader}).
  *
  * <p>Vier Gruppen mit senkrechten Trennern, in dieser Reihenfolge:
  * Blocktyp, Zeichenauszeichnung, Blockformat, Farbe.
@@ -137,71 +137,29 @@ const BLOCK_FORMATS: readonly {
   },
 ]
 
-export function SelectionToolbar({
-  editor,
-  disabled,
-}: {
-  editor: Editor
-  disabled: boolean
-}) {
-  return (
-    <BubbleMenu
-      editor={editor}
-      options={{ placement: "top" }}
-      /*
-       * Nicht ueber einem Medienknoten: dort gibt es keinen Text
-       * auszuzeichnen, und die Leiste verdeckt das Bild.
-       *
-       * <p><strong>Geprueft wird die Art der Auswahl und nicht nur ihre
-       * Laenge.</strong> Zuvor stand hier allein {@code from !== to}, und
-       * das trifft auf eine NodeSelection ebenso zu: sie umfasst den ganzen
-       * Knoten. Wer ein Bild einfuegte, bekam deshalb die Textleiste mit
-       * Fett, Farbe und Ueberschriftenebenen darueber, und sie blieb
-       * stehen, solange der Knoten ausgewaehlt war. Die Zusage im Kommentar
-       * stand also da, die Bedingung dazu fehlte.
-       */
-      shouldShow={({ editor: current, from, to }) => {
-        const { selection } = current.state
-        if (disabled || selection.empty || from === to) {
-          return false
-        }
-        /* Ein ausgewaehlter Knoten ist kein markierter Text. */
-        if (selection instanceof NodeSelection) {
-          return false
-        }
-        /* Und ebenso wenig eine Auswahl, die genau einen atomaren Knoten
-           umschliesst, etwa nach dem Einfuegen ueber die Pille. */
-        let onlyAtoms = true
-        current.state.doc.nodesBetween(from, to, (node) => {
-          if (node.isText) {
-            onlyAtoms = false
-          }
-          return onlyAtoms
-        })
-        return !onlyAtoms
-      }}
-    >
-      <SelectionToolbarBar editor={editor} disabled={disabled} />
-    </BubbleMenu>
-  )
-}
-
 /**
- * Die Leiste selbst, ohne die Blase darum.
+ * Die Formatierungsleiste.
  *
- * <p><strong>Getrennt, damit sie pruefbar bleibt.</strong> Die Blase ist
- * ausgeblendet, solange nichts markiert ist, und in jsdom nimmt ein Element
- * in einem versteckten Teilbaum keinen Fokus an: ein Test gegen die
- * vollstaendige {@link SelectionToolbar} koennte die Tastaturfuehrung
- * deshalb gar nicht ausloesen. Die Trennung kostet nichts und macht genau
- * die Zusage pruefbar, um die es geht.
+ * <p><strong>Sie steht seit dem Umzug in die Kopfzeile dauerhaft da</strong>
+ * und nicht mehr als Blase ueber markiertem Text (BubbleMenu): die Werkzeuge
+ * sind damit jederzeit sichtbar und erreichbar, ohne dass erst markiert
+ * werden muss. Die aktiven Zustaende folgen weiter der Textmarke bzw. der
+ * Auswahl, denn {@code useEditorState} liest {@code isActive()} bei jeder
+ * Transaktion; die Befehle selbst wirken wie zuvor an der Auswahl oder als
+ * gemerkte Auszeichnung an der Cursorstelle. Ohne Schreibrecht (§4.1) ist
+ * die Leiste deaktiviert und nicht versteckt (SC 3.2.4).
+ *
+ * <p>{@code className} erlaubt der Kopfzeile, Rahmen und Flaeche der Leiste
+ * abzulegen; die Vorgaben hier bleiben der Stand fuer jeden anderen Ort.
  */
 export function SelectionToolbarBar({
   editor,
   disabled,
+  className,
 }: {
   editor: Editor
   disabled: boolean
+  className?: string
 }) {
   const { t } = useTranslation()
   const linkTriggerRef = useRef<HTMLButtonElement>(null)
@@ -230,7 +188,10 @@ export function SelectionToolbarBar({
             editor.commands.focus()
           }
         }}
-        className="rounded-card border border-border bg-popover p-1 shadow-md"
+        className={cn(
+          "rounded-card border border-border bg-popover p-1 shadow-md",
+          className
+        )}
       >
         <BlockTypeMenu editor={editor} disabled={disabled} />
 

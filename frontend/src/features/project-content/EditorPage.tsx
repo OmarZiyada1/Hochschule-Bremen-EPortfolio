@@ -28,7 +28,6 @@ import { BlockDragHandle } from "@/features/project-content/components/BlockDrag
 import { BlockKeyboardBar } from "@/features/project-content/components/BlockKeyboardBar"
 import { EditorHeader } from "@/features/project-content/components/EditorHeader"
 import { EditorSidebar } from "@/features/project-content/components/EditorSidebar"
-import { SelectionToolbar } from "@/features/project-content/components/SelectionToolbar"
 import { TableControls } from "@/features/project-content/components/TableControls"
 import { blocksToDoc } from "@/features/project-content/blockSerialization"
 import type { ProjectDocument } from "@/features/project-content/blockTypes"
@@ -39,10 +38,13 @@ import { useAutosave } from "@/features/project-content/hooks/useAutosave"
  * Die Schreibflaeche des Editors auf {@code /projects/:projectId/editor}
  * (Figma {@code Template / Studierende · Editor}).
  *
- * <p><strong>Aufbau nach dem Template:</strong> Kopfzeile mit Zurueck,
- * Rueckgaengig, Speicherzustand und Workflow-Aktion; darunter links die
- * Schreibflaeche unter dem Projekttitel, rechts die Seitenleiste mit dem
- * Vorschau-Schalter und den Projektinformationen.
+ * <p><strong>Aufbau:</strong> Kopfzeile mit Zurueck, Rueckgaengig und
+ * Wiederholen, der dauerhaften Formatierungsleiste, Speicherzustand,
+ * Vorschau-Schalter und Workflow-Aktion; darunter links die Schreibflaeche
+ * unter dem Projekttitel, rechts die Seitenleiste mit den
+ * Projektinformationen. Das Template zeichnet die Formatierung als Blase
+ * ueber markiertem Text; der Umzug in die Kopfzeile ist eine bewusste
+ * Abweichung (Nutzerentscheidung, siehe EditorHeader).
  *
  * <p><strong>Die Schreibflaeche traegt dieselbe Klasse wie der
  * Renderer</strong> ({@code .project-content}), damit ein Beitrag beim
@@ -264,6 +266,7 @@ export default function EditorPage() {
           autosaveState={autosave.state}
           busy={withdraw.isPending}
           mayRunWorkflow={isAuthor}
+          mayWrite={mayWrite}
           /*
            * Einreichen fuehrt auf die Metadatenseite und nicht in ein
            * Seitenpanel. §3.3 verlangt sieben Angaben, die im Editor nicht
@@ -279,6 +282,7 @@ export default function EditorPage() {
           }}
           onWithdraw={() => setWithdrawOpen(true)}
           onBack={() => void leaveTo("/my-portfolio")}
+          onPreview={() => void leaveTo(`/projects/${projectId}`)}
           workflowButtonRef={workflowButtonRef}
           backButtonRef={backButtonRef}
         />
@@ -372,17 +376,12 @@ export default function EditorPage() {
                 />
               )}
 
-              {editor !== null && (
-                <SelectionToolbar editor={editor} disabled={!mayWrite} />
-              )}
-
               <EditorContent editor={editor} />
             </div>
           </div>
 
           <EditorSidebar
             project={detail}
-            onPreview={() => void leaveTo(`/projects/${projectId}`)}
             onEditMetadata={() =>
               void leaveTo(`/projects/${projectId}/metadata`)
             }

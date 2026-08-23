@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react"
+import { fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { HttpResponse, http } from "msw"
 import { Route, Routes } from "react-router-dom"
@@ -341,6 +341,27 @@ describe("EditorPage", () => {
         ),
       WAIT
     )
+  })
+
+  it("Alt+F10 fuehrt aus dem Text in die Formatierungsleiste im Header", async () => {
+    /* Der Sprung sucht dokumentweit nach [data-selection-toolbar]; genau
+       dieser Selektor haette beim Umzug der Leiste in die Kopfzeile
+       brechen koennen, deshalb steht die Zusage hier fest. */
+    const { container } = renderEditor(ownDraft(), [textBlock("Ein Absatz.")])
+    await screen.findByText("Ein Absatz.", undefined, WAIT)
+
+    const surface = container.querySelector<HTMLElement>(".ProseMirror")
+    if (surface === null) {
+      throw new Error("Schreibflaeche nicht gefunden")
+    }
+    surface.focus()
+    fireEvent.keyDown(surface, { key: "F10", altKey: true })
+
+    await waitFor(() => {
+      const toolbar = container.querySelector("[data-selection-toolbar]")
+      expect(toolbar).not.toBeNull()
+      expect(toolbar?.contains(document.activeElement)).toBe(true)
+    }, WAIT)
   })
 
   it("zeigt einem fremden Konto keine Workflow-Aktion", async () => {
