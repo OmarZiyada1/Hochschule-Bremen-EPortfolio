@@ -12,9 +12,30 @@ import {
   COVER_IMAGE_MAX_BYTES,
   COVER_IMAGE_MIME_TYPES,
 } from "@/features/projects/ProjectMetadataForm.schema"
+import { cn } from "@/lib/utils"
 
 /** Zehn Mebibyte als Zahl fuer die Meldung, passend zu §3.15. */
 const MAX_MEGABYTES = Math.round(COVER_IMAGE_MAX_BYTES / (1024 * 1024))
+
+/**
+ * Die zulaessigen Seitenverhaeltnisse der Vorschauflaeche.
+ *
+ * <p>Als Tabelle und nicht als zusammengesetzte Klasse, weil Tailwind die
+ * Klassennamen im Quelltext liest: {@code aspect-[${ratio}]} entstuende
+ * erst zur Laufzeit und faende sich im gebauten CSS nicht wieder.
+ *
+ * <p>Zwei Werte, weil dasselbe Bild an zwei Stellen verschieden gerahmt
+ * ist: das Metadatenformular zeigt es 7:4 wie im Template, die Kopfpartie
+ * des Editors 16:9 (KAN-36). Der Standard bleibt der aeltere Wert, damit
+ * die vorhandenen Aufrufe unveraendert bleiben.
+ */
+const ASPECT_CLASS = {
+  "7/4": "aspect-[7/4]",
+  "16/9": "aspect-video",
+} as const
+
+/** Seitenverhaeltnis der Vorschauflaeche. */
+export type CoverImageAspect = keyof typeof ASPECT_CLASS
 
 /**
  * Das Titelbild in der Vorschau-Spalte des Metadatenformulars (§3.15,
@@ -65,6 +86,7 @@ export function CoverImageField({
   onUpload,
   uploading = false,
   disabled = false,
+  aspect = "7/4",
 }: {
   /** Referenz der Form /api/files/{id}, leer heisst "kein Titelbild". */
   value: string
@@ -73,6 +95,8 @@ export function CoverImageField({
   onUpload: (file: File) => Promise<string>
   uploading?: boolean
   disabled?: boolean
+  /** Rahmen der Vorschauflaeche; siehe {@link ASPECT_CLASS}. */
+  aspect?: CoverImageAspect
 }) {
   const { t } = useTranslation()
   const inputId = useId()
@@ -129,7 +153,12 @@ export function CoverImageField({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex aspect-[7/4] w-full items-center justify-center overflow-hidden rounded-card bg-surface-brand">
+      <div
+        className={cn(
+          "flex w-full items-center justify-center overflow-hidden rounded-card bg-surface-brand",
+          ASPECT_CLASS[aspect]
+        )}
+      >
         {value === "" ? (
           <span className="type-body-sm text-surface-brand-foreground">
             {t("project.metadata.cover.empty")}

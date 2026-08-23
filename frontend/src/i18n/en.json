@@ -813,6 +813,11 @@
     "position": "Rank {{position}}"
   },
   "projectContent": {
+    "intro": {
+            "abstract": "Abstract",
+      "regionLabel": "Cover image, title and summary",
+      "notSaved": "The header details are not saved while the marked fields are invalid."
+    },
     "unknownBlock": {
       "title": "This section cannot be displayed",
       "description": "A content block of type “{{nodeType}}” is stored in a form this view cannot render.",

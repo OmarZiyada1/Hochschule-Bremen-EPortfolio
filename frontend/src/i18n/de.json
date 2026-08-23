@@ -813,6 +813,11 @@
     "position": "Platz {{position}}"
   },
   "projectContent": {
+    "intro": {
+            "abstract": "Abstract",
+      "regionLabel": "Titelbild, Titel und Kurzbeschreibung",
+      "notSaved": "Die Kopfangaben werden nicht gespeichert, solange die markierten Felder nicht stimmen."
+    },
     "unknownBlock": {
       "title": "Dieser Abschnitt kann nicht angezeigt werden",
       "description": "Ein Inhaltsblock vom Typ „{{nodeType}}“ liegt in einer Form vor, die diese Ansicht nicht darstellen kann.",

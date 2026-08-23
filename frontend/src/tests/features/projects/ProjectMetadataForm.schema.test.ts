@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest"
 
 import {
   projectMetadataSchema,
+  toProjectIntroUpdateRequest,
+  toProjectIntroValues,
   toProjectMetadataValues,
   toProjectUpdateRequest,
   type ProjectMetadataValues,
@@ -203,9 +205,21 @@ describe("projectMetadataSchema", () => {
     expect(result.error?.issues[0]?.message).toBe("validation.title.tooLong")
   })
 
-  it("beanstandet eine Kurzbeschreibung ueber 200 Zeichen", () => {
+  /*
+   * Die Grenze ist die des Servers (1024 Zeichen, @Size an
+   * ProjectCreateRequest), nicht mehr die 200 aus dem Template. Die 200
+   * waren eine Gestaltungsregel fuer die Kachel, und die kuerzt selbst
+   * (line-clamp-3); im Editor steht dasselbe Feld als Abstract und ist
+   * dort Fliesstext.
+   */
+  it("laesst eine lange Kurzbeschreibung durch und beanstandet erst ueber 1024 Zeichen", () => {
+    expect(
+      projectMetadataSchema.safeParse(values({ summary: "x".repeat(600) }))
+        .success
+    ).toBe(true)
+
     const result = projectMetadataSchema.safeParse(
-      values({ summary: "x".repeat(201) })
+      values({ summary: "x".repeat(1025) })
     )
 
     expect(result.success).toBe(false)
@@ -254,5 +268,89 @@ describe("projectMetadataSchema", () => {
     expect(result.error?.issues[0]?.message).toBe(
       "validation.projectType.unknown"
     )
+  })
+})
+
+/*
+ * Der Ausschnitt, den die Kopfpartie des Editors bearbeitet (KAN-36).
+ * Zwei Feinheiten verhindern hier Datenverlust und sind deshalb
+ * ausdruecklich abgesichert.
+ */
+describe("Kopfpartie des Editors", () => {
+  it("liest genau die drei Felder aus dem Projekt", () => {
+    expect(toProjectIntroValues(fullProject())).toEqual({
+      title: "Campus-Garten",
+      summary: "Ein Beet auf dem Dach.",
+      coverImageUrl: "/api/files/cover-1",
+    })
+  })
+
+  /*
+   * Der Body traegt die ganze Metadatenkarte: ProjectUpdateRequest hat
+   * ersetzende Semantik, ein PUT mit nur dem Titel loeschte Fakultaet,
+   * Studiengang, Abschluss, Kategorie, Semester, Typ und Modul (§3.3).
+   */
+  it("traegt die ganze Karte und tauscht nur die drei Felder aus", () => {
+    const project = fullProject()
+    const card = toProjectIntroUpdateRequest(project, {
+      title: "Anderer Titel",
+      summary: "",
+      coverImageUrl: "",
+    })
+
+    expect(card.title).toBe("Anderer Titel")
+    /* Leer heisst loeschen, und dafuer steht null. */
+    expect(card.summary).toBeNull()
+    expect(card.coverImageUrl).toBeNull()
+    /* Und alles Uebrige bleibt unangetastet. */
+    expect(card.facultyId).toBe("f-4")
+    expect(card.studyProgramId).toBe("sp-1")
+    expect(card.moduleId).toBe("m-1")
+    expect(card.categoryId).toBe("c-1")
+    expect(card.projectType).toBe("REGULAR")
+    expect(card.degree).toBe("BACHELOR")
+  })
+
+  /*
+   * Die Version gehoert dem Speichertakt und nicht dem zuletzt gelesenen
+   * Projekt: im Editor schreiben zwei Wege gegen dieselbe Project.version
+   * (§6.4), und der Cache-Stand waere nach einem reinen Blockspeichern
+   * einen Schritt zurueck.
+   */
+  it("laesst die version ausdruecklich weg", () => {
+    const card = toProjectIntroUpdateRequest(
+      fullProject(),
+      toProjectIntroValues(fullProject())
+    )
+
+    expect("version" in card).toBe(false)
+  })
+
+  /*
+   * editors ist null, wenn die anfragende Person die Zuweisung nicht sehen
+   * darf (§3.3). Eine leere Liste wuerde sie loeschen, null laesst sie
+   * unveraendert (§6.1).
+   */
+  it("laesst eine unsichtbare Redaktionszuweisung unveraendert", () => {
+    const project = fullProject()
+    project.editors = null
+
+    const card = toProjectIntroUpdateRequest(
+      project,
+      toProjectIntroValues(project)
+    )
+
+    expect(card.editorIds).toBeNull()
+  })
+
+  it("schreibt eine sichtbare Redaktionszuweisung mit", () => {
+    const project = fullProject()
+
+    const card = toProjectIntroUpdateRequest(
+      project,
+      toProjectIntroValues(project)
+    )
+
+    expect(card.editorIds).toEqual((project.editors ?? []).map((e) => e.id))
   })
 })

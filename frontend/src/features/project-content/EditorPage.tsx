@@ -9,7 +9,7 @@ import { useAuth } from "@/api/auth/AuthContext"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import { blockQueries } from "@/api/queries/blocks"
 import { projectQueries, withdrawProject } from "@/api/queries/projects"
-import type { ProjectDetailResponse } from "@/api/types"
+import type { ProjectDetailResponse, ProjectUpdateRequest } from "@/api/types"
 import { VersionConflictDialog } from "@/components/common/VersionConflictDialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
@@ -33,12 +33,18 @@ import { EditorContextProvider } from "@/features/project-content/EditorContext"
 import { BlockDragHandle } from "@/features/project-content/components/BlockDragHandle"
 import { BlockKeyboardBar } from "@/features/project-content/components/BlockKeyboardBar"
 import { EditorHeader } from "@/features/project-content/components/EditorHeader"
+import { EditorIntro } from "@/features/project-content/components/EditorIntro"
 import { EditorSidebar } from "@/features/project-content/components/EditorSidebar"
 import { TableControlsLayer } from "@/features/project-content/components/TableControlsLayer"
 import { blocksToDoc } from "@/features/project-content/blockSerialization"
 import type { ProjectDocument } from "@/features/project-content/blockTypes"
 import { createEditorExtensions } from "@/features/project-content/editorSchema"
 import { useAutosave } from "@/features/project-content/hooks/useAutosave"
+import {
+  toProjectIntroUpdateRequest,
+  toProjectIntroValues,
+  type ProjectIntroValues,
+} from "@/features/projects/ProjectMetadataForm.schema"
 
 /**
  * Die Schreibflaeche des Editors auf {@code /projects/:projectId/editor}
@@ -88,6 +94,20 @@ export default function EditorPage() {
   /* Der Konflikt wurde gezeigt und weggedrueckt; der Takt bleibt trotzdem
      angehalten, bis die Seite neu gelesen hat. */
   const [conflictSeen, setConflictSeen] = useState(false)
+  /*
+   * Zaehlt die ausdruecklichen Neuladevorgaenge. Er ist der {@code key} der
+   * Kopfpartie und damit ihr Ruecksetzer: „Serverstand laden" verspricht,
+   * die eigenen Eingaben zu verwerfen, und der Inhalt tut das auch (der
+   * Editor wird neu aufgebaut). Ohne diesen Zaehler blieben Titel und
+   * Abstract stehen und gingen beim naechsten Takt mit der jetzt wieder
+   * gueltigen Version hinaus: die fremde Aenderung waere ohne 409 und ohne
+   * Meldung ueberschrieben (Befund des Frontend-Reviews).
+   *
+   * <p>Als Zaehler und nicht als {@code project.version}: die erhoeht sich
+   * bei jeder Speicherung, und die Kopfpartie entstuende mitten im Tippen
+   * neu und naehme den Fokus mit.
+   */
+  const [reloadCount, setReloadCount] = useState(0)
 
   const project = useQuery(projectQueries.detail(projectId))
   const blocks = useQuery(blockQueries.list(projectId))
@@ -109,6 +129,107 @@ export default function EditorPage() {
   const status = project.data?.status ?? "DRAFT"
   const statusEditable = status === "DRAFT" || status === "REVISION"
   const mayWrite = statusEditable && (read?.canSave ?? false)
+
+  /*
+   * Die Kopfangaben haengen am Status und nicht an {@code canSave}: ein
+   * Block, den diese Ansicht nicht lesen kann, ist ein Grund, den Inhalt
+   * nicht zurueckzuschreiben (der PUT ersetzt die ganze Liste), aber
+   * keiner, Titelbild, Titel und Kurzbeschreibung festzuhalten. Sie laufen
+   * ueber einen anderen Endpoint (§6.1).
+   *
+   * <p><strong>Zweistufig wie am Server</strong> (§6.1, Zeile
+   * {@code PUT /projects/{id}}: „Autor:in und Mitglieder, in DRAFT und
+   * REVISION"; {@code ProjectPermissionService.mayEditMetadata}). Der
+   * Status allein genuegt nicht: eine zugewiesene Redaktion darf ein
+   * Projekt in {@code REVISION} lesen und saehe sonst beschreibbare
+   * Felder, deren Speicherung mit 403 endet, und zwar bei jedem
+   * Entprellungsfenster neu (Befund der Contract-Pruefung).
+   */
+  const isProjectSide =
+    user !== null &&
+    (project.data?.author?.id === user.id ||
+      (project.data?.members ?? []).some((member) => member.userId === user.id))
+  const mayEditMetadata = statusEditable && isProjectSide
+
+  /*
+   * Der Stand, gegen den die Kopfangaben verglichen und geschrieben
+   * werden: das zuletzt vom Server bestaetigte Projekt und die Frage, ob
+   * ueberhaupt geschrieben werden darf. Als Ref, weil der Speichertakt
+   * beides im Augenblick des Sendens braucht und nicht in der Fassung,
+   * die beim letzten Rendern galt.
+   */
+  const metadataRef = useRef<{
+    project: ProjectDetailResponse | null
+    editable: boolean
+  }>({ project: null, editable: false })
+  useEffect(() => {
+    metadataRef.current = {
+      project: project.data ?? null,
+      editable: mayEditMetadata,
+    }
+  })
+
+  /* Der Lesezugriff auf die Kopfpartie; sie meldet ihn selbst an. */
+  const readIntroRef = useRef<() => ProjectIntroValues | null>(() => null)
+  const registerIntroRead = useCallback(
+    (read: () => ProjectIntroValues | null) => {
+      readIntroRef.current = read
+    },
+    []
+  )
+
+  /**
+   * Die Metadatenkarte fuer den Takt, oder {@code null}, wenn nichts zu
+   * tun ist.
+   *
+   * <p><strong>Verglichen wird gegen das Projekt selbst</strong> und nicht
+   * gegen ein Merkmal im Takt: die Antwort jedes erfolgreichen PUT landet
+   * im Cache und damit in {@code metadataRef}, der Vergleich laeuft also
+   * immer gegen das, was der Server zuletzt bestaetigt hat. Ohne diesen
+   * Vergleich schickte der erste Takt eines frisch geladenen Beitrags die
+   * unveraenderte Karte los, und ein Entwurf bekaeme allein vom Ansehen
+   * eine neue {@code version} (§6.4).
+   */
+  const readMetadata = useCallback((): Omit<
+    ProjectUpdateRequest,
+    "version"
+  > | null => {
+    const { project: current, editable } = metadataRef.current
+    const values = readIntroRef.current()
+    if (!editable || current === null || values === null) {
+      return null
+    }
+    const wanted = toProjectIntroUpdateRequest(current, values)
+    const saved = toProjectIntroUpdateRequest(
+      current,
+      toProjectIntroValues(current)
+    )
+    return JSON.stringify(wanted) === JSON.stringify(saved) ? null : wanted
+  }, [])
+
+  const onMetadataSaved = useCallback(
+    (updated: ProjectDetailResponse) => {
+      /* Zuerst in den Ref: der Takt kann unmittelbar noch einmal laufen,
+         bevor React neu gerendert hat, und verglichen wird gegen den
+         Serverstand. */
+      metadataRef.current = { ...metadataRef.current, project: updated }
+      queryClient.setQueryData(
+        projectQueries.detail(projectId).queryKey,
+        updated
+      )
+      /*
+       * Die Listen tragen Titel und Teaser auf ihren Kacheln und werden
+       * deshalb als veraltet vermerkt, aber nicht sofort nachgeladen: die
+       * Antwort steht schon im Cache, und ein Refetch bei jedem Takt liefe
+       * waehrend des Tippens dauernd.
+       */
+      void queryClient.invalidateQueries({
+        queryKey: ["projects"],
+        refetchType: "inactive",
+      })
+    },
+    [projectId, queryClient]
+  )
 
   /*
    * Ein Dokument ohne Kinder ergaenzt ProseMirror beim Aufbau um einen
@@ -211,7 +332,16 @@ export default function EditorPage() {
     version: blocks.data?.version ?? 0,
     blocks: blocks.data?.blocks ?? [],
     readDocument,
+    readMetadata,
+    onMetadataSaved,
   })
+
+  /* Stabil gehalten: die Kopfpartie meldet jede Aenderung hierueber, und
+     eine bei jedem Rendern neue Funktion liesse ihren Effekt dauernd
+     laufen. */
+  const scheduleFromIntro = useCallback(() => {
+    scheduleRef.current()
+  }, [])
 
   /*
    * Der Editor entsteht vor dem Speichertakt, sein onUpdate braucht ihn
@@ -315,7 +445,27 @@ export default function EditorPage() {
            * Blockbedienung liegt links davon im Einzug der Spalte.
            */}
           <div className="editor-content-column flex min-w-0 flex-1 flex-col gap-4">
-            <h1 className="type-h1">{detail.title}</h1>
+            {/*
+             * Titelbild, Titel und Kurzbeschreibung stehen ueber dem
+             * Beitrag und sind dort aenderbar. Sie sind Metadaten und
+             * laufen ueber einen anderen Endpoint als der Inhalt (§6.1);
+             * derselbe Speichertakt fuehrt beide nacheinander, weil sie
+             * sich eine {@code Project.version} teilen (§6.4).
+             *
+             * <p><strong>Der key ist der Zaehler der Neuladevorgaenge</strong>
+             * und nicht {@code id-version} wie im Metadatenformular: die
+             * Version erhoeht sich bei jeder Speicherung, und die
+             * Kopfpartie entstuende mitten im Tippen neu. „Serverstand
+             * laden" muss sie dagegen verwerfen, sonst ueberschriebe sie
+             * die fremde Aenderung, wegen der neu geladen wurde.
+             */}
+            <EditorIntro
+              key={reloadCount}
+              project={detail}
+              editable={mayEditMetadata}
+              onChange={scheduleFromIntro}
+              onRegisterRead={registerIntroRead}
+            />
 
             {!statusEditable && (
               <Alert>
@@ -502,6 +652,9 @@ export default function EditorPage() {
         open={autosave.state === "conflict" && !conflictSeen}
         onReload={() => {
           setConflictSeen(false)
+          /* Verwirft auch die Kopfangaben: der Dialog verspricht, die
+             eigenen Eingaben zugunsten des Serverstands aufzugeben. */
+          setReloadCount((count) => count + 1)
           /* Beide Schluessel ausdruecklich: der Inhalt liegt seit KAN-36
              bewusst nicht mehr unter ["projects", …], damit ihn eine
              fremde Invalidierung nicht mitreisst (api/queries/blocks.ts).

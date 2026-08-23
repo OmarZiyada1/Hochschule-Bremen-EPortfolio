@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import { HttpResponse, http } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import type { ProjectDetailResponse, ProjectUpdateRequest } from "@/api/types"
 import type { ProjectDocument } from "@/features/project-content/blockTypes"
 import { useAutosave } from "@/features/project-content/hooks/useAutosave"
 import { apiErrorResponse } from "@/tests/msw/handlers"
@@ -16,6 +17,8 @@ const PROJECT_ID = "1f9d7a10-0000-0000-0000-000000000000"
 const BLOCK_ID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
 
 const PATH = "*/api/projects/:projectId/blocks"
+/** Der Metadatenweg (§6.1), getrennt vom Inhalt und mit derselben version. */
+const PROJECT_PATH = "*/api/projects/:projectId"
 
 function documentWith(text: string): ProjectDocument {
   return {
@@ -33,16 +36,31 @@ function documentWith(text: string): ProjectDocument {
   }
 }
 
-/** Der Hook mit einem Dokument, das der Test von aussen wechseln kann. */
-function setUp(initial = "erste Fassung") {
+/**
+ * Der Hook mit einem Dokument, das der Test von aussen wechseln kann.
+ *
+ * <p>Die Kopfangaben sind vorbelegt mit „nichts zu tun": die aelteren
+ * Faelle pruefen allein den Inhaltsweg, und ein Metadaten-Request wuerde
+ * dort nur stoeren.
+ */
+function setUp(
+  initial = "erste Fassung",
+  options: {
+    enabled?: boolean
+    readMetadata?: () => Omit<ProjectUpdateRequest, "version"> | null
+    onMetadataSaved?: (project: ProjectDetailResponse) => void
+  } = {}
+) {
   const state = { text: initial }
   const view = renderHook(() =>
     useAutosave({
       projectId: PROJECT_ID,
-      enabled: true,
+      enabled: options.enabled ?? true,
       version: 3,
       blocks: [{ id: BLOCK_ID, type: "TEXT" }],
       readDocument: () => documentWith(state.text),
+      readMetadata: options.readMetadata ?? (() => null),
+      onMetadataSaved: options.onMetadataSaved ?? (() => undefined),
     })
   )
   return { view, state }
@@ -307,5 +325,146 @@ describe("useAutosave", () => {
     })
 
     expect(calls).toBe(1)
+  })
+
+  /*
+   * Inhalt und Kopfangaben laufen ueber zwei Endpoints (§6.1), erhoehen
+   * aber dieselbe Project.version (§6.4). Nebeneinander gaebe das einen
+   * 409 gegen die eigene vorige Speicherung.
+   */
+  it("schickt Inhalt und Kopfangaben nacheinander und reicht die version weiter", async () => {
+    const calls: { ziel: string; version: number }[] = []
+    server.use(
+      http.put(PATH, async ({ request }) => {
+        const body = (await request.json()) as { version: number }
+        calls.push({ ziel: "blocks", version: body.version })
+        return HttpResponse.json({ version: 4, blocks: [] })
+      }),
+      http.put(PROJECT_PATH, async ({ request }) => {
+        const body = (await request.json()) as { version: number }
+        calls.push({ ziel: "project", version: body.version })
+        return HttpResponse.json({ version: 5 })
+      })
+    )
+
+    const { view, state } = setUp("erste Fassung", {
+      readMetadata: () => ({ title: "Neuer Titel" }),
+    })
+
+    await act(async () => {
+      state.text = "geaenderter Text"
+      await view.result.current.flush()
+    })
+
+    expect(calls).toEqual([
+      { ziel: "blocks", version: 3 },
+      { ziel: "project", version: 4 },
+    ])
+  })
+
+  it("uebergibt die Antwort der Kopfangaben nach oben", async () => {
+    const saved: { version: number }[] = []
+    server.use(
+      http.put(PATH, () => HttpResponse.json({ version: 4, blocks: [] })),
+      http.put(PROJECT_PATH, () => HttpResponse.json({ version: 9 }))
+    )
+
+    const { view } = setUp("erste Fassung", {
+      readMetadata: () => ({ title: "Neuer Titel" }),
+      onMetadataSaved: (project) => saved.push(project),
+    })
+
+    await act(async () => {
+      await view.result.current.flush()
+    })
+
+    expect(saved).toHaveLength(1)
+    expect(saved[0].version).toBe(9)
+  })
+
+  it("sendet nichts, solange sich an den Kopfangaben nichts geaendert hat", async () => {
+    let projectPuts = 0
+    server.use(
+      http.put(PATH, () => HttpResponse.json({ version: 4, blocks: [] })),
+      http.put(PROJECT_PATH, () => {
+        projectPuts = projectPuts + 1
+        return HttpResponse.json({ version: 5 })
+      })
+    )
+
+    /* null heisst: der Aufrufer hat verglichen, es gibt nichts zu tun. */
+    const { view, state } = setUp("erste Fassung", { readMetadata: () => null })
+
+    await act(async () => {
+      state.text = "geaenderter Text"
+      await view.result.current.flush()
+    })
+
+    expect(projectPuts).toBe(0)
+  })
+
+  /*
+   * Ein Block, den die Ansicht nicht lesen kann, sperrt die Schreibflaeche
+   * (der PUT ersetzt die ganze Liste). Der Titel darf trotzdem gespeichert
+   * werden, er laeuft ueber einen anderen Endpoint.
+   */
+  it("speichert die Kopfangaben auch bei gesperrter Schreibflaeche", async () => {
+    let blockPuts = 0
+    let projectPuts = 0
+    server.use(
+      http.put(PATH, () => {
+        blockPuts = blockPuts + 1
+        return HttpResponse.json({ version: 4, blocks: [] })
+      }),
+      http.put(PROJECT_PATH, () => {
+        projectPuts = projectPuts + 1
+        return HttpResponse.json({ version: 5 })
+      })
+    )
+
+    const { view } = setUp("erste Fassung", {
+      enabled: false,
+      readMetadata: () => ({ title: "Neuer Titel" }),
+    })
+
+    await act(async () => {
+      await view.result.current.flush()
+    })
+
+    expect(blockPuts).toBe(0)
+    expect(projectPuts).toBe(1)
+  })
+
+  it("haelt den ganzen Takt an, wenn die Kopfangaben mit 409 antworten", async () => {
+    let projectPuts = 0
+    server.use(
+      http.put(PATH, () => HttpResponse.json({ version: 4, blocks: [] })),
+      http.put(PROJECT_PATH, () => {
+        projectPuts = projectPuts + 1
+        return apiErrorResponse(
+          409,
+          "PROJECT_VERSION_CONFLICT",
+          `/api/projects/${PROJECT_ID}`
+        )
+      })
+    )
+
+    const { view, state } = setUp("erste Fassung", {
+      readMetadata: () => ({ title: "Neuer Titel" }),
+    })
+
+    await act(async () => {
+      state.text = "geaenderter Text"
+      await view.result.current.flush()
+    })
+
+    expect(view.result.current.state).toBe("conflict")
+
+    /* Auch der Inhaltsweg steht danach: beide teilen sich die version. */
+    await act(async () => {
+      state.text = "noch eine Aenderung"
+      await view.result.current.flush()
+    })
+    expect(projectPuts).toBe(1)
   })
 })

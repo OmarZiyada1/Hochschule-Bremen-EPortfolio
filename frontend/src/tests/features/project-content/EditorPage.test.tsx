@@ -429,4 +429,110 @@ describe("EditorPage", () => {
       screen.queryByRole("button", { name: "Einreichen" })
     ).not.toBeInTheDocument()
   })
+
+  /*
+   * Titelbild, Titel und Kurzbeschreibung sind Metadaten und laufen ueber
+   * PUT /projects/{id}, der Inhalt ueber PUT /projects/{id}/blocks (§6.1).
+   * Beide erhoehen dieselbe Project.version (§6.4), deshalb fuehrt sie ein
+   * Takt nacheinander.
+   */
+  it("schreibt eine Titelaenderung ueber den Metadatenweg und nicht ueber den Inhaltsweg", async () => {
+    const user = userEvent.setup()
+    const cards: { version: number; title?: string }[] = []
+    const project = ownDraft()
+
+    renderEditor(project, [textBlock("Erster Absatz")])
+    server.use(
+      http.put("*/api/projects/:projectId", async ({ request }) => {
+        const body = (await request.json()) as {
+          version: number
+          title?: string
+        }
+        cards.push(body)
+        return HttpResponse.json({
+          ...project,
+          title: body.title ?? project.title,
+          version: body.version + 1,
+        })
+      })
+    )
+
+    const title = await screen.findByLabelText("Projekttitel", {}, WAIT)
+    await user.clear(title)
+    await user.type(title, "Anderer Titel")
+
+    await waitFor(() => expect(cards).toHaveLength(1), WAIT)
+    expect(cards[0].title).toBe("Anderer Titel")
+    /* Die Karte traegt die uebrigen Angaben mit: ProjectUpdateRequest hat
+       ersetzende Semantik, ein PUT mit nur dem Titel loeschte Fakultaet,
+       Studiengang und alles Weitere. */
+    expect(cards[0]).toHaveProperty("summary")
+    expect(cards[0]).toHaveProperty("coverImageUrl")
+  })
+
+  it("laesst die Kopfangaben auch dann schreiben, wenn ein Block nicht lesbar ist", async () => {
+    const user = userEvent.setup()
+    let blockPuts = 0
+    let projectPuts = 0
+    const project = ownDraft()
+
+    renderEditor(project, [textBlock("Erster Absatz"), unreadableBlock()])
+    server.use(
+      http.put("*/api/projects/:projectId/blocks", () => {
+        blockPuts = blockPuts + 1
+        return HttpResponse.json({ version: 2, blocks: [] })
+      }),
+      http.put("*/api/projects/:projectId", async ({ request }) => {
+        projectPuts = projectPuts + 1
+        const body = (await request.json()) as { version: number }
+        return HttpResponse.json({ ...project, version: body.version + 1 })
+      })
+    )
+
+    const title = await screen.findByLabelText("Projekttitel", {}, WAIT)
+    await user.type(title, " ergaenzt")
+
+    await waitFor(() => expect(projectPuts).toBe(1), WAIT)
+    /* Der Inhalt bleibt aussen vor: der PUT ersetzt die ganze Liste und
+       loeschte damit den Block, den diese Ansicht nicht lesen kann. */
+    expect(blockPuts).toBe(0)
+  })
+
+  /*
+   * Ein Beitrag darf nicht allein vom Ansehen eine neue Project.version
+   * bekommen (§6.4). Der Takt vergleicht die Kopfangaben deshalb gegen
+   * den zuletzt vom Server bestaetigten Stand, und ohne Eingabe gibt es
+   * dort nichts zu senden.
+   */
+  it("schickt beim blossen Ansehen keinen Metadaten-Request", async () => {
+    const user = userEvent.setup()
+    let projectPuts = 0
+    const project = ownDraft()
+
+    let blockPuts = 0
+
+    renderEditor(project, [textBlock("Erster Absatz")])
+    server.use(
+      http.put("*/api/projects/:projectId/blocks", () => {
+        blockPuts = blockPuts + 1
+        return HttpResponse.json({ version: 2, blocks: [] })
+      }),
+      http.put("*/api/projects/:projectId", async ({ request }) => {
+        projectPuts = projectPuts + 1
+        const body = (await request.json()) as { version: number }
+        return HttpResponse.json({ ...project, version: body.version + 1 })
+      })
+    )
+
+    /* Im Inhalt getippt, an den Kopfangaben nichts angeruehrt. */
+    await screen.findByLabelText("Projekttitel", {}, WAIT)
+    const surface = document.querySelector<HTMLElement>(".ProseMirror")
+    expect(surface).not.toBeNull()
+    await user.click(surface as HTMLElement)
+    await user.keyboard("weiter")
+
+    /* Der Inhalt geht hinaus, die Kopfangaben nicht. */
+    await waitFor(() => expect(blockPuts).toBeGreaterThanOrEqual(1), WAIT)
+    expect(projectPuts).toBe(0)
+  })
 })

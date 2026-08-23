@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { replaceBlocks } from "@/api/queries/blocks"
+import { updateProject } from "@/api/queries/projects"
 import { isApiError, type ApiError } from "@/api/errors"
+import type { ProjectDetailResponse, ProjectUpdateRequest } from "@/api/types"
 import {
   docToBlocks,
   type PreviousBlock,
@@ -10,6 +12,18 @@ import type { ProjectDocument } from "@/features/project-content/blockTypes"
 
 /**
  * Der Speichertakt des Editors (Contract 6.1, 6.4).
+ *
+ * <p><strong>Zwei Wege, ein Takt, eine Version.</strong> Der Editor
+ * schreibt an zwei Stellen: den Inhalt ueber
+ * {@code PUT /projects/{id}/blocks} und die Kopfangaben (Titelbild, Titel,
+ * Kurzbeschreibung) ueber {@code PUT /projects/{id}}. Zusammengefasst wird
+ * das nicht, §6.1 trennt Inhalt und Metadaten. Beide erhoehen aber
+ * dieselbe {@code Project.version} ({@code BlockService.replace} ruft
+ * {@code project.touch()}), und deshalb duerfen sie nicht nebeneinander
+ * laufen: der zweite ginge mit der Version los, die der erste gerade
+ * veraltet hat, und der Takt bliebe nach dem 409 dauerhaft stehen. Dieser
+ * Hook fuehrt sie darum <em>nacheinander</em> und reicht die Version aus
+ * jeder Antwort an den naechsten Request weiter.
  *
  * <p><strong>Entprellt, und immer nur einer.</strong> Zwei ueberlappende
  * Takte erzeugen zuverlaessig einen Versionskonflikt gegen sich selbst: der
@@ -74,9 +88,20 @@ export function useAutosave({
   version,
   blocks,
   readDocument,
+  readMetadata,
+  onMetadataSaved,
 }: {
   projectId: string
-  /** Falsch heisst: nicht speichern (read-only Status oder Loecher im Bestand). */
+  /**
+   * Falsch heisst: den <em>Inhalt</em> nicht speichern (read-only Status
+   * oder Loecher im Bestand).
+   *
+   * <p>Die Kopfangaben haengen ausdruecklich nicht daran: ein Block, den
+   * diese Ansicht nicht lesen kann, ist ein Grund, den Inhalt nicht
+   * zurueckzuschreiben, aber keiner, den Titel festzuhalten. Ob sie
+   * geaendert werden duerfen, beantwortet {@link readMetadata} mit
+   * {@code null}.
+   */
   enabled: boolean
   /** Version aus dem letzten Lesen; danach fuehrt der Hook sie selbst. */
   version: number
@@ -84,6 +109,21 @@ export function useAutosave({
   blocks: readonly PreviousBlock[]
   /** Liefert den aktuellen Stand der Schreibflaeche. */
   readDocument: () => ProjectDocument | null
+  /**
+   * Liefert die zu schreibende Metadatenkarte ohne {@code version}, oder
+   * {@code null}, wenn nichts zu tun ist.
+   *
+   * <p><strong>Der Vergleich liegt beim Aufrufer</strong> und nicht hier:
+   * er kennt den zuletzt vom Server bestaetigten Stand (die Antwort steht
+   * im Query-Cache) und kann daran ablesen, ob sich etwas geaendert hat.
+   * Ein Merkmal im Takt muesste denselben Stand ein zweites Mal fuehren
+   * und liefe beim ersten Takt eines frisch geladenen Projekts ins Leere:
+   * es kennt noch nichts und schickte die unveraenderte Karte los, womit
+   * ein Beitrag allein vom Ansehen eine neue Version bekaeme (§6.4).
+   */
+  readMetadata: () => Omit<ProjectUpdateRequest, "version"> | null
+  /** Meldet die Antwort des Metadaten-PUT, damit der Cache sie uebernimmt. */
+  onMetadataSaved: (project: ProjectDetailResponse) => void
 }): Autosave {
   const [state, setState] = useState<AutosaveState>("idle")
   const [error, setError] = useState<ApiError | null>(null)
@@ -115,6 +155,18 @@ export function useAutosave({
   })
 
   /*
+   * Der Rueckmelder fuer die gespeicherten Kopfangaben, aus demselben
+   * Grund ueber einen Ref wie {@code runRef} weiter unten: er schliesst
+   * ueber den QueryClient und die Projekt-ID und ist bei jedem Rendern
+   * eine neue Funktion. Stuende er in den Abhaengigkeiten von
+   * {@code save}, entstuende der ganze Takt bei jedem Rendern neu.
+   */
+  const onMetadataSavedRef = useRef(onMetadataSaved)
+  useEffect(() => {
+    onMetadataSavedRef.current = onMetadataSaved
+  })
+
+  /*
    * Ein neues Lesen (erster Abruf, Neuladen nach Konflikt) setzt den Takt
    * zurueck: Version und IDs sind danach andere.
    *
@@ -133,28 +185,59 @@ export function useAutosave({
   }, [version])
 
   const save = useCallback(async (): Promise<boolean> => {
-    const document = readDocument()
-    if (document === null || !enabled || stoppedRef.current) {
+    if (stoppedRef.current) {
       return false
     }
 
-    const payload = docToBlocks(document, previousRef.current)
-    const fingerprint = JSON.stringify(payload)
-    if (fingerprint === savedRef.current) {
-      setState("saved")
+    /* Der Inhalt, sofern er ueberhaupt geschrieben werden darf und sich
+       seit der letzten Bestaetigung geaendert hat. */
+    const document = enabled ? readDocument() : null
+    const payload =
+      document === null ? null : docToBlocks(document, previousRef.current)
+    const fingerprint = payload === null ? null : JSON.stringify(payload)
+    const blocksToSend =
+      payload !== null && fingerprint !== savedRef.current ? payload : null
+
+    /* Die Kopfangaben. Der Aufrufer hat bereits verglichen. */
+    const metadataToSend = readMetadata()
+
+    if (blocksToSend === null && metadataToSend === null) {
+      /* „idle" bleibt „idle": auf einem read-only Beitrag leert jeder Weg
+         aus der Seite heraus den Takt, und ein „Gespeichert" waere dort
+         eine Meldung ueber etwas, das nie speicherbar war. */
+      setState((current) => (current === "idle" ? current : "saved"))
       return true
     }
 
     setState("saving")
     try {
-      const response = await replaceBlocks(
-        projectId,
-        versionRef.current,
-        payload
-      )
-      versionRef.current = response.version
-      previousRef.current = response.blocks
-      savedRef.current = fingerprint
+      /*
+       * Erst der Inhalt, dann die Kopfangaben, und die zweite Anfrage geht
+       * mit der Version aus der ersten Antwort los. Umgekehrt oder
+       * gleichzeitig gaebe es einen 409 gegen die eigene vorige
+       * Speicherung (§6.4).
+       */
+      if (blocksToSend !== null) {
+        const response = await replaceBlocks(
+          projectId,
+          versionRef.current,
+          blocksToSend
+        )
+        versionRef.current = response.version
+        previousRef.current = response.blocks
+        savedRef.current = fingerprint
+      }
+      if (metadataToSend !== null) {
+        const response = await updateProject(projectId, {
+          ...metadataToSend,
+          version: versionRef.current,
+        })
+        versionRef.current = response.version
+        /* Ueber einen Ref: der Aufrufer reicht hier gewoehnlich eine bei
+           jedem Rendern neue Funktion herein, und stuende sie in den
+           Abhaengigkeiten, entstuende der Takt dauernd neu. */
+        onMetadataSavedRef.current(response)
+      }
       setError(null)
       setState("saved")
       return true
@@ -173,7 +256,7 @@ export function useAutosave({
       }
       return false
     }
-  }, [enabled, projectId, readDocument])
+  }, [enabled, projectId, readDocument, readMetadata])
 
   const run = useCallback((): Promise<boolean> => {
     if (runningRef.current !== null) {
@@ -207,7 +290,13 @@ export function useAutosave({
   }, [save])
 
   const schedule = useCallback(() => {
-    if (!enabled || stoppedRef.current) {
+    /*
+     * Ohne {@code enabled}: die Kopfangaben duerfen auch dann geschrieben
+     * werden, wenn die Schreibflaeche gesperrt ist, etwa weil ein Block
+     * nicht gelesen werden konnte. Ob wirklich etwas hinausgeht,
+     * entscheidet {@code save()}.
+     */
+    if (stoppedRef.current) {
       return
     }
     setState((current) => (current === "saving" ? current : "pending"))
@@ -234,20 +323,20 @@ export function useAutosave({
       },
       Math.min(DEBOUNCE_MS, untilDeadline)
     )
-  }, [enabled, run])
+  }, [run])
 
   const flush = useCallback(async (): Promise<boolean> => {
     if (timerRef.current !== null) {
       clearTimeout(timerRef.current)
       timerRef.current = null
     }
-    if (!enabled || stoppedRef.current) {
-      /* Nichts zu speichern ist kein Fehlschlag: eine read-only Flaeche hat
-         keinen offenen Stand. */
-      return !stoppedRef.current
+    if (stoppedRef.current) {
+      return false
     }
+    /* Nichts zu speichern ist kein Fehlschlag: {@code save()} meldet dann
+       von selbst {@code true}, ohne einen Request abzusetzen. */
     return run()
-  }, [enabled, run])
+  }, [run])
 
   /*
    * Ein offener Takt wird beim Abraeumen noch angestossen. Ob er den Server
