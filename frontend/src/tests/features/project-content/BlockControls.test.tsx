@@ -21,7 +21,13 @@ const WAIT = { timeout: 20000 }
 
 let captured: Editor | null = null
 
-function Harness({ onBusyChange }: { onBusyChange: (busy: boolean) => void }) {
+function Harness({
+  onBusyChange,
+  onAnnounce = () => undefined,
+}: {
+  onBusyChange: (busy: boolean) => void
+  onAnnounce?: (message: string) => void
+}) {
   const editor = useEditor({
     extensions: createEditorExtensions(),
     content: "<p>Erster Absatz</p><p>Zweiter Absatz</p>",
@@ -43,7 +49,7 @@ function Harness({ onBusyChange }: { onBusyChange: (busy: boolean) => void }) {
         index={0}
         disabled={false}
         onBusyChange={onBusyChange}
-        onAnnounce={() => undefined}
+        onAnnounce={onAnnounce}
       />
       <EditorContent editor={editor} />
     </div>
@@ -85,5 +91,30 @@ describe("BlockControls", () => {
       screen.getByRole("group", { name: "Block einfügen" })
     ).toBeInTheDocument()
     expect(captured?.state.doc.child(1).type.name).toBe("horizontalRule")
+  })
+
+  it("loescht den Block sofort, ohne Rueckfrage, und sagt den Weg zurueck an", async () => {
+    const user = userEvent.setup()
+    const onAnnounce = vi.fn()
+    renderWithProviders(
+      <Harness onBusyChange={() => undefined} onAnnounce={onAnnounce} />
+    )
+
+    await screen.findByRole("button", { name: "Block einfügen" }, WAIT)
+    await waitFor(() => expect(captured?.state.doc.childCount).toBe(2), WAIT)
+
+    await user.click(screen.getByRole("button", { name: "Absatz löschen" }))
+
+    /* Kein Dialog dazwischen (Nutzerentscheidung): der Klick wirkt sofort,
+       Rueckgaengig stellt den Block wieder her, und genau das sagt die
+       Ansage. */
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+    await waitFor(() => expect(captured?.state.doc.childCount).toBe(1), WAIT)
+    expect(onAnnounce).toHaveBeenCalledWith(
+      "Absatz gelöscht. Rückgängig stellt ihn wieder her."
+    )
+
+    captured?.commands.undo()
+    await waitFor(() => expect(captured?.state.doc.childCount).toBe(2), WAIT)
   })
 })

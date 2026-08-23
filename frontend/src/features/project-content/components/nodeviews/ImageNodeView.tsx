@@ -1,9 +1,8 @@
 import type { ReactNodeViewProps } from "@tiptap/react"
-import { RefreshCwIcon, TriangleAlertIcon } from "lucide-react"
+import { TriangleAlertIcon } from "lucide-react"
 import { useId } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Toggle } from "@/components/ui/toggle"
@@ -67,11 +66,9 @@ export function ImageNodeView({ node, updateAttributes }: ReactNodeViewProps) {
     width: ImageWidth
   }
   const image = useFileObjectUrl(attrs.fileId)
-  const label = t("projectContent.blockName.imageBlock")
 
   return (
     <MediaShell
-      label={label}
       incompleteHint={
         attrs.fileId ? null : t("projectContent.image.incomplete")
       }
@@ -200,17 +197,6 @@ export function ImageNodeView({ node, updateAttributes }: ReactNodeViewProps) {
                   }
                 />
               </div>
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="w-fit text-muted-foreground"
-                onClick={() => updateAttributes({ fileId: null })}
-              >
-                <RefreshCwIcon aria-hidden="true" />
-                {t("projectContent.image.replace")}
-              </Button>
             </div>
           ) : (
             attrs.caption != null &&

@@ -46,25 +46,9 @@ export function maxMebibytes(kind: UploadKind): number {
   return Math.round(UPLOAD_CONSTRAINTS[kind].maxBytes / MEBIBYTE)
 }
 
-/**
- * Dateigroesse in der Schreibweise der Oberflaeche.
- *
- * <p>Bewusst mit {@code Intl} und nicht mit einer eigenen Rundung: die
- * Trennzeichen unterscheiden sich zwischen Deutsch und Englisch, und die
- * Zahl steht in einem Satz, den ein Screenreader vorliest.
+/*
+ * Eine zweite formatFileSize stand hier bis zum WYSIWYG-Umbau (binaer,
+ * 1024er-Teilung) und lieferte am Dokumentblock eine andere Groesse als
+ * der Renderer (dezimal, Intl-Einheiten): Editor "1,4 MB", Seite
+ * "1,5 MB". Es gibt nur noch die Fassung in renderer/renderBlockNode.
  */
-export function formatFileSize(bytes: number, locale: string): string {
-  if (bytes < 1024) {
-    return new Intl.NumberFormat(locale).format(bytes) + " B"
-  }
-  const units = ["KB", "MB", "GB"]
-  let value = bytes / 1024
-  let unit = 0
-  while (value >= 1024 && unit < units.length - 1) {
-    value = value / 1024
-    unit = unit + 1
-  }
-  return `${new Intl.NumberFormat(locale, {
-    maximumFractionDigits: 1,
-  }).format(value)} ${units[unit]}`
-}

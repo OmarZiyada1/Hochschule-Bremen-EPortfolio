@@ -304,7 +304,8 @@ Wann eine Rückfrage Pflicht ist und wann sie nur stört:
 
 | Fall | Rückfrage |
 | --- | --- |
-| Löschen von Projekt, Block, Datei, Kommentar, Stammdatum | ja, mit „unwiderruflich" im Text |
+| Löschen von Projekt, Datei, Kommentar, Stammdatum | ja, mit „unwiderruflich" im Text |
+| Löschen eines Blocks im Editor | nein: Rückgängig stellt vollständig wieder her, die Live-Region sagt den Weg an (SC 3.3.4 lässt Umkehrbarkeit als gleichwertigen Weg zu; Nutzerentscheidung in KAN-36) |
 | Statuswechsel, der fremde Sicht ändert: einreichen, zurückziehen, genehmigen, veröffentlichen, zur Überarbeitung zurückgeben | ja |
 | Konto deaktivieren, Rolle ändern, Passwort zurücksetzen (Administration) | ja, mit dem Hinweis auf die sofortige Wirkung |
 | Zusammenführen von Kategorien, Umsortieren mit Datenwirkung | ja |

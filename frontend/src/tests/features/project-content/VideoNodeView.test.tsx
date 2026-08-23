@@ -1,5 +1,4 @@
-import { screen, waitFor } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
+import { screen } from "@testing-library/react"
 import { HttpResponse, http } from "msw"
 import { Route, Routes } from "react-router-dom"
 import { beforeEach, describe, expect, it } from "vitest"
@@ -107,9 +106,14 @@ describe("VideoNodeView", () => {
     expect(video).toHaveAttribute("preload", "metadata")
     expect(video).not.toHaveAttribute("autoplay")
 
-    /* Das Upload- und Adressformular dominiert den Block nicht mehr. */
+    /* Das Upload- und Adressformular dominiert den Block nicht mehr, und
+       eine Ersetzen-Aktion gibt es nicht: loeschen und neu einfuegen ist
+       der Weg (Nutzerentscheidung). */
     expect(
       screen.queryByText("Oder Videoadresse einfügen")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Video ersetzen" })
     ).not.toBeInTheDocument()
     /* Die Unterschrift ist direkt am Block editierbar. */
     expect(screen.getByLabelText("Bildunterschrift")).toBeInTheDocument()
@@ -133,41 +137,6 @@ describe("VideoNodeView", () => {
     expect(
       screen.queryByText("YouTube, Video mx4c5TrvHWU")
     ).not.toBeInTheDocument()
-  }, 60000)
-
-  it("fuehrt ueber Ersetzen zurueck zu Upload und Adresse, ohne die Unterschrift zu verlieren", async () => {
-    renderEditor(ownDraft(), [
-      videoBlock({
-        provider: "youtube",
-        videoId: "mx4c5TrvHWU",
-        caption: "Erster Lauf",
-      }),
-    ])
-
-    await screen.findByTitle("Eingebettetes Video von YouTube", undefined, WAIT)
-    await userEvent.click(
-      screen.getByRole("button", { name: "Video ersetzen" })
-    )
-
-    await waitFor(() => {
-      expect(
-        screen.getByText("Video hochladen oder hierher ziehen")
-      ).toBeInTheDocument()
-    })
-    expect(screen.getByText("Oder Videoadresse einfügen")).toBeInTheDocument()
-
-    /* Die Unterschrift haengt am Block, nicht an der Quelle: eine neue
-       Quelle uebernimmt sie wieder. */
-    const url = screen.getByPlaceholderText(
-      "Adresse, Teilen-Link oder Einbettungscode"
-    )
-    await userEvent.type(url, "https://vimeo.com/76979871")
-    await userEvent.click(screen.getByRole("button", { name: "Einbetten" }))
-
-    expect(
-      await screen.findByTitle("Eingebettetes Video von Vimeo", undefined, WAIT)
-    ).toBeInTheDocument()
-    expect(screen.getByLabelText("Bildunterschrift")).toHaveValue("Erster Lauf")
   }, 60000)
 
   it("zeigt ohne Schreibrecht den Player mit figcaption, ohne Bedienelemente", async () => {

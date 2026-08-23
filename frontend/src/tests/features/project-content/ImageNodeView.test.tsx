@@ -135,59 +135,19 @@ describe("ImageNodeView", () => {
     ).toBeInTheDocument()
   }, 60000)
 
-  it("Ersetzen behaelt Alternativtext, Unterschrift und Breite", async () => {
-    const NEW_FILE_ID = "f1f1f1f1-0000-4000-8000-000000000009"
-    renderEditor(ownDraft(), [imageBlock({ width: 75 })])
-    server.use(
-      http.post("*/api/files", () =>
-        HttpResponse.json(
-          {
-            id: NEW_FILE_ID,
-            url: `/api/files/${NEW_FILE_ID}`,
-            mimeType: "image/png",
-            size: 1024,
-          },
-          { status: 201 }
-        )
-      )
-    )
-
-    await screen.findByRole("toolbar", { name: "Bildbreite" }, WAIT)
-    await userEvent.click(screen.getByRole("button", { name: "Bild ersetzen" }))
-
-    /* Zurueck im leeren Zustand: die Ablageflaeche steht wieder da. */
-    expect(
-      await screen.findByText("Bild hochladen oder hierher ziehen")
-    ).toBeInTheDocument()
-
-    /* Ein neues Bild uebernimmt die stehengebliebenen Angaben: Ersetzen
-       setzt nur fileId zurueck, nie alt, caption oder width. */
-    await userEvent.upload(
-      screen.getByLabelText(/Bild hochladen oder hierher ziehen/),
-      new File(["x"], "neu.png", { type: "image/png" })
-    )
-
-    await waitFor(() => {
-      expect(screen.getByLabelText("Bildunterschrift")).toHaveValue(
-        "Abbildung 1"
-      )
-    }, WAIT)
-    expect(screen.getByLabelText("Alternativtext")).toHaveValue(
-      "Ein Messaufbau"
-    )
-    expect(
-      screen.getByRole("button", { name: "Bildbreite 75 Prozent" })
-    ).toHaveAttribute("aria-pressed", "true")
-  }, 60000)
-
   it("fuehrt Alternativtext und Bildunterschrift direkt unter dem Bild, ohne Ausklapper", async () => {
     renderEditor(ownDraft(), [imageBlock({ alt: "", caption: "" })])
 
     const alt = await screen.findByLabelText("Alternativtext", undefined, WAIT)
     const caption = screen.getByLabelText("Bildunterschrift")
 
-    /* Der fruehere Ausklapper existiert am Bild nicht mehr. */
+    /* Der fruehere Ausklapper existiert am Bild nicht mehr, und eine
+       Ersetzen-Aktion gibt es nicht: loeschen und neu einfuegen ist der
+       Weg (Nutzerentscheidung). */
     expect(screen.queryByText("Angaben zum Block Bild")).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Bild ersetzen" })
+    ).not.toBeInTheDocument()
 
     await userEvent.type(alt, "Ein Messaufbau")
     expect(alt).toHaveValue("Ein Messaufbau")

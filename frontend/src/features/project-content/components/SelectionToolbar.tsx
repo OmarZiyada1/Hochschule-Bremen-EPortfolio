@@ -251,7 +251,10 @@ export function SelectionToolbarBar({
 
         <ToolbarSeparator />
 
-        <ColorMenu editor={editor} disabled={disabled} />
+        {/* Zwei eigene Schaltflaechen (Nutzerentscheidung): jede oeffnet
+            nur ihre Farbauswahl, die Exklusivitaet der Marks bleibt. */}
+        <ColorMenu editor={editor} disabled={disabled} kind="text" />
+        <ColorMenu editor={editor} disabled={disabled} kind="highlight" />
       </Toolbar>
 
       <LinkDialog

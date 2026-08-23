@@ -35,7 +35,6 @@ export function MathNodeView({ node, updateAttributes }: ReactNodeViewProps) {
 
   return (
     <MediaShell
-      label={t("projectContent.blockName.mathBlock")}
       incompleteHint={
         latex.trim() === "" ? t("projectContent.formula.incomplete") : null
       }

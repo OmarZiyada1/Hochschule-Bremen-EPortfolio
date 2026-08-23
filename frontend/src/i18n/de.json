@@ -1,4 +1,4 @@
-﻿{
+{
   "app": {
     "name": "E-Portfolio Hochschule Bremen",
     "institution": "Hochschule Bremen",
@@ -863,7 +863,6 @@
       "incomplete": "Noch kein Video gewählt. Der Block wird gespeichert, sobald eines hinterlegt ist.",
       "caption": "Bildunterschrift",
       "captionPlaceholder": "Bildunterschrift …",
-      "replace": "Video ersetzen",
       "loadFailed": "Das Video konnte nicht geladen werden.",
       "dropzone": "Video hochladen oder hierher ziehen",
       "dropzoneHint": "MP4 oder WebM bis {{max}} MB",
@@ -876,16 +875,15 @@
     "audio": {
       "label": "Audioaufnahme aus diesem Beitrag",
       "incomplete": "Noch keine Aufnahme gewählt. Der Block wird gespeichert, sobald eine darin liegt.",
-      "caption": "Bildunterschrift",
-      "replace": "Aufnahme ersetzen",
-      "fileDetail": "Hochgeladene Datei",
+      "caption": "Beschriftung",
+      "captionPlaceholder": "Beschriftung …",
+      "loadFailed": "Die Aufnahme konnte nicht geladen werden.",
       "dropzone": "Audio hochladen oder hierher ziehen",
       "dropzoneHint": "MP3, WAV oder OGG bis {{max}} MB"
     },
     "embed": {
       "title": "Eingebetteter Inhalt von {{provider}}",
       "incomplete": "Noch keine Adresse eingetragen. Der Block wird gespeichert, sobald eine hinterlegt ist.",
-      "replace": "Einbettung ersetzen",
       "urlLabel": "Adresse der Einbettung",
       "urlPlaceholder": "https://",
       "urlHint": "YouTube, Vimeo, Figma und CodePen. Die Adresszeile des Browsers, der Teilen-Link oder der ganze Einbettungscode: alles drei geht.",
@@ -895,7 +893,6 @@
     "document": {
       "accessibleName": "{{fileName}} herunterladen, PDF, {{size}}",
       "incomplete": "Noch kein Dokument gewählt. Der Block wird gespeichert, sobald eines darin liegt.",
-      "replace": "Dokument ersetzen",
       "dropzone": "Dokument hochladen oder hierher ziehen",
       "dropzoneHint": "PDF bis {{max}} MB"
     },
@@ -929,18 +926,13 @@
       "drop": "{{block}} an dieser Stelle ablegen",
       "moveHint": "Ziehen, oder anheben und mit den Pfeiltasten verschieben",
       "delete": "{{block}} löschen",
-      "confirmDelete": {
-        "title": "Block löschen?",
-        "description": "{{block}} an Position {{position}} wird aus dem Beitrag entfernt. Rückgängig machen lässt sich das nur über die Rückgängig-Funktion.",
-        "confirm": "Löschen"
-      },
       "announce": {
         "position": "{{block}} an Position {{position}} von {{count}}",
         "pickedUp": "{{block}} angehoben, Position {{position}} von {{count}}",
         "dropped": "{{block}} abgelegt an Position {{position}} von {{count}}",
         "cancelled": "Verschieben abgebrochen, {{block}} steht wieder an Position {{position}} von {{count}}",
         "edge": "{{block}} steht bereits am Rand",
-        "deleted": "{{block}} gelöscht"
+        "deleted": "{{block}} gelöscht. Rückgängig stellt ihn wieder her."
       }
     },
     "editor": {
@@ -969,9 +961,8 @@
       "blockType": "Blocktyp",
       "text": "Text",
       "heading": "Heading {{level}}",
-      "color": "Farbe",
       "textColor": "Textfarbe",
-      "highlightColor": "Hintergrund",
+      "highlightColor": "Highlight",
       "colorDefault": "Standard",
       "colorRole": {
         "neutral": "Neutral",
@@ -1006,9 +997,6 @@
         "justifyBlocked": "Blocksatz ist an einer Überschrift nicht möglich"
       }
     },
-    "mediaShell": {
-      "settings": "Angaben zum Block {{block}}"
-    },
     "media": {
       "loading": "Wird geladen …",
       "unavailable": "Diese Datei ist nicht verfügbar."
@@ -1032,17 +1020,16 @@
       "widthOption": "Bildbreite {{width}} Prozent",
       "widthValue": "{{width}} %",
       "widthChanged": "Bildbreite auf {{width}} Prozent gesetzt.",
-      "replace": "Bild ersetzen",
       "dropzone": "Bild hochladen oder hierher ziehen",
       "dropzoneHint": "PNG, JPG oder WebP bis {{max}} MB"
     },
     "gallery": {
       "incomplete": "Noch kein Bild in der Galerie. Der Block wird gespeichert, sobald eines darin liegt.",
-      "altGroup": "Alternativtexte",
       "altFor": "Bild {{position}}",
       "caption": "Bildunterschrift der Galerie",
       "columns": "Spalten",
       "columnsOption": "{{columns}} Spalten",
+      "columnsChanged": "Galerie auf {{columns}} Spalten gestellt.",
       "remove": "Bild {{position}} entfernen",
       "dropzone": "Bild zur Galerie hinzufügen"
     },

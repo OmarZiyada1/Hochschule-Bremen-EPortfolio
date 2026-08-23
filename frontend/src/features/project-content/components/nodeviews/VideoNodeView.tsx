@@ -1,5 +1,5 @@
 import type { ReactNodeViewProps } from "@tiptap/react"
-import { RefreshCwIcon, TriangleAlertIcon } from "lucide-react"
+import { TriangleAlertIcon } from "lucide-react"
 import { useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -53,9 +53,9 @@ import { maxMebibytes } from "@/features/project-content/uploadKinds"
  *
  * <p><strong>Die Angaben stehen am Block und nicht mehr in einem
  * Ausklapper:</strong> die Unterschrift als schlankes Feld direkt unter
- * dem Player, das Ersetzen als Aktion darunter. Erst "Ersetzen" zeigt
- * wieder den leeren Zustand mit Upload und Adresse; die Unterschrift
- * bleibt dabei stehen.
+ * dem Player. Eine Ersetzen-Aktion gibt es nicht mehr
+ * (Nutzerentscheidung): wer ein anderes Video will, loescht den Block und
+ * fuegt einen neuen ein; Rueckgaengig stellt den alten wieder her.
  */
 export function VideoNodeView({ node, updateAttributes }: ReactNodeViewProps) {
   const { t } = useTranslation()
@@ -100,17 +100,8 @@ export function VideoNodeView({ node, updateAttributes }: ReactNodeViewProps) {
     })
   }
 
-  const reset = () =>
-    updateAttributes({
-      fileId: null,
-      provider: null,
-      videoId: null,
-      hash: null,
-    })
-
   return (
     <MediaShell
-      label={t("projectContent.blockName.videoBlock")}
       incompleteHint={
         hasFile || hasEmbed ? null : t("projectContent.video.incomplete")
       }
@@ -166,17 +157,6 @@ export function VideoNodeView({ node, updateAttributes }: ReactNodeViewProps) {
                   }
                 />
               </div>
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="w-fit text-muted-foreground"
-                onClick={reset}
-              >
-                <RefreshCwIcon aria-hidden="true" />
-                {t("projectContent.video.replace")}
-              </Button>
             </div>
           ) : (
             attrs.caption != null &&

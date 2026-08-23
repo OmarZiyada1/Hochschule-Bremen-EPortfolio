@@ -167,14 +167,16 @@ describe("Farbmenue", () => {
     const seen: { editor?: Editor } = {}
     renderMenus("<p>Ein Absatz</p>", (editor) => {
       seen.editor = editor
-      return <ColorMenu editor={editor} disabled={false} />
+      return <ColorMenu editor={editor} disabled={false} kind="text" />
     })
 
-    await user.click(await screen.findByRole("button", { name: "Farbe" }, WAIT))
+    await user.click(
+      await screen.findByRole("button", { name: "Textfarbe" }, WAIT)
+    )
     await user.click(
       await within(
         await screen.findByRole("group", { name: "Textfarbe" }, WAIT)
-      ).findByRole("radio", { name: "Violett" })
+      ).findByRole("menuitemradio", { name: "Violett" })
     )
 
     /* Gespeichert wird der Rollenname und nie ein Hex-Wert (Contract 2.5). */
@@ -184,23 +186,28 @@ describe("Farbmenue", () => {
     }, WAIT)
   })
 
-  it("ersetzt eine gesetzte Textfarbe durch den Hintergrund, statt beides zu fuehren", async () => {
+  it("ersetzt eine gesetzte Textfarbe durch das Highlight, statt beides zu fuehren", async () => {
+    /* Die Exklusivitaet gilt auch ueber die zwei getrennten Schaltflaechen
+       hinweg: jede oeffnet nur ihre Farbauswahl (Nutzerentscheidung), die
+       Marks schliessen sich weiter aus. */
     const user = userEvent.setup({ pointerEventsCheck: 0 })
     const seen: { editor?: Editor } = {}
     renderMenus("<p>Ein Absatz</p>", (editor) => {
       seen.editor = editor
-      return <ColorMenu editor={editor} disabled={false} />
+      return <ColorMenu editor={editor} disabled={false} kind="highlight" />
     })
 
-    await screen.findByRole("button", { name: "Farbe" }, WAIT)
+    await screen.findByRole("button", { name: "Highlight" }, WAIT)
     await waitFor(() => expect(seen.editor).toBeDefined(), WAIT)
     seen.editor?.chain().focus().setMark("textStyle", { color: "purple" }).run()
 
-    await user.click(await screen.findByRole("button", { name: "Farbe" }, WAIT))
+    await user.click(
+      await screen.findByRole("button", { name: "Highlight" }, WAIT)
+    )
     await user.click(
       await within(
-        await screen.findByRole("group", { name: "Hintergrund" }, WAIT)
-      ).findByRole("radio", { name: "Bernstein" })
+        await screen.findByRole("group", { name: "Highlight" }, WAIT)
+      ).findByRole("menuitemradio", { name: "Bernstein" })
     )
 
     /* Die Schrift auf einer Hervorhebung bleibt --foreground; fuer die
@@ -213,21 +220,25 @@ describe("Farbmenue", () => {
     }, WAIT)
   })
 
-  it("bietet Standard und die neun Rollen je Gruppe", async () => {
-    const user = userEvent.setup()
+  it("bietet Standard und die neun Rollen je Schaltflaeche", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
     renderMenus("<p>Ein Absatz</p>", (editor) => (
-      <ColorMenu editor={editor} disabled={false} />
+      <>
+        <ColorMenu editor={editor} disabled={false} kind="text" />
+        <ColorMenu editor={editor} disabled={false} kind="highlight" />
+      </>
     ))
 
-    await user.click(await screen.findByRole("button", { name: "Farbe" }, WAIT))
-
-    for (const name of ["Textfarbe", "Hintergrund"]) {
+    for (const name of ["Textfarbe", "Highlight"]) {
+      await user.click(await screen.findByRole("button", { name }, WAIT))
       const group = await screen.findByRole("group", { name }, WAIT)
-      expect(within(group).getAllByRole("radio"), name).toHaveLength(10)
+      expect(within(group).getAllByRole("menuitemradio"), name).toHaveLength(10)
       expect(
-        within(group).getByRole("radio", { name: "Standard" }),
+        within(group).getByRole("menuitemradio", { name: "Standard" }),
         name
       ).toBeInTheDocument()
+      /* Das offene Menue schliessen, bevor das zweite aufgeht. */
+      await user.keyboard("{Escape}")
     }
   })
 })

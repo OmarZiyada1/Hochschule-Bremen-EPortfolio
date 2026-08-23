@@ -1,4 +1,4 @@
-﻿{
+{
   "app": {
     "name": "E-Portfolio Hochschule Bremen",
     "institution": "Hochschule Bremen",
@@ -863,7 +863,6 @@
       "incomplete": "No video chosen yet. The block is saved as soon as one is set.",
       "caption": "Caption",
       "captionPlaceholder": "Caption …",
-      "replace": "Replace video",
       "loadFailed": "The video could not be loaded.",
       "dropzone": "Upload a video or drop it here",
       "dropzoneHint": "MP4 or WebM up to {{max}} MB",
@@ -877,15 +876,14 @@
       "label": "Audio recording from this contribution",
       "incomplete": "No recording chosen yet. The block is saved as soon as it holds one.",
       "caption": "Caption",
-      "replace": "Replace recording",
-      "fileDetail": "Uploaded file",
+      "captionPlaceholder": "Caption …",
+      "loadFailed": "The recording could not be loaded.",
       "dropzone": "Upload audio or drop it here",
       "dropzoneHint": "MP3, WAV or OGG up to {{max}} MB"
     },
     "embed": {
       "title": "Embedded content from {{provider}}",
       "incomplete": "No address entered yet. The block is saved as soon as one is set.",
-      "replace": "Replace embed",
       "urlLabel": "Address of the embed",
       "urlPlaceholder": "https://",
       "urlHint": "YouTube, Vimeo, Figma and CodePen. The browser address, the share link or the whole embed snippet: all three work.",
@@ -895,7 +893,6 @@
     "document": {
       "accessibleName": "Download {{fileName}}, PDF, {{size}}",
       "incomplete": "No document chosen yet. The block is saved as soon as it holds one.",
-      "replace": "Replace document",
       "dropzone": "Upload a document or drop it here",
       "dropzoneHint": "PDF up to {{max}} MB"
     },
@@ -929,18 +926,13 @@
       "drop": "Drop {{block}} here",
       "moveHint": "Drag, or pick up and move with the arrow keys",
       "delete": "Delete {{block}}",
-      "confirmDelete": {
-        "title": "Delete block?",
-        "description": "{{block}} at position {{position}} will be removed from the contribution. Only undo can bring it back.",
-        "confirm": "Delete"
-      },
       "announce": {
         "position": "{{block}} at position {{position}} of {{count}}",
         "pickedUp": "{{block}} picked up, position {{position}} of {{count}}",
         "dropped": "{{block}} dropped at position {{position}} of {{count}}",
         "cancelled": "Move cancelled, {{block}} is back at position {{position}} of {{count}}",
         "edge": "{{block}} is already at the edge",
-        "deleted": "{{block}} deleted"
+        "deleted": "{{block}} deleted. Undo restores it."
       }
     },
     "editor": {
@@ -969,9 +961,8 @@
       "blockType": "Block type",
       "text": "Text",
       "heading": "Heading {{level}}",
-      "color": "Colour",
       "textColor": "Text colour",
-      "highlightColor": "Background",
+      "highlightColor": "Highlight",
       "colorDefault": "Default",
       "colorRole": {
         "neutral": "Neutral",
@@ -1006,9 +997,6 @@
         "justifyBlocked": "Justified text is not available on a heading"
       }
     },
-    "mediaShell": {
-      "settings": "Details for the {{block}} block"
-    },
     "media": {
       "loading": "Loading …",
       "unavailable": "This file is not available."
@@ -1032,17 +1020,16 @@
       "widthOption": "Image width {{width}} per cent",
       "widthValue": "{{width}} %",
       "widthChanged": "Image width set to {{width}} per cent.",
-      "replace": "Replace image",
       "dropzone": "Upload an image or drop it here",
       "dropzoneHint": "PNG, JPG or WebP up to {{max}} MB"
     },
     "gallery": {
       "incomplete": "No image in the gallery yet. The block is saved as soon as it holds one.",
-      "altGroup": "Alternative texts",
       "altFor": "Image {{position}}",
       "caption": "Gallery caption",
       "columns": "Columns",
       "columnsOption": "{{columns}} columns",
+      "columnsChanged": "Gallery set to {{columns}} columns.",
       "remove": "Remove image {{position}}",
       "dropzone": "Add an image to the gallery"
     },

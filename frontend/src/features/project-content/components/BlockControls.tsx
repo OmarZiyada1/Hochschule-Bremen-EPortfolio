@@ -4,16 +4,6 @@ import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -60,9 +50,11 @@ import {
  * Bedienung fuer einen Screenreader stumm. Die Live-Region liegt an der
  * Seite, diese Komponente ruft nur {@link BlockControlsProps.onAnnounce}.
  *
- * <p><strong>Loeschen fragt nach</strong> und benennt den Block im Text:
- * ein Bild oder eine Tabelle ist Arbeit, die sich nicht mit einem Klick
- * wiederherstellen laesst.
+ * <p><strong>Loeschen wirkt sofort, ohne Rueckfrage</strong>
+ * (Nutzerentscheidung): der Klick entfernt den Block, die Ansage nennt ihn
+ * und den Weg zurueck, und Rueckgaengig stellt ihn vollstaendig wieder her.
+ * Die fruehere Rueckfrage stand vor jedem Loeschen im Weg, obwohl der
+ * Verlust ohnehin einen Tastendruck entfernt reparabel ist.
  */
 export type BlockControlsProps = {
   editor: Editor
@@ -73,7 +65,7 @@ export type BlockControlsProps = {
   size?: "sm" | "default"
   /**
    * Meldet, ob gerade eine Flaeche dieser Bedienung offen steht: die
-   * Einfuegeleiste, die Loeschrueckfrage oder ein angehobener Block.
+   * Einfuegeleiste oder ein angehobener Block.
    *
    * <p><strong>Wofuer der Verwender das braucht.</strong> Am Zeiger haengt
    * die Bedienung im Drag-Handle, und der blendet sich aus, sobald der
@@ -100,7 +92,6 @@ export function BlockControls({
      das Popover darum herum seine Form danach richtet: eine Pille um zehn
      runde Schaltflaechen, eine Karte um ein Formular. */
   const [insertMode, setInsertMode] = useState<"types" | "table">("types")
-  const [confirmDelete, setConfirmDelete] = useState(false)
   /* Die Position, an der der Block angehoben wurde. Nicht null heisst
      "angehoben"; Escape stellt sie wieder her. */
   const [pickedUpAt, setPickedUpAt] = useState<number | null>(null)
@@ -108,7 +99,7 @@ export function BlockControls({
 
   /* Nach oben gemeldet und nicht selbst behandelt: wo die Bedienung haengt
      und was das fuer sie bedeutet, weiss nur ihr Verwender. */
-  const busy = inserting || confirmDelete || pickedUpAt !== null
+  const busy = inserting || pickedUpAt !== null
   useEffect(() => {
     onBusyChange?.(busy)
     /* Beim Abraeumen zurueckmelden: verschwindet die Bedienung, waehrend
@@ -296,45 +287,14 @@ export function BlockControls({
         </TooltipContent>
       </Tooltip>
 
-      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <button
-                type="button"
-                disabled={disabled}
-                draggable={false}
-                onClick={() => setConfirmDelete(true)}
-                className={`${iconButton} hover:bg-muted hover:text-destructive`}
-              />
-            }
-          >
-            <Trash2Icon aria-hidden="true" className="size-4" />
-            <span className="sr-only">
-              {t("projectContent.blockControls.delete", { block: blockLabel })}
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>
-            {t("projectContent.blockControls.delete", { block: blockLabel })}
-          </TooltipContent>
-        </Tooltip>
-        <AlertDialogContent className="rounded-modal">
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("projectContent.blockControls.confirmDelete.title")}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("projectContent.blockControls.confirmDelete.description", {
-                block: blockLabel,
-                position: index + 1,
-              })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.action.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <button
+              type="button"
+              disabled={disabled}
+              draggable={false}
               onClick={() => {
-                setConfirmDelete(false)
                 deleteBlock(editor, index)
                 onAnnounce(
                   t("projectContent.blockControls.announce.deleted", {
@@ -342,12 +302,19 @@ export function BlockControls({
                   })
                 )
               }}
-            >
-              {t("projectContent.blockControls.confirmDelete.confirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              className={`${iconButton} hover:bg-muted hover:text-destructive`}
+            />
+          }
+        >
+          <Trash2Icon aria-hidden="true" className="size-4" />
+          <span className="sr-only">
+            {t("projectContent.blockControls.delete", { block: blockLabel })}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          {t("projectContent.blockControls.delete", { block: blockLabel })}
+        </TooltipContent>
+      </Tooltip>
     </div>
   )
 }

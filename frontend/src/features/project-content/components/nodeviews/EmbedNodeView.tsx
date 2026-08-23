@@ -1,5 +1,4 @@
 import type { ReactNodeViewProps } from "@tiptap/react"
-import { BracesIcon, RefreshCwIcon } from "lucide-react"
 import { useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -11,8 +10,8 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { MediaCard } from "@/features/project-content/components/nodeviews/MediaCard"
 import { MediaShell } from "@/features/project-content/components/MediaShell"
+import { displayHeight } from "@/features/project-content/renderer/renderBlockNode"
 import {
   EMBED_PROVIDERS,
   type EmbedProvider,
@@ -21,6 +20,14 @@ import { parseEmbedInput } from "@/features/project-content/providerInput"
 
 /**
  * EMBED auf der Schreibflaeche (Contract 2.5).
+ *
+ * <p><strong>Der Block zeigt den echten Rahmen des Anbieters</strong>
+ * (WYSIWYG-Umbau in KAN-36), mit derselben Adresse, demselben Titel und
+ * derselben begrenzten Hoehe wie im Renderer ({@code displayHeight}). Die
+ * Adresse ist zu diesem Zeitpunkt bereits die kanonische, gegen die
+ * Allowlist gepruefte Form; ein fremder Host erreicht dieses iframe nie.
+ * Eine Ersetzen-Aktion gibt es nicht mehr: wer eine andere Einbettung
+ * will, loescht den Block und fuegt einen neuen ein.
  *
  * <p><strong>Der Anbieter wird nicht gefragt, sondern gelesen.</strong> Er
  * ergibt sich eindeutig aus dem Host der Adresse, und genau diese Zuordnung
@@ -32,9 +39,6 @@ import { parseEmbedInput } from "@/features/project-content/providerInput"
  * bleibt der Server mit 400 {@code EMBED_PROVIDER_NOT_ALLOWED}; die
  * Allowlist wird hier nicht nachgebaut, sondern aus derselben Datei
  * gelesen, die auch der Renderer benutzt.
- *
- * <p>Kein {@code iframe} auf der Schreibflaeche, aus demselben Grund wie
- * beim Video: ein fremder Rahmen faengt Tastatur und Zeiger ab.
  */
 export function EmbedNodeView({ node, updateAttributes }: ReactNodeViewProps) {
   const { t } = useTranslation()
@@ -73,28 +77,16 @@ export function EmbedNodeView({ node, updateAttributes }: ReactNodeViewProps) {
 
   return (
     <MediaShell
-      label={t("projectContent.blockName.embedBlock")}
       incompleteHint={hasEmbed ? null : t("projectContent.embed.incomplete")}
-      settings={
-        hasEmbed ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-fit"
-            onClick={() => updateAttributes({ provider: null, embedUrl: null })}
-          >
-            <RefreshCwIcon aria-hidden="true" />
-            {t("projectContent.embed.replace")}
-          </Button>
-        ) : undefined
-      }
     >
       {hasEmbed ? (
-        <MediaCard
-          icon={BracesIcon}
-          title={t("projectContent.blockName.embedBlock")}
-          detail={`${t(`projectContent.provider.${attrs.provider}`)} · ${attrs.embedUrl}`}
+        <iframe
+          title={t("projectContent.embed.title", {
+            provider: t(`projectContent.provider.${attrs.provider}`),
+          })}
+          src={attrs.embedUrl as string}
+          height={displayHeight(attrs.height)}
+          loading="lazy"
         />
       ) : (
         <Field contentEditable={false}>
