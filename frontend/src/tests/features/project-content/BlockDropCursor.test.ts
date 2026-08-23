@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
+
 import { Editor } from "@tiptap/react"
 import { Slice } from "@tiptap/pm/model"
 import { NodeSelection, TextSelection } from "@tiptap/pm/state"
@@ -104,6 +107,105 @@ describe("dropLineForBoxes", () => {
 
   it("hat im leeren Beitrag keine Lage", () => {
     expect(dropLineForBoxes([], 0)).toBeNull()
+  })
+})
+
+/*
+ * Die gerechnete Lage ist nur die halbe Zusage: die Linie haengt als Kind im
+ * Rahmen der Schreibflaeche, und dessen Stylesheet gibt jedem Kind einen
+ * Blockabstand nach oben. Ein Aussenabstand verschiebt auch ein absolut
+ * gesetztes top, die Linie lag damit einen Blockabstand zu tief und wieder
+ * mitten auf dem folgenden Block: die Rechnung stimmte, das Ergebnis war
+ * trotzdem falsch.
+ *
+ * Ein margin: 0 an der Linie hatte das nicht behoben, denn
+ * .project-content-drop-line ist eine Klasse und
+ * .project-content > :not(:first-child) eine Klasse mehr; die Flussregel
+ * gewann. Genau das haelt dieser Test fest, und zwar an der Quelldatei: der
+ * Testlauf uebersetzt kein CSS (vite.config.ts, css: false), und jsdom
+ * rechnet ohnehin kein Layout. Geprueft wird deshalb nicht die berechnete
+ * Zahl, sondern ob eine Regel mit Aussenabstand die Linie ueberhaupt trifft,
+ * und das entscheidet der Selektor-Motor und keine Zeichenkettensuche.
+ */
+const projectContentCss = readFileSync(
+  join(import.meta.dirname, "..", "..", "..", "styles", "project-content.css"),
+  "utf8"
+).replace(/\/\*[\s\S]*?\*\//g, "")
+
+/**
+ * Zerlegt eine Selektorliste an ihren Kommas.
+ *
+ * <p>Und zwar nur an denen der obersten Ebene: {@code :not(a, b)} und
+ * {@code :is(h2, h3)} tragen ebenfalls Kommas, und ein blosses
+ * {@code split(",")} zerschnitte genau die Ausnahme, um die es hier geht.
+ */
+function splitSelectorList(selector: string): string[] {
+  const parts: string[] = []
+  let depth = 0
+  let current = ""
+
+  for (const char of selector) {
+    if (char === "(" || char === "[") {
+      depth += 1
+    } else if (char === ")" || char === "]") {
+      depth -= 1
+    }
+    if (char === "," && depth === 0) {
+      parts.push(current)
+      current = ""
+      continue
+    }
+    current += char
+  }
+  parts.push(current)
+  return parts
+}
+
+/** Jeder einzelne Selektor, dessen Regel einen Aussenabstand setzt. */
+function selectorsSettingMargin(css: string): string[] {
+  const found: string[] = []
+  /* Nur die innersten Regeln: ein Deklarationsblock enthaelt keine
+     Klammern, @layer und @media fallen damit von selbst heraus. */
+  for (const [, selector, declarations] of css.matchAll(
+    /([^{}]+)\{([^{}]*)\}/g
+  )) {
+    if (!/(^|[\s;])margin/.test(declarations)) {
+      continue
+    }
+    for (const single of splitSelectorList(selector)) {
+      const normalized = single.trim().replace(/\s+/g, " ")
+      if (normalized !== "" && !normalized.startsWith("@")) {
+        found.push(normalized)
+      }
+    }
+  }
+  return found
+}
+
+describe("Die Ablegelinie im Stylesheet", () => {
+  it("faengt sich keinen Blockabstand aus dem Rahmen der Schreibflaeche ein", () => {
+    /* Der Aufbau wie in EditorPage: im Rahmen steht der Rahmen von
+       EditorContent, die Linie haengt die Extension dahinter. */
+    const frame = document.createElement("div")
+    frame.className = "project-content"
+    frame.append(document.createElement("div"))
+    const line = document.createElement("div")
+    line.className = "project-content-drop-line"
+    frame.append(line)
+    document.body.append(frame)
+
+    const selectors = selectorsSettingMargin(projectContentCss)
+    /* Ohne diese Zusicherung liefe der Test auch dann gruen durch, wenn das
+       Zerlegen nichts gefunden haette. */
+    expect(selectors.length).toBeGreaterThan(5)
+
+    try {
+      for (const selector of selectors) {
+        expect(line.matches(selector), selector).toBe(false)
+      }
+    } finally {
+      frame.remove()
+    }
   })
 })
 

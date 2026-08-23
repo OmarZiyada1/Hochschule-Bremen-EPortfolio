@@ -63,8 +63,18 @@
    * Lesepfad jedem Bild seinen Abstand, waehrend es ihn auf der
    * Schreibflaeche hatte. So gewinnt die Flussregel in beiden Pfaden, und
    * derselbe Beitrag sieht in beiden gleich aus.
+   *
+   * Ausgenommen ist die Ablegelinie. Sie haengt im selben Rahmen, ist aber
+   * kein Block, sondern eine Anzeige darueber: ihr Ort wird gemessen und als
+   * top gesetzt, und ein Aussenabstand verschiebt auch ein absolut gesetztes
+   * top. Mit dieser Regel lag sie genau einen Blockabstand zu tief und damit
+   * wieder mitten auf dem folgenden Block, also genau da, wo sie nie liegen
+   * soll. Ein margin: 0 in ihrer eigenen Regel reicht dagegen nicht:
+   * .project-content-drop-line ist eine Klasse, dieser Selektor hier ist
+   * Klasse plus :not(:first-child) und damit spezifischer. Deshalb steht die
+   * Ausnahme hier und nicht dort.
    */
-  .project-content > :not(:first-child),
+  .project-content > :not(:first-child, .project-content-drop-line),
   .project-content .ProseMirror > :not(:first-child) {
     margin-block-start: 1rem;
   }
@@ -543,6 +553,9 @@
    * z-index 20: ueber dem Ziehgriff (10), unter der klebenden Kopfzeile des
    * Editors (30), damit die Linie beim Scrollen waehrend des Ziehens nicht
    * ueber ihr erscheint.
+   *
+   * Vom Blockabstand ist sie ausgenommen, und zwar oben an der Flussregel
+   * und nicht hier: dieser Selektor waere der schwaechere von beiden.
    */
   .project-content-drop-line {
     position: absolute;
@@ -550,11 +563,6 @@
     pointer-events: none;
     background-color: var(--primary);
     border-radius: var(--radius-selection);
-    /* Die Linie haengt im Rahmen der Schreibflaeche und ist damit ein Kind
-       von .project-content: ohne diese Zeile schoebe der Blockabstand von
-       dort (> * + *) sie um einen Zeilenabstand nach unten, denn ein
-       Aussenabstand wirkt auch auf ein absolut gesetztes top. */
-    margin: 0;
   }
 
   .project-content-drop-line[data-orientation="horizontal"] {
