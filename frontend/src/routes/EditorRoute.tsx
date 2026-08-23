@@ -5,6 +5,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 /**
  * Der Editor als eigener Chunk (KAN-36).
  *
+ * <p><strong>Ohne NavBar und Footer:</strong> den Rahmen fuehrt das
+ * EditorLayout, das im Routenbaum ueber der Rollenschranke liegt und
+ * dort begruendet ist.
+ *
  * <p><strong>Die einzige nachgeladene Route, und das hat einen Grund.</strong>
  * Der Editor zieht ueber {@code createEditorExtensions} das gesamte
  * ProseMirror-Buendel mit, die groesste einzelne Abhaengigkeit des

@@ -25,6 +25,7 @@ import ResetPasswordPage from "@/features/auth/ResetPasswordPage"
 import TokenGalleryPage from "@/features/token-gallery/TokenGalleryPage"
 import { AppLayout } from "@/routes/AppLayout"
 import { AuthLayout } from "@/routes/AuthLayout"
+import { EditorLayout } from "@/routes/EditorLayout"
 import { EditorRoute } from "@/routes/EditorRoute"
 import { PlaceholderPage } from "@/routes/PlaceholderPage"
 import { RequireAuth } from "@/routes/RequireAuth"
@@ -46,10 +47,11 @@ import { RequireRole } from "@/routes/RequireRole"
  * als Projekt-ID gelesen.
  *
  * Die 404-Auffangroute steht als letzte Route ausserhalb der Layout-Route
- * (Template ohne NavBar, eigene Fusszeile); alle uebrigen Seitenrouten
- * liegen im Anwendungsrahmen.
+ * (Template ohne NavBar, eigene Fusszeile); ebenfalls ausserhalb liegt der
+ * Editor, der mit dem EditorHeader eine eigene Kopfzeile fuehrt. Alle
+ * uebrigen Seitenrouten liegen im Anwendungsrahmen.
  *
- * /dev/tokens und /dev/components sind die Prueffflaechen aus KAN-6 und
+ * /dev/tokens und /dev/components sind die Pruefflaechen aus KAN-6 und
  * KAN-29. Sie liegen ausserhalb der Layout-Route, damit NavBar und Footer
  * sie nicht ueberlagern, und existieren nur im Entwicklungs-Build:
  * import.meta.env.DEV ist im Produktions-Build eine Konstante, der Zweig
@@ -79,13 +81,6 @@ export const routes: RouteObject[] = [
           {
             path: "/projects/:projectId/metadata",
             element: <ProjectMetadataPage />,
-          },
-          {
-            /* Der blockbasierte Editor (KAN-36). Er liegt unter derselben
-               Rollenschranke wie die Metadatenseite; die Ressourcenebene
-               (Autor:in oder Projektmitglied) prueft der Server (§5). */
-            path: "/projects/:projectId/editor",
-            element: <EditorRoute />,
           },
         ],
       },
@@ -222,6 +217,28 @@ export const routes: RouteObject[] = [
       {
         path: "/accessibility",
         element: <PlaceholderPage titleKey="placeholder.title.accessibility" />,
+      },
+    ],
+  },
+  {
+    /* Der blockbasierte Editor (KAN-36) liegt ausserhalb des
+       Anwendungsrahmens: die Schreibflaeche fuehrt mit dem EditorHeader
+       eine eigene Kopfzeile samt Zurueck-Weg, NavBar und Footer entfallen
+       dort. Das EditorLayout steht ueber der Rollenschranke, damit auch
+       die AccessDeniedPage im Rahmen mit main-Landmarke erscheint. Die
+       Rollenschranke ist dieselbe wie an den Metadatenseiten; die
+       Ressourcenebene (Autor:in oder Projektmitglied) prueft der
+       Server (§5). */
+    element: <EditorLayout />,
+    children: [
+      {
+        element: <RequireRole roles={["STUDENT", "EDITOR"]} />,
+        children: [
+          {
+            path: "/projects/:projectId/editor",
+            element: <EditorRoute />,
+          },
+        ],
       },
     ],
   },

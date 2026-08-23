@@ -10,8 +10,10 @@ import { navLinksFor, userMenuFor } from "@/routes/navLinks"
 
 /**
  * Anwendungsrahmen: Sprunglink, Kopfleiste, Inhaltsbereich, Fusszeile
- * (Ticket KAN-7, Umfang 1). Alle Seitenrouten liegen als Kinder unter
- * dieser Layout-Route; nur die /dev-Prueffflaechen stehen ausserhalb.
+ * (Ticket KAN-7, Umfang 1). Die Seitenrouten liegen als Kinder unter
+ * dieser Layout-Route; ausserhalb stehen die Auth-Seiten (AuthLayout),
+ * der Editor (EditorRoute, eigene Kopfzeile ohne NavBar und Footer),
+ * die 404-Seite und die /dev-Pruefflaechen.
  *
  * Der Sprunglink ist das erste fokussierbare Element (SC 2.4.1): ohne ihn
  * durchlaeuft jede Tastaturbedienung auf jeder Seite erneut die gesamte

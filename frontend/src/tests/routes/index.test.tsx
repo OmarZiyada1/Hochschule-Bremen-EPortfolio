@@ -145,7 +145,55 @@ describe("Routenbaum", () => {
        endet sonst nach der Standardsekunde von Vitest, waehrend das Warten
        noch laeuft. Aufgefallen, als der Editor-Chunk mit KAN-36 groesser
        wurde. */
+
+    /* Der Editor liegt ausserhalb des Anwendungsrahmens: seine Kopfzeile
+       ist der EditorHeader, NavBar und Footer entfallen. Kennzeichen des
+       Rahmens sind Sprunglink, Hauptnavigation und contentinfo. */
+    expect(
+      screen.queryByRole("link", { name: "Zum Inhalt springen" })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("navigation", { name: "Hauptnavigation" })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument()
   }, 60000)
+
+  it("Editor ohne Anmeldung fuehrt sichtbar zum Login", () => {
+    /* Die Rollenschranke wirkt auch nach dem Umzug der Route aus dem
+       Anwendungsrahmen; die uebrigen RequireRole-Tests laufen alle gegen
+       Instanzen unter dem AppLayout und fingen einen Wegfall hier nicht. */
+    renderWithProviders(
+      <>
+        <AppUnderTest />
+        <LocationProbe />
+      </>,
+      "/projects/1f9d7a10-0000-0000-0000-000000000000/editor"
+    )
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Anmelden" })
+    ).toBeInTheDocument()
+    expect(screen.getByTestId("pathname")).toHaveTextContent("/login")
+  })
+
+  it("ADMIN: direkter Aufruf des Editors endet in einer sichtbaren Meldung", () => {
+    signInAs("ADMIN")
+    renderWithProviders(
+      <AppUnderTest />,
+      "/projects/1f9d7a10-0000-0000-0000-000000000000/editor"
+    )
+
+    /* Contract 5, Fussnote 10: ein Admin-Konto bearbeitet keine eigenen
+       Projekte. Die Meldung erscheint im Rahmen des EditorLayout und
+       damit in einer main-Landmarke, auch ohne NavBar und Footer. */
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Kein Zugriff" })
+    ).toBeInTheDocument()
+    expect(screen.getByRole("main")).toBeInTheDocument()
+    expect(
+      screen.queryByRole("navigation", { name: "Hauptnavigation" })
+    ).not.toBeInTheDocument()
+  })
 
   it("EDITOR erreicht die Redaktionsebene", () => {
     signInAs("EDITOR")
