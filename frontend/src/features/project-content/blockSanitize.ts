@@ -6,6 +6,7 @@ import {
   type GalleryColumns,
   type GalleryItem,
   type HeadingLevel,
+  type HeadingTextAlign,
   type ImageWidth,
   type InlineNode,
   type ListItemNode,
@@ -16,12 +17,15 @@ import {
 } from "@/features/project-content/blockTypes"
 import { isContentColorRole } from "@/features/project-content/contentColors"
 import {
+  VIDEO_HASH_PATTERN,
   isAllowedEmbedUrl,
   isEmbedProvider,
   isValidVideoId,
   isVideoProvider,
+  type EmbedProvider,
   type VideoProvider,
 } from "@/features/project-content/providers"
+import { parseEmbedInput } from "@/features/project-content/providerInput"
 
 /**
  * Die Whitelist beim Lesen: was nicht in Contract 2.5 steht, faellt weg.
@@ -90,6 +94,7 @@ export type DropReason =
  */
 export type NormalizationReason =
   | "HEADING_LEVEL_CLAMPED"
+  | "HEADING_JUSTIFY_REMOVED"
   | "IMAGE_WIDTH_DEFAULTED"
   | "GALLERY_COLUMNS_DEFAULTED"
   | "GALLERY_ITEM_DROPPED"
@@ -97,6 +102,10 @@ export type NormalizationReason =
   | "GALLERY_FILE_IDS_REMOVED"
   | "AUDIO_SRC_REMOVED"
   | "VIDEO_URL_REMOVED"
+  /* Eine alte Einbettungsadresse in die kanonische Form gerechnet (v64). */
+  | "EMBED_URL_NORMALIZED"
+  /* Ein Gist-Block zu einem Absatz mit Link geworden (v64). */
+  | "EMBED_GIST_CONVERTED_TO_LINK"
 
 export type SanitizeResult =
   | { ok: true; node: BlockNode; normalizations: NormalizationReason[] }
@@ -281,7 +290,10 @@ function sanitizeRoot(raw: RawNode, context: SanitizeContext): RootResult {
       return {
         node: {
           type: "heading",
-          attrs: { level: toHeadingLevel(attrs.level, context) },
+          attrs: {
+            level: toHeadingLevel(attrs.level, context),
+            textAlign: toHeadingTextAlign(attrs.textAlign, context),
+          },
           content: sanitizeInlineList(raw.content, context, 2),
         },
       }
@@ -342,7 +354,7 @@ function sanitizeRoot(raw: RawNode, context: SanitizeContext): RootResult {
     case "documentBlock":
       return sanitizeDocument(attrs)
     case "embedBlock":
-      return sanitizeEmbed(attrs)
+      return sanitizeEmbed(attrs, context)
     case "mathBlock":
       return sanitizeMath(attrs)
   }
@@ -684,10 +696,23 @@ function sanitizeVideo(
   if (!isValidVideoId(provider, attrs.videoId)) {
     return { reason: "VIDEO_ID_INVALID" }
   }
+  /*
+   * Der Freigabe-Hash gehoert nur an ein nicht gelistetes Vimeo-Video
+   * (2.5 seit v64). Ein unbrauchbarer Wert wird still verworfen und macht
+   * den Block nicht ungueltig: ohne ihn ist ein oeffentliches Video
+   * weiterhin abspielbar, und ein nicht gelistetes zeigt den Fehler des
+   * Anbieters im Rahmen, was besser ist als ein verschwundener Block.
+   */
+  const hash =
+    provider === "vimeo" &&
+    typeof attrs.hash === "string" &&
+    VIDEO_HASH_PATTERN.test(attrs.hash)
+      ? attrs.hash
+      : null
   return {
     node: {
       type: "videoBlock",
-      attrs: { provider, videoId: attrs.videoId, caption },
+      attrs: { provider, videoId: attrs.videoId, hash, caption },
     },
   }
 }
@@ -736,18 +761,75 @@ function sanitizeDocument(attrs: Record<string, unknown>): RootResult {
   }
 }
 
-function sanitizeEmbed(attrs: Record<string, unknown>): RootResult {
+/**
+ * <p><strong>Alte Einbettungen werden beim Lesen umgeschrieben</strong>
+ * (Contract v64). Bis dahin genuegte der Host: gespeichert wurde, was
+ * jemand eingefuegt hatte, also auch die Zuschauerseite
+ * {@code youtube.com/watch?v=…} oder {@code codepen.io/…/pen/…}, die sich
+ * beide nicht einbetten lassen. Seit v64 gilt zusaetzlich der Pfad, und
+ * Figma bettet ueber einen eigenen Host ein. Ohne diese Umrechnung waeren
+ * solche Bloecke nicht mehr lesbar, und weil
+ * {@code BlockService.replace} die <em>gesamte</em> Liste prueft, waere
+ * der ganze Beitrag danach nicht mehr speicherbar: eine Sackgasse, aus der
+ * die Autor:in nicht einmal durch Loeschen des Blocks herauskaeme.
+ *
+ * <p><strong>Ein Gist-Block wird zu einem Absatz mit Link.</strong> Er
+ * laesst sich nicht umrechnen, weil GitHub fuer Gists keinen einbettbaren
+ * Rahmen anbietet; das war schon vor v64 so, nur fiel es nicht auf, weil
+ * die Adresse angenommen wurde und erst der leere Rahmen es zeigte. Statt
+ * den Block zu verwerfen, bleibt die Adresse als anklickbarer Text
+ * stehen: der Beitrag bleibt speicherbar, und nichts verschwindet
+ * unbemerkt.
+ */
+function sanitizeEmbed(
+  attrs: Record<string, unknown>,
+  context: SanitizeContext
+): RootResult {
+  const url = typeof attrs.embedUrl === "string" ? attrs.embedUrl : null
+
+  if (attrs.provider === "gist") {
+    if (url === null) {
+      return { reason: "EMBED_PROVIDER_NOT_ALLOWED" }
+    }
+    context.normalizations.push("EMBED_GIST_CONVERTED_TO_LINK")
+    return {
+      node: {
+        type: "paragraph",
+        attrs: { textAlign: null },
+        content: [
+          {
+            type: "text",
+            text: url,
+            marks: [{ type: "link", attrs: { href: url } }],
+          },
+        ],
+      },
+    }
+  }
+
   if (!isEmbedProvider(attrs.provider)) {
     return { reason: "EMBED_PROVIDER_NOT_ALLOWED" }
   }
-  if (!isAllowedEmbedUrl(attrs.provider, attrs.embedUrl)) {
-    /* Die Adresse wird als reiner Text weitergereicht, damit der Platzhalter
-       sie nennen kann (2.5). Ein iframe entsteht nicht, und href wird sie
-       nirgends: sichtbar ist sie ausschliesslich als Textinhalt. */
-    return {
-      reason: "EMBED_URL_NOT_ALLOWED",
-      detail: typeof attrs.embedUrl === "string" ? attrs.embedUrl : undefined,
+  let provider: EmbedProvider = attrs.provider
+  let embedUrl: string
+
+  if (isAllowedEmbedUrl(provider, attrs.embedUrl)) {
+    embedUrl = attrs.embedUrl
+  } else {
+    /* Vor dem Verwerfen der Versuch, die alte Adresse in die kanonische
+       Form zu rechnen. parseEmbedInput liefert nur zurueck, was Host und
+       Pfad der Allowlist erfuellt. */
+    const repaired = url === null ? null : parseEmbedInput(url)
+    if (repaired === null) {
+      /* Die Adresse wird als reiner Text weitergereicht, damit der
+         Platzhalter sie nennen kann (2.5). Ein iframe entsteht nicht, und
+         href wird sie nirgends: sichtbar ist sie ausschliesslich als
+         Textinhalt. */
+      return { reason: "EMBED_URL_NOT_ALLOWED", detail: url ?? undefined }
     }
+    context.normalizations.push("EMBED_URL_NORMALIZED")
+    provider = repaired.provider
+    embedUrl = repaired.embedUrl
   }
   /* Die Hoehe wird hier nicht begrenzt, nur auf einen brauchbaren Wert
      gebracht. Weder 2.5 noch BlockValidationService kennen eine Spanne;
@@ -763,7 +845,7 @@ function sanitizeEmbed(attrs: Record<string, unknown>): RootResult {
   return {
     node: {
       type: "embedBlock",
-      attrs: { provider: attrs.provider, embedUrl: attrs.embedUrl, height },
+      attrs: { provider, embedUrl, height },
     },
   }
 }
@@ -834,8 +916,8 @@ function toPositiveInteger(value: unknown): number | null {
 }
 
 /**
- * Ueberschriftenebene 2 bis 3 (2.5 seit v51). Eine Ebene ausserhalb wird
- * auf den naechsten erlaubten Wert gesetzt und vermerkt, nicht verworfen:
+ * Ueberschriftenebene 1 bis 6 (2.5 seit v63). Eine Ebene ausserhalb wird
+ * auf den naechsten erlaubten Wert geklemmt und vermerkt, nicht verworfen:
  * der Text der Ueberschrift ist Inhalt, ihre Ebene ist Gliederung, und eine
  * verworfene Ueberschrift naehme dem Beitrag mehr als eine verschobene.
  */
@@ -843,9 +925,38 @@ function toHeadingLevel(
   value: unknown,
   context: SanitizeContext
 ): HeadingLevel {
-  if (value === 2 || value === 3) {
+  if (
+    value === 1 ||
+    value === 2 ||
+    value === 3 ||
+    value === 4 ||
+    value === 5 ||
+    value === 6
+  ) {
     return value
   }
   context.normalizations.push("HEADING_LEVEL_CLAMPED")
-  return typeof value === "number" && value > 3 ? 3 : 2
+  return typeof value === "number" && value > 6 ? 6 : 1
+}
+
+/**
+ * Ausrichtung einer Ueberschrift (2.5 seit v63): {@code justify} faellt
+ * weg und wird vermerkt, alles Unbekannte wird still zu {@code null}.
+ *
+ * <p>Der Unterschied ist gewollt. Ein {@code justify} ist ein Wert, den die
+ * Autor:in einmal gesetzt hat und der seit v63 nicht mehr zulaessig ist;
+ * ihn zu verschweigen hiesse, eine sichtbare Aenderung zu verschweigen.
+ * Eine Zeichenkette, die gar keine Ausrichtung ist, war nie Inhalt.
+ */
+function toHeadingTextAlign(
+  value: unknown,
+  context: SanitizeContext
+): HeadingTextAlign | null {
+  if (value === "left" || value === "center" || value === "right") {
+    return value
+  }
+  if (value === "justify") {
+    context.normalizations.push("HEADING_JUSTIFY_REMOVED")
+  }
+  return null
 }

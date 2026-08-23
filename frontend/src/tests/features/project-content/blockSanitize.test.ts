@@ -174,7 +174,19 @@ describe("Marks", () => {
   })
 
   it("nimmt bei textStyle und highlight nur bekannte Rollennamen", () => {
-    for (const color of ["neutral", "blue", "green", "amber", "red"]) {
+    /* Neun seit Contract v63; brown, orange, purple und pink sind mit
+       KAN-36 dazugekommen. */
+    for (const color of [
+      "neutral",
+      "brown",
+      "orange",
+      "amber",
+      "green",
+      "blue",
+      "purple",
+      "pink",
+      "red",
+    ]) {
       const { node } = sanitized(
         textNode([{ type: "textStyle", attrs: { color } }])
       )
@@ -197,7 +209,10 @@ describe("Marks", () => {
       "rgb(255,0,0)",
       primitiveAusdruck,
       "url(x)",
-      "orange",
+      /* Bewusst nicht "orange" oder "purple": beide sind seit v63 Rollen.
+         Der Fall braucht ein Farbwort, das keine ist, sonst prueft er ab
+         der naechsten Palettenerweiterung stillschweigend nichts mehr. */
+      "teal",
       "",
       null,
       12,
@@ -231,12 +246,14 @@ describe("Marks", () => {
 })
 
 describe("Attribute und Knotengrammatik", () => {
-  it("verschiebt eine Ueberschriftenebene ausserhalb von 2 bis 3", () => {
+  it("klemmt eine Ueberschriftenebene ausserhalb von 1 bis 6", () => {
+    /* Sechs Ebenen seit Contract v63. Geklemmt und nicht verworfen: der
+       Text der Ueberschrift ist Inhalt, ihre Ebene ist Gliederung. */
     for (const [given, expected] of [
-      [1, 2],
-      [0, 2],
-      [4, 3],
-      [5, 3],
+      [0, 1],
+      [-1, 1],
+      [7, 6],
+      [12, 6],
     ] as const) {
       const result = sanitized({
         type: "heading",
@@ -264,6 +281,47 @@ describe("Attribute und Knotengrammatik", () => {
       const paragraph = node.type === "paragraph" ? node : null
       expect(paragraph?.attrs?.textAlign, given).toBe(expected)
     }
+  })
+
+  it("nimmt textAlign an der Ueberschrift ohne Blocksatz", () => {
+    /* §2.5 seit v63: left, center und right, aber kein justify. Blocksatz
+       an einer ein- oder zweizeiligen Ueberschrift zerreisst den Zeilenfall,
+       ohne einen Satzspiegel zu gewinnen. */
+    for (const [given, expected] of [
+      ["left", "left"],
+      ["center", "center"],
+      ["right", "right"],
+      ["justify", null],
+      ["middle", null],
+    ] as const) {
+      const { node } = sanitized({
+        type: "heading",
+        attrs: { level: 2, textAlign: given },
+        content: [],
+      })
+      const heading = node.type === "heading" ? node : null
+      expect(heading?.attrs.textAlign, given).toBe(expected)
+    }
+  })
+
+  it("vermerkt den entfernten Blocksatz an der Ueberschrift", () => {
+    /* Der Wert war einmal gesetzt und ist seit v63 unzulaessig; ihn
+       stillschweigend fallen zu lassen hiesse, eine sichtbare Aenderung zu
+       verschweigen. Ein Wort, das gar keine Ausrichtung ist, war dagegen
+       nie Inhalt und wird nicht vermerkt. */
+    const removed = sanitized({
+      type: "heading",
+      attrs: { level: 2, textAlign: "justify" },
+      content: [],
+    })
+    expect(removed.normalizations).toContain("HEADING_JUSTIFY_REMOVED")
+
+    const nonsense = sanitized({
+      type: "heading",
+      attrs: { level: 2, textAlign: "middle" },
+      content: [],
+    })
+    expect(nonsense.normalizations).not.toContain("HEADING_JUSTIFY_REMOVED")
   })
 
   it("entfernt colwidth an Tabellenzellen und behaelt colspan und rowspan", () => {
@@ -388,7 +446,7 @@ describe("Medienknoten", () => {
         type: "embedBlock",
         attrs: {
           provider: "codepen",
-          embedUrl: "https://codepen.io/pen/embed/abc",
+          embedUrl: "https://codepen.io/a/embed/abc",
           height: given,
         },
       })
@@ -408,7 +466,7 @@ describe("Medienknoten", () => {
     })
     const ohneHttps = sanitizeBlockNode({
       type: "embedBlock",
-      attrs: { provider: "codepen", embedUrl: "http://codepen.io/pen/embed/a" },
+      attrs: { provider: "codepen", embedUrl: "http://codepen.io/a/embed/b" },
     })
 
     expect(fremderProvider.ok === false && fremderProvider.reason).toBe(
@@ -506,5 +564,82 @@ describe("Medienknoten", () => {
     expect(fehlend.normalizations).toContain("GALLERY_ITEM_ALT_DEFAULTED")
     const node = fehlend.node
     expect(node.type === "galleryBlock" && node.attrs.items[0].alt).toBe("")
+  })
+})
+
+/*
+ * Contract v64 aendert, was eine gueltige Einbettung ist: Host und Pfad
+ * statt nur Host, embed.figma.com statt www.figma.com, und gist entfaellt
+ * ganz. Ein bereits gespeicherter Block darf daran nicht scheitern. Weil
+ * BlockService.replace die gesamte Liste prueft, waere ein einziger alter
+ * Block sonst eine Sackgasse: der Beitrag liesse sich nicht mehr speichern,
+ * und der Block nicht einmal loeschen.
+ */
+describe("Alte Einbettungen beim Lesen (Contract v64)", () => {
+  const embed = (provider: string, embedUrl: string) => ({
+    type: "embedBlock",
+    attrs: { provider, embedUrl, height: 460 },
+  })
+
+  it("rechnet die YouTube-Zuschauerseite in die Einbettung um", () => {
+    const result = sanitized(
+      embed("youtube", "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    )
+    expect(result.node).toEqual(
+      embed("youtube", "https://www.youtube.com/embed/dQw4w9WgXcQ")
+    )
+    expect(result.normalizations).toContain("EMBED_URL_NORMALIZED")
+  })
+
+  it("fuehrt eine alte Figma-Adresse auf den Einbettungshost", () => {
+    const result = sanitized(
+      embed(
+        "figma",
+        "https://www.figma.com/design/o6SECXRMKGOzCfG5xZebPV/HSB?node-id=839-3273"
+      )
+    )
+    const node = result.node
+    expect(node.type).toBe("embedBlock")
+    const url = new URL(
+      node.type === "embedBlock" ? node.attrs.embedUrl : "https://x.invalid"
+    )
+    expect(url.hostname).toBe("embed.figma.com")
+    expect(url.searchParams.get("embed-host")).toBe("share")
+    expect(result.normalizations).toContain("EMBED_URL_NORMALIZED")
+  })
+
+  it("rechnet die CodePen-Seite in die Einbettung um", () => {
+    const result = sanitized(embed("codepen", "https://codepen.io/a/pen/b"))
+    expect(result.node).toEqual(
+      embed("codepen", "https://codepen.io/a/embed/b")
+    )
+  })
+
+  it("macht aus einem Gist-Block einen Absatz mit Link", () => {
+    /* Umrechnen geht nicht: GitHub bietet fuer Gists keinen einbettbaren
+       Rahmen an. Verwerfen ginge auch nicht, das waere die Sackgasse. */
+    const url =
+      "https://gist.github.com/tomfun/d6f4f1faeac1aed9493c425e9cfe8fa5"
+    const result = sanitized(embed("gist", url))
+    expect(result.node).toEqual({
+      type: "paragraph",
+      attrs: { textAlign: null },
+      content: [
+        {
+          type: "text",
+          text: url,
+          marks: [{ type: "link", attrs: { href: url } }],
+        },
+      ],
+    })
+    expect(result.normalizations).toContain("EMBED_GIST_CONVERTED_TO_LINK")
+  })
+
+  it("verwirft, was sich auch nicht umrechnen laesst", () => {
+    const result = sanitizeBlockNode(
+      embed("youtube", "https://example.org/nichts")
+    )
+    expect(result.ok).toBe(false)
+    expect(result.ok === false && result.reason).toBe("EMBED_URL_NOT_ALLOWED")
   })
 })

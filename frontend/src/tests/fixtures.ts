@@ -126,6 +126,9 @@ export function projectDetail(
   return {
     ...projectCard(),
     module: null,
+    /* Freiwillig seit Contract v66; die Autor:in bleibt Autor:in und wird
+       kein Mitglied (§3.13.1). */
+    authorRole: null,
     members: [],
     blocks: [],
     editors: null,

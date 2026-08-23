@@ -29,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { CoverImageField } from "@/features/projects/components/CoverImageField"
 import { ProjectEditorsField } from "@/features/projects/components/ProjectEditorsField"
 import { ProjectMembersField } from "@/features/projects/components/ProjectMembersField"
+import { missingForSubmit } from "@/features/project-content/submitRequirements"
 import { TagCombobox } from "@/features/projects/components/TagCombobox"
 import {
   PROJECT_METADATA_FIELDS,
@@ -81,6 +82,9 @@ const MEMBERS_ERROR_ID = "project-metadata-members-error"
  * Fakultaet wechselt, haette fuer einen Moment einen Studiengang ohne
  * passende Fakultaet gespeichert.
  */
+/** Welche der beiden Absendeschaltflaechen geklickt wurde. */
+export type SubmitIntent = "primary" | "secondary"
+
 export function ProjectMetadataForm({
   project,
   onSubmit,
@@ -89,6 +93,9 @@ export function ProjectMetadataForm({
   onUploadCoverImage,
   disabled = false,
   headingLevel = 2,
+  submitLabel,
+  submitPendingLabel,
+  secondarySubmit,
 }: {
   /** Zuletzt bekannter Stand; Ausgangswerte und Quelle der {@code version}. */
   project: ProjectDetailResponse
@@ -97,7 +104,10 @@ export function ProjectMetadataForm({
    * {@code PROJECT_VERSION_CONFLICT} wird von dieser Komponente bewusst
    * nicht abgefangen.
    */
-  onSubmit: (request: ProjectUpdateRequest) => Promise<ProjectDetailResponse>
+  onSubmit: (
+    request: ProjectUpdateRequest,
+    intent: SubmitIntent
+  ) => Promise<ProjectDetailResponse>
   onCancel: () => void
   /**
    * Meldet nach oben, ob ungespeicherte Eingaben vorliegen. Die Route
@@ -123,6 +133,31 @@ export function ProjectMetadataForm({
    * frontend-design, Abschnitt 4).
    */
   headingLevel?: 2 | 3
+  /**
+   * Beschriftung der Absendeschaltflaeche. Ohne Angabe „Speichern".
+   *
+   * <p>Der Editor oeffnet dasselbe Formular auf dem Weg ins Einreichen
+   * (KAN-36); dort speichert die Schaltflaeche nicht nur, sie reicht
+   * anschliessend ein, und „Speichern" waere an dieser Stelle eine falsche
+   * Zusage. Die Beschriftung ist das Einzige, was sich unterscheidet:
+   * Felder, Pruefung und Schreibweg sind dieselben.
+   */
+  submitLabel?: string
+  /** Beschriftung waehrend des Absendens; ohne Angabe „Wird gespeichert". */
+  submitPendingLabel?: string
+  /**
+   * Eine zweite Absendeschaltflaeche neben der ersten, mit derselben
+   * Pruefung und demselben Schreibweg, aber anderem Ziel.
+   *
+   * <p><strong>Warum zwei und nicht eine mit Auswahl.</strong> Auf dem Weg
+   * ins Einreichen gibt es genau zwei sinnvolle Enden: nur speichern und
+   * zurueck in den Editor, oder speichern und einreichen. Beide sind
+   * Absenden desselben Formulars; welches gemeint ist, sagt die
+   * angeklickte Schaltflaeche und nicht ein Schalter daneben, den man
+   * uebersieht. {@link ProjectMetadataFormProps.onSubmit} bekommt es als
+   * zweites Argument.
+   */
+  secondarySubmit?: { label: string; pendingLabel?: string }
 }) {
   const { t } = useTranslation()
   /* Die Rolle kommt aus dem Kontext und nicht aus dem Token (§6.5); der
@@ -315,10 +350,26 @@ export function ProjectMetadataForm({
     </span>
   )
 
-  const submit = form.handleSubmit(async (values) => {
+  /*
+   * Welche Schaltflaeche das Absenden ausgeloest hat, steht im Ereignis:
+   * {@code SubmitEvent.submitter} nennt genau sie, und ihr {@code value}
+   * traegt die Absicht. Das ist der Weg, den HTML dafuer vorsieht, und er
+   * kommt ohne einen Ref aus, der beim Rendern gelesen wuerde.
+   *
+   * <p>Der State daneben traegt nur die Beschriftung waehrend des
+   * Absendens, denn die entsteht im Rendern und nicht im Ereignis.
+   */
+  const [pendingIntent, setPendingIntent] = useState<SubmitIntent>("primary")
+
+  const submit = form.handleSubmit(async (values, event) => {
+    const submitter = (event?.nativeEvent as SubmitEvent | undefined)?.submitter
+    const intent: SubmitIntent =
+      submitter instanceof HTMLButtonElement && submitter.value === "secondary"
+        ? "secondary"
+        : "primary"
     form.clearErrors("root.server")
     try {
-      await onSubmit(toProjectUpdateRequest(project, values))
+      await onSubmit(toProjectUpdateRequest(project, values), intent)
     } catch (error) {
       if (!isApiError(error)) {
         throw error
@@ -335,6 +386,31 @@ export function ProjectMetadataForm({
           PROJECT_METADATA_FIELDS,
           setServerFieldError
         )
+        return
+      }
+      /*
+       * PROJECT_INCOMPLETE nennt die fehlenden Angaben beim Namen.
+       *
+       * <p>Der Server schickt sie in seiner Meldung mit, aber als
+       * Feldnamen; die uebersetzte Fassung sagte dafuer nur „das Projekt
+       * ist noch unvollstaendig", was niemanden weiterbringt, der genau
+       * wissen will, was fehlt. Gerechnet wird deshalb hier, aus dem
+       * zuletzt bekannten Projektstand und derselben Liste, die auch der
+       * Hinweis oben benutzt (§3.3).
+       */
+      if (error.errorCode === "PROJECT_INCOMPLETE") {
+        const missing = missingForSubmit(project)
+        form.setError("root.server", {
+          type: "server",
+          message:
+            missing.length === 0
+              ? t(apiErrorMessageKey(error), { defaultValue: error.message })
+              : t("project.metadata.incomplete", {
+                  fields: missing
+                    .map((entry) => t(`projectContent.submit.field.${entry}`))
+                    .join(", "),
+                }),
+        })
         return
       }
       form.setError("root.server", {
@@ -730,6 +806,46 @@ export function ProjectMetadataForm({
             />
           </div>
 
+          {/*
+           * Die Funktionsbezeichnung der Autor:in steht ueber der
+           * Mitgliederliste und nicht darin: sie ist kein Mitglied
+           * (§3.13.1), traegt aber seit Contract v66 eine eigene
+           * Bezeichnung (§3.3). Freiwillig, sie kann spaeter
+           * eingetragen werden.
+           *
+           * <p>Beschriftung und Feld, sonst nichts. Hier standen einmal
+           * eine Ueberschrift, ein Erklaerabsatz und eine Beschreibung
+           * unter dem Feld; drei Saetze fuer ein freiwilliges Textfeld
+           * sind mehr Text, als die Sache hergibt, und sie schoben die
+           * Mitgliederliste nach unten aus dem Blick.
+           */}
+          <Controller
+            name="authorRole"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid} className="gap-2">
+                <FieldLabel
+                  htmlFor={field.name}
+                  className="type-label-xs text-muted-foreground uppercase"
+                >
+                  {t("project.metadata.authorRole.label")}
+                </FieldLabel>
+                <Input
+                  {...field}
+                  id={field.name}
+                  disabled={disabled}
+                  placeholder={t("project.metadata.authorRole.placeholder")}
+                  aria-invalid={fieldState.invalid}
+                />
+                {fieldState.invalid && (
+                  <FieldError
+                    errors={[{ message: messageOf(fieldState.error) }]}
+                  />
+                )}
+              </Field>
+            )}
+          />
+
           <div className="flex flex-col gap-3">
             <Controller
               name="members"
@@ -798,12 +914,30 @@ export function ProjectMetadataForm({
           <div className="flex flex-wrap items-center gap-4">
             <Button
               type="submit"
+              name="intent"
+              value="primary"
+              onClick={() => setPendingIntent("primary")}
               disabled={disabled || form.formState.isSubmitting || uploading}
             >
-              {form.formState.isSubmitting
-                ? t("project.metadata.submitPending")
-                : t("project.metadata.submit")}
+              {form.formState.isSubmitting && pendingIntent === "primary"
+                ? (submitPendingLabel ?? t("project.metadata.submitPending"))
+                : (submitLabel ?? t("project.metadata.submit"))}
             </Button>
+            {secondarySubmit !== undefined && (
+              <Button
+                type="submit"
+                name="intent"
+                value="secondary"
+                variant="secondary"
+                onClick={() => setPendingIntent("secondary")}
+                disabled={disabled || form.formState.isSubmitting || uploading}
+              >
+                {form.formState.isSubmitting && pendingIntent === "secondary"
+                  ? (secondarySubmit.pendingLabel ??
+                    t("project.metadata.submitPending"))
+                  : secondarySubmit.label}
+              </Button>
+            )}
             <Button type="button" variant="ghost" onClick={onCancel}>
               {t("common.action.cancel")}
             </Button>

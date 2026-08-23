@@ -13,6 +13,7 @@ import {
   rememberRequestedRoute,
 } from "@/api/auth/redirect"
 import { isApiError } from "@/api/errors"
+import { isObjectUrlQueryKey } from "@/api/queries/files"
 
 /**
  * Zentrale Reaktion auf die Fehlercodes aus Contract 6.2: einmal hier,
@@ -48,16 +49,12 @@ export function reactToSessionError(error: unknown): void {
        * (Klaerungsrunde KAN-33). window.location, weil diese Reaktion
        * ausserhalb von Komponenten laeuft und keinen Router-Hook hat.
        */
-      rememberRequestedRoute(
-        window.location.pathname + window.location.search
-      )
+      rememberRequestedRoute(window.location.pathname + window.location.search)
       endSession(error.errorCode)
       navigateForAuth(LOGIN_PATH)
       break
     case "PASSWORD_CHANGE_REQUIRED":
-      rememberRequestedRoute(
-        window.location.pathname + window.location.search
-      )
+      rememberRequestedRoute(window.location.pathname + window.location.search)
       setPasswordChangeRequired(true)
       navigateForAuth(CHANGE_PASSWORD_PATH)
       break
@@ -103,6 +100,25 @@ export function createQueryClient(): QueryClient {
    * Das Abo lebt so lange wie der Client, also so lange wie die Anwendung
    * beziehungsweise der einzelne Test.
    */
+  /*
+   * Object-URLs gehoeren dem Cache und werden mit ihm freigegeben
+   * (fileQueries.objectUrl). Ohne diese Zeile haelt der Browser jedes je
+   * gezeigte Bild bis zum Neuladen der Seite im Speicher; ein Beitrag mit
+   * einer Galerie kommt schnell auf zweistellige Megabyte. "removed" ist
+   * der einzige Zeitpunkt, an dem die Adresse sicher niemand mehr
+   * anzeigt: er faellt nach der Aufraeumfrist des letzten Verwenders und
+   * bei client.clear() darunter.
+   */
+  client.getQueryCache().subscribe((event) => {
+    if (event.type !== "removed" || !isObjectUrlQueryKey(event.query.queryKey)) {
+      return
+    }
+    const url: unknown = event.query.state.data
+    if (typeof url === "string") {
+      URL.revokeObjectURL(url)
+    }
+  })
+
   let hadSession = getAuthState().session !== null
   subscribe(() => {
     const hasSession = getAuthState().session !== null

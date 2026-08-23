@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
 
 import { resolveApiUrl } from "@/api/client"
+import { useFileUrl } from "@/api/useFileUrl"
 import type { ProjectCardResponse } from "@/api/types"
 import { ClapIcon } from "@/components/common/ClapIcon"
 import { StatusBadge } from "@/components/common/StatusBadge"
@@ -69,6 +70,16 @@ export function ProjectCard({
     ? resolveApiUrl(project.author.avatarUrl)
     : null
 
+  /*
+   * Das Kachelbild eines noch nicht veroeffentlichten Projekts ist nicht
+   * oeffentlich (§3.15, §5): es wird deshalb mit Token geholt, sonst
+   * antwortet der Server mit 401 und die Kachel zeigt einen leeren Rahmen.
+   * Zu sehen war das unter „Mein Portfolio" und nach dem Einreichen. Bei
+   * PUBLISHED bleibt es beim blossen Pfad, dort darf der Browser das Bild
+   * zwischenspeichern (Befund aus KAN-36).
+   */
+  const cover = useFileUrl(project.coverImageUrl, project.status !== "PUBLISHED")
+
   /* gap-0 und py-0 heben den Innenabstand der Registry-Karte auf: das Cover
      liegt randlos, den Abstand setzt erst der Inhalt darunter. Beides laeuft
      ueber className, die erzeugte Datei bleibt unberuehrt. */
@@ -80,10 +91,10 @@ export function ProjectCard({
             ist Dekoration und traegt keinen Namen: dass hier kein Bild ist,
             sagt der Vorlesende sonst bei jeder Kachel einer Liste erneut. */}
         <div className="relative h-47 w-full">
-          {project.coverImageUrl ? (
+          {cover.url !== null ? (
             <>
               <img
-                src={project.coverImageUrl}
+                src={cover.url}
                 alt=""
                 className="size-full object-cover"
               />

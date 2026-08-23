@@ -375,6 +375,27 @@ Ausführlich in den vier Frontend-Skills; hier nur, was überall gilt.
     `docs <item>`), nicht geraten; importiert wird ausschließlich
     aus `@/components/ui/…`, nie direkt aus `@base-ui/react` außerhalb dieses
     Ordners. Einzelheiten im Skill `frontend-shadcn`.
+
+    **Der eine Ausnahmefall: Base UI hat es, die Registry nicht.** Führt die
+    Registry zum Stil `base-nova` kein passendes Element, die Basis Base UI
+    aber sehr wohl, dann entsteht unter `components/ui/` von Hand eine dünne
+    Hülle um die Base-UI-Primitive, und die Domänenkomponente benutzt sie.
+    Nachbauen ist auch dann keine Antwort: eine Zusage wie Roving-Tabindex,
+    Pfeiltasten oder Fokusfang ist nirgends so vollständig wie in der
+    Primitive, und was von Hand entsteht, weicht mit der Zeit ab. Die
+    Ausnahme greift nur nach Nachweis, also nach einem `pnpm dlx
+    shadcn@latest view <item>`, das mit 404 antwortet; der Nachweis gehört
+    als Begründung in den Kopf der Datei. Vorbild:
+    `components/ui/toolbar.tsx` (KAN-36).
+
+    **Und ebenso im Umfeld:** Wo eine eingesetzte Bibliothek für ein Problem
+    eine offizielle Erweiterung mitbringt, wird sie genommen und nicht
+    nachgebaut. Ein Eigenbau daneben ist ein Befund, auch wenn er
+    funktioniert. Beispiele aus KAN-36: der Ziehgriff am Block kommt aus
+    `@tiptap/extension-drag-handle-react`, der Platzhalter aus
+    `@tiptap/extensions`, der Slash-Befehl aus `@tiptap/suggestion`. Bringt
+    eine solche Erweiterung weitere Pakete mit, wird das vor der Aufnahme
+    genannt und entschieden (Regel 9 im Backend-Teil gilt sinngemäß).
 12. **Formulare validieren über `zod`.** Jedes Formular nutzt
     `react-hook-form` mit einem `zod`-Schema (`@hookform/resolvers`);
     handgeschriebene Validierungslogik daneben ist ein Befund. Das Schema

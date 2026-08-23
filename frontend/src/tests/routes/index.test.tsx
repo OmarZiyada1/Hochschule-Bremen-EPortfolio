@@ -4,7 +4,12 @@ import { beforeEach, describe, expect, it } from "vitest"
 
 import { setPasswordChangeRequired } from "@/api/auth/authStore"
 import i18n from "@/i18n"
-import { emptyProjectsHandler, ownPortfolioHandler } from "@/tests/msw/handlers"
+import {
+  emptyProjectsHandler,
+  ownPortfolioHandler,
+  projectBlocksHandler,
+  projectDetailHandler,
+} from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
 import { AppUnderTest, LocationProbe, signInAs } from "@/tests/routes/helpers"
@@ -109,16 +114,85 @@ describe("Routenbaum", () => {
     ).toBeInTheDocument()
   })
 
-  it("EDITOR erreicht den Editor", () => {
+  it("EDITOR erreicht den Editor", async () => {
     signInAs("EDITOR")
+    /* Bloecke vor dem Detail: sonst faengt das Muster /projects/:projectId
+       den laengeren Pfad zuerst ab. */
+    server.use(
+      ownPortfolioHandler(),
+      projectBlocksHandler(),
+      projectDetailHandler({ title: "Beitrag im Entwurf", status: "DRAFT" })
+    )
     renderWithProviders(
       <AppUnderTest />,
       "/projects/1f9d7a10-0000-0000-0000-000000000000/editor"
     )
 
+    /* findBy, weil die Route nachgeladen wird (React.lazy) und die Seite
+       erst nach zwei Abrufen steht. Die einzige h1 ist der Projekttitel
+       (§3.3); der Editor gibt selbst keine aus. */
     expect(
-      screen.getByRole("heading", { level: 1, name: "Editor" })
+      await screen.findByRole(
+        "heading",
+        { level: 1, name: "Beitrag im Entwurf" },
+        /* Der Editor-Chunk zieht das ganze ProseMirror-Buendel nach, und
+           im vollstaendigen Lauf teilen sich alle Dateien den Rechner. Die
+           Standardgrenze von einer Sekunde reicht dafuer bei weitem nicht. */
+        { timeout: 60000 }
+      )
     ).toBeInTheDocument()
+    /* Die Grenze am findByRole allein genuegt nicht: der Testfall selbst
+       endet sonst nach der Standardsekunde von Vitest, waehrend das Warten
+       noch laeuft. Aufgefallen, als der Editor-Chunk mit KAN-36 groesser
+       wurde. */
+
+    /* Der Editor liegt ausserhalb des Anwendungsrahmens: seine Kopfzeile
+       ist der EditorHeader, NavBar und Footer entfallen. Kennzeichen des
+       Rahmens sind Sprunglink, Hauptnavigation und contentinfo. */
+    expect(
+      screen.queryByRole("link", { name: "Zum Inhalt springen" })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("navigation", { name: "Hauptnavigation" })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument()
+  }, 60000)
+
+  it("Editor ohne Anmeldung fuehrt sichtbar zum Login", () => {
+    /* Die Rollenschranke wirkt auch nach dem Umzug der Route aus dem
+       Anwendungsrahmen; die uebrigen RequireRole-Tests laufen alle gegen
+       Instanzen unter dem AppLayout und fingen einen Wegfall hier nicht. */
+    renderWithProviders(
+      <>
+        <AppUnderTest />
+        <LocationProbe />
+      </>,
+      "/projects/1f9d7a10-0000-0000-0000-000000000000/editor"
+    )
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Anmelden" })
+    ).toBeInTheDocument()
+    expect(screen.getByTestId("pathname")).toHaveTextContent("/login")
+  })
+
+  it("ADMIN: direkter Aufruf des Editors endet in einer sichtbaren Meldung", () => {
+    signInAs("ADMIN")
+    renderWithProviders(
+      <AppUnderTest />,
+      "/projects/1f9d7a10-0000-0000-0000-000000000000/editor"
+    )
+
+    /* Contract 5, Fussnote 10: ein Admin-Konto bearbeitet keine eigenen
+       Projekte. Die Meldung erscheint im Rahmen des EditorLayout und
+       damit in einer main-Landmarke, auch ohne NavBar und Footer. */
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Kein Zugriff" })
+    ).toBeInTheDocument()
+    expect(screen.getByRole("main")).toBeInTheDocument()
+    expect(
+      screen.queryByRole("navigation", { name: "Hauptnavigation" })
+    ).not.toBeInTheDocument()
   })
 
   it("EDITOR erreicht die Redaktionsebene", () => {

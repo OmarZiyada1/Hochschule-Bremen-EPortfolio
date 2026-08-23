@@ -66,6 +66,19 @@ public class Project extends AuditableEntity {
 	@JoinColumn(name = "author_id", nullable = false)
 	private User author;
 
+	/**
+	 * Funktionsbezeichnung der Autor:in im Projekt, z. B. „Konzept" (§3.3 seit
+	 * Contract v66). Freiwillig und jederzeit nachtragbar.
+	 *
+	 * <p><strong>Warum am Projekt und nicht als Mitgliedszeile.</strong> Die
+	 * Autor:in ist keine {@code ProjectMember}-Zeile (§3.13.1); §5 haengt
+	 * Rechte an genau dieser Unterscheidung. Gefehlt hat allein die
+	 * Moeglichkeit, ihre Rolle zu benennen, und die braucht kein zweites
+	 * Verstaendnis davon, wer zum Projekt gehoert.
+	 */
+	@Column(name = "author_role", length = 255)
+	private String authorRole;
+
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "faculty_id")
 	private Faculty faculty;
@@ -221,6 +234,14 @@ public class Project extends AuditableEntity {
 
 	public void setAuthor(User author) {
 		this.author = author;
+	}
+
+	public String getAuthorRole() {
+		return authorRole;
+	}
+
+	public void setAuthorRole(String authorRole) {
+		this.authorRole = authorRole;
 	}
 
 	public Faculty getFaculty() {

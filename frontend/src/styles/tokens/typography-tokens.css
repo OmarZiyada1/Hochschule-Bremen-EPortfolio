@@ -50,6 +50,32 @@
   --fs-h2: clamp(1.125rem, 1.076rem + 0.217vw, 1.25rem); /* 18 bis 20 */
 
   /* ----------------------------------------------------------
+   * Inhaltsskala (Foundation "4 Inhaltsskala", KAN-36).
+   *
+   * Sechs eigene Groessen fuer die Zwischenueberschriften eines Beitrags,
+   * getrennt von der UI-Skala darueber. Der Grund ist kein Geschmack:
+   * --fs-h3 liegt bei 16px und damit auf Fliesstextgroesse, die Ebenen 4
+   * bis 6 waeren in der UI-Skala also kleiner als der Text, den sie
+   * gliedern.
+   *
+   * --fs-content-h1 traegt bewusst dieselben Werte wie --fs-h1: die
+   * oberste Zwischenueberschrift bestehender Beitraege sieht nach der
+   * Umstellung auf Contract v63 genauso aus wie vorher.
+   *
+   * Anker wie ueberall: 360px und 1280px.
+   * ---------------------------------------------------------- */
+  --fs-content-h1: clamp(1.5rem, 1.402rem + 0.435vw, 1.75rem); /* 24 bis 28 */
+  --fs-content-h2: clamp(1.25rem, 1.201rem + 0.217vw, 1.375rem); /* 20 bis 22 */
+  --fs-content-h3: clamp(1.125rem, 1.076rem + 0.217vw, 1.25rem); /* 18 bis 20 */
+  --fs-content-h4: clamp(
+    1.0625rem,
+    1.038rem + 0.109vw,
+    1.125rem
+  ); /* 17 bis 18 */
+  --fs-content-h5: clamp(1rem, 0.976rem + 0.109vw, 1.0625rem); /* 16 bis 17 */
+  --fs-content-h6: 1rem; /* 16, die Untergrenze */
+
+  /* ----------------------------------------------------------
    * Feste Groessen (Foundation 5.2), mobil gleich Desktop.
    * Fliesstext fluid schrumpfen zu lassen wuerde die vom Nutzer
    * kontrollierte Vergroesserung nach SC 1.4.4 untergraben.
@@ -87,6 +113,12 @@
   --lh-h1: 1.5714; /* Figma 157,14 %, 44px auf 28px */
   --lh-h2: 1.8; /* Figma 180 %, 36px auf 20px */
   --lh-num-stat: 1.1875; /* Figma 118,75 %, 38px auf 32px */
+
+  /* Zeilenhoehe der Inhaltsueberschriften ab Ebene 2 (KAN-36). Enger als
+     der Fliesstext, weil eine Zwischenueberschrift selten mehr als zwei
+     Zeilen hat und als ein Block gelesen werden soll. Ebene 1 behaelt
+     --lh-h1, damit sie sich unveraendert liest. */
+  --lh-content-heading: 1.3;
 
   /* Sonderfall 1: Figma fuehrt Numeral/Rank als AUTO. Die Zeilenhoehe kommt
      damit aus der Metrik von Source Sans 3 ExtraBold und ist kein
@@ -165,6 +197,58 @@
     font-size: var(--fs-h3);
     font-weight: 600;
     line-height: var(--lh-body);
+  }
+
+  /* Die sechs Inhaltsueberschriften (KAN-36). Sie tragen die Ebene, die
+     die Autor:in im Editor gewaehlt hat, und nicht das HTML-Element, in
+     dem sie landet: gerendert wird eine Stufe tiefer (Contract 2.5), die
+     Klasse .type-content-h1 steht also an einem h2. Deshalb setzt der
+     Renderer sie ausdruecklich und verlaesst sich nicht auf den Elementnamen.
+
+     Ausnahme content-h6: Familie und Schnitt des Fliesstextes statt
+     Zilla Slab, weil sechs Stufen ueber einer Untergrenze von 16px allein
+     ueber die Groesse nicht mehr unterscheidbar sind. Die letzte Stufe
+     trennt sich deshalb ueber Schnitt und Familie. */
+  .type-content-h1 {
+    font-family: var(--font-heading);
+    font-size: var(--fs-content-h1);
+    font-weight: 600;
+    line-height: var(--lh-h1);
+  }
+
+  .type-content-h2 {
+    font-family: var(--font-heading);
+    font-size: var(--fs-content-h2);
+    font-weight: 600;
+    line-height: var(--lh-content-heading);
+  }
+
+  .type-content-h3 {
+    font-family: var(--font-heading);
+    font-size: var(--fs-content-h3);
+    font-weight: 600;
+    line-height: var(--lh-content-heading);
+  }
+
+  .type-content-h4 {
+    font-family: var(--font-heading);
+    font-size: var(--fs-content-h4);
+    font-weight: 600;
+    line-height: var(--lh-content-heading);
+  }
+
+  .type-content-h5 {
+    font-family: var(--font-heading);
+    font-size: var(--fs-content-h5);
+    font-weight: 600;
+    line-height: var(--lh-content-heading);
+  }
+
+  .type-content-h6 {
+    font-family: var(--font-body);
+    font-size: var(--fs-content-h6);
+    font-weight: 700;
+    line-height: var(--lh-content-heading);
   }
 
   /* Die vier folgenden Rollen sind mit KAN-29 dazugekommen. Ihre Groessen

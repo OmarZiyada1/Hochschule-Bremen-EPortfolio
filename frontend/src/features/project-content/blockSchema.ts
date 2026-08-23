@@ -13,6 +13,7 @@ import { AudioBlock } from "@/features/project-content/extensions/AudioBlock"
 import { DocumentBlock } from "@/features/project-content/extensions/DocumentBlock"
 import { EmbedBlock } from "@/features/project-content/extensions/EmbedBlock"
 import { GalleryBlock } from "@/features/project-content/extensions/GalleryBlock"
+import { HeadingAlignGuard } from "@/features/project-content/extensions/HeadingAlignGuard"
 import { ImageBlock } from "@/features/project-content/extensions/ImageBlock"
 import { MathBlock } from "@/features/project-content/extensions/MathBlock"
 import { VideoBlock } from "@/features/project-content/extensions/VideoBlock"
@@ -104,8 +105,13 @@ const ContentHighlight = Highlight.extend({
 export function createBlockExtensions(): Extensions {
   return [
     StarterKit.configure({
-      /* Der Projekttitel ist die einzige Ebene 1 der Seite (2.5, 3.3). */
-      heading: { levels: [2, 3] },
+      /*
+       * Sechs Ebenen (2.5 seit v63). Gespeichert wird die Gliederungsebene,
+       * angezeigt eine Stufe tiefer: der Projekttitel bleibt die einzige
+       * Ebene 1 der Seite (3.3), und die Abbildung steht an einer Stelle in
+       * headingRendering.ts.
+       */
+      heading: { levels: [1, 2, 3, 4, 5, 6] },
       /*
        * link gehoert in Tiptap 3 zum StarterKit. autolink legte
        * unentschiedene Marks an, waehrend jemand tippt, und ein Klick im
@@ -124,6 +130,16 @@ export function createBlockExtensions(): Extensions {
        * still. Ein Umbruch entsteht als neuer Absatz.
        */
       hardBreak: false,
+      /*
+       * Die Ablegelinie kommt aus BlockDropCursor und nicht aus
+       * prosemirror-dropcursor: dessen Rechnung ueber posAtCoords und
+       * dropPoint trifft auch Stellen innerhalb eines Blocks und zeichnete
+       * die Linie deshalb quer ueber Bloecke, je unterschiedlicher deren
+       * Hoehen, desto haeufiger. Die Begruendung im Einzelnen steht im Kopf
+       * von extensions/BlockDropCursor.ts; angemeldet wird der Ersatz im
+       * Editor-Schema, weil es ihn nur beim Schreiben gibt.
+       */
+      dropcursor: false,
     }),
     /*
      * TableKit meldet table, tableRow, tableHeader und tableCell gemeinsam
@@ -131,11 +147,17 @@ export function createBlockExtensions(): Extensions {
      * braeuchte danach die Migration aus 2.10. KAN-71 erbt die Einstellung.
      */
     TableKit.configure({ table: { resizable: false } }),
-    /* 2.5 nennt textAlign nur bei TEXT. */
+    /*
+     * 2.5 fuehrt textAlign seit v63 an TEXT und HEADING. Die Werteliste
+     * gilt fuer beide Typen gemeinsam, die Extension kennt keine Liste je
+     * Typ; dass justify an der Ueberschrift trotzdem nicht stehenbleibt,
+     * sichert HeadingAlignGuard.
+     */
     TextAlign.configure({
-      types: ["paragraph"],
+      types: ["paragraph", "heading"],
       alignments: ["left", "center", "right", "justify"],
     }),
+    HeadingAlignGuard,
     ContentTextStyle,
     ContentHighlight,
     Superscript,

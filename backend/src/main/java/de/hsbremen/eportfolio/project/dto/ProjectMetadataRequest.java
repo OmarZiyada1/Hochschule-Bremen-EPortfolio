@@ -31,6 +31,13 @@ public interface ProjectMetadataRequest {
 
 	String summary();
 
+	/**
+	 * Funktionsbezeichnung der Autor:in im Projekt (§3.3 seit Contract v66),
+	 * freiwillig. Die Autor:in bleibt dabei Autor:in und wird kein Mitglied
+	 * (§3.13.1); gefehlt hat allein die Moeglichkeit, ihre Rolle zu benennen.
+	 */
+	String authorRole();
+
 	String coverImageUrl();
 
 	ProjectType projectType();

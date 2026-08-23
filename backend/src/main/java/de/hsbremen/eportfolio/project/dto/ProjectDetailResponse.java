@@ -52,6 +52,8 @@ import java.util.UUID;
  * @param studyProgram  (§3.7)
  * @param module        (§3.9)
  * @param author        Ersteller:in und Eigentuemer:in
+ * @param authorRole    ihre Funktionsbezeichnung im Projekt, freiwillig
+ *                      (§3.3 seit Contract v66)
  * @param members       Co-Autor:innen und Mitwirkende (§3.13)
  * @param tags          freie Schlagwoerter, hoechstens fuenf
  * @param blocks        Inhalt, nach {@code orderIndex} geordnet (§3.4)
@@ -109,6 +111,13 @@ public record ProjectDetailResponse(
 		ReferenceResponse module,
 
 		PersonResponse author,
+
+		@Schema(description = "Funktionsbezeichnung der Autor:in im Projekt, z. B. "
+				+ "\"Konzept\" (§3.3 seit Contract v66). Freiwillig; die Autor:in bleibt "
+				+ "Autor:in und ist kein Mitglied (§3.13.1).",
+				example = "Konzept", nullable = true,
+				requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+		String authorRole,
 
 		@Schema(description = "Co-Autor:innen und Mitwirkende (§3.13). Nicht zu verwechseln "
 				+ "mit der zugewiesenen Redaktion.")
@@ -197,6 +206,7 @@ public record ProjectDetailResponse(
 				ReferenceResponse.from(project.getStudyProgram()),
 				ReferenceResponse.from(project.getModule()),
 				PersonResponse.from(project.getAuthor()),
+				project.getAuthorRole(),
 				members,
 				tags,
 				blocks,

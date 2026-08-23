@@ -79,6 +79,12 @@ public record ProjectUpdateRequest(
 		@Size(max = 1024, message = "Kurzbeschreibung ist zu lang (hoechstens 1024 Zeichen).")
 		String summary,
 
+		@Schema(description = "Funktionsbezeichnung der Autor:in im Projekt, z. B. "
+				+ "\"Konzept\". Freiwillig; die Autor:in bleibt Autor:in und wird kein "
+				+ "Mitglied (§3.13.1).", example = "Konzept")
+		@Size(max = 255, message = "authorRole ist zu lang (hoechstens 255 Zeichen).")
+		String authorRole,
+
 		@Schema(description = "Kachelbild. Null loescht den Wert.", nullable = true)
 		@Size(max = 1024, message = "coverImageUrl ist zu lang (hoechstens 1024 Zeichen).")
 		String coverImageUrl,

@@ -22,9 +22,21 @@ function Harness({ initial = [] as string[] }) {
 }
 
 const SUGGESTIONS: TagResponse[] = [
-  { id: "11111111-1111-4111-8111-111111111111", name: "Nachhaltigkeit", usageCount: 12 },
-  { id: "22222222-2222-4222-8222-222222222222", name: "Robotik", usageCount: 7 },
-  { id: "33333333-3333-4333-8333-333333333333", name: "Green IT", usageCount: 3 },
+  {
+    id: "11111111-1111-4111-8111-111111111111",
+    name: "Nachhaltigkeit",
+    usageCount: 12,
+  },
+  {
+    id: "22222222-2222-4222-8222-222222222222",
+    name: "Robotik",
+    usageCount: 7,
+  },
+  {
+    id: "33333333-3333-4333-8333-333333333333",
+    name: "Green IT",
+    usageCount: 3,
+  },
 ]
 
 /** Zaehlt die Aufrufe mit, damit "es geht kein Request hinaus" pruefbar ist. */
@@ -66,9 +78,13 @@ describe("TagCombobox", () => {
     const listbox = await openList(user)
 
     await waitFor(() =>
-      expect(within(listbox).getByRole("option", { name: "Nachhaltigkeit" })).toBeInTheDocument()
+      expect(
+        within(listbox).getByRole("option", { name: "Nachhaltigkeit" })
+      ).toBeInTheDocument()
     )
-    expect(within(listbox).getByRole("option", { name: "Green IT" })).toBeInTheDocument()
+    expect(
+      within(listbox).getByRole("option", { name: "Green IT" })
+    ).toBeInTheDocument()
     expect(
       within(listbox).queryByRole("option", { name: "Robotik" })
     ).not.toBeInTheDocument()
@@ -109,10 +125,9 @@ describe("TagCombobox", () => {
     // Abwarten, bis die entprellte Antwort da ist: bis dahin stehen noch die
     // Vorschlaege zum leeren Suchbegriff in der Liste, und die Pfeiltaste
     // traefe den falschen Eintrag.
-    await waitFor(
-      () => expect(screen.getAllByRole("option")).toHaveLength(1),
-      { timeout: 3000 }
-    )
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(1), {
+      timeout: 3000,
+    })
     expect(
       screen.getByRole("option", { name: "„Quantenoptik“ hinzufügen" })
     ).toBeInTheDocument()
@@ -139,7 +154,9 @@ describe("TagCombobox", () => {
 
     // Der Leerzustand der Primitive ist selbst eine Live-Region; stuende er
     // ueber einem waehlbaren Eintrag, saegte er die Ansage entzwei.
-    expect(screen.queryByText("Kein Schlagwort gefunden.")).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("Kein Schlagwort gefunden.")
+    ).not.toBeInTheDocument()
   })
 
   it("nimmt keinen sechsten Tag an, sagt warum und schickt keinen Request", async () => {
@@ -164,7 +181,9 @@ describe("TagCombobox", () => {
     await user.click(input)
     await user.type(input, "Sechstes")
 
-    await waitFor(() => expect(screen.getAllByText(grund).length).toBeGreaterThan(0))
+    await waitFor(() =>
+      expect(screen.getAllByText(grund).length).toBeGreaterThan(0)
+    )
     expect(screen.queryAllByRole("option")).toHaveLength(0)
     expect(requests).toHaveLength(0)
   })
@@ -188,7 +207,9 @@ describe("TagCombobox", () => {
     await user.click(input)
     await screen.findByRole("listbox")
     await waitFor(() =>
-      expect(screen.getByRole("option", { name: "Nachhaltigkeit" })).toBeInTheDocument()
+      expect(
+        screen.getByRole("option", { name: "Nachhaltigkeit" })
+      ).toBeInTheDocument()
     )
 
     await user.keyboard("{ArrowDown}{Enter}")
@@ -218,13 +239,18 @@ describe("TagCombobox", () => {
     await user.type(input, "green")
 
     await waitFor(
-      () => expect(requests.some((url) => url.searchParams.get("q") === "green")).toBe(true),
+      () =>
+        expect(
+          requests.some((url) => url.searchParams.get("q") === "green")
+        ).toBe(true),
       { timeout: 3000 }
     )
 
     const listbox = await screen.findByRole("listbox")
     await waitFor(() =>
-      expect(within(listbox).getByRole("option", { name: "Green IT" })).toBeInTheDocument()
+      expect(
+        within(listbox).getByRole("option", { name: "Green IT" })
+      ).toBeInTheDocument()
     )
     expect(
       within(listbox).queryByRole("option", { name: "Robotik" })
@@ -254,7 +280,11 @@ describe("TagCombobox", () => {
 
     await user.click(screen.getByLabelText("Schlagwörter"))
 
-    const meldung = await screen.findByText(/schiefgelaufen/, {}, { timeout: 3000 })
+    const meldung = await screen.findByText(
+      /schiefgelaufen/,
+      {},
+      { timeout: 3000 }
+    )
     expect(meldung).toHaveAttribute("role", "alert")
   })
 })

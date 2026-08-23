@@ -49,8 +49,13 @@ public final class BlockSchemaMigration {
 	 * gehoben: {@code AUDIO.src} ist entfallen, {@code GALLERY.fileIds} heisst
 	 * jetzt {@code items} und traegt Objekte statt blosser IDs, und
 	 * {@code HEADING.level} kennt die Ebene 1 nicht mehr.
+	 *
+	 * <p>Mit Contract v63 auf 3: {@code HEADING.level} kennt wieder 1 bis 6,
+	 * und die Anzeige schiebt die Ebene um eine Stufe. Dieselbe Zahl bedeutet
+	 * damit etwas anderes als vorher, weshalb es eine Version braucht und
+	 * nicht bloss eine erweiterte Werteliste.
 	 */
-	public static final int CURRENT_VERSION = 2;
+	public static final int CURRENT_VERSION = 3;
 
 	private BlockSchemaMigration() {
 		// Nur statische Funktionen, kein Zustand.
@@ -71,7 +76,49 @@ public final class BlockSchemaMigration {
 		if (fromVersion >= CURRENT_VERSION || content == null || !content.isObject()) {
 			return content;
 		}
-		return migrateOneToTwo(type, content);
+		/*
+		 * Die Schritte laufen als Kette und nicht als Fallunterscheidung: ein
+		 * Dokument der Version 1 muss beide durchlaufen, und die Kette bleibt
+		 * beim naechsten Schritt dieselbe Zeile laenger. Ein switch ueber
+		 * fromVersion vergaesse den ersten Schritt beim zweiten Aufruf.
+		 */
+		JsonNode migrated = content;
+		if (fromVersion < 2) {
+			migrated = migrateOneToTwo(type, migrated);
+		}
+		if (fromVersion < 3) {
+			migrated = migrateTwoToThree(type, migrated);
+		}
+		return migrated;
+	}
+
+	/**
+	 * Version 2 nach 3, also die Ebenenverschiebung aus Contract v63 (§2.5,
+	 * §2.10).
+	 *
+	 * <p><strong>Ohne diesen Schritt rutschte jeder vorhandene Beitrag eine
+	 * Stufe nach unten.</strong> Bis v62 war ein gespeichertes {@code level: 2}
+	 * die oberste Zwischenueberschrift und wurde als {@code h2} angezeigt; ab
+	 * v63 zeigt die Anzeige jede Ebene eine Stufe tiefer, dieselbe 2 waere also
+	 * ploetzlich ein {@code h3}. Die Migration bildet deshalb 2 auf 1 und 3 auf
+	 * 2 ab; das Aussehen bestehender Beitraege bleibt unveraendert.
+	 *
+	 * <p><strong>Abgebildet wird genau diese Menge und keine weitere.</strong>
+	 * Andere Werte hat der Schreibweg bis v62 gar nicht durchgelassen, und
+	 * jeder von ihnen ist unter v63 fuer sich gueltig. Sie mitzuverschieben
+	 * waere eine Annahme ueber Daten, die es nicht geben kann.
+	 */
+	private static JsonNode migrateTwoToThree(BlockType type, JsonNode content) {
+		if (type != BlockType.HEADING) {
+			return content;
+		}
+		JsonNode level = content.path("attrs").path("level");
+		if (!level.isIntegralNumber() || (level.asInt() != 2 && level.asInt() != 3)) {
+			return content;
+		}
+		ObjectNode migrated = (ObjectNode) content.deepCopy();
+		((ObjectNode) migrated.path("attrs")).put("level", level.asInt() - 1);
+		return migrated;
 	}
 
 	/**

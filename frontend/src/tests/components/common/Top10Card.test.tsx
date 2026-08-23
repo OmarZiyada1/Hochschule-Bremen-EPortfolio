@@ -89,4 +89,24 @@ describe("Top10Card", () => {
     ).toBeVisible()
     expect(screen.queryByText("Medieninformatik")).not.toBeInTheDocument()
   })
+
+  it("laesst das Titelbild ueber resolveApiUrl laufen", () => {
+    /* Die Adresse landet im src eines img und laeuft nie durch request();
+       ohne resolveApiUrl laedt bei gesetztem VITE_API_BASE_URL kein
+       einziges Titelbild der Startseite. ProjectCard und ProfileCard
+       machen es an derselben Stelle richtig, diese Kachel tat es nicht
+       (Befund aus KAN-36). */
+    const { container } = renderWithProviders(
+      <Top10Card
+        position={1}
+        title="Campus-Garten"
+        coverImageUrl="/api/files/11111111-1111-4111-8111-111111111111"
+      />
+    )
+
+    const src = container.querySelector("img")?.getAttribute("src") ?? ""
+    expect(
+      src.endsWith("/api/files/11111111-1111-4111-8111-111111111111")
+    ).toBe(true)
+  })
 })

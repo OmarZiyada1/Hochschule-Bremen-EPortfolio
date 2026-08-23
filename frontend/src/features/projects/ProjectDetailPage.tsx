@@ -6,11 +6,11 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Link, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams } from "react-router-dom"
 
-import { resolveApiUrl } from "@/api/client"
+import { useAuth } from "@/api/auth/AuthContext"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
-import type { ProjectDetailResponse } from "@/api/types"
+import type { BlockResponse, ProjectDetailResponse } from "@/api/types"
 import { EmptyState } from "@/components/common/EmptyState"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { Alert, AlertTitle } from "@/components/ui/alert"
@@ -24,6 +24,9 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ViewModeSwitch } from "@/features/project-content/components/ViewModeSwitch"
+import { useProjectFileUrls } from "@/features/project-content/hooks/useProjectFileUrls"
+import { useFileUrl } from "@/api/useFileUrl"
 import { ProjectContent } from "@/features/project-content/renderer/ProjectContent"
 import { ProjectMetaSidebar } from "@/features/projects/components/ProjectMetaSidebar"
 import { ReactionPanel } from "@/features/projects/components/ReactionPanel"
@@ -68,10 +71,33 @@ import { cn } from "@/lib/utils"
  * Ein dauerhaft gesperrter Knopf ist fuer die Tastatur ein Ziel ohne Zweck
  * (Frontend-Regel 10).
  */
+/* Eine Liste, nicht bei jedem Rendern eine neue: sie steht in den
+   Abhaengigkeiten der Bildaufloesung. */
+const EMPTY_BLOCKS: readonly BlockResponse[] = []
+
 export default function ProjectDetailPage() {
   const { t } = useTranslation()
   const { projectId } = useParams()
   const { data, isPending, error } = useProjectDetail(projectId ?? "")
+
+  /*
+   * Die Medien eines noch nicht veroeffentlichten Beitrags brauchen den
+   * angemeldeten Weg; ohne ihn beantwortet der Server jede Medienanfrage
+   * dieser Seite mit 401, und die Vorschau eines Entwurfs zeigt leere
+   * Stellen statt Bild, Video, Ton und Dokument (Begruendung an
+   * useProjectFileUrls).
+   * Bei PUBLISHED bleibt es beim blossen Pfad: dort ist die Datei
+   * oeffentlich und obendrein zwischenspeicherbar (§3.15).
+   */
+  const needsToken = data !== undefined && data.status !== "PUBLISHED"
+  const { resolveFileUrl, fileState } = useProjectFileUrls(
+    data?.blocks ?? EMPTY_BLOCKS,
+    needsToken
+  )
+  /* Dasselbe gilt fuer das Titelbild: nach dem Einreichen ist das Projekt
+     SUBMITTED und die Datei damit nicht mehr oeffentlich; ohne den
+     angemeldeten Weg verschwand das Bild an dieser Stelle. */
+  const cover = useFileUrl(data?.coverImageUrl, needsToken)
 
   /* Nur schmal gebraucht: ab lg steht das Panel dauerhaft daneben, und die
      Schublade wird dann gar nicht erst geoeffnet. */
@@ -222,10 +248,10 @@ export default function ProjectDetailPage() {
                 ein erstes img oben mit und nimmt dafuer das obere Polster
                 zurueck. In einen Rahmen gesetzt bliebe stattdessen ein
                 Polsterrand um das Bild stehen. */}
-              {data.coverImageUrl && (
+              {cover.url !== null && (
                 <>
                   <img
-                    src={resolveApiUrl(data.coverImageUrl)}
+                    src={cover.url}
                     alt=""
                     className="h-60 w-full object-cover sm:h-110"
                   />
@@ -251,9 +277,12 @@ export default function ProjectDetailPage() {
                       {participates && data.status && (
                         <StatusBadge status={data.status} />
                       )}
-                      {/* Ohne Titelbild fehlt die Flaeche fuer den schwebenden
-                        Knopf; dann steht er in dieser Zeile. */}
-                      {!data.coverImageUrl && (
+                      {/* Ohne sichtbares Titelbild fehlt die Flaeche fuer den
+                        schwebenden Knopf; dann steht er in dieser Zeile. Das
+                        gilt auch, solange das Bild eines Entwurfs noch
+                        geladen wird: sonst gaebe es kurz keinen Weg zu den
+                        Projektdaten. */}
+                      {cover.url === null && (
                         <InfoTrigger onOpen={() => setInfoOpen(true)} />
                       )}
                     </div>
@@ -299,7 +328,11 @@ export default function ProjectDetailPage() {
                       /* Der Renderer setzt .project-content selbst und bringt seine
                      Stilquelle mit (styles/project-content.css). Eine zweite
                      entsteht hier nicht. */
-                      <ProjectContent blocks={data.blocks ?? []} />
+                      <ProjectContent
+                        blocks={data.blocks ?? EMPTY_BLOCKS}
+                        resolveFileUrl={resolveFileUrl}
+                        fileState={fileState}
+                      />
                     )}
                   </section>
                 </article>
@@ -373,8 +406,38 @@ export default function ProjectDetailPage() {
  * Aufbaus liefen auseinander, sobald eine Zeile dazukommt.
  */
 function ProjectInfoPanel({ project }: { project: ProjectDetailResponse }) {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+
+  /*
+   * Der Weg zurueck in den Editor, die zweite Haelfte des Umschalters aus
+   * KAN-36. Er erscheint nur, wenn diese Seite fuer die anfragende Person
+   * wirklich eine Vorschau ist: im Arbeitszustand des Projekts (§4.1) und
+   * fuer die Autor:in oder ein Projektmitglied (§5). Fuer alle anderen ist
+   * sie die Seite selbst, und ein Schalter „Bearbeiten" waere ein Weg, der
+   * mit 403 endet.
+   *
+   * Verbindlich bleibt der Server; diese Bedingung entscheidet nur, ob der
+   * Schalter sichtbar ist.
+   */
+  const editable = project.status === "DRAFT" || project.status === "REVISION"
+  const participates =
+    user !== null &&
+    (project.author?.id === user.id ||
+      (project.members ?? []).some((member) => member.userId === user.id))
+
   return (
     <div className="flex flex-col gap-6">
+      {editable && participates && (
+        <ViewModeSwitch
+          mode="preview"
+          onModeChange={(mode) => {
+            if (mode === "edit") {
+              void navigate(`/projects/${project.id}/editor`)
+            }
+          }}
+        />
+      )}
       {project.id !== undefined && (
         <>
           <ReactionPanel

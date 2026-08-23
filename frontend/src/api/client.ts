@@ -205,10 +205,91 @@ async function requestBlob(
   return response.blob()
 }
 
+/**
+ * Laedt eine Datei hoch und meldet dabei den Fortschritt.
+ *
+ * <p><strong>Die einzige Stelle im Frontend, die nicht ueber fetch
+ * laeuft</strong>, und der Grund ist keine Bequemlichkeit: fetch kennt
+ * keinen Fortschritt beim <em>Senden</em>. {@code ReadableStream} als Body
+ * waere die Alternative, ist aber ohne HTTP/2 nicht zuverlaessig und
+ * verlangt {@code duplex: "half"}, das nicht jeder Browser kennt. Ein
+ * Upload von 10 MB ueber eine Mobilverbindung ohne jede Rueckmeldung sieht
+ * aus wie ein Stillstand, und genau davor steht SC 3.2.1 nicht, aber die
+ * Zusage aus dem Skill frontend-design: was laenger dauert, sagt, dass es
+ * laeuft.
+ *
+ * <p>Die Regel „kein fetch ausserhalb von {@code src/api/}"
+ * (Frontend-Regel 3) bleibt unberuehrt: dies ist {@code src/api/}, und
+ * jeder Fehler verlaesst die Funktion als {@link ApiError} wie ueberall.
+ *
+ * @param onProgress Anteil zwischen 0 und 1, oder {@code null}, solange die
+ *                   Gesamtgroesse nicht bekannt ist
+ * @param signal     bricht den laufenden Upload ab; der Aufrufer bekommt
+ *                   dieselbe {@code AbortError}-Ausnahme wie bei fetch
+ */
+function upload<T>(
+  path: string,
+  body: FormData,
+  options: {
+    onProgress?: (progress: number | null) => void
+    signal?: AbortSignal
+  } = {}
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open("POST", buildUrl(path))
+
+    const token = getToken()
+    if (token !== null) {
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`)
+    }
+    /* Kein Content-Type: die Grenzmarke des multipart-Rumpfes setzt der
+       Browser selbst, genau wie bei fetch. */
+
+    const abort = () => xhr.abort()
+    options.signal?.addEventListener("abort", abort)
+    const done = () => options.signal?.removeEventListener("abort", abort)
+
+    xhr.upload.addEventListener("progress", (event) => {
+      options.onProgress?.(
+        event.lengthComputable ? event.loaded / event.total : null
+      )
+    })
+
+    xhr.addEventListener("abort", () => {
+      done()
+      reject(new DOMException("Der Upload wurde abgebrochen.", "AbortError"))
+    })
+
+    xhr.addEventListener("error", () => {
+      done()
+      reject(transportError(path))
+    })
+
+    xhr.addEventListener("load", () => {
+      done()
+      let parsed: unknown = null
+      try {
+        parsed = JSON.parse(xhr.responseText)
+      } catch {
+        /* kein JSON: apiErrorFromBody faellt auf den Transportfehler zurueck */
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(parsed as T)
+        return
+      }
+      reject(apiErrorFromBody(parsed, xhr.status, path))
+    })
+
+    xhr.send(body)
+  })
+}
+
 export const api = {
   get<T>(path: string, options?: Omit<RequestOptions, "body">): Promise<T> {
     return request<T>("GET", path, options)
   },
+  upload,
   getBlob(path: string, options?: { signal?: AbortSignal }): Promise<Blob> {
     return requestBlob(path, options)
   },

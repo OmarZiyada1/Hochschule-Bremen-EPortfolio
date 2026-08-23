@@ -72,33 +72,79 @@ class BlockValidationServiceTest {
 	// ------------------------------------------------------------------
 
 	@Nested
-	@DisplayName("HEADING: Ebene 2 und 3, denn Ebene 1 ist der Projekttitel")
+	@DisplayName("HEADING: Ebenen 1 bis 6, Ausrichtung ohne Blocksatz (§2.5 seit v63)")
 	class Heading {
 
 		@ParameterizedTest
-		@ValueSource(ints = { 2, 3 })
-		@DisplayName("Ebene 2 und 3 sind gueltig")
-		void levelsTwoAndThree(int level) {
+		@ValueSource(ints = { 1, 2, 3, 4, 5, 6 })
+		@DisplayName("Die sechs Ebenen sind gueltig")
+		void allSixLevels(int level) {
 			assertThatCode(() -> service.validate(BlockType.HEADING, heading(level), 0))
 					.doesNotThrowAnyException();
 		}
 
 		@ParameterizedTest
-		@ValueSource(ints = { 1, 4 })
-		@DisplayName("Ebene 1 und 4 ergeben 400 BLOCK_CONTENT_INVALID")
-		void levelsOneAndFour(int level) {
+		@ValueSource(ints = { 0, 7 })
+		@DisplayName("Ebene 0 und 7 ergeben 400 BLOCK_CONTENT_INVALID")
+		void levelsOutsideTheRange(int level) {
 			expect(ErrorCodes.BLOCK_CONTENT_INVALID, BlockType.HEADING, heading(level));
 		}
 
 		@Test
-		@DisplayName("Die Meldung nennt den Grund fuer die fehlende Ebene 1")
+		@DisplayName("Die Meldung nennt den Projekttitel als Ebene 1 der Seite")
 		void messageNamesTheProjectTitle() {
-			assertThatThrownBy(() -> service.validate(BlockType.HEADING, heading(1), 0))
+			assertThatThrownBy(() -> service.validate(BlockType.HEADING, heading(7), 0))
 					.hasMessageContaining("Projekttitel");
+		}
+
+		@ParameterizedTest
+		@ValueSource(strings = { "left", "center", "right" })
+		@DisplayName("Drei Ausrichtungen sind gueltig")
+		void allowedAlignments(String textAlign) {
+			assertThatCode(() -> service.validate(BlockType.HEADING,
+					headingAligned(2, textAlign), 0)).doesNotThrowAnyException();
+		}
+
+		@Test
+		@DisplayName("Blocksatz an der Ueberschrift ergibt 400")
+		void justifyIsRejected() {
+			expect(ErrorCodes.BLOCK_CONTENT_INVALID, BlockType.HEADING,
+					headingAligned(2, "justify"));
+		}
+
+		@Test
+		@DisplayName("Blocksatz am Absatz bleibt gueltig")
+		void justifyStaysAllowedOnParagraph() {
+			JsonNode paragraph = node("paragraph",
+					MAPPER.createObjectNode().put("textAlign", "justify"));
+			assertThatCode(() -> service.validate(BlockType.TEXT, paragraph, 0))
+					.doesNotThrowAnyException();
+		}
+
+		@Test
+		@DisplayName("Fehlendes textAlign ist gueltig: der Server ergaenzt nichts")
+		void alignmentMayBeAbsent() {
+			assertThatCode(() -> service.validate(BlockType.HEADING, heading(3), 0))
+					.doesNotThrowAnyException();
+		}
+
+		@Test
+		@DisplayName("Ein ausdrueckliches null gilt als nicht gesetzt")
+		void explicitNullIsTreatedAsAbsent() {
+			ObjectNode attrs = MAPPER.createObjectNode().put("level", 2);
+			attrs.putNull("textAlign");
+			assertThatCode(() -> service.validate(BlockType.HEADING, node("heading", attrs), 0))
+					.doesNotThrowAnyException();
 		}
 
 		private JsonNode heading(int level) {
 			return node("heading", MAPPER.createObjectNode().put("level", level));
+		}
+
+		private JsonNode headingAligned(int level, String textAlign) {
+			return node("heading", MAPPER.createObjectNode()
+					.put("level", level)
+					.put("textAlign", textAlign));
 		}
 	}
 
@@ -577,10 +623,13 @@ class BlockValidationServiceTest {
 
 		@ParameterizedTest
 		@ValueSource(strings = { "textStyle", "highlight" })
-		@DisplayName("Ein Farbwort ausserhalb der fuenf Rollen ergibt 400")
+		@DisplayName("Ein Farbwort ausserhalb der neun Rollen ergibt 400")
 		void unknownRole(String markType) {
+			/* Bewusst nicht "purple": das ist seit v63 eine der neun Rollen.
+			   Der Fall braucht ein Wort, das keine ist, sonst prueft er ab
+			   der naechsten Palettenerweiterung stillschweigend nichts mehr. */
 			expect(ErrorCodes.BLOCK_CONTENT_INVALID, BlockType.TEXT,
-					paragraphWithMark(colored(markType, "purple")));
+					paragraphWithMark(colored(markType, "teal")));
 		}
 
 		@ParameterizedTest
@@ -592,9 +641,10 @@ class BlockValidationServiceTest {
 		}
 
 		@ParameterizedTest
-		@ValueSource(strings = { "neutral", "blue", "green", "amber", "red" })
-		@DisplayName("Die fuenf Rollennamen sind gueltig")
-		void allFiveRoles(String role) {
+		@ValueSource(strings = { "neutral", "blue", "green", "amber", "red",
+				"brown", "orange", "purple", "pink" })
+		@DisplayName("Die neun Rollennamen sind gueltig")
+		void allNineRoles(String role) {
 			assertThatCode(() -> service.validate(BlockType.TEXT,
 					paragraphWithMark(colored("textStyle", role)), 0))
 					.doesNotThrowAnyException();
@@ -744,31 +794,70 @@ class BlockValidationServiceTest {
 		}
 
 		@Test
-		@DisplayName("vimeo, figma, codepen und gist mit je einem Host")
+		@DisplayName("vimeo, figma und codepen mit je einem Host")
 		void singleHostProviders() {
 			assertThatCode(() -> service.validate(BlockType.EMBED,
 					embed("vimeo", "https://player.vimeo.com/video/1"), 0))
 					.doesNotThrowAnyException();
 			assertThatCode(() -> service.validate(BlockType.EMBED,
-					embed("figma", "https://www.figma.com/embed?embed_host=share"), 0))
+					embed("figma", "https://embed.figma.com/design/o6SECXRMKGOzCfG5xZebPV/Name?embed-host=share"), 0))
 					.doesNotThrowAnyException();
 			assertThatCode(() -> service.validate(BlockType.EMBED,
-					embed("codepen", "https://codepen.io/pen/abc"), 0))
+					embed("codepen", "https://codepen.io/a/embed/abc"), 0))
 					.doesNotThrowAnyException();
+			// gist entfaellt mit v64: GitHub bietet fuer Gists keinen
+			// einbettbaren Rahmen an, sondern nur ein nachgeladenes Skript.
+			expect(ErrorCodes.EMBED_PROVIDER_NOT_ALLOWED, BlockType.EMBED,
+					embed("gist", "https://gist.github.com/a/b"));
+		}
+
+		@Test
+		@DisplayName("Seit v64 zaehlt auch der Pfad: die Zuschauerseite geht nicht mehr durch")
+		void pathMustBeAnEmbed() {
+			// Der haeufigste Fehlschlag: erlaubter Host, aber eine Seite, die
+			// das Einbetten per X-Frame-Options verbietet. Sie wurde
+			// angenommen und ergab einen leeren Rahmen ohne jede Meldung.
+			expect(ErrorCodes.EMBED_PROVIDER_NOT_ALLOWED, BlockType.EMBED,
+					embed("youtube", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"));
+			expect(ErrorCodes.EMBED_PROVIDER_NOT_ALLOWED, BlockType.EMBED,
+					embed("codepen", "https://codepen.io/a/pen/b"));
+			expect(ErrorCodes.EMBED_PROVIDER_NOT_ALLOWED, BlockType.EMBED,
+					embed("figma", "https://embed.figma.com/nichts/x"));
 			assertThatCode(() -> service.validate(BlockType.EMBED,
-					embed("gist", "https://gist.github.com/a/b"), 0))
+					embed("youtube", "https://www.youtube.com/embed/dQw4w9WgXcQ"), 0))
 					.doesNotThrowAnyException();
+		}
+
+		@Test
+		@DisplayName("Der Freigabe-Hash gehoert nur an ein vimeo-Video (v64)")
+		void vimeoShareHash() {
+			// Ein nicht gelistetes Vimeo-Video ist ohne den Hash nicht
+			// abspielbar; an einem youtube-Block waere er eine Angabe ohne
+			// Wirkung.
+			assertThatCode(() -> service.validate(BlockType.VIDEO,
+					node("videoBlock", MAPPER.createObjectNode()
+							.put("provider", "vimeo").put("videoId", "1212836492")
+							.put("hash", "3ace684330")), 0))
+					.doesNotThrowAnyException();
+			expect(ErrorCodes.BLOCK_CONTENT_INVALID, BlockType.VIDEO,
+					node("videoBlock", MAPPER.createObjectNode()
+							.put("provider", "youtube").put("videoId", "dQw4w9WgXcQ")
+							.put("hash", "3ace684330")));
+			expect(ErrorCodes.BLOCK_CONTENT_INVALID, BlockType.VIDEO,
+					node("videoBlock", MAPPER.createObjectNode()
+							.put("provider", "vimeo").put("videoId", "1212836492")
+							.put("hash", "a/b?c=1")));
 		}
 
 		@Test
 		@DisplayName("Nur https: eine http-Adresse ergibt EMBED_PROVIDER_NOT_ALLOWED")
 		void onlyHttps() {
 			expect(ErrorCodes.EMBED_PROVIDER_NOT_ALLOWED, BlockType.EMBED,
-					embed("codepen", "http://codepen.io/pen/abc"));
+					embed("codepen", "http://codepen.io/a/embed/abc"));
 		}
 
 		@Test
-		@DisplayName("VIDEO kennt nur youtube und vimeo, EMBED alle fuenf")
+		@DisplayName("VIDEO kennt nur youtube und vimeo, EMBED alle vier")
 		void listIsSplitInTwo() {
 			// Die VIDEO-Haelfte: die beiden Videoanbieter gehen durch, die drei
 			// uebrigen nicht.
@@ -780,19 +869,18 @@ class BlockValidationServiceTest {
 					node("videoBlock", MAPPER.createObjectNode()
 							.put("provider", "vimeo").put("videoId", "123456789")), 0))
 					.doesNotThrowAnyException();
-			for (String embedOnly : new String[] { "figma", "codepen", "gist" }) {
+			for (String embedOnly : new String[] { "figma", "codepen" }) {
 				expect(ErrorCodes.EMBED_PROVIDER_NOT_ALLOWED, BlockType.VIDEO,
 						node("videoBlock", MAPPER.createObjectNode()
 								.put("provider", embedOnly).put("videoId", "12345")));
 			}
 
-			// Die EMBED-Haelfte: alle fuenf gehen durch, ein sechster nicht.
+			// Die EMBED-Haelfte: alle vier gehen durch, ein fuenfter nicht.
 			for (String[] pair : new String[][] {
 					{ "youtube", "https://www.youtube.com/embed/x" },
 					{ "vimeo", "https://player.vimeo.com/video/1" },
-					{ "figma", "https://www.figma.com/embed?embed_host=share" },
-					{ "codepen", "https://codepen.io/pen/abc" },
-					{ "gist", "https://gist.github.com/a/b" } }) {
+					{ "figma", "https://embed.figma.com/design/o6SECXRMKGOzCfG5xZebPV/Name?embed-host=share" },
+					{ "codepen", "https://codepen.io/a/embed/abc" } }) {
 				assertThatCode(() -> service.validate(BlockType.EMBED,
 						embed(pair[0], pair[1]), 0)).doesNotThrowAnyException();
 			}
@@ -941,7 +1029,7 @@ class BlockValidationServiceTest {
 		samples.put(BlockType.EMBED,
 				node("embedBlock", MAPPER.createObjectNode()
 						.put("provider", "figma")
-						.put("embedUrl", "https://www.figma.com/embed?embed_host=share")
+						.put("embedUrl", "https://embed.figma.com/design/o6SECXRMKGOzCfG5xZebPV/Name?embed-host=share")
 						.put("height", 480)));
 
 		return Map.copyOf(samples);

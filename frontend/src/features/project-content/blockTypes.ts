@@ -37,15 +37,28 @@ import type {
 /* ------------------------------------------------------------------ */
 
 /**
- * Ueberschriftenebenen 2 bis 3 (Contract 2.5 seit v51). Die einzige Ebene 1
- * einer Projektseite ist der Projekttitel aus {@code Project.title} (3.3);
- * eine zweite Ebene 1 im selben Dokument macht die Gliederung fuer
- * Screenreader mehrdeutig (SC 1.3.1).
+ * Ueberschriftenebenen 1 bis 6 (Contract 2.5 seit v63).
+ *
+ * <p>Der gespeicherte Wert ist die <strong>Gliederungsebene des
+ * Beitrags</strong> und nicht das HTML-Element: die einzige Ebene 1 einer
+ * Projektseite bleibt der Projekttitel aus {@code Project.title} (3.3),
+ * deshalb schiebt die Anzeige jede Ebene um genau eine Stufe nach unten
+ * ({@code headingRendering.ts}). Eine zweite Ebene 1 im selben Dokument
+ * machte die Gliederung fuer Screenreader mehrdeutig (SC 1.3.1).
  */
-export type HeadingLevel = 2 | 3
+export type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6
 
-/** Ausrichtung eines Absatzes. Contract 2.5 nennt textAlign nur bei TEXT. */
+/** Ausrichtung eines Absatzes (Contract 2.5). */
 export type ContentTextAlign = "left" | "center" | "right" | "justify"
+
+/**
+ * Ausrichtung einer Ueberschrift (Contract 2.5 seit v63): dieselben Werte
+ * ohne {@code justify}. Blocksatz an einer ein- oder zweizeiligen
+ * Ueberschrift erzeugt Wortabstaende, die den Zeilenfall zerreissen, ohne
+ * einen Satzspiegel zu gewinnen; serverseitig ergibt er 400
+ * {@code BLOCK_CONTENT_INVALID}.
+ */
+export type HeadingTextAlign = Exclude<ContentTextAlign, "justify">
 
 /** Bildbreite in Prozent der Textspalte: genau drei Stufen (Contract 2.5). */
 export type ImageWidth = 100 | 75 | 50
@@ -68,8 +81,15 @@ export type GalleryItem = { fileId: string; alt: string }
  * 400 abweist.
  */
 export type VideoSource =
-  | { fileId: string; provider?: never; videoId?: never }
-  | { fileId?: never; provider: VideoProvider; videoId: string }
+  | { fileId: string; provider?: never; videoId?: never; hash?: never }
+  /* hash nur bei vimeo und nur bei nicht gelisteten Videos (2.5 seit
+     v64); ohne ihn antwortet der Player dort mit einer Fehlerseite. */
+  | {
+      fileId?: never
+      provider: VideoProvider
+      videoId: string
+      hash?: string | null
+    }
 
 /* ------------------------------------------------------------------ */
 /* Inline: Text und die zehn Marks                                      */
@@ -103,7 +123,7 @@ export type InlineNode = TextNode
 
 export type HeadingNode = {
   type: "heading"
-  attrs: { level: HeadingLevel }
+  attrs: { level: HeadingLevel; textAlign?: HeadingTextAlign | null }
   content?: InlineNode[]
 }
 

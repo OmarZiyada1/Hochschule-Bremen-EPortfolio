@@ -9,11 +9,12 @@ import type {
   StatusHistoryResponse,
 } from "@/api/types"
 import ProjectDetailPage from "@/features/projects/ProjectDetailPage"
+import i18n from "@/i18n"
 import { person, reference } from "@/tests/fixtures"
-import { apiErrorResponse } from "@/tests/msw/handlers"
+import { apiErrorResponse, fileBlobHandler } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
-import { signInAs } from "@/tests/routes/helpers"
+import { LocationProbe, signInAs } from "@/tests/routes/helpers"
 
 /*
  * Die Detailtiefe der Blockdarstellung (data-width, data-columns, beide
@@ -108,7 +109,9 @@ const ALL_BLOCK_NODES: unknown[] = [
     type: "embedBlock",
     attrs: {
       provider: "codepen",
-      embedUrl: "https://codepen.io/pen/embed/abc",
+      /* Seit Contract v64 muss der Pfad die Einbettung sein:
+         /<user>/embed/<slug> und nicht die Pen-Seite. */
+      embedUrl: "https://codepen.io/a/embed/abc",
       height: 520,
     },
   },
@@ -182,6 +185,9 @@ function projectResponse(
       abbreviation: null,
     }),
     author: person({ id: "u-1", firstName: "Lena", lastName: "Mueller" }),
+    /* Die Autor:in ist kein Mitglied (§3.13.1), traegt aber seit Contract
+       v66 ihre eigene Funktionsbezeichnung. */
+    authorRole: "Konzept",
     members: [
       {
         userId: "u-3",
@@ -215,7 +221,15 @@ function detailHandler(body: ProjectDetailResponse) {
 }
 
 function renderPage() {
-  return renderWithProviders(<ProjectDetailPage />, `/projects/${PROJECT_ID}`)
+  return renderWithProviders(
+    <>
+      <ProjectDetailPage />
+      {/* Die Adresse bleibt ablesbar, wenn die Seite weiterleitet
+          (Umschalter in den Editor, KAN-36). */}
+      <LocationProbe />
+    </>,
+    `/projects/${PROJECT_ID}`
+  )
 }
 
 /**
@@ -242,6 +256,24 @@ vi.mock("react-router-dom", async () => {
     await vi.importActual<typeof import("react-router-dom")>("react-router-dom")
   return { ...actual, useParams: () => ({ projectId: PROJECT_ID }) }
 })
+
+/**
+ * Der Veroeffentlichungsmonat in der Schreibweise, die die Seitenleiste
+ * selbst benutzt.
+ *
+ * <p><strong>Ausgerechnet und nicht hingeschrieben.</strong> Die Zeile
+ * entsteht ueber {@code Intl.DateTimeFormat} mit der Sprache der
+ * Oberflaeche; deutsch trennt sie mit einem Punkt, englisch mit einem
+ * Schraegstrich. Ein festes „10/2025" im Test prueft deshalb nicht die
+ * Seite, sondern die Sprache, in der sie zufaellig gerendert wurde, und
+ * faellt um, sobald die ICU-Daten der Laufzeit vollstaendig sind.
+ */
+function publishedMonth(): string {
+  return new Intl.DateTimeFormat(i18n.language, {
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date("2025-10-15T08:00:00Z"))
+}
 
 describe("Inhalt und Gliederung", () => {
   beforeEach(() => {
@@ -322,7 +354,7 @@ describe("Inhalt und Gliederung", () => {
     expect(within(drawer).getByText("Projektdaten")).toBeInTheDocument()
     expect(within(drawer).getByText("Digitalisierung")).toBeInTheDocument()
     expect(within(drawer).getByText("WiSe 2025/26")).toBeInTheDocument()
-    expect(within(drawer).getByText("10/2025")).toBeInTheDocument()
+    expect(within(drawer).getByText(publishedMonth())).toBeInTheDocument()
     /* Nicht nur die Metadaten: die Reaktionen sind Teil desselben Panels
        und waeren schmal sonst gar nicht erreichbar. */
     expect(within(drawer).getByText("Reaktionen")).toBeInTheDocument()
@@ -335,7 +367,7 @@ describe("Inhalt und Gliederung", () => {
 
     expect(screen.getByText("Digitalisierung")).toBeInTheDocument()
     expect(screen.getByText("WiSe 2025/26")).toBeInTheDocument()
-    expect(screen.getByText("10/2025")).toBeInTheDocument()
+    expect(screen.getByText(publishedMonth())).toBeInTheDocument()
 
     /* Der Studiengang steht mit vollem Namen und ohne Kuerzel: das Kuerzel
        wiederholte ihn nur in kurz (Vorgabe zur Abnahme von KAN-32). Auf der
@@ -345,8 +377,11 @@ describe("Inhalt und Gliederung", () => {
 
     const members = screen.getByText("Projektmitglieder").parentElement
     const names = within(members as HTMLElement).getAllByRole("listitem")
-    expect(names[0]).toHaveTextContent("Lena Mueller")
-    expect(names[1]).toHaveTextContent("Tobias Lang")
+    expect(names).toHaveLength(2)
+    /* Die Autor:in steht vorn und traegt seit Contract v66 ihre eigene
+       Funktionsbezeichnung. */
+    expect(names[0]).toHaveTextContent("Lena Mueller · Konzept")
+    expect(names[1]).toHaveTextContent("Tobias Lang · Frontend")
   })
 })
 
@@ -496,7 +531,7 @@ describe("Sichtbarkeitsunterschiede", () => {
     /* Oeffentlich ist ohnehin alles PUBLISHED, dort unterschiede der Badge
        nichts (Klaerungsrunde zu KAN-32). Gesucht wird der Badge, nicht der
        Text: "Veroeffentlicht" ist zugleich die Beschriftung der Zeile
-       "Veroeffentlicht 10/2025" in der Seitenleiste. */
+       "Veroeffentlicht 10.2025" in der Seitenleiste. */
     expect(statusBadge()).toBeNull()
   })
 
@@ -602,5 +637,137 @@ describe("Fehlerfaelle", () => {
     expect(
       screen.getByRole("button", { name: "Zur Projektbibliothek" })
     ).toBeInTheDocument()
+  })
+})
+
+describe("Weg zurueck in den Editor (KAN-36)", () => {
+  /*
+   * Die zweite Haelfte des Umschalters: im Editor fuehrt er auf diese
+   * Seite, hier zurueck. Eine Vorschau ohne Weg zurueck waere eine
+   * Sackgasse.
+   */
+  const SIGNED_IN_ID = "00000000-0000-0000-0000-000000000001"
+
+  it("zeigt der Autor:in im Entwurf den Schalter und fuehrt in den Editor", async () => {
+    const user = userEvent.setup()
+    server.use(
+      fileBlobHandler(),
+      detailHandler(
+        projectResponse({
+          status: "DRAFT",
+          author: person({ id: SIGNED_IN_ID, firstName: "Mira" }),
+        })
+      )
+    )
+    signInAs("STUDENT")
+    renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    await user.click(screen.getByRole("switch", { name: "Bearbeiten" }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId("pathname")).toHaveTextContent(
+        `/projects/${PROJECT_ID}/editor`
+      )
+    )
+  })
+
+  it("zeigt ihn nicht bei einem veroeffentlichten Projekt", async () => {
+    /* Inhaltsbearbeitung gibt es nur in DRAFT und REVISION (§4.1); ein
+       Schalter „Bearbeiten" waere hier ein Weg, der mit 409 endet. */
+    server.use(
+      detailHandler(
+        projectResponse({
+          status: "PUBLISHED",
+          author: person({ id: SIGNED_IN_ID, firstName: "Mira" }),
+        })
+      )
+    )
+    signInAs("STUDENT")
+    renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    expect(
+      screen.queryByRole("switch", { name: "Bearbeiten" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("zeigt ihn einer unbeteiligten Person nicht", async () => {
+    server.use(fileBlobHandler(), detailHandler(projectResponse({ status: "DRAFT" })))
+    signInAs("STUDENT")
+    renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    expect(
+      screen.queryByRole("switch", { name: "Bearbeiten" })
+    ).not.toBeInTheDocument()
+  })
+})
+
+describe("Medien eines noch nicht veroeffentlichten Beitrags (KAN-36)", () => {
+  /*
+   * GET /api/files/{id} ist erst oeffentlich, wenn das Projekt PUBLISHED
+   * ist (§3.15, §5). Ein img, video oder audio weist nichts nach, das
+   * Token liegt im Store: in der Vorschau eines Entwurfs beantwortete der
+   * Server deshalb jede Medienanfrage mit 401, und die Seite zeigte leere
+   * Stellen, ohne Fehler und ohne Meldung. Seit KAN-36 loest die Seite
+   * jede Datei eines nicht veroeffentlichten Beitrags ueber den
+   * angemeldeten Weg auf.
+   */
+  function firstImage(): HTMLImageElement {
+    return screen.getAllByRole("img")[0] as HTMLImageElement
+  }
+
+  it("holt die Bilder eines Entwurfs mit Token und zeigt sie", async () => {
+    server.use(
+      fileBlobHandler(),
+      detailHandler(projectResponse({ status: "DRAFT" }))
+    )
+    signInAs("STUDENT")
+    renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    await waitFor(() =>
+      expect(firstImage().getAttribute("src")).toMatch(/^blob:/)
+    )
+  })
+
+  it("holt auch Video, Ton und Dokument eines Entwurfs mit Token", async () => {
+    /* Die Vorschau ist die echte Seite und keine Nachbildung: ein Beitrag,
+       in dem das Video fehlt, beantwortet die Frage nicht, um derentwillen
+       jemand sie oeffnet. */
+    server.use(
+      fileBlobHandler(),
+      detailHandler(projectResponse({ status: "DRAFT" }))
+    )
+    signInAs("STUDENT")
+    const { container } = renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    await waitFor(() => {
+      expect(container.querySelector("video")?.getAttribute("src")).toMatch(
+        /^blob:/
+      )
+      expect(container.querySelector("audio")?.getAttribute("src")).toMatch(
+        /^blob:/
+      )
+      const link = container.querySelector('[data-block="document"] a')
+      expect(link?.getAttribute("href")).toMatch(/^blob:/)
+      /* Eine Object-URL traegt keinen Dateinamen; ohne download hiesse die
+         gespeicherte Datei nach einer zufaelligen Kennung. */
+      expect(link).toHaveAttribute("download")
+    })
+  })
+
+  it("laesst ein veroeffentlichtes Projekt beim blossen Pfad", async () => {
+    /* Dort ist die Datei oeffentlich und obendrein zwischenspeicherbar;
+       ein Blob-Abruf naehme dem Browser genau das. */
+    server.use(detailHandler(projectResponse({ status: "PUBLISHED" })))
+    renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    const src = firstImage().getAttribute("src") ?? ""
+    expect(src).not.toMatch(/^blob:/)
+    expect(src.endsWith(`/api/files/${FILE_A}`)).toBe(true)
   })
 })

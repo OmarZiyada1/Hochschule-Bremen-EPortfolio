@@ -390,6 +390,9 @@ public class ProjectWriteService {
 		project.setStudyProgram(
 				reference(request.studyProgramId(), studyProgramRepository, "studyProgramId"));
 		project.setModule(reference(request.moduleId(), moduleRepository, "moduleId"));
+		/* Leerraum ist keine Bezeichnung, wie bei projectRole auch (§3.3 seit
+		   Contract v66). */
+		project.setAuthorRole(normalizedRole(request.authorRole()));
 	}
 
 	/**
@@ -617,7 +620,9 @@ public class ProjectWriteService {
 	 * Funktionsbezeichnung".
 	 *
 	 * <p>Zwei fachliche Regeln aus §3.13.1 stehen hier: die Autor:in ist kein
-	 * Mitglied, sie steht in {@code Project.authorId}; und ein Konto ist
+	 * Mitglied, sie steht in {@code Project.authorId} und traegt ihre
+	 * Funktionsbezeichnung seit Contract v66 in {@code authorRole}; und ein
+	 * Konto ist
 	 * hoechstens einmal Mitglied desselben Projekts, was die Datenbank ueber
 	 * {@code unique(project_id, user_id)} ohnehin erzwingt. Beides ergibt
 	 * <strong>400</strong>. Die Doppelung vor dem Schreiben abzufangen ist
@@ -628,17 +633,37 @@ public class ProjectWriteService {
 	private Map<UUID, String> validateMembers(List<MemberRequest> requested, User author) {
 		Map<UUID, String> wanted = new LinkedHashMap<>();
 		for (MemberRequest entry : requested) {
-			if (author != null && entry.userId().equals(author.getId())) {
-				throw new ValidationException(ErrorCodes.VALIDATION_FAILED,
-						"Die Autor:in ist kein Projektmitglied und gehoert nicht in die Liste "
-								+ "(§3.13.1).");
-			}
-			if (wanted.put(entry.userId(), entry.projectRole().trim()) != null) {
+			// containsKey und nicht der Rueckgabewert von put: seit Contract
+			// v65 darf die Bezeichnung null sein, und put gaebe fuer eine
+			// vorhandene Zeile ohne Bezeichnung ebenfalls null zurueck. Die
+			// Doppelung bliebe unbemerkt und liefe in die
+			// Constraint-Verletzung, die diese Pruefung gerade abfaengt.
+			if (wanted.containsKey(entry.userId())) {
 				throw new ValidationException(ErrorCodes.VALIDATION_FAILED,
 						"Ein Konto kann nur einmal Mitglied desselben Projekts sein (§3.13).");
 			}
+			if (author != null && entry.userId().equals(author.getId())) {
+				throw new ValidationException(ErrorCodes.VALIDATION_FAILED,
+						"Die Autor:in ist kein Projektmitglied und gehoert nicht in die Liste "
+								+ "(§3.13.1). Ihre Funktionsbezeichnung steht in authorRole.");
+			}
+			wanted.put(entry.userId(), normalizedRole(entry.projectRole()));
 		}
 		return wanted;
+	}
+
+	/**
+	 * Leerraum ist keine Bezeichnung. Seit Contract v65 ist das Feld
+	 * freiwillig; eine Zeichenkette aus Leerzeichen waere weder eine Angabe
+	 * noch ein ausdrueckliches Nichts und liefe beim naechsten Vergleich als
+	 * Aenderung durch.
+	 */
+	private String normalizedRole(String value) {
+		if (value == null) {
+			return null;
+		}
+		String trimmed = value.trim();
+		return trimmed.isEmpty() ? null : trimmed;
 	}
 
 	private Map<UUID, String> currentMembers(Project project) {

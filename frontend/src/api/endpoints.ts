@@ -28,6 +28,21 @@ export const apiPaths = {
     list: "/api/projects",
     detail: (projectId: string) => `/api/projects/${projectId}`,
     /*
+     * Der Inhalt des Projekts (§6.1, KAN-36). GET liest die Blockliste, PUT
+     * ersetzt sie vollstaendig und antwortet mit { version, blocks }.
+     *
+     * Bewusst ein eigener Pfad neben detail: Metadaten und Inhalt bleiben
+     * getrennt (§6.1), im Server wie im Client. Ein gemeinsamer Endpoint
+     * machte aus jedem Tastenanschlag im Editor eine Metadatenaenderung.
+     */
+    blocks: (projectId: string) => `/api/projects/${projectId}/blocks`,
+    /*
+     * Einreichen (§4.1, §6.1). Die Gegenrichtung ist withdraw; beide sind
+     * Statuswechsel und stehen deshalb hier und nicht unter einem
+     * gemeinsamen "workflow"-Schluessel: der Pfad ist die Aktion.
+     */
+    submit: (projectId: string) => `/api/projects/${projectId}/submit`,
+    /*
      * Zurueckziehen der eigenen Einreichung (§4.1, seit Contract v50,
      * KAN-69). Geloescht wird dagegen ueber detail: DELETE /projects/{id}
      * hat keinen eigenen Pfad.

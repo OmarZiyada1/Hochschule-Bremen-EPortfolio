@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { ImageIcon } from "lucide-react"
-import { useEffect, useId, useMemo, useState } from "react"
+import { useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
@@ -12,9 +12,30 @@ import {
   COVER_IMAGE_MAX_BYTES,
   COVER_IMAGE_MIME_TYPES,
 } from "@/features/projects/ProjectMetadataForm.schema"
+import { cn } from "@/lib/utils"
 
 /** Zehn Mebibyte als Zahl fuer die Meldung, passend zu §3.15. */
 const MAX_MEGABYTES = Math.round(COVER_IMAGE_MAX_BYTES / (1024 * 1024))
+
+/**
+ * Die zulaessigen Seitenverhaeltnisse der Vorschauflaeche.
+ *
+ * <p>Als Tabelle und nicht als zusammengesetzte Klasse, weil Tailwind die
+ * Klassennamen im Quelltext liest: {@code aspect-[${ratio}]} entstuende
+ * erst zur Laufzeit und faende sich im gebauten CSS nicht wieder.
+ *
+ * <p>Zwei Werte, weil dasselbe Bild an zwei Stellen verschieden gerahmt
+ * ist: das Metadatenformular zeigt es 7:4 wie im Template, die Kopfpartie
+ * des Editors 16:9 (KAN-36). Der Standard bleibt der aeltere Wert, damit
+ * die vorhandenen Aufrufe unveraendert bleiben.
+ */
+const ASPECT_CLASS = {
+  "7/4": "aspect-[7/4]",
+  "16/9": "aspect-video",
+} as const
+
+/** Seitenverhaeltnis der Vorschauflaeche. */
+export type CoverImageAspect = keyof typeof ASPECT_CLASS
 
 /**
  * Das Titelbild in der Vorschau-Spalte des Metadatenformulars (§3.15,
@@ -65,6 +86,7 @@ export function CoverImageField({
   onUpload,
   uploading = false,
   disabled = false,
+  aspect = "7/4",
 }: {
   /** Referenz der Form /api/files/{id}, leer heisst "kein Titelbild". */
   value: string
@@ -73,33 +95,29 @@ export function CoverImageField({
   onUpload: (file: File) => Promise<string>
   uploading?: boolean
   disabled?: boolean
+  /** Rahmen der Vorschauflaeche; siehe {@link ASPECT_CLASS}. */
+  aspect?: CoverImageAspect
 }) {
   const { t } = useTranslation()
   const inputId = useId()
   const errorId = `${inputId}-error`
   const [error, setError] = useState<string | null>(null)
 
+  /*
+   * Die Object-URL kommt aus dem Query-Cache und wird mit ihm freigegeben
+   * (fileQueries.objectUrl). Sie hier zu erzeugen und im Aufraeumen eines
+   * Effekts freizugeben, war unter StrictMode falsch: React ruft beim
+   * Montieren Aufbau, Abbau, Aufbau, und der Abbau gab genau die Adresse
+   * frei, die das img in derselben Runde schon trug. Sichtbar wurde das,
+   * sobald die Datei beim Montieren im Cache lag, also beim zweiten
+   * Aufschlagen der Metadatenseite: das Titelbild blieb leer, ohne Fehler
+   * und ohne Meldung (Befund aus KAN-36).
+   */
   const image = useQuery({
-    ...fileQueries.blob(value),
+    ...fileQueries.objectUrl(value),
     enabled: value !== "",
   })
-
-  /*
-   * Die Object-URL lebt so lange wie der Blob und wird beim Wechsel
-   * freigegeben. Ohne revokeObjectURL haelt der Browser jedes je gezeigte
-   * Bild bis zum Neuladen der Seite im Speicher.
-   */
-  const blob = image.data
-  const objectUrl = useMemo(
-    () => (blob === undefined ? null : URL.createObjectURL(blob)),
-    [blob]
-  )
-  useEffect(() => {
-    if (objectUrl === null) {
-      return
-    }
-    return () => URL.revokeObjectURL(objectUrl)
-  }, [objectUrl])
+  const objectUrl = image.data ?? null
 
   async function onFileSelected(file: File | undefined) {
     if (file === undefined) {
@@ -135,7 +153,12 @@ export function CoverImageField({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex aspect-[7/4] w-full items-center justify-center overflow-hidden rounded-card bg-surface-brand">
+      <div
+        className={cn(
+          "flex w-full items-center justify-center overflow-hidden rounded-card bg-surface-brand",
+          ASPECT_CLASS[aspect]
+        )}
+      >
         {value === "" ? (
           <span className="type-body-sm text-surface-brand-foreground">
             {t("project.metadata.cover.empty")}

@@ -3,7 +3,7 @@ package de.hsbremen.eportfolio.common.error;
 /**
  * Fehlercodes fuer das Envelope aus API-Contract §6.2.
  *
- * <p>Stand Contract v62 steht jede Konstante dieser Klasse auch in §6.2.
+ * <p>Stand Contract v67 steht jede Konstante dieser Klasse auch in §6.2.
  * {@link #VALIDATION_FAILED} war bis v14 nur hier gefuehrt und wurde mit v15
  * nachgetragen (Tabelle „Fehlercodes Anfrageformat", Historieneintrag in §10).
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
@@ -186,8 +186,8 @@ public final class ErrorCodes {
 	/**
 	 * 400: der Provider eines VIDEO- oder EMBED-Blocks steht nicht in der
 	 * Allowlist aus §2.5 ({@code youtube}, {@code vimeo}, {@code figma},
-	 * {@code codepen}, {@code gist}), oder der Host der {@code embedUrl} gehoert
-	 * nicht zum angegebenen Provider.
+	 * {@code codepen}; {@code gist} entfiel mit v64), oder Host oder Pfad der
+	 * {@code embedUrl} gehoeren nicht zum angegebenen Provider.
 	 *
 	 * <p><strong>Warum ein eigener Code neben
 	 * {@link #BLOCK_CONTENT_INVALID}:</strong> die beiden verlangen von der

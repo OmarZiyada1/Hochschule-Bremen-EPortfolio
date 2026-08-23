@@ -1,6 +1,9 @@
 import { z } from "zod"
 
-import { newPasswordSchema, withPasswordConfirmation } from "@/features/auth/password.schema"
+import {
+  newPasswordSchema,
+  withPasswordConfirmation,
+} from "@/features/auth/password.schema"
 
 /**
  * Eingabepruefung der erzwungenen bzw. freiwilligen Passwortaenderung

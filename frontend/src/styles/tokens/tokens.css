@@ -70,6 +70,40 @@
   --gruen-800: #065f46;
   --gruen-950: #052e16;
 
+  /* Inhaltsrampen (Foundation "5 Inhaltsfarben", KAN-36, Contract v63).
+     Vier Familien ausschliesslich fuer die Farbauswahl im Editor.
+
+     Sie stehen bewusst neben den funktionalen Rampen und nicht in ihnen:
+     rot, bernstein und gruen tragen eine feste Bedeutung (Fehler, Warnung,
+     Erfolg) und erscheinen in Meldungen, Pillen und Statusbadges. Diese
+     vier bedeuten nichts, sie sind Auszeichnung im Text einer Autor:in.
+     Ein Semantic-Token ausserhalb der Inhaltsfarben greift deshalb nie auf
+     sie zu; taete es das, truege eine Oberflaechenrolle ploetzlich eine
+     Farbe, die fuer Fliesstext gemessen ist.
+
+     Vier Stufen je Familie, genau die, die die Inhaltsrollen brauchen: 700
+     als Textfarbe hell, 400 als Textfarbe dunkel, 100 als Flaeche hell,
+     950 als Flaeche dunkel. Weitere Stufen entstuenden auf Vorrat. */
+  --braun-100: #ede0d4;
+  --braun-400: #c9ab91;
+  --braun-700: #5d4037;
+  --braun-950: #2c1810;
+
+  --orange-100: #ffedd5;
+  --orange-400: #fb923c;
+  --orange-700: #c2410c;
+  --orange-950: #431407;
+
+  --violett-100: #f3e8ff;
+  --violett-400: #c084fc;
+  --violett-700: #7e22ce;
+  --violett-950: #3b0764;
+
+  --pink-100: #fce7f3;
+  --pink-400: #f472b6;
+  --pink-700: #be185d;
+  --pink-950: #500724;
+
   /* Basis (Foundation 2.4). basis/schwarz existiert bewusst nicht: kein
      Semantic-Token nutzt reines Schwarz. */
   --basis-weiss: #ffffff;
@@ -210,6 +244,21 @@
   --content-highlight-green: var(--gruen-100);
   --content-highlight-amber: var(--bernstein-100);
   --content-highlight-red: var(--rot-100);
+
+  /* Vier weitere Rollen mit Contract v63 (KAN-36), nach derselben Bauart
+     wie die fuenf darueber: 700 als Textfarbe, 100 als
+     Hervorhebungsflaeche. Gemessen gegen card (basis/weiss), weil ein
+     Beitrag auf der Karte steht und nicht auf dem Seitenhintergrund, und
+     zusaetzlich gegen background. */
+  --content-text-brown: var(--braun-700);
+  --content-text-orange: var(--orange-700);
+  --content-text-purple: var(--violett-700);
+  --content-text-pink: var(--pink-700);
+
+  --content-highlight-brown: var(--braun-100);
+  --content-highlight-orange: var(--orange-100);
+  --content-highlight-purple: var(--violett-100);
+  --content-highlight-pink: var(--pink-100);
 
   /* Markenflaechen (Foundation 3.7). surface-brand-muted ist Zweittext
      ausschliesslich auf einer Markenflaeche, nie auf card. */
@@ -352,6 +401,18 @@
   --content-highlight-green: var(--gruen-950);
   --content-highlight-amber: var(--bernstein-950);
   --content-highlight-red: var(--rot-950);
+
+  /* Die vier Rollen aus Contract v63 (KAN-36) im dunklen Modus: 400 als
+     Textfarbe, 950 als Hervorhebungsflaeche, wie bei den fuenf darueber. */
+  --content-text-brown: var(--braun-400);
+  --content-text-orange: var(--orange-400);
+  --content-text-purple: var(--violett-400);
+  --content-text-pink: var(--pink-400);
+
+  --content-highlight-brown: var(--braun-950);
+  --content-highlight-orange: var(--orange-950);
+  --content-highlight-purple: var(--violett-950);
+  --content-highlight-pink: var(--pink-950);
 
   /* surface-brand ist im dunklen Modus bewusst nicht blau, sonst setzt sich
      die Flaeche nicht vom Seitenhintergrund ab. surface-highlight wird
@@ -523,11 +584,19 @@
   --color-content-text-green: var(--content-text-green);
   --color-content-text-amber: var(--content-text-amber);
   --color-content-text-red: var(--content-text-red);
+  --color-content-text-brown: var(--content-text-brown);
+  --color-content-text-orange: var(--content-text-orange);
+  --color-content-text-purple: var(--content-text-purple);
+  --color-content-text-pink: var(--content-text-pink);
   --color-content-highlight-neutral: var(--content-highlight-neutral);
   --color-content-highlight-blue: var(--content-highlight-blue);
   --color-content-highlight-green: var(--content-highlight-green);
   --color-content-highlight-amber: var(--content-highlight-amber);
   --color-content-highlight-red: var(--content-highlight-red);
+  --color-content-highlight-brown: var(--content-highlight-brown);
+  --color-content-highlight-orange: var(--content-highlight-orange);
+  --color-content-highlight-purple: var(--content-highlight-purple);
+  --color-content-highlight-pink: var(--content-highlight-pink);
 
   --color-surface-brand: var(--surface-brand);
   --color-surface-brand-foreground: var(--surface-brand-foreground);

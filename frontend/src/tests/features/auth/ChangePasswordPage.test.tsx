@@ -27,21 +27,15 @@ describe("ChangePasswordPage", () => {
     await i18n.changeLanguage("de")
   })
 
-  async function fillAndSubmit(
-    current: string,
-    next: string,
-    confirm = next
-  ) {
+  async function fillAndSubmit(current: string, next: string, confirm = next) {
     const user = userEvent.setup()
     await user.type(screen.getByLabelText("Aktuelles Passwort"), current)
-    await user.type(screen.getByLabelText("Neues Passwort", { exact: true }), next)
     await user.type(
-      screen.getByLabelText("Neues Passwort bestätigen"),
-      confirm
+      screen.getByLabelText("Neues Passwort", { exact: true }),
+      next
     )
-    await user.click(
-      screen.getByRole("button", { name: "Passwort ändern" })
-    )
+    await user.type(screen.getByLabelText("Neues Passwort bestätigen"), confirm)
+    await user.click(screen.getByRole("button", { name: "Passwort ändern" }))
   }
 
   it("fuehrt an allen drei Passwortfeldern einen Sichtbarkeitsschalter (KAN-67)", () => {

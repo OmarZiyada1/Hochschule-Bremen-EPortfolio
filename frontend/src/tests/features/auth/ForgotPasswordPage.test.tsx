@@ -22,10 +22,7 @@ describe("ForgotPasswordPage", () => {
 
   async function submitEmail(email: string) {
     const user = userEvent.setup()
-    await user.type(
-      screen.getByLabelText("Private E-Mail (Login)"),
-      email
-    )
+    await user.type(screen.getByLabelText("Private E-Mail (Login)"), email)
     await user.click(screen.getByRole("button", { name: "Code anfordern" }))
     return user
   }
@@ -34,8 +31,9 @@ describe("ForgotPasswordPage", () => {
     /* Der Server antwortet immer 204, auch bei unbekannter Adresse
        (Contract 6.1, v35); die Oberflaeche schliesst daraus nichts. */
     server.use(
-      http.post("*/api/auth/forgot-password", () =>
-        new HttpResponse(null, { status: 204 })
+      http.post(
+        "*/api/auth/forgot-password",
+        () => new HttpResponse(null, { status: 204 })
       )
     )
     renderWithProviders(
@@ -55,14 +53,12 @@ describe("ForgotPasswordPage", () => {
     ).toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Code eingeben" }))
-    expect(screen.getByTestId("pathname")).toHaveTextContent(
-      "/reset-password"
-    )
+    expect(screen.getByTestId("pathname")).toHaveTextContent("/reset-password")
     /* Die Adresse laeuft als Router-State mit und steht vorbefuellt im
        Formular. */
-    expect(
-      screen.getByLabelText("Private E-Mail (Login)")
-    ).toHaveValue("wer-auch-immer@example.org")
+    expect(screen.getByLabelText("Private E-Mail (Login)")).toHaveValue(
+      "wer-auch-immer@example.org"
+    )
   })
 
   it("zeigt das Rate-Limit als Wartehinweis", async () => {

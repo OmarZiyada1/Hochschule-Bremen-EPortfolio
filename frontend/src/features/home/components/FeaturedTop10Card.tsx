@@ -2,6 +2,7 @@ import { ArrowUpRightIcon, ImageIcon, TrophyIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
 
+import { resolveApiUrl } from "@/api/client"
 import type { Top10EntryResponse } from "@/api/types"
 import { Pill } from "@/components/common/Pill"
 import { Card, CardContent } from "@/components/ui/card"
@@ -60,7 +61,10 @@ export function FeaturedTop10Card({
       <div className="relative min-h-48 sm:min-h-72">
         {project.coverImageUrl ? (
           <img
-            src={project.coverImageUrl}
+            /* Wie in ProjectCard ueber resolveApiUrl: die Adresse laeuft
+               nie durch request() und muesste die Basis-URL sonst selbst
+               tragen. */
+            src={resolveApiUrl(project.coverImageUrl)}
             alt=""
             className="absolute inset-0 size-full object-cover"
           />

@@ -1,0 +1,321 @@
+import { useEditorState, type Editor } from "@tiptap/react"
+import {
+  BoldIcon,
+  CodeIcon,
+  ItalicIcon,
+  LinkIcon,
+  ListIcon,
+  ListOrderedIcon,
+  QuoteIcon,
+  StrikethroughIcon,
+  SubscriptIcon,
+  SuperscriptIcon,
+  UnderlineIcon,
+  type LucideIcon,
+} from "lucide-react"
+import { useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
+
+import { Toggle } from "@/components/ui/toggle"
+import {
+  Toolbar,
+  ToolbarButton,
+  ToolbarSeparator,
+} from "@/components/ui/toolbar"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { AlignMenu } from "@/features/project-content/components/AlignMenu"
+import { BlockTypeMenu } from "@/features/project-content/components/BlockTypeMenu"
+import { ColorMenu } from "@/features/project-content/components/ColorMenu"
+import { LinkDialog } from "@/features/project-content/components/LinkDialog"
+import { cn } from "@/lib/utils"
+
+/**
+ * Die Formatierungsleiste des Editors (Figma {@code sec:Selection Toolbar};
+ * sie stand dort als Blase ueber markiertem Text und steht seit dem Umzug
+ * dauerhaft in der Kopfzeile, siehe {@code EditorHeader}).
+ *
+ * <p>Vier Gruppen mit senkrechten Trennern, in dieser Reihenfolge:
+ * Blocktyp, Zeichenauszeichnung, Blockformat, Farbe.
+ *
+ * <p><strong>Ein Tabstopp fuer die ganze Leiste</strong>, innen die
+ * Pfeiltasten, {@code Home} und {@code End} (Roving-Tabindex, WAI-ARIA
+ * Authoring Practices fuer {@code toolbar}). Zwoelf einzelne Tabstopps
+ * zwischen Text und Leiste waeren fuer Tastaturbedienung unbenutzbar: wer
+ * nach dem Markieren weiterschreiben will, muesste zwoelfmal Tab druecken.
+ *
+ * <p><strong>Das besorgt die Primitive und nicht mehr diese Datei.</strong>
+ * Zuvor fuehrte die Leiste den Roving-Tabindex selbst: ein Effekt ohne
+ * Abhaengigkeiten suchte bei jedem Rendern alle Eintraege per
+ * {@code querySelectorAll} zusammen und schrieb {@code tabIndex} an jedes
+ * Element neu. Base UI bringt {@code Toolbar} mit, samt Pfeiltasten,
+ * Umlauf und der Behandlung deaktivierter, aber fokussierbarer Eintraege;
+ * die Huelle dazu steht in {@code components/ui/toolbar.tsx}.
+ *
+ * <p><strong>Warum nicht {@code toggle-group} fuer die Gruppen.</strong>
+ * Die Primitive bringt einen eigenen Roving-Tabindex mit und faengt die
+ * Pfeiltasten innerhalb der Gruppe ab. Vier davon nebeneinander ergaeben
+ * vier abgeschlossene Pfeilbereiche, also das Gegenteil der Zusage. Wo eine
+ * Gruppe einen eigenen Fokusbereich haben <em>soll</em>, naemlich im
+ * Ausrichtungsmenue, steht sehr wohl ein {@code toggle-group}.
+ *
+ * <p><strong>Der Zustand der Schaltflaechen kommt aus
+ * {@code useEditorState}.</strong> Seit Tiptap v3 rendert der Editor die
+ * Seite bei einer Transaktion nicht mehr neu; ein {@code editor.isActive()}
+ * im Rendern zeigte deshalb den Stand der vorletzten Auswahl, und Fett sah
+ * beim Markieren eines fetten Wortes nicht gedrueckt aus.
+ *
+ * <p>Alt+F10 fuehrt aus dem Text in die Leiste (die Seite faengt es ab),
+ * Escape zurueck in den Text, ohne die Markierung zu verlieren.
+ */
+
+/** Die elf Auszeichnungen der Leiste, in der Reihenfolge des Templates. */
+const MARKS: readonly {
+  name: string
+  icon: LucideIcon
+  toggle: (editor: Editor) => void
+}[] = [
+  {
+    name: "bold",
+    icon: BoldIcon,
+    toggle: (e) => e.chain().focus().toggleBold().run(),
+  },
+  {
+    name: "italic",
+    icon: ItalicIcon,
+    toggle: (e) => e.chain().focus().toggleItalic().run(),
+  },
+  {
+    name: "underline",
+    icon: UnderlineIcon,
+    toggle: (e) => e.chain().focus().toggleUnderline().run(),
+  },
+  {
+    name: "strike",
+    icon: StrikethroughIcon,
+    toggle: (e) => e.chain().focus().toggleStrike().run(),
+  },
+  {
+    name: "code",
+    icon: CodeIcon,
+    toggle: (e) => e.chain().focus().toggleCode().run(),
+  },
+  {
+    name: "superscript",
+    icon: SuperscriptIcon,
+    toggle: (e) => e.chain().focus().toggleSuperscript().run(),
+  },
+  {
+    name: "subscript",
+    icon: SubscriptIcon,
+    toggle: (e) => e.chain().focus().toggleSubscript().run(),
+  },
+]
+
+const BLOCK_FORMATS: readonly {
+  name: string
+  icon: LucideIcon
+  toggle: (editor: Editor) => void
+}[] = [
+  {
+    name: "bulletList",
+    icon: ListIcon,
+    toggle: (e) => e.chain().focus().toggleBulletList().run(),
+  },
+  {
+    name: "orderedList",
+    icon: ListOrderedIcon,
+    toggle: (e) => e.chain().focus().toggleOrderedList().run(),
+  },
+  {
+    name: "blockquote",
+    icon: QuoteIcon,
+    toggle: (e) => e.chain().focus().toggleBlockquote().run(),
+  },
+]
+
+/**
+ * Die Formatierungsleiste.
+ *
+ * <p><strong>Sie steht seit dem Umzug in die Kopfzeile dauerhaft da</strong>
+ * und nicht mehr als Blase ueber markiertem Text (BubbleMenu): die Werkzeuge
+ * sind damit jederzeit sichtbar und erreichbar, ohne dass erst markiert
+ * werden muss. Die aktiven Zustaende folgen weiter der Textmarke bzw. der
+ * Auswahl, denn {@code useEditorState} liest {@code isActive()} bei jeder
+ * Transaktion; die Befehle selbst wirken wie zuvor an der Auswahl oder als
+ * gemerkte Auszeichnung an der Cursorstelle. Ohne Schreibrecht (§4.1) ist
+ * die Leiste deaktiviert und nicht versteckt (SC 3.2.4).
+ *
+ * <p>{@code className} erlaubt der Kopfzeile, Rahmen und Flaeche der Leiste
+ * abzulegen; die Vorgaben hier bleiben der Stand fuer jeden anderen Ort.
+ */
+export function SelectionToolbarBar({
+  editor,
+  disabled,
+  className,
+}: {
+  editor: Editor
+  disabled: boolean
+  className?: string
+}) {
+  const { t } = useTranslation()
+  const linkTriggerRef = useRef<HTMLButtonElement>(null)
+  const [linkOpen, setLinkOpen] = useState(false)
+
+  const active = useEditorState({
+    editor,
+    selector: ({ editor: current }) => {
+      const result: Record<string, boolean> = {}
+      for (const { name } of [...MARKS, ...BLOCK_FORMATS]) {
+        result[name] = current.isActive(name)
+      }
+      result.link = current.isActive("link")
+      return result
+    },
+  })
+
+  return (
+    <>
+      <Toolbar
+        data-selection-toolbar
+        aria-label={t("projectContent.toolbar.label")}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault()
+            editor.commands.focus()
+          }
+        }}
+        className={cn(
+          "rounded-card border border-border bg-popover p-1 shadow-md",
+          className
+        )}
+      >
+        <BlockTypeMenu editor={editor} disabled={disabled} />
+
+        <ToolbarSeparator />
+
+        {MARKS.map(({ name, icon, toggle }) => (
+          <MarkButton
+            key={name}
+            disabled={disabled}
+            icon={icon}
+            name={name}
+            pressed={active?.[name] ?? false}
+            onToggle={() => toggle(editor)}
+          />
+        ))}
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <ToolbarButton
+                render={
+                  <Toggle
+                    ref={linkTriggerRef}
+                    data-toolbar-item
+                    size="sm"
+                    disabled={disabled}
+                    pressed={active?.link ?? false}
+                    onPressedChange={() => setLinkOpen(true)}
+                    className="size-8 min-w-0 px-0"
+                  />
+                }
+              />
+            }
+          >
+            <LinkIcon aria-hidden="true" />
+            <span className="sr-only">
+              {t("projectContent.toolbar.mark.link")}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            {t("projectContent.toolbar.mark.link")}
+          </TooltipContent>
+        </Tooltip>
+
+        <ToolbarSeparator />
+
+        {BLOCK_FORMATS.map(({ name, icon, toggle }) => (
+          <MarkButton
+            key={name}
+            disabled={disabled}
+            icon={icon}
+            name={name}
+            pressed={active?.[name] ?? false}
+            onToggle={() => toggle(editor)}
+          />
+        ))}
+        <AlignMenu editor={editor} disabled={disabled} />
+
+        <ToolbarSeparator />
+
+        {/* Zwei eigene Schaltflaechen (Nutzerentscheidung): jede oeffnet
+            nur ihre Farbauswahl, die Exklusivitaet der Marks bleibt. */}
+        <ColorMenu editor={editor} disabled={disabled} kind="text" />
+        <ColorMenu editor={editor} disabled={disabled} kind="highlight" />
+      </Toolbar>
+
+      <LinkDialog
+        editor={editor}
+        open={linkOpen}
+        onOpenChange={(open) => {
+          setLinkOpen(open)
+          if (!open) {
+            /* Der Fokus geht an den Auslöser zurueck; ohne das faellt er
+               auf body (SC 2.4.3). */
+            linkTriggerRef.current?.focus()
+          }
+        }}
+      />
+    </>
+  )
+}
+
+/**
+ * Eine Schaltflaeche der Leiste. {@code aria-pressed} kommt von der
+ * Primitive; der zugaengliche Name steht als {@code sr-only}-Text und nicht
+ * nur im Tooltip, denn auf Touch erscheint der Tooltip gar nicht.
+ */
+function MarkButton({
+  disabled,
+  icon: Icon,
+  name,
+  pressed,
+  onToggle,
+}: {
+  disabled: boolean
+  icon: LucideIcon
+  name: string
+  pressed: boolean
+  onToggle: () => void
+}) {
+  const { t } = useTranslation()
+  const label = t(`projectContent.toolbar.mark.${name}`)
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <ToolbarButton
+            render={
+              <Toggle
+                data-toolbar-item
+                size="sm"
+                disabled={disabled}
+                pressed={pressed}
+                onPressedChange={onToggle}
+                className="size-8 min-w-0 px-0"
+              />
+            }
+          />
+        }
+      >
+        <Icon aria-hidden="true" />
+        <span className="sr-only">{label}</span>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  )
+}

@@ -217,6 +217,29 @@ export function removeReaction(projectId: string): Promise<ReactionResponse> {
 }
 
 /**
+ * POST /projects/{id}/submit (§4.1, §6.1, KAN-36): die Autor:in reicht
+ * ihren Beitrag zur Begutachtung ein, aus DRAFT oder REVISION nach
+ * SUBMITTED.
+ *
+ * <p><strong>Vollstaendig heisst hier mehr als „hat einen Titel".</strong>
+ * §3.3 verlangt zum Einreichen Projekttyp, Fakultaet, Studiengang,
+ * Abschluss, Kategorie, Semester und mindestens eine Redaktionszuweisung;
+ * fehlt davon etwas, antwortet der Server 400 {@code PROJECT_INCOMPLETE}
+ * und nennt die fehlenden Felder <em>vollstaendig</em>, nicht das erste.
+ * Der Editor fuehrt deshalb vor dem Aufruf durch die Metadaten, statt den
+ * Fehler abzuwarten.
+ *
+ * <p>Der Inhalt wird nicht geprueft: ein Beitrag ohne Bloecke laesst sich
+ * einreichen. Ob er genug hergibt, ist eine redaktionelle Beurteilung und
+ * keine Formalie.
+ */
+export function submitProject(
+  projectId: string
+): Promise<ProjectDetailResponse> {
+  return api.post<ProjectDetailResponse>(apiPaths.projects.submit(projectId))
+}
+
+/**
  * POST /projects/{id}/withdraw (§4.1, seit Contract v50, KAN-69): die
  * Autor:in holt die eigene Einreichung aus SUBMITTED nach DRAFT zurueck.
  * Aus jedem anderen Status antwortet der Server 409

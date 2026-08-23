@@ -18,7 +18,8 @@ import java.util.UUID;
  * @param userId      Konto des Mitglieds
  * @param firstName   Vorname
  * @param lastName    Nachname
- * @param projectRole freie Funktionsbezeichnung, z. B. „Frontend"; das ist
+ * @param projectRole freie Funktionsbezeichnung, seit Contract v65 freiwillig
+ *                    und deshalb moeglicherweise {@code null}; das ist
  *                    <em>nicht</em> die System-Rolle aus §2.1
  */
 public record MemberResponse(
@@ -29,7 +30,12 @@ public record MemberResponse(
 		String lastName,
 
 		@Schema(description = "Freie Funktionsbezeichnung im Projekt, z. B. \"Frontend\". "
-				+ "Nicht die System-Rolle aus §2.1.", example = "Frontend")
+				+ "Nicht die System-Rolle aus §2.1. Freiwillig seit Contract v65: "
+				+ "sie kann spaeter eingetragen werden, und die Autor:in traegt "
+				+ "anfangs keine.",
+				example = "Frontend",
+				nullable = true,
+				requiredMode = Schema.RequiredMode.NOT_REQUIRED)
 		String projectRole) {
 
 	public static MemberResponse from(ProjectMember member) {

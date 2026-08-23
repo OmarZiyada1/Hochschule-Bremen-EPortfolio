@@ -10,7 +10,7 @@ import {
  * Anbieter.
  *
  * <p>Anders als VIDEO fuehrt EMBED seine {@code embedUrl} mit, weil es fuer
- * figma, codepen und gist keine Ableitung aus einer Kennung gibt. Dafuer
+ * figma und codepen keine Ableitung aus einer Kennung gibt. Dafuer
  * prueft der Server Anbieter <em>und</em> Host: ein passender Providername
  * mit fremdem Host waere sonst der bequeme Weg an der Allowlist vorbei und
  * ergibt 400 EMBED_PROVIDER_NOT_ALLOWED. Der Lesepfad prueft dasselbe noch

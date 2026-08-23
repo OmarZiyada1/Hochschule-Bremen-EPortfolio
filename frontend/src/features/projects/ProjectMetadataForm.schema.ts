@@ -43,7 +43,25 @@ import { isDegree, isProjectType } from "@/features/projects/projectFilters"
  * lehnt auch dieses Schema ab.
  */
 export const TITLE_MAX_LENGTH = 100
-export const SUMMARY_MAX_LENGTH = 200
+
+/**
+ * Die Kurzbeschreibung reicht bis an die Servergrenze, also 1024 Zeichen
+ * ({@code ProjectCreateRequest}, DB-Spalte {@code length = 1024}).
+ *
+ * <p><strong>Sie stand einmal auf 200</strong>, nach dem Zaehler im
+ * Template. Die Zahl war eine Gestaltungsregel und keine fachliche Grenze:
+ * was auf einer Kachel umbricht, ist unlesbar. Genau das loest die Kachel
+ * aber selbst, sie kuerzt mit {@code line-clamp-3}
+ * ({@code components/common/ProjectCard.tsx}). Was blieb, war eine Huerde
+ * beim Schreiben: im Editor steht die Kurzbeschreibung als Abstract ueber
+ * dem Beitrag und ist dort Fliesstext, kein Kachel-Teaser.
+ *
+ * <p>Client und Server sagen damit dasselbe. Eine engere Zahl im Client
+ * waere eine zweite Wahrheit ueber dasselbe Feld, und sie schlaege genau
+ * dort zu, wo jemand einen langen Abstract im Editor geschrieben hat und
+ * ihn auf der Metadatenseite nicht mehr speichern koennte.
+ */
+export const SUMMARY_MAX_LENGTH = 1024
 
 /** Bild-Allowlist fuer das Titelbild (§3.15). Verbindlich bleibt der Server. */
 export const COVER_IMAGE_MIME_TYPES = [
@@ -96,18 +114,14 @@ export type PersonValue = z.infer<typeof personValueSchema>
  * Ein Projektmitglied im Formular: Person plus freie Funktionsbezeichnung
  * (§3.13).
  *
- * <p><strong>Die Bezeichnung ist Pflicht.</strong> §3.13 fuehrt
- * {@code projectRole String not null}, und {@code MemberRequest} setzt das
- * mit {@code @NotBlank} durch. Dass die generierte schema.d.ts das Feld
- * optional zeigt, ist ein springdoc-Artefakt der Request-Schemas: KAN-76 hat
- * die Pflichtfelder nur an den Antwortschemas nachgezogen. Ohne diese
- * Pruefung liefe ein Mitglied ohne Bezeichnung in ein 400
- * {@code VALIDATION_FAILED}, dessen Feldname
- * ({@code members[0].projectRole}) sich keiner Formularzeile zuordnen
- * laesst und deshalb als anonyme Meldung am Formular landete.
+ * <p><strong>Die Bezeichnung ist seit Contract v65 freiwillig.</strong> Sie
+ * kann spaeter eingetragen werden und ist keine Huerde beim Anlegen; die
+ * Autor:in, die seit derselben Version als Zeile in dieser Liste steht,
+ * traegt anfangs gar keine. Leerraum gilt als keine Angabe und wird zu
+ * einer leeren Zeichenkette getrimmt; der Server macht daraus {@code null}.
  */
 const memberValueSchema = personValueSchema.extend({
-  projectRole: z.string().trim().min(1, "validation.projectRole.required"),
+  projectRole: z.string().trim().max(255, "validation.projectRole.tooLong"),
 })
 
 export type MemberValue = z.infer<typeof memberValueSchema>
@@ -139,6 +153,9 @@ export const projectMetadataSchema = z.object({
   tags: z.array(z.string()).max(MAX_TAGS, "validation.tags.tooMany"),
   editors: z.array(personValueSchema),
   members: z.array(memberValueSchema),
+  /* Funktionsbezeichnung der Autor:in (§3.3 seit Contract v66), freiwillig.
+     Sie ist keine Mitgliedszeile: die Autor:in bleibt Autor:in (§3.13.1). */
+  authorRole: z.string().trim().max(255, "validation.projectRole.tooLong"),
 })
 
 export type ProjectMetadataValues = z.infer<typeof projectMetadataSchema>
@@ -196,11 +213,14 @@ export function toProjectMetadataValues(
       firstName: editor.firstName,
       lastName: editor.lastName,
     })),
+    authorRole: project.authorRole ?? "",
     members: project.members.map((member) => ({
       id: member.userId,
       firstName: member.firstName,
       lastName: member.lastName,
-      projectRole: member.projectRole,
+      /* Ohne Bezeichnung steht im Formular die leere Zeichenkette: ein
+         Eingabefeld kennt kein null. */
+      projectRole: member.projectRole ?? "",
     })),
   }
 }
@@ -252,10 +272,93 @@ export function toProjectUpdateRequest(
     categoryId: values.categoryId,
     semesterId: values.semesterId,
     tags: values.tags,
+    authorRole:
+      values.authorRole.trim() === "" ? undefined : values.authorRole.trim(),
     editorIds: values.editors.map((editor) => editor.id),
     members: values.members.map((member): MemberRequest => ({
       userId: member.id,
-      projectRole: member.projectRole,
+      /* Ohne Bezeichnung steht im Formular die leere Zeichenkette: ein
+         Eingabefeld kennt kein null. */
+      projectRole: member.projectRole ?? "",
     })),
+  }
+}
+
+/**
+ * Der Ausschnitt, den die Kopfpartie des Editors bearbeitet: Titelbild,
+ * Titel und Kurzbeschreibung (KAN-36).
+ *
+ * <p><strong>Abgeleitet und nicht danebengeschrieben.</strong> Es gibt
+ * genau ein Metadaten-Schema im Repository; ein zweites mit eigenen
+ * Laengengrenzen liefe beim naechsten Nachtrag auseinander, und dann
+ * beanstandete der Editor einen Titel, den das Formular durchliess. Was
+ * hier fehlt, ist nicht erlaubt-und-ungeprueft, sondern schlicht nicht
+ * Gegenstand dieser Flaeche: die uebrigen Angaben stehen auf der
+ * Metadatenseite.
+ */
+export const projectIntroSchema = projectMetadataSchema.pick({
+  title: true,
+  summary: true,
+  coverImageUrl: true,
+})
+
+export type ProjectIntroValues = z.infer<typeof projectIntroSchema>
+
+/** Fuellt die Kopfpartie aus dem zuletzt bekannten Projektstand. */
+export function toProjectIntroValues(
+  project: ProjectDetailResponse
+): ProjectIntroValues {
+  const values = toProjectMetadataValues(project)
+  return {
+    title: values.title,
+    summary: values.summary,
+    coverImageUrl: values.coverImageUrl,
+  }
+}
+
+/**
+ * Baut aus dem Projektstand und den drei Feldern der Kopfpartie die
+ * vollstaendige Metadatenkarte fuer {@code PUT /api/projects/{id}},
+ * <strong>ohne</strong> {@code version}.
+ *
+ * <p><strong>Die ganze Karte, nicht die drei Felder.</strong>
+ * {@code ProjectUpdateRequest} hat ersetzende Semantik (siehe
+ * {@link toProjectUpdateRequest}): ein PUT mit nur Titel und
+ * Kurzbeschreibung loeschte Fakultaet, Studiengang, Abschluss, Kategorie,
+ * Semester, Typ und Modul. Der Editor schreibt deshalb dieselbe Karte wie
+ * das Formular und tauscht darin nur aus, was er zeigt.
+ *
+ * <p><strong>Ohne version, und das mit Absicht.</strong> Im Editor
+ * schreiben zwei Wege gegen dasselbe Projekt, der Inhalt ueber
+ * {@code PUT /projects/{id}/blocks} und die Kopfpartie hierueber, und
+ * beide erhoehen dieselbe {@code Project.version} (§6.4;
+ * {@code BlockService.replace} ruft {@code project.touch()}). Die Version
+ * gehoert deshalb dem Speichertakt, der beide Wege nacheinander fuehrt,
+ * und nicht dem zuletzt gelesenen Projekt: das waere hier regelmaessig
+ * einen Schritt zurueck und ergaebe einen 409 gegen die eigene vorige
+ * Speicherung.
+ *
+ * <p><strong>Eine unsichtbare Redaktionszuweisung bleibt unberuehrt.</strong>
+ * {@code editors} ist {@code null}, wenn die anfragende Person die
+ * Zuweisung nicht sehen darf (§3.3). Eine leere Liste wuerde sie loeschen,
+ * {@code null} laesst sie unveraendert (§6.1); nur was sichtbar ist, wird
+ * geschrieben.
+ */
+export function toProjectIntroUpdateRequest(
+  project: ProjectDetailResponse,
+  intro: ProjectIntroValues
+): Omit<ProjectUpdateRequest, "version"> {
+  const card: Omit<ProjectUpdateRequest, "version"> & { version?: number } = {
+    ...toProjectUpdateRequest(project, {
+      ...toProjectMetadataValues(project),
+      ...intro,
+    }),
+  }
+  /* Weggenommen und nicht ausgelassen: so faellt eine kuenftig neue Angabe
+     der Karte hier nicht still unter den Tisch. */
+  delete card.version
+  return {
+    ...card,
+    editorIds: project.editors == null ? null : card.editorIds,
   }
 }

@@ -34,8 +34,11 @@ function paragraph(text: string): ParagraphNode {
 function everyNode(): BlockNode[] {
   return [
     {
+      /* textAlign steht seit Contract v63 auch an der Ueberschrift und
+         wird beim Lesen wie am Absatz auf null gesetzt, wenn nichts
+         dasteht; ohne das Feld waere der Round-Trip keine Identitaet. */
       type: "heading",
-      attrs: { level: 2 },
+      attrs: { level: 1, textAlign: null },
       content: [{ type: "text", text: "Zwischenueberschrift" }],
     },
     paragraph("Ein Absatz mit Text."),
@@ -104,7 +107,12 @@ function everyNode(): BlockNode[] {
     { type: "videoBlock", attrs: { fileId: FILE_A, caption: "Aufnahme" } },
     {
       type: "videoBlock",
-      attrs: { provider: "youtube", videoId: "dQw4w9WgXcQ", caption: "" },
+      attrs: {
+        provider: "youtube",
+        videoId: "dQw4w9WgXcQ",
+        hash: null,
+        caption: "",
+      },
     },
     { type: "audioBlock", attrs: { fileId: FILE_B, caption: "Interview" } },
     {
@@ -115,7 +123,8 @@ function everyNode(): BlockNode[] {
       type: "embedBlock",
       attrs: {
         provider: "figma",
-        embedUrl: "https://www.figma.com/embed?node-id=1",
+        embedUrl:
+          "https://embed.figma.com/design/o6SECXRMKGOzCfG5xZebPV/Name?embed-host=share",
         height: 460,
       },
     },
@@ -295,7 +304,14 @@ describe("Round-Trip ueber alle Blocktypen", () => {
       { type: "videoBlock", attrs: { fileId: FILE_A, caption: "Aufnahme" } },
       {
         type: "videoBlock",
-        attrs: { provider: "vimeo", videoId: "123456789", caption: "Vortrag" },
+        /* Nicht gelistet: ohne den Freigabe-Hash ist das Video im Rahmen
+           nicht abspielbar (2.5 seit v64). */
+        attrs: {
+          provider: "vimeo",
+          videoId: "123456789",
+          hash: "3ace684330",
+          caption: "Vortrag",
+        },
       },
     ]
     const { doc, dropped } = roundTrip(nodes)
@@ -534,8 +550,104 @@ describe("blocksToDoc", () => {
 
 describe("migrateBlockContent", () => {
   it("ist fuer Version 1 die Identitaet", () => {
+    /* Den Schritt von 1 nach 2 geht der Server beim Lesen; ein Dokument
+       dieser Version erreicht den Client gar nicht. */
     const content = paragraph("unveraendert")
 
     expect(migrateBlockContent(content, 1)).toBe(content)
+  })
+
+  it("fuehrt die aktuelle Version 3 (Contract v66, 2.10)", () => {
+    expect(BLOCK_SCHEMA_VERSION).toBe(3)
+  })
+
+  it("bildet aus Version 2 die Ebene 2 auf 1 und 3 auf 2 ab", () => {
+    /* Ohne den Schritt rutschte jede vorhandene Ueberschrift eine Stufe
+       nach unten: dieselbe Zahl bedeutet ab v63 etwas anderes, weil die
+       Anzeige eine Stufe tiefer rendert. */
+    for (const [given, expected] of [
+      [2, 1],
+      [3, 2],
+    ] as const) {
+      const migrated = migrateBlockContent(
+        { type: "heading", attrs: { level: given }, content: [] },
+        2
+      ) as { attrs: { level: number } }
+
+      expect(migrated.attrs.level, String(given)).toBe(expected)
+    }
+  })
+
+  it("laesst andere Knoten und die aktuelle Version unberuehrt", () => {
+    const content = paragraph("unveraendert")
+    expect(migrateBlockContent(content, 2)).toBe(content)
+
+    const heading = { type: "heading", attrs: { level: 2 }, content: [] }
+    expect(migrateBlockContent(heading, BLOCK_SCHEMA_VERSION)).toBe(heading)
+  })
+})
+
+describe("docToBlocks laesst unfertige Medienknoten weg", () => {
+  /*
+   * Ein Medienblock entsteht auf der Schreibflaeche leer und wird dort
+   * gefuellt. Ginge er in diesem Zustand mit, ergaebe er 400
+   * BLOCK_CONTENT_INVALID fuer die gesamte Liste, und damit waere jede
+   * weitere Aenderung am ganzen Beitrag unspeicherbar, bis jemand den
+   * Platzhalter wieder loescht.
+   */
+  it("schickt einen Medienknoten ohne Pflichtattribute nicht mit", () => {
+    const blocks = docToBlocks({
+      type: "doc",
+      content: [
+        paragraph("bleibt"),
+        {
+          type: "imageBlock",
+          attrs: { fileId: "", alt: "", caption: "", width: 100 },
+        },
+        { type: "galleryBlock", attrs: { items: [], columns: 2, caption: "" } },
+        { type: "mathBlock", attrs: { latex: "   " } },
+        {
+          type: "embedBlock",
+          attrs: { provider: "figma", embedUrl: "", height: 460 },
+        },
+      ] as BlockNode[],
+    })
+
+    expect(blocks).toHaveLength(1)
+    expect(blocks[0].type).toBe("TEXT")
+  })
+
+  it("schickt ihn mit, sobald er seine Pflichtattribute hat", () => {
+    const blocks = docToBlocks({
+      type: "doc",
+      content: [
+        {
+          type: "imageBlock",
+          attrs: { fileId: FILE_A, alt: "", caption: "", width: 100 },
+        },
+      ],
+    })
+
+    expect(blocks).toHaveLength(1)
+    expect(blocks[0].type).toBe("IMAGE")
+  })
+
+  it("laesst Absatz, Ueberschrift und Tabelle auch leer durch", () => {
+    /* Sie haben keine Pflichtattribute: leer sind sie Inhalt und kein
+       unfertiger Zustand. */
+    const blocks = docToBlocks({
+      type: "doc",
+      content: [
+        { type: "heading", attrs: { level: 1, textAlign: null }, content: [] },
+        { type: "table", content: [] },
+        paragraph("damit der Schlussabsatz nicht der einzige ist"),
+      ] as BlockNode[],
+    })
+
+    expect(blocks.map((block) => block.type)).toEqual([
+      "HEADING",
+      "TABLE",
+      "TEXT",
+    ])
   })
 })

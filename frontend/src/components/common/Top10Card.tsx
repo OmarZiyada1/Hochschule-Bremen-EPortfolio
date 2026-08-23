@@ -2,6 +2,7 @@ import { ImageIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
 
+import { resolveApiUrl } from "@/api/client"
 import type { ProjectReference } from "@/api/types"
 import { Card, CardContent } from "@/components/ui/card"
 import { fullNameOf, type PersonName } from "@/lib/name"
@@ -59,8 +60,18 @@ export function Top10Card({
     </span>
   )
 
+  /* Ueber resolveApiUrl und nicht ueber den nackten Pfad: die Adresse
+     landet im src eines img und laeuft nie durch request(), die Basis-URL
+     muesste sie also selbst tragen. Ohne das laedt bei gesetztem
+     VITE_API_BASE_URL kein einziges Titelbild der Startseite. Ein Token
+     braucht es hier nicht: die Top 10 fuehrt nur veroeffentlichte
+     Projekte, und deren Dateien sind oeffentlich (§3.15). */
   const cover = coverImageUrl ? (
-    <img src={coverImageUrl} alt="" className="size-full object-cover" />
+    <img
+      src={resolveApiUrl(coverImageUrl)}
+      alt=""
+      className="size-full object-cover"
+    />
   ) : (
     <div className="flex size-full items-center justify-center">
       <ImageIcon

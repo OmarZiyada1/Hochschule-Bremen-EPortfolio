@@ -24,7 +24,11 @@ export const newPasswordSchema = z
 export function withPasswordConfirmation<
   Shape extends z.ZodRawShape,
   Schema extends z.ZodObject<Shape>,
->(schema: Schema, passwordField: keyof z.infer<Schema>, confirmField: keyof z.infer<Schema>) {
+>(
+  schema: Schema,
+  passwordField: keyof z.infer<Schema>,
+  confirmField: keyof z.infer<Schema>
+) {
   return schema.refine(
     (values) => values[passwordField] === values[confirmField],
     {

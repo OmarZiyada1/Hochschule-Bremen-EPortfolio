@@ -43,9 +43,7 @@ describe("RegisterVerifyHsbEmailPage", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "HSB-E-Mail bestätigen" })
     ).toBeInTheDocument()
-    expect(
-      screen.getByText("lmueller@stud.hs-bremen.de")
-    ).toBeInTheDocument()
+    expect(screen.getByText("lmueller@stud.hs-bremen.de")).toBeInTheDocument()
     /* Das Template fuehrt hier kein "Zurueck" mehr. */
     expect(
       screen.queryByRole("link", { name: "Zurück" })
@@ -113,9 +111,7 @@ describe("RegisterVerifyHsbEmailPage", () => {
     saveRegistrationFlow(flow)
     renderWithProviders(<RegisterVerifyHsbEmailPage />)
 
-    expect(
-      screen.getByText("Neuen Code in 20s anfordern")
-    ).toBeInTheDocument()
+    expect(screen.getByText("Neuen Code in 20s anfordern")).toBeInTheDocument()
 
     /* 20 Sekunden ablaufen lassen: aus dem Countdown wird der Knopf.
        Sekundenweise, weil jeder Tick den naechsten Timeout erst nach dem
@@ -145,8 +141,6 @@ describe("RegisterVerifyHsbEmailPage", () => {
       purpose: "HSB_EMAIL",
     })
     /* Der Countdown beginnt von vorn. */
-    expect(
-      screen.getByText("Neuen Code in 20s anfordern")
-    ).toBeInTheDocument()
+    expect(screen.getByText("Neuen Code in 20s anfordern")).toBeInTheDocument()
   })
 })

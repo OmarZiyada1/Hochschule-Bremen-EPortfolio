@@ -84,7 +84,6 @@ describe("i18n-Ressourcen", () => {
       "vimeo",
       "figma",
       "codepen",
-      "gist",
     ])
   })
 })

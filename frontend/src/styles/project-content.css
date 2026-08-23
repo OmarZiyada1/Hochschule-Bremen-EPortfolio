@@ -45,49 +45,78 @@
     overflow-wrap: break-word;
   }
 
-  /* Ein Abstand zwischen zwei Blocken, gesetzt am Nachfolger: so traegt der
-     erste Block keinen Aussenabstand nach oben, den die Seite ausgleichen
-     muesste. */
-  .project-content > * + * {
+  /*
+   * Ein Abstand zwischen zwei Blocken, gesetzt am Nachfolger: so traegt der
+   * erste Block keinen Aussenabstand nach oben, den die Seite ausgleichen
+   * muesste.
+   *
+   * Zwei Elternteile, weil es zwei Wege gibt: im Lesepfad haengen die
+   * Bloecke unmittelbar unter .project-content (renderer/ProjectContent),
+   * auf der Schreibflaeche eine Ebene tiefer unter .ProseMirror, denn
+   * EditorContent legt einen eigenen Rahmen dazwischen. Ohne die zweite
+   * Zeile standen im Editor alle Absaetze ohne Abstand aneinander, waehrend
+   * die fertige Seite sie hatte: genau der Unterschied, den die Klasse
+   * eigentlich ausschliessen soll (Befund des Frontend-Reviews).
+   *
+   * :not(:first-child) und nicht * + *: der Reset .project-content figure
+   * (margin: 0) ist spezifischer als der Nachbarselektor und nahm im
+   * Lesepfad jedem Bild seinen Abstand, waehrend es ihn auf der
+   * Schreibflaeche hatte. So gewinnt die Flussregel in beiden Pfaden, und
+   * derselbe Beitrag sieht in beiden gleich aus.
+   *
+   * Ausgenommen ist die Ablegelinie. Sie haengt im selben Rahmen, ist aber
+   * kein Block, sondern eine Anzeige darueber: ihr Ort wird gemessen und als
+   * top gesetzt, und ein Aussenabstand verschiebt auch ein absolut gesetztes
+   * top. Mit dieser Regel lag sie genau einen Blockabstand zu tief und damit
+   * wieder mitten auf dem folgenden Block, also genau da, wo sie nie liegen
+   * soll. Ein margin: 0 in ihrer eigenen Regel reicht dagegen nicht:
+   * .project-content-drop-line ist eine Klasse, dieser Selektor hier ist
+   * Klasse plus :not(:first-child) und damit spezifischer. Deshalb steht die
+   * Ausnahme hier und nicht dort.
+   */
+  .project-content > :not(:first-child, .project-content-drop-line),
+  .project-content .ProseMirror > :not(:first-child) {
     margin-block-start: 1rem;
   }
 
   /* ============================================================
    * Ueberschriften
    *
-   * Der Renderer gibt nur h2 und h3 aus; die einzige h1 ist der Projekttitel
-   * der verwendenden Seite (Contract 2.5, 3.3, SC 1.3.1).
+   * Sechs Ebenen seit Contract v63, um eine Stufe versetzt gerendert: die
+   * einzige h1 der Seite ist der Projekttitel (2.5, 3.3, SC 1.3.1). Die
+   * Groessen kommen aus der Inhaltsskala (--fs-content-h1 bis -h6), die
+   * getrennt von der UI-Skala steht: --fs-h3 liegt auf Fliesstextgroesse,
+   * die Ebenen 4 bis 6 waeren darin kleiner als der Text, den sie
+   * gliedern.
    *
-   * Die Tokennamen --fs-h1 und --fs-h2 benennen die Figma-Textstile und
-   * nicht die HTML-Ebene: der Seitentitel traegt --fs-title, die
-   * Zwischenueberschrift darunter --fs-h1, die naechste Stufe --fs-h2. Wer
-   * hier auf die gleichnamige Ebene ginge, saehe eine Gliederung, deren
-   * zweite Stufe kleiner ist als der Fliesstext.
+   * Die Rollenklasse setzt der Renderer ausdruecklich (.type-content-h1
+   * steht an einem h2). Hier stehen nur die Abstaende, und die haengen am
+   * Element: die sechste Ebene ist gar keine Ueberschrift, sondern ein div
+   * mit role="heading" und aria-level 7, wie WAI-ARIA es fuer Ebenen
+   * jenseits von sechs vorsieht.
    * ============================================================ */
-  .project-content h2,
-  .project-content h3 {
-    font-family: var(--font-heading);
-    font-weight: 600;
-  }
-
-  .project-content h2 {
-    font-size: var(--fs-h1);
-    line-height: var(--lh-h1);
-  }
-
-  .project-content h3 {
-    font-size: var(--fs-h2);
-    line-height: var(--lh-h2);
-  }
-
-  .project-content > h2 + *,
-  .project-content > h3 + * {
+  .project-content > :is(h2, h3, h4, h5, h6, [role="heading"]) + *,
+  .project-content
+    .ProseMirror
+    > :is(h2, h3, h4, h5, h6, [role="heading"])
+    + * {
     margin-block-start: 0.5rem;
   }
 
-  .project-content > * + h2,
-  .project-content > * + h3 {
+  .project-content > * + :is(h2, h3, h4, h5, h6, [role="heading"]),
+  .project-content
+    .ProseMirror
+    > *
+    + :is(h2, h3, h4, h5, h6, [role="heading"]) {
     margin-block-start: 2rem;
+  }
+
+  /* Auf der Schreibflaeche gibt ProseMirror die Ueberschrift als das
+     Element aus, das die Knotenansicht baut (extensions/HeadingNodeView),
+     also mit derselben Rollenklasse wie im Lesepfad. Die Ausrichtung
+     laeuft ueber dasselbe Datenattribut wie am Absatz. */
+  .project-content [role="heading"] {
+    display: block;
   }
 
   /* ============================================================
@@ -199,6 +228,23 @@
     color: var(--content-text-red);
   }
 
+  /* Vier weitere Rollen mit Contract v63 (KAN-36). */
+  .project-content span[data-color="brown"] {
+    color: var(--content-text-brown);
+  }
+
+  .project-content span[data-color="orange"] {
+    color: var(--content-text-orange);
+  }
+
+  .project-content span[data-color="purple"] {
+    color: var(--content-text-purple);
+  }
+
+  .project-content span[data-color="pink"] {
+    color: var(--content-text-pink);
+  }
+
   .project-content mark[data-color] {
     color: var(--foreground);
     border-radius: var(--radius-selection);
@@ -223,6 +269,22 @@
 
   .project-content mark[data-color="red"] {
     background-color: var(--content-highlight-red);
+  }
+
+  .project-content mark[data-color="brown"] {
+    background-color: var(--content-highlight-brown);
+  }
+
+  .project-content mark[data-color="orange"] {
+    background-color: var(--content-highlight-orange);
+  }
+
+  .project-content mark[data-color="purple"] {
+    background-color: var(--content-highlight-purple);
+  }
+
+  .project-content mark[data-color="pink"] {
+    background-color: var(--content-highlight-pink);
   }
 
   /* ============================================================
@@ -354,16 +416,53 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  /*
+   * Jede Zelle hat dieselbe feste Groesse, und das Bild wird
+   * hineingestellt, statt sie auszufuellen.
+   *
+   * <p><strong>contain und nicht cover.</strong> Mit {@code cover} fuellt
+   * jedes Bild seine Zelle und wird dafuer beschnitten: ein hochformatiges
+   * verliert oben und unten, ein breites links und rechts. In einer
+   * Galerie aus gemischten Formaten sieht das nicht nach Ordnung aus,
+   * sondern nach Zufall, und es nimmt der Autor:in die Entscheidung ueber
+   * ihren eigenen Bildausschnitt ab. Mit {@code contain} bleibt das
+   * Seitenverhaeltnis des Bildes erhalten, und die Zellen stehen trotzdem
+   * buendig nebeneinander, weil die Zelle die feste Groesse traegt und
+   * nicht das Bild.
+   *
+   * <p>Der Rahmen bekommt dafuer eine ruhige Flaeche: der freie Platz
+   * neben einem hochformatigen Bild soll wie Rahmen aussehen und nicht wie
+   * ein Loch.
+   */
   .project-content figure[data-columns] li {
     aspect-ratio: 4 / 3;
     margin-block-start: 0;
+    padding: 0.5rem;
+    background-color: var(--muted);
+    border-radius: var(--radius-card);
+  }
+
+  /*
+   * Die Zelle traegt die Groesse, das Bild fuellt sie und behaelt dabei sein
+   * Seitenverhaeltnis. Genau dafuer ist {@code contain} da: Breite und Hoehe
+   * auf 100 Prozent zu setzen ist kein Widerspruch dazu, sondern die
+   * Voraussetzung, denn erst damit hat das Bild eine Flaeche, in die es
+   * eingepasst werden kann. Ein {@code auto} mit {@code max-block-size: 100%}
+   * traege das nicht: die Prozentangabe braucht eine Hoehe am Elternteil,
+   * und die Ansicht auf der Schreibflaeche legt noch eine Huelle dazwischen.
+   *
+   * <p>Die Schreibflaeche haengt ihre eigene Huelle um das Bild (Knopf zum
+   * Entfernen); sie muss die Zelle deshalb ebenso ausfuellen.
+   */
+  .project-content figure[data-columns] li > * {
+    block-size: 100%;
   }
 
   .project-content figure[data-columns] img {
     inline-size: 100%;
     block-size: 100%;
-    object-fit: cover;
-    border-radius: var(--radius-card);
+    object-fit: contain;
+    border-radius: calc(var(--radius-card) - 0.25rem);
   }
 
   /* ------------------------------------------------------------
@@ -390,5 +489,285 @@
    * ============================================================ */
   .project-content [data-block="math"] {
     overflow-x: auto;
+  }
+
+  /* ============================================================
+   * Nur auf der Schreibflaeche
+   *
+   * Der Lesepfad kennt weder Platzhalter noch Ziehgriff; beide entstehen
+   * erst im Editor (KAN-36). Sie stehen trotzdem hier, weil sie an
+   * .project-content haengen und die Datei die eine Stelle fuer das
+   * Aussehen eines Beitrags ist.
+   * ============================================================ */
+
+  /*
+   * Der Platzhalter der leeren Zeile kommt aus der Erweiterung Placeholder
+   * (@tiptap/extensions) und steht im Attribut data-placeholder. Er wird
+   * als ::before ausgegeben und aus dem Fluss genommen: als echter Inhalt
+   * verschoebe er die Zeile, und der Cursor stuende dahinter.
+   */
+  .project-content .is-empty[data-placeholder]::before {
+    content: attr(data-placeholder);
+    color: var(--muted-foreground);
+    float: inline-start;
+    block-size: 0;
+    pointer-events: none;
+    /* Ein Screenreader liest den Cursor und die leere Zeile vor; der
+       Platzhalter waere eine zweite, verwirrende Ansage (SC 1.3.1). */
+    speak: never;
+  }
+
+  /*
+   * Der Rahmen des Ziehgriffs. Die Erweiterung setzt Position, Sichtbarkeit
+   * und pointer-events selbst; hier steht nur, dass er beim Ziehen nicht im
+   * Weg ist und weich erscheint. Wer Bewegung reduziert haben will, bekommt
+   * keine (SC 2.3.3).
+   */
+  .project-content .drag-handle {
+    transition: opacity 120ms ease-out;
+  }
+
+  .project-content .drag-handle[data-dragging="true"] {
+    opacity: 0.4;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .project-content .drag-handle {
+      transition: none;
+    }
+  }
+
+  /*
+   * Die Ablegelinie beim Verschieben (extensions/BlockDropCursor).
+   *
+   * Ort und Laenge setzt die Extension als Inline-Stil, weil beide bei jedem
+   * Zeigerschritt neu gemessen werden. Dicke und Farbe stehen hier: eine
+   * Farbe im Code waere ein Wert ausserhalb der Tokenschicht
+   * (Frontend-Regel 5), und der mitgelieferte Dropcursor hatte genau das
+   * getan (er setzt sein backgroundColor selbst).
+   *
+   * Die Linie sitzt mittig auf der gemeldeten Kante statt darunter: die
+   * Extension nennt die Grenze zwischen zwei Bloecken, und translate ruecht
+   * die zwei Pixel darum herum.
+   *
+   * z-index 20: ueber dem Ziehgriff (10), unter der klebenden Kopfzeile des
+   * Editors (30), damit die Linie beim Scrollen waehrend des Ziehens nicht
+   * ueber ihr erscheint.
+   *
+   * Vom Blockabstand ist sie ausgenommen, und zwar oben an der Flussregel
+   * und nicht hier: dieser Selektor waere der schwaechere von beiden.
+   */
+  .project-content-drop-line {
+    position: absolute;
+    z-index: 20;
+    pointer-events: none;
+    background-color: var(--primary);
+    border-radius: var(--radius-selection);
+  }
+
+  .project-content-drop-line[data-orientation="horizontal"] {
+    block-size: 2px;
+    transform: translateY(-50%);
+  }
+
+  .project-content-drop-line[data-orientation="vertical"] {
+    inline-size: 2px;
+    transform: translateX(-50%);
+  }
+
+  /*
+   * Die Tabellenbedienung an der Tabelle (components/TableControlsLayer).
+   *
+   * Der Rahmen kommt nicht von dieser Anwendung: die Tabellen-Erweiterung
+   * legt ihn selbst um jede Tabelle (div.tableWrapper, ihre TableView).
+   * Genau deshalb reicht hier position: relative, und die Bedienung sitzt
+   * ohne jede Messung in der Ecke ihrer eigenen Tabelle.
+   *
+   * Sichtbar beim Zeigen auf die Tabelle, mit dem Fokus in der Bedienung
+   * und solange die Textmarke in dieser Tabelle steht. Der Fokusfall ist
+   * kein Beiwerk: ein Element mit opacity 0 nimmt den Fokus weiterhin an,
+   * und ohne diese Zeile waere der Tabstopp unsichtbar (SC 2.4.7).
+   */
+  .project-content .tableWrapper {
+    position: relative;
+  }
+
+  /*
+   * Der Kopfraum der Tabelle auf der Schreibflaeche.
+   *
+   * Ihre Bedienung sitzt darueber (naechste Regel), und der Blockabstand von
+   * 1rem reicht dafuer nicht: die Leiste misst mit ihrem Abstand rund 2rem
+   * und laege sonst auf dem Block davor (Befund des Frontend-Reviews). Der
+   * Lesepfad braucht den Raum nicht und bekommt ihn deshalb auch nicht.
+   *
+   * Und die gesperrte Schreibflaeche ebenso wenig: dort gibt es keine
+   * Bedienung (die Ebene entsteht nur mit Schreibrecht), eine Luecke ueber
+   * jeder Tabelle waere Raum ohne Anlass.
+   */
+  .project-content .ProseMirror[contenteditable="true"] > .tableWrapper {
+    margin-block-start: 2.5rem;
+  }
+
+  /*
+   * Ueber der Tabelle und nicht in ihrer ersten Zelle.
+   *
+   * Innerhalb der Tabelle lag die Bedienung auf dem Inhalt der oberen
+   * rechten Zelle, und zwar dauerhaft, solange die Textmarke in der Tabelle
+   * steht: genau dort wird aber getippt. Ueber der Oberkante liegt sie im
+   * Kopfraum der Regel darueber und verdeckt nichts.
+   */
+  .project-content [data-table-controls] {
+    position: absolute;
+    inset-inline-end: 0;
+    inset-block-end: 100%;
+    margin-block-end: 0.25rem;
+    /* Ueber der Tabelle, unter dem Ziehgriff (10) und der Ablegelinie (20). */
+    z-index: 5;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease-out;
+  }
+
+  .project-content .tableWrapper:hover [data-table-controls],
+  .project-content [data-table-controls]:focus-within,
+  .project-content [data-table-controls][data-active="true"] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .project-content [data-table-controls] {
+      transition: none;
+    }
+  }
+
+  /*
+   * Die Kopfzeile des Editors: eine Zeile breit, zwei Zeilen schmal.
+   *
+   * Breit bleibt es beim bisherigen Fluss: Zurueck, die Werkzeuge und die
+   * Aktionen stehen nebeneinander, die Aktionen schiebt ein ms-auto nach
+   * rechts. Schmal wird daraus ein Raster mit zwei Zeilen, und die
+   * Werkzeuge bekommen die untere ganz fuer sich.
+   *
+   * Der Umbruch ist ein Raster und keine zweite Fassung im Markup: die
+   * Formatierungsleiste steht damit genau einmal im DOM (Begruendung im
+   * Kopf von EditorHeader.tsx). Die Grenze liegt bei 64rem, dort wechselt
+   * auch die Seitenleiste von unterhalb nach daneben.
+   */
+  .editor-header {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  @media (width < 64rem) {
+    .editor-header {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      grid-template-areas:
+        "back actions"
+        "tools tools";
+      /* Die Trennlinie der zweiten Zeile sitzt unmittelbar unter der
+         ersten; der Zeilenabstand der breiten Fassung stuende sonst als
+         Streifen dazwischen. Luft macht die zweite Zeile selbst (py). */
+      row-gap: 0;
+    }
+
+    .editor-header > [data-header-area="back"] {
+      grid-area: back;
+    }
+
+    .editor-header > [data-header-area="tools"] {
+      grid-area: tools;
+      /* Die Leiste rollt in ihrer Zeile, statt die Seite quer zu schieben
+         (SC 1.4.10). Der Fokus rollt beim Tabben mit. */
+      min-inline-size: 0;
+    }
+
+    .editor-header > [data-header-area="actions"] {
+      grid-area: actions;
+    }
+  }
+
+  /*
+   * Vorlauf unter der klebenden Kopfzeile des Editors (SC 2.4.11).
+   *
+   * Die Seite selbst ist der Scrollbereich, die Kopfzeile klebt an seinem
+   * oberen Rand. Ohne diesen Vorlauf schoebe der Browser ein per Tabulator
+   * angesprungenes Bedienelement buendig an die Oberkante, also unter die
+   * Leiste, und der Fokus waere verdeckt.
+   *
+   * Ueber :has und nicht am Wurzelelement pauschal: die Regel gilt nur dort,
+   * wo die Editor-Spalte steht, und lastet den uebrigen Seiten keinen
+   * Sprungabstand auf.
+   *
+   * Der Wert ist bewusst grosszuegig. Schmal steht die Kopfzeile in zwei
+   * Zeilen (rund 6,8rem), breit in einer, die bei mittleren Breiten noch
+   * umbrechen kann. Ein zu grosser Vorlauf kostet nichts, er wirkt allein
+   * beim selbsttaetigen Scrollen zu einem angesprungenen Element, ein zu
+   * kleiner dagegen verdeckt den Fokus.
+   */
+  :root:has(.editor-content-column) {
+    scroll-padding-block-start: 10rem;
+  }
+
+  /*
+   * Die gemeinsame linke Inhaltsachse der Editor-Seite.
+   *
+   * <p>Der Streifen fuer die Blockbedienung liegt als Innenabstand an der
+   * Schreibflaeche (Begruendung unten). Ohne Ausgleich beginnt der
+   * Blockinhalt deshalb 5rem rechts vom Projekttitel, der ausserhalb der
+   * Schreibflaeche steht. Die Spalte schiebt darum alles, was ueber der
+   * Schreibflaeche steht (Titel, Meldungen, Tastaturleiste), um dieselbe
+   * Breite nach rechts; die Schreibflaeche selbst zieht sich um diese
+   * Breite nach links zurueck, und ihr Innenabstand bringt den Text exakt
+   * auf die Achse zurueck. Der Streifen liegt damit links AUSSERHALB der
+   * Achse, im Einzug der Spalte, und verschiebt keinen Inhalt.
+   */
+  .editor-content-column {
+    --editor-block-gutter: 5rem;
+    padding-inline-start: var(--editor-block-gutter);
+  }
+
+  .editor-content-column > .project-content {
+    margin-inline-start: calc(-1 * var(--editor-block-gutter));
+  }
+
+  /*
+   * Platz unter dem letzten Block.
+   *
+   * <p>Ohne ihn endet die Schreibflaeche unmittelbar hinter dem letzten
+   * Absatz: wer darunter klickt, trifft die Seite und nicht den Editor,
+   * und der Cursor bleibt, wo er war. Mit Mindesthoehe und Fussraum liegt
+   * unter dem Text eine klickbare Flaeche, und ProseMirror setzt die
+   * Textmarke von selbst an die naechstgelegene Stelle. Den leeren
+   * Schlussabsatz dafuer haelt TrailingNode aus dem StarterKit bereit;
+   * gespeichert wird er nicht (docToBlocks laesst ihn weg).
+   */
+  .project-content .ProseMirror {
+    min-block-size: 24rem;
+    padding-block-end: 8rem;
+    /*
+     * Der Streifen fuer die Blockbedienung, und er gehoert an die
+     * Schreibflaeche und nicht an den Rahmen darum.
+     *
+     * <p>Beides sieht gleich aus und ist es nicht: der Drag-Handle horcht
+     * auf mousemove ueber view.dom, also ueber genau diesem Element. Lag
+     * der Streifen aussen, kam dort kein Ereignis an, und der Griff
+     * erschien nur, solange der Zeiger ueber dem Text stand. Notion zeigt
+     * ihn auch daneben, und die Erweiterung kann das ebenfalls: sie sucht
+     * mit findElementNextToCoords den Block rechts vom Zeiger.
+     *
+     * <p>Dasselbe gilt beim Ablegen. prosemirror-dropcursor loescht seine
+     * Linie 20 ms nach drop oder dragleave auf view.dom und sonst erst
+     * nach seinem Notnagel von fuenf Sekunden. Wer im Streifen loslaesst,
+     * sah die Linie deshalb noch stehen, obwohl der Block laengst
+     * verschoben war.
+     *
+     * <p>Drei Schaltflaechen zu 24 Pixeln mit Abstand brauchen 80. Die
+     * Breite kommt aus der Achsenvariable oben, damit Einzug und
+     * Innenabstand nie auseinanderlaufen; der Rueckfallwert gilt, wo die
+     * Schreibflaeche ohne die Spalte steht (Tests, kuenftige Verwender).
+     */
+    padding-inline-start: var(--editor-block-gutter, 5rem);
   }
 }

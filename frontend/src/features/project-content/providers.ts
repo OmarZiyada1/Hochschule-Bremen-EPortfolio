@@ -3,7 +3,7 @@
  * v52 samt Hosts im Contract) und die eine Ableitung der Einbettungs-URL.
  *
  * <p><strong>Zweigeteilt, und das hat einen Grund.</strong> VIDEO kennt nur
- * youtube und vimeo, EMBED zusaetzlich figma, codepen und gist: bei VIDEO
+ * youtube und vimeo, EMBED zusaetzlich figma und codepen: bei VIDEO
  * wird die Einbettungs-URL aus provider und videoId abgeleitet, und diese
  * Ableitung gibt es nur fuer die beiden Videoanbieter. Ein VIDEO-Block
  * speichert deshalb nie eine URL (Contract 2.5 woertlich), ein EMBED-Block
@@ -25,14 +25,18 @@ export const VIDEO_PROVIDERS = ["youtube", "vimeo"] as const
 
 export type VideoProvider = (typeof VIDEO_PROVIDERS)[number]
 
-/** Anbieter fuer EMBED: die beiden Videoanbieter plus drei Werkzeuge. */
-export const EMBED_PROVIDERS = [
-  "youtube",
-  "vimeo",
-  "figma",
-  "codepen",
-  "gist",
-] as const
+/**
+ * Anbieter fuer EMBED: die beiden Videoanbieter plus zwei Werkzeuge.
+ *
+ * <p><strong>Ohne GitHub Gist seit Contract v64.</strong> Gist bietet
+ * keinen einbettbaren Rahmen an, sondern ausschliesslich ein Skript, das
+ * die Seite selbst nachlaedt; die Seite {@code gist.github.com} selbst
+ * verbietet das Einbetten per {@code X-Frame-Options}. Der Anbieter stand
+ * also in der Liste, ohne je funktionieren zu koennen: jede Gist-Adresse
+ * wurde angenommen und ergab danach einen leeren Rahmen. Was nicht
+ * zugesichert werden kann, steht nicht im Angebot.
+ */
+export const EMBED_PROVIDERS = ["youtube", "vimeo", "figma", "codepen"] as const
 
 export type EmbedProvider = (typeof EMBED_PROVIDERS)[number]
 
@@ -45,9 +49,31 @@ export type EmbedProvider = (typeof EMBED_PROVIDERS)[number]
 export const ALLOWED_EMBED_HOSTS: Record<EmbedProvider, readonly string[]> = {
   youtube: ["www.youtube.com", "youtube.com", "www.youtube-nocookie.com"],
   vimeo: ["player.vimeo.com"],
-  figma: ["www.figma.com"],
+  /* Seit Contract v64 embed.figma.com statt www.figma.com: die Designseite
+     selbst verbietet das Einbetten, Figma sieht dafuer einen eigenen Host
+     vor. */
+  figma: ["embed.figma.com"],
   codepen: ["codepen.io"],
-  gist: ["gist.github.com"],
+}
+
+/**
+ * Der Pfad, unter dem ein Anbieter tatsaechlich einbettet.
+ *
+ * <p><strong>Der Host allein genuegt nicht.</strong> Genau daran lag der
+ * haeufigste Fehlschlag: {@code www.youtube.com/watch?v=…} traegt einen
+ * erlaubten Host, ist aber die Zuschauerseite und verbietet das Einbetten
+ * per {@code X-Frame-Options}; sie wurde angenommen und ergab einen leeren
+ * Rahmen ohne jede Meldung. Dasselbe gilt fuer {@code codepen.io/…/pen/…}.
+ * Geprueft wird deshalb Host <em>und</em> Pfad, und die Eingabe wird
+ * vorher in genau diese Form umgerechnet
+ * ({@code providerInput.parseEmbedInput}).
+ */
+export const EMBED_PATH_PATTERNS: Record<EmbedProvider, RegExp> = {
+  youtube: /^\/embed\/[A-Za-z0-9_-]{1,64}$/,
+  vimeo: /^\/video\/\d{1,32}$/,
+  figma:
+    /^\/(design|file|board|proto|slides|deck)\/[A-Za-z0-9]{10,128}(\/.*)?$/,
+  codepen: /^\/[^/]+\/embed\/[A-Za-z0-9]+\/?$/,
 }
 
 /**
@@ -62,6 +88,20 @@ export const VIDEO_ID_PATTERNS: Record<VideoProvider, RegExp> = {
   youtube: /^[A-Za-z0-9_-]{1,64}$/,
   vimeo: /^\d{1,32}$/,
 }
+
+/**
+ * Der Freigabe-Hash eines nicht gelisteten Vimeo-Videos (Contract 2.5 seit
+ * v64).
+ *
+ * <p><strong>Warum es ihn braucht.</strong> Vimeo kennt neben oeffentlich
+ * und privat den Zustand „nicht gelistet": abspielbar, aber nur mit einem
+ * Hash in der Adresse. Ohne ihn antwortet
+ * {@code player.vimeo.com/video/123} mit einer Fehlerseite im Rahmen. Der
+ * Block speichert ihn deshalb neben der Kennung; er ist optional und fehlt
+ * bei jedem oeffentlichen Video. Ebenso restriktiv wie die Kennung, denn
+ * er wird in die Adresse eingesetzt.
+ */
+export const VIDEO_HASH_PATTERN = /^[A-Za-z0-9]{1,32}$/
 
 export function isVideoProvider(value: unknown): value is VideoProvider {
   return (
@@ -100,12 +140,21 @@ export function isValidVideoId(
  * Adresse www.youtube-nocookie.com steht zwar in der Host-Allowlist, wird
  * aber erst uebernommen, wenn Backend und Contract sie gemeinsam fuehren.
  */
-export function embedUrlFor(provider: VideoProvider, videoId: string): string {
+export function embedUrlFor(
+  provider: VideoProvider,
+  videoId: string,
+  hash?: string | null
+): string {
   switch (provider) {
     case "youtube":
       return `https://www.youtube.com/embed/${videoId}`
     case "vimeo":
-      return `https://player.vimeo.com/video/${videoId}`
+      /* Der Hash gehoert nur an ein nicht gelistetes Video und wird vorher
+         gegen VIDEO_HASH_PATTERN geprueft; ungeprueft eingesetzt waere er
+         die eine Stelle, an der Eingabetext in die Adresse gelangt. */
+      return hash != null && VIDEO_HASH_PATTERN.test(hash)
+        ? `https://player.vimeo.com/video/${videoId}?h=${hash}`
+        : `https://player.vimeo.com/video/${videoId}`
   }
 }
 
@@ -136,5 +185,10 @@ export function isAllowedEmbedUrl(
   if (parsed.protocol.toLowerCase() !== "https:") {
     return false
   }
-  return ALLOWED_EMBED_HOSTS[provider].includes(parsed.hostname.toLowerCase())
+  return (
+    ALLOWED_EMBED_HOSTS[provider].includes(parsed.hostname.toLowerCase()) &&
+    /* Seit v64 auch der Pfad: ein erlaubter Host mit der Zuschauerseite
+       statt der Einbettung ergab bisher einen leeren Rahmen. */
+    EMBED_PATH_PATTERNS[provider].test(parsed.pathname)
+  )
 }

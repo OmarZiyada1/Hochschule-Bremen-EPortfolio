@@ -11,7 +11,8 @@ import { textAttribute } from "@/features/project-content/extensions/attributes"
  * zugleich oder keines ergibt serverseitig 400 BLOCK_CONTENT_INVALID.
  *
  * <p><strong>Keine URL, in keinem Feld.</strong> Im Einbettungsfall
- * speichert der Block nur Anbieter und Kennung; die Adresse entsteht erst
+ * speichert der Block nur Anbieter, Kennung und, bei einem nicht
+ * gelisteten Vimeo-Video, dessen Freigabe-Hash; die Adresse entsteht erst
  * zur Anzeige in {@code embedUrlFor()}, aus fester Vorlage und nie aus
  * Eingabetext. Eine vom Client gelieferte Fremd-URL in der Datenbank waere
  * ein unnoetiger Angriffspunkt, weil sie beim Rendern in ein iframe
@@ -33,6 +34,9 @@ export const VideoBlock = Node.create({
       fileId: textAttribute("fileId"),
       provider: textAttribute("provider"),
       videoId: textAttribute("videoId"),
+      /* Nur bei vimeo und nur bei nicht gelisteten Videos (2.5 seit
+         v64). */
+      hash: textAttribute("hash"),
       caption: textAttribute("caption", ""),
     }
   },

@@ -60,15 +60,33 @@ describe("Schema-Vollstaendigkeit (Contract 2.5)", () => {
 })
 
 describe("Ueberschriftenebenen", () => {
-  it("erzeugt Ueberschriften nur in Ebene 2 und 3", () => {
+  it("erzeugt Ueberschriften in den Ebenen 1 bis 6", () => {
+    /* Sechs Ebenen seit Contract v63. Gespeichert wird die Gliederungsebene
+       des Beitrags; dass die Anzeige sie um eine Stufe nach unten schiebt,
+       ist Sache von headingRendering.ts und nicht des Schemas. */
     const json = generateJSON(
-      "<h1>Eins</h1><h2>Zwei</h2><h3>Drei</h3><h4>Vier</h4>",
+      "<h1>Eins</h1><h2>Zwei</h2><h3>Drei</h3><h4>Vier</h4><h5>Fuenf</h5><h6>Sechs</h6>",
       extensions
     ) as { content: { type: string; attrs?: { level?: number } }[] }
 
     expect(
       json.content.map((node) => `${node.type}:${node.attrs?.level ?? "-"}`)
-    ).toEqual(["paragraph:-", "heading:2", "heading:3", "paragraph:-"])
+    ).toEqual([
+      "heading:1",
+      "heading:2",
+      "heading:3",
+      "heading:4",
+      "heading:5",
+      "heading:6",
+    ])
+  })
+
+  it("fuehrt textAlign an Absatz und Ueberschrift", () => {
+    /* §2.5 seit v63. Die Werteliste gilt fuer beide Typen gemeinsam; dass
+       justify an der Ueberschrift nicht stehenbleibt, sichert der
+       HeadingAlignGuard, nicht das Schema. */
+    expect(schema.nodes.heading.spec.attrs?.textAlign).toBeDefined()
+    expect(schema.nodes.paragraph.spec.attrs?.textAlign).toBeDefined()
   })
 })
 
@@ -109,7 +127,13 @@ describe("Attribut-Serialisierung der sieben eigenen Nodes", () => {
       ],
       [
         "videoBlock",
-        { fileId: FILE_A, provider: null, videoId: null, caption: "Aufnahme" },
+        {
+          fileId: FILE_A,
+          provider: null,
+          videoId: null,
+          hash: null,
+          caption: "Aufnahme",
+        },
       ],
       [
         "videoBlock",
@@ -117,6 +141,7 @@ describe("Attribut-Serialisierung der sieben eigenen Nodes", () => {
           fileId: null,
           provider: "youtube",
           videoId: "dQw4w9WgXcQ",
+          hash: null,
           caption: "",
         },
       ],
@@ -128,8 +153,8 @@ describe("Attribut-Serialisierung der sieben eigenen Nodes", () => {
       [
         "embedBlock",
         {
-          provider: "gist",
-          embedUrl: "https://gist.github.com/a/b",
+          provider: "codepen",
+          embedUrl: "https://codepen.io/a/embed/b",
           height: 520,
         },
       ],

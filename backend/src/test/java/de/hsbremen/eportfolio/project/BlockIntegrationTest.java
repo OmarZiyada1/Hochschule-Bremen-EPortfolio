@@ -234,14 +234,14 @@ class BlockIntegrationTest {
 				+ "mitgeschickter Wert wird uebernommen")
 		void schemaVersionDefaultsToCurrent() throws Exception {
 			Map<String, Object> withVersion = blockEntry(null, BlockType.TEXT, 1);
-			withVersion.put("schemaVersion", 3);
+			withVersion.put("schemaVersion", 4);
 
 			JsonNode saved = save(author, draft, 0L,
 					List.of(blockEntry(null, BlockType.HEADING, 0), withVersion));
 
 			assertThat(saved.get("blocks").get(0).get("schemaVersion").asInt())
 					.isEqualTo(BlockSchemaMigration.CURRENT_VERSION);
-			assertThat(saved.get("blocks").get(1).get("schemaVersion").asInt()).isEqualTo(3);
+			assertThat(saved.get("blocks").get(1).get("schemaVersion").asInt()).isEqualTo(4);
 		}
 
 		/**

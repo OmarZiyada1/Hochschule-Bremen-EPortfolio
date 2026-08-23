@@ -567,7 +567,7 @@ describe("ProjectMetadataPage", () => {
     )
   })
 
-  it("nimmt ein Projektmitglied erst mit Funktionsbezeichnung auf (§3.13)", async () => {
+  it("nimmt ein Projektmitglied schon ohne Funktionsbezeichnung auf (§3.13 seit v65)", async () => {
     const user = userEvent.setup()
     renderEditRoute(draft())
 
@@ -588,25 +588,22 @@ describe("ProjectMetadataPage", () => {
       expect(screen.getByLabelText(/^Mitglied/)).toHaveValue("Tom Busch")
     )
 
-    /* projectRole ist am MemberRequest @NotBlank; ohne Bezeichnung liefe der
-       PUT in ein 400, dessen Feldname sich keiner Zeile zuordnen liesse. */
-    expect(add).toBeDisabled()
+    /*
+     * Die Bezeichnung ist seit Contract v65 freiwillig und laesst sich in
+     * der Liste nachtragen; sie hier zu verlangen hiesse, beim Aufnehmen
+     * eine Angabe zu erzwingen, die das Datenmodell nicht verlangt.
+     */
+    await waitFor(() => expect(add).toBeEnabled())
 
     /*
-     * Beide Felder tragen die Pflichtkennzeichnung, und zwar als Text und
+     * Nur die Person traegt die Pflichtkennzeichnung, und zwar als Text und
      * nicht nur als Zeichen (SC 1.4.1). Der Text muss erreichbar sein: ein
      * sr-only unter aria-hidden besteht getByText und wird trotzdem nie
      * vorgelesen (Befund aus KAN-29).
      */
     const markers = screen.getAllByText("Pflichtangabe")
-    expect(markers).toHaveLength(2)
-    for (const marker of markers) {
-      expect(marker.closest("[aria-hidden]")).toBeNull()
-    }
-
-    await user.type(screen.getByLabelText(/^Rolle/), "Frontend")
-
-    await waitFor(() => expect(add).toBeEnabled())
+    expect(markers).toHaveLength(1)
+    expect(markers[0].closest("[aria-hidden]")).toBeNull()
   })
 
   it("oeffnet die Redaktionszuweisung auch fuer eine Autor:in mit der Rolle EDITOR (§5, Fussnote 3 seit v60)", async () => {
@@ -680,5 +677,90 @@ describe("ProjectMetadataPage", () => {
      * irgendetwas davon sichtbar waere.
      */
     await waitFor(() => expect(authorization).toBe("Bearer test-token"))
+  })
+})
+
+/*
+ * Der Einreichweg fuehrt seit KAN-36 hierher und nicht mehr in ein
+ * Seitenpanel im Editor. Diese Seite muss deshalb drei Enden anbieten und
+ * sie unterscheidbar machen: nur speichern, speichern und einreichen, oder
+ * zurueck ohne zu speichern.
+ */
+describe("ProjectMetadataPage auf dem Einreichweg (?submit=1)", () => {
+  /** Rendert die Seite so, wie der Editor sie oeffnet. */
+  function renderSubmitRoute(project: ProjectDetailResponse) {
+    server.use(detailHandler(project), ...masterDataHandlers())
+    signInAs("STUDENT")
+    return renderPage(`/projects/${project.id}/metadata?submit=1`)
+  }
+
+  it("nennt oben, welche der sieben Pflichtangaben noch fehlen", async () => {
+    renderSubmitRoute(draft())
+
+    expect(
+      await screen.findByText(/Es fehlen noch Angaben/i, undefined, {
+        timeout: 20000,
+      })
+    ).toBeInTheDocument()
+    expect(screen.getByText(/Redaktionszuweisung/)).toBeInTheDocument()
+  })
+
+  it("bietet drei Enden und benennt sie unterscheidbar", async () => {
+    renderSubmitRoute(draft())
+
+    /*
+     * Zuvor stand hier nur „Speichern & weiter zum Editor", und genau
+     * diese Schaltflaeche reichte ein: eine falsche Zusage. Jetzt sagt
+     * jede, was sie tut.
+     */
+    expect(
+      await screen.findByRole(
+        "button",
+        { name: "Speichern und einreichen" },
+        { timeout: 20000 }
+      )
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Nur speichern, zurück zum Editor" })
+    ).toBeVisible()
+    expect(screen.getByRole("button", { name: "Abbrechen" })).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "Speichern & weiter zum Editor" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("fuehrt der Weg zurueck in den Editor und nicht ins Portfolio", async () => {
+    const user = userEvent.setup()
+    renderSubmitRoute(draft())
+
+    await user.click(
+      await screen.findByRole(
+        "button",
+        { name: "Abbrechen" },
+        { timeout: 20000 }
+      )
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId("pathname")).toHaveTextContent(
+        `/projects/${PROJECT_ID}/editor`
+      )
+    )
+  })
+
+  it("zeigt im Brotkrumenband den Editor als Station davor", async () => {
+    renderSubmitRoute(draft())
+
+    const crumbs = await screen.findByRole(
+      "navigation",
+      { name: "Seitenpfad" },
+      { timeout: 20000 }
+    )
+    /* Der Unterschied zum Bearbeiten-Weg: dort steht die Startseite davor,
+       hier der Editor, aus dem man kommt. */
+    expect(within(crumbs).getByRole("link", { name: "Editor" })).toBeVisible()
+    expect(within(crumbs).getByText("Einreichen: Pflichtangaben")).toBeVisible()
+    expect(
+      within(crumbs).queryByRole("link", { name: "Startseite" })
+    ).not.toBeInTheDocument()
   })
 })

@@ -19,9 +19,14 @@ import type {
   TableRowNode,
   VideoBlockNode,
 } from "@/features/project-content/blockTypes"
+import { headingRendering } from "@/features/project-content/headingRendering"
 import { embedUrlFor } from "@/features/project-content/providers"
 import { LazyMathBlock } from "@/features/project-content/renderer/LazyMathBlock"
 import { MediaFigure } from "@/features/project-content/renderer/MediaFigure"
+import {
+  MediaSlot,
+  type FileState,
+} from "@/features/project-content/renderer/MediaSlot"
 import { renderInline } from "@/features/project-content/renderer/renderInline"
 
 /**
@@ -72,6 +77,16 @@ export type RenderContext = {
    * mitschickt.
    */
   resolveFileUrl: (fileId: string) => string
+  /**
+   * Wie es um die Datei steht, wenn die Seite sie selbst abruft.
+   *
+   * <p>Nur die Vorschau eines nicht veroeffentlichten Beitrags holt Dateien
+   * mit Token; nur dort weiss die Seite vor dem Rendern, ob der Abruf
+   * laeuft oder gescheitert ist, und nur dort kann sie es sagen. Fehlt die
+   * Funktion, gilt jede Datei als abrufbar, und ob es stimmt, entscheidet
+   * der Browser am Element ({@code MediaSlot}).
+   */
+  fileState?: (fileId: string) => FileState
   /** Praefix erzeugter Kennungen, damit zwei Ansichten auf einer Seite sich nicht ins Gehege kommen. */
   idPrefix: string
 }
@@ -151,11 +166,31 @@ function namedBy(
 
 /**
  * Nie ein {@code h1}: die einzige Ebene 1 der Seite ist der Projekttitel,
- * den die verwendende Seite setzt (2.5, 3.3, SC 1.3.1).
+ * den die verwendende Seite setzt (2.5, 3.3, SC 1.3.1). Die Abbildung der
+ * sechs Ebenen steht in {@code headingRendering.ts} und gilt fuer Lesepfad
+ * und Schreibflaeche gleichermassen.
+ *
+ * <p>Die Rollenklasse wird ausdruecklich gesetzt und nicht dem Elementnamen
+ * ueberlassen: {@code .type-content-h1} steht an einem {@code h2}, und die
+ * sechste Ebene ist gar kein Ueberschriftenelement.
  */
 function renderHeading(node: HeadingNode): ReactNode {
-  const children = renderInline(node.content)
-  return node.attrs.level === 2 ? <h2>{children}</h2> : <h3>{children}</h3>
+  const {
+    tag: Tag,
+    role,
+    ariaLevel,
+    className,
+  } = headingRendering(node.attrs.level)
+  return (
+    <Tag
+      className={className}
+      role={role}
+      aria-level={ariaLevel}
+      data-text-align={node.attrs.textAlign ?? undefined}
+    >
+      {renderInline(node.content)}
+    </Tag>
+  )
 }
 
 function renderParagraph(node: ParagraphNode): ReactNode {
@@ -351,6 +386,14 @@ function renderTableRow(
 /* Medien                                                               */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Der Zustand einer Datei, mit dem Rueckfall fuer jede Ansicht, die keinen
+ * fuehrt: was niemand abruft, gilt als abrufbar.
+ */
+function stateOf(context: RenderContext, fileId: string): FileState {
+  return context.fileState?.(fileId) ?? "ready"
+}
+
 function renderImage(
   node: ImageBlockNode,
   nodeKey: string,
@@ -363,12 +406,20 @@ function renderImage(
       captionId={`${context.idPrefix}-${nodeKey}-caption`}
       width={width}
     >
-      <img
-        src={context.resolveFileUrl(fileId)}
-        alt={alt}
-        loading="lazy"
-        decoding="async"
-      />
+      <MediaSlot
+        key={context.resolveFileUrl(fileId)}
+        state={stateOf(context, fileId)}
+      >
+        {(fail) => (
+          <img
+            src={context.resolveFileUrl(fileId)}
+            alt={alt}
+            loading="lazy"
+            decoding="async"
+            onError={fail}
+          />
+        )}
+      </MediaSlot>
     </MediaFigure>
   )
 }
@@ -395,12 +446,20 @@ function renderGallery(
       <ul>
         {items.map((item, index) => (
           <li key={index}>
-            <img
-              src={context.resolveFileUrl(item.fileId)}
-              alt={item.alt}
-              loading="lazy"
-              decoding="async"
-            />
+            <MediaSlot
+              key={context.resolveFileUrl(item.fileId)}
+              state={stateOf(context, item.fileId)}
+            >
+              {(fail) => (
+                <img
+                  src={context.resolveFileUrl(item.fileId)}
+                  alt={item.alt}
+                  loading="lazy"
+                  decoding="async"
+                  onError={fail}
+                />
+              )}
+            </MediaSlot>
           </li>
         ))}
       </ul>
@@ -436,16 +495,24 @@ function renderVideo(
   if (attrs.fileId !== undefined) {
     return (
       <MediaFigure caption={caption} captionId={captionId}>
-        <video
-          controls
-          preload="metadata"
-          src={context.resolveFileUrl(attrs.fileId)}
-          {...namedBy(
-            captionId,
-            caption,
-            context.t("projectContent.video.label")
+        <MediaSlot
+          key={context.resolveFileUrl(attrs.fileId)}
+          state={stateOf(context, attrs.fileId)}
+        >
+          {(fail) => (
+            <video
+              controls
+              preload="metadata"
+              src={context.resolveFileUrl(attrs.fileId as string)}
+              onError={fail}
+              {...namedBy(
+                captionId,
+                caption,
+                context.t("projectContent.video.label")
+              )}
+            />
           )}
-        />
+        </MediaSlot>
       </MediaFigure>
     )
   }
@@ -457,7 +524,7 @@ function renderVideo(
           provider: context.t(`projectContent.provider.${attrs.provider}`),
         })}
         aria-describedby={caption.trim().length > 0 ? captionId : undefined}
-        src={embedUrlFor(attrs.provider, attrs.videoId)}
+        src={embedUrlFor(attrs.provider, attrs.videoId, attrs.hash)}
         loading="lazy"
         allowFullScreen
       />
@@ -474,16 +541,24 @@ function renderAudio(
   const caption = node.attrs.caption
   return (
     <MediaFigure caption={caption} captionId={captionId}>
-      <audio
-        controls
-        preload="metadata"
-        src={context.resolveFileUrl(node.attrs.fileId)}
-        {...namedBy(
-          captionId,
-          caption,
-          context.t("projectContent.audio.label")
+      <MediaSlot
+        key={context.resolveFileUrl(node.attrs.fileId)}
+        state={stateOf(context, node.attrs.fileId)}
+      >
+        {(fail) => (
+          <audio
+            controls
+            preload="metadata"
+            src={context.resolveFileUrl(node.attrs.fileId)}
+            onError={fail}
+            {...namedBy(
+              captionId,
+              caption,
+              context.t("projectContent.audio.label")
+            )}
+          />
         )}
-      />
+      </MediaSlot>
     </MediaFigure>
   )
 }
@@ -493,6 +568,13 @@ function renderAudio(
  * nennt zusaetzlich Dateityp und Groesse, damit vor dem Klick klar ist, was
  * geladen wird (SC 2.4.4). Der sichtbare Name steht im zugaenglichen Namen,
  * wie SC 2.5.3 es verlangt.
+ *
+ * <p><strong>{@code download} nur an einer Object-URL.</strong> In der
+ * Vorschau eines noch nicht veroeffentlichten Beitrags wird die Datei mit
+ * Token geholt, und die entstandene Adresse traegt keinen Dateinamen mehr:
+ * ohne das Attribut hiesse die gespeicherte Datei nach einer zufaelligen
+ * Kennung. An der oeffentlichen Adresse bleibt es weg, damit ein PDF wie
+ * bisher im Browser aufgeht, statt zwangsweise zu laden.
  */
 function renderDocument(
   node: DocumentBlockNode,
@@ -500,18 +582,30 @@ function renderDocument(
 ): ReactNode {
   const { fileId, fileName, size } = node.attrs
   const formattedSize = formatFileSize(size, context.locale)
+  const href = context.resolveFileUrl(fileId)
   return (
     <p data-block="document">
-      <a
-        href={context.resolveFileUrl(fileId)}
-        aria-label={context.t("projectContent.document.accessibleName", {
-          fileName,
-          size: formattedSize,
-        })}
-      >
-        {fileName}
-      </a>{" "}
-      <span aria-hidden="true">{formattedSize}</span>
+      {/* Ein Link hat kein onError: ob die Datei da ist, merkt der Browser
+          erst nach dem Klick. Beim angemeldeten Abruf weiss die Seite es
+          vorher, und dann steht hier die Meldung statt eines Links, der in
+          einen 403 fuehrt. */}
+      <MediaSlot state={stateOf(context, fileId)}>
+        {() => (
+          <>
+            <a
+              href={href}
+              download={href.startsWith("blob:") ? fileName : undefined}
+              aria-label={context.t("projectContent.document.accessibleName", {
+                fileName,
+                size: formattedSize,
+              })}
+            >
+              {fileName}
+            </a>{" "}
+            <span aria-hidden="true">{formattedSize}</span>
+          </>
+        )}
+      </MediaSlot>
     </p>
   )
 }
