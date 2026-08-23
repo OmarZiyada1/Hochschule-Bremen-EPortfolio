@@ -513,6 +513,28 @@
   }
 
   /*
+   * Die gemeinsame linke Inhaltsachse der Editor-Seite.
+   *
+   * <p>Der Streifen fuer die Blockbedienung liegt als Innenabstand an der
+   * Schreibflaeche (Begruendung unten). Ohne Ausgleich beginnt der
+   * Blockinhalt deshalb 5rem rechts vom Projekttitel, der ausserhalb der
+   * Schreibflaeche steht. Die Spalte schiebt darum alles, was ueber der
+   * Schreibflaeche steht (Titel, Meldungen, Tastaturleiste), um dieselbe
+   * Breite nach rechts; die Schreibflaeche selbst zieht sich um diese
+   * Breite nach links zurueck, und ihr Innenabstand bringt den Text exakt
+   * auf die Achse zurueck. Der Streifen liegt damit links AUSSERHALB der
+   * Achse, im Einzug der Spalte, und verschiebt keinen Inhalt.
+   */
+  .editor-content-column {
+    --editor-block-gutter: 5rem;
+    padding-inline-start: var(--editor-block-gutter);
+  }
+
+  .editor-content-column > .project-content {
+    margin-inline-start: calc(-1 * var(--editor-block-gutter));
+  }
+
+  /*
    * Platz unter dem letzten Block.
    *
    * <p>Ohne ihn endet die Schreibflaeche unmittelbar hinter dem letzten
@@ -543,8 +565,11 @@
      * sah die Linie deshalb noch stehen, obwohl der Block laengst
      * verschoben war.
      *
-     * <p>Drei Schaltflaechen zu 24 Pixeln mit Abstand brauchen 80.
+     * <p>Drei Schaltflaechen zu 24 Pixeln mit Abstand brauchen 80. Die
+     * Breite kommt aus der Achsenvariable oben, damit Einzug und
+     * Innenabstand nie auseinanderlaufen; der Rueckfallwert gilt, wo die
+     * Schreibflaeche ohne die Spalte steht (Tests, kuenftige Verwender).
      */
-    padding-inline-start: 5rem;
+    padding-inline-start: var(--editor-block-gutter, 5rem);
   }
 }

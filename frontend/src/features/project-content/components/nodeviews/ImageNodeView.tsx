@@ -4,42 +4,61 @@ import { useId } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "@/components/ui/button"
-import {
-  Field,
-  FieldDescription,
-  FieldLabel,
-  FieldSet,
-  FieldLegend,
-} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Toggle } from "@/components/ui/toggle"
+import { Toolbar, ToolbarButton } from "@/components/ui/toolbar"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { useEditorContext } from "@/features/project-content/EditorContext"
 import { MediaShell } from "@/features/project-content/components/MediaShell"
 import { UploadDropzone } from "@/features/project-content/components/UploadDropzone"
 import type { ImageWidth } from "@/features/project-content/blockTypes"
 import { useFileObjectUrl } from "@/features/project-content/hooks/useFileObjectUrl"
 import { maxMebibytes } from "@/features/project-content/uploadKinds"
 
-/** Die drei Stufen aus Contract 2.5, in der Reihenfolge des Templates. */
-const WIDTHS: readonly ImageWidth[] = [100, 75, 50]
+/** Die drei Stufen aus Contract 2.5, aufsteigend wie in der Leiste am Bild. */
+const WIDTHS: readonly ImageWidth[] = [50, 75, 100]
 
 /**
  * IMAGE auf der Schreibflaeche (Contract 2.5).
  *
  * <p>Leer ist der Block eine Ablageflaeche, gefuellt zeigt er das Bild in
- * der gewaehlten Breite, also so, wie es danach aussieht. Ueber „Ersetzen"
- * geht es zurueck in den leeren Zustand, ohne den Block zu verlieren: die
- * Bildunterschrift und der Alternativtext bleiben stehen.
+ * der gewaehlten Breite, also so, wie es danach aussieht.
+ *
+ * <p><strong>Die Angaben stehen am Bild und nicht mehr in einem
+ * Ausklapper.</strong> Die Breite liegt als Leiste ueber dem Bild und
+ * erscheint beim Zeigen oder mit dem Fokus; Alternativtext und
+ * Bildunterschrift sind zwei schlanke Felder direkt darunter, dort, wo die
+ * Unterschrift nachher auch steht. Jede Aenderung wirkt sofort am Block,
+ * ohne dass sich vorher etwas oeffnen muss. Der fruehere Ausklapper
+ * verlangte fuer jeden Handgriff erst das Aufklappen und stellte die drei
+ * Angaben als Formular neben das Bild statt an das Bild.
+ *
+ * <p><strong>Die Breitenleiste ist kein Zeigerweg allein</strong>
+ * (SC 2.1.1): die Leiste ist eine toolbar mit einem Tabstopp, mit dem
+ * Fokus wird sie sichtbar (focus-within), und die gewaehlte Stufe traegt
+ * aria-pressed. Beschriftet ist jede Stufe mit ihrem vollen Namen; die
+ * sichtbare Zahl allein ist als Name zu wenig. Symbole dafuer gibt es
+ * nicht: lucide fuehrt keine Dreierreihe fuer Breitenstufen, und
+ * nachgebaute SVGs sind kein Weg (Frontend-Regel 11).
  *
  * <p><strong>Zum Alternativtext.</strong> Contract 2.5 liest einen leeren
- * {@code alt} als ausdrueckliche Aussage „das Bild ist schmueckend". Die
- * Beschreibung unter dem Feld sagt genau das, statt eine zweite,
- * nicht speicherbare Angabe daneben zu fuehren; ein Kreuzchen
- * „schmueckend" haette in §2.5 kein Attribut und waere nach dem Neuladen
- * verschwunden.
+ * {@code alt} als ausdrueckliche Aussage "das Bild ist schmueckend". Der
+ * Hinweis dazu erscheint, sobald das Feld den Fokus hat, und haengt per
+ * aria-describedby dauerhaft am Feld; dauerhaft sichtbar machte er aus
+ * zwei schlanken Zeilen wieder ein Formular.
+ *
+ * <p><strong>Read-only zeigt den Lesezustand.</strong> Ohne Schreibrecht
+ * (§4.1) erscheinen weder Leiste noch Felder, sondern die Unterschrift
+ * als figcaption wie im Renderer.
  */
 export function ImageNodeView({ node, updateAttributes }: ReactNodeViewProps) {
   const { t } = useTranslation()
+  const { editable, announce } = useEditorContext()
   const fieldId = useId()
   const attrs = node.attrs as {
     fileId: string | null
@@ -56,71 +75,6 @@ export function ImageNodeView({ node, updateAttributes }: ReactNodeViewProps) {
       incompleteHint={
         attrs.fileId ? null : t("projectContent.image.incomplete")
       }
-      settings={
-        attrs.fileId ? (
-          <>
-            <Field>
-              <FieldLabel htmlFor={`${fieldId}-alt`}>
-                {t("projectContent.image.alt")}
-              </FieldLabel>
-              <Input
-                id={`${fieldId}-alt`}
-                value={attrs.alt ?? ""}
-                onChange={(event) =>
-                  updateAttributes({ alt: event.target.value })
-                }
-              />
-              <FieldDescription>
-                {t("projectContent.image.altDescription")}
-              </FieldDescription>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor={`${fieldId}-caption`}>
-                {t("projectContent.image.caption")}
-              </FieldLabel>
-              <Input
-                id={`${fieldId}-caption`}
-                value={attrs.caption ?? ""}
-                onChange={(event) =>
-                  updateAttributes({ caption: event.target.value })
-                }
-              />
-            </Field>
-
-            <FieldSet>
-              <FieldLegend variant="label">
-                {t("projectContent.image.width")}
-              </FieldLegend>
-              <RadioGroup
-                value={String(attrs.width)}
-                onValueChange={(value) =>
-                  updateAttributes({ width: Number(value) })
-                }
-                className="grid-cols-3"
-              >
-                {WIDTHS.map((width) => (
-                  <FieldLabel key={width} className="items-center">
-                    <RadioGroupItem value={String(width)} />
-                    {t("projectContent.image.widthOption", { width })}
-                  </FieldLabel>
-                ))}
-              </RadioGroup>
-            </FieldSet>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-fit"
-              onClick={() => updateAttributes({ fileId: null })}
-            >
-              <RefreshCwIcon aria-hidden="true" />
-              {t("projectContent.image.replace")}
-            </Button>
-          </>
-        ) : undefined
-      }
     >
       {attrs.fileId === null || attrs.fileId === "" ? (
         <UploadDropzone
@@ -132,7 +86,7 @@ export function ImageNodeView({ node, updateAttributes }: ReactNodeViewProps) {
           onUploaded={(file) => updateAttributes({ fileId: file.id })}
         />
       ) : (
-        <figure data-width={attrs.width}>
+        <figure data-width={attrs.width} className="group/image relative">
           {/* Ein Fehlschlag wird gesagt und nicht als Dauerladen gezeigt:
               ohne die Meldung stand hier bis zum Neuladen der Seite ein
               graues Feld, und niemand erfuhr, warum. */}
@@ -146,8 +100,121 @@ export function ImageNodeView({ node, updateAttributes }: ReactNodeViewProps) {
           ) : (
             <img src={image.url} alt={attrs.alt ?? ""} />
           )}
-          {attrs.caption != null && attrs.caption !== "" && (
-            <figcaption>{attrs.caption}</figcaption>
+
+          {editable && !image.isError && (
+            /*
+             * Erst beim Zeigen oder mit dem Fokus sichtbar, damit sie das
+             * Bild nicht dauerhaft verdeckt. focus-within macht sie fuer
+             * die Tastatur sichtbar, bevor der erste Eintrag den Fokus
+             * traegt (Base UI setzt den Tabstopp auf die Leiste).
+             */
+            <Toolbar
+              aria-label={t("projectContent.image.widthToolbar")}
+              className="absolute inset-e-2 top-2 rounded-control border border-border bg-popover p-0.5 opacity-0 shadow-md transition-opacity group-hover/image:opacity-100 focus-within:opacity-100 motion-reduce:transition-none"
+            >
+              {WIDTHS.map((width) => (
+                <Tooltip key={width}>
+                  <TooltipTrigger
+                    render={
+                      <ToolbarButton
+                        render={
+                          <Toggle
+                            size="sm"
+                            pressed={attrs.width === width}
+                            onPressedChange={() => {
+                              if (attrs.width === width) {
+                                return
+                              }
+                              updateAttributes({ width })
+                              /* Die Aenderung ist rein visuell; fuer
+                                 Screenreader sagt die Live-Region der
+                                 Seite sie an. */
+                              announce(
+                                t("projectContent.image.widthChanged", {
+                                  width,
+                                })
+                              )
+                            }}
+                            className="h-7 min-w-0 px-2"
+                          />
+                        }
+                      />
+                    }
+                  >
+                    <span aria-hidden="true" className="type-caption">
+                      {t("projectContent.image.widthValue", { width })}
+                    </span>
+                    <span className="sr-only">
+                      {t("projectContent.image.widthOption", { width })}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t("projectContent.image.widthOption", { width })}
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </Toolbar>
+          )}
+
+          {editable ? (
+            <div className="mt-2 flex flex-col gap-1">
+              <div className="group/alt">
+                <label className="sr-only" htmlFor={`${fieldId}-alt`}>
+                  {t("projectContent.image.alt")}
+                </label>
+                <Input
+                  id={`${fieldId}-alt`}
+                  value={attrs.alt ?? ""}
+                  placeholder={t("projectContent.image.altPlaceholder")}
+                  aria-describedby={`${fieldId}-alt-hint`}
+                  className="-mx-1 h-7 w-[calc(100%+0.5rem)] border-transparent px-1 py-0 text-muted-foreground shadow-none md:text-xs dark:bg-transparent"
+                  onChange={(event) =>
+                    updateAttributes({ alt: event.target.value })
+                  }
+                />
+                {/* Sichtbar nur mit Fokus im Feld; fuer Screenreader haengt
+                    er ueber aria-describedby dauerhaft am Feld. */}
+                <p
+                  id={`${fieldId}-alt-hint`}
+                  className="type-caption hidden text-muted-foreground group-focus-within/alt:block"
+                >
+                  {t("projectContent.image.altDescription")}
+                </p>
+              </div>
+
+              <div>
+                <label className="sr-only" htmlFor={`${fieldId}-caption`}>
+                  {t("projectContent.image.caption")}
+                </label>
+                <Input
+                  id={`${fieldId}-caption`}
+                  value={attrs.caption ?? ""}
+                  placeholder={t("projectContent.image.captionPlaceholder")}
+                  /* Gefuellt traegt das rahmenlose Feld keinen sichtbaren
+                     Namen mehr; der title sagt beim Zeigen, was es ist
+                     (SC 3.3.2, Review-Hinweis). */
+                  title={t("projectContent.image.caption")}
+                  className="-mx-1 h-7 w-[calc(100%+0.5rem)] border-transparent px-1 py-0 shadow-none dark:bg-transparent"
+                  onChange={(event) =>
+                    updateAttributes({ caption: event.target.value })
+                  }
+                />
+              </div>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-fit text-muted-foreground"
+                onClick={() => updateAttributes({ fileId: null })}
+              >
+                <RefreshCwIcon aria-hidden="true" />
+                {t("projectContent.image.replace")}
+              </Button>
+            </div>
+          ) : (
+            attrs.caption != null &&
+            attrs.caption !== "" && <figcaption>{attrs.caption}</figcaption>
           )}
         </figure>
       )}

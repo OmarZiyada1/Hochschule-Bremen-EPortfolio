@@ -284,7 +284,12 @@ export default function EditorPage() {
         />
 
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 lg:flex-row">
-          <div className="flex min-w-0 flex-1 flex-col gap-4">
+          {/*
+           * editor-content-column (project-content.css): Titel, Meldungen
+           * und Blockinhalt teilen sich eine linke Achse; der Streifen der
+           * Blockbedienung liegt links davon im Einzug der Spalte.
+           */}
+          <div className="editor-content-column flex min-w-0 flex-1 flex-col gap-4">
             <h1 className="type-h1">{detail.title}</h1>
 
             {!statusEditable && (

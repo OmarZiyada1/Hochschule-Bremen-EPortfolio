@@ -2,12 +2,11 @@ import type { LucideIcon } from "lucide-react"
 
 /**
  * Die benannte Karte fuer die Blocktypen, die auf der Schreibflaeche nicht
- * so erscheinen wie danach: Video, Ton, Dokument und Einbettung.
+ * so erscheinen wie danach: Ton, Dokument und Einbettung.
  *
- * <p><strong>Warum kein echter Player und kein iframe beim Schreiben.</strong>
- * Beide fangen Tastatur und Zeiger ab. Der Cursor kaeme an ihnen nicht mehr
- * vorbei, ein fremder Rahmen nimmt den Fokus und gibt ihn nicht zurueck,
- * und ein Video startete mitten im Schreiben. Die Karte sagt stattdessen,
+ * <p>Der Videoblock stand hier auch, zeigt seit der Inline-Bedienung aus
+ * KAN-36 aber den echten Player; die Abwaegung dazu steht an
+ * {@code VideoNodeView}. Fuer die uebrigen drei bleibt die Karte: sie sagt,
  * was an dieser Stelle steht; wie es aussieht, zeigt die Vorschau, und die
  * benutzt denselben Renderer wie die oeffentliche Seite.
  */

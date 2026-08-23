@@ -17,12 +17,14 @@ import {
  * Hinweis darauf, dass noch etwas fehlt.
  *
  * <p><strong>Die Angaben stehen in einem Ausklapper und nicht dauerhaft
- * offen.</strong> Alternativtext, Bildunterschrift und Breite sind drei
- * Felder je Bild; dauerhaft sichtbar zerlegten sie einen Beitrag mit fuenf
- * Bildern in ein Formular. Zugeklappt bleibt der Beitrag lesbar, und der
- * Ausklapper ist ueber die Tastatur erreichbar wie jede Schaltflaeche
+ * offen.</strong> Dauerhaft sichtbar zerlegten mehrere Felder je Block
+ * einen Beitrag in ein Formular. Zugeklappt bleibt der Beitrag lesbar, und
+ * der Ausklapper ist ueber die Tastatur erreichbar wie jede Schaltflaeche
  * (SC 2.1.1). Ein Blaettern in der Auswahl braucht es dafuer nicht: der
- * Zustand haengt am Block und nicht an der Textmarke.
+ * Zustand haengt am Block und nicht an der Textmarke. Bild und Video
+ * fuehren ihre wenigen Angaben seit der Inline-Bedienung aus KAN-36 direkt
+ * am Block und lassen {@code settings} weg; der Ausklapper bleibt fuer die
+ * Blocktypen, deren Angaben kein Gegenstueck im Block selbst haben.
  *
  * <p><strong>Der Block bleibt aenderbar, solange er steht.</strong> Das ist
  * der Unterschied zu einem Dialog beim Einfuegen: wer sich im Alternativtext

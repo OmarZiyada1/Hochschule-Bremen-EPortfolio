@@ -1,5 +1,5 @@
 import type { ReactNodeViewProps } from "@tiptap/react"
-import { RefreshCwIcon, VideoIcon } from "lucide-react"
+import { RefreshCwIcon, TriangleAlertIcon } from "lucide-react"
 import { useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -11,11 +11,16 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { MediaCard } from "@/features/project-content/components/nodeviews/MediaCard"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useEditorContext } from "@/features/project-content/EditorContext"
 import { MediaShell } from "@/features/project-content/components/MediaShell"
 import { UploadDropzone } from "@/features/project-content/components/UploadDropzone"
+import { useFileObjectUrl } from "@/features/project-content/hooks/useFileObjectUrl"
 import { parseVideoInput } from "@/features/project-content/providerInput"
-import type { VideoProvider } from "@/features/project-content/providers"
+import {
+  embedUrlFor,
+  type VideoProvider,
+} from "@/features/project-content/providers"
 import { maxMebibytes } from "@/features/project-content/uploadKinds"
 
 /**
@@ -28,19 +33,33 @@ import { maxMebibytes } from "@/features/project-content/uploadKinds"
  * serverseitig 400.
  *
  * <p><strong>Gespeichert wird keine Adresse.</strong> Aus der eingefuegten
- * Adresse liest {@code parseVideoUrl} Anbieter und {@code videoId}; die
- * Einbettungsadresse entsteht erst zur Anzeige aus fester Vorlage. Eine vom
- * Client gelieferte Fremd-URL in der Datenbank waere ein unnoetiger
- * Angriffspunkt, weil sie beim Rendern in ein {@code iframe} gelangt.
+ * Adresse liest {@code parseVideoInput} Anbieter und {@code videoId}; die
+ * Einbettungsadresse entsteht erst zur Anzeige aus fester Vorlage
+ * ({@code embedUrlFor}), derselben wie im Renderer. Eine vom Client
+ * gelieferte Fremd-URL in der Datenbank waere ein unnoetiger Angriffspunkt,
+ * weil sie beim Rendern in ein {@code iframe} gelangt.
  *
- * <p><strong>Kein laufender Player auf der Schreibflaeche.</strong> Ein
- * eingebettetes {@code iframe} faengt Tastatur und Zeiger ab: der Cursor
- * kaeme nicht mehr daran vorbei, und ein fremder Rahmen nimmt den Fokus,
- * ohne ihn zurueckzugeben. Der Block erscheint deshalb als benannte Karte;
- * wie er wirklich aussieht, zeigt die Vorschau.
+ * <p><strong>Der Block zeigt den echten Player, sobald ein Video da
+ * ist.</strong> Bis KAN-36 stand hier eine benannte Karte mit Anbieter und
+ * Kennung, aus Sorge, ein Player fange Tastatur und Zeiger ab. Die Karte
+ * erzwang aber fuer jede Kontrolle den Umweg ueber die Vorschau: ob das
+ * richtige Video hinterlegt ist, sah man erst auf der Detailseite.
+ * Deshalb steht jetzt der Player selbst da, wie im Renderer: die Datei als
+ * {@code video} mit Bedienelementen, die Einbettung als {@code iframe} des
+ * Anbieters. Nichts startet von allein ({@code preload="metadata"}, kein
+ * {@code autoplay}, SC 1.4.2), die Tastatur laeuft mit Tab durch den
+ * Player hindurch statt in ihm zu kreisen, und das Ziehen des Blocks
+ * geschieht ohnehin am Griff im Streifen links, nicht auf der Flaeche.
+ *
+ * <p><strong>Die Angaben stehen am Block und nicht mehr in einem
+ * Ausklapper:</strong> die Unterschrift als schlankes Feld direkt unter
+ * dem Player, das Ersetzen als Aktion darunter. Erst "Ersetzen" zeigt
+ * wieder den leeren Zustand mit Upload und Adresse; die Unterschrift
+ * bleibt dabei stehen.
  */
 export function VideoNodeView({ node, updateAttributes }: ReactNodeViewProps) {
   const { t } = useTranslation()
+  const { editable } = useEditorContext()
   const fieldId = useId()
   const attrs = node.attrs as {
     fileId: string | null
@@ -54,6 +73,9 @@ export function VideoNodeView({ node, updateAttributes }: ReactNodeViewProps) {
 
   const hasFile = attrs.fileId != null && attrs.fileId !== ""
   const hasEmbed = attrs.videoId != null && attrs.videoId !== ""
+  /* Unbedingt vor jeder Verzweigung: Hooks laufen bei jedem Rendern. Ohne
+     fileId laedt der Hook nichts. */
+  const file = useFileObjectUrl(hasFile ? attrs.fileId : null)
 
   const applyUrl = () => {
     /*
@@ -92,49 +114,75 @@ export function VideoNodeView({ node, updateAttributes }: ReactNodeViewProps) {
       incompleteHint={
         hasFile || hasEmbed ? null : t("projectContent.video.incomplete")
       }
-      settings={
-        hasFile || hasEmbed ? (
-          <>
-            <Field>
-              <FieldLabel htmlFor={`${fieldId}-caption`}>
-                {t("projectContent.video.caption")}
-              </FieldLabel>
-              <Input
-                id={`${fieldId}-caption`}
-                value={attrs.caption ?? ""}
-                onChange={(event) =>
-                  updateAttributes({ caption: event.target.value })
-                }
-              />
-            </Field>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-fit"
-              onClick={reset}
-            >
-              <RefreshCwIcon aria-hidden="true" />
-              {t("projectContent.video.replace")}
-            </Button>
-          </>
-        ) : undefined
-      }
     >
       {hasFile || hasEmbed ? (
-        <MediaCard
-          icon={VideoIcon}
-          title={t("projectContent.blockName.videoBlock")}
-          detail={
-            hasEmbed
-              ? t("projectContent.video.embedDetail", {
-                  provider: t(`projectContent.provider.${attrs.provider}`),
-                  videoId: attrs.videoId,
-                })
-              : t("projectContent.video.fileDetail")
-          }
-          caption={attrs.caption}
-        />
+        <figure>
+          {hasEmbed ? (
+            <iframe
+              title={t("projectContent.video.embedTitle", {
+                provider: t(`projectContent.provider.${attrs.provider}`),
+              })}
+              src={embedUrlFor(
+                attrs.provider as VideoProvider,
+                attrs.videoId as string,
+                attrs.hash
+              )}
+              loading="lazy"
+              allowFullScreen
+            />
+          ) : file.isError ? (
+            <p className="type-caption flex items-center gap-1.5 rounded-card bg-muted px-4 py-6 text-muted-foreground">
+              <TriangleAlertIcon aria-hidden="true" className="size-3.5" />
+              {t("projectContent.video.loadFailed")}
+            </p>
+          ) : file.url === null ? (
+            <Skeleton className="aspect-video w-full rounded-card" />
+          ) : (
+            <video
+              controls
+              preload="metadata"
+              src={file.url}
+              aria-label={t("projectContent.video.label")}
+            />
+          )}
+
+          {editable ? (
+            <div className="mt-2 flex flex-col gap-1">
+              <div>
+                <label className="sr-only" htmlFor={`${fieldId}-caption`}>
+                  {t("projectContent.video.caption")}
+                </label>
+                <Input
+                  id={`${fieldId}-caption`}
+                  value={attrs.caption ?? ""}
+                  placeholder={t("projectContent.video.captionPlaceholder")}
+                  /* Gefuellt traegt das rahmenlose Feld keinen sichtbaren
+                     Namen mehr; der title sagt beim Zeigen, was es ist
+                     (SC 3.3.2, Review-Hinweis). */
+                  title={t("projectContent.video.caption")}
+                  className="-mx-1 h-7 w-[calc(100%+0.5rem)] border-transparent px-1 py-0 shadow-none dark:bg-transparent"
+                  onChange={(event) =>
+                    updateAttributes({ caption: event.target.value })
+                  }
+                />
+              </div>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-fit text-muted-foreground"
+                onClick={reset}
+              >
+                <RefreshCwIcon aria-hidden="true" />
+                {t("projectContent.video.replace")}
+              </Button>
+            </div>
+          ) : (
+            attrs.caption != null &&
+            attrs.caption !== "" && <figcaption>{attrs.caption}</figcaption>
+          )}
+        </figure>
       ) : (
         <div className="flex flex-col gap-3">
           <UploadDropzone
