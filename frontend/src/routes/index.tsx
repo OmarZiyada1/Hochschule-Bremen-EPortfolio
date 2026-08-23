@@ -16,12 +16,14 @@ import ProjectDetailPage from "@/features/projects/ProjectDetailPage"
 import ProjectListPage from "@/features/projects/ProjectListPage"
 import NewProjectPage from "@/features/projects/NewProjectPage"
 import ProjectMetadataPage from "@/features/projects/ProjectMetadataPage"
+import ProjectReviewPage from "@/features/reviews/ProjectReviewPage"
 import PublicPortfolioPage from "@/features/portfolio/PublicPortfolioPage"
 import RegisterDetailsPage from "@/features/auth/RegisterDetailsPage"
 import RegisterDonePage from "@/features/auth/RegisterDonePage"
 import RegisterVerifyEmailPage from "@/features/auth/RegisterVerifyEmailPage"
 import RegisterVerifyHsbEmailPage from "@/features/auth/RegisterVerifyHsbEmailPage"
 import ResetPasswordPage from "@/features/auth/ResetPasswordPage"
+import ReviewListPage from "@/features/reviews/ReviewListPage"
 import TokenGalleryPage from "@/features/token-gallery/TokenGalleryPage"
 import { AppLayout } from "@/routes/AppLayout"
 import { AuthLayout } from "@/routes/AuthLayout"
@@ -108,22 +110,18 @@ export const routes: RouteObject[] = [
         element: <RequireRole roles={["EDITOR", "ADMIN"]} />,
         children: [
           {
+            /* Der Arbeitsplatz der Redaktion (KAN-37). Die Rollenschranke
+               ist Bequemlichkeit; welche Projekte erscheinen, entscheidet
+               der Server ueber editor=me (§5 Fussnote 11). */
             path: "/reviews",
-            element: (
-              <PlaceholderPage
-                titleKey="placeholder.title.reviews"
-                ticket="KAN-37"
-              />
-            ),
+            element: <ReviewListPage />,
           },
           {
+            /* Der Review-Modus bleibt im Anwendungsrahmen: das Template
+               zeichnet NavBar und Ruecksprungleiste, nicht das rahmenlose
+               EditorLayout (KAN-37). */
             path: "/projects/:projectId/review",
-            element: (
-              <PlaceholderPage
-                titleKey="placeholder.title.projectReview"
-                ticket="KAN-37"
-              />
-            ),
+            element: <ProjectReviewPage />,
           },
         ],
       },

@@ -752,6 +752,47 @@ public class ProjectPermissionService {
 		return isLoggedIn(user) && user.hasRole(Role.EDITOR, Role.ADMIN);
 	}
 
+	/**
+	 * Zeile „Eigene Redaktionszuweisung abgeben" aus §5 (seit Contract v68):
+	 * PUBLIC ✗, STUDENT ✗, EDITOR (✓)¹¹, ADMIN ✗
+	 * ({@code DELETE /api/projects/{id}/editors/me}).
+	 *
+	 * <p><strong>Geprueft wird die Zuweisung und nicht die Systemrolle.</strong>
+	 * EDITOR zu sein heisst nicht, fuer <em>dieses</em> Projekt zustaendig zu
+	 * sein (§5 Fussnote 11); der Klammerhaken der Matrix meint genau das. Wer
+	 * nicht zugewiesen ist, hat hier nichts abzugeben und bekommt
+	 * <strong>403</strong>. Fremde Zuweisungen aendert allein die
+	 * Administration ueber {@code PUT /projects/{id}/editors}
+	 * ({@link #mayReassignEditors}).
+	 *
+	 * <p><strong>Ohne Statuspruefung.</strong> Ob der aktuelle Status das
+	 * Abgeben zulaesst, ist eine Frage des Zustandsautomaten (§4.1) und keine
+	 * der Rechtematrix; sie steht deshalb im {@code ProjectWorkflowService}
+	 * und ergibt einen anderen Statuscode (409 statt 403).
+	 */
+	public boolean mayResignAsEditor(AuthenticatedUser user, Project project) {
+		return isAssignedEditor(user, project);
+	}
+
+	/**
+	 * Zeile „Eigene Top-10-Nominierungen lesen" aus §5 (seit Contract v68):
+	 * EDITOR (✓), ADMIN (✓), jeweils auf die eigenen Vorschlaege beschraenkt
+	 * ({@code GET /api/top10-nominations?nominatedBy=me}).
+	 *
+	 * <p><strong>Warum eine eigene Methode</strong>, obwohl sie heute dieselbe
+	 * Rollenmenge prueft wie {@link #mayNominate}: §5 fuehrt zwei Zeilen, und sie
+	 * sagen Verschiedenes. Nominieren heisst vorschlagen, dies heisst nachsehen,
+	 * was aus dem eigenen Vorschlag geworden ist. Dieselbe Ueberlegung wie bei
+	 * {@link #mayReadTop10Audit} gegenueber {@link #mayCurateTop10}.
+	 *
+	 * <p><strong>Die Einschraenkung auf die eigene Person steckt nicht hier,
+	 * sondern im Endpoint</strong>: {@code nominatedBy} laesst allein
+	 * {@code me} zu (§6.1). Der Klammerhaken in §5 beschreibt genau das.
+	 */
+	public boolean mayReadOwnNominations(AuthenticatedUser user) {
+		return isLoggedIn(user) && user.hasRole(Role.EDITOR, Role.ADMIN);
+	}
+
 	/** Zeile „Top-10 kuratieren": nur ADMIN. */
 	public boolean mayCurateTop10(AuthenticatedUser user) {
 		return isAdmin(user);

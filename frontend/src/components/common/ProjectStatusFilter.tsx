@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next"
 
+import type { ProjectStatus } from "@/api/types"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   ALL_STATUSES,
@@ -8,8 +9,16 @@ import {
 } from "@/features/portfolio/ownProjectStatus"
 
 /**
- * Der Statusfilter aus dem Template "My Portfolio": ein Segmentschalter
- * ueber "Alle" und die fuenf Werte aus §2.2.
+ * Der Statusfilter als Segmentschalter ueber "Alle" und die Werte aus §2.2.
+ *
+ * <p><strong>Zwei Seiten, ein Baustein.</strong> Er stand bis KAN-37 unter
+ * features/portfolio und zeigte dort die fuenf Werte des Templates
+ * "My Portfolio". "Meine Reviews" zeigt dieselbe Leiste ohne DRAFT: ein
+ * Entwurf erscheint in editor=me gar nicht erst, weil die Redaktion nicht
+ * veroeffentlichte Projekte erst ab SUBMITTED liest (§5 Fussnote 11). Statt
+ * einer zweiten Leiste daneben nimmt diese die Werte jetzt entgegen; sie
+ * liegt deshalb in der Bibliothek und nicht mehr im Feature (Skill
+ * frontend-modul, Abschnitt 0.5).
  *
  * <p>Komponiert die Registry-Primitive toggle-group, statt einen eigenen
  * Schalter zu bauen: Tastaturbedienung, Fokusfuehrung und die
@@ -28,6 +37,7 @@ export function ProjectStatusFilter({
   value,
   onValueChange,
   label,
+  statuses = OWN_PROJECT_STATUSES,
 }: {
   value: StatusFilterValue
   onValueChange: (value: StatusFilterValue) => void
@@ -37,12 +47,17 @@ export function ProjectStatusFilter({
    * fuer einen Screenreader eine Reihe unbeschrifteter Knoepfe.
    */
   label: string
+  /**
+   * Die anzubietenden Status, in Anzeigereihenfolge. "Alle" kommt immer
+   * davor und ist kein Contract-Wert.
+   */
+  statuses?: readonly ProjectStatus[]
 }) {
   const { t } = useTranslation()
 
   const options: { value: StatusFilterValue; label: string }[] = [
     { value: ALL_STATUSES, label: t("common.filter.all") },
-    ...OWN_PROJECT_STATUSES.map((status) => ({
+    ...statuses.map((status) => ({
       value: status as StatusFilterValue,
       label: t(`project.status.${status}`),
     })),

@@ -1,6 +1,7 @@
 package de.hsbremen.eportfolio.top10.dto;
 
 import de.hsbremen.eportfolio.common.enums.NominationStatus;
+import de.hsbremen.eportfolio.common.enums.NominationTier;
 import de.hsbremen.eportfolio.project.dto.PersonResponse;
 import de.hsbremen.eportfolio.project.dto.ProjectCardResponse;
 import de.hsbremen.eportfolio.top10.Top10Nomination;
@@ -14,11 +15,17 @@ import java.util.UUID;
  * {@code GET /api/admin/top10-nominations} und den beiden
  * Entscheidungs-Endpoints (§3.11, §6.1).
  *
- * <p><strong>Ein DTO fuer alle vier Endpoints.</strong> Sie liefern denselben
+ * <p><strong>Ein DTO fuer alle fuenf Endpoints</strong> (seit Contract v68 kam
+ * {@code GET /api/top10-nominations} dazu). Sie liefern denselben
  * Datensatz in verschiedenen Lebensphasen: offen, angenommen, abgelehnt. Zwei
  * Records mit denselben Feldern und nur anderer Nullbarkeit haetten dieselbe
  * Abbildung zweimal, und die Admin-Ansicht zeigt offene und entschiedene
  * Vorschlaege ohnehin in einer Liste (§3.11).
+ *
+ * <p><strong>Stufe und Platz stehen nebeneinander</strong> (seit Contract v68).
+ * Die Stufe ist der Vorschlag der Redaktion, der Platz die Entscheidung der
+ * Administration; erst zusammen zeigt die Zeile, was gewuenscht war und was
+ * daraus wurde. Ein Feld fuer beides haette den Vorschlag ueberschrieben.
  *
  * <p><strong>Das Protokoll bleibt vollstaendig.</strong> Eine entschiedene
  * Nominierung verschwindet nicht, sie traegt danach zusaetzlich
@@ -30,7 +37,10 @@ import java.util.UUID;
  * @param project          die Projektkachel, damit die Admin-Ansicht ohne
  *                         zweiten Aufruf zeigen kann, worueber entschieden wird
  * @param nominatedBy      Redakteur:in oder Admin, die den Vorschlag gemacht hat
- * @param proposedPosition unverbindlicher Platzvorschlag, kann fehlen
+ * @param proposedTier     vorgeschlagene Stufe (§2.13), seit Contract v68 die
+ *                         eigentliche Aussage des Vorschlags
+ * @param proposedPosition seit Contract v68 der beim Annehmen entschiedene
+ *                         Platz; leer, solange die Nominierung offen ist
  * @param status           Stand der Nominierung (§2.8)
  * @param decidedBy        entscheidende:r Admin, {@code null} solange
  *                         {@code status = PENDING}
@@ -45,8 +55,16 @@ public record Top10NominationResponse(
 
 		PersonResponse nominatedBy,
 
-		@Schema(description = "Unverbindlicher Platzvorschlag der nominierenden Person. "
-				+ "Kann fehlen (§3.11).", example = "3", nullable = true)
+		@Schema(description = "Vorgeschlagene Stufe (§2.13). Seit Contract v68 die Angabe, "
+				+ "mit der die Redaktion nominiert.", example = "TOP_5")
+		NominationTier proposedTier,
+
+		@Schema(description = "Der von der Administration entschiedene Platz (§3.11). Gesetzt "
+				+ "wird er seit Contract v69 allein von POST /admin/top10-nominations/{id}/"
+				+ "accept. Null, solange die Nominierung offen ist, nach einer Ablehnung, und "
+				+ "auch dann, wenn sie ueber PUT /admin/top10 mit angenommen wurde: dort steht "
+				+ "der Platz allein im Top10Entry (§3.11.1 Regel 5).",
+				example = "3", nullable = true)
 		Integer proposedPosition,
 
 		NominationStatus status,
@@ -82,6 +100,7 @@ public record Top10NominationResponse(
 				nomination.getId(),
 				project,
 				PersonResponse.from(nomination.getNominatedBy()),
+				nomination.getProposedTier(),
 				nomination.getProposedPosition(),
 				nomination.getStatus(),
 				PersonResponse.from(nomination.getDecidedBy()),

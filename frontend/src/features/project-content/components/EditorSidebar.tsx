@@ -8,6 +8,7 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import type { ProjectDetailResponse } from "@/api/types"
+import { CommentPanel } from "@/components/common/CommentPanel"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { Button } from "@/components/ui/button"
 import {
@@ -33,6 +34,16 @@ import { cn } from "@/lib/utils"
  * auf der oeffentlichen Detailseite. Eine zweite Fassung daneben waere ein
  * zweites Aussehen derselben Metadaten und liefe beim naechsten neuen Feld
  * auseinander.
+ *
+ * <p><strong>Darunter steht die Kommentarspalte</strong> (KAN-37), und zwar
+ * derselbe {@code CommentPanel} wie im Review-Modus. Ohne sie saehe die
+ * Autor:in ihre Aenderungswuensche nirgends und liefe beim Einreichen in
+ * ein sackgassenartiges 409 {@code CHANGE_REQUESTS_OPEN}. Sichtbar ist sie
+ * fuer die gesamte Projektseite, also Autor:in und Projektmitglieder;
+ * erstellbar ist hier allein eine Antwort ({@code context="editor"}).
+ * Welche Kommentare in der Liste stehen, entscheidet ohnehin der Server:
+ * eine {@code NOTE} erscheint fuer die Projektseite gar nicht erst darin
+ * (§6.1).
  */
 export function EditorSidebar({
   project,
@@ -120,6 +131,8 @@ export function EditorSidebar({
           </CollapsibleContent>
         </Collapsible>
       </div>
+
+      <CommentPanel project={project} context="editor" />
 
       <HistoryDialog
         open={historyOpen}

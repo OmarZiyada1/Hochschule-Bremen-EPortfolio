@@ -4,6 +4,7 @@ import type { ErrorCode } from "@/api/errors"
 import { emptyPage } from "@/api/page"
 import type {
   BlockResponse,
+  CommentResponse,
   OwnPortfolioResponse,
   ProjectDetailResponse,
   UserResponse,
@@ -107,6 +108,24 @@ export function projectBlocksHandler(
 ) {
   return http.get("*/api/projects/:projectId/blocks", () =>
     HttpResponse.json({ version, blocks })
+  )
+}
+
+/**
+ * GET /api/projects/{id}/comments (§6.1, KAN-37). Ohne Argument eine leere
+ * Liste.
+ *
+ * <p>Gebraucht ueberall dort, wo die Kommentarspalte mitrendert, also im
+ * Editor und im Review-Modus. Ohne den Handler laeuft ihr Aufruf in
+ * {@code onUnhandledRequest}, und die Spalte zeigt still ihren Fehlerzweig;
+ * der Standardreporter blendet die Meldung aus.
+ *
+ * <p>Steht vor {@code projectDetailHandler} in einer Liste, sonst faengt
+ * dessen Muster {@code /projects/:projectId} den Pfad zuerst ab.
+ */
+export function projectCommentsHandler(comments: CommentResponse[] = []) {
+  return http.get("*/api/projects/:projectId/comments", () =>
+    HttpResponse.json(comments)
   )
 }
 

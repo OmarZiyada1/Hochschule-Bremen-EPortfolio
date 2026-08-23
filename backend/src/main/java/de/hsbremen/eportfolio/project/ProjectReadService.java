@@ -442,6 +442,53 @@ public class ProjectReadService {
 				internalsVisible ? statusHistory(projectId) : null);
 	}
 
+	/**
+	 * Die Detailantwort auf {@code DELETE /api/projects/{id}/editors/me}
+	 * (§6.1, seit Contract v68), gebaut aus der Sicht, die die abgebende Person
+	 * bis zu diesem Aufruf hatte.
+	 *
+	 * <p><strong>Warum {@link #detail} hier nicht taugt.</strong> Der Aufruf
+	 * nimmt der anfragenden Person genau die Berechtigung, mit der sie ihn
+	 * ausgeloest hat: sie ist danach nicht mehr zugewiesen, und war sie die
+	 * letzte, steht das Projekt zudem im {@code DRAFT}. {@code detail} wuerde
+	 * seine eigene Leseschranke anwenden und die Antwort auf die soeben
+	 * erledigte Aktion mit 403 beenden. Die Statushistorie fiele aus demselben
+	 * Grund weg, obwohl gerade sie den Uebergang traegt, den der Aufruf
+	 * ausgeloest hat (§3.12).
+	 *
+	 * <p><strong>Das oeffnet nichts.</strong> Die Person war im Moment der
+	 * Anfrage die zugewiesene Redaktion und durfte dieselben Felder lesen; die
+	 * Berechtigung dafuer hat {@code ProjectWorkflowService.resignAsEditor}
+	 * unmittelbar davor geprueft. Geliefert wird eine einzige Momentaufnahme als
+	 * Ergebnis ihrer eigenen Handlung, kein weiterer Zugang: ein zweiter Aufruf
+	 * auf {@code GET /api/projects/{id}} endet mit 403.
+	 *
+	 * <p><strong>Sie nimmt das Projekt und keine ID.</strong> Paketprivat
+	 * schuetzt vor fremden Paketen, nicht vor dem naechsten Nachbarn: mit einer
+	 * rohen {@code UUID} koennte jede kuenftige Klasse dieses Pakets sie auf ein
+	 * beliebiges Projekt richten und {@code editors} samt Statushistorie ohne
+	 * Pruefung bekommen. Ein bereits geladenes {@link Project} kann dagegen nur
+	 * einreichen, wer es geladen und legitimiert hat; nebenbei entfaellt die
+	 * zweite Abfrage. Ohne {@code AuthenticatedUser}, damit sie sich nicht
+	 * versehentlich als allgemeiner Lesepfad benutzen laesst.
+	 *
+	 * @param project das Projekt, dessen Zuweisung gerade abgegeben wurde,
+	 *                bereits geladen und vom Aufrufer geprueft
+	 */
+	@Transactional(readOnly = true)
+	ProjectDetailResponse detailAfterOwnResignation(Project project) {
+		UUID projectId = project.getId();
+
+		return ProjectDetailResponse.from(
+				project,
+				sortedTags(project),
+				reactionRepository.countByProjectId(projectId),
+				members(projectId),
+				blocks(projectId),
+				editors(project),
+				statusHistory(projectId));
+	}
+
 	private List<MemberResponse> members(UUID projectId) {
 		return projectMemberRepository.findByProjectId(projectId).stream()
 				// Stabile Reihenfolge: die Zuordnungstabelle hat keine, und eine

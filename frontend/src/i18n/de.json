@@ -278,6 +278,18 @@
     },
     "projectRole": {
       "required": "Bitte geben Sie eine Funktionsbezeichnung an."
+    },
+    "comment": {
+      "type": "Bitte eine Art auswählen.",
+      "textRequired": "Bitte einen Text eingeben.",
+      "textTooLong": "Der Text ist zu lang (höchstens 5000 Zeichen)."
+    },
+    "nomination": {
+      "tierRequired": "Bitte eine Stufe auswählen."
+    },
+    "revision": {
+      "reasonRequired": "Bitte eine Begründung eingeben.",
+      "reasonTooLong": "Die Begründung ist zu lang (höchstens 5000 Zeichen)."
     }
   },
   "placeholder": {
@@ -289,8 +301,6 @@
       "projectMetadata": "Projekt-Metadaten",
       "myPortfolio": "Mein Portfolio",
       "profile": "Profil bearbeiten",
-      "reviews": "Meine Reviews",
-      "projectReview": "Review",
       "administration": "Administrationsseite",
       "adminProjects": "Projektverwaltung",
       "adminUsers": "Nutzer:innen",
@@ -414,7 +424,7 @@
         "projectSummary": "Studierende gestalten die Freifläche hinter dem AB-Gebäude als offenen Lernort mit Hochbeeten, Sitzstufen und einer Wetterstation.",
         "faculty": "Fakultät 4",
         "program": "Medieninformatik",
-        "module": "Digitale Medien",
+        "module": "Interaktive Systeme",
         "category": "Semesterprojekt",
         "semester": "SoSe 2026",
         "kpiFaculties": "Beteiligte Fakultäten",
@@ -688,7 +698,8 @@
         "discard": "Verwerfen und zurück"
       },
       "untitledTitle": "Unbenanntes Projekt",
-      "creating": "Das Projekt wird angelegt …"
+      "creating": "Das Projekt wird angelegt …",
+      "changeRequestsOpenAction": "Zu den offenen Änderungswünschen im Editor"
     }
   },
   "portfolio": {
@@ -810,11 +821,21 @@
     }
   },
   "top10": {
-    "position": "Platz {{position}}"
+    "position": "Platz {{position}}",
+    "tier": {
+      "TOP_1": "Top 1",
+      "TOP_5": "Top 5",
+      "TOP_10": "Top 10"
+    },
+    "nominationStatus": {
+      "PENDING": "Offen",
+      "ACCEPTED": "Angenommen",
+      "REJECTED": "Abgelehnt"
+    }
   },
   "projectContent": {
     "intro": {
-            "abstract": "Abstract",
+      "abstract": "Abstract",
       "regionLabel": "Titelbild, Titel und Kurzbeschreibung",
       "notSaved": "Die Kopfangaben werden nicht gespeichert, solange die markierten Felder nicht stimmen."
     },
@@ -1151,5 +1172,173 @@
     "description": "Jemand anders hat dieses Projekt gespeichert, während Ihre Fassung offen war. Sie können den Serverstand laden und Ihre Eingaben verwerfen, oder Ihre Fassung stehen lassen; gespeichert wird sie dann nicht.",
     "reload": "Serverstand laden",
     "keepEditing": "Eigene Fassung behalten"
+  },
+  "comment": {
+    "panel": {
+      "label": "Kommentare zum Projekt",
+      "title": "Kommentare",
+      "openCount_one": "{{count}} offen",
+      "openCount_other": "{{count}} offen",
+      "collapse": "Kommentare einklappen",
+      "expand": "Kommentare aufklappen",
+      "empty": {
+        "title": "Noch keine Kommentare",
+        "description": "Rückfragen, interne Notizen und Änderungswünsche erscheinen hier."
+      },
+      "announce": {
+        "created": "Kommentar gespeichert.",
+        "status": "Änderungswunsch steht jetzt auf {{status}}."
+      }
+    },
+    "type": {
+      "REPLY": "Antwort",
+      "NOTE": "Notiz",
+      "CHANGE_REQUEST": "Änderung"
+    },
+    "status": {
+      "OPEN": "Offen",
+      "RESOLVED": "Erledigt"
+    },
+    "action": {
+      "resolve": "Als erledigt markieren",
+      "reopen": "Wieder öffnen"
+    },
+    "form": {
+      "typeLabel": "Art des Kommentars",
+      "textLabel": "Kommentartext",
+      "placeholder": "Antwort schreiben …",
+      "submit": "Senden"
+    }
+  },
+  "review": {
+    "list": {
+      "title": "Meine Reviews",
+      "subtitle": "Projektverwaltung für Redakteur:innen",
+      "statusFilter": "Nach Status filtern",
+      "counts": {
+        "title": "Projekte, die mir zugewiesen sind",
+        "unavailable": "k. A."
+      },
+      "search": {
+        "label": "Projekte durchsuchen",
+        "placeholder": "Titel oder Studierende suchen …"
+      },
+      "filter": {
+        "allStudyPrograms": "Studiengang (alle)",
+        "allSemesters": "Semester (alle)",
+        "allModules": "Fach (alle)"
+      },
+      "column": {
+        "project": "Projekt",
+        "students": "Studierende",
+        "status": "Status",
+        "actions": "Aktionen"
+      },
+      "row": {
+        "menuFor": "Aktionen zu {{title}}",
+        "view": "Anzeigen",
+        "review": "Überprüfen",
+        "nominate": "Für Top 10 nominieren",
+        "nominateBlocked": {
+          "notPublished": "Nur veröffentlichte Projekte",
+          "inTop10": "Bereits in Top 10",
+          "nominated": "Bereits nominiert"
+        },
+        "resign": "Zuweisung abgeben"
+      },
+      "resignDialog": {
+        "title": "Redaktionszuweisung abgeben?",
+        "description": "Sie sind danach nicht mehr für „{{title}}“ zuständig. Sind Sie die letzte zugewiesene Redaktion, geht das Projekt zurück in den Entwurf und die Autor:in weist neu zu. Kommentare bleiben erhalten.",
+        "confirm": "Zuweisung abgeben"
+      },
+      "resignDone": "Zuweisung zu „{{title}}“ abgegeben. Das Projekt steht jetzt auf {{status}}.",
+      "empty": {
+        "title": "Keine zugewiesenen Projekte",
+        "description": "Sobald Ihnen ein Projekt als Redaktion zugewiesen wird, erscheint es hier.",
+        "filtered": "Zu dieser Auswahl gibt es keine Treffer. Suche oder Filter ändern."
+      }
+    },
+    "nomination": {
+      "done": "Nominierung abgeschickt.",
+      "own": {
+        "title": "Meine Top-10-Nominierungen",
+        "places": "{{count}}/{{total}} Plätze aktiv",
+        "empty": {
+          "title": "Noch keine Nominierungen",
+          "description": "Nominieren Sie ein veröffentlichtes Projekt über das Menü in der Projektliste."
+        }
+      },
+      "history": {
+        "title": "Mein Nominierungs-Verlauf",
+        "loading": "Wird geladen …",
+        "summary_one": "{{count}} Ereignis, zum Anzeigen aufklappen.",
+        "summary_other": "{{count}} Ereignisse, zum Anzeigen aufklappen.",
+        "entry": "Nominiert für {{tier}} von {{person}}",
+        "empty": {
+          "title": "Noch kein Verlauf",
+          "description": "Hier stehen später Ihre Vorschläge mit Zeitpunkt und Stand."
+        }
+      },
+      "dialog": {
+        "title": "Für Top 10 nominieren",
+        "description": "„{{title}}“ für die kuratierte Auswahl der Startseite vorschlagen.",
+        "tier": "Vorgeschlagene Stufe",
+        "submit": "Nominierung absenden"
+      },
+      "tier": {
+        "TOP_1": {
+          "hint": "Absoluter Spitzenplatz",
+          "range": "Platz 1"
+        },
+        "TOP_5": {
+          "hint": "Vordere Gruppe",
+          "range": "Plätze 2 bis 5"
+        },
+        "TOP_10": {
+          "hint": "Aufnahme in die Liste",
+          "range": "Plätze 6 bis 10"
+        }
+      }
+    },
+    "detail": {
+      "back": "Zurück zu Meine Reviews",
+      "history": "Historie",
+      "mode": {
+        "review": "Review",
+        "toggle": "Zwischen Vorschau und Review wechseln"
+      },
+      "forbidden": {
+        "title": "Kein Zugriff auf dieses Review",
+        "description": "Überprüfen kann ein Projekt nur die ihm zugewiesene Redaktion."
+      },
+      "revision": {
+        "title": "Zur Überarbeitung zurückgeben",
+        "description": "Die Begründung wird als Änderungswunsch an die Projektseite geschickt und erscheint dort im Editor.",
+        "label": "Begründung",
+        "placeholder": "Was ist zu überarbeiten?",
+        "submit": "Zurückgeben"
+      },
+      "actions": {
+        "approve": "Genehmigen",
+        "publish": "Veröffentlichen",
+        "requestRevision": "Zur Überarbeitung",
+        "approveDone": "Projekt genehmigt.",
+        "publishDone": "Projekt veröffentlicht.",
+        "revisionDone": "Projekt zur Überarbeitung zurückgegeben.",
+        "none": "In diesem Status steht keine redaktionelle Aktion an.",
+        "ownProject": "An einem Projekt, an dem Sie mitgewirkt haben, entscheidet eine andere Person über die Freigabe.",
+        "approveDialog": {
+          "title": "Projekt genehmigen?",
+          "description": "„{{title}}“ gilt danach als fachlich freigegeben. Öffentlich ist es damit noch nicht, das entscheidet der zweite Schritt.",
+          "confirm": "Genehmigen"
+        },
+        "publishDialog": {
+          "title": "Projekt veröffentlichen?",
+          "description": "„{{title}}“ ist danach für alle sichtbar, auch ohne Anmeldung. Zurückholen lässt es sich nur über „Zur Überarbeitung“.",
+          "confirm": "Veröffentlichen"
+        }
+      },
+      "loading": "Review wird geladen"
+    }
   }
 }

@@ -9,6 +9,12 @@ import { fullNameOf, type PersonName } from "@/lib/name"
  * Projektzeile der Tabellenansichten (Figma "Table Data Row"): Meine
  * Reviews, Projekte der Administrationsseite und das Top-10-Protokoll.
  *
+ * Die Spalte „Fach" kam mit KAN-37 dazu, zusammen mit dem Feld module an
+ * der Kachel (Contract v68, §3.9): „Meine Reviews" zeigt sie nach Template,
+ * und ohne das Feld waere sie nicht fuellbar gewesen. Sie ist optional wie
+ * die uebrigen; wer sie nicht setzt, bekommt eine leere Zelle und keine
+ * verschobene Tabelle.
+ *
  * Die Spalten entsprechen ProjectCardResponse (§6.1); die Kopfzeile bleibt
  * die Primitive, weil ihre Beschriftungen zur Seite gehoeren und nicht zur
  * Zeile. Eine Huelle um TableHead traege kein Domaenenwissen und waere nur
@@ -24,6 +30,7 @@ export function ProjectTableRow({
   author,
   studyProgram,
   semester,
+  module,
   status,
   href,
   actions,
@@ -32,6 +39,7 @@ export function ProjectTableRow({
   author?: PersonName | null
   studyProgram?: ProjectReference | null
   semester?: string | null
+  module?: ProjectReference | null
   status?: ProjectStatus
   href?: string
   actions?: ReactNode
@@ -52,6 +60,7 @@ export function ProjectTableRow({
         {studyProgram?.name}
       </TableCell>
       <TableCell className="text-muted-foreground">{semester}</TableCell>
+      <TableCell className="text-muted-foreground">{module?.name}</TableCell>
       <TableCell>{status && <StatusBadge status={status} />}</TableCell>
       <TableCell className="text-right">{actions}</TableCell>
     </TableRow>

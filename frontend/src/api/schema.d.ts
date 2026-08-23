@@ -219,7 +219,7 @@ export interface paths {
     put?: never
     /**
      * Projekt fuer die Top-10 nominieren
-     * @description Schlaegt ein veroeffentlichtes Projekt fuer die Top-10 vor (§3.11.1). Erlaubt fuer EDITOR und ADMIN. Der Body ist optional und traegt hoechstens einen unverbindlichen Platzvorschlag; ueber den Platz entscheidet die Administration beim Annehmen. Der Vorschlag allein aendert die Top-10 nicht.
+     * @description Schlaegt ein veroeffentlichtes Projekt fuer die Top-10 vor (§3.11.1). Erlaubt fuer EDITOR und ADMIN. Der Body traegt seit Contract v68 die vorgeschlagene Stufe (§2.13) als Pflichtangabe; ueber den Platz entscheidet die Administration beim Annehmen, und die Stufe bindet sie nicht. Der Vorschlag allein aendert die Top-10 nicht.
      */
     post: operations["nominate"]
     delete?: never
@@ -1020,6 +1020,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/top10-nominations": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Eigene Nominierungen lesen
+     * @description Die Vorschlaege der angemeldeten Person, neueste zuerst, offene wie entschiedene (§3.11). Ohne Paginierung, wie beim Admin-Spiegel. Der Parameter "nominatedBy" ist Pflicht und laesst allein den Wert "me" zu: er ist der Zuschnitt der Ressource und kein Filter. Wer fremde Vorschlaege lesen darf, nimmt GET /api/admin/top10-nominations.
+     */
+    get: operations["ownNominations"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/tags": {
     parameters: {
       query?: never
@@ -1215,6 +1235,26 @@ export interface paths {
     put?: never
     post?: never
     delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/projects/{projectId}/editors/me": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Eigene Redaktionszuweisung abgeben
+     * @description Nimmt die anfragende Person aus der zustaendigen Redaktion des Projekts (§6.1, §4.1, seit Contract v68). Moeglich nur fuer die zugewiesene Person selbst und nur in SUBMITTED oder REVISION. War es die letzte Zuweisung, faellt das Projekt nach DRAFT zurueck und die Statushistorie fuehrt den Uebergang; sonst aendert sich allein die Zuweisung. Kommentare bleiben unberuehrt.
+     */
+    delete: operations["resignAsEditor"]
     options?: never
     head?: never
     patch?: never
@@ -1571,6 +1611,8 @@ export interface components {
       faculty: components["schemas"]["ReferenceResponse"] | null
       /** @description Studiengang (§3.7). Im DRAFT noch nicht gesetzt. */
       studyProgram: components["schemas"]["ReferenceResponse"] | null
+      /** @description Modul, im Prototyp als "Fach" beschriftet (§3.9). Seit Contract v68 an der Kachel, weil "Meine Reviews" eine Spalte dafuer fuehrt. Kann fehlen; es ist kein Pflichtfeld des Einreichens (§3.3). */
+      module: components["schemas"]["ReferenceResponse"] | null
       author: components["schemas"]["PersonResponse"]
       /** @description Freie Schlagwoerter, hoechstens fuenf. Alphabetisch sortiert, damit die Reihenfolge zwischen zwei Aufrufen stabil bleibt. */
       tags: string[]
@@ -1659,11 +1701,11 @@ export interface components {
     }
     Top10NominationRequest: {
       /**
-       * Format: int32
-       * @description Unverbindlicher Platzvorschlag, 1 bis 10. Darf fehlen; ueber den tatsaechlichen Platz entscheidet die Administration beim Annehmen.
-       * @example 3
+       * @description Vorgeschlagene Stufe (§2.13). Pflichtangabe. TOP_1 meint den Spitzenplatz, TOP_5 die Plaetze 2 bis 5, TOP_10 die Plaetze 6 bis 10. Ueber den tatsaechlichen Platz entscheidet die Administration beim Annehmen; die Stufe bindet sie nicht.
+       * @example TOP_5
+       * @enum {string}
        */
-      proposedPosition?: number | null
+      proposedTier: "TOP_1" | "TOP_5" | "TOP_10"
     }
     Top10NominationResponse: {
       /** Format: uuid */
@@ -1671,8 +1713,14 @@ export interface components {
       project: components["schemas"]["ProjectCardResponse"]
       nominatedBy: components["schemas"]["PersonResponse"]
       /**
+       * @description Vorgeschlagene Stufe (§2.13). Seit Contract v68 die Angabe, mit der die Redaktion nominiert.
+       * @example TOP_5
+       * @enum {string}
+       */
+      proposedTier: "TOP_1" | "TOP_5" | "TOP_10"
+      /**
        * Format: int32
-       * @description Unverbindlicher Platzvorschlag der nominierenden Person. Kann fehlen (§3.11).
+       * @description Der von der Administration entschiedene Platz (§3.11). Gesetzt wird er seit Contract v69 allein von POST /admin/top10-nominations/{id}/accept. Null, solange die Nominierung offen ist, nach einer Ablehnung, und auch dann, wenn sie ueber PUT /admin/top10 mit angenommen wurde: dort steht der Platz allein im Top10Entry (§3.11.1 Regel 5).
        * @example 3
        */
       proposedPosition: number | null
@@ -3109,7 +3157,7 @@ export interface operations {
       }
       cookie?: never
     }
-    requestBody?: {
+    requestBody: {
       content: {
         "application/json": components["schemas"]["Top10NominationRequest"]
       }
@@ -3124,7 +3172,7 @@ export interface operations {
           "*/*": components["schemas"]["Top10NominationResponse"]
         }
       }
-      /** @description VALIDATION_FAILED: proposedPosition liegt nicht zwischen 1 und 10. */
+      /** @description VALIDATION_FAILED: proposedTier fehlt oder ist kein Wert aus §2.13. */
       400: {
         headers: {
           [name: string]: unknown
@@ -5873,6 +5921,61 @@ export interface operations {
       }
     }
   }
+  ownNominations: {
+    parameters: {
+      query: {
+        /**
+         * @description Pflichtparameter, einziger zulaessiger Wert "me".
+         * @example me
+         */
+        nominatedBy: string
+        /** @description Optionaler Filter auf den Stand der Nominierung (§2.8). Ohne Angabe kommen alle. */
+        status?: "PENDING" | "ACCEPTED" | "REJECTED"
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Die eigenen Nominierungen. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["Top10NominationResponse"][]
+        }
+      }
+      /** @description VALIDATION_FAILED: "nominatedBy" fehlt oder nennt etwas anderes als "me"; oder "status" ist kein Wert aus §2.8. */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["Top10NominationResponse"][]
+        }
+      }
+      /** @description Kein gueltiges Token mitgeschickt. */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["Top10NominationResponse"][]
+        }
+      }
+      /** @description NO_PERMISSION: die Rolle ist weder EDITOR noch ADMIN. */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["Top10NominationResponse"][]
+        }
+      }
+    }
+  }
   tags: {
     parameters: {
       query?: {
@@ -6225,6 +6328,65 @@ export interface operations {
         }
         content: {
           "*/*": components["schemas"]["DashboardResponse"]
+        }
+      }
+    }
+  }
+  resignAsEditor: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description ID des Projekts. */
+        projectId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Die Zuweisung ist aufgehoben. Die Antwort traegt die neue version, den ggf. geaenderten Status und die frische statusHistory. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["ProjectDetailResponse"]
+        }
+      }
+      /** @description Kein gueltiges Token mitgeschickt. */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["ProjectDetailResponse"]
+        }
+      }
+      /** @description NO_PERMISSION: die anfragende Person ist diesem Projekt nicht als Redaktion zugewiesen. Fremde Zuweisungen aendert die Administration ueber PUT /api/projects/{id}/editors. */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["ProjectDetailResponse"]
+        }
+      }
+      /** @description Unter dieser ID gibt es kein Projekt. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["ProjectDetailResponse"]
+        }
+      }
+      /** @description PROJECT_STATUS_NOT_EDITABLE: das Projekt steht weder in SUBMITTED noch in REVISION. Im DRAFT pflegt die Autor:in die Zuweisung selbst, ab APPROVED ist die redaktionelle Arbeit getan. */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["ProjectDetailResponse"]
         }
       }
     }

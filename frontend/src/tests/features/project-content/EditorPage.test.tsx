@@ -4,12 +4,18 @@ import { HttpResponse, http } from "msw"
 import { Route, Routes } from "react-router-dom"
 import { beforeEach, describe, expect, it } from "vitest"
 
-import type { BlockResponse, ProjectDetailResponse } from "@/api/types"
+import type {
+  BlockResponse,
+  CommentResponse,
+  ProjectDetailResponse,
+} from "@/api/types"
 import EditorPage from "@/features/project-content/EditorPage"
-import { person, projectDetail } from "@/tests/fixtures"
+import i18n from "@/i18n"
+import { comment, person, projectDetail } from "@/tests/fixtures"
 import {
   currentUserHandler,
   projectBlocksHandler,
+  projectCommentsHandler,
   projectDetailHandler,
 } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
@@ -70,12 +76,14 @@ function ownDraft(
 
 function renderEditor(
   project: ProjectDetailResponse,
-  blocks: BlockResponse[] = []
+  blocks: BlockResponse[] = [],
+  comments: CommentResponse[] = []
 ) {
   server.use(
     currentUserHandler({ id: USER_ID }),
     /* Bloecke vor dem Detail: das Muster /projects/:projectId faengt sonst
        den laengeren Pfad zuerst ab. */
+    projectCommentsHandler(comments),
     projectBlocksHandler(blocks),
     projectDetailHandler(project),
     http.put("*/api/projects/:projectId/blocks", () =>
@@ -534,5 +542,41 @@ describe("EditorPage", () => {
     /* Der Inhalt geht hinaus, die Kopfangaben nicht. */
     await waitFor(() => expect(blockPuts).toBeGreaterThanOrEqual(1), WAIT)
     expect(projectPuts).toBe(0)
+  })
+
+  it("zeigt die Kommentarspalte und bietet der Autor:in allein die Antwort an", async () => {
+    /*
+     * Die Kommentarspalte aus KAN-37 steht seit diesem Ticket auch im
+     * Editor; ohne sie saehe die Autor:in ihre Aenderungswuensche nirgends
+     * (Ticket-Ziel). Erstellbar ist hier allein eine Antwort, auch wenn der
+     * Server mehr zuliesse: der Editor ist der Schreibplatz am eigenen
+     * Beitrag.
+     */
+    renderEditor(
+      ownDraft({ status: "REVISION" }),
+      [],
+      [
+        comment({
+          id: "c-1",
+          type: "CHANGE_REQUEST",
+          status: "OPEN",
+          text: "Bitte die Quellen ergaenzen.",
+        }),
+      ]
+    )
+
+    /* In REVISION beginnt die Spalte aufgeklappt: dort sind die offenen
+       Aenderungswuensche der Arbeitsauftrag. */
+    expect(
+      await screen.findByText("Bitte die Quellen ergaenzen.")
+    ).toBeInTheDocument()
+    expect(screen.getByText(i18n.t("comment.status.OPEN"))).toBeInTheDocument()
+
+    expect(
+      screen.getByLabelText(i18n.t("comment.form.textLabel"))
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("group", { name: i18n.t("comment.form.typeLabel") })
+    ).not.toBeInTheDocument()
   })
 })

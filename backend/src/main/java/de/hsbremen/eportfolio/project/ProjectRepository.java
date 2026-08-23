@@ -28,19 +28,21 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, JpaSpec
 	 * Gefilterte, sortierte und paginierte Projektliste.
 	 *
 	 * <p>Ueberschrieben nur, um den {@code @EntityGraph} anzuhaengen: ohne ihn
-	 * laedt Hibernate Autor, Kategorie, Fakultaet und Studiengang je Kachel
-	 * einzeln nach (N+1). Alle vier sind {@code @ManyToOne}, lassen sich also
-	 * gefahrlos mitziehen; eine Sammlung im selben Graph wuerde die Paginierung
-	 * dagegen in den Arbeitsspeicher verlagern (deshalb {@code @BatchSize} an
-	 * {@code Project.tags}).
+	 * laedt Hibernate Autor, Kategorie, Fakultaet, Studiengang, Modul und
+	 * Semester je Kachel einzeln nach (N+1). Alle sind {@code @ManyToOne},
+	 * lassen sich also gefahrlos mitziehen; eine Sammlung im selben Graph wuerde
+	 * die Paginierung dagegen in den Arbeitsspeicher verlagern (deshalb
+	 * {@code @BatchSize} an {@code Project.tags}).
 	 *
-	 * <p>Das Modul fehlt bewusst: die Kachel zeigt es nicht (§6.1), und ein
-	 * weiterer Join kostet ohne Nutzen. Das Semester steht seit KAN-65 dabei,
-	 * weil die Kachel es zeigt und es seither ein Bezug und kein Textfeld mehr
-	 * ist (§3.18).
+	 * <p>Das Modul steht seit Contract v68 dabei (KAN-37). Bis dahin fehlte es
+	 * bewusst, weil die Kachel es nicht zeigte; seit „Meine Reviews" eine Spalte
+	 * „Fach" fuehrt, zeigt sie es, und ohne den Graph entstuende genau das N+1,
+	 * das er verhindern soll. Das Semester kam aus demselben Grund mit KAN-65
+	 * dazu (§3.18).
 	 */
 	@Override
-	@EntityGraph(attributePaths = {"author", "category", "faculty", "studyProgram", "semester"})
+	@EntityGraph(attributePaths = {"author", "category", "faculty", "studyProgram", "module",
+			"semester"})
 	Page<Project> findAll(Specification<Project> specification, Pageable pageable);
 
 	/**
@@ -72,7 +74,7 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, JpaSpec
 	 *
 	 * <p>Der {@code @EntityGraph} hat denselben Grund wie bei
 	 * {@link #findAll(Specification, Pageable)}: ohne ihn laedt Hibernate Autor,
-	 * Kategorie, Fakultaet und Studiengang je Kachel einzeln nach (N+1).
+	 * Kategorie, Fakultaet, Studiengang und Modul je Kachel einzeln nach (N+1).
 	 *
 	 * <p>Sortiert nach Veroeffentlichungsdatum, neueste zuerst. Das Feld ist bei
 	 * einem {@code PUBLISHED}-Projekt gesetzt (§3.3), und ein Profil ordnet seine
@@ -81,7 +83,8 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, JpaSpec
 	 * veroeffentlichte Projekte zwischen zwei Aufrufen nicht die Plaetze
 	 * tauschen.
 	 */
-	@EntityGraph(attributePaths = {"author", "category", "faculty", "studyProgram", "semester"})
+	@EntityGraph(attributePaths = {"author", "category", "faculty", "studyProgram", "module",
+			"semester"})
 	List<Project> findByAuthorIdAndStatusOrderByPublishedAtDescIdAsc(UUID authorId,
 			ProjectStatus status);
 

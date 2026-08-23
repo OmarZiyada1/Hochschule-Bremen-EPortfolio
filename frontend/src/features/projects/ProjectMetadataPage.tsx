@@ -97,6 +97,14 @@ export default function ProjectMetadataPage() {
   const uploadCover = useUploadCoverImage(projectId)
 
   const [conflict, setConflict] = useState(false)
+  /*
+   * 409 CHANGE_REQUESTS_OPEN beim Einreichen (§2.4, §4.1). Der Envelope
+   * traegt zwar einen Text, aber die Person steht dann vor einer Sperre
+   * ohne Weg: die offenen Aenderungswuensche stehen im Editor, in der
+   * Kommentarspalte aus KAN-37. Deshalb ein eigener Zustand mit einem Weg
+   * dorthin statt der blossen Meldung (Ticket KAN-37).
+   */
+  const [changeRequestsOpen, setChangeRequestsOpen] = useState(false)
   /* Ungespeicherte Eingaben: der Weg zurueck fragt dann vorher nach
      (Skill frontend-design, Abschnitt 5). */
   const [dirty, setDirty] = useState(false)
@@ -154,6 +162,10 @@ export default function ProjectMetadataPage() {
     request: ProjectUpdateRequest,
     intent: SubmitIntent
   ): Promise<ProjectDetailResponse> => {
+    /* Jeder neue Versuch beginnt ohne die alte Meldung: nach einem
+       erfolgreichen „Nur speichern" stuende sie sonst weiter da, obwohl der
+       Fehler nicht mehr aktuell ist (Befund des frontend-reviewers). */
+    setChangeRequestsOpen(false)
     try {
       const updated = await update.mutateAsync(request)
       /*
@@ -181,6 +193,12 @@ export default function ProjectMetadataPage() {
         saveError.errorCode === "PROJECT_VERSION_CONFLICT"
       ) {
         setConflict(true)
+      }
+      if (
+        isApiError(saveError) &&
+        saveError.errorCode === "CHANGE_REQUESTS_OPEN"
+      ) {
+        setChangeRequestsOpen(true)
       }
       /* Weiterwerfen: das Formular ordnet 400 VALIDATION_FAILED den Feldern
          zu und zeigt alles Uebrige als Meldung an sich selbst. Nur den
@@ -306,35 +324,52 @@ export default function ProjectMetadataPage() {
                 </AlertTitle>
               </Alert>
             ) : (
-              <ProjectMetadataForm
-                /* Nach einem Neuladen wegen Versionskonflikt traegt das
+              <>
+                {changeRequestsOpen && (
+                  <Alert variant="destructive" className="mb-6">
+                    <AlertTitle>
+                      {t("apiError.CHANGE_REQUESTS_OPEN")}
+                    </AlertTitle>
+                    <AlertDescription>
+                      <Link
+                        to={`/projects/${project.id}/editor`}
+                        className="underline"
+                      >
+                        {t("project.metadata.changeRequestsOpenAction")}
+                      </Link>
+                    </AlertDescription>
+                  </Alert>
+                )}
+                <ProjectMetadataForm
+                  /* Nach einem Neuladen wegen Versionskonflikt traegt das
                    Projekt eine neue version. Der Schluessel setzt das
                    Formular damit auf den Serverstand zurueck, ohne dass es
                    dafuer einen Effekt braeuchte. */
-                key={`${project.id}-${project.version}`}
-                project={project}
-                disabled={!isEditable(project.status)}
-                onUploadCoverImage={async (file) => {
-                  const stored = await uploadCover.mutateAsync(file)
-                  return stored.url
-                }}
-                onSubmit={submit}
-                onDirtyChange={setDirty}
-                submitLabel={
-                  submitting ? t("project.metadata.saveAndSubmit") : undefined
-                }
-                submitPendingLabel={
-                  submitting
-                    ? t("project.metadata.saveAndSubmitPending")
-                    : undefined
-                }
-                secondarySubmit={
-                  submitting
-                    ? { label: t("project.metadata.saveOnly") }
-                    : undefined
-                }
-                onCancel={submitting ? leaveToEditor : leaveToPortfolio}
-              />
+                  key={`${project.id}-${project.version}`}
+                  project={project}
+                  disabled={!isEditable(project.status)}
+                  onUploadCoverImage={async (file) => {
+                    const stored = await uploadCover.mutateAsync(file)
+                    return stored.url
+                  }}
+                  onSubmit={submit}
+                  onDirtyChange={setDirty}
+                  submitLabel={
+                    submitting ? t("project.metadata.saveAndSubmit") : undefined
+                  }
+                  submitPendingLabel={
+                    submitting
+                      ? t("project.metadata.saveAndSubmitPending")
+                      : undefined
+                  }
+                  secondarySubmit={
+                    submitting
+                      ? { label: t("project.metadata.saveOnly") }
+                      : undefined
+                  }
+                  onCancel={submitting ? leaveToEditor : leaveToPortfolio}
+                />
+              </>
             )}
           </>
         )}

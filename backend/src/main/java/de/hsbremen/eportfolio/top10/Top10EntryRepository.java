@@ -29,10 +29,14 @@ public interface Top10EntryRepository extends JpaRepository<Top10Entry, UUID> {
 	 *
 	 * <p>Der {@code @EntityGraph} hat denselben Grund wie in
 	 * {@code ProjectRepository}: ohne ihn laedt Hibernate Autor, Kategorie,
-	 * Fakultaet und Studiengang je Kachel einzeln nach (N+1).
+	 * Fakultaet, Studiengang, Modul und Semester je Kachel einzeln nach (N+1).
+	 * Modul und Semester stehen seit Contract v68 beziehungsweise KAN-65 an
+	 * der Kachel (§6.1); ohne sie im Graph kostete ausgerechnet die
+	 * oeffentliche Startseite zwei zusaetzliche Abfragen je Eintrag.
 	 */
 	@EntityGraph(attributePaths = {"project", "project.author", "project.category",
-			"project.faculty", "project.studyProgram"})
+			"project.faculty", "project.studyProgram", "project.module",
+			"project.semester"})
 	@Query("select e from Top10Entry e where e.project.status = :status order by e.position asc")
 	List<Top10Entry> findVisible(@Param("status") ProjectStatus status);
 

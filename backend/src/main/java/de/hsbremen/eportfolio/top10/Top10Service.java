@@ -472,6 +472,15 @@ public class Top10Service {
 	/**
 	 * Schliesst die offenen Nominierungen der eben aufgenommenen Projekte ab,
 	 * siehe {@link #setOrder}.
+	 *
+	 * <p><strong>Ohne {@code proposedPosition}</strong>, und das ist seit
+	 * Contract v69 ausdruecklich so festgelegt (§3.11.1 Regel 5). Den Platz
+	 * traegt allein der Weg, auf dem die Administration ihn <em>entscheidet</em>,
+	 * also {@code POST /admin/top10-nominations/{id}/accept}. Hier wird nicht
+	 * ueber einen Vorschlag entschieden, sondern die Liste gesetzt; dass eine
+	 * offene Nominierung dabei erledigt ist, ist die Nebenwirkung. Der Platz
+	 * steht in diesem Fall im {@link Top10Entry}, und dort ist er ohnehin die
+	 * verbindliche Angabe. Entschieden in der Klaerungsrunde zu KAN-37.
 	 */
 	private void closeOpenNominations(User admin, List<UUID> projectIds, Instant now) {
 		if (projectIds.isEmpty()) {

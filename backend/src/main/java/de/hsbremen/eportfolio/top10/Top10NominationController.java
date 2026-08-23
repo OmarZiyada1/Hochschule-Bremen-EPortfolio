@@ -50,14 +50,14 @@ public class Top10NominationController {
 
 	@Operation(summary = "Projekt fuer die Top-10 nominieren",
 			description = "Schlaegt ein veroeffentlichtes Projekt fuer die Top-10 vor (§3.11.1). "
-					+ "Erlaubt fuer EDITOR und ADMIN. Der Body ist optional und traegt "
-					+ "hoechstens einen unverbindlichen Platzvorschlag; ueber den Platz "
-					+ "entscheidet die Administration beim Annehmen. Der Vorschlag allein "
-					+ "aendert die Top-10 nicht.")
+					+ "Erlaubt fuer EDITOR und ADMIN. Der Body traegt seit Contract v68 die "
+					+ "vorgeschlagene Stufe (§2.13) als Pflichtangabe; ueber den Platz "
+					+ "entscheidet die Administration beim Annehmen, und die Stufe bindet sie "
+					+ "nicht. Der Vorschlag allein aendert die Top-10 nicht.")
 	@ApiResponse(responseCode = "201", description = "Die Nominierung ist angelegt und steht "
 			+ "auf PENDING.")
-	@ApiResponse(responseCode = "400", description = "VALIDATION_FAILED: proposedPosition liegt "
-			+ "nicht zwischen 1 und 10.")
+	@ApiResponse(responseCode = "400", description = "VALIDATION_FAILED: proposedTier fehlt "
+			+ "oder ist kein Wert aus §2.13.")
 	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
 	@ApiResponse(responseCode = "403", description = "NO_PERMISSION: die Rolle ist weder EDITOR "
 			+ "noch ADMIN.")
@@ -74,12 +74,11 @@ public class Top10NominationController {
 			@Parameter(description = "ID des Projekts.")
 			@PathVariable("projectId") UUID projectId,
 
-			// Optional, weil das einzige Feld des Bodys optional ist: ohne
-			// required = false endete eine Nominierung ohne Platzvorschlag mit
-			// 400, und das waere ausgerechnet der einfachste Aufruf.
-			@RequestBody(required = false) @Valid Top10NominationRequest request) {
+			// Pflicht seit Contract v68: das einzige Feld des Bodys ist die Stufe,
+			// und ohne sie traegt der Vorschlag keine Aussage. Bis v67 war der
+			// Body optional, weil sein einziges Feld optional war.
+			@RequestBody @Valid Top10NominationRequest request) {
 
-		return nominationService.nominate(user, projectId,
-				request == null ? Top10NominationRequest.empty() : request);
+		return nominationService.nominate(user, projectId, request);
 	}
 }

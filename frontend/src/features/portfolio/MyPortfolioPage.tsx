@@ -8,12 +8,12 @@ import { useAuth } from "@/api/auth/AuthContext"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import { EmptyState } from "@/components/common/EmptyState"
 import { ProjectCard } from "@/components/common/ProjectCard"
+import { ProjectStatusFilter } from "@/components/common/ProjectStatusFilter"
 import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { OwnProjectCardActions } from "@/features/portfolio/components/OwnProjectCardActions"
 import { ProfileCard } from "@/features/portfolio/components/ProfileCard"
-import { ProjectStatusFilter } from "@/features/portfolio/components/ProjectStatusFilter"
 import {
   useOwnPortfolio,
   useOwnProjects,

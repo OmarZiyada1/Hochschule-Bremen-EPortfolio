@@ -5,7 +5,9 @@ import de.hsbremen.eportfolio.common.enums.NominationStatus;
 import de.hsbremen.eportfolio.common.enums.ProjectStatus;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
 import de.hsbremen.eportfolio.common.error.ConflictException;
+import de.hsbremen.eportfolio.common.error.ErrorCodes;
 import de.hsbremen.eportfolio.common.error.ResourceNotFoundException;
+import de.hsbremen.eportfolio.common.error.ValidationException;
 import de.hsbremen.eportfolio.project.Project;
 import de.hsbremen.eportfolio.project.ProjectPermissionService;
 import de.hsbremen.eportfolio.project.ProjectReadService;
@@ -55,6 +57,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class Top10NominationService {
+
+	/**
+	 * Einziger zulaessiger Wert von {@code nominatedBy} (§6.1). Dieselbe
+	 * Schreibweise wie {@code ProjectFilterRequest.EDITOR_ME}, damit beide
+	 * Selbstbezuege im Contract gleich aussehen.
+	 */
+	static final String OWN_SCOPE = "me";
 
 	private final Top10NominationRepository nominationRepository;
 
@@ -122,7 +131,8 @@ public class Top10NominationService {
 	 *                  nicht an, weil {@code SecurityConfig} auf den Projektpfaden
 	 *                  nur {@code GET} freigibt (401)
 	 * @param projectId ID aus dem Pfad
-	 * @param request   optionaler Platzvorschlag
+	 * @param request   die vorgeschlagene Stufe (§2.13), Pflichtangabe seit
+	 *                  Contract v68
 	 * @throws ResourceNotFoundException wenn es die Projekt-ID nicht gibt (404)
 	 * @throws AccessDeniedException     wenn die Rolle weder EDITOR noch ADMIN ist
 	 *                                   (403)
@@ -150,7 +160,7 @@ public class Top10NominationService {
 		Top10Nomination nomination = new Top10Nomination();
 		nomination.setProject(project);
 		nomination.setNominatedBy(currentUser(user));
-		nomination.setProposedPosition(request.proposedPosition());
+		nomination.setProposedTier(request.proposedTier());
 		nomination.setStatus(NominationStatus.PENDING);
 
 		return toResponse(nominationRepository.saveAndFlush(nomination));
@@ -192,6 +202,56 @@ public class Top10NominationService {
 	}
 
 	// ------------------------------------------------------------------
+	// GET /api/top10-nominations?nominatedBy=me
+	// ------------------------------------------------------------------
+
+	/**
+	 * Die eigenen Nominierungen der anfragenden Person (§6.1, seit Contract
+	 * v68), neueste zuerst, ohne Paginierung.
+	 *
+	 * <p><strong>Warum es diesen Endpoint neben dem Admin-Spiegel gibt.</strong>
+	 * {@code GET /api/admin/top10-nominations} liegt hinter
+	 * {@code hasRole("ADMIN")}, und damit erfuhr eine Redakteur:in bis v67 nicht
+	 * einmal, ob ihr eigener Vorschlag noch offen ist. Sie sah weder den Stand
+	 * noch die Entscheidung; ein zweiter Vorschlag zum selben Projekt endete
+	 * dann in einem 409, das sie sich nicht erklaeren konnte.
+	 *
+	 * <p><strong>{@code nominatedBy} ist Pflicht und laesst allein {@code me}
+	 * zu.</strong> Der Parameter sieht aus wie ein Filter und ist der Zuschnitt
+	 * der Ressource: ohne ihn waere der Pfad der vollstaendige Spiegel und damit
+	 * eine Umgehung der Admin-Schranke. Ein anderer Wert ergibt
+	 * <strong>400</strong> {@code VALIDATION_FAILED} und nicht 403, weil die
+	 * Anfrage schon in ihrer Form nicht vorgesehen ist; wer fremde Vorschlaege
+	 * lesen darf, nimmt den Admin-Pfad. Derselbe Zuschnitt wie bei
+	 * {@code GET /api/projects?editor=me}.
+	 *
+	 * @param user        angemeldete Person; ohne Anmeldung 401 aus der
+	 *                    Filterkette, als STUDENT 403 aus dieser Methode
+	 * @param nominatedBy Pflichtparameter, einziger zulaessiger Wert
+	 *                    {@code me}
+	 * @param status      optionaler Filter auf einen Stand (§2.8)
+	 * @throws ValidationException   wenn {@code nominatedBy} fehlt oder etwas
+	 *                               anderes als {@code me} nennt (400)
+	 * @throws AccessDeniedException wenn die Rolle weder EDITOR noch ADMIN ist
+	 *                               (403)
+	 */
+	@Transactional(readOnly = true)
+	public List<Top10NominationResponse> ownNominations(AuthenticatedUser user, String nominatedBy,
+			NominationStatus status) {
+
+		requireOwnScope(nominatedBy);
+		requireMayReadOwn(user);
+
+		UUID ownId = user.getId();
+		List<Top10Nomination> nominations = status == null
+				? nominationRepository.findByNominatedByIdOrderByCreatedAtDescIdAsc(ownId)
+				: nominationRepository.findByNominatedByIdAndStatusOrderByCreatedAtDescIdAsc(
+						ownId, status);
+
+		return toResponses(nominations);
+	}
+
+	// ------------------------------------------------------------------
 	// POST /api/admin/top10-nominations/{id}/accept
 	// ------------------------------------------------------------------
 
@@ -200,9 +260,18 @@ public class Top10NominationService {
 	 * {@code decidedAt} und legt den {@code Top10Entry} auf dem gewuenschten Platz
 	 * an (§3.11, §6.1).
 	 *
-	 * <p><strong>Der Platz aus dem Body gilt, nicht der Vorschlag.</strong>
-	 * {@code proposedPosition} ist unverbindlich und wird hier nicht gelesen;
-	 * siehe {@link Top10AcceptRequest}.
+	 * <p><strong>Der Platz aus dem Body gilt, nicht der Vorschlag.</strong> Die
+	 * vorgeschlagene Stufe wird gelesen und angezeigt, sie bindet aber nichts:
+	 * der Server prueft nicht, ob {@code position} in ihren Bereich faellt
+	 * (§3.11.1 Regel 4, Klaerungsrunde zu KAN-37). Eine Bindung zwaenge die
+	 * Administration, einen als {@code TOP_1} vorgeschlagenen Beitrag erst
+	 * abzulehnen, um ihn auf Platz 4 zu setzen. Siehe
+	 * {@link Top10AcceptRequest}.
+	 *
+	 * <p><strong>Der entschiedene Platz wandert zusaetzlich an die
+	 * Nominierung</strong> (seit Contract v68). {@code proposedPosition} ist
+	 * damit das Feld der Administration und nicht mehr der Wunsch der
+	 * Redaktion; die Stufe steht daneben in {@code proposedTier}.
 	 *
 	 * <p><strong>Das Projekt muss immer noch veroeffentlicht sein.</strong>
 	 * Zwischen Vorschlag und Entscheidung kann die Redaktion es zurueckgezogen
@@ -236,6 +305,12 @@ public class Top10NominationService {
 		// auseinanderlaufen lassen.
 		User admin = currentUser(user);
 		top10Service.addAt(project, request.position(), admin);
+
+		// Seit Contract v68 haelt die Nominierung den entschiedenen Platz selbst
+		// fest. Der Eintrag in der Liste traegt ihn zwar auch, verschwindet aber
+		// wieder, sobald das Projekt die Top-10 verlaesst; das Protokoll soll
+		// danach noch sagen koennen, worauf entschieden wurde.
+		nomination.setProposedPosition(request.position());
 
 		return decide(nomination, admin, NominationStatus.ACCEPTED);
 	}
@@ -342,6 +417,38 @@ public class Top10NominationService {
 		}
 		throw new AccessDeniedException(
 				"Fuer die Top-10 nominieren ausschliesslich Redaktion und Administration (§5).");
+	}
+
+	/**
+	 * Der einzige zulaessige Wert von {@code nominatedBy} ist {@code me}
+	 * (§6.1). Fehlt der Parameter oder steht etwas anderes darin, folgt
+	 * <strong>400</strong> {@code VALIDATION_FAILED}.
+	 */
+	private void requireOwnScope(String nominatedBy) {
+		if (!OWN_SCOPE.equals(nominatedBy)) {
+			throw new ValidationException(ErrorCodes.VALIDATION_FAILED,
+					"Der Parameter nominatedBy ist Pflicht und laesst allein den Wert \"me\" "
+							+ "zu. Den vollstaendigen Spiegel liest die Administration ueber "
+							+ "GET /api/admin/top10-nominations (§6.1).");
+		}
+	}
+
+	/**
+	 * Zeile „Eigene Top-10-Nominierungen lesen" aus §5: EDITOR und ADMIN.
+	 *
+	 * <p>Die beiden Gruende fuer ein {@code false} auseinandergehalten wie in
+	 * {@link #requireMayNominate}: ohne Anmeldung 401, sonst 403.
+	 */
+	private void requireMayReadOwn(AuthenticatedUser user) {
+		if (permissions.mayReadOwnNominations(user)) {
+			return;
+		}
+		if (user == null || user.getStatus() != UserStatus.ACTIVE) {
+			throw new AuthenticationCredentialsNotFoundException(
+					"Fuer die eigenen Nominierungen ist eine Anmeldung erforderlich (§5).");
+		}
+		throw new AccessDeniedException(
+				"Nominierungen fuehren ausschliesslich Redaktion und Administration (§5).");
 	}
 
 	/** Zeile „Top-10 kuratieren" aus §5: nur ADMIN, siehe {@code Top10Service}. */

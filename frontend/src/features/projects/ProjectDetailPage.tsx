@@ -6,7 +6,7 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
@@ -408,6 +408,17 @@ export default function ProjectDetailPage() {
 function ProjectInfoPanel({ project }: { project: ProjectDetailResponse }) {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
+
+  /*
+   * Der Rueckweg in den Review-Modus (KAN-37). Die Redaktion kommt von dort
+   * ueber den Umschalter „Vorschau"; ohne diesen Zweig faende sie hier
+   * keinen Weg zurueck, obwohl der Schalter drueben einen zweiseitigen
+   * Wechsel verspricht. Der Herkunftsvermerk steht in der Adresse und nicht
+   * im Zustand: nur so uebersteht er einen Reload, und nur so bleibt die
+   * Seite fuer alle anderen unveraendert.
+   */
+  const fromReview = searchParams.get("from") === "review"
 
   /*
    * Der Weg zurueck in den Editor, die zweite Haelfte des Umschalters aus
@@ -428,7 +439,18 @@ function ProjectInfoPanel({ project }: { project: ProjectDetailResponse }) {
 
   return (
     <div className="flex flex-col gap-6">
-      {editable && participates && (
+      {fromReview && (
+        <ViewModeSwitch
+          mode="preview"
+          alternate="review"
+          onModeChange={(mode) => {
+            if (mode === "review") {
+              void navigate(`/projects/${project.id}/review`)
+            }
+          }}
+        />
+      )}
+      {!fromReview && editable && participates && (
         <ViewModeSwitch
           mode="preview"
           onModeChange={(mode) => {

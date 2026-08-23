@@ -1,6 +1,7 @@
 package de.hsbremen.eportfolio.top10;
 
 import de.hsbremen.eportfolio.common.enums.NominationStatus;
+import de.hsbremen.eportfolio.common.enums.NominationTier;
 import de.hsbremen.eportfolio.common.enums.Top10Action;
 import de.hsbremen.eportfolio.project.Project;
 import de.hsbremen.eportfolio.user.User;
@@ -32,14 +33,20 @@ public final class TestTop10 {
 		return entry;
 	}
 
-	/** Eine offene Nominierung (§2.8, {@code PENDING}). */
+	/**
+	 * Eine offene Nominierung (§2.8, {@code PENDING}) mit der vorgeschlagenen
+	 * Stufe (§2.13, seit Contract v68).
+	 *
+	 * <p>{@code proposedPosition} setzt der Helfer nicht mehr: das Feld gehoert
+	 * seit v68 der Administration und entsteht erst beim Annehmen.
+	 */
 	public static Top10Nomination pending(Project project, User nominatedBy,
-			Integer proposedPosition) {
+			NominationTier proposedTier) {
 
 		Top10Nomination nomination = new Top10Nomination();
 		nomination.setProject(project);
 		nomination.setNominatedBy(nominatedBy);
-		nomination.setProposedPosition(proposedPosition);
+		nomination.setProposedTier(proposedTier);
 		nomination.setStatus(NominationStatus.PENDING);
 		return nomination;
 	}
@@ -51,7 +58,7 @@ public final class TestTop10 {
 	public static Top10Nomination decided(Project project, User nominatedBy, User decidedBy,
 			NominationStatus decision) {
 
-		Top10Nomination nomination = pending(project, nominatedBy, null);
+		Top10Nomination nomination = pending(project, nominatedBy, NominationTier.TOP_10);
 		nomination.setStatus(decision);
 		nomination.setDecidedBy(decidedBy);
 		nomination.setDecidedAt(Instant.now());

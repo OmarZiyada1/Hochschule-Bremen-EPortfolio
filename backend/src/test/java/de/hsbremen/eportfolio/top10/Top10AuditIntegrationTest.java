@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.hsbremen.eportfolio.auth.AuthenticatedUser;
 import de.hsbremen.eportfolio.auth.JwtService;
+import de.hsbremen.eportfolio.common.enums.NominationTier;
 import de.hsbremen.eportfolio.common.enums.ProjectStatus;
 import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.common.enums.Top10Action;
@@ -141,7 +142,7 @@ class Top10AuditIntegrationTest {
 		@DisplayName("Die Annahme einer Nominierung schreibt genau ein ADDED mit newPosition")
 		void acceptingWritesAdded() throws Exception {
 			Top10Nomination nomination = nominationRepository.saveAndFlush(
-					TestTop10.pending(first, editor, null));
+					TestTop10.pending(first, editor, NominationTier.TOP_10));
 
 			mockMvc.perform(as(admin, post(NOMINATIONS + "/" + nomination.getId() + "/accept"))
 							.contentType(MediaType.APPLICATION_JSON)

@@ -278,6 +278,18 @@
     },
     "projectRole": {
       "required": "Please state a role in the project."
+    },
+    "comment": {
+      "type": "Please choose a type.",
+      "textRequired": "Please enter some text.",
+      "textTooLong": "The text is too long (5000 characters at most)."
+    },
+    "nomination": {
+      "tierRequired": "Please choose a tier."
+    },
+    "revision": {
+      "reasonRequired": "Please enter a reason.",
+      "reasonTooLong": "The reason is too long (5000 characters at most)."
     }
   },
   "placeholder": {
@@ -289,8 +301,6 @@
       "projectMetadata": "Project metadata",
       "myPortfolio": "My portfolio",
       "profile": "Edit profile",
-      "reviews": "My reviews",
-      "projectReview": "Review",
       "administration": "Administration",
       "adminProjects": "Project management",
       "adminUsers": "Users",
@@ -414,7 +424,7 @@
         "projectSummary": "Students turn the open space behind the AB building into an open learning place with raised beds, seating steps and a weather station.",
         "faculty": "Faculty 4",
         "program": "Media informatics",
-        "module": "Digital media",
+        "module": "Interactive Systems",
         "category": "Semester project",
         "semester": "Summer 2026",
         "kpiFaculties": "Faculties involved",
@@ -688,7 +698,8 @@
         "discard": "Discard and go back"
       },
       "untitledTitle": "Untitled project",
-      "creating": "The project is being created …"
+      "creating": "The project is being created …",
+      "changeRequestsOpenAction": "Go to the open change requests in the editor"
     }
   },
   "portfolio": {
@@ -810,11 +821,21 @@
     }
   },
   "top10": {
-    "position": "Rank {{position}}"
+    "position": "Rank {{position}}",
+    "tier": {
+      "TOP_1": "Top 1",
+      "TOP_5": "Top 5",
+      "TOP_10": "Top 10"
+    },
+    "nominationStatus": {
+      "PENDING": "Pending",
+      "ACCEPTED": "Accepted",
+      "REJECTED": "Rejected"
+    }
   },
   "projectContent": {
     "intro": {
-            "abstract": "Abstract",
+      "abstract": "Abstract",
       "regionLabel": "Cover image, title and summary",
       "notSaved": "The header details are not saved while the marked fields are invalid."
     },
@@ -1151,5 +1172,173 @@
     "description": "Someone else saved this project while your version was open. You can load the server version and discard your input, or keep your version; it will then not be saved.",
     "reload": "Load server version",
     "keepEditing": "Keep my version"
+  },
+  "comment": {
+    "panel": {
+      "label": "Project comments",
+      "title": "Comments",
+      "openCount_one": "{{count}} open",
+      "openCount_other": "{{count}} open",
+      "collapse": "Collapse comments",
+      "expand": "Expand comments",
+      "empty": {
+        "title": "No comments yet",
+        "description": "Questions, internal notes and change requests appear here."
+      },
+      "announce": {
+        "created": "Comment saved.",
+        "status": "Change request is now {{status}}."
+      }
+    },
+    "type": {
+      "REPLY": "Reply",
+      "NOTE": "Note",
+      "CHANGE_REQUEST": "Change request"
+    },
+    "status": {
+      "OPEN": "Open",
+      "RESOLVED": "Resolved"
+    },
+    "action": {
+      "resolve": "Mark as resolved",
+      "reopen": "Reopen"
+    },
+    "form": {
+      "typeLabel": "Comment type",
+      "textLabel": "Comment text",
+      "placeholder": "Write a reply …",
+      "submit": "Send"
+    }
+  },
+  "review": {
+    "list": {
+      "title": "My reviews",
+      "subtitle": "Project management for editors",
+      "statusFilter": "Filter by status",
+      "counts": {
+        "title": "Projects assigned to me",
+        "unavailable": "n/a"
+      },
+      "search": {
+        "label": "Search projects",
+        "placeholder": "Search title or students …"
+      },
+      "filter": {
+        "allStudyPrograms": "Study programme (all)",
+        "allSemesters": "Semester (all)",
+        "allModules": "Module (all)"
+      },
+      "column": {
+        "project": "Project",
+        "students": "Students",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "row": {
+        "menuFor": "Actions for {{title}}",
+        "view": "View",
+        "review": "Review",
+        "nominate": "Nominate for top 10",
+        "nominateBlocked": {
+          "notPublished": "Published projects only",
+          "inTop10": "Already in the top 10",
+          "nominated": "Already nominated"
+        },
+        "resign": "Give up assignment"
+      },
+      "resignDialog": {
+        "title": "Give up editorial assignment?",
+        "description": "You will no longer be responsible for “{{title}}”. If you are the last assigned editor, the project returns to draft and the author assigns a new one. Comments are kept.",
+        "confirm": "Give up assignment"
+      },
+      "resignDone": "Assignment for “{{title}}” given up. The project is now {{status}}.",
+      "empty": {
+        "title": "No assigned projects",
+        "description": "As soon as a project is assigned to you as editor, it appears here.",
+        "filtered": "No results for this selection. Change the search or filters."
+      }
+    },
+    "nomination": {
+      "done": "Nomination sent.",
+      "own": {
+        "title": "My top 10 nominations",
+        "places": "{{count}}/{{total}} places active",
+        "empty": {
+          "title": "No nominations yet",
+          "description": "Nominate a published project from the menu in the project list."
+        }
+      },
+      "history": {
+        "title": "My nomination history",
+        "loading": "Loading …",
+        "summary_one": "{{count}} event, expand to view.",
+        "summary_other": "{{count}} events, expand to view.",
+        "entry": "Nominated for {{tier}} by {{person}}",
+        "empty": {
+          "title": "No history yet",
+          "description": "Your proposals will appear here with time and status."
+        }
+      },
+      "dialog": {
+        "title": "Nominate for top 10",
+        "description": "Propose “{{title}}” for the curated selection on the home page.",
+        "tier": "Proposed tier",
+        "submit": "Send nomination"
+      },
+      "tier": {
+        "TOP_1": {
+          "hint": "Top spot",
+          "range": "Place 1"
+        },
+        "TOP_5": {
+          "hint": "Front group",
+          "range": "Places 2 to 5"
+        },
+        "TOP_10": {
+          "hint": "Included in the list",
+          "range": "Places 6 to 10"
+        }
+      }
+    },
+    "detail": {
+      "back": "Back to my reviews",
+      "history": "History",
+      "mode": {
+        "review": "Review",
+        "toggle": "Switch between preview and review"
+      },
+      "forbidden": {
+        "title": "No access to this review",
+        "description": "Only the assigned editorial team can review a project."
+      },
+      "revision": {
+        "title": "Send back for revision",
+        "description": "The reason is sent to the project team as a change request and appears in their editor.",
+        "label": "Reason",
+        "placeholder": "What needs revising?",
+        "submit": "Send back"
+      },
+      "actions": {
+        "approve": "Approve",
+        "publish": "Publish",
+        "requestRevision": "Send back",
+        "approveDone": "Project approved.",
+        "publishDone": "Project published.",
+        "revisionDone": "Project sent back for revision.",
+        "none": "No editorial action is due in this status.",
+        "ownProject": "For a project you contributed to, someone else decides on release.",
+        "approveDialog": {
+          "title": "Approve project?",
+          "description": "“{{title}}” counts as approved afterwards. It is not public yet, that is the second step.",
+          "confirm": "Approve"
+        },
+        "publishDialog": {
+          "title": "Publish project?",
+          "description": "“{{title}}” will be visible to everyone afterwards, including visitors who are not signed in. It can only be taken back via “Send back”.",
+          "confirm": "Publish"
+        }
+      },
+      "loading": "Loading review"
+    }
   }
 }
