@@ -557,7 +557,9 @@
         "members": "Project members",
         "editors": "Editors",
         "tags": "Tags",
-        "label": "Project data"
+        "label": "Project data",
+        "emptyValue": "-",
+        "emptyLabel": "Not specified"
       },
       "forbidden": {
         "title": "No access to this project",
@@ -826,12 +828,14 @@
       "incomplete": "No formula entered yet. The block is saved as soon as it holds one.",
       "label": "Formula in KaTeX notation",
       "placeholder": "e^{i\\pi} + 1 = 0",
-      "hint": "KaTeX notation, Ctrl or Cmd and Enter renders",
-      "render": "Render"
+      "hint": "KaTeX notation, rendered as you type. Ctrl or Cmd and Enter closes editing.",
+      "edit": "Edit formula",
+      "done": "Done"
     },
     "table": {
       "regionLabel": "Table, scrollable horizontally",
       "controls": "Table",
+      "controlsFor": "Edit table {{position}}",
       "action": {
         "addRowBefore": "Insert row above",
         "addRowAfter": "Insert row below",
@@ -1047,7 +1051,8 @@
       "undo": "Undo",
       "redo": "Redo",
       "submit": "Submit",
-      "withdraw": "Withdraw"
+      "withdraw": "Withdraw",
+      "menu": "More actions"
     },
     "autosave": {
       "saving": "Saving",

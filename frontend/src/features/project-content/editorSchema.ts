@@ -10,6 +10,7 @@ import type { ComponentType } from "react"
 import i18n from "@/i18n"
 
 import { createBlockExtensions } from "@/features/project-content/blockSchema"
+import { BlockDropCursor } from "@/features/project-content/extensions/BlockDropCursor"
 import { HeadingNodeView } from "@/features/project-content/extensions/HeadingNodeView"
 import { SlashCommand } from "@/features/project-content/extensions/SlashCommand"
 import { AudioNodeView } from "@/features/project-content/components/nodeviews/AudioNodeView"
@@ -57,13 +58,17 @@ const NODE_VIEWS: Record<string, ComponentType<ReactNodeViewProps>> = {
 }
 
 /**
- * Zwei Erweiterungen, die es nur beim Schreiben gibt und die beide fertig
- * aus dem Tiptap-Paket kommen statt von Hand.
+ * Die Erweiterungen, die es nur beim Schreiben gibt.
  *
  * <p>{@code Placeholder} sagt in der leeren Zeile, was zu tun ist, und
  * nennt dabei den Slash-Befehl: ohne diesen Hinweis findet ihn niemand.
  * {@code SlashCommand} ist der zweite Weg zum Einfuegen, neben der Pille
- * am Plus.
+ * am Plus. Beide kommen fertig aus dem Tiptap-Paket statt von Hand.
+ *
+ * <p>{@code BlockDropCursor} ist die dritte und die einzige eigene: sie
+ * ersetzt den abgemeldeten {@code dropcursor} des StarterKits, dessen
+ * Ablegelinie quer ueber Bloecken lag statt zwischen ihnen (Begruendung im
+ * Kopf der Datei).
  *
  * <p><strong>Kein {@code TrailingNode} hier.</strong> Er waere die
  * naheliegende Ergaenzung fuer „hinter dem letzten Bild weiterschreiben",
@@ -94,6 +99,7 @@ function createEditorOnlyExtensions(): Extensions {
       showOnlyWhenEditable: true,
     }),
     SlashCommand,
+    BlockDropCursor,
   ]
 }
 

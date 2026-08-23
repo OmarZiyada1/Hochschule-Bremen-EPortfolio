@@ -1,5 +1,6 @@
 import { useEditorState, type Editor } from "@tiptap/react"
 import { TableIcon } from "lucide-react"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "@/components/ui/button"
@@ -14,11 +15,12 @@ import {
 /**
  * Die Tabellenbedienung (Contract 2.5).
  *
- * <p><strong>Sie erscheint nur, wenn der Cursor in einer Tabelle
- * steht</strong>, und dann an einer festen Stelle ueber der Schreibflaeche.
- * Eine Bedienung, die an der Tabelle klebt, muesste bei jedem
- * Zellenwechsel neu vermessen werden und stuende bei einer breiten Tabelle
- * ausserhalb des Sichtfelds.
+ * <p><strong>Sie sitzt an der Tabelle, oben rechts in ihrer Ecke</strong>,
+ * und erscheint beim Zeigen darauf; wo genau, entscheidet
+ * {@code TableControlsLayer}. Sie stand einmal an einer festen Stelle ueber
+ * der Schreibflaeche, aus Sorge vor dem Nachmessen bei jedem Zellenwechsel:
+ * dort war sie von der Tabelle, auf die sie wirkt, beliebig weit entfernt.
+ * Gemessen wird trotzdem nichts, die Bedienung haengt im Rahmen der Tabelle.
  *
  * <p>Es ist ein Menue und keine Leiste: dreizehn Vorgaenge nebeneinander
  * als Symbole waeren dreizehn Symbole, die niemand auseinanderhaelt. Im
@@ -47,14 +49,39 @@ import {
  * Tiptap {@code colwidth} in jede Zelle, und das braeuchte eine weitere
  * Schemaversion.
  */
+/**
+ * Der Zustand bei geschlossenem Menue: nichts erlaubt, weil nichts gerechnet
+ * wurde. Eine Konstante und kein neues Array je Lauf, sonst meldete die
+ * Gleichheitspruefung bei jeder Transaktion eine Aenderung.
+ */
+const NOTHING_ALLOWED: readonly boolean[] = []
+
 export function TableControls({
   editor,
-  disabled,
+  position,
+  onOpen,
 }: {
   editor: Editor
-  disabled: boolean
+  /**
+   * Die wievielte Tabelle des Beitrags dies ist, ab 1.
+   *
+   * <p>Sie steht im zugaenglichen Namen, nicht im sichtbaren Text: bei
+   * mehreren Tabellen stuenden sonst mehrere Schaltflaechen namens „Tabelle"
+   * im Beitrag, und in der Elementliste eines Screenreaders waere keine von
+   * der anderen zu unterscheiden. Der sichtbare Text bleibt kurz und im
+   * Namen enthalten (SC 2.5.3).
+   */
+  position?: number
+  /**
+   * Wird beim Oeffnen des Menues gerufen, bevor die Eintraege ihren Zustand
+   * lesen. Die Ebene setzt darin die Textmarke in ihre eigene Tabelle: die
+   * Vorgaenge wirken auf die Tabelle an der Textmarke, und beim Zeigen auf
+   * eine andere traefe sonst jeder Klick die falsche.
+   */
+  onOpen?: () => void
 }) {
   const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
 
   const actions: readonly {
     key: string
@@ -138,30 +165,68 @@ export function TableControls({
    * rendert eine Transaktion die Seite nicht mehr neu, und can() beim
    * Rendern zeigte sonst den Stand von vor dem letzten Zellenwechsel
    * (dieselbe Regel wie in Kopfzeile und Auswahlleiste).
+   *
+   * <p><strong>Gerechnet wird nur bei offenem Menue.</strong> Jeder Eintrag
+   * kostet einen Trockenlauf seines Kommandos, dreizehn also dreizehn, und
+   * seit dem Umzug an die Tabelle steht diese Komponente einmal je Tabelle
+   * im Beitrag. Bei jedem Tastendruck alle Tabellen durchzurechnen waere
+   * Arbeit fuer eine Anzeige, die niemand sieht; geoeffnet wird das Menue
+   * nach einem Klick, und bis es erscheint, ist neu gerechnet.
    */
   const allowed = useEditorState({
     editor,
     selector: ({ editor: current }) =>
-      actions.map((action) => (current.isEditable ? action.can() : false)),
+      open && current.isEditable
+        ? actions.map((action) => action.can())
+        : NOTHING_ALLOWED,
     /* b ist beim ersten Lauf null: dann gibt es nichts zu vergleichen. */
     equalityFn: (a, b) =>
       b !== null && a.length === b.length && a.every((v, i) => v === b[i]),
   })
 
   return (
-    <DropdownMenu>
+    <DropdownMenu
+      open={open}
+      onOpenChange={(next) => {
+        /* Zuerst die Textmarke, dann oeffnen: die Eintraege lesen ihren
+           Zustand aus der Auswahl, und die soll dann schon stimmen. */
+        if (next) {
+          onOpen?.()
+        }
+        setOpen(next)
+      }}
+    >
       <DropdownMenuTrigger
-        render={<Button variant="outline" size="sm" disabled={disabled} />}
+        render={
+          <Button
+            variant="outline"
+            size="sm"
+            /* Ohne Schreibrecht gibt es nichts zu tun; gelesen wird es am
+               Editor selbst und nicht als Prop durchgereicht, denn genau
+               dieselbe Zusage steuert schon die Eintraege. */
+            disabled={!editor.isEditable}
+            aria-label={
+              position === undefined
+                ? undefined
+                : t("projectContent.table.controlsFor", { position })
+            }
+            /* Der Weg aus dem Text hierher; die Schreibflaeche faengt die
+               Taste ab (EditorPage). Ein Maschinen-Token, kein Text. */
+            aria-keyshortcuts="Alt+F8"
+          />
+        }
       >
         <TableIcon aria-hidden="true" />
         {t("projectContent.table.controls")}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-auto min-w-56">
-        {actions.map((action, position) => (
+      {/* Nach innen ausgerichtet: der Ausloeser steht am rechten Rand der
+          Tabelle, ein nach rechts geoeffnetes Menue liefe aus der Spalte. */}
+      <DropdownMenuContent align="end" className="w-auto min-w-56">
+        {actions.map((action, index) => (
           <div key={action.key}>
             {action.separated === true && <DropdownMenuSeparator />}
             <DropdownMenuItem
-              disabled={disabled || allowed[position] !== true}
+              disabled={allowed[index] !== true}
               onClick={() => action.run()}
             >
               {t(`projectContent.table.action.${action.key}`)}

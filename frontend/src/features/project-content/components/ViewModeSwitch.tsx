@@ -8,12 +8,14 @@ import { cn } from "@/lib/utils"
  * Der Umschalter zwischen Vorschau und Bearbeiten (Figma, Knoten
  * {@code Right}, oberste Karte).
  *
- * <p><strong>Er steht auf beiden Seiten des Wechsels.</strong> Im Editor
- * fuehrt er auf die oeffentliche Detailseite, dort fuehrt er zurueck in den
- * Editor. Eine Vorschau, aus der es keinen Weg zurueck gibt, waere eine
- * Sackgasse; zwei verschieden aussehende Schalter dafuer waeren zwei
- * Bedienungen fuer dieselbe Sache. Deshalb eine Komponente fuer beide
- * Richtungen.
+ * <p><strong>Er steht auf der oeffentlichen Detailseite</strong> und fuehrt
+ * von dort zurueck in den Editor. Eine Vorschau, aus der es keinen Weg
+ * zurueck gibt, waere eine Sackgasse.
+ *
+ * <p><strong>Im Editor steht er nicht mehr</strong> (Nutzerentscheidung):
+ * dort gibt es nur eine Richtung, naemlich in die Vorschau, und dafuer ist
+ * ein Weg richtig und kein Schalter mit zwei Zustaenden. Die Kopfzeile des
+ * Editors fuehrt ihn deshalb als Schaltflaeche „Vorschau".
  *
  * <p><strong>Vorschau heisst die echte Seite und keine Nachbildung.</strong>
  * Ob ein Beitrag nachher richtig aussieht, beantwortet nur die Seite

@@ -557,7 +557,9 @@
         "members": "Projektmitglieder",
         "editors": "Redakteur:innen",
         "tags": "Tags",
-        "label": "Projektdaten"
+        "label": "Projektdaten",
+        "emptyValue": "-",
+        "emptyLabel": "Keine Angabe"
       },
       "forbidden": {
         "title": "Kein Zugriff auf dieses Projekt",
@@ -826,12 +828,14 @@
       "incomplete": "Noch keine Formel eingegeben. Der Block wird gespeichert, sobald eine darin steht.",
       "label": "Formel in KaTeX-Schreibweise",
       "placeholder": "e^{i\\pi} + 1 = 0",
-      "hint": "KaTeX-Schreibweise, Strg oder Cmd und Enter rendert",
-      "render": "Rendern"
+      "hint": "KaTeX-Schreibweise, wird beim Tippen dargestellt. Strg oder Cmd und Enter schließt die Bearbeitung.",
+      "edit": "Formel bearbeiten",
+      "done": "Fertig"
     },
     "table": {
       "regionLabel": "Tabelle, waagerecht scrollbar",
       "controls": "Tabelle",
+      "controlsFor": "Tabelle {{position}} bearbeiten",
       "action": {
         "addRowBefore": "Zeile darüber einfügen",
         "addRowAfter": "Zeile darunter einfügen",
@@ -1047,7 +1051,8 @@
       "undo": "Rückgängig",
       "redo": "Wiederholen",
       "submit": "Einreichen",
-      "withdraw": "Zurückziehen"
+      "withdraw": "Zurückziehen",
+      "menu": "Weitere Aktionen"
     },
     "autosave": {
       "saving": "Wird gespeichert",

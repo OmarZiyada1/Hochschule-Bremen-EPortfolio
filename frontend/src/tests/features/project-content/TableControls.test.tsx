@@ -1,14 +1,27 @@
-import { act, screen, waitFor, within } from "@testing-library/react"
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
 import { EditorContent, useEditor, type Editor } from "@tiptap/react"
+import { HttpResponse, http } from "msw"
 import { useEffect } from "react"
+import { Route, Routes } from "react-router-dom"
 import { describe, expect, it } from "vitest"
 
+import type { BlockResponse } from "@/api/types"
+import EditorPage from "@/features/project-content/EditorPage"
 import { BlockControls } from "@/features/project-content/components/BlockControls"
 import { TableControls } from "@/features/project-content/components/TableControls"
+import { TableControlsLayer } from "@/features/project-content/components/TableControlsLayer"
 import { createEditorExtensions } from "@/features/project-content/editorSchema"
+import { person, projectDetail } from "@/tests/fixtures"
+import {
+  currentUserHandler,
+  projectBlocksHandler,
+  projectDetailHandler,
+} from "@/tests/msw/handlers"
+import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
+import { signInAs } from "@/tests/routes/helpers"
 
 /*
  * Befund aus KAN-36: es liess sich nur eine Tabelle mit drei mal drei
@@ -59,7 +72,7 @@ function Harness({
           onAnnounce={() => undefined}
         />
       ) : (
-        <TableControls editor={editor} disabled={false} />
+        <TableControls editor={editor} />
       )}
       <EditorContent editor={editor} />
     </div>
@@ -265,3 +278,275 @@ describe("Tabellenbedienung", () => {
     LIMIT
   )
 })
+
+describe("Tabellenbedienung am Ort der Tabelle", () => {
+  const TWO_TABLES = `
+    <table><tbody><tr><td><p>A1</p></td></tr></tbody></table>
+    <p>Dazwischen</p>
+    <table><tbody><tr><td><p>B1</p></td></tr></tbody></table>`
+
+  /** Eine Schreibflaeche mit der Ebene, so wie EditorPage sie einbindet. */
+  function LayerHarness({ content }: { content: string }) {
+    const editor = useEditor({
+      extensions: createEditorExtensions(),
+      content,
+    })
+    useEffect(() => {
+      captured = editor
+    }, [editor])
+
+    if (editor === null) {
+      return null
+    }
+    return (
+      <div className="project-content relative">
+        <EditorContent editor={editor} />
+        <TableControlsLayer editor={editor} />
+      </div>
+    )
+  }
+
+  it(
+    "haengt je Tabelle eine Bedienung in deren eigenen Rahmen",
+    async () => {
+      renderWithProviders(<LayerHarness content={TWO_TABLES} />)
+
+      /*
+       * Der Regressionsfall: die Bedienung stand einmal ganz oben in der
+       * Seite, weit weg von der Tabelle, auf die sie wirkt. Jetzt liegt sie
+       * im Rahmen der Tabellen-Erweiterung (div.tableWrapper), und damit
+       * ohne jede Messung an der richtigen Stelle.
+       */
+      await waitFor(
+        () =>
+          expect(
+            screen.getAllByRole("button", { name: /^Tabelle \d+ bearbeiten$/ })
+          ).toHaveLength(2),
+        WAIT
+      )
+
+      const wrappers = document.querySelectorAll(".tableWrapper")
+      expect(wrappers).toHaveLength(2)
+      for (const wrapper of wrappers) {
+        const controls = wrapper.querySelector("[data-table-controls]")
+        expect(controls).not.toBeNull()
+        /* Nicht beschreibbar: sonst liesse sich in die Bedienung
+           hineinschreiben, sie steht ja in der Schreibflaeche. */
+        expect(controls).toHaveAttribute("contenteditable", "false")
+      }
+    },
+    LIMIT
+  )
+
+  it(
+    "setzt die Textmarke in die eigene Tabelle, bevor das Menue oeffnet",
+    async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<LayerHarness content={TWO_TABLES} />)
+
+      const triggers = await waitFor(() => {
+        const found = screen.getAllByRole("button", {
+          name: /^Tabelle \d+ bearbeiten$/,
+        })
+        expect(found).toHaveLength(2)
+        return found
+      }, WAIT)
+
+      /* Textmarke im Absatz zwischen den Tabellen, also in keiner. */
+      await act(async () => {
+        captured?.commands.setTextSelection(1)
+      })
+
+      /* Die Bedienung der zweiten Tabelle: ohne das Nachziehen der
+         Textmarke traefe jeder Vorgang die Tabelle, in der der Cursor
+         zufaellig stand. */
+      await user.click(triggers[1])
+      await screen.findByRole("menu", {}, WAIT)
+
+      expect(captured?.isActive("table")).toBe(true)
+      const cursor = captured?.state.selection.from ?? 0
+      const secondTable = tablePositions()[1]
+      const size = captured?.state.doc.nodeAt(secondTable)?.nodeSize ?? 0
+      expect(cursor).toBeGreaterThan(secondTable)
+      expect(cursor).toBeLessThan(secondTable + size)
+    },
+    LIMIT
+  )
+
+  it(
+    "laesst den Tabulator nicht in die Tabelle durch",
+    async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<LayerHarness content={TWO_TABLES} />)
+
+      const trigger = (
+        await waitFor(() => {
+          const found = screen.getAllByRole("button", {
+            name: /^Tabelle \d+ bearbeiten$/,
+          })
+          expect(found).toHaveLength(2)
+          return found
+        }, WAIT)
+      )[0]
+
+      trigger.focus()
+      const rowsBefore = captured?.state.doc.child(0).childCount
+
+      /*
+       * Die Bedienung liegt im DOM der Schreibflaeche, und dort horcht die
+       * Tabellen-Erweiterung auf Tab (goToNextCell, an der letzten Zelle
+       * addRowAfter). Ohne den Riegel haengte ein Tabulator auf dem
+       * Ausloeser der Tabelle eine Zeile an.
+       */
+      await user.tab()
+      expect(captured?.state.doc.child(0).childCount).toBe(rowsBefore)
+      /* Und der Fokus wandert weiter, statt haengenzubleiben (SC 2.1.2). */
+      expect(trigger).not.toHaveFocus()
+    },
+    LIMIT
+  )
+
+  it(
+    "fuehrt mit Escape zurueck in den Text",
+    async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<LayerHarness content={TWO_TABLES} />)
+
+      const trigger = (
+        await waitFor(() => {
+          const found = screen.getAllByRole("button", {
+            name: /^Tabelle \d+ bearbeiten$/,
+          })
+          expect(found).toHaveLength(2)
+          return found
+        }, WAIT)
+      )[1]
+
+      trigger.focus()
+      await user.keyboard("{Escape}")
+
+      /* Der Rueckweg aus der Bedienung, wie aus der Formatierungsleiste. */
+      await waitFor(() => {
+        expect(document.querySelector(".ProseMirror")).toHaveFocus()
+      }, WAIT)
+    },
+    LIMIT
+  )
+})
+
+/*
+ * Der Sprung in die Tabellenbedienung laeuft ueber die editorProps der
+ * Seite, nicht ueber die Komponenten: geprueft wird deshalb die echte
+ * EditorPage und keine nachgebaute Schreibflaeche.
+ */
+describe("Alt+F8 fuehrt in die Tabellenbedienung", () => {
+  const PROJECT_ID = "1f9d7a10-0000-0000-0000-000000000000"
+  const USER_ID = "00000000-0000-0000-0000-000000000001"
+
+  function tableBlock(): BlockResponse {
+    return {
+      id: "aaaaaaaa-bbbb-4ccc-8ddd-000000000009",
+      type: "TABLE",
+      orderIndex: 0,
+      schemaVersion: 3,
+      content: {
+        type: "table",
+        attrs: { caption: "" },
+        content: [
+          {
+            type: "tableRow",
+            content: [
+              {
+                type: "tableCell",
+                attrs: {},
+                content: [
+                  {
+                    type: "paragraph",
+                    attrs: { textAlign: null },
+                    content: [{ type: "text", text: "A1" }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    } as unknown as BlockResponse
+  }
+
+  function renderEditorPage() {
+    server.use(
+      currentUserHandler({ id: USER_ID }),
+      projectBlocksHandler([tableBlock()]),
+      projectDetailHandler(
+        projectDetail({
+          id: PROJECT_ID,
+          title: "Beitrag im Entwurf",
+          status: "DRAFT",
+          author: person({ id: USER_ID }),
+        })
+      ),
+      http.put("*/api/projects/:projectId/blocks", () =>
+        HttpResponse.json({ version: 2, blocks: [tableBlock()] })
+      )
+    )
+    signInAs("STUDENT")
+    return renderWithProviders(
+      <Routes>
+        <Route path="/projects/:projectId/editor" element={<EditorPage />} />
+      </Routes>,
+      `/projects/${PROJECT_ID}/editor`
+    )
+  }
+
+  it(
+    "springt aus der Tabelle auf ihre Bedienung",
+    async () => {
+      renderEditorPage()
+
+      /*
+       * Der Regressionsfall dahinter: die Seite baut den Editor neu auf,
+       * sobald der Beitrag geladen ist, und beim ersten Rendern der Ebene
+       * haengt der Rahmen der Tabelle noch nicht im Dokument. Ohne den
+       * Nachlauf blieb die Bedienung an jeder geladenen Tabelle aus.
+       */
+      const trigger = await screen.findByRole(
+        "button",
+        { name: "Tabelle 1 bearbeiten" },
+        WAIT
+      )
+
+      /*
+       * Der Grund fuer die Taste: die Tabellen-Erweiterung belegt den
+       * Tabulator so, dass er nie aus der Tabelle herausfuehrt. Ohne einen
+       * eigenen Weg waere die Bedienung an ihrem neuen Ort fuer die
+       * Tastatur unerreichbar (SC 2.1.1).
+       */
+      const surface = document.querySelector<HTMLElement>(".ProseMirror")
+      expect(surface).not.toBeNull()
+      surface?.focus()
+      fireEvent.keyDown(surface as HTMLElement, { key: "F8", altKey: true })
+
+      await waitFor(() => expect(trigger).toHaveFocus(), WAIT)
+    },
+    LIMIT
+  )
+})
+
+/** Die Anfangspositionen aller Tabellen im Dokument. */
+function tablePositions(): number[] {
+  const doc = captured?.state.doc
+  const positions: number[] = []
+  let offset = 0
+  if (doc === undefined) {
+    return positions
+  }
+  for (let index = 0; index < doc.childCount; index++) {
+    const child = doc.child(index)
+    if (child.type.name === "table") {
+      positions.push(offset)
+    }
+    offset += child.nodeSize
+  }
+  return positions
+}

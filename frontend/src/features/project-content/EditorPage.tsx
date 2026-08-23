@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { EditorContent, useEditor, useEditorState } from "@tiptap/react"
+import { EditorContent, useEditor } from "@tiptap/react"
 import { LockIcon, TriangleAlertIcon } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -22,13 +22,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EditorContextProvider } from "@/features/project-content/EditorContext"
 import { BlockDragHandle } from "@/features/project-content/components/BlockDragHandle"
 import { BlockKeyboardBar } from "@/features/project-content/components/BlockKeyboardBar"
 import { EditorHeader } from "@/features/project-content/components/EditorHeader"
 import { EditorSidebar } from "@/features/project-content/components/EditorSidebar"
-import { TableControls } from "@/features/project-content/components/TableControls"
+import { TableControlsLayer } from "@/features/project-content/components/TableControlsLayer"
 import { blocksToDoc } from "@/features/project-content/blockSerialization"
 import type { ProjectDocument } from "@/features/project-content/blockTypes"
 import { createEditorExtensions } from "@/features/project-content/editorSchema"
@@ -72,11 +78,13 @@ export default function EditorPage() {
 
   const surfaceRef = useRef<HTMLDivElement>(null)
   const keyboardBarRef = useRef<HTMLDivElement>(null)
-  const workflowButtonRef = useRef<HTMLButtonElement>(null)
   const backButtonRef = useRef<HTMLButtonElement>(null)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
 
   const [announcement, setAnnouncement] = useState("")
   const [withdrawOpen, setWithdrawOpen] = useState(false)
+  /* Die Projektinformationen als Schublade; nur schmal erreichbar. */
+  const [infoOpen, setInfoOpen] = useState(false)
   /* Der Konflikt wurde gezeigt und weggedrueckt; der Takt bleibt trotzdem
      angehalten, bis die Seite neu gelesen hat. */
   const [conflictSeen, setConflictSeen] = useState(false)
@@ -130,7 +138,7 @@ export default function EditorPage() {
         attributes: {
           class: "outline-none",
         },
-        handleKeyDown: (_view, event) => {
+        handleKeyDown: (view, event) => {
           /* Alt+F10 fuehrt aus dem Text in die Auswahlleiste (WAI-ARIA
              Authoring Practices fuer toolbar). Escape fuehrt dort zurueck. */
           if (event.altKey && event.key === "F10") {
@@ -153,6 +161,29 @@ export default function EditorPage() {
             keyboardBarRef.current
               ?.querySelector<HTMLElement>("button")
               ?.focus()
+            return true
+          }
+          /*
+           * Alt+F8 fuehrt in die Tabellenbedienung. Sie haengt seit dem
+           * Umzug an die Tabelle als Portal im Rahmen der Tabelle, also
+           * innerhalb der Schreibflaeche, und dort belegt die
+           * Tabellen-Erweiterung den Tabulator (goToNextCell, an der letzten
+           * Zelle addRowAfter): mit Tab ist sie nie zu erreichen (SC 2.1.1).
+           * Gemeint ist immer die Tabelle an der Textmarke, sie traegt
+           * data-active. Gesucht wird im DOM dieses Editors und nicht im
+           * ganzen Dokument, sonst traefe der Sprung bei zwei
+           * Schreibflaechen die fremde. Steht die Marke in keiner Tabelle,
+           * laeuft die Taste weiter, statt stumm geschluckt zu werden.
+           */
+          if (event.altKey && event.key === "F8") {
+            const trigger = view.dom.querySelector<HTMLElement>(
+              '[data-table-controls][data-active="true"] button'
+            )
+            if (trigger === null) {
+              return false
+            }
+            event.preventDefault()
+            trigger.focus()
             return true
           }
           return false
@@ -193,17 +224,6 @@ export default function EditorPage() {
   useEffect(() => {
     scheduleRef.current = autosave.schedule
   }, [autosave.schedule])
-
-  /*
-   * Ob der Cursor in einer Tabelle steht. Ueber useEditorState und nicht
-   * durch Lesen beim Rendern: seit Tiptap v3 rendert eine Transaktion die
-   * Seite nicht mehr neu, die Tabellenleiste erschien und verschwand
-   * deshalb erst, wenn irgendetwas anderes ein Rendern ausloeste.
-   */
-  const inTable = useEditorState({
-    editor,
-    selector: ({ editor: current }) => current?.isActive("table") ?? false,
-  })
 
   const withdraw = useMutation({
     mutationFn: () => withdrawProject(projectId),
@@ -283,7 +303,8 @@ export default function EditorPage() {
           onWithdraw={() => setWithdrawOpen(true)}
           onBack={() => void leaveTo("/my-portfolio")}
           onPreview={() => void leaveTo(`/projects/${projectId}`)}
-          workflowButtonRef={workflowButtonRef}
+          onShowInfo={() => setInfoOpen(true)}
+          menuButtonRef={menuButtonRef}
           backButtonRef={backButtonRef}
         />
 
@@ -335,12 +356,6 @@ export default function EditorPage() {
               </Alert>
             )}
 
-            {editor !== null && inTable === true && (
-              <div className="flex">
-                <TableControls editor={editor} disabled={!mayWrite} />
-              </div>
-            )}
-
             {/*
              * Der Rahmen bleibt relativ: das Drag-Handle-Plugin haengt
              * seinen Rahmen in das Elternelement der Schreibflaeche und
@@ -352,11 +367,12 @@ export default function EditorPage() {
              * DOM des Editors am rechten Rand des Streifens, und zwei
              * Dinge gingen verloren, die beide daran haengen: der
              * Drag-Handle horcht auf mousemove ueber view.dom, der Griff
-             * erschien also nur ueber dem Text und nicht daneben; und
-             * prosemirror-dropcursor loescht seine Linie bei drop und
-             * dragleave auf view.dom, sonst erst nach seinem Notnagel von
-             * fuenf Sekunden. Wer im Streifen loslaesst, sah die Linie
-             * deshalb noch sekundenlang stehen.
+             * erschien also nur ueber dem Text und nicht daneben; und die
+             * Ablegelinie (extensions/BlockDropCursor, frueher
+             * prosemirror-dropcursor) loescht sich bei drop und dragleave
+             * auf view.dom, sonst erst nach ihrem Notnagel von fuenf
+             * Sekunden. Wer im Streifen loslaesst, sah die Linie deshalb
+             * noch sekundenlang stehen.
              */}
             {editor !== null && mayWrite && (
               <BlockKeyboardBar
@@ -377,17 +393,70 @@ export default function EditorPage() {
               )}
 
               <EditorContent editor={editor} />
+
+              {/*
+               * Nach der Schreibflaeche und nicht davor: die Ebene haengt
+               * ihre Bedienung als Portal in den Rahmen jeder Tabelle, und
+               * den gibt es erst, wenn die Schreibflaeche im DOM steht.
+               */}
+              {editor !== null && mayWrite && (
+                <TableControlsLayer editor={editor} />
+              )}
             </div>
           </div>
 
+          {/*
+           * Breit steht die Seitenleiste neben der Schreibflaeche, schmal
+           * gar nicht im Fluss: dort naehme sie der Schreibflaeche die
+           * Breite, und die Angaben sind beim Schreiben nicht dauernd
+           * gebraucht. Erreichbar bleibt sie ueber das Menue der Kopfzeile,
+           * das sie als Schublade oeffnet (unten).
+           */}
           <EditorSidebar
             project={detail}
+            className="hidden lg:flex"
             onEditMetadata={() =>
               void leaveTo(`/projects/${projectId}/metadata`)
             }
           />
         </div>
       </div>
+
+      {/*
+       * Dieselbe Seitenleiste als Schublade, ueber die volle Breite.
+       * Wiederverwendet und nicht nachgebaut: eine zweite Fassung derselben
+       * Angaben liefe beim naechsten neuen Feld auseinander.
+       */}
+      <Sheet open={infoOpen} onOpenChange={setInfoOpen}>
+        <SheetContent
+          side="right"
+          /*
+           * Volle Breite und kein lg:hidden: die Schublade ist ohnehin nur
+           * schmal erreichbar (der Ausloeser traegt lg:hidden). Waere das
+           * Panel selbst versteckt, bliebe beim Verbreitern des Fensters
+           * der abgedunkelte Ruecken stehen, waehrend der Inhalt
+           * verschwindet: eine Sperre, die niemand mehr sieht (Befund des
+           * Frontend-Reviews). w-full und nicht w-screen, denn ein
+           * fixiertes Element rechnet 100 Prozent gegen das
+           * Ansichtsfenster ohne Rollbalken.
+           */
+          className="gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-none"
+          finalFocus={menuButtonRef}
+        >
+          <SheetHeader className="border-b border-border">
+            <SheetTitle>{t("projectContent.sidebar.projectInfo")}</SheetTitle>
+          </SheetHeader>
+          <div className="overflow-y-auto p-4">
+            <EditorSidebar
+              project={detail}
+              onEditMetadata={() => {
+                setInfoOpen(false)
+                void leaveTo(`/projects/${projectId}/metadata`)
+              }}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/*
        * Eine Live-Region fuer die ganze Seite. Sie ist immer im DOM und
@@ -444,7 +513,15 @@ export default function EditorPage() {
           })
         }}
         onKeepEditing={() => setConflictSeen(true)}
-        finalFocus={workflowButtonRef}
+        /*
+         * Zurueck in die Kopfzeile, und zwar auf den Weg heraus: er ist das
+         * einzige Bedienelement, das in jeder Breite sichtbar ist. Der
+         * Einreichen-Knopf war es nicht mehr, seit er schmal im Menue
+         * steht: ein Element mit display:none nimmt keinen Fokus an, und
+         * die Tastaturbedienung begaenne nach dem Wegdruecken wieder ganz
+         * vorn (SC 2.4.3, Befund des Frontend-Reviews).
+         */
+        finalFocus={backButtonRef}
       />
     </EditorContextProvider>
   )

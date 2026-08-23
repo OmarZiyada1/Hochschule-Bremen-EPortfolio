@@ -1,10 +1,25 @@
 import { useEditorState, type Editor } from "@tiptap/react"
-import { ArrowLeftIcon, Redo2Icon, Undo2Icon } from "lucide-react"
+import {
+  ArrowLeftIcon,
+  EyeIcon,
+  InfoIcon,
+  MenuIcon,
+  Redo2Icon,
+  SendIcon,
+  Undo2Icon,
+} from "lucide-react"
 import type { RefObject } from "react"
 import { useTranslation } from "react-i18next"
 
 import type { ProjectStatus } from "@/api/types"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Separator } from "@/components/ui/separator"
 import {
   Tooltip,
@@ -13,7 +28,6 @@ import {
 } from "@/components/ui/tooltip"
 import { AutosaveStatus } from "@/features/project-content/components/AutosaveStatus"
 import { SelectionToolbarBar } from "@/features/project-content/components/SelectionToolbar"
-import { ViewModeSwitch } from "@/features/project-content/components/ViewModeSwitch"
 import type { AutosaveState } from "@/features/project-content/hooks/useAutosave"
 
 /**
@@ -31,11 +45,11 @@ import type { AutosaveState } from "@/features/project-content/hooks/useAutosave
  * zurueck; den Sprung faengt die Seite ab und trifft die Leiste ueber
  * {@code data-selection-toolbar}, egal wo sie steht.
  *
- * <p><strong>Der Umschalter Vorschau/Bearbeiten stand in der
- * Seitenleiste</strong> und steht jetzt hier, zwischen Formatierung und
- * Workflow-Aktion: er gehoert zur Bedienung des Editors, nicht zu den
- * Projektinformationen. Er fuehrt unveraendert auf die oeffentliche
- * Detailseite; die Seite leert vorher den Speichertakt.
+ * <p><strong>Der Weg in die Vorschau stand in der Seitenleiste</strong> und
+ * steht jetzt hier, zwischen Formatierung und Workflow-Aktion: er gehoert
+ * zur Bedienung des Editors, nicht zu den Projektinformationen. Er fuehrt
+ * unveraendert auf die oeffentliche Detailseite; die Seite leert vorher den
+ * Speichertakt.
  *
  * <p><strong>Der Speicherzustand bleibt in der Kopfzeile.</strong> Die
  * gewuenschte Reihenfolge nennt ihn nicht, aber er muss sichtbar bleiben
@@ -66,6 +80,33 @@ import type { AutosaveState } from "@/features/project-content/hooks/useAutosave
  * senden hiesse, die Autor:in mit einer Liste fehlender Felder
  * zurueckzuschicken, statt sie dorthin zu fuehren, wo sie sie eintraegt.
  * Diese Komponente meldet nur die Absicht; den Weg fuehrt {@code EditorPage}.
+ *
+ * <p><strong>Die Kopfzeile bleibt beim Scrollen oben stehen.</strong> Sie
+ * traegt seit dem Umzug der Formatierungsleiste die Werkzeuge, mit denen
+ * waehrend des Schreibens gearbeitet wird; scrollte sie weg, muesste fuer
+ * jedes Fettstellen erst zurueckgescrollt werden. Der Rahmen der Route
+ * ({@code EditorLayout}) setzt bewusst keinen eigenen Scrollbereich, deshalb
+ * klebt sie am Ansichtsfenster.
+ *
+ * <p>{@code z-30} ist mit Bedacht gewaehlt: ueber der Schreibflaeche und
+ * ueber der Ablegelinie des Ziehens ({@code z-20}), aber unter den
+ * Ueberlagerungen aus {@code components/ui} ({@code z-50}), damit ein Menue
+ * dieser Leiste nicht hinter ihr verschwindet.
+ *
+ * <p><strong>Schmal wird aus der einen Zeile eine zweite.</strong> Oben
+ * bleiben Zurueck, der Speicherzustand und ein Menue mit den uebrigen
+ * Aktionen; darunter steht die Formatierung mit Rueckgaengig und
+ * Wiederholen und rollt bei Bedarf waagerecht. Beide Zeilen kleben
+ * gemeinsam, weil sie ein Element sind.
+ *
+ * <p><strong>Die Werkzeuge stehen genau einmal im DOM.</strong> Welche
+ * Zeile sie tragen, entscheidet ein Raster ({@code .editor-header} in
+ * project-content.css) und keine zweite Fassung: ein Duplikat haette zwei
+ * gleich benannte Werkzeugleisten ergeben, und der Sprung mit Alt+F10
+ * traefe womoeglich die unsichtbare. Nur die Aktionen rechts gibt es
+ * zweimal, denn ein Menueeintrag ist kein versteckter Schalter; die
+ * jeweils andere Fassung ist mit {@code display: none} auch fuer
+ * Screenreader fort.
  */
 export function EditorHeader({
   editor,
@@ -78,8 +119,9 @@ export function EditorHeader({
   onWithdraw,
   onBack,
   onPreview,
-  workflowButtonRef,
+  onShowInfo,
   backButtonRef,
+  menuButtonRef,
 }: {
   editor: Editor | null
   status: ProjectStatus
@@ -98,8 +140,26 @@ export function EditorHeader({
   onBack: () => void
   /** Wechselt in die oeffentliche Ansicht; die Seite speichert vorher. */
   onPreview: () => void
-  workflowButtonRef?: RefObject<HTMLButtonElement | null>
+  /**
+   * Oeffnet die Projektinformationen als Schublade.
+   *
+   * <p>Nur auf schmalen Ansichten gebraucht: dort steht die Seitenleiste
+   * nicht neben der Schreibflaeche, weil sie ihr die Breite naehme.
+   */
+  onShowInfo: () => void
+  /**
+   * Der Weg aus der Seite, als Rueckgabeziel des Konfliktdialogs: er ist
+   * das einzige Bedienelement der Kopfzeile, das in jeder Breite sichtbar
+   * ist.
+   */
   backButtonRef?: RefObject<HTMLButtonElement | null>
+  /**
+   * Der Ausloeser des Menues, als Rueckgabeziel fuer die Schublade der
+   * Projektinformationen: sie hat keinen eigenen Trigger mehr, sobald das
+   * Menue geschlossen ist, und ohne Ziel fiele der Fokus beim Schliessen
+   * auf den Seitenanfang (SC 2.4.3).
+   */
+  menuButtonRef?: RefObject<HTMLButtonElement | null>
 }) {
   const { t } = useTranslation()
 
@@ -133,94 +193,177 @@ export function EditorHeader({
   const canWithdraw = status === "SUBMITTED"
 
   return (
-    <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-card px-4 py-3 sm:px-8">
-      <Button ref={backButtonRef} variant="ghost" size="sm" onClick={onBack}>
-        <ArrowLeftIcon aria-hidden="true" />
-        {t("projectContent.header.back")}
-      </Button>
-
-      <div className="flex items-center gap-1">
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                disabled={!canUndo}
-                onClick={() => editor?.chain().focus().undo().run()}
-              />
-            }
-          >
-            <Undo2Icon aria-hidden="true" />
-            <span className="sr-only">{t("projectContent.header.undo")}</span>
-          </TooltipTrigger>
-          <TooltipContent>{t("projectContent.header.undo")}</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                disabled={!canRedo}
-                onClick={() => editor?.chain().focus().redo().run()}
-              />
-            }
-          >
-            <Redo2Icon aria-hidden="true" />
-            <span className="sr-only">{t("projectContent.header.redo")}</span>
-          </TooltipTrigger>
-          <TooltipContent>{t("projectContent.header.redo")}</TooltipContent>
-        </Tooltip>
+    <header className="editor-header sticky top-0 z-30 items-center gap-x-3 gap-y-2 border-b border-border bg-card">
+      <div
+        data-header-area="back"
+        className="flex items-center px-4 py-3 sm:px-8 lg:pe-0"
+      >
+        <Button ref={backButtonRef} variant="ghost" size="sm" onClick={onBack}>
+          <ArrowLeftIcon aria-hidden="true" />
+          {t("projectContent.header.back")}
+        </Button>
       </div>
 
-      {/* Dieselbe Leiste wie zuvor in der Blase, nur ohne Rahmen und
-          Flaeche: Rand und Schatten gehoeren zur schwebenden Fassung, in
-          der Kopfzeile traegt der Header beides. flex-wrap, weil die
-          Primitive selbst nicht umbricht und die Leiste sonst unterhalb
-          von rund 600 px die Seite quer scrollen liesse (SC 1.4.10). Der
-          Trenner steht bei der Leiste und entfaellt mit ihr. */}
-      {editor !== null && (
-        <>
-          <Separator
-            orientation="vertical"
-            className="h-5 self-center"
-            aria-hidden="true"
-          />
-          <SelectionToolbarBar
-            editor={editor}
-            disabled={!mayWrite}
-            className="flex-wrap rounded-none border-0 bg-transparent p-0 shadow-none"
-          />
-        </>
-      )}
+      {/*
+       * Rueckgaengig, Wiederholen und die Formatierung stehen zusammen: auf
+       * breiten Ansichten in der einen Zeile, auf schmalen in der zweiten
+       * darunter. Es ist dieselbe Leiste und nicht eine zweite Fassung; ein
+       * Duplikat im DOM haette zwei gleich benannte Werkzeugleisten ergeben,
+       * und der Sprung mit Alt+F10 traefe womoeglich die unsichtbare.
+       *
+       * <p>Schmal wird waagerecht gescrollt statt umgebrochen
+       * (Nutzerentscheidung): eine Leiste, die auf drei Zeilen waechst,
+       * schiebt die Schreibflaeche aus dem Bild. Die Knoepfe bleiben dabei
+       * erreichbar, weil der Fokus den Bereich beim Tabben mitrollt.
+       *
+       * <p><strong>{@code shrink-0} an jedem Eintrag ist die Bedingung
+       * dafuer, dass ueberhaupt gerollt wird.</strong> Die Schaltflaechen
+       * der Leiste tragen {@code min-w-0}; ohne den Riegel staucht ein
+       * Flex-Container sie, statt ueberzulaufen, und bei 390 px blieben von
+       * 32 Pixeln knapp 18 uebrig: keine Rolle, dafuer Tippziele unter der
+       * Mindestgroesse von 24 mal 24 (SC 2.5.8, Befund des
+       * Frontend-Reviews). Dasselbe Muster steht in
+       * {@code BlockInsertBar}, die ebenso rollt.
+       */}
+      <div
+        data-header-area="tools"
+        className="flex items-center gap-1 overflow-x-auto border-t border-border px-4 py-2 *:shrink-0 sm:px-8 lg:gap-3 lg:overflow-x-visible lg:border-t-0 lg:px-0 lg:py-3"
+      >
+        {/* Die beiden dichter beieinander als die Gruppen untereinander,
+            wie vor dem Umbruch in zwei Zeilen. */}
+        <div className="flex items-center gap-1 *:shrink-0">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={!canUndo}
+                  onClick={() => editor?.chain().focus().undo().run()}
+                />
+              }
+            >
+              <Undo2Icon aria-hidden="true" />
+              <span className="sr-only">{t("projectContent.header.undo")}</span>
+            </TooltipTrigger>
+            <TooltipContent>{t("projectContent.header.undo")}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={!canRedo}
+                  onClick={() => editor?.chain().focus().redo().run()}
+                />
+              }
+            >
+              <Redo2Icon aria-hidden="true" />
+              <span className="sr-only">{t("projectContent.header.redo")}</span>
+            </TooltipTrigger>
+            <TooltipContent>{t("projectContent.header.redo")}</TooltipContent>
+          </Tooltip>
+        </div>
 
-      <div className="ms-auto flex flex-wrap items-center gap-3">
+        {/* Dieselbe Leiste wie zuvor in der Blase, nur ohne Rahmen und
+            Flaeche: Rand und Schatten gehoeren zur schwebenden Fassung, in
+            der Kopfzeile traegt der Header beides. Der Trenner steht bei der
+            Leiste und entfaellt mit ihr. */}
+        {editor !== null && (
+          <>
+            <Separator
+              orientation="vertical"
+              className="h-5 self-center"
+              aria-hidden="true"
+            />
+            <SelectionToolbarBar
+              editor={editor}
+              disabled={!mayWrite}
+              className="flex-nowrap rounded-none border-0 bg-transparent p-0 shadow-none *:shrink-0 lg:flex-wrap"
+            />
+          </>
+        )}
+      </div>
+
+      <div
+        data-header-area="actions"
+        className="flex flex-wrap items-center justify-end gap-3 px-4 py-3 sm:px-8 lg:ms-auto lg:ps-0"
+      >
         <AutosaveStatus state={autosaveState} />
-        <ViewModeSwitch
-          mode="edit"
-          onModeChange={(mode) => {
-            if (mode === "preview") {
-              onPreview()
+
+        {/* Breit: jede Aktion sichtbar. */}
+        <div className="hidden items-center gap-3 lg:flex">
+          {/*
+           * Ein Weg und kein Schalter (Nutzerentscheidung): der Editor ist
+           * keine Einstellung mit zwei Zustaenden, sondern eine Seite, von
+           * der es zur Vorschau geht. Der Schalter stand fuer beide
+           * Richtungen und lud dazu ein, „Bearbeiten" anzuklicken, obwohl
+           * man laengst darin war. Zurueck fuehrt derselbe Schalter auf der
+           * oeffentlichen Seite; dort ist er richtig, denn dort gibt es
+           * beide Richtungen zu sehen.
+           */}
+          <Button variant="link" size="sm" onClick={onPreview}>
+            <EyeIcon aria-hidden="true" />
+            {t("projectContent.sidebar.preview")}
+          </Button>
+          {mayRunWorkflow && canSubmit && (
+            <Button onClick={onSubmit} disabled={busy}>
+              {t("projectContent.header.submit")}
+            </Button>
+          )}
+          {mayRunWorkflow && canWithdraw && (
+            <Button variant="secondary" onClick={onWithdraw} disabled={busy}>
+              {t("projectContent.header.withdraw")}
+            </Button>
+          )}
+        </div>
+
+        {/*
+         * Schmal: dieselben Aktionen in einem Menue. Zurueck und der
+         * Speicherzustand bleiben ausserhalb (Nutzerentscheidung): der eine
+         * ist der Weg aus der Seite, der andere eine Anzeige, die niemand
+         * erst aufklappen soll, um zu sehen, ob sein Text gesichert ist.
+         */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                ref={menuButtonRef}
+                variant="ghost"
+                size="icon-sm"
+                className="lg:hidden"
+              />
             }
-          }}
-          className="rounded-none border-0 bg-transparent p-0"
-        />
-        {mayRunWorkflow && canSubmit && (
-          <Button ref={workflowButtonRef} onClick={onSubmit} disabled={busy}>
-            {t("projectContent.header.submit")}
-          </Button>
-        )}
-        {mayRunWorkflow && canWithdraw && (
-          <Button
-            ref={workflowButtonRef}
-            variant="secondary"
-            onClick={onWithdraw}
-            disabled={busy}
           >
-            {t("projectContent.header.withdraw")}
-          </Button>
-        )}
+            <MenuIcon aria-hidden="true" />
+            <span className="sr-only">{t("projectContent.header.menu")}</span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={onPreview}>
+              <EyeIcon aria-hidden="true" />
+              {t("projectContent.sidebar.preview")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onShowInfo}>
+              <InfoIcon aria-hidden="true" />
+              {t("projectContent.sidebar.projectInfo")}
+            </DropdownMenuItem>
+            {mayRunWorkflow && (canSubmit || canWithdraw) && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  disabled={busy}
+                  onClick={canSubmit ? onSubmit : onWithdraw}
+                >
+                  <SendIcon aria-hidden="true" />
+                  {canSubmit
+                    ? t("projectContent.header.submit")
+                    : t("projectContent.header.withdraw")}
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   )

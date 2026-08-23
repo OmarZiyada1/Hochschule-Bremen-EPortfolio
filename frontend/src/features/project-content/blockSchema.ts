@@ -130,6 +130,16 @@ export function createBlockExtensions(): Extensions {
        * still. Ein Umbruch entsteht als neuer Absatz.
        */
       hardBreak: false,
+      /*
+       * Die Ablegelinie kommt aus BlockDropCursor und nicht aus
+       * prosemirror-dropcursor: dessen Rechnung ueber posAtCoords und
+       * dropPoint trifft auch Stellen innerhalb eines Blocks und zeichnete
+       * die Linie deshalb quer ueber Bloecke, je unterschiedlicher deren
+       * Hoehen, desto haeufiger. Die Begruendung im Einzelnen steht im Kopf
+       * von extensions/BlockDropCursor.ts; angemeldet wird der Ersatz im
+       * Editor-Schema, weil es ihn nur beim Schreiben gibt.
+       */
+      dropcursor: false,
     }),
     /*
      * TableKit meldet table, tableRow, tableHeader und tableCell gemeinsam

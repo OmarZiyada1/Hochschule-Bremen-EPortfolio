@@ -326,12 +326,60 @@ describe("EditorPage", () => {
     }, WAIT)
   })
 
-  it("fuehrt der Vorschau-Schalter auf die oeffentliche Detailseite", async () => {
+  it("oeffnet die Projektinformationen als Schublade und schliesst sie wieder", async () => {
     const user = userEvent.setup()
     renderEditor(ownDraft(), [textBlock("Ein Absatz.")])
 
+    /*
+     * Schmal steht die Seitenleiste nicht neben der Schreibflaeche, sondern
+     * hinter dem Menue der Kopfzeile. Es ist dieselbe Leiste: eine zweite
+     * Fassung derselben Angaben liefe beim naechsten neuen Feld
+     * auseinander. (jsdom wertet kein CSS aus, die breite Fassung steht im
+     * Test also daneben; geprueft wird der Weg, nicht die Breite.)
+     */
     await user.click(
-      await screen.findByRole("switch", { name: "Bearbeiten" }, WAIT)
+      await screen.findByRole("button", { name: "Weitere Aktionen" }, WAIT)
+    )
+    await user.click(
+      within(await screen.findByRole("menu", {}, WAIT)).getByRole("menuitem", {
+        name: "Projektinformationen",
+      })
+    )
+
+    const drawer = await screen.findByRole("dialog", {}, WAIT)
+    expect(
+      within(drawer).getByRole("heading", { name: "Projektinformationen" })
+    ).toBeInTheDocument()
+    /* Derselbe Inhalt wie in der Leiste, einschliesslich ihrer Wege. */
+    expect(
+      within(drawer).getByRole("button", { name: "Metadaten bearbeiten" })
+    ).toBeInTheDocument()
+    expect(within(drawer).getByText("Entwurf")).toBeInTheDocument()
+
+    await user.click(within(drawer).getByRole("button", { name: "Schließen" }))
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    )
+
+    /* Der Fokus kehrt auf den Ausloeser zurueck. Die Schublade hat keinen
+       eigenen Trigger mehr, sobald das Menue zu ist; ohne Rueckgabeziel
+       fiele er auf den Seitenanfang (SC 2.4.3). */
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Weitere Aktionen" })
+      ).toHaveFocus()
+    )
+  })
+
+  it("fuehrt der Vorschau-Weg auf die oeffentliche Detailseite", async () => {
+    const user = userEvent.setup()
+    renderEditor(ownDraft(), [textBlock("Ein Absatz.")])
+
+    /* Eine Schaltflaeche und kein Schalter: der Editor kennt nur die eine
+       Richtung (Nutzerentscheidung). Schmal fuehrt derselbe Weg als
+       Eintrag im Menue der Kopfzeile, das dafuer erst aufgeht. */
+    await user.click(
+      await screen.findByRole("button", { name: "Vorschau" }, WAIT)
     )
 
     await waitFor(

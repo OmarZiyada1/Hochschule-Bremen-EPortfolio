@@ -1,6 +1,7 @@
 import type { Editor } from "@tiptap/react"
-import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
+import type { Node as ProseMirrorNode, Slice } from "@tiptap/pm/model"
 import { NodeSelection, TextSelection } from "@tiptap/pm/state"
+import type { EditorView } from "@tiptap/pm/view"
 
 import {
   isBlockNodeName,
@@ -145,6 +146,84 @@ export function moveBlock(
       : TextSelection.near(transaction.doc.resolve(target + 1))
   )
   editor.view.dispatch(transaction.scrollIntoView())
+  return true
+}
+
+/**
+ * Legt gezogene Bloecke an einer Blockgrenze ab.
+ *
+ * <p>Das Gegenstueck zur Ablegelinie ({@code extensions/BlockDropCursor}):
+ * beide rechnen mit derselben Zahl, dem <strong>Index der Luecke</strong>
+ * zwischen zwei Top-Level-Bloecken. {@code 0} ist vor dem ersten,
+ * {@code childCount} hinter dem letzten. Ohne diese gemeinsame Zahl zeigte
+ * die Linie das eine an und ProseMirrors eigener Ablegeweg taete das andere:
+ * er rechnet ueber {@code dropPoint} und trifft dabei auch Stellen
+ * <em>innerhalb</em> eines Blocks, etwa zwischen zwei Punkten einer Liste.
+ *
+ * <p><strong>Ausschneiden und Einsetzen in einer Transaktion</strong>, wie
+ * bei {@link moveBlock}: ein Schritt im Rueckgaengig-Verlauf und ein Anlass
+ * fuer den Speichertakt. Die Einfuegestelle wird ueber {@code tr.mapping}
+ * nachgefuehrt und nicht neu gerechnet; nur so stimmt sie auch, wenn die
+ * Quelle vor ihr lag und das Loeschen alles nach oben geschoben hat.
+ *
+ * @param index Index der Luecke, gezaehlt <em>vor</em> dem Ablegen
+ * @param moved ob dies ein Verschieben ist (sonst eine Kopie)
+ * @returns ob abgelegt wurde; {@code false} ueberlaesst den Fall ProseMirror
+ */
+export function dropBlocksAt(
+  view: EditorView,
+  index: number,
+  slice: Slice,
+  moved: boolean
+): boolean {
+  const doc = view.state.doc
+  const selection = view.state.selection
+
+  /* Verschieben ohne Auswahl gibt es nicht: ohne sie wuesste niemand, was
+     zu entfernen ist, und der Block stuende danach zweimal da. */
+  if (moved && selection.empty) {
+    return false
+  }
+
+  const target = Math.max(0, Math.min(index, doc.childCount))
+  const insertPos = offsetOfBlock(doc, target)
+
+  /*
+   * Ob das Dokument diesen Inhalt an dieser Stelle ueberhaupt aufnimmt.
+   * {@code insert} wirft sonst einen TransformError, und geworfen wuerde
+   * mitten im Ablegen, wo niemand ihn faengt. Mit {@code false} behaelt
+   * ProseMirror den Fall und macht daraus, was es kann (Hinweis des
+   * Frontend-Reviews).
+   */
+  const $insert = doc.resolve(insertPos)
+  if (
+    !$insert.parent.canReplace($insert.index(), $insert.index(), slice.content)
+  ) {
+    return false
+  }
+
+  /* Auf sich selbst abgelegt: der Beitrag saehe danach aus wie zuvor, und
+     eine Transaktion dafuer waere ein leerer Schritt im Verlauf und ein
+     unnoetiger Speicherlauf. */
+  if (moved && insertPos >= selection.from && insertPos <= selection.to) {
+    return true
+  }
+
+  const transaction = view.state.tr
+  if (moved) {
+    transaction.deleteSelection()
+  }
+
+  const at = transaction.mapping.map(insertPos)
+  transaction.insert(at, slice.content)
+
+  const first = slice.content.firstChild
+  transaction.setSelection(
+    first !== null && first.isAtom
+      ? NodeSelection.create(transaction.doc, at)
+      : TextSelection.near(transaction.doc.resolve(at + 1))
+  )
+  view.dispatch(transaction.scrollIntoView())
   return true
 }
 

@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { EditorContent, useEditor, type Editor } from "@tiptap/react"
 import { useEffect } from "react"
@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { EditorHeader } from "@/features/project-content/components/EditorHeader"
 import { createEditorExtensions } from "@/features/project-content/editorSchema"
+import type { AutosaveState } from "@/features/project-content/hooks/useAutosave"
 import { renderWithProviders } from "@/tests/render"
 
 /**
@@ -34,9 +35,15 @@ let captured: Editor | null = null
 function Harness({
   mayWrite = true,
   onPreview = () => undefined,
+  onShowInfo = () => undefined,
+  mayRunWorkflow = false,
+  autosaveState = "idle",
 }: {
   mayWrite?: boolean
   onPreview?: () => void
+  onShowInfo?: () => void
+  mayRunWorkflow?: boolean
+  autosaveState?: AutosaveState
 }) {
   const editor = useEditor({
     extensions: createEditorExtensions(),
@@ -57,14 +64,15 @@ function Harness({
       <EditorHeader
         editor={editor}
         status="DRAFT"
-        autosaveState="idle"
+        autosaveState={autosaveState}
         busy={false}
-        mayRunWorkflow={false}
+        mayRunWorkflow={mayRunWorkflow}
         mayWrite={mayWrite}
         onSubmit={() => undefined}
         onWithdraw={() => undefined}
         onBack={() => undefined}
         onPreview={onPreview}
+        onShowInfo={onShowInfo}
       />
       <EditorContent editor={editor} />
     </div>
@@ -110,6 +118,80 @@ describe("EditorHeader", () => {
     )
   })
 
+  it("fuehrt Zurueck und den Speicherzustand ausserhalb des Menues", async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<Harness autosaveState="saved" />)
+
+    /*
+     * Beide bleiben sichtbar, egal wie schmal die Ansicht ist
+     * (Nutzerentscheidung): der eine ist der Weg aus der Seite, der andere
+     * die Auskunft, ob der Text gesichert ist. Wer dafuer erst aufklappen
+     * muesste, klappt staendig auf.
+     */
+    const back = await screen.findByRole("button", { name: "Zurück" }, WAIT)
+    expect(back.closest('[role="menu"]')).toBeNull()
+    expect(screen.getByText("Gespeichert").closest('[role="menu"]')).toBeNull()
+
+    /* Und im Menue stehen sie auch nicht ein zweites Mal. */
+    await user.click(screen.getByRole("button", { name: "Weitere Aktionen" }))
+    const menu = await screen.findByRole("menu", {}, WAIT)
+    expect(
+      within(menu).queryByRole("menuitem", { name: "Zurück" })
+    ).not.toBeInTheDocument()
+    expect(within(menu).queryByText("Gespeichert")).not.toBeInTheDocument()
+  })
+
+  it("fuehrt die uebrigen Aktionen im Menue", async () => {
+    const onPreview = vi.fn()
+    const onShowInfo = vi.fn()
+    const user = userEvent.setup()
+    renderWithProviders(
+      <Harness mayRunWorkflow onPreview={onPreview} onShowInfo={onShowInfo} />
+    )
+
+    await user.click(
+      await screen.findByRole("button", { name: "Weitere Aktionen" }, WAIT)
+    )
+
+    const menu = await screen.findByRole("menu", {}, WAIT)
+    await user.click(
+      within(menu).getByRole("menuitem", { name: "Projektinformationen" })
+    )
+    expect(onShowInfo).toHaveBeenCalledTimes(1)
+
+    await user.click(screen.getByRole("button", { name: "Weitere Aktionen" }))
+    await user.click(
+      within(await screen.findByRole("menu", {}, WAIT)).getByRole("menuitem", {
+        name: "Vorschau",
+      })
+    )
+    expect(onPreview).toHaveBeenCalledTimes(1)
+
+    /* Einreichen steht im Status DRAFT und nur fuer die Autor:in (§4.1, §5). */
+    await user.click(screen.getByRole("button", { name: "Weitere Aktionen" }))
+    expect(
+      within(await screen.findByRole("menu", {}, WAIT)).getByRole("menuitem", {
+        name: "Einreichen",
+      })
+    ).toBeInTheDocument()
+  })
+
+  it("fuehrt die Formatierung genau einmal, auch neben dem Menue", async () => {
+    renderWithProviders(<Harness />)
+
+    /*
+     * Der schmale Umbruch ist ein Raster und keine zweite Fassung: zwei
+     * Werkzeugleisten im DOM waeren zwei gleich benannte Schaltflaechen je
+     * Auszeichnung, und der Sprung mit Alt+F10 traefe womoeglich die
+     * unsichtbare.
+     */
+    await screen.findByRole("button", { name: "Fett" }, WAIT)
+    expect(screen.getAllByRole("button", { name: "Fett" })).toHaveLength(1)
+    expect(document.querySelectorAll("[data-selection-toolbar]")).toHaveLength(
+      1
+    )
+  })
+
   it("sperrt die Formatierungsleiste ohne Schreibrecht", async () => {
     renderWithProviders(<Harness mayWrite={false} />)
 
@@ -120,12 +202,18 @@ describe("EditorHeader", () => {
     expect(screen.getByRole("button", { name: "Zitat" })).toBeDisabled()
   })
 
-  it("meldet den Wechsel in die Vorschau ueber den Umschalter", async () => {
+  it("fuehrt mit einer Schaltflaeche in die Vorschau und nicht mit einem Schalter", async () => {
     const onPreview = vi.fn()
     renderWithProviders(<Harness onPreview={onPreview} />)
 
+    /* Der Editor kennt nur eine Richtung; ein Schalter mit zwei Zustaenden
+       lud dazu ein, „Bearbeiten" anzuklicken, obwohl man darin war
+       (Nutzerentscheidung). Zurueck fuehrt der Schalter auf der
+       oeffentlichen Seite. */
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument()
+
     await userEvent.click(
-      await screen.findByRole("switch", { name: "Bearbeiten" }, WAIT)
+      await screen.findByRole("button", { name: "Vorschau" }, WAIT)
     )
     expect(onPreview).toHaveBeenCalledTimes(1)
   })

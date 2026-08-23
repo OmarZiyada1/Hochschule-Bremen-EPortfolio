@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/collapsible"
 import { HistoryDialog } from "@/features/project-content/components/HistoryDialog"
 import { ProjectMetaSidebar } from "@/features/projects/components/ProjectMetaSidebar"
+import { cn } from "@/lib/utils"
 
 /**
  * Die rechte Spalte des Editors (Figma, Knoten {@code Right}).
@@ -36,8 +37,18 @@ import { ProjectMetaSidebar } from "@/features/projects/components/ProjectMetaSi
 export function EditorSidebar({
   project,
   onEditMetadata,
+  className,
 }: {
   project: ProjectDetailResponse
+  /**
+   * Zusaetzliche Klassen fuer die Huelle.
+   *
+   * <p>Gebraucht, weil dieselbe Leiste an zwei Stellen steht: breit neben
+   * der Schreibflaeche, schmal in einer Schublade. Was sie zeigt, ist
+   * beidemal dasselbe; wo sie steht und ob sie sichtbar ist, entscheidet
+   * die Seite.
+   */
+  className?: string
   /**
    * Oeffnet die Metadatenseite zum Bearbeiten, ohne den Einreichweg.
    *
@@ -54,7 +65,7 @@ export function EditorSidebar({
   return (
     <aside
       aria-label={t("projectContent.sidebar.label")}
-      className="flex w-full flex-col gap-4 lg:w-90"
+      className={cn("flex w-full flex-col gap-4 lg:w-90", className)}
     >
       <div className="flex flex-col gap-4 rounded-card border border-border bg-card p-5">
         <div className="flex items-center justify-between gap-2">
@@ -89,7 +100,13 @@ export function EditorSidebar({
             />
           </CollapsibleTrigger>
           <CollapsibleContent className="flex flex-col gap-4 pt-4">
-            <ProjectMetaSidebar project={project} />
+            {/*
+             * Mit den leeren Feldern: waehrend des Schreibens zeigt die
+             * vollstaendige Liste, was eingetragen ist und was nicht, und
+             * sie springt nicht, sobald ein Feld gefuellt wird. Auf der
+             * oeffentlichen Seite bleibt es beim Weglassen.
+             */}
+            <ProjectMetaSidebar project={project} showEmptyFields />
             <Button
               type="button"
               variant="outline"
