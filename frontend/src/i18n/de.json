@@ -255,7 +255,7 @@
       "invalid": "Bitte geben Sie den 6-stelligen Code ein."
     },
     "biography": {
-      "tooLong": "Die Bio darf höchstens 5000 Zeichen lang sein."
+      "tooLong": "Die Bio darf höchstens 500 Zeichen lang sein."
     },
     "currentPassword": {
       "requiredForEmailChange": "Bitte geben Sie Ihr aktuelles Passwort ein, um die E-Mail-Adresse zu ändern."

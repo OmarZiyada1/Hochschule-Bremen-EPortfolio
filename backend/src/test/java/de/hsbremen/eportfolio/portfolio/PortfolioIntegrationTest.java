@@ -405,13 +405,38 @@ class PortfolioIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Zu lange Biografie ergibt 400 VALIDATION_FAILED im Envelope aus §6.2")
+		@DisplayName("501 Zeichen Biografie ergeben 400 VALIDATION_FAILED im Envelope aus §6.2")
 		void biographyTooLong() throws Exception {
-			update(owner, "x".repeat(5001), null)
+			update(owner, "x".repeat(501), null)
 					.andExpect(status().isBadRequest())
 					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
 					.andExpect(jsonPath("$.status").value(400))
 					.andExpect(jsonPath("$.path").value("/api/portfolio/me"));
+
+			assertThat(portfolioRepository.findByUserId(owner.getId()).orElseThrow().getBiography())
+					.isEqualTo("Studiere Informatik im 5. Semester.");
+		}
+
+		@Test
+		@DisplayName("Genau 500 Zeichen gehen durch und stehen anschliessend ungekuerzt da")
+		void biographyAtLimit() throws Exception {
+			/*
+			 * Der Grenzfall gehoert dazu, weil an drei Stellen dieselbe Zahl steht
+			 * (§3.2, seit Contract v75): @Size im Request, varchar(500) in der
+			 * Spalte und der Zaehler im Formular. Ein Off-by-one an einer davon
+			 * faellt ohne diesen Test erst auf, wenn jemand eine lange Biografie
+			 * schreibt, und aeussert sich dann als 500 aus der Datenbank statt als
+			 * 400 aus der Validierung.
+			 */
+			String atLimit = "x".repeat(500);
+
+			update(owner, atLimit, null)
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.biography").value(atLimit));
+
+			assertThat(portfolioRepository.findByUserId(owner.getId()).orElseThrow().getBiography())
+					.hasSize(500)
+					.isEqualTo(atLimit);
 		}
 
 		@Test

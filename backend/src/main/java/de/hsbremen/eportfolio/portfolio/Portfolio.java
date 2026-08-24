@@ -19,7 +19,15 @@ public class Portfolio extends AuditableEntity {
 	@JoinColumn(name = "user_id", nullable = false, unique = true)
 	private User user;
 
-	@Column(columnDefinition = "text")
+	/**
+	 * Hoechstens 500 Zeichen (§3.2, seit Contract v75). Die Laenge steht hier
+	 * und nicht nur in {@code PortfolioUpdateRequest}: liefe die Spalte weiter als
+	 * {@code text}, wuerde {@code ddl-auto: validate} beim Start gegen die
+	 * Migration {@code V202608242020} stolpern, und die Grenze gaelte nur fuer den
+	 * einen Schreibweg, der durch die Bean-Validation kommt. Vorbild ist
+	 * {@link #avatarUrl} im selben Entity.
+	 */
+	@Column(length = 500)
 	private String biography;
 
 	@Column(length = 1024)

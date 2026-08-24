@@ -209,6 +209,27 @@ describe("MyPortfolioPage", () => {
     ).toBeVisible()
   })
 
+  it("bricht eine Biografie ohne Leerzeichen um, statt die Karte zu sprengen", async () => {
+    /*
+     * SC 1.4.10. Eine Bio darf seit KAN-79 500 Zeichen fassen, und die
+     * duerfen eine einzige Zeichenkette ohne Leerzeichen sein; ohne
+     * Umbruchregel laeuft sie ueber den Kartenrand hinaus und der Rest ist
+     * nicht lesbar. jsdom rechnet kein Layout, pruefbar ist deshalb die
+     * Regel selbst und dass der Text vollstaendig im Dokument steht.
+     */
+    const unbroken = "skjdfhuiseiifsbues".repeat(20)
+    server.use(
+      ownPortfolioHandler({ biography: unbroken }),
+      http.get("*/api/projects", () => HttpResponse.json(projectsPage([])))
+    )
+    signInAs("STUDENT")
+    renderWithProviders(<AppUnderTest />, "/my-portfolio")
+
+    const bio = await screen.findByText(unbroken)
+    expect(bio).toBeVisible()
+    expect(bio).toHaveClass("wrap-anywhere")
+  })
+
   it("kommt mit einem Konto ohne Portfolio-Zeile ohne Fehler aus", async () => {
     /* §3.2.1: GET /portfolio/me antwortet dann 200 mit leeren Feldern. Die
        Karte zeigt Name und Adresse aus dem Auth-Kontext. */

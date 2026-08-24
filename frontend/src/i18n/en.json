@@ -255,7 +255,7 @@
       "invalid": "Please enter the 6-digit code."
     },
     "biography": {
-      "tooLong": "The bio must not exceed 5000 characters."
+      "tooLong": "The bio must not exceed 500 characters."
     },
     "currentPassword": {
       "requiredForEmailChange": "Please enter your current password to change the email address."

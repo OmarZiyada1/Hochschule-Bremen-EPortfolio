@@ -11,6 +11,7 @@ import {
   isApiError,
 } from "@/api/errors"
 import type { OwnPortfolioResponse, UserResponse } from "@/api/types"
+import { CharacterCounter } from "@/components/common/CharacterCounter"
 import { PasswordInput } from "@/components/common/PasswordInput"
 import { UserAvatar } from "@/components/common/UserAvatar"
 import { Alert, AlertTitle } from "@/components/ui/alert"
@@ -31,6 +32,7 @@ import {
   useUploadAvatar,
 } from "@/features/portfolio/hooks/useProfileMutations"
 import {
+  BIOGRAPHY_MAX_LENGTH,
   isEmailChange,
   profileFormSchema,
   type ProfileFormValues,
@@ -512,14 +514,29 @@ export function ProfileForm({
                 >
                   {t("portfolio.profile.biography")}
                 </FieldLabel>
+                {/*
+                 * Bewusst ohne maxLength: ein eingefuegter laengerer Text
+                 * bliebe sonst stillschweigend gekappt im Feld stehen, und
+                 * wer ihn aus einem anderen Dokument holt, merkt den Verlust
+                 * erst spaeter. Stattdessen bleibt er stehen und wird
+                 * beanstandet, mit dem Zaehler daneben, der sagt, um wie
+                 * viel es zu viel ist (SC 3.3.1).
+                 */}
                 <Textarea
                   {...field}
                   id={field.name}
                   rows={4}
                   aria-invalid={fieldState.invalid}
                   aria-describedby={
-                    fieldState.invalid ? "profile-biography-error" : undefined
+                    fieldState.invalid
+                      ? "profile-biography-counter profile-biography-error"
+                      : "profile-biography-counter"
                   }
+                />
+                <CharacterCounter
+                  id="profile-biography-counter"
+                  value={field.value}
+                  max={BIOGRAPHY_MAX_LENGTH}
                 />
                 {fieldState.invalid && (
                   <FieldError
