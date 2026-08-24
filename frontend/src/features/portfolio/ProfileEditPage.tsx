@@ -80,7 +80,7 @@ export default function ProfileEditPage() {
           <CardContent className="flex flex-col gap-6 px-6">
             {isPending || me.isPending ? (
               <>
-                <Skeleton className="mx-auto size-24 rounded-card" />
+                <Skeleton className="mx-auto size-24 rounded-pill" />
                 <Skeleton className="h-8 w-48 rounded-control" />
                 <Skeleton className="h-64 rounded-control" />
               </>

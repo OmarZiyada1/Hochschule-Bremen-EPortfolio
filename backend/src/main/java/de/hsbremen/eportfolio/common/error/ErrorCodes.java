@@ -3,7 +3,7 @@ package de.hsbremen.eportfolio.common.error;
 /**
  * Fehlercodes fuer das Envelope aus API-Contract §6.2.
  *
- * <p>Stand Contract v67 steht jede Konstante dieser Klasse auch in §6.2.
+ * <p>Stand Contract v74 steht jede Konstante dieser Klasse auch in §6.2.
  * {@link #VALIDATION_FAILED} war bis v14 nur hier gefuehrt und wurde mit v15
  * nachgetragen (Tabelle „Fehlercodes Anfrageformat", Historieneintrag in §10).
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
@@ -40,13 +40,21 @@ package de.hsbremen.eportfolio.common.error;
  *
  * <p>Ebenso neu entstanden ist {@link #INTERNAL_ERROR} mit KAN-55 (Contract
  * v31): bis dahin fuehrte §6.2 ueberhaupt keinen Code fuer den unerwarteten
- * Serverfehler, und ein 500 lief an dem einen Fehlerformat vorbei. Zuletzt kam
- * Davor kam {@link #CHANGE_REQUESTS_OPEN} mit KAN-59 dazu (Contract v38): §2.4
+ * Serverfehler, und ein 500 lief an dem einen Fehlerformat vorbei. Davor kam
+ * {@link #CHANGE_REQUESTS_OPEN} mit KAN-59 dazu (Contract v38): §2.4
  * verlangte den Review-Kreislauf, ohne dass ein Code die Sperre beim
  * Einreichen trug.
- * Zuletzt {@link #FILE_RANGE_NOT_SATISFIABLE} mit KAN-72 (Contract v52): §3.15
+ *
+ * <p>Zuletzt {@link #FILE_RANGE_NOT_SATISFIABLE} mit KAN-72 (Contract v52): §3.15
  * verlangt seit v51, dass die Dateiauslieferung HTTP-Range beantwortet, und
  * fuer den unerfuellbaren Bereich fuehrte §6.2 bis dahin keinen Code.
+ *
+ * <p>KAN-37 hat keinen Code hinzugefuegt. Contract v74 hat allein zwei
+ * Ausloesertexte nachgetragen, die §3.11.1 und §4.1 laengst verlangten:
+ * {@link #NOMINATION_ALREADY_DECIDED} gilt seit v70 auch fuer das
+ * Zurueckziehen einer Nominierung, {@link #RESOURCE_IN_USE} seit v72 auch
+ * fuer den Uebergang nach REVISION, solange das Projekt einen Platz in der
+ * kuratierten Top-10 haelt.
  */
 public final class ErrorCodes {
 

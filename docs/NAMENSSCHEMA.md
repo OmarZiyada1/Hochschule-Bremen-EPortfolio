@@ -100,7 +100,8 @@ qualifiziert Jacksons Klasse voll aus.
 | `BlockType` | `BILD` · `GALERIE` · `VIDEO` · `AUDIO` · `DOKUMENT` · `EINBETTUNG` | `IMAGE` · `GALLERY` · `VIDEO` · `AUDIO` · `DOCUMENT` · `EMBED` |
 | `ProjectType` | `REGULAR` · `PAPER` · `THESIS` | unverändert |
 | `Degree` | `BACHELOR` · `MASTER` · `MBA` | unverändert |
-| `NominationStatus` | `OFFEN` · `ANGENOMMEN` · `ABGELEHNT` | `PENDING` · `ACCEPTED` · `REJECTED` |
+| `NominationStatus` | `OFFEN` · `ANGENOMMEN` · `ABGELEHNT` · `ZURUECKGEZOGEN` | `PENDING` · `ACCEPTED` · `REJECTED` · `WITHDRAWN` (vierter Wert seit Contract v70, KAN-37) |
+| `NominationTier` | `TOP_1` · `TOP_5` · `TOP_10` | unverändert (seit Contract v68, KAN-37) |
 | `UserStatus` | `REGISTRIERUNG_OFFEN` · `AKTIV` · `DEAKTIVIERT` | `REGISTRATION_PENDING` · `ACTIVE` · `DEACTIVATED` |
 | `VerificationPurpose` | `PRIVAT` · `HSB` · `PASSWORT_RUECKSETZUNG` | `PRIVATE_EMAIL` · `HSB_EMAIL` · `PASSWORD_RESET` |
 | `Top10Action` | `HINZUGEFUEGT` · `ENTFERNT` · `UMSORTIERT` | `ADDED` · `REMOVED` · `REORDERED` |
@@ -190,6 +191,7 @@ Entity, sondern eine Aggregation über `project_tag`, und steht deshalb nur in
 | `ablauf` · `ablaufZeitpunkt` | `expiresAt` |
 | `vonStatus` · `nachStatus` · `geaendertVon` | `fromStatus` · `toStatus` · `changedBy` |
 | `nominiertVon` · `vorgeschlagenePosition` | `nominatedBy` · `proposedPosition` |
+| `vorgeschlageneStufe` | `proposedTier` (seit Contract v68, KAN-37) |
 | `entschiedenVon` · `entschiedenAm` | `decidedBy` · `decidedAt` |
 | `aufgenommenAm` · `position` | `addedAt` · `position` |
 | `adminId` · `aktion` | `adminId` · `action` |

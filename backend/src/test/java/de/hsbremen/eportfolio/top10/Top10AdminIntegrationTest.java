@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import de.hsbremen.eportfolio.auth.AuthenticatedUser;
 import de.hsbremen.eportfolio.auth.JwtService;
 import de.hsbremen.eportfolio.common.enums.NominationStatus;
+import de.hsbremen.eportfolio.common.enums.NominationTier;
 import de.hsbremen.eportfolio.common.enums.ProjectStatus;
 import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.project.Project;
@@ -127,7 +128,7 @@ class Top10AdminIntegrationTest {
 		@Test
 		@DisplayName("Nach einer Entscheidung bleibt das Protokoll vollstaendig (§3.11)")
 		void keepsDecidedNominations() throws Exception {
-			Top10Nomination open = nomination(first, null);
+			Top10Nomination open = nomination(first, NominationTier.TOP_10);
 			nominationRepository.saveAndFlush(
 					TestTop10.decided(second, editor, admin, NominationStatus.REJECTED));
 
@@ -143,7 +144,7 @@ class Top10AdminIntegrationTest {
 		@Test
 		@DisplayName("Der Filter status grenzt auf einen Stand ein (§2.8)")
 		void filtersByStatus() throws Exception {
-			nomination(first, null);
+			nomination(first, NominationTier.TOP_10);
 			nominationRepository.saveAndFlush(
 					TestTop10.decided(second, editor, admin, NominationStatus.REJECTED));
 
@@ -196,17 +197,18 @@ class Top10AdminIntegrationTest {
 		@Test
 		@DisplayName("Setzt status, decidedBy und decidedAt und legt den Eintrag auf dem Platz an")
 		void createsEntry() throws Exception {
-			Top10Nomination nomination = nomination(first, 9);
+			Top10Nomination nomination = nomination(first, NominationTier.TOP_10);
 
 			accept(nomination, 4)
 					.andExpect(status().isOk())
 					.andExpect(jsonPath("$.status").value("ACCEPTED"))
 					.andExpect(jsonPath("$.decidedBy.id").value(admin.getId().toString()))
 					.andExpect(jsonPath("$.decidedAt").isNotEmpty())
-					// Der Vorschlag bleibt stehen und wird nicht durch den
-					// tatsaechlichen Platz ueberschrieben: er ist Teil des
-					// Protokolls.
-					.andExpect(jsonPath("$.proposedPosition").value(9));
+					// Die vorgeschlagene Stufe bleibt stehen, sie ist Teil des
+					// Protokolls. proposedPosition traegt seit Contract v68 den
+					// entschiedenen Platz und nicht mehr einen Wunsch.
+					.andExpect(jsonPath("$.proposedTier").value("TOP_10"))
+					.andExpect(jsonPath("$.proposedPosition").value(4));
 
 			assertThat(entryRepository.findByProjectId(first.getId()))
 					.get()
@@ -215,9 +217,13 @@ class Top10AdminIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Der unverbindliche Platzvorschlag entscheidet nicht: es gilt der Body")
-		void ignoresProposedPosition() throws Exception {
-			accept(nomination(first, 1), 7).andExpect(status().isOk());
+		@DisplayName("Die vorgeschlagene Stufe bindet den Platz nicht: es gilt der Body "
+				+ "(§3.11.1 Regel 4)")
+		void tierDoesNotBindPosition() throws Exception {
+			accept(nomination(first, NominationTier.TOP_1), 7)
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.proposedTier").value("TOP_1"))
+					.andExpect(jsonPath("$.proposedPosition").value(7));
 
 			assertThat(entryRepository.findByProjectId(first.getId()))
 					.get()
@@ -229,7 +235,7 @@ class Top10AdminIntegrationTest {
 		@DisplayName("Ein belegter Platz ergibt 409 RESOURCE_IN_USE und veraendert nichts")
 		void occupiedPosition() throws Exception {
 			entry(first, 2);
-			Top10Nomination nomination = nomination(second, null);
+			Top10Nomination nomination = nomination(second, NominationTier.TOP_10);
 
 			accept(nomination, 2)
 					.andExpect(status().isConflict())
@@ -249,7 +255,7 @@ class Top10AdminIntegrationTest {
 				entry(project(ProjectStatus.PUBLISHED, "Platz " + i), i);
 			}
 
-			Top10Nomination nomination = nomination(first, null);
+			Top10Nomination nomination = nomination(first, NominationTier.TOP_10);
 			for (int position = 1; position <= 10; position++) {
 				accept(nomination, position)
 						.andExpect(status().isConflict())
@@ -262,7 +268,7 @@ class Top10AdminIntegrationTest {
 		@Test
 		@DisplayName("Ein Platz ausserhalb von 1 bis 10 und ein fehlender Platz ergeben 400")
 		void invalidPosition() throws Exception {
-			Top10Nomination nomination = nomination(first, null);
+			Top10Nomination nomination = nomination(first, NominationTier.TOP_10);
 
 			for (String body : List.of("{\"position\":0}", "{\"position\":11}", "{}")) {
 				mockMvc.perform(as(admin, post(NOMINATIONS + "/" + nomination.getId() + "/accept"))
@@ -278,7 +284,7 @@ class Top10AdminIntegrationTest {
 		@Test
 		@DisplayName("Eine bereits entschiedene Nominierung ergibt 409 NOMINATION_ALREADY_DECIDED")
 		void alreadyDecided() throws Exception {
-			Top10Nomination nomination = nomination(first, null);
+			Top10Nomination nomination = nomination(first, NominationTier.TOP_10);
 			accept(nomination, 1).andExpect(status().isOk());
 
 			accept(nomination, 2)
@@ -298,7 +304,7 @@ class Top10AdminIntegrationTest {
 		@DisplayName("Ein inzwischen zurueckgezogenes Projekt ergibt 409 PROJECT_NOT_PUBLISHED: "
 				+ "§3.11.1 Regel 1 gilt auch fuer die Aufnahme")
 		void projectWithdrawnMeanwhile() throws Exception {
-			Top10Nomination nomination = nomination(first, null);
+			Top10Nomination nomination = nomination(first, NominationTier.TOP_10);
 
 			first.setStatus(ProjectStatus.REVISION);
 			projectRepository.saveAndFlush(first);
@@ -323,7 +329,7 @@ class Top10AdminIntegrationTest {
 		@Test
 		@DisplayName("Ohne Token 401, mit fremder Rolle 403")
 		void adminOnly() throws Exception {
-			Top10Nomination nomination = nomination(first, null);
+			Top10Nomination nomination = nomination(first, NominationTier.TOP_10);
 			String path = NOMINATIONS + "/" + nomination.getId() + "/accept";
 
 			mockMvc.perform(post(path).contentType(MediaType.APPLICATION_JSON)
@@ -352,7 +358,7 @@ class Top10AdminIntegrationTest {
 		@Test
 		@DisplayName("Setzt status, decidedBy und decidedAt, ohne die Liste anzufassen")
 		void rejectsWithoutTouchingTheList() throws Exception {
-			Top10Nomination nomination = nomination(first, null);
+			Top10Nomination nomination = nomination(first, NominationTier.TOP_10);
 
 			mockMvc.perform(as(admin, post(NOMINATIONS + "/" + nomination.getId() + "/reject")))
 					.andExpect(status().isOk())
@@ -367,7 +373,7 @@ class Top10AdminIntegrationTest {
 		@DisplayName("Ein Vorschlag zu einem zurueckgezogenen Projekt laesst sich ablehnen: "
 				+ "die Statuspruefung haengt an der Aufnahme, nicht an der Entscheidung")
 		void rejectsWithdrawnProject() throws Exception {
-			Top10Nomination nomination = nomination(first, null);
+			Top10Nomination nomination = nomination(first, NominationTier.TOP_10);
 
 			first.setStatus(ProjectStatus.REVISION);
 			projectRepository.saveAndFlush(first);
@@ -460,8 +466,8 @@ class Top10AdminIntegrationTest {
 		@Test
 		@DisplayName("Offene Nominierungen der aufgenommenen Projekte gelten als angenommen")
 		void closesOpenNominations() throws Exception {
-			Top10Nomination taken = nomination(first, null);
-			Top10Nomination untouched = nomination(third, null);
+			Top10Nomination taken = nomination(first, NominationTier.TOP_10);
+			Top10Nomination untouched = nomination(third, NominationTier.TOP_10);
 
 			setOrder(admin, first, second).andExpect(status().isOk());
 
@@ -471,6 +477,11 @@ class Top10AdminIntegrationTest {
 						assertThat(nomination.getStatus()).isEqualTo(NominationStatus.ACCEPTED);
 						assertThat(nomination.getDecidedBy().getId()).isEqualTo(admin.getId());
 						assertThat(nomination.getDecidedAt()).isNotNull();
+						/* Der Platz bleibt leer: er kommt allein aus dem Weg,
+						   auf dem die Administration ihn entscheidet, also aus
+						   accept (§3.11.1 Regel 5, Contract v69). Hier steht er
+						   im Top10Entry. */
+						assertThat(nomination.getProposedPosition()).isNull();
 					});
 			assertThat(nominationRepository.findById(untouched.getId()))
 					.get()
@@ -576,9 +587,9 @@ class Top10AdminIntegrationTest {
 		return entryRepository.saveAndFlush(TestTop10.entry(project, position, Instant.now()));
 	}
 
-	private Top10Nomination nomination(Project project, Integer proposedPosition) {
+	private Top10Nomination nomination(Project project, NominationTier proposedTier) {
 		return nominationRepository.saveAndFlush(
-				TestTop10.pending(project, editor, proposedPosition));
+				TestTop10.pending(project, editor, proposedTier));
 	}
 
 	private ResultActions accept(Top10Nomination nomination, int position) throws Exception {

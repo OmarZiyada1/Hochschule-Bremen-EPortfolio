@@ -1,4 +1,4 @@
-import { EyeIcon, PencilIcon } from "lucide-react"
+import { EyeIcon, MessageSquareIcon, PencilIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { Switch } from "@/components/ui/switch"
@@ -21,23 +21,44 @@ import { cn } from "@/lib/utils"
  * Ob ein Beitrag nachher richtig aussieht, beantwortet nur die Seite
  * selbst, mit ihrer Breite, ihrer Umgebung und demselben Renderer.
  *
+ * <p><strong>Die rechte Seite ist nicht immer „Bearbeiten".</strong> Der
+ * Review-Modus aus KAN-37 zeigt denselben Umschalter mit „Review" statt
+ * „Bearbeiten" (Template „Editor (Review-Modus)"): dieselbe Domaene,
+ * dieselbe Bedienung, ein anderes Gegenstueck zur Vorschau. Deshalb
+ * {@code alternate} an dieser Huelle und keine zweite Komponente daneben;
+ * eine Abschrift liefe beim naechsten Barrierefreiheits-Nachzug auseinander.
+ *
  * <p><strong>Die beiden Woerter links und rechts sind Zierat.</strong> Sie
  * werden nicht vorgelesen ({@code aria-hidden}) und sagen nicht, welcher
  * Zustand gilt; der zugaengliche Name des Schalters nennt genau eine Sache,
  * und {@code aria-checked} sagt ein oder aus. Ohne das hoerte man nur
  * „Schalter, aktiviert" und wuesste nicht, wovon.
  */
+export type ViewMode = "preview" | "edit" | "review"
+
 export function ViewModeSwitch({
   mode,
   onModeChange,
+  alternate = "edit",
   className,
 }: {
-  mode: "preview" | "edit"
-  onModeChange: (mode: "preview" | "edit") => void
+  mode: ViewMode
+  onModeChange: (mode: ViewMode) => void
+  /** Das Gegenstueck zur Vorschau: der Editor oder der Review-Modus. */
+  alternate?: "edit" | "review"
   className?: string
 }) {
   const { t } = useTranslation()
-  const editing = mode === "edit"
+  const editing = mode !== "preview"
+  const AlternateIcon = alternate === "review" ? MessageSquareIcon : PencilIcon
+  const alternateLabel =
+    alternate === "review"
+      ? t("review.detail.mode.review")
+      : t("projectContent.sidebar.edit")
+  const toggleLabel =
+    alternate === "review"
+      ? t("review.detail.mode.toggle")
+      : t("projectContent.sidebar.previewToggle")
 
   return (
     <div
@@ -58,9 +79,9 @@ export function ViewModeSwitch({
       </span>
       <Switch
         checked={editing}
-        aria-label={t("projectContent.sidebar.previewToggle")}
+        aria-label={toggleLabel}
         onCheckedChange={(checked) =>
-          onModeChange(checked ? "edit" : "preview")
+          onModeChange(checked ? alternate : "preview")
         }
       />
       <span
@@ -70,8 +91,8 @@ export function ViewModeSwitch({
           editing ? "font-semibold text-foreground" : "text-muted-foreground"
         )}
       >
-        <PencilIcon className="size-3.5" />
-        {t("projectContent.sidebar.edit")}
+        <AlternateIcon className="size-3.5" />
+        {alternateLabel}
       </span>
     </div>
   )

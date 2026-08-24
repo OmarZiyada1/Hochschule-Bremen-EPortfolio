@@ -10,6 +10,7 @@ import {
   currentUserHandler,
   fileBlobHandler,
   projectBlocksHandler,
+  projectCommentsHandler,
   projectDetailHandler,
 } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
@@ -51,6 +52,7 @@ function ownDraft(): ProjectDetailResponse {
 function renderEditor(blocks: BlockResponse[]) {
   server.use(
     currentUserHandler({ id: USER_ID }),
+    projectCommentsHandler(),
     projectBlocksHandler(blocks),
     projectDetailHandler(ownDraft()),
     fileBlobHandler(),

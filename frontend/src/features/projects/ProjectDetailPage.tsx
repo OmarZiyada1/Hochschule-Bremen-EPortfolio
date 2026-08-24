@@ -6,7 +6,7 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
@@ -28,6 +28,7 @@ import { ViewModeSwitch } from "@/features/project-content/components/ViewModeSw
 import { useProjectFileUrls } from "@/features/project-content/hooks/useProjectFileUrls"
 import { useFileUrl } from "@/api/useFileUrl"
 import { ProjectContent } from "@/features/project-content/renderer/ProjectContent"
+import { CommentPanel } from "@/components/common/CommentPanel"
 import { ProjectMetaSidebar } from "@/features/projects/components/ProjectMetaSidebar"
 import { ReactionPanel } from "@/features/projects/components/ReactionPanel"
 import { useProjectDetail } from "@/features/projects/hooks/useProjectDetail"
@@ -343,25 +344,18 @@ export default function ProjectDetailPage() {
               und Projekttext sind zwei Gegenstaende und stehen deshalb in
               zwei Panels nebeneinander.
 
-              Mitlaufend ab lg: der Projekttext ist um ein Vielfaches laenger
-              als die Daten, und wer weit unten liest, soll Semester oder
-              Betreuung nicht durch Zurueckscrollen suchen muessen. Moeglich
-              ist das erst, seit die Daten eine eigene Karte haben: in der
-              gemeinsamen Karte war deren overflow-hidden der Scroll-Container
-              und machte sticky wirkungslos. items-start am Raster ist die
-              zweite Bedingung, sonst fuellte die Karte die Zeilenhoehe und
-              haette keinen Weg zu kleben. Der Abstand nach oben entspricht
-              dem py-8 der Seite; die Kopfleiste scrollt mit und braucht
-              keinen Platz.
-
-              Ohne eigene Hoehenbegrenzung und ohne inneren Scrollbereich:
-              die Karte steht am Stueck. Ein Panel, das laenger ist als das
-              Fenster, schiebt seine letzten Zeilen dann aus dem Bild, bis
-              die Seite weit genug gescrollt ist.
+              Sie laeuft nicht mit. Bis KAN-37 klebte sie ab lg am oberen
+              Rand; das half beim langen Projekttext, nahm der Karte aber
+              jede ruhige Lage, sobald sie selbst laenger wurde als das
+              Fenster: die letzten Zeilen blieben dann unerreichbar, bis die
+              Seite weit genug gescrollt war. Mit der Kommentarspalte in
+              derselben Spalte tritt genau das ein. Die Karte steht deshalb
+              am Stueck und scrollt mit der Seite (Nutzerentscheidung zu
+              KAN-37).
 
               Schmal ist die Karte ausgeblendet; denselben Inhalt zeigt dort
               die Schublade. */}
-            <Card className="hidden [--card-spacing:--spacing(10)] lg:sticky lg:top-8 lg:block">
+            <Card className="hidden [--card-spacing:--spacing(10)] lg:block">
               <CardContent>
                 <aside
                   aria-label={t("project.detail.meta.label")}
@@ -408,6 +402,17 @@ export default function ProjectDetailPage() {
 function ProjectInfoPanel({ project }: { project: ProjectDetailResponse }) {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
+
+  /*
+   * Der Rueckweg in den Review-Modus (KAN-37). Die Redaktion kommt von dort
+   * ueber den Umschalter „Vorschau"; ohne diesen Zweig faende sie hier
+   * keinen Weg zurueck, obwohl der Schalter drueben einen zweiseitigen
+   * Wechsel verspricht. Der Herkunftsvermerk steht in der Adresse und nicht
+   * im Zustand: nur so uebersteht er einen Reload, und nur so bleibt die
+   * Seite fuer alle anderen unveraendert.
+   */
+  const fromReview = searchParams.get("from") === "review"
 
   /*
    * Der Weg zurueck in den Editor, die zweite Haelfte des Umschalters aus
@@ -428,7 +433,18 @@ function ProjectInfoPanel({ project }: { project: ProjectDetailResponse }) {
 
   return (
     <div className="flex flex-col gap-6">
-      {editable && participates && (
+      {fromReview && (
+        <ViewModeSwitch
+          mode="preview"
+          alternate="review"
+          onModeChange={(mode) => {
+            if (mode === "review") {
+              void navigate(`/projects/${project.id}/review`)
+            }
+          }}
+        />
+      )}
+      {!fromReview && editable && participates && (
         <ViewModeSwitch
           mode="preview"
           onModeChange={(mode) => {
@@ -449,6 +465,35 @@ function ProjectInfoPanel({ project }: { project: ProjectDetailResponse }) {
         </>
       )}
       <ProjectMetaSidebar project={project} />
+
+      {/*
+       * Die Kommentarspalte gehoert auch hierher (Nacharbeit an KAN-37).
+       * Bis dahin stand sie nur im Editor und im Review-Modus, und beide
+       * sind fuer die Autor:in eines eingereichten oder genehmigten
+       * Projekts unerreichbar: der Stift auf der Kachel und der Umschalter
+       * oben erscheinen nur in DRAFT und REVISION, die Review-Seite ist
+       * rollengesperrt. Ihre Aenderungswuensche standen damit an keiner
+       * Stelle, an die sie kam, obwohl §2.3 sie jeder Person zeigt, die das
+       * Projekt lesen darf. Dasselbe galt fuer Projektmitglieder und fuer
+       * die Administration.
+       *
+       * Nicht bei PUBLISHED: dort ist die Seite die oeffentliche Ansicht,
+       * und die Rueckmeldungen der Redaktion gehen die Oeffentlichkeit
+       * nichts an. Dieselbe Bedingung wie an den beiden anderen Orten.
+       *
+       * Nur fuer Angemeldete: ohne Token liefert der Endpoint 401, und ein
+       * leerer Kasten mit Fehlermeldung waere die schlechtere Auskunft als
+       * gar keiner. Was innerhalb davon sichtbar ist, entscheidet ohnehin
+       * der Server (§6.1).
+       */}
+      {user !== null && project.status !== "PUBLISHED" && (
+        <>
+          <hr />
+          {/* Aufgeklappt: hier ist die Spalte der einzige Ort, an dem die
+              Autor:in ihre Aenderungswuensche sieht. */}
+          <CommentPanel project={project} context="editor" defaultOpen />
+        </>
+      )}
     </div>
   )
 }

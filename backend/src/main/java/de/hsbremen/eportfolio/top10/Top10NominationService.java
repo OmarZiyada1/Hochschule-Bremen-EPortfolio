@@ -5,7 +5,9 @@ import de.hsbremen.eportfolio.common.enums.NominationStatus;
 import de.hsbremen.eportfolio.common.enums.ProjectStatus;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
 import de.hsbremen.eportfolio.common.error.ConflictException;
+import de.hsbremen.eportfolio.common.error.ErrorCodes;
 import de.hsbremen.eportfolio.common.error.ResourceNotFoundException;
+import de.hsbremen.eportfolio.common.error.ValidationException;
 import de.hsbremen.eportfolio.project.Project;
 import de.hsbremen.eportfolio.project.ProjectPermissionService;
 import de.hsbremen.eportfolio.project.ProjectReadService;
@@ -27,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Vorschlag und Entscheidung (§3.11, §3.11.1): die Nominierung durch die
- * Redaktion und die drei Admin-Endpoints aus §6.1
+ * Redaktion, ihr Zurueckziehen und die drei Admin-Endpoints aus §6.1
  * ({@code GET /api/admin/top10-nominations}, {@code .../accept},
  * {@code .../reject}).
  *
@@ -51,10 +53,24 @@ import org.springframework.transaction.annotation.Transactional;
  * (§3.11.1 Regel 2).</li>
  * <li>{@code NOMINATION_ALREADY_DECIDED}: ueber den Vorschlag ist entschieden.</li>
  * </ul>
+ *
+ * <p><strong>Seit Contract v70 kommt {@link #withdraw} dazu</strong> (KAN-37),
+ * das Zurueckziehen aus §3.11.1. Es ist der einzige Weg dieses Dienstes, der
+ * die kuratierte Liste veraendert, ohne etwas aufzunehmen: zieht die
+ * Administration einen angenommenen Vorschlag zurueck, verlaesst das Projekt die
+ * Liste. Der dritte 409 oben deckt ihn mit ab, mit eigener Meldung, weil
+ * {@code ACCEPTED} hier fuer die Administration kein Abweisungsgrund ist.
  */
 @Service
 @Transactional
 public class Top10NominationService {
+
+	/**
+	 * Einziger zulaessiger Wert von {@code nominatedBy} (§6.1). Dieselbe
+	 * Schreibweise wie {@code ProjectFilterRequest.EDITOR_ME}, damit beide
+	 * Selbstbezuege im Contract gleich aussehen.
+	 */
+	static final String OWN_SCOPE = "me";
 
 	private final Top10NominationRepository nominationRepository;
 
@@ -122,7 +138,8 @@ public class Top10NominationService {
 	 *                  nicht an, weil {@code SecurityConfig} auf den Projektpfaden
 	 *                  nur {@code GET} freigibt (401)
 	 * @param projectId ID aus dem Pfad
-	 * @param request   optionaler Platzvorschlag
+	 * @param request   die vorgeschlagene Stufe (§2.13), Pflichtangabe seit
+	 *                  Contract v68
 	 * @throws ResourceNotFoundException wenn es die Projekt-ID nicht gibt (404)
 	 * @throws AccessDeniedException     wenn die Rolle weder EDITOR noch ADMIN ist
 	 *                                   (403)
@@ -150,7 +167,7 @@ public class Top10NominationService {
 		Top10Nomination nomination = new Top10Nomination();
 		nomination.setProject(project);
 		nomination.setNominatedBy(currentUser(user));
-		nomination.setProposedPosition(request.proposedPosition());
+		nomination.setProposedTier(request.proposedTier());
 		nomination.setStatus(NominationStatus.PENDING);
 
 		return toResponse(nominationRepository.saveAndFlush(nomination));
@@ -192,6 +209,56 @@ public class Top10NominationService {
 	}
 
 	// ------------------------------------------------------------------
+	// GET /api/top10-nominations?nominatedBy=me
+	// ------------------------------------------------------------------
+
+	/**
+	 * Die eigenen Nominierungen der anfragenden Person (§6.1, seit Contract
+	 * v68), neueste zuerst, ohne Paginierung.
+	 *
+	 * <p><strong>Warum es diesen Endpoint neben dem Admin-Spiegel gibt.</strong>
+	 * {@code GET /api/admin/top10-nominations} liegt hinter
+	 * {@code hasRole("ADMIN")}, und damit erfuhr eine Redakteur:in bis v67 nicht
+	 * einmal, ob ihr eigener Vorschlag noch offen ist. Sie sah weder den Stand
+	 * noch die Entscheidung; ein zweiter Vorschlag zum selben Projekt endete
+	 * dann in einem 409, das sie sich nicht erklaeren konnte.
+	 *
+	 * <p><strong>{@code nominatedBy} ist Pflicht und laesst allein {@code me}
+	 * zu.</strong> Der Parameter sieht aus wie ein Filter und ist der Zuschnitt
+	 * der Ressource: ohne ihn waere der Pfad der vollstaendige Spiegel und damit
+	 * eine Umgehung der Admin-Schranke. Ein anderer Wert ergibt
+	 * <strong>400</strong> {@code VALIDATION_FAILED} und nicht 403, weil die
+	 * Anfrage schon in ihrer Form nicht vorgesehen ist; wer fremde Vorschlaege
+	 * lesen darf, nimmt den Admin-Pfad. Derselbe Zuschnitt wie bei
+	 * {@code GET /api/projects?editor=me}.
+	 *
+	 * @param user        angemeldete Person; ohne Anmeldung 401 aus der
+	 *                    Filterkette, als STUDENT 403 aus dieser Methode
+	 * @param nominatedBy Pflichtparameter, einziger zulaessiger Wert
+	 *                    {@code me}
+	 * @param status      optionaler Filter auf einen Stand (§2.8)
+	 * @throws ValidationException   wenn {@code nominatedBy} fehlt oder etwas
+	 *                               anderes als {@code me} nennt (400)
+	 * @throws AccessDeniedException wenn die Rolle weder EDITOR noch ADMIN ist
+	 *                               (403)
+	 */
+	@Transactional(readOnly = true)
+	public List<Top10NominationResponse> ownNominations(AuthenticatedUser user, String nominatedBy,
+			NominationStatus status) {
+
+		requireOwnScope(nominatedBy);
+		requireMayReadOwn(user);
+
+		UUID ownId = user.getId();
+		List<Top10Nomination> nominations = status == null
+				? nominationRepository.findByNominatedByIdOrderByCreatedAtDescIdAsc(ownId)
+				: nominationRepository.findByNominatedByIdAndStatusOrderByCreatedAtDescIdAsc(
+						ownId, status);
+
+		return toResponses(nominations);
+	}
+
+	// ------------------------------------------------------------------
 	// POST /api/admin/top10-nominations/{id}/accept
 	// ------------------------------------------------------------------
 
@@ -200,9 +267,18 @@ public class Top10NominationService {
 	 * {@code decidedAt} und legt den {@code Top10Entry} auf dem gewuenschten Platz
 	 * an (§3.11, §6.1).
 	 *
-	 * <p><strong>Der Platz aus dem Body gilt, nicht der Vorschlag.</strong>
-	 * {@code proposedPosition} ist unverbindlich und wird hier nicht gelesen;
-	 * siehe {@link Top10AcceptRequest}.
+	 * <p><strong>Der Platz aus dem Body gilt, nicht der Vorschlag.</strong> Die
+	 * vorgeschlagene Stufe wird gelesen und angezeigt, sie bindet aber nichts:
+	 * der Server prueft nicht, ob {@code position} in ihren Bereich faellt
+	 * (§3.11.1 Regel 4, Klaerungsrunde zu KAN-37). Eine Bindung zwaenge die
+	 * Administration, einen als {@code TOP_1} vorgeschlagenen Beitrag erst
+	 * abzulehnen, um ihn auf Platz 4 zu setzen. Siehe
+	 * {@link Top10AcceptRequest}.
+	 *
+	 * <p><strong>Der entschiedene Platz wandert zusaetzlich an die
+	 * Nominierung</strong> (seit Contract v68). {@code proposedPosition} ist
+	 * damit das Feld der Administration und nicht mehr der Wunsch der
+	 * Redaktion; die Stufe steht daneben in {@code proposedTier}.
 	 *
 	 * <p><strong>Das Projekt muss immer noch veroeffentlicht sein.</strong>
 	 * Zwischen Vorschlag und Entscheidung kann die Redaktion es zurueckgezogen
@@ -237,6 +313,12 @@ public class Top10NominationService {
 		User admin = currentUser(user);
 		top10Service.addAt(project, request.position(), admin);
 
+		// Seit Contract v68 haelt die Nominierung den entschiedenen Platz selbst
+		// fest. Der Eintrag in der Liste traegt ihn zwar auch, verschwindet aber
+		// wieder, sobald das Projekt die Top-10 verlaesst; das Protokoll soll
+		// danach noch sagen koennen, worauf entschieden wurde.
+		nomination.setProposedPosition(request.position());
+
 		return decide(nomination, admin, NominationStatus.ACCEPTED);
 	}
 
@@ -269,6 +351,73 @@ public class Top10NominationService {
 		requirePending(nomination);
 
 		return decide(nomination, currentUser(user), NominationStatus.REJECTED);
+	}
+
+	// ------------------------------------------------------------------
+	// POST /api/top10-nominations/{id}/withdraw
+	// ------------------------------------------------------------------
+
+	/**
+	 * Zieht einen Vorschlag zurueck: setzt {@code status} auf
+	 * {@code WITHDRAWN}, dazu {@code decidedBy} und {@code decidedAt}
+	 * (§3.11.1, §6.1, seit Contract v70).
+	 *
+	 * <p><strong>Warum es diesen Weg gibt.</strong> Bis v69 fuehrte kein Weg
+	 * zurueck. Ein versehentlicher oder ueberholter Vorschlag blieb offen, bis
+	 * die Administration ihn ablehnte, und diese Ablehnung stand danach im
+	 * Protokoll als kuratorische Entscheidung, die so niemand getroffen hatte.
+	 * Ausserdem sperrte er nach §3.11.1 Regel 2 sein Projekt fuer jeden weiteren
+	 * Vorschlag.
+	 *
+	 * <p><strong>Zwei Reichweiten in einem Endpoint.</strong> Die nominierende
+	 * Person zieht ihren eigenen Vorschlag zurueck, solange er {@code PENDING}
+	 * ist; die Administration jeden, auch einen bereits angenommenen. Der
+	 * Unterschied steht in §5 als Klammerhaken gegen vollen Haken und wird hier
+	 * an zwei Stellen geprueft: die Person in
+	 * {@link ProjectPermissionService#mayWithdrawNomination} (403), der Stand in
+	 * {@link #requireWithdrawable} (409).
+	 *
+	 * <p><strong>Ein zurueckgezogener angenommener Vorschlag nimmt sein Projekt
+	 * aus der Liste</strong> (§3.11.1). Das ist der einzige Fall, in dem dieser
+	 * Dienst die Liste anfasst, und er laeuft wie das Annehmen ueber
+	 * {@link Top10Service}: hier {@code removeOnWithdrawnNomination}, dort
+	 * {@code addAt}. Die Protokollzeile {@code REMOVED} entsteht dabei
+	 * (§3.17).
+	 *
+	 * <p><strong>{@code proposedPosition} bleibt stehen.</strong> Es haelt fest,
+	 * worauf einmal entschieden wurde, und das bleibt wahr, auch wenn das
+	 * Projekt die Liste wieder verlassen hat. Dieselbe Ueberlegung wie bei
+	 * {@code Top10Service.removeOnLeavingPublished}, das die Nominierung
+	 * ebenfalls unberuehrt laesst.
+	 *
+	 * <p><strong>Die Sperre aus Regel 2 faellt damit.</strong> Ein
+	 * zurueckgezogener Vorschlag ist nicht mehr offen; dasselbe Projekt darf
+	 * erneut nominiert werden, solange es keinen {@code Top10Entry} hat. Das
+	 * ergibt sich ohne Zutun aus {@code existsByProjectIdAndStatus(...,
+	 * PENDING)} in {@link #nominate} und ist deshalb hier nur festgehalten und
+	 * nicht eigens umgesetzt.
+	 *
+	 * @param user         angemeldete Person
+	 * @param nominationId ID aus dem Pfad
+	 * @throws ResourceNotFoundException wenn es die Nominierung nicht gibt (404)
+	 * @throws AccessDeniedException     wenn es ein fremder Vorschlag ist und die
+	 *                                   Rolle nicht ADMIN (403)
+	 * @throws ConflictException         wenn der Stand das Zurueckziehen nicht
+	 *                                   mehr zulaesst (409)
+	 */
+	public Top10NominationResponse withdraw(AuthenticatedUser user, UUID nominationId) {
+		Top10Nomination nomination = load(nominationId);
+
+		boolean curator = permissions.mayCurateTop10(user);
+		requireMayWithdraw(user, nomination);
+		requireWithdrawable(nomination, curator);
+
+		User actor = currentUser(user);
+		if (nomination.getStatus() == NominationStatus.ACCEPTED) {
+			top10Service.removeOnWithdrawnNomination(nomination.getProject(), actor);
+		}
+
+		return decide(nomination, actor, NominationStatus.WITHDRAWN);
 	}
 
 	// ------------------------------------------------------------------
@@ -316,6 +465,57 @@ public class Top10NominationService {
 		}
 	}
 
+	/**
+	 * Zurueckziehen laesst sich ein offener Vorschlag, die Administration
+	 * zusaetzlich einen angenommenen (§3.11.1, seit Contract v70). Alles andere
+	 * ergibt <strong>409</strong> und nicht 404: die Nominierung existiert, und
+	 * §6.3.1 verbietet es, den Zustand einer vorhandenen Ressource hinter einem
+	 * „gibt es nicht" zu verstecken.
+	 *
+	 * <p>Eigene Pruefung statt {@link #requirePending}: die Menge der zulaessigen
+	 * Staende ist hier eine andere und haengt an der Rolle. Auch die Meldung ist
+	 * eine andere, denn {@code ACCEPTED} ist fuer die Administration kein Grund
+	 * zur Abweisung.
+	 *
+	 * @param curator ob die anfragende Person kuratieren darf (§5)
+	 */
+	private void requireWithdrawable(Top10Nomination nomination, boolean curator) {
+		NominationStatus status = nomination.getStatus();
+		if (status == NominationStatus.PENDING) {
+			return;
+		}
+		if (curator && status == NominationStatus.ACCEPTED) {
+			return;
+		}
+		throw ConflictException.nominationNotWithdrawable(status.name());
+	}
+
+	/**
+	 * Zeile „Nominierung zurueckziehen" aus §5: EDITOR nur den eigenen
+	 * Vorschlag, ADMIN jeden.
+	 *
+	 * <p>Die beiden Gruende fuer ein {@code false} auseinandergehalten wie in
+	 * {@link #requireMayNominate}: ohne Anmeldung 401, sonst 403.
+	 *
+	 * <p>{@code getNominatedBy().getId()} loest den Lazy-Proxy nicht auf: die ID
+	 * steht im Fremdschluessel und damit bereits im geladenen Datensatz. Ein
+	 * Nachladen der Person allein fuer den Vergleich waere eine Abfrage ohne
+	 * Ertrag.
+	 */
+	private void requireMayWithdraw(AuthenticatedUser user, Top10Nomination nomination) {
+		if (permissions.mayWithdrawNomination(user, nomination.getNominatedBy().getId())) {
+			return;
+		}
+		if (user == null || user.getStatus() != UserStatus.ACTIVE) {
+			throw new AuthenticationCredentialsNotFoundException(
+					"Fuer das Zurueckziehen einer Nominierung ist eine Anmeldung "
+							+ "erforderlich (§5).");
+		}
+		throw new AccessDeniedException(
+				"Zurueckziehen darf einen Vorschlag, wer ihn gemacht hat; fremde Vorschlaege "
+						+ "zieht allein die Administration zurueck (§5).");
+	}
+
 	/** §3.11.1 Regel 1, an beiden Stellen dieselbe Pruefung. */
 	private void requirePublished(Project project) {
 		if (project.getStatus() != ProjectStatus.PUBLISHED) {
@@ -342,6 +542,38 @@ public class Top10NominationService {
 		}
 		throw new AccessDeniedException(
 				"Fuer die Top-10 nominieren ausschliesslich Redaktion und Administration (§5).");
+	}
+
+	/**
+	 * Der einzige zulaessige Wert von {@code nominatedBy} ist {@code me}
+	 * (§6.1). Fehlt der Parameter oder steht etwas anderes darin, folgt
+	 * <strong>400</strong> {@code VALIDATION_FAILED}.
+	 */
+	private void requireOwnScope(String nominatedBy) {
+		if (!OWN_SCOPE.equals(nominatedBy)) {
+			throw new ValidationException(ErrorCodes.VALIDATION_FAILED,
+					"Der Parameter nominatedBy ist Pflicht und laesst allein den Wert \"me\" "
+							+ "zu. Den vollstaendigen Spiegel liest die Administration ueber "
+							+ "GET /api/admin/top10-nominations (§6.1).");
+		}
+	}
+
+	/**
+	 * Zeile „Eigene Top-10-Nominierungen lesen" aus §5: EDITOR und ADMIN.
+	 *
+	 * <p>Die beiden Gruende fuer ein {@code false} auseinandergehalten wie in
+	 * {@link #requireMayNominate}: ohne Anmeldung 401, sonst 403.
+	 */
+	private void requireMayReadOwn(AuthenticatedUser user) {
+		if (permissions.mayReadOwnNominations(user)) {
+			return;
+		}
+		if (user == null || user.getStatus() != UserStatus.ACTIVE) {
+			throw new AuthenticationCredentialsNotFoundException(
+					"Fuer die eigenen Nominierungen ist eine Anmeldung erforderlich (§5).");
+		}
+		throw new AccessDeniedException(
+				"Nominierungen fuehren ausschliesslich Redaktion und Administration (§5).");
 	}
 
 	/** Zeile „Top-10 kuratieren" aus §5: nur ADMIN, siehe {@code Top10Service}. */

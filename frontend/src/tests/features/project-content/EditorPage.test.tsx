@@ -4,12 +4,18 @@ import { HttpResponse, http } from "msw"
 import { Route, Routes } from "react-router-dom"
 import { beforeEach, describe, expect, it } from "vitest"
 
-import type { BlockResponse, ProjectDetailResponse } from "@/api/types"
+import type {
+  BlockResponse,
+  CommentResponse,
+  ProjectDetailResponse,
+} from "@/api/types"
 import EditorPage from "@/features/project-content/EditorPage"
-import { person, projectDetail } from "@/tests/fixtures"
+import i18n from "@/i18n"
+import { comment, person, projectDetail } from "@/tests/fixtures"
 import {
   currentUserHandler,
   projectBlocksHandler,
+  projectCommentsHandler,
   projectDetailHandler,
 } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
@@ -70,12 +76,14 @@ function ownDraft(
 
 function renderEditor(
   project: ProjectDetailResponse,
-  blocks: BlockResponse[] = []
+  blocks: BlockResponse[] = [],
+  comments: CommentResponse[] = []
 ) {
   server.use(
     currentUserHandler({ id: USER_ID }),
     /* Bloecke vor dem Detail: das Muster /projects/:projectId faengt sonst
        den laengeren Pfad zuerst ab. */
+    projectCommentsHandler(comments),
     projectBlocksHandler(blocks),
     projectDetailHandler(project),
     http.put("*/api/projects/:projectId/blocks", () =>
@@ -347,6 +355,13 @@ describe("EditorPage", () => {
     )
 
     const drawer = await screen.findByRole("dialog", {}, WAIT)
+    /* Die Schublade traegt seit KAN-37 den Namen der ganzen Leiste: darin
+       stehen Status, Projektinformationen und Kommentare, und der
+       Aufklapper der Projektinformationen bringt seine eigene Ueberschrift
+       mit. */
+    expect(
+      within(drawer).getByRole("heading", { name: "Projektangaben" })
+    ).toBeInTheDocument()
     expect(
       within(drawer).getByRole("heading", { name: "Projektinformationen" })
     ).toBeInTheDocument()
@@ -534,5 +549,79 @@ describe("EditorPage", () => {
     /* Der Inhalt geht hinaus, die Kopfangaben nicht. */
     await waitFor(() => expect(blockPuts).toBeGreaterThanOrEqual(1), WAIT)
     expect(projectPuts).toBe(0)
+  })
+
+  it("zeigt die Kommentarspalte und bietet der Autor:in allein die Antwort an", async () => {
+    /*
+     * Die Kommentarspalte aus KAN-37 steht seit diesem Ticket auch im
+     * Editor; ohne sie saehe die Autor:in ihre Aenderungswuensche nirgends
+     * (Ticket-Ziel). Erstellbar ist hier allein eine Antwort, auch wenn der
+     * Server mehr zuliesse: der Editor ist der Schreibplatz am eigenen
+     * Beitrag.
+     */
+    renderEditor(
+      ownDraft({ status: "REVISION" }),
+      [],
+      [
+        comment({
+          id: "c-1",
+          type: "CHANGE_REQUEST",
+          status: "OPEN",
+          text: "Bitte die Quellen ergaenzen.",
+        }),
+      ]
+    )
+
+    /* In REVISION beginnt die Spalte aufgeklappt: dort sind die offenen
+       Aenderungswuensche der Arbeitsauftrag. */
+    expect(
+      await screen.findByText("Bitte die Quellen ergaenzen.")
+    ).toBeInTheDocument()
+    /* Den Stand traegt seit der Nacharbeit die Kopfzeile des Eintrags, und
+       unten steht die Handlung. Die Autor:in darf sie ausloesen: die
+       Projektseite hakt den an sie gerichteten Wunsch selbst ab (§2.4). */
+    expect(
+      screen.getByText(i18n.t("comment.type.CHANGE_REQUEST"))
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: i18n.t("comment.action.resolve") })
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByLabelText(i18n.t("comment.form.textLabel"))
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("group", { name: i18n.t("comment.form.typeLabel") })
+    ).not.toBeInTheDocument()
+  })
+
+  it("zeigt die Projektinformationen als Aufklapper mit Ueberschrift", async () => {
+    renderEditor(ownDraft())
+
+    /* Gemeinsamer Baustein mit dem Review-Modus (ProjectInfoSection); der
+       Aufklapper liegt in einer Ueberschrift, damit die Seitenleiste einen
+       Sprungpunkt hat. */
+    expect(
+      await screen.findByRole("heading", {
+        name: new RegExp(i18n.t("projectContent.sidebar.projectInfo")),
+      })
+    ).toBeInTheDocument()
+  })
+
+  it("zeigt die Kommentarspalte bei PUBLISHED nicht", async () => {
+    renderEditor(
+      ownDraft({ status: "PUBLISHED" }),
+      [],
+      [comment({ id: "c-1", type: "REPLY", text: "Sollte nicht erscheinen." })]
+    )
+
+    await screen.findByRole("heading", {
+      name: new RegExp(i18n.t("projectContent.sidebar.projectInfo")),
+    })
+    /* Dort ist die redaktionelle Arbeit vorbei und der Beitrag
+       oeffentlich (Nutzerentscheidung zur Nacharbeit an KAN-37). */
+    expect(
+      screen.queryByRole("region", { name: i18n.t("comment.panel.label") })
+    ).not.toBeInTheDocument()
   })
 })

@@ -108,6 +108,45 @@ export type ProjectReference = ApiSchemas["ReferenceResponse"]
 /** Eintrag der kuratierten Top-10 (Contract 3.11, 6.1): Platz, Aufnahmezeitpunkt, Projektkachel. */
 export type Top10EntryResponse = ApiSchemas["Top10EntryResponse"]
 
+/**
+ * Nominierung fuer die Top-10 (Contract 3.11, 6.1; KAN-37). Der Request
+ * traegt seit Contract v68 allein die Stufe, die Antwort fuehrt sie neben
+ * dem von der Administration entschiedenen Platz.
+ */
+export type Top10NominationResponse = ApiSchemas["Top10NominationResponse"]
+export type Top10NominationRequest = ApiSchemas["Top10NominationRequest"]
+
+/** Vorgeschlagene Stufe nach Contract 2.13: genau drei Werte. */
+export type NominationTier = Top10NominationRequest["proposedTier"]
+
+/** Stand einer Nominierung nach Contract 2.8. */
+export type NominationStatus = Top10NominationResponse["status"]
+
+/**
+ * Kommentare eines Projekts (Contract 2.3, 2.4, 3.5, 6.1; KAN-37).
+ *
+ * <p>Die drei Typen und die beiden Staende laufen unveraendert durch den
+ * Code und werden nur fuer die Anzeige uebersetzt (Frontend-Regel 6):
+ * comment.type.REPLY, comment.status.OPEN.
+ */
+export type CommentResponse = ApiSchemas["CommentResponse"]
+export type CommentCreateRequest = ApiSchemas["CommentCreateRequest"]
+export type CommentStatusRequest = ApiSchemas["CommentStatusRequest"]
+
+/** Kommentartyp nach Contract 2.3: REPLY, NOTE, CHANGE_REQUEST. */
+export type CommentType = CommentCreateRequest["type"]
+
+/**
+ * Stand eines Aenderungswunsches nach Contract 2.4.
+ *
+ * <p>Abgeleitet vom Request und nicht von der Antwort: an
+ * CommentResponse.status ist das Feld leer, solange der Kommentar kein
+ * CHANGE_REQUEST ist (§2.4), und der Alias meint die Werteliste und nicht
+ * den Feldinhalt. Im Request ist der Stand Pflicht, dort steht er also ohne
+ * Umweg ueber ein Exclude.
+ */
+export type CommentStatus = CommentStatusRequest["status"]
+
 /** Fakultaet aus GET /api/faculties (Contract 3.8). */
 export type FacultyResponse = ApiSchemas["FacultyResponse"]
 

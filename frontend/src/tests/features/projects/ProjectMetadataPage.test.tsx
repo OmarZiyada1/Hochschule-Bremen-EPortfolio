@@ -14,6 +14,7 @@ import type {
   UserLookupResponse,
 } from "@/api/types"
 import ProjectMetadataPage from "@/features/projects/ProjectMetadataPage"
+import i18n from "@/i18n"
 import { projectDetail, reference } from "@/tests/fixtures"
 import {
   apiErrorResponse,
@@ -377,6 +378,50 @@ describe("ProjectMetadataPage", () => {
     /* Kein automatischer zweiter Versuch: er ueberschriebe genau die fremde
        Aenderung, vor der die Versionspruefung schuetzt. */
     expect(puts).toBe(1)
+  })
+
+  it("fuehrt bei 409 CHANGE_REQUESTS_OPEN sichtbar auf die offenen Aenderungswuensche", async () => {
+    const user = userEvent.setup()
+    let submits = 0
+    const project = draft({ status: "REVISION" })
+    server.use(
+      detailHandler(project),
+      ...masterDataHandlers(),
+      http.put(`*/api/projects/${PROJECT_ID}`, () =>
+        HttpResponse.json({ ...project, version: 2 })
+      ),
+      http.post(`*/api/projects/${PROJECT_ID}/submit`, () => {
+        submits += 1
+        return apiErrorResponse(
+          409,
+          "CHANGE_REQUESTS_OPEN",
+          `/api/projects/${PROJECT_ID}/submit`
+        )
+      })
+    )
+    signInAs("STUDENT")
+    renderPage(`/projects/${PROJECT_ID}/metadata?submit=1`)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: i18n.t("project.metadata.saveAndSubmit"),
+      })
+    )
+
+    /*
+     * Ohne einen Weg dorthin waere die Meldung eine Sackgasse: die offenen
+     * Aenderungswuensche stehen im Editor, in der Kommentarspalte aus
+     * KAN-37.
+     */
+    const link = await screen.findByRole("link", {
+      name: i18n.t("project.metadata.changeRequestsOpenAction"),
+    })
+    expect(link).toHaveAttribute("href", `/projects/${PROJECT_ID}/editor`)
+    expect(
+      screen.getByText(i18n.t("apiError.CHANGE_REQUESTS_OPEN"))
+    ).toBeInTheDocument()
+    /* Kein zweiter Versuch. */
+    expect(submits).toBe(1)
   })
 
   it("stellt ein Projekt ausserhalb von DRAFT und REVISION schreibgeschuetzt dar", async () => {

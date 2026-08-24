@@ -75,15 +75,18 @@ describe("UserAvatar", () => {
     expect(root).toHaveAttribute("data-size", "default")
   })
 
-  it("nutzt die Markenflaeche und den Kartenradius statt der Kreisform", () => {
-    /* Beide Eingriffe sind im Ticket entschieden (Foundation 7) und stehen
-       nur hier, damit sie nicht an jeder Aufrufstelle erneut auftauchen. */
+  it("nutzt die Markenflaeche und haelt die Kreisform ausdruecklich fest", () => {
+    /* Beide Eingriffe stehen nur hier, damit sie nicht an jeder Aufrufstelle
+       erneut auftauchen. Der Radius steht seit der Nacharbeit an KAN-37 auf
+       radius-pill: die Kreisform war zuvor eine Nebenwirkung der fehlenden
+       Radius-Aufloesung und faellt ohne diese Zusage beim naechsten Griff an
+       cn wieder um. */
     const { container } = renderWithProviders(
       <UserAvatar person={{ firstName: "Mira", lastName: "Beispiel" }} />
     )
 
     expect(container.querySelector("[data-slot=avatar]")).toHaveClass(
-      "rounded-card"
+      "rounded-pill"
     )
     expect(container.querySelector("[data-slot=avatar-fallback]")).toHaveClass(
       "bg-surface-brand"

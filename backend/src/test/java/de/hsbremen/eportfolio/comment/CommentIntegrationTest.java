@@ -16,9 +16,12 @@ import de.hsbremen.eportfolio.common.enums.CommentStatus;
 import de.hsbremen.eportfolio.common.enums.CommentType;
 import de.hsbremen.eportfolio.common.enums.ProjectStatus;
 import de.hsbremen.eportfolio.common.enums.Role;
+import de.hsbremen.eportfolio.top10.TestTop10;
+import de.hsbremen.eportfolio.top10.Top10EntryRepository;
 import de.hsbremen.eportfolio.project.Project;
 import de.hsbremen.eportfolio.project.ProjectMemberRepository;
 import de.hsbremen.eportfolio.project.ProjectRepository;
+import de.hsbremen.eportfolio.project.ProjectStatusHistoryRepository;
 import de.hsbremen.eportfolio.project.TestProject;
 import de.hsbremen.eportfolio.user.TestUser;
 import de.hsbremen.eportfolio.user.User;
@@ -36,6 +39,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -85,6 +89,12 @@ class CommentIntegrationTest {
 
 	@Autowired
 	private CommentRepository commentRepository;
+
+	@Autowired
+	private ProjectStatusHistoryRepository statusHistoryRepository;
+
+	@Autowired
+	private Top10EntryRepository top10EntryRepository;
 
 	private User author;
 
@@ -346,6 +356,146 @@ class CommentIntegrationTest {
 	// ==================================================================
 	// PATCH /api/comments/{id}
 	// ==================================================================
+
+	// ==================================================================
+	// Der Aenderungswunsch als Statusausloeser (Contract v71)
+	// ==================================================================
+
+	/**
+	 * §4.1 seit Contract v71: ein Kommentar vom Typ {@code CHANGE_REQUEST}
+	 * bringt das Projekt nach {@code REVISION}, mit denselben Folgen wie
+	 * {@code POST /request-revision}. Geprueft wird beides: dass er es tut, wo
+	 * er es soll, und dass er es unterlaesst, wo er es nicht darf.
+	 */
+	@Nested
+	@DisplayName("CHANGE_REQUEST als Statusausloeser (§4.1, v71)")
+	class ChangeRequestTriggersRevision {
+
+		@ParameterizedTest(name = "aus {0}")
+		@EnumSource(value = ProjectStatus.class,
+				names = {"SUBMITTED", "APPROVED", "PUBLISHED"})
+		@DisplayName("Aus SUBMITTED, APPROVED und PUBLISHED geht das Projekt nach REVISION")
+		void movesToRevision(ProjectStatus from) throws Exception {
+			Project project = project(from, "Projekt in " + from.name());
+
+			create(assignedEditor, project, "CHANGE_REQUEST", "Bitte die Quellen ergaenzen.");
+
+			assertThat(reload(project).getStatus()).isEqualTo(ProjectStatus.REVISION);
+		}
+
+		@Test
+		@DisplayName("Der Uebergang wird protokolliert, mit der schreibenden Person")
+		void writesHistory() throws Exception {
+			Project project = project(ProjectStatus.SUBMITTED, "Eingereicht");
+
+			create(assignedEditor, project, "CHANGE_REQUEST", "Bitte nachbessern.");
+
+			assertThat(statusHistoryRepository.findByProjectIdOrderByTimestampAsc(
+					project.getId()))
+					.singleElement()
+					.satisfies(entry -> {
+						assertThat(entry.getFromStatus()).isEqualTo(ProjectStatus.SUBMITTED);
+						assertThat(entry.getToStatus()).isEqualTo(ProjectStatus.REVISION);
+						assertThat(entry.getChangedBy().getId())
+								.isEqualTo(assignedEditor.getId());
+					});
+		}
+
+		@Test
+		@DisplayName("Es entsteht genau ein Kommentar, nicht zusaetzlich einer aus dem Uebergang")
+		void writesExactlyOneComment() throws Exception {
+			Project project = project(ProjectStatus.SUBMITTED, "Eingereicht");
+
+			create(assignedEditor, project, "CHANGE_REQUEST", "Bitte nachbessern.");
+
+			assertThat(commentRepository.findByProjectIdAndTypeInOrderByCreatedAtAsc(
+					project.getId(), java.util.Set.of(CommentType.CHANGE_REQUEST)))
+					.singleElement()
+					.satisfies(comment ->
+							assertThat(comment.getText()).isEqualTo("Bitte nachbessern."));
+		}
+
+		@Test
+		@DisplayName("Steht das Projekt in der Top-10, bleibt der Status stehen (§4.1, v72)")
+		void top10BlocksTheTransition() throws Exception {
+			Project project = project(ProjectStatus.PUBLISHED, "Auf der Startseite");
+			top10EntryRepository.saveAndFlush(
+					TestTop10.entry(project, 4, java.time.Instant.now()));
+
+			/*
+			 * Kein 409: gestellt war die Anfrage, einen Kommentar anzulegen,
+			 * und die war erlaubt. Der Uebergang unterbleibt still, wie in
+			 * DRAFT und REVISION auch.
+			 */
+			assertThat(create(assignedEditor, project, "CHANGE_REQUEST", "Bitte nachbessern.")
+					.get("status").asText()).isEqualTo("OPEN");
+
+			assertThat(reload(project).getStatus()).isEqualTo(ProjectStatus.PUBLISHED);
+			assertThat(top10EntryRepository.findByProjectId(project.getId())).isPresent();
+		}
+
+		@Test
+		@DisplayName("Ohne Platz in der Liste geht der Uebergang aus PUBLISHED")
+		void publishedWithoutSeatStillMoves() throws Exception {
+			Project project = project(ProjectStatus.PUBLISHED, "Nicht kuratiert");
+
+			create(assignedEditor, project, "CHANGE_REQUEST", "Bitte nachbessern.");
+
+			assertThat(reload(project).getStatus()).isEqualTo(ProjectStatus.REVISION);
+		}
+
+		@ParameterizedTest(name = "aus {0}")
+		@EnumSource(value = ProjectStatus.class, names = {"DRAFT", "REVISION"})
+		@DisplayName("In DRAFT und REVISION bleibt der Status, und das ist kein Fehlerfall")
+		void keepsStatusWhereTransitionDoesNotApply(ProjectStatus from) throws Exception {
+			Project project = project(from, "Projekt in " + from.name());
+
+			/* 201 und nicht 409: create() besteht selbst darauf. */
+			assertThat(create(assignedEditor, project, "CHANGE_REQUEST", "Hinweis.")
+					.get("status").asText()).isEqualTo("OPEN");
+			assertThat(reload(project).getStatus()).isEqualTo(from);
+			assertThat(statusHistoryRepository.findByProjectIdOrderByTimestampAsc(
+					project.getId())).isEmpty();
+		}
+
+		@Test
+		@DisplayName("Eine nicht zugewiesene Redakteur:in schreibt den Wunsch, bewegt aber "
+				+ "den Status nicht (§5 Fussnote 11)")
+		void unassignedEditorDoesNotTrigger() throws Exception {
+			Project project = project(ProjectStatus.SUBMITTED, "Eingereicht");
+
+			create(otherEditor, project, "CHANGE_REQUEST", "Von aussen.");
+
+			assertThat(reload(project).getStatus()).isEqualTo(ProjectStatus.SUBMITTED);
+			assertThat(statusHistoryRepository.findByProjectIdOrderByTimestampAsc(
+					project.getId())).isEmpty();
+		}
+
+		@Test
+		@DisplayName("Die Administration loest den Uebergang auch ohne Zuweisung aus")
+		void adminTriggers() throws Exception {
+			Project project = project(ProjectStatus.SUBMITTED, "Eingereicht");
+
+			create(admin, project, "CHANGE_REQUEST", "Aus der Administration.");
+
+			assertThat(reload(project).getStatus()).isEqualTo(ProjectStatus.REVISION);
+		}
+
+		@ParameterizedTest(name = "Typ {0}")
+		@ValueSource(strings = {"REPLY", "NOTE"})
+		@DisplayName("REPLY und NOTE bewegen den Status nie")
+		void otherTypesNeverTrigger(String type) throws Exception {
+			Project project = project(ProjectStatus.SUBMITTED, "Eingereicht");
+
+			create(assignedEditor, project, type, "Nur eine Rueckmeldung.");
+
+			assertThat(reload(project).getStatus()).isEqualTo(ProjectStatus.SUBMITTED);
+		}
+
+		private Project reload(Project project) {
+			return projectRepository.findById(project.getId()).orElseThrow();
+		}
+	}
 
 	@Nested
 	@DisplayName("PATCH /api/comments/{id}")

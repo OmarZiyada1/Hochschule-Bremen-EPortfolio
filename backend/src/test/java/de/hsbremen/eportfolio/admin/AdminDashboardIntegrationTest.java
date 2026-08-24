@@ -11,6 +11,7 @@ import de.hsbremen.eportfolio.auth.AuthenticatedUser;
 import de.hsbremen.eportfolio.auth.JwtService;
 import de.hsbremen.eportfolio.common.enums.BlockType;
 import de.hsbremen.eportfolio.common.enums.NominationStatus;
+import de.hsbremen.eportfolio.common.enums.NominationTier;
 import de.hsbremen.eportfolio.common.enums.ProjectStatus;
 import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
@@ -155,7 +156,7 @@ class AdminDashboardIntegrationTest {
 
 		Project first = project(ProjectStatus.PUBLISHED);
 		Project second = project(ProjectStatus.PUBLISHED);
-		nominationRepository.saveAndFlush(TestTop10.pending(first, student, null));
+		nominationRepository.saveAndFlush(TestTop10.pending(first, student, NominationTier.TOP_10));
 		nominationRepository.saveAndFlush(
 				TestTop10.decided(second, student, admin, NominationStatus.ACCEPTED));
 

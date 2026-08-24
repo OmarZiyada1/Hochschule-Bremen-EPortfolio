@@ -27,9 +27,19 @@ import java.util.UUID;
  * {@code PROJECT_NOT_FOUND} (die ID gibt es nicht),
  * {@code PROJECT_STATUS_TRANSITION_INVALID} (§4.1 fuehrt den Uebergang aus
  * diesem Status nicht), {@code PROJECT_VERSION_CONFLICT} (§6.4, jemand hat
- * dieselbe Zeile gleichzeitig geaendert) und {@code NO_PERMISSION}. Der letzte
+ * dieselbe Zeile gleichzeitig geaendert), seit Contract v72
+ * {@code RESOURCE_IN_USE} und {@code NO_PERMISSION}. Der letzte
  * ist die Vollstaendigkeit halber dabei und tritt heute nicht auf: den Endpoint
  * erreicht nur ADMIN, und §5 gibt dieser Rolle beide Uebergaenge frei.
+ *
+ * <p><strong>{@code RESOURCE_IN_USE} ist der wahrscheinlichste Fall dieser
+ * Liste</strong> (seit Contract v72). Die Sammelaktion
+ * {@code request-revision} auf einer Auswahl veroeffentlichter Projekte
+ * trifft genau die, die in der kuratierten Top-10 stehen, und §4.1 sperrt
+ * dort den Uebergang: erst aus der Liste nehmen, dann zurueckgeben. Die
+ * uebrigen Zeilen laufen durch, das ist der Sinn der Ergebnisliste. Eine
+ * Oberflaeche, die diesen Code nicht kennt, meldet an dieser Stelle einen
+ * unbekannten Fehler, obwohl die Auskunft eindeutig ist.
  *
  * <p><strong>Kein Meldungstext.</strong> Entschieden wird im Client nach
  * {@code errorCode} und nie nach dem Wortlaut (§6.2); der Anzeigetext kommt aus

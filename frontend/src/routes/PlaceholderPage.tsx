@@ -13,7 +13,7 @@ export function PlaceholderPage({
   titleKey,
   ticket,
 }: {
-  /** i18n-Schluessel der Seitenueberschrift, z. B. placeholder.title.reviews */
+  /** i18n-Schluessel der Seitenueberschrift, z. B. placeholder.title.imprint */
   titleKey: string
   /** Ticket, das die Seite baut (KAN-…); fehlt es, ist die Seite statisch. */
   ticket?: string

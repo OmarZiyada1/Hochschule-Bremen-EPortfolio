@@ -380,6 +380,13 @@ export function ProjectMetadataForm({
            desselben Problems am Formular waere Rauschen. */
         return
       }
+      if (error.errorCode === "CHANGE_REQUESTS_OPEN") {
+        /* Aus demselben Grund durchgereicht (KAN-37): die offenen
+           Aenderungswuensche stehen im Editor, und nur die Seite kann den
+           Weg dorthin anbieten. Ein zweiter Text am Formular saehe aus wie
+           ein zweiter Fehler. */
+        return
+      }
       if (error.errorCode === "VALIDATION_FAILED") {
         applyValidationErrors(
           error,

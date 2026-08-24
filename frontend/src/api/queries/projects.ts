@@ -60,6 +60,33 @@ export interface OwnProjectListParams {
   status?: ProjectStatus
 }
 
+/**
+ * Parameter der Reviewliste „Meine Reviews" (KAN-37). Der Zuschnitt
+ * editor=me steckt in der Fabrik und nicht hier: er ist die Ressource und
+ * keine Wahl der Oberflaeche (§6.1, §5 Fussnote 11).
+ *
+ * <p>Die Filter sind Einzelwerte und keine Arrays, anders als in der
+ * oeffentlichen Bibliothek: das Template zeigt je Gruppe ein Auswahlfeld
+ * und keine Mehrfachauswahl. Wiederholbar waeren die Parameter serverseitig
+ * trotzdem (§6.1 seit v43).
+ */
+export interface ReviewListParams {
+  /** Suchbegriff q, durchsucht Titel, Kurzbeschreibung und Autorenname. */
+  q?: string
+  /** Seite, 0-basiert (§6.6). */
+  page?: number
+  /** Seitengroesse; ohne Angabe gilt der Serverstandard 20 (§6.6). */
+  size?: number
+  /** Projektstatus (§2.2), oder undefined fuer den Filterwert „Alle". */
+  status?: ProjectStatus
+  /** ID eines Studiengangs aus GET /api/study-programs (§3.7). */
+  studyProgram?: string
+  /** ID eines Semesters aus GET /api/semesters (§3.18). */
+  semester?: string
+  /** ID eines Moduls aus GET /api/modules (§3.9), im Template „Fach". */
+  module?: string
+}
+
 /** Serverseitiges Maximum aus §6.6; darueber kappt der Server still. */
 const OWN_PROJECTS_PAGE_SIZE = 100
 
@@ -127,6 +154,33 @@ export const projectQueries = {
             size: OWN_PROJECTS_PAGE_SIZE,
           },
         }),
+    }),
+
+  /**
+   * „Meine Reviews": die der angemeldeten Redakteur:in zugewiesenen
+   * Projekte (§6.1, KAN-37).
+   *
+   * <p><strong>editor=me ist fest verdrahtet.</strong> Der Wert ist der
+   * Zuschnitt der Ressource und keine Einstellung: die Seite zeigt die
+   * eigene Zustaendigkeit, und ein anderer Wert waere eine andere Seite.
+   * Ohne Token antwortet der Server mit 401 und nicht mit einer leeren
+   * Liste (§5), was die Oberflaeche sichtbar behandelt.
+   *
+   * <p><strong>Ein DRAFT erscheint hier nicht.</strong> Die Redaktion liest
+   * nicht veroeffentlichte Projekte erst ab SUBMITTED (§5 Fussnote 11); die
+   * Einschraenkung liegt im Server, nicht in diesem Filter.
+   *
+   * <p>placeholderData wie in der Bibliothek: beim Blaettern bleibt die
+   * vorige Seite stehen, statt die Tabelle auf Skelette zurueckzuwerfen.
+   */
+  reviews: (params: ReviewListParams = {}) =>
+    queryOptions({
+      queryKey: ["projects", "reviews", params] as const,
+      queryFn: () =>
+        api.get<PageResponse<ProjectCardResponse>>(apiPaths.projects.list, {
+          query: { editor: "me", ...params },
+        }),
+      placeholderData: keepPreviousData,
     }),
 
   /**
@@ -221,6 +275,14 @@ export function removeReaction(projectId: string): Promise<ReactionResponse> {
  * ihren Beitrag zur Begutachtung ein, aus DRAFT oder REVISION nach
  * SUBMITTED.
  *
+ * <p><strong>Seit Contract v73 laeuft ein zweiter Weg ueber denselben
+ * Endpoint</strong> („Projekt zurueck in die Pruefung geben", §5): die
+ * zugewiesene Redaktion und die Administration holen ein Projekt aus
+ * REVISION nach SUBMITTED zurueck, etwa wenn sie es versehentlich
+ * zurueckgegeben oder die Aenderungswuensche selbst erledigt haben. Aus
+ * DRAFT bleibt es bei der Autor:in; der redaktionelle Weg endet dort mit
+ * 403 NO_PERMISSION. Die Vorbedingungen unten gelten fuer beide Wege.
+ *
  * <p><strong>Vollstaendig heisst hier mehr als „hat einen Titel".</strong>
  * §3.3 verlangt zum Einreichen Projekttyp, Fakultaet, Studiengang,
  * Abschluss, Kategorie, Semester und mindestens eine Redaktionszuweisung;
@@ -257,4 +319,71 @@ export function withdrawProject(
  */
 export function deleteProject(projectId: string): Promise<void> {
   return api.delete<void>(apiPaths.projects.detail(projectId))
+}
+
+/**
+ * POST /projects/{id}/approve (§4.1, §6.1, KAN-37): die zugewiesene
+ * Redaktion genehmigt ein eingereichtes Projekt, SUBMITTED nach APPROVED.
+ *
+ * <p><strong>Das Vier-Augen-Prinzip greift.</strong> Wer zur Projektseite
+ * gehoert, also Autor:in oder Projektmitglied ist, genehmigt nicht, auch
+ * nicht als zugewiesene Redaktion (§4.1 seit v61, §5 Fussnote 1). Die
+ * Oberflaeche blendet die Handlung dann aus; verbindlich bleibt der Server,
+ * und ein trotzdem eintreffendes 403 wird sichtbar behandelt.
+ */
+export function approveProject(
+  projectId: string
+): Promise<ProjectDetailResponse> {
+  return api.post<ProjectDetailResponse>(apiPaths.projects.approve(projectId))
+}
+
+/**
+ * POST /projects/{id}/publish (§4.1, §6.1): APPROVED nach PUBLISHED.
+ * Dieselbe Sperre wie beim Genehmigen; fuer ADMIN greift sie nicht (§7,
+ * offener Punkt 7).
+ */
+export function publishProject(
+  projectId: string
+): Promise<ProjectDetailResponse> {
+  return api.post<ProjectDetailResponse>(apiPaths.projects.publish(projectId))
+}
+
+/**
+ * POST /projects/{id}/request-revision (§4.1, §6.1): zurueck zur
+ * Ueberarbeitung, aus SUBMITTED, APPROVED oder PUBLISHED.
+ *
+ * <p><strong>Die Begruendung ist Pflicht</strong> und wird serverseitig zu
+ * einem CHANGE_REQUEST-Kommentar mit Stand OPEN (§2.3, §4.1); in der
+ * Statushistorie steht sie nicht. Ohne sie bliebe die Autor:in ohne
+ * Arbeitsauftrag, deshalb prueft das zod-Schema sie schon vor dem Absenden.
+ *
+ * <p>Das Vier-Augen-Prinzip gilt hier <strong>nicht</strong>: eine
+ * Ruecknahme ist keine Freigabe und traegt in §5 keine Fussnote 1.
+ */
+export function requestProjectRevision(
+  projectId: string,
+  reason: string
+): Promise<ProjectDetailResponse> {
+  return api.post<ProjectDetailResponse>(
+    apiPaths.projects.requestRevision(projectId),
+    { reason }
+  )
+}
+
+/**
+ * DELETE /projects/{id}/editors/me (§4.1, §6.1, seit Contract v68): die
+ * eigene Redaktionszuweisung abgeben, 200 mit der Detailantwort.
+ *
+ * <p>Moeglich nur fuer die zugewiesene Person selbst und nur in SUBMITTED
+ * und REVISION. War es die letzte Zuweisung, faellt das Projekt nach DRAFT
+ * zurueck; sonst stuende es ohne zustaendige Redaktion da und niemand
+ * ausser der Administration koennte es entscheiden. Die Oberflaeche nennt
+ * den Rueckfall vor der Bestaetigung.
+ */
+export function resignAsEditor(
+  projectId: string
+): Promise<ProjectDetailResponse> {
+  return api.delete<ProjectDetailResponse>(
+    apiPaths.projects.editorSelf(projectId)
+  )
 }

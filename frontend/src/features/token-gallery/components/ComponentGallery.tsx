@@ -1015,6 +1015,7 @@ function ProjectCardDemos() {
     category: null,
     faculty,
     studyProgram: null,
+    module: null,
     author: { ...person, id: "demo-person", avatarUrl: null },
     tags: [],
     reactionCount: 142,
@@ -1161,6 +1162,9 @@ function AdminDemos() {
               <TableHead>{t("tokens.components.demo.userFirstName")}</TableHead>
               <TableHead>{t("tokens.components.demo.selectLabel")}</TableHead>
               <TableHead>{t("tokens.components.demo.tableSemester")}</TableHead>
+              {/* Seit KAN-37 fuehrt die Zeile eine Spalte „Fach"; ohne diese
+                  Kopfzelle waere die Demotabelle verschoben. */}
+              <TableHead>{t("project.detail.meta.module")}</TableHead>
               <TableHead>{t("tokens.components.demo.tableStatus")}</TableHead>
               {/* sr-only gehoert an den Text, nicht an die Zelle: die Klasse
                   setzt position:absolute und nimmt die Kopfzelle damit aus
@@ -1185,6 +1189,11 @@ function AdminDemos() {
                   abbreviation: null,
                 }}
                 semester={t("tokens.components.demo.semester")}
+                module={{
+                  id: "demo-module",
+                  name: t("tokens.components.demo.module"),
+                  abbreviation: null,
+                }}
                 status={status}
                 href="#"
                 actions={rowActions}

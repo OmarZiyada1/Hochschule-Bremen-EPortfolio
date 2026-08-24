@@ -17,6 +17,7 @@ import { person, projectDetail } from "@/tests/fixtures"
 import {
   currentUserHandler,
   projectBlocksHandler,
+  projectCommentsHandler,
   projectDetailHandler,
 } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
@@ -477,6 +478,7 @@ describe("Alt+F8 fuehrt in die Tabellenbedienung", () => {
   function renderEditorPage() {
     server.use(
       currentUserHandler({ id: USER_ID }),
+      projectCommentsHandler(),
       projectBlocksHandler([tableBlock()]),
       projectDetailHandler(
         projectDetail({

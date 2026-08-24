@@ -594,7 +594,12 @@ export default function EditorPage() {
           finalFocus={menuButtonRef}
         >
           <SheetHeader className="border-b border-border">
-            <SheetTitle>{t("projectContent.sidebar.projectInfo")}</SheetTitle>
+            {/* Die Schublade traegt den Namen der ganzen Leiste und nicht
+                den ihres ersten Aufklappers: seit KAN-37 stehen darin
+                Status, Projektinformationen und Kommentare, und
+                „Projektinformationen" stuende sonst zweimal als
+                Ueberschrift darin. */}
+            <SheetTitle>{t("projectContent.sidebar.label")}</SheetTitle>
           </SheetHeader>
           <div className="overflow-y-auto p-4">
             <EditorSidebar

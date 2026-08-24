@@ -9,6 +9,7 @@ import { person, projectDetail } from "@/tests/fixtures"
 import {
   currentUserHandler,
   projectBlocksHandler,
+  projectCommentsHandler,
   projectDetailHandler,
 } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
@@ -54,6 +55,7 @@ function ownDraft(): ProjectDetailResponse {
 function renderEditor(blocks: BlockResponse[]) {
   server.use(
     currentUserHandler({ id: USER_ID }),
+    projectCommentsHandler(),
     projectBlocksHandler(blocks),
     projectDetailHandler(ownDraft()),
     http.put("*/api/projects/:projectId/blocks", () =>

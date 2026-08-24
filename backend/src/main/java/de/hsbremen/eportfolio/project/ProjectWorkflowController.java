@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -82,8 +83,9 @@ public class ProjectWorkflowController {
 	@ApiResponse(responseCode = "400", description = "PROJECT_INCOMPLETE: mindestens ein "
 			+ "Pflichtfeld aus §3.3 fehlt. Die Meldung nennt alle fehlenden Felder.")
 	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
-	@ApiResponse(responseCode = "403", description = "Angemeldet, aber nicht die Autor:in. "
-			+ "Projektmitglieder duerfen mitschreiben, aber nicht einreichen (§4.1).")
+	@ApiResponse(responseCode = "403", description = "Angemeldet, aber weder die Autor:in "
+			+ "noch, seit Contract v73 und nur aus REVISION, die zugewiesene Redaktion oder "
+			+ "die Administration (§4.1, §5). Aus DRAFT reicht allein die Autor:in ein.")
 	@ApiResponse(responseCode = "404", description = "Unter dieser ID gibt es kein Projekt.")
 	@ApiResponse(responseCode = "409", description = "PROJECT_STATUS_TRANSITION_INVALID: das "
 			+ "Projekt steht nicht in DRAFT oder REVISION, ist also zum Beispiel schon "
@@ -202,7 +204,10 @@ public class ProjectWorkflowController {
 	@ApiResponse(responseCode = "404", description = "Unter dieser ID gibt es kein Projekt.")
 	@ApiResponse(responseCode = "409", description = "PROJECT_STATUS_TRANSITION_INVALID: das "
 			+ "Projekt steht in DRAFT oder bereits in REVISION, es gibt also nichts "
-			+ "zurueckzugeben.")
+			+ "zurueckzugeben. RESOURCE_IN_USE (seit Contract v72): das veroeffentlichte "
+			+ "Projekt steht in der kuratierten Top-10; die Administration nimmt es zuerst "
+			+ "aus der Liste, ueber PUT /api/admin/top10 oder ueber das Zurueckziehen der "
+			+ "Nominierung.")
 	@PostMapping("/request-revision")
 	public ProjectDetailResponse requestRevision(
 			@AuthenticationPrincipal AuthenticatedUser user,
@@ -213,5 +218,37 @@ public class ProjectWorkflowController {
 			@Valid @RequestBody RevisionRequest request) {
 
 		return workflowService.requestRevision(user, projectId, request);
+	}
+
+	// ------------------------------------------------------------------
+	// DELETE /api/projects/{projectId}/editors/me
+	// ------------------------------------------------------------------
+
+	@Operation(summary = "Eigene Redaktionszuweisung abgeben",
+			description = "Nimmt die anfragende Person aus der zustaendigen Redaktion des "
+					+ "Projekts (§6.1, §4.1, seit Contract v68). Moeglich nur fuer die "
+					+ "zugewiesene Person selbst und nur in SUBMITTED oder REVISION. War es "
+					+ "die letzte Zuweisung, faellt das Projekt nach DRAFT zurueck und die "
+					+ "Statushistorie fuehrt den Uebergang; sonst aendert sich allein die "
+					+ "Zuweisung. Kommentare bleiben unberuehrt.")
+	@ApiResponse(responseCode = "200", description = "Die Zuweisung ist aufgehoben. Die Antwort "
+			+ "traegt die neue version, den ggf. geaenderten Status und die frische "
+			+ "statusHistory.")
+	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
+	@ApiResponse(responseCode = "403", description = "NO_PERMISSION: die anfragende Person ist "
+			+ "diesem Projekt nicht als Redaktion zugewiesen. Fremde Zuweisungen aendert die "
+			+ "Administration ueber PUT /api/projects/{id}/editors.")
+	@ApiResponse(responseCode = "404", description = "Unter dieser ID gibt es kein Projekt.")
+	@ApiResponse(responseCode = "409", description = "PROJECT_STATUS_NOT_EDITABLE: das Projekt "
+			+ "steht weder in SUBMITTED noch in REVISION. Im DRAFT pflegt die Autor:in die "
+			+ "Zuweisung selbst, ab APPROVED ist die redaktionelle Arbeit getan.")
+	@DeleteMapping("/editors/me")
+	public ProjectDetailResponse resignAsEditor(
+			@AuthenticationPrincipal AuthenticatedUser user,
+
+			@Parameter(description = "ID des Projekts.")
+			@PathVariable("projectId") UUID projectId) {
+
+		return workflowService.resignAsEditor(user, projectId);
 	}
 }

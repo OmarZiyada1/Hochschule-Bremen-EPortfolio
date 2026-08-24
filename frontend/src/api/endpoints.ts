@@ -55,6 +55,55 @@ export const apiPaths = {
      * Projekt einmal gibt. Eingetragen mit KAN-32.
      */
     reaction: (projectId: string) => `/api/projects/${projectId}/reaction`,
+    /*
+     * Die redaktionellen Statuswechsel (§4.1, §6.1, KAN-37). Sie stehen
+     * neben submit und withdraw und aus demselben Grund einzeln: der Pfad
+     * ist die Aktion. Nur request-revision traegt einen Koerper
+     * ({ reason }), die beiden anderen keinen.
+     */
+    approve: (projectId: string) => `/api/projects/${projectId}/approve`,
+    publish: (projectId: string) => `/api/projects/${projectId}/publish`,
+    requestRevision: (projectId: string) =>
+      `/api/projects/${projectId}/request-revision`,
+    /*
+     * Kommentare eines Projekts (§6.1, §2.3, KAN-37). GET liest die Liste,
+     * POST legt einen Kommentar an. Was in der Liste steht, entscheidet der
+     * Server: eine NOTE erscheint fuer die Projektseite gar nicht erst
+     * darin, und der Client filtert deshalb nichts nach (Frontend-Regel 3,
+     * Skill frontend-api Abschnitt 8).
+     *
+     * Aendern, Umschalten und Loeschen haengen dagegen an der Kommentar-ID
+     * und nicht am Projekt; sie stehen deshalb unter comments.
+     */
+    comments: (projectId: string) => `/api/projects/${projectId}/comments`,
+    /*
+     * Nominierung fuer die Top-10 (§3.11.1, §6.1). Der Koerper traegt seit
+     * Contract v68 die Stufe ({ proposedTier }) und keinen Platz mehr.
+     */
+    top10Nomination: (projectId: string) =>
+      `/api/projects/${projectId}/top10-nomination`,
+    /*
+     * Die eigene Redaktionszuweisung abgeben (§4.1, §6.1, seit Contract
+     * v68). Der Selbstbezug steht im Pfad und nicht als Parameter, wie bei
+     * portfolio.me: eine fremde Zuweisung aendert allein die Administration
+     * ueber PUT /projects/{id}/editors, und den Pfad gibt es hier deshalb
+     * gar nicht erst.
+     */
+    editorSelf: (projectId: string) => `/api/projects/${projectId}/editors/me`,
+  },
+  /*
+   * Ein einzelner Kommentar (§6.1, §2.4, KAN-37). Bewusst neben projects und
+   * nicht darin, obwohl derselbe Controller sie ausliefert: adressiert ist
+   * der Kommentar, nicht das Projekt.
+   *
+   * detail traegt zwei Methoden: DELETE loescht den Kommentar (§6.1,
+   * Autor:in und ADMIN). PATCH aendert seinen Text und bekommt seinen
+   * Verwender erst, wenn die Oberflaeche das Aendern anbietet; der Pfad ist
+   * derselbe.
+   */
+  comments: {
+    status: (commentId: string) => `/api/comments/${commentId}/status`,
+    detail: (commentId: string) => `/api/comments/${commentId}`,
   },
   /*
    * Portfolio (§6.1, §3.2), eingetragen mit KAN-34. Die beiden Pfade
@@ -84,6 +133,22 @@ export const apiPaths = {
   },
   top10: {
     list: "/api/top10",
+    /*
+     * Die eigenen Nominierungen der Redaktion (§6.1, seit Contract v68,
+     * KAN-37). Der Parameter nominatedBy ist Pflicht und laesst allein
+     * "me" zu; er ist der Zuschnitt der Ressource und kein Filter. Den
+     * vollstaendigen Spiegel fuehrt GET /api/admin/top10-nominations, und
+     * der bleibt der Administrationsseite vorbehalten (KAN-40).
+     */
+    nominations: "/api/top10-nominations",
+    /*
+     * Zurueckziehen einer Nominierung (§6.1, seit Contract v70, KAN-37).
+     * Derselbe Pfad wie oben, deshalb steht er hier und nicht unter admin:
+     * zurueckziehen darf in erster Linie die nominierende Person selbst,
+     * die Administration zusaetzlich jeden Vorschlag. Ohne Koerper.
+     */
+    withdrawNomination: (nominationId: string) =>
+      `/api/top10-nominations/${nominationId}/withdraw`,
   },
   /*
    * Stammdaten (§6.1, Backend-Modul masterdata): vollstaendige Listen ohne

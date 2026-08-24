@@ -377,10 +377,12 @@ class ProjectControllerTest {
 		UUID id = UUID.randomUUID();
 		ReferenceResponse semester =
 				new ReferenceResponse(UUID.randomUUID(), "WiSe 2025/26", null);
+		ReferenceResponse module =
+				new ReferenceResponse(UUID.randomUUID(), "Interaktive Systeme", "IS");
 		ProjectCardResponse card = new ProjectCardResponse(
 				id, "Titel", "Teaser", "/api/files/1", ProjectStatus.PUBLISHED,
 				ProjectType.THESIS, Degree.BACHELOR, semester,
-				null, null, null, null, List.of("react", "ux"), 3, null);
+				null, null, null, module, null, List.of("react", "ux"), 3, null);
 		when(projectReadService.list(any(), any(), any()))
 				.thenReturn(new PageResponse<>(List.of(card), 0, 20, 1, 1));
 
@@ -392,8 +394,27 @@ class ProjectControllerTest {
 				.andExpect(jsonPath("$.content[0].projectType").value("THESIS"))
 				.andExpect(jsonPath("$.content[0].degree").value("BACHELOR"))
 				.andExpect(jsonPath("$.content[0].semester.name").value("WiSe 2025/26"))
+				// Seit Contract v68 an der Kachel, damit „Meine Reviews" die Spalte
+				// „Fach" ohne zweiten Aufruf fuellen kann (KAN-37).
+				.andExpect(jsonPath("$.content[0].module.name").value("Interaktive Systeme"))
+				.andExpect(jsonPath("$.content[0].module.abbreviation").value("IS"))
 				.andExpect(jsonPath("$.content[0].tags[0]").value("react"))
 				.andExpect(jsonPath("$.content[0].reactionCount").value(3));
+	}
+
+	@Test
+	@DisplayName("Ohne Modul bleibt die Kachel gueltig: das Feld fehlt, die uebrigen stehen")
+	void cardWithoutModule() throws Exception {
+		ProjectCardResponse card = new ProjectCardResponse(
+				UUID.randomUUID(), "Ohne Fach", null, null, ProjectStatus.DRAFT,
+				null, null, null, null, null, null, null, null, List.of(), 0, null);
+		when(projectReadService.list(any(), any(), any()))
+				.thenReturn(new PageResponse<>(List.of(card), 0, 20, 1, 1));
+
+		mockMvc.perform(get("/api/projects"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content[0].title").value("Ohne Fach"))
+				.andExpect(jsonPath("$.content[0].module").doesNotExist());
 	}
 
 	// --- Hilfsmittel -------------------------------------------------------

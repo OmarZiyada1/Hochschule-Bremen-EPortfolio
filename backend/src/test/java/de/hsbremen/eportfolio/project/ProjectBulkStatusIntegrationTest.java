@@ -15,9 +15,13 @@ import de.hsbremen.eportfolio.common.enums.CommentStatus;
 import de.hsbremen.eportfolio.common.enums.CommentType;
 import de.hsbremen.eportfolio.common.enums.ProjectStatus;
 import de.hsbremen.eportfolio.common.enums.Role;
+import de.hsbremen.eportfolio.top10.TestTop10;
+import de.hsbremen.eportfolio.top10.Top10Entry;
+import de.hsbremen.eportfolio.top10.Top10EntryRepository;
 import de.hsbremen.eportfolio.user.TestUser;
 import de.hsbremen.eportfolio.user.User;
 import de.hsbremen.eportfolio.user.UserRepository;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -81,6 +85,9 @@ class ProjectBulkStatusIntegrationTest {
 	@Autowired
 	private CommentRepository commentRepository;
 
+	@Autowired
+	private Top10EntryRepository top10EntryRepository;
+
 	private User admin;
 
 	private User editor;
@@ -107,6 +114,8 @@ class ProjectBulkStatusIntegrationTest {
 	@AfterEach
 	void removeData() {
 		for (UUID projectId : createdProjects) {
+			top10EntryRepository.findByProjectId(projectId)
+					.ifPresent(top10EntryRepository::delete);
 			commentRepository.deleteAll(commentRepository.findByProjectId(projectId));
 			statusHistoryRepository.deleteAll(
 					statusHistoryRepository.findByProjectIdOrderByTimestampAsc(projectId));
@@ -204,6 +213,49 @@ class ProjectBulkStatusIntegrationTest {
 			assertThat(comments.get(0).getStatus()).isEqualTo(CommentStatus.OPEN);
 			assertThat(comments.get(0).getText()).isEqualTo("Bitte die Quellenangaben ergaenzen.");
 		}
+	}
+
+	/**
+	 * Seit Contract v72 sperrt ein Platz in der kuratierten Top-10 den Weg nach
+	 * {@code REVISION} (§4.1, §3.11.1). Der Sammelwechsel ist die Stelle, an
+	 * der das am ehesten auffaellt: {@code request-revision} auf einer Auswahl
+	 * veroeffentlichter Projekte trifft genau die kuratierten mit.
+	 *
+	 * <p>Geprueft wird beides zugleich, denn erst zusammen ergeben sie die
+	 * Zusage dieses Endpoints: die gesperrte Zeile traegt
+	 * {@code RESOURCE_IN_USE}, und die uebrigen laufen trotzdem durch.
+	 */
+	@Test
+	@DisplayName("request-revision an einem Top-10-Projekt ist eine Zeile mit "
+			+ "RESOURCE_IN_USE, die uebrigen laufen durch (§4.1, v72)")
+	void curatedProjectIsARowWithResourceInUse() throws Exception {
+		UUID curated = createProject(ProjectStatus.PUBLISHED);
+		UUID plain = createProject(ProjectStatus.PUBLISHED);
+		top10EntryRepository.saveAndFlush(TestTop10.entry(
+				projectRepository.findById(curated).orElseThrow(), 1, Instant.now()));
+
+		mockMvc.perform(as(admin, post(BULK)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(json(body(List.of(curated, plain), "request-revision",
+								"Bitte die Quellenangaben ergaenzen.")))))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.results[0].projectId").value(curated.toString()))
+				.andExpect(jsonPath("$.results[0].success").value(false))
+				.andExpect(jsonPath("$.results[0].errorCode").value("RESOURCE_IN_USE"))
+				.andExpect(jsonPath("$.results[1].success").value(true));
+
+		// Das kuratierte Projekt steht unveraendert da, samt Platz.
+		assertThat(statusOf(curated)).isEqualTo(ProjectStatus.PUBLISHED);
+		assertThat(top10EntryRepository.findByProjectId(curated))
+				.get()
+				.extracting(Top10Entry::getPosition)
+				.isEqualTo(1);
+		// Und es hat auch keinen Aenderungswunsch bekommen: der Uebergang ist
+		// gescheitert, bevor irgendetwas geschrieben wurde.
+		assertThat(commentRepository.findByProjectIdAndType(curated,
+				CommentType.CHANGE_REQUEST)).isEmpty();
+
+		assertThat(statusOf(plain)).isEqualTo(ProjectStatus.REVISION);
 	}
 
 	// ==================================================================

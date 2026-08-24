@@ -197,6 +197,25 @@ describe("Routenbaum", () => {
 
   it("EDITOR erreicht die Redaktionsebene", () => {
     signInAs("EDITOR")
+    /* „Meine Reviews" (KAN-37) zieht Liste, vier Kennzahlen, die eigenen
+       Nominierungen, die Top-10 und drei Optionslisten; hier zaehlt nur,
+       dass die Route im Rahmen steht, deshalb antworten alle leer. */
+    server.use(
+      http.get("*/api/projects", () =>
+        HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 20,
+          totalElements: 0,
+          totalPages: 0,
+        })
+      ),
+      http.get("*/api/top10-nominations", () => HttpResponse.json([])),
+      http.get("*/api/top10", () => HttpResponse.json([])),
+      http.get("*/api/study-programs", () => HttpResponse.json([])),
+      http.get("*/api/semesters", () => HttpResponse.json([])),
+      http.get("*/api/modules", () => HttpResponse.json([]))
+    )
     renderWithProviders(<AppUnderTest />, "/reviews")
 
     expect(

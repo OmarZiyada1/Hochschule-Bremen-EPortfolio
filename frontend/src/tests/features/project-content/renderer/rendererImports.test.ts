@@ -11,6 +11,14 @@ import { describe, expect, it } from "vitest"
  * JSON-Renderer, Risiko R7) und KaTeX nur dann, wenn ein Beitrag
  * tatsaechlich eine Formel enthaelt.
  *
+ * <p><strong>Zwei Einstiege seit KAN-37.</strong> Der Waechter deckte
+ * bislang allein {@code ProjectContent} ab. Der Review-Modus ist der zweite
+ * Weg in denselben Lesepfad, und er liegt nicht hinter dem
+ * {@code React.lazy} des Editors: zoege er ueber eine Zwischendatei etwas
+ * aus {@code @tiptap/*} oder {@code prosemirror-*}, kaeme das
+ * ProseMirror-Buendel ins Hauptbuendel zurueck, das mit KAN-36 gerade von
+ * 1,74 MB auf 592 kB gefallen ist.
+ *
  * <p>Die ESLint-Regel {@code no-restricted-imports} deckt nur den
  * <em>direkten</em> Import in {@code renderer/}. Sie saehe nicht, wenn der
  * Renderer eine Zwischendatei importierte, die ihrerseits Tiptap zieht, und
@@ -22,6 +30,14 @@ import { describe, expect, it } from "vitest"
 const srcDir = resolve(import.meta.dirname, "..", "..", "..", "..")
 const rendererDir = join(srcDir, "features", "project-content", "renderer")
 const entryFile = join(rendererDir, "ProjectContent.tsx")
+/* Der zweite Einstieg in den Lesepfad seit KAN-37: der Review-Modus rendert
+   denselben Inhalt und liegt ausserhalb des Editor-Buendels. */
+const reviewPageFile = join(
+  srcDir,
+  "features",
+  "reviews",
+  "ProjectReviewPage.tsx"
+)
 
 const FORBIDDEN_IN_READ_PATH = /^(@tiptap\/|prosemirror-|@?prosemirror)/
 
@@ -188,5 +204,47 @@ describe("KaTeX erst mit der ersten Formel", () => {
       [...withDynamic.keys()].some((file) => file.endsWith("renderMath.ts"))
     ).toBe(true)
     expect([...withDynamic.values()].flat().includes("katex")).toBe(true)
+  })
+})
+
+describe("Review-Modus ohne Tiptap", () => {
+  /*
+   * Mit dynamischen Importen, wie beim Renderer: der Review-Modus soll das
+   * Buendel auf keinem Weg erreichen, auch nicht ueber einen eigenen Chunk.
+   * Ein dynamischer Import auf den Editor waere ein anderer Fall, den es
+   * hier aber nicht gibt.
+   */
+  const closure = importClosure([reviewPageFile], true)
+
+  it("umfasst die Seite und ihre Zulieferer", () => {
+    /* Waere die Aufloesung kaputt, liefe der Test leer durch. Deshalb die
+       untere Schranke und zwei Stichproben aus dem, was die Seite laut
+       Ticket benutzen darf. */
+    expect(closure.size).toBeGreaterThanOrEqual(8)
+    expect(
+      [...closure.keys()].some((file) => file.endsWith("ProjectReviewPage.tsx"))
+    ).toBe(true)
+    expect(
+      [...closure.keys()].some((file) => file.endsWith("ProjectContent.tsx"))
+    ).toBe(true)
+  })
+
+  it("importiert in keinem Modul des Baums aus @tiptap oder prosemirror", () => {
+    for (const [file, specifiers] of closure) {
+      for (const specifier of specifiers) {
+        expect(
+          FORBIDDEN_IN_READ_PATH.test(specifier),
+          `${file} importiert ${specifier}`
+        ).toBe(false)
+      }
+    }
+  })
+
+  it("laesst die Seite auch nicht mittelbar an blockSchema.ts", () => {
+    for (const [file, specifiers] of closure) {
+      for (const specifier of specifiers) {
+        expect(specifier.endsWith("blockSchema"), `${file}`).toBe(false)
+      }
+    }
   })
 })

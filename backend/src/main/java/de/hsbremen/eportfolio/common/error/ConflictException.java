@@ -61,6 +61,31 @@ public class ConflictException extends RuntimeException {
 	}
 
 	/**
+	 * Das Abgeben der eigenen Redaktionszuweisung in einem Status, der es nicht
+	 * zulaesst (§4.1, seit Contract v68: nur {@code SUBMITTED} und
+	 * {@code REVISION}).
+	 *
+	 * <p><strong>Eigene Fabrik trotz gleichem Fehlercode.</strong> §6.2 deckt
+	 * den Fall seit v68 ausdruecklich mit
+	 * {@code PROJECT_STATUS_NOT_EDITABLE} ab, aber die Meldung von
+	 * {@link #statusNotEditable} passt nicht: sie nennt {@code DRAFT} und
+	 * {@code REVISION} als erlaubt, und im {@code DRAFT} laese sie sich sogar
+	 * als Widerspruch („im Status DRAFT nicht bearbeitbar, erlaubt sind DRAFT
+	 * und REVISION"). Beim Abgeben ist es genau umgekehrt: der {@code DRAFT}
+	 * ist der eine Status, in dem es <em>nicht</em> geht, weil die Autor:in
+	 * die Zuweisung dort selbst pflegt (§5 Fussnote 3).
+	 *
+	 * @param status Status, in dem das Projekt tatsaechlich steht
+	 */
+	public static ConflictException resignNotAllowed(String status) {
+		return new ConflictException(ErrorCodes.PROJECT_STATUS_NOT_EDITABLE,
+				"Die Redaktionszuweisung laesst sich im Status " + status + " nicht abgeben. "
+						+ "Moeglich ist das nur in SUBMITTED und REVISION: im Entwurf pflegt "
+						+ "die Autor:in die Zuweisung selbst, ab APPROVED ist die "
+						+ "redaktionelle Arbeit getan.");
+	}
+
+	/**
 	 * Der angeforderte Statusuebergang steht nicht in der Tabelle aus §4.1.
 	 *
 	 * <p>Die Meldung nennt den tatsaechlichen Status und die zulaessigen
@@ -183,6 +208,28 @@ public class ConflictException extends RuntimeException {
 		return new ConflictException(ErrorCodes.NOMINATION_ALREADY_DECIDED,
 				"Ueber diese Nominierung ist bereits entschieden worden (Stand: " + actual + "). "
 						+ "Bitte neu laden.");
+	}
+
+	/**
+	 * Diese Nominierung laesst sich nicht mehr zurueckziehen (§3.11.1, seit
+	 * Contract v70).
+	 *
+	 * <p><strong>Derselbe Fehlercode wie bei der zweiten Entscheidung</strong>
+	 * ({@link #nominationAlreadyDecided}), weil es derselbe Fall ist: ueber den
+	 * Vorschlag ist bereits verfuegt worden. Eine eigene Konstante daneben
+	 * traeuge nichts bei, was der Client anders behandeln muesste. Die Meldung
+	 * unterscheidet sich trotzdem, denn hier ist {@code ACCEPTED} fuer die
+	 * Administration <em>kein</em> Grund zur Abweisung, und ein Text, der das
+	 * Gegenteil nahelegt, waere schlicht falsch.
+	 *
+	 * @param actual Stand der Nominierung, {@code ACCEPTED}, {@code REJECTED}
+	 *               oder {@code WITHDRAWN}
+	 */
+	public static ConflictException nominationNotWithdrawable(String actual) {
+		return new ConflictException(ErrorCodes.NOMINATION_ALREADY_DECIDED,
+				"Diese Nominierung laesst sich nicht mehr zurueckziehen; sie steht auf "
+						+ actual + ". Zurueckziehen laesst sich ein offener Vorschlag, die "
+						+ "Administration zusaetzlich einen angenommenen (§3.11.1).");
 	}
 
 	public String getErrorCode() {

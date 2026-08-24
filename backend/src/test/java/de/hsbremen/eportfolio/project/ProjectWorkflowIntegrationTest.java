@@ -208,6 +208,98 @@ class ProjectWorkflowIntegrationTest {
 		}
 
 		@Test
+		@DisplayName("Die zugewiesene Redaktion gibt aus REVISION zurueck in die Pruefung "
+				+ "(§4.1, v73), protokolliert mit ihr als handelnder Person")
+		void assignedEditorReturnsItToReview() throws Exception {
+			Project returned = saved(complete(author, ProjectStatus.REVISION, "Nachgebessert"));
+			returned.getEditors().add(assignedEditor);
+			returned = saved(returned);
+
+			JsonNode response = ok(assignedEditor, returned, "submit");
+
+			assertThat(response.get("status").asText()).isEqualTo("SUBMITTED");
+			/*
+			 * §3.12: ablesbar bleibt, dass dieser Schritt aus der Redaktion
+			 * kam und nicht von der Autor:in.
+			 */
+			JsonNode entry = response.get("statusHistory").get(0);
+			assertThat(entry.get("fromStatus").asText()).isEqualTo("REVISION");
+			assertThat(entry.get("toStatus").asText()).isEqualTo("SUBMITTED");
+			assertThat(entry.get("changedBy").get("id").asText())
+					.isEqualTo(assignedEditor.getId().toString());
+		}
+
+		@Test
+		@DisplayName("Die Administration ebenfalls, auch ohne Zuweisung")
+		void adminReturnsItToReview() throws Exception {
+			Project returned = saved(complete(author, ProjectStatus.REVISION, "Nachgebessert"));
+
+			assertThat(ok(admin, returned, "submit").get("status").asText())
+					.isEqualTo("SUBMITTED");
+		}
+
+		@Test
+		@DisplayName("Aus DRAFT reicht weiterhin allein die Autor:in ein: 403 fuer die "
+				+ "Redaktion (§4.1, v73)")
+		void editorMayNotSubmitADraft() throws Exception {
+			Project ownDraft = saved(complete(author, ProjectStatus.DRAFT, "Entwurf"));
+			ownDraft.getEditors().add(assignedEditor);
+			ownDraft = saved(ownDraft);
+
+			mockMvc.perform(as(assignedEditor, action(ownDraft, "submit")))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+		}
+
+		@Test
+		@DisplayName("Ein nicht zugewiesenes Redaktionskonto bekommt 403 (§5 Fussnote 11)")
+		void unassignedEditorMayNotReturnIt() throws Exception {
+			Project returned = saved(complete(author, ProjectStatus.REVISION, "Nachgebessert"));
+
+			mockMvc.perform(as(otherEditor, action(returned, "submit")))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+		}
+
+		/**
+		 * Eine Zuweisung ueberlebt die Herabstufung eines Kontos: die Zeile in
+		 * {@code project_editor} raeumt {@code PATCH /admin/users/{id}} nicht
+		 * mit (§3.1.1). Geprueft wird deshalb die Rolle und nicht nur die
+		 * Zuweisung, sonst haette die Herabstufung an jedem schon zugewiesenen
+		 * Projekt keine Wirkung (Contract v74, §4.1).
+		 */
+		@Test
+		@DisplayName("Ein nach der Zuweisung auf STUDENT herabgestuftes Konto bekommt 403 "
+				+ "(§4.1, v74)")
+		void downgradedEditorMayNotReturnIt() throws Exception {
+			Project returned = saved(complete(author, ProjectStatus.REVISION, "Nachgebessert"));
+			User downgraded = save(Role.STUDENT);
+			returned.getEditors().add(downgraded);
+			returned = saved(returned);
+
+			mockMvc.perform(as(downgraded, action(returned, "submit")))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+
+			assertThat(reload(returned).getStatus()).isEqualTo(ProjectStatus.REVISION);
+		}
+
+		@Test
+		@DisplayName("Auch die Redaktion reicht nicht ein, solange Aenderungswuensche offen "
+				+ "sind: 409 CHANGE_REQUESTS_OPEN")
+		void openChangeRequestsBlockTheEditorToo() throws Exception {
+			Project returned = saved(complete(author, ProjectStatus.REVISION, "Nachgebessert"));
+			returned.getEditors().add(assignedEditor);
+			returned = saved(returned);
+			commentRepository.saveAndFlush(
+					Comment.changeRequest(returned, assignedEditor, "Bitte nachbessern."));
+
+			mockMvc.perform(as(assignedEditor, action(returned, "submit")))
+					.andExpect(status().isConflict())
+					.andExpect(jsonPath("$.errorCode").value("CHANGE_REQUESTS_OPEN"));
+		}
+
+		@Test
 		@DisplayName("Ohne die Pflichtfelder aus §3.3: 400 PROJECT_INCOMPLETE, und die Meldung "
 				+ "nennt alle sieben")
 		void incompleteDraft() throws Exception {
@@ -968,6 +1060,220 @@ class ProjectWorkflowIntegrationTest {
 	}
 
 	// ==================================================================
+	// DELETE /api/projects/{projectId}/editors/me
+	// ==================================================================
+
+	@Nested
+	@DisplayName("DELETE /api/projects/{projectId}/editors/me")
+	class ResigningAsEditor {
+
+		@Test
+		@DisplayName("Eine von zwei zugewiesenen Redakteur:innen gibt ab: die Zuweisung "
+				+ "verschwindet, der Status bleibt SUBMITTED")
+		void oneOfTwoResigns() throws Exception {
+			Project project = submitted();
+			project.getEditors().add(otherEditor);
+			projectRepository.saveAndFlush(project);
+
+			JsonNode response = body(as(otherEditor, resign(project)));
+
+			assertThat(response.get("status").asText()).isEqualTo("SUBMITTED");
+			assertThat(reload(project).getStatus()).isEqualTo(ProjectStatus.SUBMITTED);
+			assertThat(reload(project).getEditors())
+					.extracting(User::getId)
+					.containsExactly(assignedEditor.getId());
+
+			// Nur der Uebergang des Einreichens, kein zweiter Eintrag: es hat
+			// sich kein Status geaendert.
+			assertThat(history(project)).hasSize(1);
+		}
+
+		@Test
+		@DisplayName("Die letzte gibt ab: Status DRAFT, Historieneintrag mit ihr als changedBy")
+		void lastResignFallsBackToDraft() throws Exception {
+			Project project = submitted();
+
+			JsonNode response = body(as(assignedEditor, resign(project)));
+
+			assertThat(response.get("status").asText()).isEqualTo("DRAFT");
+			assertThat(reload(project).getStatus()).isEqualTo(ProjectStatus.DRAFT);
+			assertThat(reload(project).getEditors()).isEmpty();
+
+			ProjectStatusHistory entry = lastEntry(project);
+			assertThat(entry.getFromStatus()).isEqualTo(ProjectStatus.SUBMITTED);
+			assertThat(entry.getToStatus()).isEqualTo(ProjectStatus.DRAFT);
+			assertThat(entry.getChangedBy().getId()).isEqualTo(assignedEditor.getId());
+
+			// Die Antwort traegt die frische Historie und eine neue version
+			// (§6.1).
+			assertThat(response.get("statusHistory")).hasSize(2);
+			assertThat(response.get("version").isNull()).isFalse();
+		}
+
+		@Test
+		@DisplayName("Auch aus REVISION heraus: der Rueckfall geht nach DRAFT, offene "
+				+ "Aenderungswuensche bleiben stehen")
+		void resignFromRevision() throws Exception {
+			Project project = submitted();
+			revision(assignedEditor, project, "Bitte die Quellen ergaenzen.");
+
+			assertThat(reload(project).getStatus()).isEqualTo(ProjectStatus.REVISION);
+			long openBefore = commentRepository.countByProjectIdAndTypeAndStatus(
+					project.getId(), CommentType.CHANGE_REQUEST, CommentStatus.OPEN);
+			assertThat(openBefore).isEqualTo(1);
+
+			JsonNode response = body(as(assignedEditor, resign(project)));
+
+			assertThat(response.get("status").asText()).isEqualTo("DRAFT");
+			assertThat(commentRepository.countByProjectIdAndTypeAndStatus(
+					project.getId(), CommentType.CHANGE_REQUEST, CommentStatus.OPEN))
+					.isEqualTo(openBefore);
+		}
+
+		@Test
+		@DisplayName("In APPROVED ergibt das Abgeben 409 PROJECT_STATUS_NOT_EDITABLE")
+		void notEditableAfterApproval() throws Exception {
+			Project project = submitted();
+			ok(assignedEditor, project, "approve");
+
+			mockMvc.perform(as(assignedEditor, resign(project)))
+					.andExpect(status().isConflict())
+					.andExpect(jsonPath("$.errorCode").value("PROJECT_STATUS_NOT_EDITABLE"));
+
+			assertThat(reload(project).getEditors())
+					.extracting(User::getId)
+					.containsExactly(assignedEditor.getId());
+		}
+
+		@Test
+		@DisplayName("In PUBLISHED ebenfalls 409, und die Meldung nennt die richtigen Status")
+		void notEditableAfterPublication() throws Exception {
+			Project project = submitted();
+			ok(assignedEditor, project, "approve");
+			ok(assignedEditor, project, "publish");
+
+			mockMvc.perform(as(assignedEditor, resign(project)))
+					.andExpect(status().isConflict())
+					.andExpect(jsonPath("$.errorCode").value("PROJECT_STATUS_NOT_EDITABLE"))
+					// Die Meldung von statusNotEditable nennt DRAFT und REVISION
+					// als erlaubt und waere hier in beiden Richtungen falsch;
+					// deshalb hat das Abgeben eine eigene (Befund des
+					// code-reviewers zu KAN-37).
+					.andExpect(jsonPath("$.message", containsString("SUBMITTED und REVISION")));
+		}
+
+		@Test
+		@DisplayName("Im DRAFT ebenfalls 409: dort pflegt die Autor:in die Zuweisung selbst")
+		void notEditableInDraft() throws Exception {
+			mockMvc.perform(as(assignedEditor, resign(draft)))
+					.andExpect(status().isConflict())
+					.andExpect(jsonPath("$.errorCode").value("PROJECT_STATUS_NOT_EDITABLE"))
+					// Die allgemeine Meldung laese sich hier als Widerspruch
+					// lesen („im Status DRAFT nicht bearbeitbar, erlaubt sind
+					// DRAFT und REVISION"); die eigene sagt, worum es geht.
+					.andExpect(jsonPath("$.message", not(containsString("nicht mehr bearbeitet"))))
+					.andExpect(jsonPath("$.message", containsString("SUBMITTED und REVISION")));
+		}
+
+		@Test
+		@DisplayName("Ein nicht zugewiesenes Redaktionskonto bekommt 403 und nicht 409")
+		void unassignedEditorForbidden() throws Exception {
+			Project project = submitted();
+
+			mockMvc.perform(as(otherEditor, resign(project)))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+
+			assertThat(reload(project).getEditors())
+					.extracting(User::getId)
+					.containsExactly(assignedEditor.getId());
+		}
+
+		@Test
+		@DisplayName("Ein Admin ist nie zugewiesen und bekommt deshalb 403")
+		void adminForbidden() throws Exception {
+			Project project = submitted();
+
+			mockMvc.perform(as(admin, resign(project)))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+		}
+
+		@Test
+		@DisplayName("Ein technisch zugewiesener Admin darf abgeben: die Zuweisung zaehlt, "
+				+ "nicht die Rolle")
+		void assignedAdminMayResign() throws Exception {
+			Project project = submitted();
+			/* §5 Fussnote 11 nennt eine solche Zuweisung moeglich und
+			   wirkungslos; das Kreuz bei ADMIN in §5 beschreibt den Regelfall,
+			   dass ein Admin gar nicht erst zugewiesen wird (Contract v69,
+			   Klaerungsrunde zu KAN-37). Steht er doch drin, wird er sie los. */
+			project.getEditors().add(admin);
+			projectRepository.saveAndFlush(project);
+
+			body(as(admin, resign(project)));
+
+			assertThat(reload(project).getEditors())
+					.extracting(User::getId)
+					.containsExactly(assignedEditor.getId());
+			assertThat(reload(project).getStatus()).isEqualTo(ProjectStatus.SUBMITTED);
+		}
+
+		@Test
+		@DisplayName("Die Autor:in bekommt 403: sie gibt keine Redaktionszuweisung ab")
+		void authorForbidden() throws Exception {
+			Project project = submitted();
+
+			mockMvc.perform(as(author, resign(project)))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+		}
+
+		@Test
+		@DisplayName("Ohne Token 401")
+		void unauthenticated() throws Exception {
+			Project project = submitted();
+
+			mockMvc.perform(resign(project))
+					.andExpect(status().isUnauthorized())
+					.andExpect(jsonPath("$.errorCode").value("NOT_AUTHENTICATED"));
+		}
+
+		@Test
+		@DisplayName("Eine unbekannte Projekt-ID ergibt 404 und nicht 403 (§6.3.1)")
+		void unknownProject() throws Exception {
+			mockMvc.perform(as(assignedEditor,
+							delete("/api/projects/" + UUID.randomUUID() + "/editors/me")))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.errorCode").value("PROJECT_NOT_FOUND"));
+		}
+
+		@Test
+		@DisplayName("Nach dem Rueckfall kann die Autor:in neu zuweisen und erneut einreichen")
+		void authorRegainsControl() throws Exception {
+			Project project = submitted();
+			body(as(assignedEditor, resign(project)));
+
+			mockMvc.perform(as(author, put("/api/projects/" + project.getId())
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(json(
+									"version", reload(project).getVersion(),
+									"title", "Gruppenarbeit",
+									"projectType", "THESIS",
+									"degree", "BACHELOR",
+									"semesterId", semester.getId().toString(),
+									"categoryId", category.getId().toString(),
+									"facultyId", faculty.getId().toString(),
+									"studyProgramId", studyProgram.getId().toString(),
+									"editorIds", List.of(otherEditor.getId().toString())))))
+					.andExpect(status().isOk());
+
+			assertThat(ok(author, project, "submit").get("status").asText())
+					.isEqualTo("SUBMITTED");
+		}
+	}
+
+	// ==================================================================
 	// Hilfsmittel
 	// ==================================================================
 
@@ -1056,6 +1362,11 @@ class ProjectWorkflowIntegrationTest {
 
 		UUID id = UUID.fromString(objectMapper.readTree(response).get("id").asText());
 		return projectRepository.findById(id).orElseThrow();
+	}
+
+	/** {@code DELETE /api/projects/{id}/editors/me} (§6.1, seit Contract v68). */
+	private MockHttpServletRequestBuilder resign(Project project) {
+		return delete("/api/projects/" + project.getId() + "/editors/me");
 	}
 
 	private MockHttpServletRequestBuilder action(Project project, String action) {

@@ -66,7 +66,10 @@ public class ProjectAdminController {
 					+ "sondern traegt seinen Fehlercode in seiner Zeile. Aufgerufen wird je "
 					+ "Projekt derselbe Dienst wie beim Einzel-Endpoint, samt Rechtepruefung, "
 					+ "Statushistorie (§3.12) und, bei request-revision, dem "
-					+ "CHANGE_REQUEST-Kommentar.")
+					+ "CHANGE_REQUEST-Kommentar. Seit Contract v72 traegt eine Zeile "
+					+ "RESOURCE_IN_USE, wenn das Projekt in der kuratierten Top-10 steht: "
+					+ "der Weg nach REVISION ist dann gesperrt, bis es die Administration "
+					+ "aus der Liste nimmt (§4.1, §3.11.1).")
 	@ApiResponse(responseCode = "200", description = "Ein Ergebnis je angefragter ID, in der "
 			+ "Reihenfolge des Bodys. Auch dann, wenn keine einzige Zeile erfolgreich war: die "
 			+ "Anfrage selbst war in Ordnung.")

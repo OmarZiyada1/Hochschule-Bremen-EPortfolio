@@ -13,6 +13,7 @@ import de.hsbremen.eportfolio.common.error.ValidationException;
 import de.hsbremen.eportfolio.project.Project;
 import de.hsbremen.eportfolio.project.ProjectPermissionService;
 import de.hsbremen.eportfolio.project.ProjectRepository;
+import de.hsbremen.eportfolio.project.ProjectWorkflowService;
 import de.hsbremen.eportfolio.user.User;
 import de.hsbremen.eportfolio.user.UserRepository;
 import java.util.EnumSet;
@@ -75,14 +76,23 @@ public class CommentService {
 
 	private final ProjectPermissionService permissions;
 
+	/**
+	 * Fuer den Uebergang, den ein {@code CHANGE_REQUEST} seit Contract v71
+	 * ausloest (§4.1). Kein Zyklus: {@code ProjectWorkflowService} haengt am
+	 * {@code CommentRepository} und nicht an diesem Dienst.
+	 */
+	private final ProjectWorkflowService workflowService;
+
 	public CommentService(CommentRepository commentRepository,
 			ProjectRepository projectRepository,
 			UserRepository userRepository,
-			ProjectPermissionService permissions) {
+			ProjectPermissionService permissions,
+			ProjectWorkflowService workflowService) {
 		this.commentRepository = commentRepository;
 		this.projectRepository = projectRepository;
 		this.userRepository = userRepository;
 		this.permissions = permissions;
+		this.workflowService = workflowService;
 	}
 
 	// ------------------------------------------------------------------
@@ -159,8 +169,28 @@ public class CommentService {
 
 		Comment comment = Comment.of(project, currentUser(user), request.type(),
 				request.text().trim());
+		CommentResponse response = CommentResponse.from(
+				commentRepository.saveAndFlush(comment));
 
-		return CommentResponse.from(commentRepository.saveAndFlush(comment));
+		/*
+		 * Seit Contract v71 ist der Aenderungswunsch zugleich ein
+		 * Statusausloeser (§4.1): aus SUBMITTED, APPROVED und PUBLISHED geht
+		 * das Projekt nach REVISION, mit Historieneintrag. Drei Faelle lassen
+		 * den Status stehen, und keiner davon ist ein Fehler: die uebrigen
+		 * Staende, eine fehlende Zuweisung, und seit Contract v72 ein Platz in
+		 * der kuratierten Top-10. Die Begruendungen stehen an
+		 * revisionAfterChangeRequest.
+		 *
+		 * Nach dem Speichern des Kommentars, nicht davor: der Kommentar ist der
+		 * Gegenstand dieses Aufrufs, der Uebergang seine Folge. Beides laeuft in
+		 * derselben Transaktion, es kann also nicht der eine ohne den anderen
+		 * stehenbleiben.
+		 */
+		if (request.type() == CommentType.CHANGE_REQUEST) {
+			workflowService.revisionAfterChangeRequest(user, project);
+		}
+
+		return response;
 	}
 
 	// ------------------------------------------------------------------

@@ -2,6 +2,7 @@ package de.hsbremen.eportfolio.top10;
 
 import de.hsbremen.eportfolio.common.domain.BaseEntity;
 import de.hsbremen.eportfolio.common.enums.NominationStatus;
+import de.hsbremen.eportfolio.common.enums.NominationTier;
 import de.hsbremen.eportfolio.project.Project;
 import de.hsbremen.eportfolio.user.User;
 import jakarta.persistence.Column;
@@ -36,7 +37,23 @@ public class Top10Nomination extends BaseEntity {
 	@JoinColumn(name = "nominated_by", nullable = false)
 	private User nominatedBy;
 
-	/** Wrapper-Typ, weil die Spalte nullable ist. */
+	/**
+	 * Die vorgeschlagene Stufe (§2.13), seit Contract v68 Pflichtangabe der
+	 * Nominierung.
+	 */
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 32)
+	private NominationTier proposedTier;
+
+	/**
+	 * Wrapper-Typ, weil die Spalte nullable ist.
+	 *
+	 * <p><strong>Seit Contract v68 das Feld der Administration.</strong> Die
+	 * Nominierung schlaegt eine Stufe vor und keinen Platz; hier steht deshalb
+	 * nicht mehr der Wunsch der Redaktion, sondern der beim Annehmen
+	 * entschiedene Platz. Solange die Nominierung offen ist, bleibt das Feld
+	 * leer.
+	 */
 	private Integer proposedPosition;
 
 	/** Entspricht dem Default der Spalte, da JPA die Spalte immer mitschreibt. */
@@ -72,6 +89,14 @@ public class Top10Nomination extends BaseEntity {
 
 	public void setNominatedBy(User nominatedBy) {
 		this.nominatedBy = nominatedBy;
+	}
+
+	public NominationTier getProposedTier() {
+		return proposedTier;
+	}
+
+	public void setProposedTier(NominationTier proposedTier) {
+		this.proposedTier = proposedTier;
 	}
 
 	public Integer getProposedPosition() {

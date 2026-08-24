@@ -1,11 +1,13 @@
 import type {
   ApiSchemas,
+  CommentResponse,
   OwnPortfolioResponse,
   ProjectCardResponse,
   ProjectDetailResponse,
   ProjectReference,
   StatusHistoryResponse,
   Top10EntryResponse,
+  Top10NominationResponse,
   UserResponse,
 } from "@/api/types"
 
@@ -83,6 +85,7 @@ export function projectCard(
     category: null,
     faculty: null,
     studyProgram: null,
+    module: null,
     author: person(),
     tags: [],
     reactionCount: 0,
@@ -136,6 +139,53 @@ export function projectDetail(
     version: 1,
     createdAt: "2026-01-01T10:00:00Z",
     updatedAt: "2026-01-01T10:00:00Z",
+    ...overrides,
+  }
+}
+
+/**
+ * Ein Kommentar (§3.5, §6.1). Ohne Ueberschreibung eine Antwort einer
+ * studentischen Person; {@code status} ist {@code null}, weil nur ein
+ * {@code CHANGE_REQUEST} einen Stand traegt (§2.4).
+ */
+export function comment(
+  overrides: Partial<CommentResponse> = {}
+): CommentResponse {
+  return {
+    id: "c-1",
+    author: {
+      id: "p-1",
+      firstName: "Mira",
+      lastName: "Beispiel",
+      role: "STUDENT",
+    },
+    type: "REPLY",
+    text: "Danke fuer die Rueckmeldung.",
+    status: null,
+    createdAt: "2026-01-02T10:00:00Z",
+    updatedAt: "2026-01-02T10:00:00Z",
+    ...overrides,
+  }
+}
+
+/**
+ * Eine Nominierung (§3.11, §6.1). Ohne Ueberschreibung ein offener
+ * Vorschlag der Stufe TOP_10; {@code proposedPosition} ist leer, weil der
+ * Platz seit Contract v68 erst beim Annehmen entsteht.
+ */
+export function nomination(
+  overrides: Partial<Top10NominationResponse> = {}
+): Top10NominationResponse {
+  return {
+    id: "n-1",
+    project: projectCard(),
+    nominatedBy: person(),
+    proposedTier: "TOP_10",
+    proposedPosition: null,
+    status: "PENDING",
+    decidedBy: null,
+    decidedAt: null,
+    createdAt: "2026-01-03T10:00:00Z",
     ...overrides,
   }
 }

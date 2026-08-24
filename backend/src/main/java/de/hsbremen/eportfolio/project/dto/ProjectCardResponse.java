@@ -13,7 +13,11 @@ import java.util.UUID;
  * Ein Projekt in der Listenansicht von {@code GET /api/projects} (§6.1).
  *
  * <p>Die Kachel traegt genau das, was Uebersicht und Filterleiste anzeigen.
- * Nicht enthalten sind {@code blocks}, {@code members}, {@code editors}, die
+ * Seit Contract v68 traegt sie auch {@code module} (§3.9): die Redaktionsliste
+ * „Meine Reviews" zeigt eine Spalte „Fach", und ein Nachladen je Zeile waere
+ * genau das N+1, das der Lesedienst sonst ueberall vermeidet.
+ *
+ * <p>Nicht enthalten sind {@code blocks}, {@code members}, {@code editors}, die
  * Statushistorie und {@code version}: das Blockdokument je Treffer zu laden
  * waere fuer eine Liste unverhaeltnismaessig, und die uebrigen Felder
  * unterliegen einer Sichtbarkeitspruefung, die je Projekt zu treffen waere.
@@ -30,6 +34,7 @@ import java.util.UUID;
  * @param category        (§3.6)
  * @param faculty         (§3.8)
  * @param studyProgram    (§3.7)
+ * @param module          (§3.9)
  * @param author          Ersteller:in und Eigentuemer:in
  * @param tags            freie Schlagwoerter, hoechstens fuenf
  * @param reactionCount   {@code COUNT} der Reaktionen (§3.10)
@@ -71,6 +76,12 @@ public record ProjectCardResponse(
 		@Schema(description = "Studiengang (§3.7). Im DRAFT noch nicht gesetzt.",
 				nullable = true)
 		ReferenceResponse studyProgram,
+
+		@Schema(description = "Modul, im Prototyp als \"Fach\" beschriftet (§3.9). Seit "
+				+ "Contract v68 an der Kachel, weil \"Meine Reviews\" eine Spalte dafuer "
+				+ "fuehrt. Kann fehlen; es ist kein Pflichtfeld des Einreichens (§3.3).",
+				nullable = true)
+		ReferenceResponse module,
 
 		PersonResponse author,
 
@@ -119,6 +130,7 @@ public record ProjectCardResponse(
 				ReferenceResponse.from(project.getCategory()),
 				ReferenceResponse.from(project.getFaculty()),
 				ReferenceResponse.from(project.getStudyProgram()),
+				ReferenceResponse.from(project.getModule()),
 				PersonResponse.from(project.getAuthor(), authorAvatarUrl),
 				tags,
 				reactionCount,

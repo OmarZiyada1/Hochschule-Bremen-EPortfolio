@@ -6,6 +6,7 @@ import de.hsbremen.eportfolio.comment.CommentRepository;
 import de.hsbremen.eportfolio.common.enums.CommentStatus;
 import de.hsbremen.eportfolio.common.enums.CommentType;
 import de.hsbremen.eportfolio.common.enums.ProjectStatus;
+import de.hsbremen.eportfolio.common.enums.UserStatus;
 import de.hsbremen.eportfolio.common.error.ConflictException;
 import de.hsbremen.eportfolio.common.error.ErrorCodes;
 import de.hsbremen.eportfolio.common.error.ResourceNotFoundException;
@@ -22,6 +23,7 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -276,14 +278,197 @@ public class ProjectWorkflowService {
 
 		Project project = load(projectId);
 		requireAllowed(user, project, ProjectTransition.REQUEST_REVISION);
+		requireNotInTop10ForRevision(project);
 
 		writeChangeRequest(user, project, request.reason().trim());
 		return perform(user, project, ProjectTransition.REQUEST_REVISION);
 	}
 
+	/**
+	 * Der zweite Ausloeser desselben Uebergangs (§4.1, seit Contract v71,
+	 * KAN-37): ein Kommentar vom Typ {@code CHANGE_REQUEST} bringt das Projekt
+	 * nach {@code REVISION}. Aufgerufen aus {@code CommentService.create},
+	 * <strong>nachdem</strong> der Kommentar geschrieben ist.
+	 *
+	 * <p><strong>Warum es diesen Weg gibt.</strong> Bis v70 fuehrten zwei Wege
+	 * zu demselben Ziel, die in der Oberflaeche gleich aussahen und verschieden
+	 * wirkten: der Knopf setzte den Status, das Kommentarformular nicht. Wer den
+	 * Wunsch im Formular schrieb, sah das Projekt eingereicht bleiben und tippte
+	 * ihn im Dialog ein zweites Mal.
+	 *
+	 * <p><strong>Diese Methode schreibt keinen Kommentar.</strong> Anders als
+	 * {@link #requestRevision}, das mit {@link #writeChangeRequest} anfaengt,
+	 * liegt er hier bereits vor; ein zweiter waere dieselbe Aussage doppelt.
+	 *
+	 * <p><strong>Sie wirft nicht, sondern laesst es sein.</strong> Zwei Faelle
+	 * fuehren dazu, und beide sind nach §4.1 ausdruecklich kein Fehler:
+	 * <ul>
+	 * <li>Der Status laesst den Uebergang nicht zu, also {@code DRAFT} oder
+	 * {@code REVISION}. Kommentieren ist nach §5 in jedem Status erlaubt; ein
+	 * 409 haette der Redaktion das Werkzeug in genau dem Stand genommen, in dem
+	 * sie es am meisten braucht. Wirkung hat der Wunsch dort trotzdem: solange
+	 * er {@code OPEN} ist, sperrt er das Einreichen (§2.4).</li>
+	 * <li>Die Person duerfte den Uebergang nicht ausloesen, ist also nicht
+	 * zugewiesen (§5 Fussnote 11). Den Kommentar darf sie schreiben, §5 fuehrt
+	 * dafuer eine eigene Zeile ohne diese Einschraenkung. Wuerde der Uebergang
+	 * hier trotzdem greifen, waere Fussnote 11 durch die Hintertuer ausgehebelt:
+	 * es genuegte, statt des Uebergangs einen Kommentar zu schreiben.</li>
+	 * </ul>
+	 *
+	 * <p>Ein 403 waere in beiden Faellen die falsche Antwort, denn der Aufruf,
+	 * den die Person gestellt hat, war das Anlegen eines Kommentars, und das
+	 * durfte sie.
+	 *
+	 * @param user    angemeldete Person, bereits als berechtigt zum Kommentieren
+	 *                geprueft
+	 * @param project das Projekt des Kommentars, in dieser Transaktion geladen
+	 */
+	public void revisionAfterChangeRequest(AuthenticatedUser user, Project project) {
+		if (!ProjectTransition.REQUEST_REVISION.isAllowedFrom(project.getStatus())) {
+			return;
+		}
+		if (!permissions.mayTrigger(user, project, ProjectTransition.REQUEST_REVISION)) {
+			return;
+		}
+		/*
+		 * Seit Contract v72 sperrt die kuratierte Liste den Uebergang. Auch
+		 * dieser Fall bleibt still: gestellt war die Anfrage, einen Kommentar
+		 * anzulegen, und die war erlaubt. Wer den Uebergang wirklich will,
+		 * nimmt das Projekt zuerst aus der Liste und bekommt ueber
+		 * POST /request-revision die klare Auskunft.
+		 */
+		if (top10Service.holdsSeat(project)) {
+			return;
+		}
+		applyTransition(user, project, ProjectTransition.REQUEST_REVISION);
+	}
+
+	// ------------------------------------------------------------------
+	// DELETE /api/projects/{projectId}/editors/me
+	// ------------------------------------------------------------------
+
+	/**
+	 * Die angemeldete Redakteur:in gibt ihre eigene Zuweisung zurueck (§6.1,
+	 * §4.1, seit Contract v68), <strong>200</strong> mit der Detailantwort.
+	 *
+	 * <p><strong>Warum das hier liegt und nicht im
+	 * {@code ProjectWriteService}.</strong> Der Aufruf aendert nicht nur die
+	 * Zuweisung: war es die letzte, ist er zugleich ein Statusuebergang mit
+	 * Historieneintrag (§3.12). Die Maschinerie dafuer steht in diesem Dienst,
+	 * und zwei Stellen, die Statushistorie schreiben, liefen mit der Zeit
+	 * auseinander.
+	 *
+	 * <p><strong>Reihenfolge der Pruefungen nach §6.3.1:</strong> laden (fehlt
+	 * → 404) → Berechtigung (nein → 403) → Status (nein → 409) → schreiben.
+	 *
+	 * <p><strong>Nur die zugewiesene Person selbst.</strong> Fremde Zuweisungen
+	 * aendert allein die Administration ueber
+	 * {@code PUT /api/projects/{id}/editors}; wer gar nicht zugewiesen ist, hat
+	 * hier nichts abzugeben und bekommt <strong>403</strong>
+	 * {@code NO_PERMISSION}. Ein 404 waere die falsche Auskunft, denn das
+	 * Projekt gibt es (§6.3.1). Entschieden wird ueber die Zuweisung und nicht
+	 * ueber die Systemrolle: ein Admin wird in aller Regel nicht zugewiesen
+	 * (§4.1), und wo eine technische Zuweisung doch besteht, ist sie es, die
+	 * abgegeben wird.
+	 *
+	 * <p><strong>Nur in {@code SUBMITTED} und {@code REVISION}</strong>, sonst
+	 * <strong>409</strong> {@code PROJECT_STATUS_NOT_EDITABLE}. Im {@code DRAFT}
+	 * pflegt die Autor:in die Zuweisung selbst (§5 Fussnote 3), ab
+	 * {@code APPROVED} ist die redaktionelle Arbeit getan und die Zuweisung nur
+	 * noch Protokoll.
+	 *
+	 * <p><strong>War es die letzte Zuweisung, faellt das Projekt nach
+	 * {@code DRAFT}</strong>, protokolliert mit der abgebenden Person als
+	 * {@code changedBy}. Andernfalls stuende ein eingereichtes Projekt ohne
+	 * zustaendige Redaktion da: genehmigen, veroeffentlichen und zurueckgeben
+	 * koennte ausser der Administration niemand mehr (§5 Fussnote 11), und die
+	 * Autor:in kaeme nicht heran, weil sie erst im {@code DRAFT} wieder zuweisen
+	 * darf. Waren weitere zugewiesen, aendert sich allein die Zuweisung.
+	 *
+	 * <p><strong>Kommentare bleiben unberuehrt</strong>, offene
+	 * Aenderungswuensche also auch. Sie sind der Arbeitsauftrag an die
+	 * Projektseite und haengen nicht daran, wer ihn erteilt hat; erledigen kann
+	 * die Projektseite sie selbst (§2.4).
+	 *
+	 * @throws ResourceNotFoundException wenn es die Projekt-ID nicht gibt (404)
+	 * @throws AccessDeniedException     wenn die Person dem Projekt nicht als
+	 *                                   Redaktion zugewiesen ist (403)
+	 * @throws ConflictException         wenn der Status das Abgeben nicht
+	 *                                   zulaesst (409)
+	 */
+	public ProjectDetailResponse resignAsEditor(AuthenticatedUser user, UUID projectId) {
+		Project project = load(projectId);
+
+		requireAssignedEditor(user, project);
+		requireResignableStatus(project);
+
+		User actor = currentUser(user);
+		project.getEditors().removeIf(editor -> editor.getId().equals(actor.getId()));
+
+		boolean wasLast = project.getEditors().isEmpty();
+		ProjectStatus from = project.getStatus();
+		if (wasLast) {
+			project.setStatus(ProjectStatus.DRAFT);
+		}
+		projectRepository.saveAndFlush(project);
+
+		if (wasLast) {
+			recordTransition(project, from, ProjectStatus.DRAFT, actor);
+		}
+
+		// Nicht ueber readService.detail: der Aufruf hat der anfragenden Person
+		// gerade die Leseberechtigung genommen, mit der sie ihn ausgeloest hat.
+		// Begruendung an der Methode.
+		return readService.detailAfterOwnResignation(project);
+	}
+
 	// ------------------------------------------------------------------
 	// Pruefungen
 	// ------------------------------------------------------------------
+
+	/**
+	 * Abgeben darf allein, wer selbst zugewiesen ist (§5, Zeile „Eigene
+	 * Redaktionszuweisung abgeben").
+	 *
+	 * <p>Die Antwort gibt {@link ProjectPermissionService#mayResignAsEditor}
+	 * und nicht dieser Dienst: die Ressourcenebene gehoert vollstaendig dorthin
+	 * (Hausregel „Berechtigungen zweistufig"). Hier bleibt allein die
+	 * Uebersetzung des {@code false} in die richtige Antwort.
+	 *
+	 * <p>Die beiden Gruende dafuer auseinandergehalten wie im
+	 * {@code Top10NominationService}: ohne Anmeldung 401, sonst 403. Den
+	 * ersten Fall faengt die Filterkette in aller Regel schon ab; die
+	 * Unterscheidung steht hier trotzdem, damit der Dienst auch fuer sich
+	 * genommen die richtige Auskunft gibt.
+	 */
+	private void requireAssignedEditor(AuthenticatedUser user, Project project) {
+		if (permissions.mayResignAsEditor(user, project)) {
+			return;
+		}
+		if (user == null || user.getStatus() != UserStatus.ACTIVE) {
+			throw new AuthenticationCredentialsNotFoundException(
+					"Fuer das Abgeben der Redaktionszuweisung ist eine Anmeldung erforderlich "
+							+ "(§5).");
+		}
+		throw new AccessDeniedException(
+				"Abgeben kann eine Redaktionszuweisung nur, wer selbst zugewiesen ist; "
+						+ "fremde Zuweisungen aendert die Administration ueber "
+						+ "PUT /api/projects/{id}/editors (§6.1).");
+	}
+
+	/**
+	 * §4.1: abgegeben wird nur in {@code SUBMITTED} und {@code REVISION}.
+	 *
+	 * <p>Eigene Fabrik statt {@link ConflictException#statusNotEditable}, obwohl
+	 * derselbe Fehlercode gilt: deren Meldung nennt {@code DRAFT} und
+	 * {@code REVISION} als erlaubt und waere hier in beiden Richtungen falsch.
+	 */
+	private void requireResignableStatus(Project project) {
+		ProjectStatus status = project.getStatus();
+		if (status != ProjectStatus.SUBMITTED && status != ProjectStatus.REVISION) {
+			throw ConflictException.resignNotAllowed(status.name());
+		}
+	}
 
 	/**
 	 * Die zwei Gruende, aus denen ein Uebergang scheitern kann, in zwei
@@ -311,6 +496,35 @@ public class ProjectWorkflowService {
 							.map(ProjectStatus::name)
 							.collect(Collectors.joining(", ")));
 		}
+	}
+
+	/**
+	 * Ein veroeffentlichtes Projekt geht nicht nach {@code REVISION}, solange
+	 * es in der kuratierten Top-10 steht (§4.1, §3.11.1, seit Contract v72).
+	 *
+	 * <p><strong>Die Reihenfolge ist seit v72 umgedreht.</strong> Bis v71 entzog
+	 * der Uebergang den Platz still mit; ein einziges Zurueckgeben nahm damit
+	 * einen kuratierten Beitrag aus der oeffentlichen Auswahl, ohne dass jemand
+	 * darueber entschieden haette. Die Startseite gehoert nach §5 allein der
+	 * Administration: erst aus der Liste nehmen, dann zurueckgeben.
+	 *
+	 * <p><strong>409 und nicht 403.</strong> Die Person darf den Uebergang, das
+	 * Projekt ist nur gerade nicht in dem Zustand, in dem er greift (§6.3.1).
+	 * Die Meldung nennt den Weg aus der Liste, sonst bliebe die Auskunft eine
+	 * Sackgasse.
+	 */
+	private void requireNotInTop10ForRevision(Project project) {
+		if (project.getStatus() != ProjectStatus.PUBLISHED) {
+			return;
+		}
+		if (!top10Service.holdsSeat(project)) {
+			return;
+		}
+		throw ConflictException.resourceInUse(
+				"Dieses Projekt steht in der Top-10 und laesst sich deshalb nicht "
+						+ "zurueckgeben. Die Administration nimmt es zuerst aus der Liste, "
+						+ "ueber PUT /api/admin/top10 oder ueber das Zurueckziehen der "
+						+ "Nominierung (§3.11.1, §4.1).");
 	}
 
 	/**
@@ -394,6 +608,15 @@ public class ProjectWorkflowService {
 	 * an dieser Stelle gilt sie fuer jeden kuenftigen Uebergang mit, ohne dass
 	 * jemand daran denken muss.
 	 *
+	 * <p><strong>Eine Ausnahme gibt es seit KAN-37.</strong>
+	 * {@link #resignAsEditor} setzt den Status ohne diesen Weg, weil das Abgeben
+	 * kein Uebergang aus der Tabelle ist, sondern eine Zuweisungsaenderung mit
+	 * einer Statusfolge. Der Top-10-Entzug fehlt dort folgerichtig: abgegeben
+	 * wird nur aus {@code SUBMITTED} und {@code REVISION}, und aus keinem der
+	 * beiden verlaesst ein Projekt {@code PUBLISHED}. Wer hier kuenftig etwas
+	 * ergaenzt, das fuer <em>jeden</em> Statuswechsel gelten soll, prueft
+	 * {@code resignAsEditor} mit.
+	 *
 	 * <p><strong>Die handelnde Person wird einmal geladen und zweimal
 	 * verwendet</strong>, fuer die Statushistorie (§3.12) und fuer das
 	 * Top-10-Protokoll (§3.17, seit KAN-45). Im Protokoll der Top-10 steht damit
@@ -404,15 +627,44 @@ public class ProjectWorkflowService {
 	private ProjectDetailResponse perform(AuthenticatedUser user, Project project,
 			ProjectTransition transition) {
 
+		applyTransition(user, project, transition);
+		return readService.detail(user, project.getId());
+	}
+
+	/**
+	 * Der Uebergang selbst, ohne die Antwort. Herausgeloest mit Contract v71,
+	 * weil {@link #revisionAfterChangeRequest} ihn braucht und die Detailantwort
+	 * nicht: sie kostet eine eigene Abfrage, und der Aufrufer dort gibt einen
+	 * Kommentar zurueck und kein Projekt.
+	 */
+	private void applyTransition(AuthenticatedUser user, Project project,
+			ProjectTransition transition) {
+
 		ProjectStatus from = project.getStatus();
 		project.setStatus(transition.target());
 		projectRepository.saveAndFlush(project);
 
 		User actor = currentUser(user);
 		recordTransition(project, from, transition.target(), actor);
+		/*
+		 * Der Entzug bleibt als Sicherung stehen (§3.17 fuehrt ihn weiter als
+		 * Schreibweg), kann seit Contract v72 aber nicht mehr ausloesen:
+		 * requireNotInTop10 und holdsSeat weisen den einzigen Uebergang aus
+		 * PUBLISHED vorher ab, releaseSeat findet also keinen Eintrag. Das
+		 * Loeschen eines Projekts laeuft nicht hier durch, sondern ueber
+		 * Top10Service.removeOnProjectDeletion aus dem ProjectWriteService.
+		 */
 		top10Service.removeOnLeavingPublished(project, actor);
 
-		return readService.detail(user, project.getId());
+		/*
+		 * Offene Nominierungen fallen mit (§3.11.1, seit v72). Sie waeren sonst
+		 * unerfuellbar und im Weg zugleich: annehmen liesse sich das Projekt
+		 * nicht mehr, und offen sperrte der Vorschlag es gegen jeden neuen.
+		 * Angenommene bleiben stehen, sie sind Protokoll.
+		 */
+		if (from == ProjectStatus.PUBLISHED) {
+			top10Service.withdrawOpenNominations(project, actor);
+		}
 	}
 
 	/**
