@@ -3,9 +3,9 @@ import { z } from "zod"
 /**
  * Eingabepruefung des Profilformulars (KAN-34, Frontend-Regel 12).
  *
- * <p>Die Laengen kommen aus dem Contract: biography hoechstens 5000 Zeichen
- * (§6.1, PortfolioUpdateRequest). Fehlertexte sind i18n-Schluessel,
- * uebersetzt wird erst bei der Anzeige.
+ * <p>Die Laengen kommen aus dem Contract: biography hoechstens 500 Zeichen
+ * (§3.2). Fehlertexte sind i18n-Schluessel, uebersetzt wird erst bei der
+ * Anzeige.
  *
  * <p><strong>Die Bedingung fuer currentPassword steht im Schema</strong>,
  * nicht im Komponentencode: Pflicht ist das Feld genau dann, wenn die
@@ -18,8 +18,13 @@ import { z } from "zod"
  * bei vergebener Adresse erscheinen zusaetzlich am betroffenen Feld.
  */
 
-/** Contract §6.1: PortfolioUpdateRequest.biography, hoechstens 5000 Zeichen. */
-export const BIOGRAPHY_MAX_LENGTH = 5000
+/**
+ * Contract §3.2: portfolio.biography, hoechstens 500 Zeichen. Die Grenze steht
+ * seit v75 im Contract; bis dahin standen hier 5000, eine Zahl ohne Deckung.
+ * Serverseitig traegt sie die Bean-Validation und die Spalte selbst, hier
+ * beanstandet sie vor dem Request und speist den Zeichenzaehler.
+ */
+export const BIOGRAPHY_MAX_LENGTH = 500
 
 /**
  * Ob die eingegebene Adresse einen Wechsel bedeutet. Gross- und

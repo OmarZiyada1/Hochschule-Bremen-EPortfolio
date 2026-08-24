@@ -188,6 +188,82 @@ describe("ProfileEditPage", () => {
     expect(portfolio.body).toMatchObject({ biography: "Neu" })
   })
 
+  it("zeigt die Restzeichenzahl der Bio und beanstandet 501 Zeichen vor dem Request", async () => {
+    /*
+     * KAN-79, Contract v75 (§3.2): die Bio fasst 500 Zeichen. Weiches Limit
+     * mit Zähler statt hartem maxLength, damit sichtbar ist, wie viel zu
+     * viel ist (SC 3.3.1). Der eingegebene Text bleibt deshalb ungekürzt
+     * im Feld stehen, und es geht kein Request raus.
+     */
+    let portfolioCalls = 0
+    server.use(
+      ownPortfolioHandler(),
+      http.put("*/api/auth/me", () => HttpResponse.json(userResponse())),
+      http.put("*/api/portfolio/me", () => {
+        portfolioCalls += 1
+        return HttpResponse.json({ biography: null, avatarUrl: null })
+      }),
+      http.get("*/api/auth/me", () => HttpResponse.json(userResponse()))
+    )
+    await renderProfile()
+
+    const bio = screen.getByLabelText("Bio")
+    /* Der Zähler hängt über aria-describedby am Feld; die zugängliche
+       Beschreibung belegt Text und Verdrahtung in einem. getByText schiede
+       aus, weil CharacterCounter denselben Text an der Ansageschwelle ein
+       zweites Mal in seine Live-Region schreibt. */
+    expect(bio).toHaveAccessibleDescription("Noch 500 Zeichen")
+
+    /* Eingefügt statt getippt: 501 Tastendrücke wären derselbe Fall in
+       langsam, und genau das Einfügen ist der Weg, auf dem ein zu langer
+       Text ins Feld gerät. */
+    const tooLong = "x".repeat(501)
+    await userEvent.click(bio)
+    await userEvent.paste(tooLong)
+
+    expect(bio).toHaveValue(tooLong)
+    expect(bio).toHaveAccessibleDescription("1 Zeichen zu viel")
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Änderungen speichern" })
+    )
+
+    expect(
+      await screen.findByText("Die Bio darf höchstens 500 Zeichen lang sein.")
+    ).toBeVisible()
+    /* Ungekürzt stehen geblieben, nicht stillschweigend auf 500 gekappt. */
+    expect(bio).toHaveValue(tooLong)
+    expect(portfolioCalls).toBe(0)
+  })
+
+  it("laesst genau 500 Zeichen durch", async () => {
+    /* Der Grenzfall gehört dazu: das Schema prüft max, nicht "kleiner
+       als", und ein Off-by-one fällt sonst erst am 400 des Servers auf. */
+    const atLimit = "x".repeat(500)
+    const portfolio: { body?: unknown } = {}
+    server.use(
+      ownPortfolioHandler(),
+      http.put("*/api/auth/me", () => HttpResponse.json(userResponse())),
+      portfolioPutHandler(portfolio),
+      http.get("*/api/auth/me", () => HttpResponse.json(userResponse()))
+    )
+    await renderProfile()
+
+    const bio = screen.getByLabelText("Bio")
+    await userEvent.click(bio)
+    await userEvent.paste(atLimit)
+    expect(bio).toHaveAccessibleDescription("Noch 0 Zeichen")
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Änderungen speichern" })
+    )
+
+    expect(
+      await screen.findByText("Profil und Portfolio wurden gespeichert.")
+    ).toBeVisible()
+    expect(portfolio.body).toMatchObject({ biography: atLimit })
+  })
+
   it("benennt einen Teilerfolg, statt ihn als Erfolg zu melden", async () => {
     /* DoD KAN-34: scheitert einer der beiden Requests, wird das sichtbar
        benannt. */

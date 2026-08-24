@@ -1550,7 +1550,7 @@ export interface components {
       editorIds: string[]
     }
     PortfolioUpdateRequest: {
-      /** @description Freitext zur eigenen Person. null oder weggelassen loescht die bisherige Biografie. */
+      /** @description Freitext zur eigenen Person, hoechstens 500 Zeichen. null oder weggelassen loescht die bisherige Biografie. */
       biography?: string | null
       /** @description Adresse des Profilbilds. null oder weggelassen entfernt es. Wird mit KAN-23 durch eine Datei-ID ersetzt (§3.15). */
       avatarUrl?: string | null

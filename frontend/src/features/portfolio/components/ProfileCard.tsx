@@ -71,8 +71,19 @@ export function ProfileCard({
 
         {role !== undefined && <RoleBadge role={role} />}
 
+        {/*
+          SC 1.4.10: eine Biografie ohne Leerzeichen darf die Karte nicht
+          sprengen. Ohne Umbruchregel laeuft eine einzige lange Zeichenkette
+          ueber den Kartenrand hinaus und der Rest ist schlicht nicht
+          lesbar. wrap-anywhere und nicht break-words, weil der Absatz in
+          einer Flex-Spalte liegt: break-word bricht zwar die Zeile, laesst
+          die min-content-Breite des Absatzes aber unveraendert, sodass die
+          Spalte im schmalen Ansichtsfenster weiterhin aufgezogen wird.
+          break-all scheidet aus, das ist die Regel fuer die Adresse
+          darunter und zerteilt auch gewoehnliche Woerter.
+        */}
         {biography && (
-          <p className="type-body-sm w-full text-muted-foreground">
+          <p className="type-body-sm w-full wrap-anywhere text-muted-foreground">
             {biography}
           </p>
         )}
