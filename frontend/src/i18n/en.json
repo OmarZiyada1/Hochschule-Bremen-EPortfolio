@@ -830,7 +830,8 @@
     "nominationStatus": {
       "PENDING": "Pending",
       "ACCEPTED": "Accepted",
-      "REJECTED": "Rejected"
+      "REJECTED": "Rejected",
+      "WITHDRAWN": "Withdrawn"
     }
   },
   "projectContent": {
@@ -1179,15 +1180,22 @@
       "title": "Comments",
       "openCount_one": "{{count}} open",
       "openCount_other": "{{count}} open",
-      "collapse": "Collapse comments",
-      "expand": "Expand comments",
       "empty": {
         "title": "No comments yet",
         "description": "Questions, internal notes and change requests appear here."
       },
       "announce": {
         "created": "Comment saved.",
-        "status": "Change request is now {{status}}."
+        "status": "Change request is now {{status}}.",
+        "deleted": "Comment deleted."
+      },
+      "statusChanged": "The project is now in “{{status}}”.",
+      "delete": {
+        "action": "Delete comment by {{author}}",
+        "short": "Delete",
+        "title": "Delete comment?",
+        "description": "The comment by {{author}} from {{timestamp}} is removed and cannot be restored.",
+        "confirm": "Delete"
       }
     },
     "type": {
@@ -1206,8 +1214,17 @@
     "form": {
       "typeLabel": "Comment type",
       "textLabel": "Comment text",
-      "placeholder": "Write a reply …",
-      "submit": "Send"
+      "submit": "Send",
+      "placeholder": {
+        "REPLY": "Write a reply …",
+        "NOTE": "Write an internal note …",
+        "CHANGE_REQUEST": "Describe the change request …"
+      },
+      "shortcut": "⌘/Ctrl + Enter",
+      "hint": "{{name}} · {{shortcut}}"
+    },
+    "changeRequest": {
+      "resolvedLabel": "Changed"
     }
   },
   "review": {
@@ -1226,7 +1243,10 @@
       "filter": {
         "allStudyPrograms": "Study programme (all)",
         "allSemesters": "Semester (all)",
-        "allModules": "Module (all)"
+        "allModules": "Module (all)",
+        "studyProgramLabel": "Filter by study program",
+        "semesterLabel": "Filter by semester",
+        "moduleLabel": "Filter by subject or module"
       },
       "column": {
         "project": "Project",
@@ -1236,12 +1256,11 @@
       },
       "row": {
         "menuFor": "Actions for {{title}}",
-        "view": "View",
         "review": "Review",
         "nominate": "Nominate for top 10",
         "nominateBlocked": {
-          "notPublished": "Published projects only",
-          "inTop10": "Already in the top 10",
+          "notPublished": "Only published projects can be nominated.",
+          "inTop10": "This project is already in the top 10.",
           "nominated": "Already nominated"
         },
         "resign": "Give up assignment"
@@ -1266,18 +1285,15 @@
         "empty": {
           "title": "No nominations yet",
           "description": "Nominate a published project from the menu in the project list."
-        }
-      },
-      "history": {
-        "title": "My nomination history",
-        "loading": "Loading …",
-        "summary_one": "{{count}} event, expand to view.",
-        "summary_other": "{{count}} events, expand to view.",
-        "entry": "Nominated for {{tier}} by {{person}}",
-        "empty": {
-          "title": "No history yet",
-          "description": "Your proposals will appear here with time and status."
-        }
+        },
+        "statusFilter": "Filter nominations by state",
+        "emptyFiltered": {
+          "PENDING": "No pending nominations.",
+          "ACCEPTED": "No accepted nominations.",
+          "REJECTED": "No rejected nominations.",
+          "WITHDRAWN": "No withdrawn nominations."
+        },
+        "formerPosition": "Added at rank {{position}}"
       },
       "dialog": {
         "title": "Nominate for top 10",
@@ -1298,6 +1314,17 @@
           "hint": "Included in the list",
           "range": "Places 6 to 10"
         }
+      },
+      "withdraw": {
+        "action": "Withdraw nomination",
+        "title": "Withdraw nomination?",
+        "description": "The top 10 nomination for “{{title}}” will be withdrawn.",
+        "accepted": "The project also leaves the top 10 on the start page. The place becomes free and the remaining entries do not move up.",
+        "confirm": "Withdraw",
+        "done": "Nomination for {{title}} withdrawn.",
+        "actionFor": "Withdraw nomination: {{title}}",
+        "actionAccepted": "Withdraw and remove from the top 10",
+        "actionAcceptedFor": "Withdraw nomination and remove project from the top 10: {{title}}"
       }
     },
     "detail": {
@@ -1332,13 +1359,29 @@
           "description": "“{{title}}” counts as approved afterwards. It is not public yet, that is the second step.",
           "confirm": "Approve"
         },
+        "submitDone": "Project sent back for review.",
+        "submitDialog": {
+          "title": "Send back for review?",
+          "description": "“{{title}}” goes back into review. The author can no longer edit it until someone sends it back for revision again.",
+          "confirm": "Send back"
+        },
         "publishDialog": {
           "title": "Publish project?",
           "description": "“{{title}}” will be visible to everyone afterwards, including visitors who are not signed in. It can only be taken back via “Send back”.",
           "confirm": "Publish"
         }
       },
-      "loading": "Loading review"
+      "loading": "Loading review",
+      "breadcrumb": "Review",
+      "statusMenu": {
+        "label": "Change status",
+        "blocked": {
+          "from": "Not possible from the current state",
+          "editorial": "Only the author submits a project",
+          "ownProject": "Own project: no release",
+          "inTop10": "In the top 10: remove it there first"
+        }
+      }
     }
   }
 }

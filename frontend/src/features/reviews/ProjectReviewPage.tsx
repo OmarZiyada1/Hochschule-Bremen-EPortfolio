@@ -1,20 +1,29 @@
+import { useQuery } from "@tanstack/react-query"
 import {
-  ArrowLeftIcon,
+  CheckIcon,
+  ChevronDownIcon,
   FileQuestionIcon,
   FileTextIcon,
   HistoryIcon,
   LockIcon,
 } from "lucide-react"
-import { useRef, useState } from "react"
+import { useRef, useState, type RefObject } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, useNavigate, useParams } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { top10Queries } from "@/api/queries/top10"
 import { useFileUrl } from "@/api/useFileUrl"
-import type { BlockResponse, ProjectDetailResponse } from "@/api/types"
+import type {
+  BlockResponse,
+  ProjectDetailResponse,
+  ProjectStatus,
+} from "@/api/types"
+import { BreadcrumbBar } from "@/components/common/BreadcrumbBar"
 import { CommentPanel } from "@/components/common/CommentPanel"
 import { EmptyState } from "@/components/common/EmptyState"
+import { ProjectInfoSection } from "@/components/common/ProjectInfoSection"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { Alert, AlertTitle } from "@/components/ui/alert"
 import {
@@ -29,12 +38,17 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
 import { HistoryDialog } from "@/features/project-content/components/HistoryDialog"
 import { ViewModeSwitch } from "@/features/project-content/components/ViewModeSwitch"
 import { useProjectFileUrls } from "@/features/project-content/hooks/useProjectFileUrls"
 import { ProjectContent } from "@/features/project-content/renderer/ProjectContent"
-import { ProjectMetaSidebar } from "@/features/projects/components/ProjectMetaSidebar"
 import { useProjectDetail } from "@/features/projects/hooks/useProjectDetail"
 import { RevisionDialog } from "@/features/reviews/components/RevisionDialog"
 import { useReviewWorkflow } from "@/features/reviews/hooks/useReviews"
@@ -100,19 +114,17 @@ export default function ProjectReviewPage() {
 
   return (
     <>
-      <div className="border-b bg-card">
-        <div className="mx-auto flex w-full max-w-6xl px-4 py-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            nativeButton={false}
-            render={<Link to="/reviews" />}
-          >
-            <ArrowLeftIcon aria-hidden="true" />
-            {t("review.detail.back")}
-          </Button>
-        </div>
-      </div>
+      {/* Das Brotkrumenband traegt den Weg zurueck vollstaendig; ein
+          zweiter Link „Zurueck zu Meine Reviews" daneben sagte dasselbe ein
+          zweites Mal und schoebe die Ueberschrift nach unten (stehende
+          Entscheidung, Skill frontend-modul Abschnitt 0a). */}
+      <BreadcrumbBar
+        items={[
+          { label: t("common.nav.home"), to: "/" },
+          { label: t("common.nav.reviews"), to: "/reviews" },
+          { label: data?.title ?? t("review.detail.breadcrumb") },
+        ]}
+      />
 
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
         {notFound && (
@@ -252,25 +264,193 @@ export default function ProjectReviewPage() {
                 }}
               />
 
+              {/*
+               * Zwei Karten: der Umschalter und darunter alles, was zum
+               * Projekt gehoert. Statuszeile, Projektinformationen und
+               * Kommentare stehen in derselben Karte, die beiden
+               * Aufklapper als Akkordeon.
+               */}
               <ReviewActionsCard project={data} />
-
-              <Card>
-                <CardContent>
-                  <aside
-                    aria-label={t("project.detail.meta.label")}
-                    className="flex flex-col gap-6"
-                  >
-                    <ProjectMetaSidebar project={data} />
-                  </aside>
-                </CardContent>
-              </Card>
-
-              <CommentPanel project={data} context="review" />
             </div>
           </div>
         )}
       </div>
     </>
+  )
+}
+
+/**
+ * Der Status als Menue: aktueller Stand als Marke, darunter die vier
+ * redaktionellen Staende aus §2.2.
+ *
+ * <p><strong>Warum ein Menue und keine Knopfreihe.</strong> Vorher standen
+ * bis zu drei Knoepfe untereinander, und welcher fehlte, sagte nichts
+ * darueber, was es sonst noch gaebe. Das Menue zeigt immer dieselben vier
+ * Eintraege; welcher gerade geht, entscheidet §4.1.
+ *
+ * <p><strong>Entwurf steht bewusst nicht darin.</strong> Nach §4.1 fuehrt
+ * dorthin kein redaktioneller Weg: die Autor:in zieht ihre Einreichung
+ * selbst zurueck, und die Redaktion kommt nur ueber das Abgeben der
+ * Zuweisung dorthin, was etwas anderes ist als ein Statuswechsel.
+ *
+ * <p><strong>Gesperrt statt versteckt, und mit Grund.</strong> Ein
+ * ausgegrauter Eintrag ohne Erklaerung sagt nicht, warum (SC 3.3.2); jeder
+ * gesperrte traegt deshalb eine zweite Zeile. Gesperrt wird ueber
+ * {@code aria-disabled} und nicht ueber {@code disabled}, sonst waere der
+ * Eintrag nicht mehr fokussierbar und der Grund fuer die Tastatur
+ * unerreichbar. Dasselbe Muster wie im Zeilenmenue der Reviewliste.
+ *
+ * <p>Der aktuelle Stand ist kein Ziel: er traegt einen Haken und ist
+ * gesperrt, ohne Begruendung, denn dass man dort schon steht, sieht man an
+ * der Marke daneben.
+ */
+function StatusMenu({
+  project,
+  mayRelease,
+  inTop10,
+  pending,
+  onSelect,
+  triggerRef,
+}: {
+  project: ProjectDetailResponse
+  /** Vier-Augen-Prinzip (§5 Fussnote 1), nur fuer Freigaben. */
+  mayRelease: boolean
+  /**
+   * Steht das Projekt gerade in der kuratierten Top-10? Dann sperrt §4.1
+   * seit Contract v72 den Weg nach REVISION: erst aus der Liste nehmen,
+   * dann zurueckgeben. Verbindlich bleibt der Server mit 409
+   * RESOURCE_IN_USE; die Oberflaeche sagt es nur vorher.
+   */
+  inTop10: boolean
+  pending: boolean
+  onSelect: (
+    target: "APPROVED" | "PUBLISHED" | "REVISION" | "SUBMITTED"
+  ) => void
+  /*
+   * Der Menueknopf, fuer die Fokusrueckgabe aus den Dialogen (SC 2.4.3).
+   * Nicht je Eintrag einer: der Eintrag ist abgebaut, sobald das Menue
+   * schliesst, und der Fokus faellt sonst auf body.
+   */
+  triggerRef: RefObject<HTMLButtonElement | null>
+}) {
+  const { t } = useTranslation()
+  const status = project.status
+
+  const targets: { value: ProjectStatus; blocked: string | null }[] = [
+    {
+      value: "SUBMITTED",
+      /*
+       * Seit Contract v73 gibt es einen redaktionellen Weg dorthin, aber nur
+       * aus REVISION („Projekt zurueck in die Pruefung geben", §5). Aus
+       * DRAFT reicht weiterhin allein die Autor:in ein, und aus APPROVED und
+       * PUBLISHED fuehrt nach §4.1 ueberhaupt kein Weg zurueck nach
+       * SUBMITTED, auch nicht fuer sie. Der Grund muss die beiden
+       * auseinanderhalten, sonst schickt er auf eine falsche Faehrte.
+       */
+      blocked:
+        status === "SUBMITTED" || status === "REVISION"
+          ? null
+          : status === "DRAFT"
+            ? "editorial"
+            : "from",
+    },
+    {
+      value: "APPROVED",
+      blocked:
+        status === "APPROVED"
+          ? null
+          : status !== "SUBMITTED"
+            ? "from"
+            : !mayRelease
+              ? "ownProject"
+              : null,
+    },
+    {
+      value: "PUBLISHED",
+      blocked:
+        status === "PUBLISHED"
+          ? null
+          : status !== "APPROVED"
+            ? "from"
+            : !mayRelease
+              ? "ownProject"
+              : null,
+    },
+    {
+      value: "REVISION",
+      blocked:
+        status === "REVISION"
+          ? null
+          : status === "PUBLISHED" && inTop10
+            ? "inTop10"
+            : status === "SUBMITTED" ||
+                status === "APPROVED" ||
+                status === "PUBLISHED"
+              ? null
+              : "from",
+    },
+  ]
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        ref={triggerRef}
+        render={<Button variant="ghost" size="sm" className="gap-1.5 px-1" />}
+      >
+        <StatusBadge status={status} />
+        <ChevronDownIcon aria-hidden="true" className="size-3.5" />
+        <span className="sr-only">{t("review.detail.statusMenu.label")}</span>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align="start">
+        {targets.map((target) => {
+          const current = target.value === status
+          const disabled = current || target.blocked !== null || pending
+          return (
+            <DropdownMenuItem
+              key={target.value}
+              aria-disabled={disabled || undefined}
+              /*
+               * Gesperrt heisst hier: lesbar bleiben. Base UIs MenuItem
+               * schliesst das Menue auch bei aria-disabled (closeOnClick
+               * steht auf true), und ein Menue, das sich ohne Wirkung und
+               * ohne Meldung schliesst, laesst die Begruendung daneben nie
+               * lesen. Gedaempft wird deshalb nur die Beschriftung ueber
+               * die Rolle text-disabled; der Grund bleibt bei vollem
+               * muted-foreground, weil er die Erklaerung ist, fuer die der
+               * Eintrag ueberhaupt fokussierbar bleibt (SC 1.4.3).
+               */
+              closeOnClick={!disabled}
+              onClick={() => {
+                if (disabled) {
+                  return
+                }
+                onSelect(
+                  target.value as
+                    "APPROVED" | "PUBLISHED" | "REVISION" | "SUBMITTED"
+                )
+              }}
+            >
+              {current ? (
+                <CheckIcon aria-hidden="true" />
+              ) : (
+                <span aria-hidden="true" className="size-4" />
+              )}
+              <span className="flex flex-col items-start">
+                <span className={disabled ? "text-text-disabled" : undefined}>
+                  {t(`project.status.${target.value}`)}
+                </span>
+                {!current && target.blocked !== null && (
+                  <span className="type-label-xs text-muted-foreground">
+                    {t(`review.detail.statusMenu.blocked.${target.blocked}`)}
+                  </span>
+                )}
+              </span>
+            </DropdownMenuItem>
+          )
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
@@ -285,10 +465,29 @@ export default function ProjectReviewPage() {
 function ReviewActionsCard({ project }: { project: ProjectDetailResponse }) {
   const { t } = useTranslation()
   const { user } = useAuth()
-  const { approve, publish, requestRevision } = useReviewWorkflow(project.id)
+  const { approve, publish, requestRevision, submit } = useReviewWorkflow(
+    project.id
+  )
 
   const [historyOpen, setHistoryOpen] = useState(false)
   const [revisionOpen, setRevisionOpen] = useState(false)
+  /*
+   * Welcher der beiden Aufklapper offen ist, oder keiner. Vorgabe sind die
+   * Kommentare: im Review-Modus sind sie die Arbeitsflaeche, die
+   * Projektinformationen der Nachschlagefall.
+   */
+  const [panel, setPanel] = useState<"info" | "comments" | null>("comments")
+
+  /*
+   * Die kuratierte Liste, allein fuer die Frage, ob dieses Projekt darin
+   * steht (§4.1 seit v72). Der Endpoint ist oeffentlich, liefert hoechstens
+   * zehn Eintraege und teilt sich den Cache mit „Meine Reviews"; ein
+   * eigenes Feld an der Projektantwort waere dafuer zu viel.
+   */
+  const top10 = useQuery(top10Queries.list())
+  const inTop10 = (top10.data ?? []).some(
+    (entry) => entry.project.id === project.id
+  )
   const [notice, setNotice] = useState("")
   /*
    * Beide Freigabeschritte fragen vorher zurueck (Skill frontend-design,
@@ -297,10 +496,18 @@ function ReviewActionsCard({ project }: { project: ProjectDetailResponse }) {
    * Ueberarbeitung" wieder einfangen. Nicht destruktiv eingefaerbt, es wird
    * nichts zerstoert.
    */
-  const [confirm, setConfirm] = useState<"approve" | "publish" | null>(null)
-  const approveRef = useRef<HTMLButtonElement | null>(null)
-  const publishRef = useRef<HTMLButtonElement | null>(null)
-  const revisionRef = useRef<HTMLButtonElement | null>(null)
+  const [confirm, setConfirm] = useState<"approve" | "publish" | "submit">(
+    "approve"
+  )
+  /*
+   * Offen und Schritt stehen getrennt, damit die Beschriftung waehrend der
+   * Schliessanimation stehen bleibt. Zusammengelegt zeigte der Dialog beim
+   * Zugehen kurz den Text des Genehmigens, auch wenn er zum Veroeffentlichen
+   * geoeffnet war.
+   */
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  /* Ein Ausloeser fuer beide Dialoge: das Statusmenue. */
+  const statusMenuRef = useRef<HTMLButtonElement | null>(null)
 
   /*
    * Vier-Augen-Prinzip (§4.1 seit v61, §5 Fussnote 1): wer zur Projektseite
@@ -322,14 +529,62 @@ function ReviewActionsCard({ project }: { project: ProjectDetailResponse }) {
     project.status === "APPROVED" ||
     project.status === "PUBLISHED"
 
-  const failure = approve.error ?? publish.error ?? requestRevision.error
+  /*
+   * Die Freigabe ist am eigenen Projekt gesperrt, und der Status waere
+   * sonst einer, in dem sie ginge. Ohne die zweite Haelfte stuende der
+   * Hinweis auch in REVISION, wo ohnehin niemand freigibt.
+   */
+  const releaseBlocked =
+    onProjectSide &&
+    !mayRelease &&
+    (project.status === "SUBMITTED" || project.status === "APPROVED")
+  /*
+   * Seit Contract v73 gibt es aus REVISION heraus einen redaktionellen Weg
+   * zurueck in die Pruefung. Ohne ihn hier meldete die Karte „keine
+   * redaktionelle Aktion", waehrend das Menue daneben „Eingereicht" anbot.
+   */
+  const maySubmitBack = project.status === "REVISION"
+  const nothingPossible =
+    !mayApprove && !mayPublish && !mayRequestRevision && !maySubmitBack
+
+  const failure =
+    approve.error ?? publish.error ?? requestRevision.error ?? submit.error
   const failed = isApiError(failure) ? failure : null
 
   return (
     <Card>
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <StatusBadge status={project.status} />
+          <StatusMenu
+            project={project}
+            mayRelease={mayRelease}
+            inTop10={inTop10}
+            pending={approve.isPending || publish.isPending || submit.isPending}
+            onSelect={(target) => {
+              if (target === "REVISION") {
+                setRevisionOpen(true)
+                return
+              }
+              /*
+               * Auch dieser Schritt fragt zurueck (Skill frontend-design,
+               * Abschnitt 5, Zeile „einreichen"): er nimmt der Autor:in die
+               * Bearbeitbarkeit, denn REVISION ist editierbar und SUBMITTED
+               * nicht, und schiebt das Projekt in eine fremde
+               * Warteschlange. Nicht destruktiv eingefaerbt, es wird nichts
+               * zerstoert. Ein 409 CHANGE_REQUESTS_OPEN erscheint sichtbar
+               * darunter.
+               */
+              setConfirm(
+                target === "APPROVED"
+                  ? "approve"
+                  : target === "PUBLISHED"
+                    ? "publish"
+                    : "submit"
+              )
+              setConfirmOpen(true)
+            }}
+            triggerRef={statusMenuRef}
+          />
           <Button
             variant="ghost"
             size="sm"
@@ -341,47 +596,26 @@ function ReviewActionsCard({ project }: { project: ProjectDetailResponse }) {
           </Button>
         </div>
 
-        {!mayApprove && !mayPublish && !mayRequestRevision ? (
+        {/*
+         * Die frueheren drei Knoepfe stecken jetzt im Statusmenue oben. Was
+         * bleibt, ist der Hinweis darauf, warum es an diesem Projekt
+         * weniger anbietet als sonst. Ein Menue, dessen Eintraege gesperrt
+         * sind, nennt zwar je Eintrag einen Grund, aber das
+         * Vier-Augen-Prinzip betrifft die ganze Karte und gehoert deshalb
+         * auch neben sie (§5 Fussnote 1).
+         */}
+        {nothingPossible ? (
           <p className="type-body-sm text-muted-foreground">
-            {onProjectSide && !mayRelease
+            {releaseBlocked
               ? t("review.detail.actions.ownProject")
               : t("review.detail.actions.none")}
           </p>
         ) : (
-          <div className="flex flex-col gap-2">
-            {mayApprove && (
-              <Button
-                ref={approveRef}
-                disabled={approve.isPending}
-                onClick={() => setConfirm("approve")}
-              >
-                {t("review.detail.actions.approve")}
-              </Button>
-            )}
-            {mayPublish && (
-              <Button
-                ref={publishRef}
-                disabled={publish.isPending}
-                onClick={() => setConfirm("publish")}
-              >
-                {t("review.detail.actions.publish")}
-              </Button>
-            )}
-            {mayRequestRevision && (
-              <Button
-                ref={revisionRef}
-                variant="outline"
-                onClick={() => setRevisionOpen(true)}
-              >
-                {t("review.detail.actions.requestRevision")}
-              </Button>
-            )}
-            {onProjectSide && !mayRelease && (
-              <p className="type-label-xs text-muted-foreground">
-                {t("review.detail.actions.ownProject")}
-              </p>
-            )}
-          </div>
+          releaseBlocked && (
+            <p className="type-label-xs text-muted-foreground">
+              {t("review.detail.actions.ownProject")}
+            </p>
+          )
         )}
 
         {failed !== null && (
@@ -392,36 +626,65 @@ function ReviewActionsCard({ project }: { project: ProjectDetailResponse }) {
           </Alert>
         )}
 
+        {/*
+         * Statuszeile, Projektinformationen und Kommentare in einer Karte
+         * (Frame 109:2). Die beiden Aufklapper bilden ein Akkordeon: wer den
+         * einen oeffnet, schliesst den anderen. Zwei offene Kaesten
+         * untereinander schoben die Kommentare sonst unter die Falz, und
+         * genau die sollen im Review-Modus greifbar sein.
+         *
+         * Der Zustand liegt deshalb hier und nicht in den beiden Bausteinen:
+         * ein Akkordeon ist eine Aussage ueber das Paar, nicht ueber ein
+         * Glied. Beide nehmen dafuer open und onOpenChange entgegen.
+         */}
+        <hr />
+        <ProjectInfoSection
+          project={project}
+          open={panel === "info"}
+          onOpenChange={(next) => setPanel(next ? "info" : null)}
+        />
+
+        {/*
+         * Nicht bei PUBLISHED (Nutzerentscheidung zur Nacharbeit an
+         * KAN-37): dort ist die redaktionelle Arbeit vorbei, und die Spalte
+         * zeigte nur noch einen Verlauf, an dem nichts mehr haengt.
+         */}
+        {project.status !== "PUBLISHED" && (
+          <CommentPanel
+            project={project}
+            context="review"
+            open={panel === "comments"}
+            onOpenChange={(next) => setPanel(next ? "comments" : null)}
+          />
+        )}
+
         <AlertDialog
-          open={confirm !== null}
-          onOpenChange={(next) => {
-            if (!next) {
-              setConfirm(null)
-            }
-          }}
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
         >
           <AlertDialogContent
             className="rounded-modal"
-            finalFocus={confirm === "publish" ? publishRef : approveRef}
+            finalFocus={statusMenuRef}
           >
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {t(`review.detail.actions.${confirm ?? "approve"}Dialog.title`)}
+                {t(`review.detail.actions.${confirm}Dialog.title`)}
               </AlertDialogTitle>
               <AlertDialogDescription>
-                {t(
-                  `review.detail.actions.${confirm ?? "approve"}Dialog.description`,
-                  { title: project.title }
-                )}
+                {t(`review.detail.actions.${confirm}Dialog.description`, {
+                  title: project.title,
+                })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>{t("common.action.cancel")}</AlertDialogCancel>
               <AlertDialogAction
-                disabled={approve.isPending || publish.isPending}
+                disabled={
+                  approve.isPending || publish.isPending || submit.isPending
+                }
                 onClick={() => {
                   const step = confirm
-                  setConfirm(null)
+                  setConfirmOpen(false)
                   if (step === "approve") {
                     approve.mutate(undefined, {
                       onSuccess: () =>
@@ -434,11 +697,15 @@ function ReviewActionsCard({ project }: { project: ProjectDetailResponse }) {
                         setNotice(t("review.detail.actions.publishDone")),
                     })
                   }
+                  if (step === "submit") {
+                    submit.mutate(undefined, {
+                      onSuccess: () =>
+                        setNotice(t("review.detail.actions.submitDone")),
+                    })
+                  }
                 }}
               >
-                {t(
-                  `review.detail.actions.${confirm ?? "approve"}Dialog.confirm`
-                )}
+                {t(`review.detail.actions.${confirm}Dialog.confirm`)}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -460,7 +727,7 @@ function ReviewActionsCard({ project }: { project: ProjectDetailResponse }) {
           }}
           pending={requestRevision.isPending}
           error={requestRevision.error}
-          finalFocus={revisionRef}
+          finalFocus={statusMenuRef}
           onSubmit={(reason) => {
             requestRevision.mutate(reason, {
               onSuccess: () => {

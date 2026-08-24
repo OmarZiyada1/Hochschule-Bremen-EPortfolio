@@ -46,6 +46,7 @@ export interface FilterOption {
 export function FilterSelect({
   id,
   label,
+  labelHidden = false,
   options,
   value,
   onValueChange,
@@ -58,6 +59,17 @@ export function FilterSelect({
 }: {
   id?: string
   label: string
+  /**
+   * Beschriftung nur fuer Hilfsmittel, wie bei {@code SearchInput}. Eine
+   * Filterzeile aus mehreren Auswahlfeldern kommt ohne sichtbare
+   * Beschriftungen aus, sobald jeder Sammeleintrag das Feld benennt
+   * („Studiengang (alle)"): der Text darueber sagte dann dasselbe ein
+   * zweites Mal und schoebe die Felder gegeneinander, weil ein Suchfeld
+   * daneben keine Beschriftung braucht. Entfernt wird sie nie, sie wandert
+   * nur in {@code sr-only}: ohne sie waere das Feld fuer einen Screenreader
+   * unbeschriftet (SC 1.3.1, SC 3.3.2).
+   */
+  labelHidden?: boolean
   options: FilterOption[]
   value: string | null
   onValueChange: (value: string | null) => void
@@ -108,7 +120,10 @@ export function FilterSelect({
           Beschriftungen einer Seite dieselbe Farbe und dasselbe Gewicht. */}
       <FieldLabel
         htmlFor={triggerId}
-        className="type-label-xs text-muted-foreground uppercase group-data-[invalid=true]/field:text-destructive"
+        className={cn(
+          "type-label-xs text-muted-foreground uppercase group-data-[invalid=true]/field:text-destructive",
+          labelHidden && "sr-only"
+        )}
       >
         {label}
         {labelSuffix}
@@ -119,9 +134,20 @@ export function FilterSelect({
         onValueChange={(next) => onValueChange(next as string | null)}
         disabled={disabled}
       >
+        {/* Die Hoehe steht mit demselben Modifikator da, den die
+            erzeugte Datei benutzt. Ein blankes h-11 taeuscht hier:
+            select.tsx fuehrt seine Hoehe ausschliesslich als
+            data-[size=default]:h-8, und data-size steht immer am
+            Element. Fuer tailwind-merge sind das zwei Schluessel,
+            beide Klassen ueberleben, und dann gewinnt der
+            Attributselektor mit (0,2,0) gegen (0,1,0): das Feld
+            blieb 32px hoch, waehrend SearchInput auf 44px stand.
+            Bei InputGroup faellt das nicht auf, weil dort ein
+            schlichtes h-8 steht, das dieselbe Gruppe trifft.
+            Dasselbe Muster wie in UserAvatar (Befund aus KAN-34). */}
         <SelectTrigger
           id={triggerId}
-          className="h-11 w-full"
+          className="w-full data-[size=default]:h-11"
           aria-invalid={invalid}
           aria-describedby={describedBy}
         >

@@ -278,9 +278,69 @@ public class ProjectWorkflowService {
 
 		Project project = load(projectId);
 		requireAllowed(user, project, ProjectTransition.REQUEST_REVISION);
+		requireNotInTop10ForRevision(project);
 
 		writeChangeRequest(user, project, request.reason().trim());
 		return perform(user, project, ProjectTransition.REQUEST_REVISION);
+	}
+
+	/**
+	 * Der zweite Ausloeser desselben Uebergangs (§4.1, seit Contract v71,
+	 * KAN-37): ein Kommentar vom Typ {@code CHANGE_REQUEST} bringt das Projekt
+	 * nach {@code REVISION}. Aufgerufen aus {@code CommentService.create},
+	 * <strong>nachdem</strong> der Kommentar geschrieben ist.
+	 *
+	 * <p><strong>Warum es diesen Weg gibt.</strong> Bis v70 fuehrten zwei Wege
+	 * zu demselben Ziel, die in der Oberflaeche gleich aussahen und verschieden
+	 * wirkten: der Knopf setzte den Status, das Kommentarformular nicht. Wer den
+	 * Wunsch im Formular schrieb, sah das Projekt eingereicht bleiben und tippte
+	 * ihn im Dialog ein zweites Mal.
+	 *
+	 * <p><strong>Diese Methode schreibt keinen Kommentar.</strong> Anders als
+	 * {@link #requestRevision}, das mit {@link #writeChangeRequest} anfaengt,
+	 * liegt er hier bereits vor; ein zweiter waere dieselbe Aussage doppelt.
+	 *
+	 * <p><strong>Sie wirft nicht, sondern laesst es sein.</strong> Zwei Faelle
+	 * fuehren dazu, und beide sind nach §4.1 ausdruecklich kein Fehler:
+	 * <ul>
+	 * <li>Der Status laesst den Uebergang nicht zu, also {@code DRAFT} oder
+	 * {@code REVISION}. Kommentieren ist nach §5 in jedem Status erlaubt; ein
+	 * 409 haette der Redaktion das Werkzeug in genau dem Stand genommen, in dem
+	 * sie es am meisten braucht. Wirkung hat der Wunsch dort trotzdem: solange
+	 * er {@code OPEN} ist, sperrt er das Einreichen (§2.4).</li>
+	 * <li>Die Person duerfte den Uebergang nicht ausloesen, ist also nicht
+	 * zugewiesen (§5 Fussnote 11). Den Kommentar darf sie schreiben, §5 fuehrt
+	 * dafuer eine eigene Zeile ohne diese Einschraenkung. Wuerde der Uebergang
+	 * hier trotzdem greifen, waere Fussnote 11 durch die Hintertuer ausgehebelt:
+	 * es genuegte, statt des Uebergangs einen Kommentar zu schreiben.</li>
+	 * </ul>
+	 *
+	 * <p>Ein 403 waere in beiden Faellen die falsche Antwort, denn der Aufruf,
+	 * den die Person gestellt hat, war das Anlegen eines Kommentars, und das
+	 * durfte sie.
+	 *
+	 * @param user    angemeldete Person, bereits als berechtigt zum Kommentieren
+	 *                geprueft
+	 * @param project das Projekt des Kommentars, in dieser Transaktion geladen
+	 */
+	public void revisionAfterChangeRequest(AuthenticatedUser user, Project project) {
+		if (!ProjectTransition.REQUEST_REVISION.isAllowedFrom(project.getStatus())) {
+			return;
+		}
+		if (!permissions.mayTrigger(user, project, ProjectTransition.REQUEST_REVISION)) {
+			return;
+		}
+		/*
+		 * Seit Contract v72 sperrt die kuratierte Liste den Uebergang. Auch
+		 * dieser Fall bleibt still: gestellt war die Anfrage, einen Kommentar
+		 * anzulegen, und die war erlaubt. Wer den Uebergang wirklich will,
+		 * nimmt das Projekt zuerst aus der Liste und bekommt ueber
+		 * POST /request-revision die klare Auskunft.
+		 */
+		if (top10Service.holdsSeat(project)) {
+			return;
+		}
+		applyTransition(user, project, ProjectTransition.REQUEST_REVISION);
 	}
 
 	// ------------------------------------------------------------------
@@ -439,6 +499,35 @@ public class ProjectWorkflowService {
 	}
 
 	/**
+	 * Ein veroeffentlichtes Projekt geht nicht nach {@code REVISION}, solange
+	 * es in der kuratierten Top-10 steht (§4.1, §3.11.1, seit Contract v72).
+	 *
+	 * <p><strong>Die Reihenfolge ist seit v72 umgedreht.</strong> Bis v71 entzog
+	 * der Uebergang den Platz still mit; ein einziges Zurueckgeben nahm damit
+	 * einen kuratierten Beitrag aus der oeffentlichen Auswahl, ohne dass jemand
+	 * darueber entschieden haette. Die Startseite gehoert nach §5 allein der
+	 * Administration: erst aus der Liste nehmen, dann zurueckgeben.
+	 *
+	 * <p><strong>409 und nicht 403.</strong> Die Person darf den Uebergang, das
+	 * Projekt ist nur gerade nicht in dem Zustand, in dem er greift (§6.3.1).
+	 * Die Meldung nennt den Weg aus der Liste, sonst bliebe die Auskunft eine
+	 * Sackgasse.
+	 */
+	private void requireNotInTop10ForRevision(Project project) {
+		if (project.getStatus() != ProjectStatus.PUBLISHED) {
+			return;
+		}
+		if (!top10Service.holdsSeat(project)) {
+			return;
+		}
+		throw ConflictException.resourceInUse(
+				"Dieses Projekt steht in der Top-10 und laesst sich deshalb nicht "
+						+ "zurueckgeben. Die Administration nimmt es zuerst aus der Liste, "
+						+ "ueber PUT /api/admin/top10 oder ueber das Zurueckziehen der "
+						+ "Nominierung (§3.11.1, §4.1).");
+	}
+
+	/**
 	 * Der Review-Kreislauf aus §2.4 beim Einreichen: haengen am Projekt noch
 	 * Kommentare vom Typ {@code CHANGE_REQUEST} im Status {@code OPEN}, folgt
 	 * <strong>409</strong> {@code CHANGE_REQUESTS_OPEN} mit der Anzahl der
@@ -538,15 +627,44 @@ public class ProjectWorkflowService {
 	private ProjectDetailResponse perform(AuthenticatedUser user, Project project,
 			ProjectTransition transition) {
 
+		applyTransition(user, project, transition);
+		return readService.detail(user, project.getId());
+	}
+
+	/**
+	 * Der Uebergang selbst, ohne die Antwort. Herausgeloest mit Contract v71,
+	 * weil {@link #revisionAfterChangeRequest} ihn braucht und die Detailantwort
+	 * nicht: sie kostet eine eigene Abfrage, und der Aufrufer dort gibt einen
+	 * Kommentar zurueck und kein Projekt.
+	 */
+	private void applyTransition(AuthenticatedUser user, Project project,
+			ProjectTransition transition) {
+
 		ProjectStatus from = project.getStatus();
 		project.setStatus(transition.target());
 		projectRepository.saveAndFlush(project);
 
 		User actor = currentUser(user);
 		recordTransition(project, from, transition.target(), actor);
+		/*
+		 * Der Entzug bleibt als Sicherung stehen (§3.17 fuehrt ihn weiter als
+		 * Schreibweg), kann seit Contract v72 aber nicht mehr ausloesen:
+		 * requireNotInTop10 und holdsSeat weisen den einzigen Uebergang aus
+		 * PUBLISHED vorher ab, releaseSeat findet also keinen Eintrag. Das
+		 * Loeschen eines Projekts laeuft nicht hier durch, sondern ueber
+		 * Top10Service.removeOnProjectDeletion aus dem ProjectWriteService.
+		 */
 		top10Service.removeOnLeavingPublished(project, actor);
 
-		return readService.detail(user, project.getId());
+		/*
+		 * Offene Nominierungen fallen mit (§3.11.1, seit v72). Sie waeren sonst
+		 * unerfuellbar und im Weg zugleich: annehmen liesse sich das Projekt
+		 * nicht mehr, und offen sperrte der Vorschlag es gegen jeden neuen.
+		 * Angenommene bleiben stehen, sie sind Protokoll.
+		 */
+		if (from == ProjectStatus.PUBLISHED) {
+			top10Service.withdrawOpenNominations(project, actor);
+		}
 	}
 
 	/**

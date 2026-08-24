@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   commentQueries,
   createComment,
+  deleteComment,
   setCommentStatus,
 } from "@/api/queries/comments"
 import type { CommentCreateRequest, CommentStatus } from "@/api/types"
@@ -45,6 +46,42 @@ export function useCreateComment(projectId: string) {
   return useMutation({
     mutationFn: (request: CommentCreateRequest) =>
       createComment(projectId, request),
+    onSuccess: (_created, request) => {
+      void queryClient.invalidateQueries({
+        queryKey: commentQueries.list(projectId).queryKey,
+      })
+      /*
+       * Seit Contract v71 ist ein CHANGE_REQUEST zugleich ein
+       * Statusausloeser (§4.1): aus SUBMITTED, APPROVED und PUBLISHED geht
+       * das Projekt nach REVISION. Die Antwort sagt das nicht, sie traegt
+       * den Kommentar; der neue Stand kommt deshalb ueber ein Nachladen.
+       * Der Praefix umfasst Liste, Kennzahlen und Detailabfrage, und alle
+       * drei zeigen den Status.
+       *
+       * Ob der Wechsel wirklich stattgefunden hat, entscheidet der Server:
+       * in DRAFT und REVISION geschieht nichts, und ohne Zuweisung
+       * ebenfalls nicht (§5 Fussnote 11). Deshalb wird hier nur nachgeladen
+       * und nichts behauptet; wer eine Meldung zeigt, vergleicht den Status
+       * vorher und nachher.
+       */
+      if (request.type === "CHANGE_REQUEST") {
+        void queryClient.invalidateQueries({ queryKey: ["projects"] })
+      }
+    },
+  })
+}
+
+/**
+ * Einen Kommentar loeschen (§6.1), <strong>204</strong>.
+ *
+ * <p>Danach wird die Liste invalidiert und nicht von Hand gekuerzt: mit
+ * einem geloeschten Aenderungswunsch aendert sich auch die Zahl der offenen
+ * Punkte, und die steht in der Kopfzeile.
+ */
+export function useDeleteComment(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (commentId: string) => deleteComment(commentId),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: commentQueries.list(projectId).queryKey,

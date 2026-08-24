@@ -164,6 +164,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/top10-nominations/{nominationId}/withdraw": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Nominierung zurueckziehen
+     * @description Zieht einen Vorschlag zurueck und setzt ihn auf WITHDRAWN (§2.8, §3.11.1, seit Contract v70). Ohne Koerper. Die nominierende Person zieht ihren eigenen Vorschlag zurueck, solange er PENDING ist; die Administration jeden, auch einen bereits angenommenen. Ein zurueckgezogener angenommener Vorschlag nimmt sein Projekt dabei aus der kuratierten Liste.
+     */
+    post: operations["withdraw"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/projects": {
     parameters: {
       query?: never
@@ -201,7 +221,7 @@ export interface paths {
      * Projekt zurueckziehen
      * @description SUBMITTED nach DRAFT, ausgeloest von der Autor:in (§4.1, seit v50). Ohne die Pruefungen des Einreichens: Vollstaendigkeit und offene Aenderungswuensche betreffen nur den Weg zur Redaktion. Danach ist das Projekt wieder bearbeitbar und als Entwurf auch loeschbar (§6.1).
      */
-    post: operations["withdraw"]
+    post: operations["withdraw_1"]
     delete?: never
     options?: never
     head?: never
@@ -286,7 +306,7 @@ export interface paths {
      * Eigene Reaktion zuruecknehmen
      * @description Entfernt die Reaktion der angemeldeten Person an diesem Projekt und liefert die neue Gesamtzahl. Betroffen ist ausschliesslich die eigene Zeile; eine fremde Reaktion laesst sich ueber diesen Endpoint gar nicht adressieren. Idempotent: gibt es keine Reaktion, bleibt der Aufruf folgenlos und antwortet trotzdem mit 200. Die Antwort ist 200 und nicht 204, weil der Client den neuen Zaehler braucht (§6.1).
      */
-    delete: operations["withdraw_1"]
+    delete: operations["withdraw_2"]
     options?: never
     head?: never
     patch?: never
@@ -327,7 +347,7 @@ export interface paths {
     put?: never
     /**
      * Kommentar anlegen
-     * @description Legt einen Kommentar an diesem Projekt an. Welcher type zulaessig ist, haengt an der Rolle (§5): REPLY duerfen die Projektseite, Redaktion und Administration, NOTE und CHANGE_REQUEST nur Redaktion und Administration. Ein CHANGE_REQUEST startet immer im Status OPEN (§2.4). Der Projektstatus spielt keine Rolle: die Sperre aus §4.1 gilt dem Inhalt, nicht der Rueckmeldung dazu.
+     * @description Legt einen Kommentar an diesem Projekt an. Welcher type zulaessig ist, haengt an der Rolle (§5): REPLY duerfen die Projektseite, Redaktion und Administration, NOTE und CHANGE_REQUEST nur Redaktion und Administration. Ein CHANGE_REQUEST startet immer im Status OPEN (§2.4). Der Projektstatus sperrt das Kommentieren nicht: die Sperre aus §4.1 gilt dem Inhalt, nicht der Rueckmeldung dazu. Seit Contract v71 ist ein CHANGE_REQUEST zugleich ein Statusausloeser (§4.1): steht das Projekt in SUBMITTED, APPROVED oder PUBLISHED und darf die anfragende Person den Uebergang ausloesen, geht es damit nach REVISION, mit Historieneintrag (§3.12). Steht ein veroeffentlichtes Projekt in der kuratierten Top-10, unterbleibt der Uebergang seit Contract v72 (§4.1): erst aus der Liste nehmen, dann zurueckgeben. In den uebrigen Staenden und ohne dieses Recht entsteht ebenfalls nur der Kommentar; keiner dieser Faelle ist ein Fehler. Die Antwort bleibt in jedem Fall der Kommentar und nennt den Status nicht.
      */
     post: operations["create_1"]
     delete?: never
@@ -671,7 +691,7 @@ export interface paths {
     put?: never
     /**
      * Status mehrerer Projekte aendern
-     * @description Fuehrt fuer jedes Projekt der Auswahl denselben Uebergang aus, entweder publish oder request-revision. Jedes Projekt wird einzeln geprueft und in einer eigenen Transaktion verarbeitet: ein Projekt, das nach §4.1 gerade nicht uebergehen darf, blockiert die uebrigen nicht, sondern traegt seinen Fehlercode in seiner Zeile. Aufgerufen wird je Projekt derselbe Dienst wie beim Einzel-Endpoint, samt Rechtepruefung, Statushistorie (§3.12) und, bei request-revision, dem CHANGE_REQUEST-Kommentar.
+     * @description Fuehrt fuer jedes Projekt der Auswahl denselben Uebergang aus, entweder publish oder request-revision. Jedes Projekt wird einzeln geprueft und in einer eigenen Transaktion verarbeitet: ein Projekt, das nach §4.1 gerade nicht uebergehen darf, blockiert die uebrigen nicht, sondern traegt seinen Fehlercode in seiner Zeile. Aufgerufen wird je Projekt derselbe Dienst wie beim Einzel-Endpoint, samt Rechtepruefung, Statushistorie (§3.12) und, bei request-revision, dem CHANGE_REQUEST-Kommentar. Seit Contract v72 traegt eine Zeile RESOURCE_IN_USE, wenn das Projekt in der kuratierten Top-10 steht: der Weg nach REVISION ist dann gesperrt, bis es die Administration aus der Liste nimmt (§4.1, §3.11.1).
      */
     post: operations["changeStatus"]
     delete?: never
@@ -1642,6 +1662,35 @@ export interface components {
       addedAt: string
       project: components["schemas"]["ProjectCardResponse"]
     }
+    Top10NominationResponse: {
+      /** Format: uuid */
+      id: string
+      project: components["schemas"]["ProjectCardResponse"]
+      nominatedBy: components["schemas"]["PersonResponse"]
+      /**
+       * @description Vorgeschlagene Stufe (§2.13). Seit Contract v68 die Angabe, mit der die Redaktion nominiert.
+       * @example TOP_5
+       * @enum {string}
+       */
+      proposedTier: "TOP_1" | "TOP_5" | "TOP_10"
+      /**
+       * Format: int32
+       * @description Der von der Administration entschiedene Platz (§3.11). Gesetzt wird er seit Contract v69 allein von POST /admin/top10-nominations/{id}/accept. Null, solange die Nominierung offen ist, nach einer Ablehnung, und auch dann, wenn sie ueber PUT /admin/top10 mit angenommen wurde: dort steht der Platz allein im Top10Entry (§3.11.1 Regel 5).
+       * @example 3
+       */
+      proposedPosition: number | null
+      /** @enum {string} */
+      status: "PENDING" | "ACCEPTED" | "REJECTED" | "WITHDRAWN"
+      /** @description Wer entschieden hat: die Administration beim Annehmen und Ablehnen, seit Contract v70 beim Zurueckziehen auch die nominierende Redaktion, seit v72 die Person, die den Uebergang aus PUBLISHED ausgeloest hat. Null, solange status = PENDING ist. */
+      decidedBy: components["schemas"]["PersonResponse"] | null
+      /**
+       * Format: date-time
+       * @description Zeitpunkt der Entscheidung. Null, solange status = PENDING ist.
+       */
+      decidedAt: string | null
+      /** Format: date-time */
+      createdAt: string
+    }
     ProjectCreateRequest: {
       /**
        * @description Titel des Projekts. Einziges Pflichtfeld beim Anlegen.
@@ -1706,35 +1755,6 @@ export interface components {
        * @enum {string}
        */
       proposedTier: "TOP_1" | "TOP_5" | "TOP_10"
-    }
-    Top10NominationResponse: {
-      /** Format: uuid */
-      id: string
-      project: components["schemas"]["ProjectCardResponse"]
-      nominatedBy: components["schemas"]["PersonResponse"]
-      /**
-       * @description Vorgeschlagene Stufe (§2.13). Seit Contract v68 die Angabe, mit der die Redaktion nominiert.
-       * @example TOP_5
-       * @enum {string}
-       */
-      proposedTier: "TOP_1" | "TOP_5" | "TOP_10"
-      /**
-       * Format: int32
-       * @description Der von der Administration entschiedene Platz (§3.11). Gesetzt wird er seit Contract v69 allein von POST /admin/top10-nominations/{id}/accept. Null, solange die Nominierung offen ist, nach einer Ablehnung, und auch dann, wenn sie ueber PUT /admin/top10 mit angenommen wurde: dort steht der Platz allein im Top10Entry (§3.11.1 Regel 5).
-       * @example 3
-       */
-      proposedPosition: number | null
-      /** @enum {string} */
-      status: "PENDING" | "ACCEPTED" | "REJECTED"
-      /** @description Entscheidende:r Admin. Null, solange status = PENDING ist. */
-      decidedBy: components["schemas"]["PersonResponse"] | null
-      /**
-       * Format: date-time
-       * @description Zeitpunkt der Entscheidung. Null, solange status = PENDING ist.
-       */
-      decidedAt: string | null
-      /** Format: date-time */
-      createdAt: string
     }
     RevisionRequest: {
       /**
@@ -2967,6 +2987,65 @@ export interface operations {
       }
     }
   }
+  withdraw: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description ID der Nominierung. */
+        nominationId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Die zurueckgezogene Nominierung. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["Top10NominationResponse"]
+        }
+      }
+      /** @description Kein gueltiges Token mitgeschickt. */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["Top10NominationResponse"]
+        }
+      }
+      /** @description NO_PERMISSION: fremder Vorschlag ohne Administrationsrecht, oder die Rolle ist weder EDITOR noch ADMIN. */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["Top10NominationResponse"]
+        }
+      }
+      /** @description RESOURCE_NOT_FOUND: unter dieser ID gibt es keine Nominierung. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["Top10NominationResponse"]
+        }
+      }
+      /** @description NOMINATION_ALREADY_DECIDED: der Stand laesst das Zurueckziehen nicht mehr zu. */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["Top10NominationResponse"]
+        }
+      }
+    }
+  }
   list_1: {
     parameters: {
       query?: {
@@ -3088,7 +3167,7 @@ export interface operations {
       }
     }
   }
-  withdraw: {
+  withdraw_1: {
     parameters: {
       query?: never
       header?: never
@@ -3258,7 +3337,7 @@ export interface operations {
           "*/*": components["schemas"]["ProjectDetailResponse"]
         }
       }
-      /** @description Angemeldet, aber nicht die Autor:in. Projektmitglieder duerfen mitschreiben, aber nicht einreichen (§4.1). */
+      /** @description Angemeldet, aber weder die Autor:in noch, seit Contract v73 und nur aus REVISION, die zugewiesene Redaktion oder die Administration (§4.1, §5). Aus DRAFT reicht allein die Autor:in ein. */
       403: {
         headers: {
           [name: string]: unknown
@@ -3348,7 +3427,7 @@ export interface operations {
           "*/*": components["schemas"]["ProjectDetailResponse"]
         }
       }
-      /** @description PROJECT_STATUS_TRANSITION_INVALID: das Projekt steht in DRAFT oder bereits in REVISION, es gibt also nichts zurueckzugeben. */
+      /** @description PROJECT_STATUS_TRANSITION_INVALID: das Projekt steht in DRAFT oder bereits in REVISION, es gibt also nichts zurueckzugeben. RESOURCE_IN_USE (seit Contract v72): das veroeffentlichte Projekt steht in der kuratierten Top-10; die Administration nimmt es zuerst aus der Liste, ueber PUT /api/admin/top10 oder ueber das Zurueckziehen der Nominierung. */
       409: {
         headers: {
           [name: string]: unknown
@@ -3409,7 +3488,7 @@ export interface operations {
       }
     }
   }
-  withdraw_1: {
+  withdraw_2: {
     parameters: {
       query?: never
       header?: never
@@ -5930,7 +6009,7 @@ export interface operations {
          */
         nominatedBy: string
         /** @description Optionaler Filter auf den Stand der Nominierung (§2.8). Ohne Angabe kommen alle. */
-        status?: "PENDING" | "ACCEPTED" | "REJECTED"
+        status?: "PENDING" | "ACCEPTED" | "REJECTED" | "WITHDRAWN"
       }
       header?: never
       path?: never
@@ -6182,7 +6261,7 @@ export interface operations {
     parameters: {
       query?: {
         /** @description Optionaler Filter auf den Stand der Nominierung (§2.8). Ohne Angabe kommen alle. */
-        status?: "PENDING" | "ACCEPTED" | "REJECTED"
+        status?: "PENDING" | "ACCEPTED" | "REJECTED" | "WITHDRAWN"
       }
       header?: never
       path?: never

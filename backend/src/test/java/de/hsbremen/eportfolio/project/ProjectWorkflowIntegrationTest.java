@@ -208,6 +208,98 @@ class ProjectWorkflowIntegrationTest {
 		}
 
 		@Test
+		@DisplayName("Die zugewiesene Redaktion gibt aus REVISION zurueck in die Pruefung "
+				+ "(§4.1, v73), protokolliert mit ihr als handelnder Person")
+		void assignedEditorReturnsItToReview() throws Exception {
+			Project returned = saved(complete(author, ProjectStatus.REVISION, "Nachgebessert"));
+			returned.getEditors().add(assignedEditor);
+			returned = saved(returned);
+
+			JsonNode response = ok(assignedEditor, returned, "submit");
+
+			assertThat(response.get("status").asText()).isEqualTo("SUBMITTED");
+			/*
+			 * §3.12: ablesbar bleibt, dass dieser Schritt aus der Redaktion
+			 * kam und nicht von der Autor:in.
+			 */
+			JsonNode entry = response.get("statusHistory").get(0);
+			assertThat(entry.get("fromStatus").asText()).isEqualTo("REVISION");
+			assertThat(entry.get("toStatus").asText()).isEqualTo("SUBMITTED");
+			assertThat(entry.get("changedBy").get("id").asText())
+					.isEqualTo(assignedEditor.getId().toString());
+		}
+
+		@Test
+		@DisplayName("Die Administration ebenfalls, auch ohne Zuweisung")
+		void adminReturnsItToReview() throws Exception {
+			Project returned = saved(complete(author, ProjectStatus.REVISION, "Nachgebessert"));
+
+			assertThat(ok(admin, returned, "submit").get("status").asText())
+					.isEqualTo("SUBMITTED");
+		}
+
+		@Test
+		@DisplayName("Aus DRAFT reicht weiterhin allein die Autor:in ein: 403 fuer die "
+				+ "Redaktion (§4.1, v73)")
+		void editorMayNotSubmitADraft() throws Exception {
+			Project ownDraft = saved(complete(author, ProjectStatus.DRAFT, "Entwurf"));
+			ownDraft.getEditors().add(assignedEditor);
+			ownDraft = saved(ownDraft);
+
+			mockMvc.perform(as(assignedEditor, action(ownDraft, "submit")))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+		}
+
+		@Test
+		@DisplayName("Ein nicht zugewiesenes Redaktionskonto bekommt 403 (§5 Fussnote 11)")
+		void unassignedEditorMayNotReturnIt() throws Exception {
+			Project returned = saved(complete(author, ProjectStatus.REVISION, "Nachgebessert"));
+
+			mockMvc.perform(as(otherEditor, action(returned, "submit")))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+		}
+
+		/**
+		 * Eine Zuweisung ueberlebt die Herabstufung eines Kontos: die Zeile in
+		 * {@code project_editor} raeumt {@code PATCH /admin/users/{id}} nicht
+		 * mit (§3.1.1). Geprueft wird deshalb die Rolle und nicht nur die
+		 * Zuweisung, sonst haette die Herabstufung an jedem schon zugewiesenen
+		 * Projekt keine Wirkung (Contract v74, §4.1).
+		 */
+		@Test
+		@DisplayName("Ein nach der Zuweisung auf STUDENT herabgestuftes Konto bekommt 403 "
+				+ "(§4.1, v74)")
+		void downgradedEditorMayNotReturnIt() throws Exception {
+			Project returned = saved(complete(author, ProjectStatus.REVISION, "Nachgebessert"));
+			User downgraded = save(Role.STUDENT);
+			returned.getEditors().add(downgraded);
+			returned = saved(returned);
+
+			mockMvc.perform(as(downgraded, action(returned, "submit")))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+
+			assertThat(reload(returned).getStatus()).isEqualTo(ProjectStatus.REVISION);
+		}
+
+		@Test
+		@DisplayName("Auch die Redaktion reicht nicht ein, solange Aenderungswuensche offen "
+				+ "sind: 409 CHANGE_REQUESTS_OPEN")
+		void openChangeRequestsBlockTheEditorToo() throws Exception {
+			Project returned = saved(complete(author, ProjectStatus.REVISION, "Nachgebessert"));
+			returned.getEditors().add(assignedEditor);
+			returned = saved(returned);
+			commentRepository.saveAndFlush(
+					Comment.changeRequest(returned, assignedEditor, "Bitte nachbessern."));
+
+			mockMvc.perform(as(assignedEditor, action(returned, "submit")))
+					.andExpect(status().isConflict())
+					.andExpect(jsonPath("$.errorCode").value("CHANGE_REQUESTS_OPEN"));
+		}
+
+		@Test
 		@DisplayName("Ohne die Pflichtfelder aus §3.3: 400 PROJECT_INCOMPLETE, und die Meldung "
 				+ "nennt alle sieben")
 		void incompleteDraft() throws Exception {

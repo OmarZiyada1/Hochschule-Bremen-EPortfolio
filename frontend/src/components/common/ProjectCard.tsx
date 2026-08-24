@@ -78,7 +78,10 @@ export function ProjectCard({
    * PUBLISHED bleibt es beim blossen Pfad, dort darf der Browser das Bild
    * zwischenspeichern (Befund aus KAN-36).
    */
-  const cover = useFileUrl(project.coverImageUrl, project.status !== "PUBLISHED")
+  const cover = useFileUrl(
+    project.coverImageUrl,
+    project.status !== "PUBLISHED"
+  )
 
   /* gap-0 und py-0 heben den Innenabstand der Registry-Karte auf: das Cover
      liegt randlos, den Abstand setzt erst der Inhalt darunter. Beides laeuft
@@ -93,11 +96,7 @@ export function ProjectCard({
         <div className="relative h-47 w-full">
           {cover.url !== null ? (
             <>
-              <img
-                src={cover.url}
-                alt=""
-                className="size-full object-cover"
-              />
+              <img src={cover.url} alt="" className="size-full object-cover" />
               {/* Ohne diesen Film gibt es fuer den weissen Titel auf einem
                   hochgeladenen Foto keine Kontrastzusage (SC 1.4.3). Auf dem
                   Verlauf ist der Kontrast berechenbar, dort entfaellt er. */}

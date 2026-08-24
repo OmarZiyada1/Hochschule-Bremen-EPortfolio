@@ -12,9 +12,14 @@ import {
   publishProject,
   requestProjectRevision,
   resignAsEditor,
+  submitProject,
   type ReviewListParams,
 } from "@/api/queries/projects"
-import { nominateProject, top10Queries } from "@/api/queries/top10"
+import {
+  nominateProject,
+  top10Queries,
+  withdrawNomination,
+} from "@/api/queries/top10"
 import type {
   NominationTier,
   ProjectDetailResponse,
@@ -118,6 +123,30 @@ export function useNominateProject() {
 }
 
 /**
+ * Eine eigene Nominierung zurueckziehen (§3.11.1, seit Contract v70).
+ *
+ * <p>Danach wird derselbe Ast invalidiert wie beim Nominieren: die Liste
+ * im Nominierungsbereich zeigt den neuen Stand sonst erst nach einem
+ * Reload. Zusaetzlich der Ast "top10", denn ein zurueckgezogener
+ * angenommener Vorschlag nimmt sein Projekt aus der kuratierten Liste, und
+ * daran haengt die Angabe "n von zehn Plaetzen aktiv" ebenso wie die
+ * Sperre "Bereits in Top 10" im Zeilenmenue.
+ *
+ * <p>Der Praefix "top10" umfasst beide Schluessel; eine zweite
+ * Invalidierung fuer die Nominierungen waere dieselbe Anweisung ein
+ * zweites Mal.
+ */
+export function useWithdrawNomination() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (nominationId: string) => withdrawNomination(nominationId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["top10"] })
+    },
+  })
+}
+
+/**
  * Die drei Statuswechsel der Redaktion und das Abgeben der Zuweisung
  * (§4.1, §6.1).
  *
@@ -175,5 +204,19 @@ export function useReviewWorkflow(projectId: string) {
     onSuccess: applyResult,
   })
 
-  return { approve, publish, requestRevision, resign }
+  /*
+   * Zurueck in die Pruefung (§4.1, seit Contract v73): derselbe Endpoint wie
+   * beim Einreichen, aber aus der Redaktion heraus und nur aus REVISION. Bis
+   * v72 war die Ruecknahme ein Weg ohne Rueckweg.
+   *
+   * Kein zweiter Versuch bei 409 CHANGE_REQUESTS_OPEN: der Konflikt haengt
+   * am Bestand offener Aenderungswuensche, und der aendert sich nicht durch
+   * Wiederholen. Die Meldung fuehrt auf die Kommentarspalte daneben.
+   */
+  const submit = useMutation({
+    mutationFn: () => submitProject(projectId),
+    onSuccess: applyResult,
+  })
+
+  return { approve, publish, requestRevision, resign, submit }
 }

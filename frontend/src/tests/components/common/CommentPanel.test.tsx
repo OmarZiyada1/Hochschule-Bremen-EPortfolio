@@ -7,11 +7,12 @@ import type { CommentResponse, ProjectDetailResponse } from "@/api/types"
 import { CommentPanel } from "@/components/common/CommentPanel"
 import {
   creatableTypes,
+  mayDeleteComment,
   maySetChangeRequestStatus,
 } from "@/components/common/commentPermissions"
 import i18n from "@/i18n"
 import { comment, person, projectDetail } from "@/tests/fixtures"
-import { currentUserHandler } from "@/tests/msw/handlers"
+import { apiErrorResponse, currentUserHandler } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
 import { signInAs } from "@/tests/routes/helpers"
@@ -110,6 +111,64 @@ describe("CommentPanel", () => {
     })
   })
 
+  it("sendet mit Strg+Enter und laesst Enter den Zeilenumbruch", async () => {
+    signInAs("EDITOR")
+    const sent: unknown[] = []
+    server.use(
+      commentsHandler([]),
+      http.post("*/api/projects/:projectId/comments", async ({ request }) => {
+        sent.push(await request.json())
+        return HttpResponse.json(comment(), { status: 201 })
+      })
+    )
+
+    renderWithProviders(<CommentPanel project={project()} />)
+
+    const field = await screen.findByLabelText(i18n.t("comment.form.textLabel"))
+    await userEvent.type(field, "Erste Zeile")
+
+    /* Enter allein bleibt der Zeilenumbruch: ein Kommentar ist oft
+       mehrzeilig, und ein Feld, das beim ersten Absatzende absendet,
+       verliert den Rest. */
+    await userEvent.type(field, "{Enter}Zweite Zeile")
+    expect(sent).toHaveLength(0)
+
+    await userEvent.type(field, "{Control>}{Enter}{/Control}")
+    await waitFor(() => expect(sent).toHaveLength(1))
+    expect(sent[0]).toEqual({
+      type: "REPLY",
+      text: "Erste Zeile\nZweite Zeile",
+    })
+  })
+
+  it("legt ein 400 VALIDATION_FAILED an das Textfeld", async () => {
+    signInAs("EDITOR")
+    server.use(
+      commentsHandler([]),
+      http.post("*/api/projects/:projectId/comments", () =>
+        apiErrorResponse(
+          400,
+          "VALIDATION_FAILED",
+          "/api/projects/pr-1/comments",
+          "text: Der Text ist zu lang."
+        )
+      )
+    )
+
+    renderWithProviders(<CommentPanel project={project()} />)
+
+    await userEvent.type(
+      await screen.findByLabelText(i18n.t("comment.form.textLabel")),
+      "Zu langer Text"
+    )
+    await userEvent.click(
+      screen.getByRole("button", { name: i18n.t("comment.form.submit") })
+    )
+
+    /* Am Feld und nicht als Sammelmeldung darunter (Frontend-Regel 12). */
+    expect(await screen.findByText("Der Text ist zu lang.")).toBeInTheDocument()
+  })
+
   it("unterscheidet die Typen ohne Farbwahrnehmung", async () => {
     signInAs("EDITOR")
     server.use(
@@ -123,7 +182,9 @@ describe("CommentPanel", () => {
     renderWithProviders(<CommentPanel project={project()} />)
 
     /* Jeder Eintrag traegt seine Art als Text, nicht nur als Flaechenfarbe
-       (SC 1.4.1). Der Stand steht ebenfalls als Wort da. */
+       (SC 1.4.1). Den Stand traegt seit der Nacharbeit die Kopfzeile: ein
+       offener Aenderungswunsch heisst „Aenderung", ein erledigter
+       „Geaendert"; unten steht die Handlung. */
     const list = await screen.findByRole("list")
     expect(
       within(list).getByText(i18n.t("comment.type.REPLY"))
@@ -135,7 +196,9 @@ describe("CommentPanel", () => {
       within(list).getByText(i18n.t("comment.type.CHANGE_REQUEST"))
     ).toBeInTheDocument()
     expect(
-      within(list).getByText(i18n.t("comment.status.OPEN"))
+      within(list).getByRole("button", {
+        name: i18n.t("comment.action.resolve"),
+      })
     ).toBeInTheDocument()
   })
 
@@ -163,6 +226,37 @@ describe("CommentPanel", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("nennt am Eintrag den Namen, aber keine Rolle", async () => {
+    signInAs("EDITOR")
+    server.use(
+      commentsHandler([
+        comment({
+          id: "c-1",
+          type: "REPLY",
+          author: {
+            id: "p-9",
+            firstName: "Jan",
+            lastName: "Schulz",
+            role: "STUDENT",
+          },
+        }),
+      ])
+    )
+
+    renderWithProviders(<CommentPanel project={project()} />)
+
+    const list = await screen.findByRole("list")
+    expect(within(list).getByText("Jan Schulz")).toBeInTheDocument()
+    /* Wer geschrieben hat, sagt der Name; die Rolle daneben verdoppelte die
+       Zeile (Nutzerentscheidung zur Nacharbeit an KAN-37). */
+    expect(
+      within(list).queryByText(i18n.t("user.role.STUDENT"))
+    ).not.toBeInTheDocument()
+    expect(
+      within(list).queryByText(i18n.t("user.role.EDITOR"))
+    ).not.toBeInTheDocument()
+  })
+
   it("zeigt den Statusumschalter nur an einem Aenderungswunsch", async () => {
     signInAs("EDITOR")
     server.use(
@@ -178,7 +272,9 @@ describe("CommentPanel", () => {
     /* REPLY und NOTE tragen keinen Stand (§2.4); an ihnen gaebe es nichts
        umzuschalten, und der Server antwortete mit 409. */
     expect(
-      screen.queryByRole("button", { name: i18n.t("comment.action.resolve") })
+      screen.queryByRole("button", {
+        name: new RegExp(i18n.t("comment.action.resolve")),
+      })
     ).not.toBeInTheDocument()
   })
 
@@ -199,10 +295,14 @@ describe("CommentPanel", () => {
 
     renderWithProviders(<CommentPanel project={project()} />)
 
+    /* Der Knopf traegt die Handlung und nicht den Stand: ein blosses Wort
+       „Erledigt" sah aus wie eine Angabe. Den Stand tragen Kopfzeile und
+       Flaeche. */
+    expect(
+      await screen.findByText(i18n.t("comment.changeRequest.resolvedLabel"))
+    ).toBeInTheDocument()
     await userEvent.click(
-      await screen.findByRole("button", {
-        name: i18n.t("comment.action.reopen"),
-      })
+      screen.getByRole("button", { name: i18n.t("comment.action.reopen") })
     )
 
     /* §2.4 begruendet den Rueckweg ausdruecklich: die Redaktion soll ohne
@@ -226,7 +326,7 @@ describe("CommentPanel", () => {
        Aenderungswuensche der Arbeitsauftrag sind. */
     await userEvent.click(
       await screen.findByRole("button", {
-        name: i18n.t("comment.panel.expand"),
+        name: new RegExp(i18n.t("comment.panel.title")),
       })
     )
 
@@ -268,7 +368,7 @@ describe("CommentPanel", () => {
 
     await userEvent.click(
       await screen.findByRole("button", {
-        name: i18n.t("comment.panel.expand"),
+        name: new RegExp(i18n.t("comment.panel.title")),
       })
     )
 
@@ -302,7 +402,31 @@ describe("CommentPanel", () => {
     /* Dort sind die offenen Aenderungswuensche der Arbeitsauftrag; eine
        zugeklappte Spalte verstuende sich als Nebensache. */
     expect(await screen.findByRole("list")).toBeInTheDocument()
-    expect(screen.getByText(i18n.t("comment.status.OPEN"))).toBeInTheDocument()
+    expect(
+      screen.getByText(i18n.t("comment.type.CHANGE_REQUEST"))
+    ).toBeInTheDocument()
+  })
+
+  it("nennt die Zahl der offenen Aenderungswuensche im Namen des Aufklappers", async () => {
+    signInAs("EDITOR")
+    server.use(
+      commentsHandler([
+        comment({ id: "c-3", type: "CHANGE_REQUEST", status: "OPEN" }),
+      ])
+    )
+
+    renderWithProviders(<CommentPanel project={project()} />)
+
+    /* Ein aria-label am Trigger ueberschriebe den Inhalt und schluckte den
+       Zaehler; er waere sichtbar und nie hoerbar (Befund des
+       frontend-reviewers). */
+    expect(
+      await screen.findByRole("button", {
+        name: new RegExp(
+          `${i18n.t("comment.panel.title")}.*${i18n.t("comment.panel.openCount", { count: 1 })}`
+        ),
+      })
+    ).toBeInTheDocument()
   })
 
   it("meldet die Zahl der offenen Aenderungswuensche in der Kopfzeile", async () => {
@@ -390,6 +514,125 @@ describe("Rechte der Kommentarspalte", () => {
         maySetChangeRequestStatus(target, { id: "fremd", role: "STUDENT" })
       ).toBe(false)
       expect(maySetChangeRequestStatus(target, null)).toBe(false)
+    })
+  })
+
+  it("bietet das Loeschen am eigenen Kommentar an, nicht am fremden", async () => {
+    signInAs("EDITOR")
+    server.use(
+      commentsHandler([
+        comment({
+          id: "c-eigen",
+          type: "REPLY",
+          text: "Von mir.",
+          author: {
+            id: SESSION_USER,
+            firstName: "Mira",
+            lastName: "Beispiel",
+            role: "EDITOR",
+          },
+        }),
+        comment({
+          id: "c-fremd",
+          type: "REPLY",
+          text: "Von jemand anderem.",
+          author: {
+            id: "author-1",
+            firstName: "Jan",
+            lastName: "Schulz",
+            role: "STUDENT",
+          },
+        }),
+      ])
+    )
+
+    renderWithProviders(<CommentPanel project={project()} />)
+    await screen.findByText("Von mir.")
+
+    /* §6.1: loeschen darf die verfassende Person, nicht die Projektseite,
+       nur weil der Kommentar an ihrem Projekt haengt. */
+    expect(
+      screen.getByRole("button", {
+        name: i18n.t("comment.panel.delete.action", {
+          author: "Mira Beispiel",
+        }),
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: i18n.t("comment.panel.delete.action", { author: "Jan Schulz" }),
+      })
+    ).toBeNull()
+  })
+
+  it("loescht nach Rueckfrage und ruft dabei DELETE auf", async () => {
+    signInAs("EDITOR")
+    const deleted: string[] = []
+    server.use(
+      http.delete("*/api/comments/:commentId", ({ params }) => {
+        deleted.push(String(params.commentId))
+        return new HttpResponse(null, { status: 204 })
+      }),
+      commentsHandler([
+        comment({
+          id: "c-eigen",
+          type: "REPLY",
+          text: "Von mir.",
+          author: {
+            id: SESSION_USER,
+            firstName: "Mira",
+            lastName: "Beispiel",
+            role: "EDITOR",
+          },
+        }),
+      ])
+    )
+
+    renderWithProviders(<CommentPanel project={project()} />)
+    await screen.findByText("Von mir.")
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: i18n.t("comment.panel.delete.action", {
+          author: "Mira Beispiel",
+        }),
+      })
+    )
+
+    /* Erst die Rueckfrage: der Text ist danach weg. */
+    expect(
+      await screen.findByRole("heading", {
+        name: i18n.t("comment.panel.delete.title"),
+      })
+    ).toBeInTheDocument()
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: i18n.t("comment.panel.delete.confirm"),
+      })
+    )
+
+    await waitFor(() => expect(deleted).toEqual(["c-eigen"]))
+  })
+
+  describe("mayDeleteComment", () => {
+    it("laesst die verfassende Person und die Administration durch", () => {
+      expect(mayDeleteComment("mira", { id: "mira", role: "STUDENT" })).toBe(
+        true
+      )
+      expect(mayDeleteComment("jemand", { id: "chef", role: "ADMIN" })).toBe(
+        true
+      )
+    })
+
+    it("sperrt alle uebrigen, auch die Projektseite und die Redaktion", () => {
+      expect(mayDeleteComment("jemand", { id: "mira", role: "STUDENT" })).toBe(
+        false
+      )
+      expect(mayDeleteComment("jemand", { id: "red", role: "EDITOR" })).toBe(
+        false
+      )
+      expect(mayDeleteComment("jemand", null)).toBe(false)
     })
   })
 })

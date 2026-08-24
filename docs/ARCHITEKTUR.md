@@ -113,8 +113,8 @@ liest.
 | `Reaction`              | ✓      | ✓ (4)     | ✓          | -       | nur als `reactionCount` in den Projekt-Antworten |
 | `ProjectStatusHistory`  | ✓      | ✓ (4)     | ✓          | -       | eingebettet in `GET /api/projects/{id}`, nur für Beteiligte |
 | `Top10Entry`            | ✓      | ✓ (5)     | ✓          | `Top10Service` (öffentliche Liste, Reihenfolge, Entzug des Platzes) | ✓ `GET /api/top10`, `PUT /api/admin/top10` |
-| `Top10Nomination`       | ✓      | ✓ (5, 20) | ✓          | `Top10NominationService` (Vorschlag und Entscheidung) | ✓ `POST /api/projects/{id}/top10-nomination`, `GET /api/top10-nominations?nominatedBy=me` (die eigenen, seit KAN-37), `GET /api/admin/top10-nominations`, `POST /api/admin/top10-nominations/{id}/accept` bzw. `/reject` |
-| `Top10AuditEntry`       | ✓      | ✓ (13)    | ✓          | `Top10AuditService` (ein Schreibweg, vier Aufrufer; KAN-45) | ✓ `GET /api/admin/top10-audit`, nur lesend |
+| `Top10Nomination`       | ✓      | ✓ (5, 20, 21) | ✓          | `Top10NominationService` (Vorschlag und Entscheidung) | ✓ `POST /api/projects/{id}/top10-nomination`, `GET /api/top10-nominations?nominatedBy=me` (die eigenen, seit KAN-37), `POST /api/top10-nominations/{id}/withdraw` (zurückziehen, seit Contract v70), `GET /api/admin/top10-nominations`, `POST /api/admin/top10-nominations/{id}/accept` bzw. `/reject` |
+| `Top10AuditEntry`       | ✓      | ✓ (13)    | ✓          | `Top10AuditService` (ein Schreibweg, fünf Aufrufer; KAN-45) | ✓ `GET /api/admin/top10-audit`, nur lesend |
 | `Block`                 | ✓      | ✓ (6, 7)  | ✓          | `BlockValidationService` (Validierung, kein CRUD) | eingebettet in `GET /api/projects/{id}` |
 | Auth                    | keine Entity | -   | -          | `AuthService`, `JwtService`, `LoginAttemptService`, `VerificationAttemptService` | ✓ `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` |
 
@@ -166,8 +166,9 @@ Liegen unter `backend/src/main/resources/db/migration`, Namensschema
 | 18 | `V202608221930__author_role_instead_of_membership.sql` | KAN-35: Rücknahme von 17 (Contract v66, §3.3). Die Autor:in ist keine Mitgliedszeile, sondern steht in `project.author_id`; bleiben sollte allein die Funktionsbezeichnung, und die bekommt sie als neue Spalte `project.author_role`. Die vorige Migration wird nicht geändert, sondern zurückgenommen: eine eingespielte Datei nachträglich anzufassen ist bei Flyway ein Prüfsummenfehler. |
 | 19 | `V202608221955__author_member_rows_removed_again.sql` | KAN-35: Nachräumen zu 18. Zwischen 18 und dem Neustart mit dem zugehörigen Programmstand legte die laufende Anwendung weiter Mitgliedszeilen für die Autor:in an; solche Projekte ließen sich danach nicht mehr speichern (400 nach §3.13.1). |
 | 20 | `V202608231030__nomination_tier.sql` | KAN-37: Spalte `top10_nomination.proposed_tier` (`varchar(32) not null`) für die Nominierungsstufe aus §2.13 (Contract v68), mit Check-Constraint `ck_top10_nomination_proposed_tier` über `TOP_1`, `TOP_5`, `TOP_10`. Drei Schritte, weil die Spalte am Ende `not null` steht und die Tabelle bereits Zeilen tragen kann: anlegen, aus `proposed_position` ableiten (1 → `TOP_1`, 2 bis 5 → `TOP_5`, alles Weitere und `null` → `TOP_10`), dann `not null` setzen. Kein Default: die Stufe ist Pflichtangabe des Anfragekörpers, ein Default würde eine fehlende Angabe still zu einer Aussage machen. |
+| 21 | `V202608241200__nomination_withdrawn.sql` | KAN-37: `NominationStatus` (§2.8) bekommt mit Contract v70 den vierten Wert `WITHDRAWN`. Die Spalte `top10_nomination.status` bleibt, nur ihr Check-Constraint `ck_top10_nomination_status` kannte den Wert nicht; ohne die Migration endete jedes Zurückziehen im Constraint-Verstoß und damit in einem 500. Bestehende Zeilen werden nicht umgeschrieben: `WITHDRAWN` entsteht erst durch den neuen Endpoint, kein vorhandener Stand wird umgedeutet. |
 
-Aktueller Schemastand laut Flyway: `202608231030`, 20 Migrationen.
+Aktueller Schemastand laut Flyway: `202608241200`, 21 Migrationen.
 
 Die Dateinamen 1 bis 8 tragen weiterhin deutsche Beschreibungen
 (`__projekt_und_zuordnungen.sql`). Das bleibt so: eingespielte Migrationen
@@ -848,7 +849,7 @@ einzigen Rolle ohne Vier-Augen-Prinzip getroffen. Das Protokoll beantwortet
 deshalb eine Frage, die die Statushistorie (§3.12) nicht beantworten kann:
 welcher Platz war wann durch welches Projekt belegt, und wer hat das veranlasst.
 
-### Ein Schreibweg, vier Aufrufer
+### Ein Schreibweg, fünf Aufrufer
 
 `Top10AuditService.record` ist die einzige Stelle, an der eine Protokollzeile
 entsteht. Die Methode nimmt **keine Aktion** entgegen, sondern zwei Zustände der
@@ -866,7 +867,7 @@ führe zuverlässig dazu, dass ein Pfad vergessen wird. Wäre die Aktion ein
 Parameter, müsste jeder Aufrufer sie selbst bestimmen, und `PUT /admin/top10`
 müsste alle drei Fälle nebeneinander behandeln.
 
-Aufgerufen wird `record` von vier Stellen, alle über `Top10Service` gebündelt:
+Aufgerufen wird `record` von fünf Stellen, alle über `Top10Service` gebündelt:
 
 1. `PUT /admin/top10` (`setOrder`): Aufnahme, Entfernung und Umsortierung in
    einem Zug. Der Vorzustand wird **vor** der Positionsschleife festgehalten,
@@ -874,8 +875,16 @@ Aufgerufen wird `record` von vier Stellen, alle über `Top10Service` gebündelt:
 2. die Annahme einer Nominierung (`addAt`): `ADDED`.
 3. der Entzug des Platzes beim Verlassen von `PUBLISHED`
    (`removeOnLeavingPublished`, gerufen aus `ProjectWorkflowService`):
-   `REMOVED`.
-4. das Löschen eines Projekts, das einen Platz belegt
+   `REMOVED`. Seit Contract v72 kann dieser Weg nicht mehr auslösen:
+   `requireNotInTop10` weist den Übergang nach `REVISION` mit **409**
+   `RESOURCE_IN_USE` ab, solange das Projekt einen Platz belegt. Der
+   Aufruf bleibt als Sicherung stehen, und §3.17 führt den Weg weiter.
+4. das Zurückziehen einer angenommenen Nominierung durch die
+   Administration (`removeOnWithdrawnNomination`, gerufen aus
+   `Top10NominationService.withdraw`, seit Contract v70): `REMOVED`.
+   Das ist seitdem der Weg, auf dem ein kuratiertes Projekt die Liste
+   verlässt, ohne dass jemand die ganze Reihenfolge neu setzt.
+5. das Löschen eines Projekts, das einen Platz belegt
    (`removeOnProjectDeletion`, gerufen aus `ProjectWriteService.delete`):
    `REMOVED`.
 

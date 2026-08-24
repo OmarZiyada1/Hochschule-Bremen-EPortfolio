@@ -278,8 +278,18 @@ public class Top10Service {
 
 	/**
 	 * Nimmt ein Projekt aus der Top-10, sobald es {@code PUBLISHED} verlaesst.
-	 * Aufgerufen aus {@code ProjectWorkflowService} bei jedem Statusuebergang;
-	 * nach §4.1 ist das heute allein die Ruecknahme nach {@code REVISION}.
+	 * Aufgerufen aus {@code ProjectWorkflowService} bei jedem Statusuebergang.
+	 *
+	 * <p><strong>Seit Contract v72 kann dieser Weg nicht mehr ausloesen.</strong>
+	 * Der einzige Uebergang aus {@code PUBLISHED} ist die Ruecknahme nach
+	 * {@code REVISION}, und beide Ausloeser sperren sie, solange das Projekt
+	 * einen Platz belegt: {@code requireNotInTop10} am ausdruecklichen Weg und
+	 * {@code holdsSeat} am Kommentarweg. {@link #releaseSeat} findet hier also
+	 * keinen Eintrag mehr. Die Methode bleibt trotzdem stehen, und zwar
+	 * bewusst: §3.17 fuehrt den Schreibweg weiter, und ein kuenftiger
+	 * Uebergang aus {@code PUBLISHED} heraus faende die Aufraeumung schon vor,
+	 * statt sie zu vergessen. Wer sie entfernt, streicht auch den Weg aus
+	 * §3.17 und aus {@code docs/ARCHITEKTUR.md} Kapitel 13.
 	 *
 	 * <p><strong>Warum entfernen und nicht nur ausblenden.</strong> Beides haette
 	 * die Startseite sauber gehalten. Entschieden wurde in der Klaerungsrunde zu
@@ -354,6 +364,93 @@ public class Top10Service {
 	 */
 	public void removeOnProjectDeletion(Project project, User actor) {
 		releaseSeat(project, actor, false);
+	}
+
+	// ------------------------------------------------------------------
+	// Auskunft und Aufraeumen fuer den Zustandsautomaten
+	// ------------------------------------------------------------------
+
+	/**
+	 * Steht dieses Projekt gerade in der kuratierten Liste (§3.11)?
+	 *
+	 * <p>Gefragt wird das seit Contract v72 vor dem Uebergang nach
+	 * {@code REVISION}: solange das Projekt einen Platz belegt, ist der Weg
+	 * gesperrt (§4.1). Bis v71 war es umgekehrt, der Uebergang entzog den Platz
+	 * still mit; damit gab er der Redaktion die Startseite in die Hand, obwohl
+	 * die nach §5 allein der Administration gehoert.
+	 *
+	 * <p>Gefragt wird der Bestand <em>jetzt</em> und nicht die Vorgeschichte:
+	 * ein Projekt, das die Liste laengst wieder verlassen hat, ist nicht
+	 * gesperrt.
+	 */
+	public boolean holdsSeat(Project project) {
+		return entryRepository.existsByProjectId(project.getId());
+	}
+
+	/**
+	 * Zieht die offenen Nominierungen eines Projekts zurueck, weil es
+	 * {@code PUBLISHED} verlaesst (§3.11.1, seit Contract v72).
+	 *
+	 * <p><strong>Warum sie nicht stehenbleiben duerfen.</strong> Annehmen
+	 * liesse sich ein nicht veroeffentlichtes Projekt nach Regel 1 ohnehin
+	 * nicht; offen sperrte der Vorschlag es nach Regel 2 aber zugleich gegen
+	 * jeden neuen. Er waere also unerfuellbar und im Weg zugleich.
+	 *
+	 * <p><strong>Angenommene bleiben unberuehrt.</strong> Dass ein Vorschlag
+	 * angenommen wurde, bleibt wahr, auch wenn das Projekt die Liste spaeter
+	 * verlaesst (§3.11). Das Protokoll wird nicht rueckwirkend umgeschrieben.
+	 *
+	 * @param actor wer den Statuswechsel ausgeloest hat; er steht danach als
+	 *              {@code decidedBy} an den zurueckgezogenen Vorschlaegen
+	 */
+	public void withdrawOpenNominations(Project project, User actor) {
+		List<Top10Nomination> open = nominationRepository.findByStatusAndProjectIdIn(
+				NominationStatus.PENDING, List.of(project.getId()));
+		if (open.isEmpty()) {
+			return;
+		}
+
+		Instant now = Instant.now();
+		for (Top10Nomination nomination : open) {
+			nomination.setStatus(NominationStatus.WITHDRAWN);
+			nomination.setDecidedBy(actor);
+			nomination.setDecidedAt(now);
+		}
+		nominationRepository.saveAll(open);
+		nominationRepository.flush();
+	}
+
+	// ------------------------------------------------------------------
+	// Entzug beim Zurueckziehen einer angenommenen Nominierung
+	// ------------------------------------------------------------------
+
+	/**
+	 * Nimmt ein Projekt aus der Top-10, weil die Administration die Nominierung
+	 * zurueckzieht, ueber die es aufgenommen wurde (§3.11.1, seit Contract v70).
+	 * Aufgerufen aus {@link Top10NominationService#withdraw}.
+	 *
+	 * <p><strong>Der fuenfte Schreibweg des Protokolls</strong> (§3.17), nach
+	 * {@link #setOrder}, {@link #addAt}, {@link #removeOnLeavingPublished} und
+	 * {@link #removeOnProjectDeletion}. Ohne ihn verloere ein Projekt seinen
+	 * Platz, ohne dass das Protokoll davon wuesste, und genau das war der Grund
+	 * fuer die beiden Wege aus Contract v28.
+	 *
+	 * <p><strong>Auch dieser Platz bleibt frei</strong>, die uebrigen Eintraege
+	 * ruecken nicht nach; siehe Klassenkommentar.
+	 *
+	 * <p><strong>Ohne Statuspruefung</strong>, anders als
+	 * {@link #removeOnLeavingPublished}: das Projekt ist zu diesem Zeitpunkt
+	 * veroeffentlicht, sonst stuende es nicht in der Liste, und ob es das noch
+	 * ist, spielt fuer den Entzug keine Rolle. Belegt es keinen Platz, geschieht
+	 * nichts.
+	 *
+	 * @param project das Projekt der zurueckgezogenen Nominierung
+	 * @param admin   wer zurueckzieht; bei diesem Weg immer ein Admin, weil nur
+	 *                die Administration einen angenommenen Vorschlag
+	 *                zurueckziehen darf (§5)
+	 */
+	void removeOnWithdrawnNomination(Project project, User admin) {
+		releaseSeat(project, admin, true);
 	}
 
 	/**

@@ -61,6 +61,22 @@ export function createComment(
 }
 
 /**
+ * DELETE /api/comments/{id} (§6.1), ergibt <strong>204</strong> ohne
+ * Koerper.
+ *
+ * <p><strong>Wer loeschen darf, entscheidet der Server</strong> (§6.1,
+ * Zeile „Autor:in / ADMIN"): die verfassende Person ihren eigenen
+ * Kommentar, die Administration jeden. Ausdruecklich nicht die Autor:in des
+ * Projekts, nur weil der Kommentar an ihrem Projekt haengt; ein
+ * Aenderungswunsch waere sonst wegklickbar, statt erledigt zu werden. Die
+ * Oberflaeche bietet den Knopf deshalb nur dort an, wo er greift, und
+ * behandelt ein trotzdem eintreffendes 403 sichtbar.
+ */
+export function deleteComment(commentId: string): Promise<void> {
+  return api.delete<void>(apiPaths.comments.detail(commentId))
+}
+
+/**
  * PATCH /api/comments/{id}/status (§6.1, §2.4): den Stand eines
  * Aenderungswunsches umschalten.
  *
@@ -72,8 +88,9 @@ export function createComment(
  * wirkungslos und kein Fehler.
  *
  * <p>Nur ein CHANGE_REQUEST traegt einen Stand; bei REPLY und NOTE
- * antwortet der Server mit 409 (§2.4). Die Oberflaeche zeigt den Umschalter
- * deshalb ausschliesslich an einem Aenderungswunsch.
+ * antwortet der Server mit 400 VALIDATION_FAILED (§6.1, Kommentare: ein
+ * eigener Fehlercode ist dafuer bewusst nicht vergeben). Die Oberflaeche
+ * zeigt den Umschalter deshalb ausschliesslich an einem Aenderungswunsch.
  */
 export function setCommentStatus(
   commentId: string,

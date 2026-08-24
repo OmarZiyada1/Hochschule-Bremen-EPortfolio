@@ -11,7 +11,11 @@ import type {
 import ProjectDetailPage from "@/features/projects/ProjectDetailPage"
 import i18n from "@/i18n"
 import { person, reference } from "@/tests/fixtures"
-import { apiErrorResponse, fileBlobHandler } from "@/tests/msw/handlers"
+import {
+  apiErrorResponse,
+  currentUserHandler,
+  fileBlobHandler,
+} from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
 import { LocationProbe, signInAs } from "@/tests/routes/helpers"
@@ -693,7 +697,10 @@ describe("Weg zurueck in den Editor (KAN-36)", () => {
   })
 
   it("zeigt ihn einer unbeteiligten Person nicht", async () => {
-    server.use(fileBlobHandler(), detailHandler(projectResponse({ status: "DRAFT" })))
+    server.use(
+      fileBlobHandler(),
+      detailHandler(projectResponse({ status: "DRAFT" }))
+    )
     signInAs("STUDENT")
     renderPage()
 
@@ -769,5 +776,62 @@ describe("Medien eines noch nicht veroeffentlichten Beitrags (KAN-36)", () => {
     const src = firstImage().getAttribute("src") ?? ""
     expect(src).not.toMatch(/^blob:/)
     expect(src.endsWith(`/api/files/${FILE_A}`)).toBe(true)
+  })
+
+  it(
+    "zeigt die Kommentarspalte im Arbeitszustand, damit die Autor:in ihre " +
+      "Aenderungswuensche findet",
+    async () => {
+      /*
+       * Die Luecke, die dieser Fall schliesst: bei SUBMITTED erreicht die
+       * Autor:in weder den Editor (kein Stift, kein Umschalter) noch den
+       * Review-Modus (rollengesperrt). Ihre Aenderungswuensche standen damit
+       * an keiner Stelle, an die sie kommt, obwohl §2.3 sie jeder Person
+       * zeigt, die das Projekt lesen darf.
+       */
+      signInAs("STUDENT")
+      server.use(
+        http.get("*/api/projects/:projectId/comments", () =>
+          HttpResponse.json([
+            {
+              id: "c-1",
+              author: person({ firstName: "Rita", lastName: "Redakteurin" }),
+              type: "CHANGE_REQUEST",
+              text: "Bitte die Quellen ergaenzen.",
+              status: "OPEN",
+              createdAt: "2026-02-01T10:00:00Z",
+              updatedAt: "2026-02-01T10:00:00Z",
+            },
+          ])
+        ),
+        detailHandler(projectResponse({ status: "SUBMITTED" }))
+      )
+
+      renderPage()
+
+      expect(
+        await screen.findByText("Bitte die Quellen ergaenzen.")
+      ).toBeInTheDocument()
+    }
+  )
+
+  it("zeigt sie bei einem veroeffentlichten Projekt nicht", async () => {
+    /* Dort ist die Seite die oeffentliche Ansicht; die Rueckmeldungen der
+       Redaktion gehen die Oeffentlichkeit nichts an. */
+    signInAs("STUDENT")
+    server.use(
+      currentUserHandler(),
+      http.get("*/api/projects/:projectId/comments", () =>
+        HttpResponse.json([])
+      ),
+      detailHandler(projectResponse({ status: "PUBLISHED" }))
+    )
+
+    renderPage()
+    await screen.findByRole("heading", { level: 1 })
+
+    expect(
+      screen.queryByRole("region", { name: i18n.t("comment.panel.label") })
+    ).toBeNull()
   })
 })

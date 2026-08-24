@@ -51,6 +51,30 @@ export const top10Queries = {
 }
 
 /**
+ * POST /top10-nominations/{id}/withdraw (§3.11.1, §6.1, seit Contract v70),
+ * ohne Koerper, ergibt <strong>200</strong> mit der zurueckgezogenen
+ * Nominierung.
+ *
+ * <p><strong>Zwei Reichweiten, ein Aufruf.</strong> Die nominierende Person
+ * zieht ihren eigenen Vorschlag zurueck, solange er PENDING ist; die
+ * Administration jeden, auch einen bereits angenommenen. Welcher Fall
+ * vorliegt, entscheidet der Server; die Oberflaeche blendet die Handlung nur
+ * dort ein, wo sie nach demselben Massstab greifen kann (siehe
+ * nominationWithdrawable).
+ *
+ * <p>Sichtbar zu behandeln ist ein 409 NOMINATION_ALREADY_DECIDED: der Stand
+ * hat sich seit dem letzten Laden geaendert. Kein zweiter Versuch, er
+ * scheiterte mit derselben Begruendung.
+ */
+export function withdrawNomination(
+  nominationId: string
+): Promise<Top10NominationResponse> {
+  return api.post<Top10NominationResponse>(
+    apiPaths.top10.withdrawNomination(nominationId)
+  )
+}
+
+/**
  * POST /projects/{id}/top10-nomination (§3.11.1, §6.1), ergibt
  * <strong>201</strong>.
  *

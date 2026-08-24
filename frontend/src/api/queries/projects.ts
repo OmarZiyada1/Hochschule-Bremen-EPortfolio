@@ -275,6 +275,14 @@ export function removeReaction(projectId: string): Promise<ReactionResponse> {
  * ihren Beitrag zur Begutachtung ein, aus DRAFT oder REVISION nach
  * SUBMITTED.
  *
+ * <p><strong>Seit Contract v73 laeuft ein zweiter Weg ueber denselben
+ * Endpoint</strong> („Projekt zurueck in die Pruefung geben", §5): die
+ * zugewiesene Redaktion und die Administration holen ein Projekt aus
+ * REVISION nach SUBMITTED zurueck, etwa wenn sie es versehentlich
+ * zurueckgegeben oder die Aenderungswuensche selbst erledigt haben. Aus
+ * DRAFT bleibt es bei der Autor:in; der redaktionelle Weg endet dort mit
+ * 403 NO_PERMISSION. Die Vorbedingungen unten gelten fuer beide Wege.
+ *
  * <p><strong>Vollstaendig heisst hier mehr als „hat einen Titel".</strong>
  * §3.3 verlangt zum Einreichen Projekttyp, Fakultaet, Studiengang,
  * Abschluss, Kategorie, Semester und mindestens eine Redaktionszuweisung;

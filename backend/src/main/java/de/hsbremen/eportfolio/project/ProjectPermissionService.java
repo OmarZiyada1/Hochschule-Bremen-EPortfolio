@@ -381,6 +381,16 @@ public class ProjectPermissionService {
 	 * aktuellen Status zu betrachten: die Rollen- und Beziehungsspalte aus §5
 	 * einschliesslich Vier-Augen-Prinzip.
 	 *
+	 * <p><strong>Eine benannte Ausnahme seit Contract v73:</strong> beim
+	 * {@code SUBMIT} haengt das Recht der Redaktion am Ausgangsstatus. §4.1
+	 * fuehrt zwei Zeilen auf demselben Endpoint: die Autor:in reicht aus
+	 * {@code DRAFT} und {@code REVISION} ein, die zugewiesene Redaktion und
+	 * die Administration allein aus {@code REVISION}. Fuer sie ist das kein
+	 * Zustandsproblem, sondern eine Frage des Rechts: aus dem Entwurf duerfen
+	 * sie ueberhaupt nicht einreichen, und die Antwort ist deshalb
+	 * <strong>403</strong> und nicht 409 (§6.3.1). Wer das aendert, aendert
+	 * damit auch den Statuscode.
+	 *
 	 * <p><strong>Warum die Frage getrennt von der Statusfrage beantwortet
 	 * wird.</strong> Ein abgewiesener Uebergang hat zwei verschiedene Antworten:
 	 * fehlt das Recht, ist es 403 {@code NO_PERMISSION}, passt nur der Status
@@ -407,7 +417,29 @@ public class ProjectPermissionService {
 			// Projektseite: Mitglieder duerfen mitschreiben, aber nicht
 			// einreichen. Der Haken bei ADMIN fehlt in der Matrix selbst dann,
 			// wenn er das Projekt angelegt hat.
-			case SUBMIT -> !user.hasRole(Role.ADMIN) && isAuthor(user, project);
+			// Seit Contract v73 hat die Zeile ein Gegenstueck: „Projekt zurueck
+			// in die Pruefung geben" (§5), also REVISION nach SUBMITTED durch
+			// die zugewiesene Redaktion oder die Administration. Bis v72 konnte
+			// das allein die Autor:in, und damit war die Ruecknahme ein Weg
+			// ohne Rueckweg: wer versehentlich zurueckgegeben oder die
+			// Aenderungswuensche selbst erledigt hatte, steckte fest.
+			//
+			// Ausdruecklich nur aus REVISION. Aus DRAFT reicht weiterhin allein
+			// die Autor:in ein; den Entwurf sieht die Redaktion nach §5
+			// Fussnote 11 nicht einmal, und ein Einreichen von dort waere ein
+			// Zugriff auf etwas, das noch niemand zur Pruefung gegeben hat.
+			//
+			// Die Rolle wird mitgeprueft, genau wie beim REQUEST_REVISION
+			// darunter: eine Zuweisung in project_editor bleibt stehen, wenn
+			// ein Konto ueber PATCH /admin/users/{id} von EDITOR auf STUDENT
+			// heruntergestuft wird (§3.1.1). Ohne hasRole(EDITOR) kaeme diese
+			// Person durch die Rechtepruefung und scheiterte erst beim Lesen
+			// der Antwort, also nach dem geschriebenen Statuswechsel.
+			case SUBMIT -> (!user.hasRole(Role.ADMIN) && isAuthor(user, project))
+					|| (project.getStatus() == ProjectStatus.REVISION
+							&& (isAdmin(user)
+									|| (user.hasRole(Role.EDITOR)
+											&& isAssignedEditor(user, project))));
 
 			// „Projekt zurueckziehen" (§4.1, seit v50): dieselbe Spalte wie beim
 			// Einreichen, denn es ist dessen Gegenstueck. Wer einreichen darf,
@@ -791,6 +823,34 @@ public class ProjectPermissionService {
 	 */
 	public boolean mayReadOwnNominations(AuthenticatedUser user) {
 		return isLoggedIn(user) && user.hasRole(Role.EDITOR, Role.ADMIN);
+	}
+
+	/**
+	 * Zeile „Nominierung zurueckziehen" aus §5 (seit Contract v70): PUBLIC ✗,
+	 * STUDENT ✗, EDITOR (✓) auf den eigenen Vorschlag, ADMIN ✓ auf jeden
+	 * ({@code POST /api/top10-nominations/{id}/withdraw}).
+	 *
+	 * <p><strong>Die Einschraenkung auf die eigene Person steht hier und nicht
+	 * im Endpoint</strong>, anders als bei {@link #mayReadOwnNominations}: dort
+	 * schneidet der Pflichtparameter {@code nominatedBy=me} die Ressource
+	 * zurecht, hier adressiert der Pfad eine einzelne fremde Nominierung. Der
+	 * Klammerhaken der Matrix ist damit eine Ressourcenfrage und gehoert nach
+	 * Hausregel 5 in diesen Dienst.
+	 *
+	 * <p><strong>Ohne Standspruefung.</strong> Ob {@code PENDING} oder
+	 * {@code ACCEPTED} zurueckgezogen werden darf, ist eine Frage des Zustands
+	 * (§3.11.1) und keine der Rechtematrix; sie steht deshalb im
+	 * {@code Top10NominationService} und ergibt 409 statt 403. Dieselbe
+	 * Aufteilung wie bei {@link #mayResignAsEditor}.
+	 *
+	 * @param nominatedById wer den Vorschlag gemacht hat
+	 */
+	public boolean mayWithdrawNomination(AuthenticatedUser user, UUID nominatedById) {
+		if (isAdmin(user)) {
+			return true;
+		}
+		return isLoggedIn(user) && user.hasRole(Role.EDITOR)
+				&& user.getId().equals(nominatedById);
 	}
 
 	/** Zeile „Top-10 kuratieren": nur ADMIN. */

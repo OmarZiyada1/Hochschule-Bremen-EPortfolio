@@ -29,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Vorschlag und Entscheidung (§3.11, §3.11.1): die Nominierung durch die
- * Redaktion und die drei Admin-Endpoints aus §6.1
+ * Redaktion, ihr Zurueckziehen und die drei Admin-Endpoints aus §6.1
  * ({@code GET /api/admin/top10-nominations}, {@code .../accept},
  * {@code .../reject}).
  *
@@ -53,6 +53,13 @@ import org.springframework.transaction.annotation.Transactional;
  * (§3.11.1 Regel 2).</li>
  * <li>{@code NOMINATION_ALREADY_DECIDED}: ueber den Vorschlag ist entschieden.</li>
  * </ul>
+ *
+ * <p><strong>Seit Contract v70 kommt {@link #withdraw} dazu</strong> (KAN-37),
+ * das Zurueckziehen aus §3.11.1. Es ist der einzige Weg dieses Dienstes, der
+ * die kuratierte Liste veraendert, ohne etwas aufzunehmen: zieht die
+ * Administration einen angenommenen Vorschlag zurueck, verlaesst das Projekt die
+ * Liste. Der dritte 409 oben deckt ihn mit ab, mit eigener Meldung, weil
+ * {@code ACCEPTED} hier fuer die Administration kein Abweisungsgrund ist.
  */
 @Service
 @Transactional
@@ -347,6 +354,73 @@ public class Top10NominationService {
 	}
 
 	// ------------------------------------------------------------------
+	// POST /api/top10-nominations/{id}/withdraw
+	// ------------------------------------------------------------------
+
+	/**
+	 * Zieht einen Vorschlag zurueck: setzt {@code status} auf
+	 * {@code WITHDRAWN}, dazu {@code decidedBy} und {@code decidedAt}
+	 * (§3.11.1, §6.1, seit Contract v70).
+	 *
+	 * <p><strong>Warum es diesen Weg gibt.</strong> Bis v69 fuehrte kein Weg
+	 * zurueck. Ein versehentlicher oder ueberholter Vorschlag blieb offen, bis
+	 * die Administration ihn ablehnte, und diese Ablehnung stand danach im
+	 * Protokoll als kuratorische Entscheidung, die so niemand getroffen hatte.
+	 * Ausserdem sperrte er nach §3.11.1 Regel 2 sein Projekt fuer jeden weiteren
+	 * Vorschlag.
+	 *
+	 * <p><strong>Zwei Reichweiten in einem Endpoint.</strong> Die nominierende
+	 * Person zieht ihren eigenen Vorschlag zurueck, solange er {@code PENDING}
+	 * ist; die Administration jeden, auch einen bereits angenommenen. Der
+	 * Unterschied steht in §5 als Klammerhaken gegen vollen Haken und wird hier
+	 * an zwei Stellen geprueft: die Person in
+	 * {@link ProjectPermissionService#mayWithdrawNomination} (403), der Stand in
+	 * {@link #requireWithdrawable} (409).
+	 *
+	 * <p><strong>Ein zurueckgezogener angenommener Vorschlag nimmt sein Projekt
+	 * aus der Liste</strong> (§3.11.1). Das ist der einzige Fall, in dem dieser
+	 * Dienst die Liste anfasst, und er laeuft wie das Annehmen ueber
+	 * {@link Top10Service}: hier {@code removeOnWithdrawnNomination}, dort
+	 * {@code addAt}. Die Protokollzeile {@code REMOVED} entsteht dabei
+	 * (§3.17).
+	 *
+	 * <p><strong>{@code proposedPosition} bleibt stehen.</strong> Es haelt fest,
+	 * worauf einmal entschieden wurde, und das bleibt wahr, auch wenn das
+	 * Projekt die Liste wieder verlassen hat. Dieselbe Ueberlegung wie bei
+	 * {@code Top10Service.removeOnLeavingPublished}, das die Nominierung
+	 * ebenfalls unberuehrt laesst.
+	 *
+	 * <p><strong>Die Sperre aus Regel 2 faellt damit.</strong> Ein
+	 * zurueckgezogener Vorschlag ist nicht mehr offen; dasselbe Projekt darf
+	 * erneut nominiert werden, solange es keinen {@code Top10Entry} hat. Das
+	 * ergibt sich ohne Zutun aus {@code existsByProjectIdAndStatus(...,
+	 * PENDING)} in {@link #nominate} und ist deshalb hier nur festgehalten und
+	 * nicht eigens umgesetzt.
+	 *
+	 * @param user         angemeldete Person
+	 * @param nominationId ID aus dem Pfad
+	 * @throws ResourceNotFoundException wenn es die Nominierung nicht gibt (404)
+	 * @throws AccessDeniedException     wenn es ein fremder Vorschlag ist und die
+	 *                                   Rolle nicht ADMIN (403)
+	 * @throws ConflictException         wenn der Stand das Zurueckziehen nicht
+	 *                                   mehr zulaesst (409)
+	 */
+	public Top10NominationResponse withdraw(AuthenticatedUser user, UUID nominationId) {
+		Top10Nomination nomination = load(nominationId);
+
+		boolean curator = permissions.mayCurateTop10(user);
+		requireMayWithdraw(user, nomination);
+		requireWithdrawable(nomination, curator);
+
+		User actor = currentUser(user);
+		if (nomination.getStatus() == NominationStatus.ACCEPTED) {
+			top10Service.removeOnWithdrawnNomination(nomination.getProject(), actor);
+		}
+
+		return decide(nomination, actor, NominationStatus.WITHDRAWN);
+	}
+
+	// ------------------------------------------------------------------
 	// Pruefungen und gemeinsame Hilfsmittel
 	// ------------------------------------------------------------------
 
@@ -389,6 +463,57 @@ public class Top10NominationService {
 		if (nomination.getStatus() != NominationStatus.PENDING) {
 			throw ConflictException.nominationAlreadyDecided(nomination.getStatus().name());
 		}
+	}
+
+	/**
+	 * Zurueckziehen laesst sich ein offener Vorschlag, die Administration
+	 * zusaetzlich einen angenommenen (§3.11.1, seit Contract v70). Alles andere
+	 * ergibt <strong>409</strong> und nicht 404: die Nominierung existiert, und
+	 * §6.3.1 verbietet es, den Zustand einer vorhandenen Ressource hinter einem
+	 * „gibt es nicht" zu verstecken.
+	 *
+	 * <p>Eigene Pruefung statt {@link #requirePending}: die Menge der zulaessigen
+	 * Staende ist hier eine andere und haengt an der Rolle. Auch die Meldung ist
+	 * eine andere, denn {@code ACCEPTED} ist fuer die Administration kein Grund
+	 * zur Abweisung.
+	 *
+	 * @param curator ob die anfragende Person kuratieren darf (§5)
+	 */
+	private void requireWithdrawable(Top10Nomination nomination, boolean curator) {
+		NominationStatus status = nomination.getStatus();
+		if (status == NominationStatus.PENDING) {
+			return;
+		}
+		if (curator && status == NominationStatus.ACCEPTED) {
+			return;
+		}
+		throw ConflictException.nominationNotWithdrawable(status.name());
+	}
+
+	/**
+	 * Zeile „Nominierung zurueckziehen" aus §5: EDITOR nur den eigenen
+	 * Vorschlag, ADMIN jeden.
+	 *
+	 * <p>Die beiden Gruende fuer ein {@code false} auseinandergehalten wie in
+	 * {@link #requireMayNominate}: ohne Anmeldung 401, sonst 403.
+	 *
+	 * <p>{@code getNominatedBy().getId()} loest den Lazy-Proxy nicht auf: die ID
+	 * steht im Fremdschluessel und damit bereits im geladenen Datensatz. Ein
+	 * Nachladen der Person allein fuer den Vergleich waere eine Abfrage ohne
+	 * Ertrag.
+	 */
+	private void requireMayWithdraw(AuthenticatedUser user, Top10Nomination nomination) {
+		if (permissions.mayWithdrawNomination(user, nomination.getNominatedBy().getId())) {
+			return;
+		}
+		if (user == null || user.getStatus() != UserStatus.ACTIVE) {
+			throw new AuthenticationCredentialsNotFoundException(
+					"Fuer das Zurueckziehen einer Nominierung ist eine Anmeldung "
+							+ "erforderlich (§5).");
+		}
+		throw new AccessDeniedException(
+				"Zurueckziehen darf einen Vorschlag, wer ihn gemacht hat; fremde Vorschlaege "
+						+ "zieht allein die Administration zurueck (§5).");
 	}
 
 	/** §3.11.1 Regel 1, an beiden Stellen dieselbe Pruefung. */

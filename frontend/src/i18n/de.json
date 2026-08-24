@@ -830,7 +830,8 @@
     "nominationStatus": {
       "PENDING": "Offen",
       "ACCEPTED": "Angenommen",
-      "REJECTED": "Abgelehnt"
+      "REJECTED": "Abgelehnt",
+      "WITHDRAWN": "Zurückgezogen"
     }
   },
   "projectContent": {
@@ -1179,15 +1180,22 @@
       "title": "Kommentare",
       "openCount_one": "{{count}} offen",
       "openCount_other": "{{count}} offen",
-      "collapse": "Kommentare einklappen",
-      "expand": "Kommentare aufklappen",
       "empty": {
         "title": "Noch keine Kommentare",
         "description": "Rückfragen, interne Notizen und Änderungswünsche erscheinen hier."
       },
       "announce": {
         "created": "Kommentar gespeichert.",
-        "status": "Änderungswunsch steht jetzt auf {{status}}."
+        "status": "Änderungswunsch steht jetzt auf {{status}}.",
+        "deleted": "Kommentar gelöscht."
+      },
+      "statusChanged": "Das Projekt steht jetzt auf „{{status}}“.",
+      "delete": {
+        "action": "Kommentar von {{author}} löschen",
+        "short": "Löschen",
+        "title": "Kommentar löschen?",
+        "description": "Der Kommentar von {{author}} vom {{timestamp}} wird entfernt und lässt sich nicht wiederherstellen.",
+        "confirm": "Löschen"
       }
     },
     "type": {
@@ -1206,8 +1214,17 @@
     "form": {
       "typeLabel": "Art des Kommentars",
       "textLabel": "Kommentartext",
-      "placeholder": "Antwort schreiben …",
-      "submit": "Senden"
+      "submit": "Senden",
+      "placeholder": {
+        "REPLY": "Antwort schreiben …",
+        "NOTE": "Interne Notiz schreiben …",
+        "CHANGE_REQUEST": "Änderungswunsch beschreiben …"
+      },
+      "shortcut": "⌘/Strg + Enter",
+      "hint": "{{name}} · {{shortcut}}"
+    },
+    "changeRequest": {
+      "resolvedLabel": "Geändert"
     }
   },
   "review": {
@@ -1226,7 +1243,10 @@
       "filter": {
         "allStudyPrograms": "Studiengang (alle)",
         "allSemesters": "Semester (alle)",
-        "allModules": "Fach (alle)"
+        "allModules": "Fach (alle)",
+        "studyProgramLabel": "Studiengang filtern",
+        "semesterLabel": "Semester filtern",
+        "moduleLabel": "Fach oder Modul filtern"
       },
       "column": {
         "project": "Projekt",
@@ -1236,12 +1256,11 @@
       },
       "row": {
         "menuFor": "Aktionen zu {{title}}",
-        "view": "Anzeigen",
         "review": "Überprüfen",
-        "nominate": "Für Top 10 nominieren",
+        "nominate": "Top 10 nominieren",
         "nominateBlocked": {
-          "notPublished": "Nur veröffentlichte Projekte",
-          "inTop10": "Bereits in Top 10",
+          "notPublished": "Nur veröffentlichte Projekte können nominiert werden.",
+          "inTop10": "Das Projekt steht bereits in der Top 10.",
           "nominated": "Bereits nominiert"
         },
         "resign": "Zuweisung abgeben"
@@ -1266,18 +1285,15 @@
         "empty": {
           "title": "Noch keine Nominierungen",
           "description": "Nominieren Sie ein veröffentlichtes Projekt über das Menü in der Projektliste."
-        }
-      },
-      "history": {
-        "title": "Mein Nominierungs-Verlauf",
-        "loading": "Wird geladen …",
-        "summary_one": "{{count}} Ereignis, zum Anzeigen aufklappen.",
-        "summary_other": "{{count}} Ereignisse, zum Anzeigen aufklappen.",
-        "entry": "Nominiert für {{tier}} von {{person}}",
-        "empty": {
-          "title": "Noch kein Verlauf",
-          "description": "Hier stehen später Ihre Vorschläge mit Zeitpunkt und Stand."
-        }
+        },
+        "statusFilter": "Nominierungen nach Stand filtern",
+        "emptyFiltered": {
+          "PENDING": "Keine offenen Nominierungen.",
+          "ACCEPTED": "Keine angenommenen Nominierungen.",
+          "REJECTED": "Keine abgelehnten Nominierungen.",
+          "WITHDRAWN": "Keine zurückgezogenen Nominierungen."
+        },
+        "formerPosition": "Aufgenommen auf Platz {{position}}"
       },
       "dialog": {
         "title": "Für Top 10 nominieren",
@@ -1298,6 +1314,17 @@
           "hint": "Aufnahme in die Liste",
           "range": "Plätze 6 bis 10"
         }
+      },
+      "withdraw": {
+        "action": "Nominierung zurückziehen",
+        "title": "Nominierung zurückziehen?",
+        "description": "Die Top-10-Nominierung für „{{title}}“ wird zurückgezogen.",
+        "accepted": "Das Projekt verlässt damit auch die Top-10 der Startseite. Der Platz wird frei und die übrigen Einträge rücken nicht nach.",
+        "confirm": "Zurückziehen",
+        "done": "Nominierung für {{title}} zurückgezogen.",
+        "actionFor": "Nominierung zurückziehen: {{title}}",
+        "actionAccepted": "Zurückziehen und aus der Top-10 nehmen",
+        "actionAcceptedFor": "Nominierung zurückziehen und Projekt aus der Top-10 nehmen: {{title}}"
       }
     },
     "detail": {
@@ -1332,13 +1359,29 @@
           "description": "„{{title}}“ gilt danach als fachlich freigegeben. Öffentlich ist es damit noch nicht, das entscheidet der zweite Schritt.",
           "confirm": "Genehmigen"
         },
+        "submitDone": "Projekt zurück in die Prüfung gegeben.",
+        "submitDialog": {
+          "title": "Zurück in die Prüfung geben?",
+          "description": "„{{title}}“ steht danach wieder in der Prüfung. Die Autor:in kann es dann nicht mehr bearbeiten, bis jemand es erneut zur Überarbeitung zurückgibt.",
+          "confirm": "Zurückgeben"
+        },
         "publishDialog": {
           "title": "Projekt veröffentlichen?",
           "description": "„{{title}}“ ist danach für alle sichtbar, auch ohne Anmeldung. Zurückholen lässt es sich nur über „Zur Überarbeitung“.",
           "confirm": "Veröffentlichen"
         }
       },
-      "loading": "Review wird geladen"
+      "loading": "Review wird geladen",
+      "breadcrumb": "Review",
+      "statusMenu": {
+        "label": "Status ändern",
+        "blocked": {
+          "from": "Aus dem aktuellen Stand nicht möglich",
+          "editorial": "Dorthin reicht allein die Autor:in ein",
+          "ownProject": "Eigenes Projekt: keine Freigabe",
+          "inTop10": "Steht in der Top-10: erst dort entfernen"
+        }
+      }
     }
   }
 }

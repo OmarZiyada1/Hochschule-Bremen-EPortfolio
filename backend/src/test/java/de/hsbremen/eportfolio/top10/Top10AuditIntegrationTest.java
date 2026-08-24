@@ -223,30 +223,29 @@ class Top10AuditIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Verlaesst ein Projekt PUBLISHED, steht der Entzug als REMOVED mit der "
-				+ "Redaktion als handelnder Person (§3.17, Nachtrag v28)")
-		void leavingPublishedWritesRemoved() throws Exception {
+		@DisplayName("Seit Contract v72 kommt der Entzug ueber den Statuswechsel gar nicht "
+				+ "mehr zustande: die Liste sperrt ihn, und es entsteht keine Zeile")
+		void leavingPublishedIsRefusedWhileInTheList() throws Exception {
 			entry(first, 3);
 			assignEditor(first, editor);
 
+			/*
+			 * Bis v71 entzog dieser Aufruf den Platz still mit und schrieb dafuer
+			 * eine Zeile REMOVED. §4.1 dreht die Reihenfolge seit v72 um: erst
+			 * aus der Liste nehmen, dann zurueckgeben. Der Schreibweg aus dem
+			 * Nachtrag zu v28 bleibt in §3.17 stehen, kann auf diesem Weg aber
+			 * nicht mehr ausloesen; frei wird ein Platz jetzt ueber
+			 * PUT /admin/top10, ueber das Zurueckziehen einer angenommenen
+			 * Nominierung (v70) oder ueber das Loeschen des Projekts.
+			 */
 			mockMvc.perform(as(editor, post("/api/projects/" + first.getId() + "/request-revision"))
 							.contentType(MediaType.APPLICATION_JSON)
 							.content("{\"reason\":\"Bitte die Quellenangaben ergaenzen.\"}"))
-					.andExpect(status().isOk());
+					.andExpect(status().isConflict())
+					.andExpect(jsonPath("$.errorCode").value("RESOURCE_IN_USE"));
 
-			assertThat(entryRepository.findByProjectId(first.getId())).isEmpty();
-			assertThat(auditRepository.findAll())
-					.singleElement()
-					.satisfies(entry -> {
-						assertThat(entry.getAction()).isEqualTo(Top10Action.REMOVED);
-						assertThat(entry.getProject().getId()).isEqualTo(first.getId());
-						// Nicht der Admin: den Entzug loest die Ruecknahme aus, und die
-						// kommt von der Redaktion. Genau deshalb heisst das Feld „wer die
-						// Aenderung veranlasst hat".
-						assertThat(entry.getAdmin().getId()).isEqualTo(editor.getId());
-						assertThat(entry.getPreviousPosition()).isEqualTo(3);
-						assertThat(entry.getNewPosition()).isNull();
-					});
+			assertThat(entryRepository.findByProjectId(first.getId())).isPresent();
+			assertThat(auditRepository.findAll()).isEmpty();
 		}
 
 		@Test

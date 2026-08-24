@@ -1,7 +1,10 @@
 import { useTranslation } from "react-i18next"
 
 import type { ProjectStatus } from "@/api/types"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import {
+  SegmentedFilter,
+  type SegmentedOption,
+} from "@/components/common/SegmentedFilter"
 import {
   ALL_STATUSES,
   OWN_PROJECT_STATUSES,
@@ -20,18 +23,11 @@ import {
  * liegt deshalb in der Bibliothek und nicht mehr im Feature (Skill
  * frontend-modul, Abschnitt 0.5).
  *
- * <p>Komponiert die Registry-Primitive toggle-group, statt einen eigenen
- * Schalter zu bauen: Tastaturbedienung, Fokusfuehrung und die
- * Zustandsmeldung ueber aria-pressed bringt Base UI mit, und genau die
- * gehen bei einem nachgebauten Segmentschalter zuverlaessig verloren
- * (Skill frontend-shadcn, Abschnitt 1). Von Hand kommt nur das
- * Domaenenwissen dazu: welche Werte es gibt und wie sie heissen.
- *
- * <p>Die Zustandsfarben stehen mit denselben Modifikatoren wie in der
- * erzeugten Datei (aria-pressed, data-[state=on]), damit tailwind-merge sie
- * gegeneinander aufloest und die aktive Flaeche nicht von der Vorgabe der
- * Registry ueberschrieben wird. Der Komponentencode selbst bleibt
- * unangetastet.
+ * <p><strong>Die Gestalt liegt seit der Nacharbeit an KAN-37 im
+ * {@link SegmentedFilter}</strong>, weil der Nominierungsbereich dieselbe
+ * Leiste ueber {@code NominationStatus} zeigt. Diese Komponente traegt nur
+ * noch das Domaenenwissen: welche Status es gibt, wie sie heissen und dass
+ * "Alle" davorsteht.
  */
 export function ProjectStatusFilter({
   value,
@@ -41,11 +37,7 @@ export function ProjectStatusFilter({
 }: {
   value: StatusFilterValue
   onValueChange: (value: StatusFilterValue) => void
-  /**
-   * Zugaenglicher Name der Gruppe. Sichtbar steht ueber dem Schalter
-   * bewusst keine Ueberschrift mehr; ohne diesen Namen waere die Gruppe
-   * fuer einen Screenreader eine Reihe unbeschrifteter Knoepfe.
-   */
+  /** Zugaenglicher Name der Gruppe, siehe {@link SegmentedFilter}. */
   label: string
   /**
    * Die anzubietenden Status, in Anzeigereihenfolge. "Alle" kommt immer
@@ -55,7 +47,7 @@ export function ProjectStatusFilter({
 }) {
   const { t } = useTranslation()
 
-  const options: { value: StatusFilterValue; label: string }[] = [
+  const options: SegmentedOption<StatusFilterValue>[] = [
     { value: ALL_STATUSES, label: t("common.filter.all") },
     ...statuses.map((status) => ({
       value: status as StatusFilterValue,
@@ -64,32 +56,12 @@ export function ProjectStatusFilter({
   ]
 
   return (
-    <ToggleGroup
-      aria-label={label}
-      spacing={0}
-      value={[value]}
-      onValueChange={(next) => {
-        /*
-         * Base UI hebt den Druck auf, wenn das aktive Segment erneut
-         * betaetigt wird; die Liste ist dann leer. Ein Filter ohne jeden
-         * Wert ist kein Zustand dieser Seite: er faellt auf "Alle" zurueck,
-         * statt eine leere Liste zu zeigen.
-         */
-        onValueChange(
-          (next[0] as StatusFilterValue | undefined) ?? ALL_STATUSES
-        )
-      }}
-      className="max-w-full flex-wrap rounded-control border bg-muted p-1"
-    >
-      {options.map((option) => (
-        <ToggleGroupItem
-          key={option.value}
-          value={option.value}
-          className="rounded-control px-4 aria-pressed:bg-card aria-pressed:text-foreground aria-pressed:shadow-sm data-[state=on]:bg-card"
-        >
-          {option.label}
-        </ToggleGroupItem>
-      ))}
-    </ToggleGroup>
+    <SegmentedFilter
+      label={label}
+      options={options}
+      value={value}
+      onValueChange={onValueChange}
+      fallback={ALL_STATUSES}
+    />
   )
 }

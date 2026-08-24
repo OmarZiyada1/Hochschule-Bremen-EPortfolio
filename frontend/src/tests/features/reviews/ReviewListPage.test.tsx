@@ -208,8 +208,15 @@ describe("ReviewListPage", () => {
       })
     )
 
-    /* Der Grund steht als Text im Eintrag, nicht nur als Ausgrauen
-       (SC 3.3.2). */
+    /* Gesperrt ueber aria-disabled statt disabled: nur so bleibt der
+       Eintrag fokussierbar und der Grund fuer die Tastatur erreichbar. */
+    const item = await screen.findByRole("menuitem", {
+      name: i18n.t("review.list.row.nominate"),
+    })
+    expect(item).toHaveAttribute("aria-disabled", "true")
+
+    /* Der Grund steht im Kurzhinweis, nicht nur im Ausgrauen (SC 3.3.2). */
+    await userEvent.hover(item)
     expect(
       await screen.findByText(
         i18n.t("review.list.row.nominateBlocked.notPublished")
@@ -239,6 +246,11 @@ describe("ReviewListPage", () => {
       })
     )
 
+    await userEvent.hover(
+      await screen.findByRole("menuitem", {
+        name: i18n.t("review.list.row.nominate"),
+      })
+    )
     expect(
       await screen.findByText(i18n.t("review.list.row.nominateBlocked.inTop10"))
     ).toBeInTheDocument()
@@ -316,6 +328,29 @@ describe("ReviewListPage", () => {
       await screen.findByText(i18n.t("apiError.RESOURCE_IN_USE"))
     ).toBeInTheDocument()
     expect(sent).toHaveLength(1)
+  })
+
+  it("fuehrt im Zeilenmenue keinen Eintrag Anzeigen mehr", async () => {
+    server.use(...baseHandlers({ projects: [ASSIGNED] }))
+
+    renderWithProviders(<ReviewListPage />, "/reviews")
+    await screen.findByText("RoboNav")
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: i18n.t("review.list.row.menuFor", { title: "RoboNav" }),
+      })
+    )
+
+    /* Der Projektname der Zeile ist bereits der Weg auf die Detailseite
+       (Nutzerentscheidung zur Nacharbeit an KAN-37). */
+    expect(
+      await screen.findByText(i18n.t("review.list.row.review"))
+    ).toBeInTheDocument()
+    /* Woertlich und nicht ueber einen i18n-Schluessel: der Schluessel ist
+       mit dem Eintrag entfallen, und t() gaebe sonst den Schluesselnamen
+       zurueck, den die Seite nie rendert. Der Test waere stumm gruen. */
+    expect(screen.queryByText("Anzeigen")).not.toBeInTheDocument()
   })
 
   it("bietet Zuweisung abgeben nur in SUBMITTED und REVISION an", async () => {

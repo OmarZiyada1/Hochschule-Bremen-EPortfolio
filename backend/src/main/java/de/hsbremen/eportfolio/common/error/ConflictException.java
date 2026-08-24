@@ -210,6 +210,28 @@ public class ConflictException extends RuntimeException {
 						+ "Bitte neu laden.");
 	}
 
+	/**
+	 * Diese Nominierung laesst sich nicht mehr zurueckziehen (§3.11.1, seit
+	 * Contract v70).
+	 *
+	 * <p><strong>Derselbe Fehlercode wie bei der zweiten Entscheidung</strong>
+	 * ({@link #nominationAlreadyDecided}), weil es derselbe Fall ist: ueber den
+	 * Vorschlag ist bereits verfuegt worden. Eine eigene Konstante daneben
+	 * traeuge nichts bei, was der Client anders behandeln muesste. Die Meldung
+	 * unterscheidet sich trotzdem, denn hier ist {@code ACCEPTED} fuer die
+	 * Administration <em>kein</em> Grund zur Abweisung, und ein Text, der das
+	 * Gegenteil nahelegt, waere schlicht falsch.
+	 *
+	 * @param actual Stand der Nominierung, {@code ACCEPTED}, {@code REJECTED}
+	 *               oder {@code WITHDRAWN}
+	 */
+	public static ConflictException nominationNotWithdrawable(String actual) {
+		return new ConflictException(ErrorCodes.NOMINATION_ALREADY_DECIDED,
+				"Diese Nominierung laesst sich nicht mehr zurueckziehen; sie steht auf "
+						+ actual + ". Zurueckziehen laesst sich ein offener Vorschlag, die "
+						+ "Administration zusaetzlich einen angenommenen (§3.11.1).");
+	}
+
 	public String getErrorCode() {
 		return errorCode;
 	}

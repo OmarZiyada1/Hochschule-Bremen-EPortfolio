@@ -15,6 +15,7 @@ import {
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 
+import { useAuth } from "@/api/auth/AuthContext"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import type { ReviewListParams } from "@/api/queries/projects"
 import type { ProjectCardResponse, ProjectStatus } from "@/api/types"
@@ -48,11 +49,8 @@ import {
   statusQueryValue,
 } from "@/features/portfolio/ownProjectStatus"
 import { paginationItems } from "@/features/projects/paginationItems"
-import {
-  NominationHistoryCard,
-  OwnNominationsCard,
-} from "@/features/reviews/components/NominationCards"
 import { NominationDialog } from "@/features/reviews/components/NominationDialog"
+import { NominationPanel } from "@/features/reviews/components/NominationPanel"
 import { ReviewRowMenu } from "@/features/reviews/components/ReviewRowMenu"
 import {
   useNominateProject,
@@ -108,6 +106,7 @@ const countIcons: Record<ProjectStatus, typeof ClockIcon> = {
  */
 export default function ReviewListPage() {
   const { t, i18n } = useTranslation()
+  const { role } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   /* Zahlen formatiert die Bibliothek, nicht der Code: dreistellige Werte
      bekommen sonst je nach Sprache einen anderen Trenner als auf der
@@ -177,6 +176,9 @@ export default function ReviewListPage() {
     useState<ProjectCardResponse | null>(null)
   /* Der Ausloeser der zuletzt geoeffneten Zeile, fuer die Fokusrueckgabe. */
   const nominationTrigger = useRef<HTMLElement | null>(null)
+  /* Fokusziel, wenn eine Zeile nach dem Abgeben der Zuweisung aus der
+     Liste faellt (SC 2.4.3). */
+  const table = useRef<HTMLTableElement | null>(null)
   const [notice, setNotice] = useState("")
   /*
    * Der Fehler eines Zeilenvorgangs braucht eine sichtbare Stelle. Die
@@ -259,7 +261,11 @@ export default function ReviewListPage() {
       {/* Suche, Filter und Statusleiste */}
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <div className="grid gap-4 lg:grid-cols-4">
+          {/* Ohne die drei Beschriftungen stehen alle vier
+              Bedienelemente auf derselben Hoehe (h-11) und auf
+              derselben Grundlinie; die frueheren Zeilen darueber
+              schoben die Auswahlfelder gegen das Suchfeld. */}
+          <div className="grid items-end gap-4 lg:grid-cols-4">
             <SearchInput
               label={t("review.list.search.label")}
               labelHidden
@@ -268,7 +274,8 @@ export default function ReviewListPage() {
               onValueChange={setSearchDraft}
             />
             <FilterSelect
-              label={t("project.detail.meta.studyProgram")}
+              label={t("review.list.filter.studyProgramLabel")}
+              labelHidden
               allLabel={t("review.list.filter.allStudyPrograms")}
               options={(options.studyPrograms.data ?? []).map((entry) => ({
                 value: entry.id,
@@ -282,7 +289,8 @@ export default function ReviewListPage() {
               }
             />
             <FilterSelect
-              label={t("project.detail.meta.semester")}
+              label={t("review.list.filter.semesterLabel")}
+              labelHidden
               allLabel={t("review.list.filter.allSemesters")}
               options={(options.semesters.data ?? []).map((entry) => ({
                 value: entry.id,
@@ -296,7 +304,8 @@ export default function ReviewListPage() {
               }
             />
             <FilterSelect
-              label={t("project.detail.meta.module")}
+              label={t("review.list.filter.moduleLabel")}
+              labelHidden
               allLabel={t("review.list.filter.allModules")}
               options={(options.modules.data ?? []).map((entry) => ({
                 value: entry.id,
@@ -368,7 +377,12 @@ export default function ReviewListPage() {
       {rows.length > 0 && (
         <Card>
           <CardContent className="overflow-x-auto">
-            <Table>
+            {/* tabIndex -1: nach dem Abgeben der Zuweisung faellt das
+                Projekt womoeglich aus editor=me, und die Zeile samt
+                Menueknopf verschwindet. Ohne dieses Ziel fiele der Fokus auf
+                body und die naechste Tabulatorreihe begaenne wieder ganz
+                oben (SC 2.4.3). */}
+            <Table ref={table} tabIndex={-1} className="outline-none">
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("review.list.column.project")}</TableHead>
@@ -395,7 +409,10 @@ export default function ReviewListPage() {
                       nominationTrigger.current = trigger.current
                       setNominationFor(project)
                     }}
-                    onNotice={setNotice}
+                    onNotice={(message) => {
+                      setNotice(message)
+                      table.current?.focus()
+                    }}
                     onError={setRowError}
                   />
                 ))}
@@ -459,19 +476,17 @@ export default function ReviewListPage() {
         </Pagination>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <OwnNominationsCard
-          nominations={nominations.data ?? []}
-          activePlaces={top10.data?.length}
-          isPending={nominations.isPending}
-          error={nominations.error ?? top10.error ?? undefined}
-        />
-        <NominationHistoryCard
-          nominations={nominations.data ?? []}
-          isPending={nominations.isPending}
-          error={nominations.error ?? undefined}
-        />
-      </div>
+      {/* Ein Bereich fuer laufende wie erledigte Vorschlaege; die
+          Standsleiste darin ersetzt den frueheren zweiten Kasten
+          „Mein Nominierungs-Verlauf", der dieselben Zeilen ein zweites Mal
+          zeigte. Volle Breite, weil er ohne Nachbarn steht. */}
+      <NominationPanel
+        nominations={nominations.data ?? []}
+        top10={top10.data}
+        isPending={nominations.isPending}
+        error={nominations.error ?? top10.error ?? undefined}
+        isAdmin={role === "ADMIN"}
+      />
 
       {nominationFor !== null && (
         <NominationDialog

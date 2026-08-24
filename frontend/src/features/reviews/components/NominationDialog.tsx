@@ -1,5 +1,4 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { AwardIcon, MedalIcon, TrophyIcon } from "lucide-react"
 import { useId, type RefObject } from "react"
 import { Controller, useForm } from "react-hook-form"
 import { useTranslation } from "react-i18next"
@@ -25,17 +24,8 @@ import {
   nominationSchema,
   type NominationFormValues,
 } from "@/features/reviews/components/NominationDialog.schema"
+import { tierIcons } from "@/features/reviews/nominations"
 import { cn } from "@/lib/utils"
-
-/**
- * Symbol je Stufe. Zusammen mit Bezeichnung und Platzangabe ist die Stufe
- * damit ohne Farbwahrnehmung unterscheidbar (SC 1.4.1).
- */
-const tierIcons: Record<NominationTier, typeof TrophyIcon> = {
-  TOP_1: TrophyIcon,
-  TOP_5: MedalIcon,
-  TOP_10: AwardIcon,
-}
 
 /**
  * „Fuer Top 10 nominieren" (§3.11.1, §6.1; KAN-37): Projekttitel und die

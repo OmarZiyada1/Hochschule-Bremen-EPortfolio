@@ -110,7 +110,10 @@ export function createQueryClient(): QueryClient {
    * bei client.clear() darunter.
    */
   client.getQueryCache().subscribe((event) => {
-    if (event.type !== "removed" || !isObjectUrlQueryKey(event.query.queryKey)) {
+    if (
+      event.type !== "removed" ||
+      !isObjectUrlQueryKey(event.query.queryKey)
+    ) {
       return
     }
     const url: unknown = event.query.state.data

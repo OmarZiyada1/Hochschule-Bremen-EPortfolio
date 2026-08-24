@@ -36,10 +36,25 @@ const avatarSizes: Record<UserAvatarSize, { box: string; initials: string }> = {
  * (Figma "Avatar").
  *
  * Sie buendelt die drei Eingriffe, die sonst an jeder Aufrufstelle erneut
- * stuenden: der Radius auf radius-card statt der Kreisform der Registry
- * (im Ticket auf 12px entschieden, Foundation 7), die Markenflaeche statt
- * muted, und die Initialen aus dem Namen. Alles laeuft ueber className, die
- * erzeugte Datei bleibt unveraendert.
+ * stuenden: der Radius, die Markenflaeche statt muted, und die Initialen aus
+ * dem Namen. Alles laeuft ueber className, die erzeugte Datei bleibt
+ * unveraendert.
+ *
+ * <p><strong>Zum Radius: radius-pill, also die Kreisform.</strong> Bis zur
+ * Nacharbeit an KAN-37 stand hier radius-card, entschieden mit KAN-69 nach
+ * Foundation 7 und der Figma-Angabe „Avatar: rounded-10". Gesehen hat das
+ * niemand: tailwind-merge kannte die Hausskala nicht, das rounded-full der
+ * Registry blieb daneben stehen und gewann, und die Flaeche war seit jeher
+ * rund. Als die Skala nachgetragen wurde, damit Dialoge ihre 16px bekommen,
+ * wurde aus dem Kreis ueber Nacht ein abgerundetes Quadrat.
+ *
+ * <p>Entschieden wurde daraufhin fuer die Kreisform, weil sie der Stand ist,
+ * den alle kennen. Sie steht jetzt ausdruecklich da und nicht mehr als
+ * Nebenwirkung: radius-pill ist ein Hausradius, ueberlebt also die
+ * Zusammenfuehrung und laesst sich nicht mehr versehentlich verdraengen.
+ * <strong>Damit weicht die Flaeche von der Figma-Angabe „rounded-10"
+ * ab</strong>; wer sie dorthin zurueckholen will, tauscht die drei
+ * radius-pill unten gegen radius-card und zieht den Test nach.
  *
  * Standardmaessig traegt die Flaeche keinen zugaenglichen Namen: sie steht
  * fast immer neben dem ausgeschriebenen Namen, und ein zweiter Name daneben
@@ -75,16 +90,16 @@ export function UserAvatar({
          schlichte size-8 kommt und das Mass der Huelle sie verdraengt. */
       size="default"
       aria-hidden={labelled ? undefined : true}
-      className={cn("rounded-card after:rounded-card", step.box, className)}
+      className={cn("rounded-pill after:rounded-pill", step.box, className)}
     >
       {labelled && <span className="sr-only">{name}</span>}
       {imageUrl && (
-        <AvatarImage className="rounded-card" src={imageUrl} alt="" />
+        <AvatarImage className="rounded-pill" src={imageUrl} alt="" />
       )}
       <AvatarFallback
         aria-hidden={labelled ? true : undefined}
         className={cn(
-          "rounded-card bg-surface-brand font-bold text-surface-brand-foreground",
+          "rounded-pill bg-surface-brand font-bold text-surface-brand-foreground",
           step.initials
         )}
       >

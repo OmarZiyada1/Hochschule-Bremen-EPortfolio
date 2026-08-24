@@ -57,6 +57,28 @@ export function creatableTuple(
 }
 
 /**
+ * Darf die anfragende Person diesen Kommentar loeschen (§6.1, Zeile
+ * „DELETE /comments/{id} | Autor:in / ADMIN")?
+ *
+ * <p><strong>Autor:in meint die verfassende Person des Kommentars</strong>
+ * und nicht die des Projekts. Bildet
+ * {@code ProjectPermissionService.mayDeleteComment} ab: wer geschrieben
+ * hat, nimmt zurueck, und die Administration raeumt auf. Die Projektseite
+ * darf einen Aenderungswunsch der Redaktion <em>erledigen</em> (§2.4), aber
+ * nicht wegloeschen; sonst waere die Vorbedingung beim Einreichen (§4.1,
+ * 409 CHANGE_REQUESTS_OPEN) mit einem Klick zu umgehen.
+ */
+export function mayDeleteComment(
+  commentAuthorId: string,
+  user: { id: string; role: Role } | null
+): boolean {
+  if (user === null) {
+    return false
+  }
+  return user.role === "ADMIN" || commentAuthorId === user.id
+}
+
+/**
  * Darf die anfragende Person den Stand eines Aenderungswunsches setzen
  * (§5, Zeile „CHANGE_REQUEST-Status setzen": STUDENT (✓), EDITOR ✓,
  * ADMIN ✓)?

@@ -103,8 +103,16 @@ public class CommentController {
 					+ "haengt an der Rolle (§5): REPLY duerfen die Projektseite, Redaktion und "
 					+ "Administration, NOTE und CHANGE_REQUEST nur Redaktion und Administration. "
 					+ "Ein CHANGE_REQUEST startet immer im Status OPEN (§2.4). Der Projektstatus "
-					+ "spielt keine Rolle: die Sperre aus §4.1 gilt dem Inhalt, nicht der "
-					+ "Rueckmeldung dazu.")
+					+ "sperrt das Kommentieren nicht: die Sperre aus §4.1 gilt dem Inhalt, nicht "
+					+ "der Rueckmeldung dazu. Seit Contract v71 ist ein CHANGE_REQUEST zugleich "
+					+ "ein Statusausloeser (§4.1): steht das Projekt in SUBMITTED, APPROVED oder "
+					+ "PUBLISHED und darf die anfragende Person den Uebergang ausloesen, geht es "
+					+ "damit nach REVISION, mit Historieneintrag (§3.12). Steht ein "
+					+ "veroeffentlichtes Projekt in der kuratierten Top-10, unterbleibt der "
+					+ "Uebergang seit Contract v72 (§4.1): erst aus der Liste nehmen, dann "
+					+ "zurueckgeben. In den uebrigen Staenden und ohne dieses Recht entsteht "
+					+ "ebenfalls nur der Kommentar; keiner dieser Faelle ist ein Fehler. Die "
+					+ "Antwort bleibt in jedem Fall der Kommentar und nennt den Status nicht.")
 	@ApiResponse(responseCode = "201", description = "Der angelegte Kommentar.")
 	@ApiResponse(responseCode = "400", description = "VALIDATION_FAILED: type oder text fehlt, text "
 			+ "ist zu lang, oder type ist keiner der Werte aus §2.3.")

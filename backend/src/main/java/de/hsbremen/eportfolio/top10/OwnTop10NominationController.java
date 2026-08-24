@@ -8,8 +8,11 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,6 +29,16 @@ import org.springframework.web.bind.annotation.RestController;
  * {@code GET /api/projects?editor=me}: dieselbe Ressource, auf die eigene
  * Person eingegrenzt. Der vollstaendige Spiegel bleibt
  * {@code GET /api/admin/top10-nominations}.
+ *
+ * <p><strong>Seit Contract v70 liegt hier auch das Zurueckziehen</strong>
+ * ({@code POST /api/top10-nominations/{id}/withdraw}, KAN-37). Der Pfad ist
+ * derselbe Ressourcenzuschnitt, und der Endpoint gehoert nicht unter
+ * {@code /api/admin/}: zurueckziehen darf in erster Linie die nominierende
+ * Person selbst. Dass die Administration jeden Vorschlag zurueckziehen darf,
+ * macht daraus keinen Admin-Endpoint, sondern ist die weitere Reichweite
+ * derselben Handlung (§5). Der Klassenname bleibt trotzdem
+ * {@code OwnTop10NominationController}: er benennt den Pfad, nicht die
+ * Rollenmenge.
  *
  * <p><strong>Ein eigener Controller und keine Zeile im
  * {@link Top10Controller}.</strong> Der traegt {@code @SecurityRequirements},
@@ -82,5 +95,30 @@ public class OwnTop10NominationController {
 			@RequestParam(name = "status", required = false) NominationStatus status) {
 
 		return nominationService.ownNominations(user, nominatedBy, status);
+	}
+
+	@Operation(summary = "Nominierung zurueckziehen",
+			description = "Zieht einen Vorschlag zurueck und setzt ihn auf WITHDRAWN "
+					+ "(§2.8, §3.11.1, seit Contract v70). Ohne Koerper. Die nominierende "
+					+ "Person zieht ihren eigenen Vorschlag zurueck, solange er PENDING ist; "
+					+ "die Administration jeden, auch einen bereits angenommenen. Ein "
+					+ "zurueckgezogener angenommener Vorschlag nimmt sein Projekt dabei aus "
+					+ "der kuratierten Liste.")
+	@ApiResponse(responseCode = "200", description = "Die zurueckgezogene Nominierung.")
+	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
+	@ApiResponse(responseCode = "403", description = "NO_PERMISSION: fremder Vorschlag ohne "
+			+ "Administrationsrecht, oder die Rolle ist weder EDITOR noch ADMIN.")
+	@ApiResponse(responseCode = "404", description = "RESOURCE_NOT_FOUND: unter dieser ID gibt "
+			+ "es keine Nominierung.")
+	@ApiResponse(responseCode = "409", description = "NOMINATION_ALREADY_DECIDED: der Stand "
+			+ "laesst das Zurueckziehen nicht mehr zu.")
+	@PostMapping("/{nominationId}/withdraw")
+	public Top10NominationResponse withdraw(
+			@AuthenticationPrincipal AuthenticatedUser user,
+
+			@Parameter(description = "ID der Nominierung.")
+			@PathVariable("nominationId") UUID nominationId) {
+
+		return nominationService.withdraw(user, nominationId);
 	}
 }

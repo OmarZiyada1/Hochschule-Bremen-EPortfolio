@@ -96,13 +96,14 @@ export const apiPaths = {
    * nicht darin, obwohl derselbe Controller sie ausliefert: adressiert ist
    * der Kommentar, nicht das Projekt.
    *
-   * Bislang steht hier allein der Stand des Aenderungswunsches. §6.1 fuehrt
-   * daneben PATCH /api/comments/{id} (Text aendern) und DELETE (loeschen);
-   * beide bekommen ihren Eintrag erst mit ihrem ersten Verwender, wie jeder
-   * Pfad in dieser Datei.
+   * detail traegt zwei Methoden: DELETE loescht den Kommentar (§6.1,
+   * Autor:in und ADMIN). PATCH aendert seinen Text und bekommt seinen
+   * Verwender erst, wenn die Oberflaeche das Aendern anbietet; der Pfad ist
+   * derselbe.
    */
   comments: {
     status: (commentId: string) => `/api/comments/${commentId}/status`,
+    detail: (commentId: string) => `/api/comments/${commentId}`,
   },
   /*
    * Portfolio (§6.1, §3.2), eingetragen mit KAN-34. Die beiden Pfade
@@ -140,6 +141,14 @@ export const apiPaths = {
      * der bleibt der Administrationsseite vorbehalten (KAN-40).
      */
     nominations: "/api/top10-nominations",
+    /*
+     * Zurueckziehen einer Nominierung (§6.1, seit Contract v70, KAN-37).
+     * Derselbe Pfad wie oben, deshalb steht er hier und nicht unter admin:
+     * zurueckziehen darf in erster Linie die nominierende Person selbst,
+     * die Administration zusaetzlich jeden Vorschlag. Ohne Koerper.
+     */
+    withdrawNomination: (nominationId: string) =>
+      `/api/top10-nominations/${nominationId}/withdraw`,
   },
   /*
    * Stammdaten (§6.1, Backend-Modul masterdata): vollstaendige Listen ohne

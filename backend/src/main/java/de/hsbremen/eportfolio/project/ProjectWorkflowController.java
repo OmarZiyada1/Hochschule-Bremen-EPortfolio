@@ -83,8 +83,9 @@ public class ProjectWorkflowController {
 	@ApiResponse(responseCode = "400", description = "PROJECT_INCOMPLETE: mindestens ein "
 			+ "Pflichtfeld aus §3.3 fehlt. Die Meldung nennt alle fehlenden Felder.")
 	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
-	@ApiResponse(responseCode = "403", description = "Angemeldet, aber nicht die Autor:in. "
-			+ "Projektmitglieder duerfen mitschreiben, aber nicht einreichen (§4.1).")
+	@ApiResponse(responseCode = "403", description = "Angemeldet, aber weder die Autor:in "
+			+ "noch, seit Contract v73 und nur aus REVISION, die zugewiesene Redaktion oder "
+			+ "die Administration (§4.1, §5). Aus DRAFT reicht allein die Autor:in ein.")
 	@ApiResponse(responseCode = "404", description = "Unter dieser ID gibt es kein Projekt.")
 	@ApiResponse(responseCode = "409", description = "PROJECT_STATUS_TRANSITION_INVALID: das "
 			+ "Projekt steht nicht in DRAFT oder REVISION, ist also zum Beispiel schon "
@@ -203,7 +204,10 @@ public class ProjectWorkflowController {
 	@ApiResponse(responseCode = "404", description = "Unter dieser ID gibt es kein Projekt.")
 	@ApiResponse(responseCode = "409", description = "PROJECT_STATUS_TRANSITION_INVALID: das "
 			+ "Projekt steht in DRAFT oder bereits in REVISION, es gibt also nichts "
-			+ "zurueckzugeben.")
+			+ "zurueckzugeben. RESOURCE_IN_USE (seit Contract v72): das veroeffentlichte "
+			+ "Projekt steht in der kuratierten Top-10; die Administration nimmt es zuerst "
+			+ "aus der Liste, ueber PUT /api/admin/top10 oder ueber das Zurueckziehen der "
+			+ "Nominierung.")
 	@PostMapping("/request-revision")
 	public ProjectDetailResponse requestRevision(
 			@AuthenticationPrincipal AuthenticatedUser user,

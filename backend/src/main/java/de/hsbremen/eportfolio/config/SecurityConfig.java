@@ -205,7 +205,7 @@ public class SecurityConfig {
 					// wird an dieser Tabelle allein als Nebenwirkung von
 					// POST/PUT /api/projects, und die fallen unter
 					// authenticated().
-					// Die beiden Pfade aus KAN-37 stehen bewusst nicht in dieser
+					// Die drei Pfade aus KAN-37 stehen bewusst nicht in dieser
 					// Liste. DELETE /api/projects/*/editors/me faellt unter
 					// anyRequest().authenticated(), weil /api/projects/* nur als
 					// GET freigegeben ist; ohne Token ergibt es damit 401, wie §5

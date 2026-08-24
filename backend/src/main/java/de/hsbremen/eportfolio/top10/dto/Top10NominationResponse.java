@@ -42,8 +42,12 @@ import java.util.UUID;
  * @param proposedPosition seit Contract v68 der beim Annehmen entschiedene
  *                         Platz; leer, solange die Nominierung offen ist
  * @param status           Stand der Nominierung (§2.8)
- * @param decidedBy        entscheidende:r Admin, {@code null} solange
- *                         {@code status = PENDING}
+ * @param decidedBy        wer entschieden hat: die Administration beim
+ *                         Annehmen und Ablehnen, seit Contract v70 beim
+ *                         Zurueckziehen auch die nominierende Redaktion,
+ *                         seit v72 die Person, die den Uebergang aus
+ *                         {@code PUBLISHED} ausgeloest hat (§3.11.1);
+ *                         {@code null} solange {@code status = PENDING}
  * @param decidedAt        Zeitpunkt der Entscheidung, {@code null} solange offen
  * @param createdAt        Anlagezeitpunkt, zugleich das Sortierkriterium der
  *                         Admin-Liste
@@ -69,7 +73,7 @@ public record Top10NominationResponse(
 
 		NominationStatus status,
 
-		@Schema(description = "Entscheidende:r Admin. Null, solange status = PENDING ist.",
+		@Schema(description = "Wer entschieden hat: die Administration beim Annehmen und Ablehnen, seit Contract v70 beim Zurueckziehen auch die nominierende Redaktion, seit v72 die Person, die den Uebergang aus PUBLISHED ausgeloest hat. Null, solange status = PENDING ist.",
 				nullable = true)
 		PersonResponse decidedBy,
 
