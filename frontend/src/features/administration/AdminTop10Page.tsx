@@ -21,11 +21,7 @@ import {
   useAdminNominations,
   useTop10Entries,
 } from "@/features/administration/hooks/useAdminTop10"
-import {
-  buildSlots,
-  freePositions,
-  slotSignature,
-} from "@/features/administration/top10Slots"
+import { buildSlots, freePositions } from "@/features/administration/top10Slots"
 import {
   ALL_NOMINATION_STATUSES,
   NOMINATION_STATUSES,
@@ -185,16 +181,10 @@ export default function AdminTop10Page() {
           <Skeleton className="h-20 w-full" />
         </div>
       ) : (
-        /* Der key gleicht den Arbeitszustand mit dem Server ab: aendert
-           sich der Stand, baut React den Editor mit dem frischen Stand neu
-           auf; solange nur lokal umsortiert wird, bleibt er stehen. Das ist
-           der von React vorgesehene Weg, den Zustand einer Teilansicht
-           zurueckzusetzen, und er kommt ohne Effekt aus. */
-        <Top10SlotEditor
-          key={slotSignature(serverEntries)}
-          entries={serverEntries}
-          onNotice={setNotice}
-        />
+        /* Ohne key und ohne Arbeitszustand: seit der Umstellung auf
+           Sofortspeichern kommen die Plaetze unmittelbar aus der
+           Serverantwort, es gibt also nichts mehr zurueckzusetzen. */
+        <Top10SlotEditor entries={serverEntries} onNotice={setNotice} />
       )}
     </>
   )

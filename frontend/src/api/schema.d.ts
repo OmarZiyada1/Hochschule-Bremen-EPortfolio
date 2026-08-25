@@ -154,7 +154,7 @@ export interface paths {
     get?: never
     /**
      * Top-10 setzen
-     * @description Ersetzt Bestand und Reihenfolge vollstaendig: der Index in projectIds ist der Platz, das erste Element steht auf Platz 1 (§3.11.1). Was nicht genannt ist, faellt aus der Liste; eine leere Liste leert sie. Zulaessig sind hoechstens zehn verschiedene, veroeffentlichte Projekte. Offene Nominierungen der aufgenommenen Projekte gelten damit als angenommen. Antwort ist die neue Liste wie bei GET /api/top10.
+     * @description Ersetzt Bestand und Reihenfolge vollstaendig: der Index in projectIds ist der Platz, das erste Element steht auf Platz 1 (§3.11.1). Was nicht genannt ist, faellt aus der Liste; eine leere Liste leert sie. Ein null-Eintrag laesst den Platz frei (seit Contract v78): [A, null, C] setzt A auf 1 und C auf 3. Nachlaufende null-Eintraege schneidet der Server ab. Zulaessig sind hoechstens zehn Eintraege, freie Plaetze zaehlen mit; die genannten Projekte muessen verschieden und veroeffentlicht sein. Offene Nominierungen der aufgenommenen Projekte gelten damit als angenommen. Antwort ist die neue Liste wie bei GET /api/top10.
      */
     put: operations["setOrder"]
     post?: never
@@ -1440,6 +1440,8 @@ export interface components {
       userId: string
       firstName: string
       lastName: string
+      /** @description Profilbild als Referenz /api/files/{id} (§3.15.1). Kann fehlen: das Konto hat keines hinterlegt, oder die Antwort fuehrt es an dieser Stelle nicht mit. Gefuellt ist es an den Mitgliedern einer Projektkachel. */
+      avatarUrl: string | null
       /**
        * @description Freie Funktionsbezeichnung im Projekt, z. B. "Frontend". Nicht die System-Rolle aus §2.1. Freiwillig seit Contract v65: sie kann spaeter eingetragen werden, und die Autor:in traegt anfangs keine.
        * @example Frontend
@@ -1600,8 +1602,8 @@ export interface components {
       status: "REGISTRATION_PENDING" | "ACTIVE" | "DEACTIVATED"
     }
     Top10OrderRequest: {
-      /** @description Projekte in der gewuenschten Reihenfolge; der Index bestimmt den Platz, das erste Element steht auf Platz 1. Hoechstens zehn Eintraege, keine Wiederholungen, ausschliesslich veroeffentlichte Projekte. Eine leere Liste leert die Top-10. */
-      projectIds: string[]
+      /** @description Plaetze in der gewuenschten Reihenfolge; der Index bestimmt den Platz, das erste Element steht auf Platz 1. Ein null-Eintrag laesst den Platz frei (seit Contract v78): [A, null, C] setzt A auf 1 und C auf 3. Nachlaufende null-Eintraege schneidet der Server ab. Hoechstens zehn Eintraege, freie Plaetze zaehlen mit. Keine Wiederholungen, ausschliesslich veroeffentlichte Projekte; null darf beliebig oft vorkommen. Eine leere Liste leert die Top-10. */
+      projectIds: (string | null)[]
     }
     ProjectCardResponse: {
       /** Format: uuid */
@@ -1634,6 +1636,8 @@ export interface components {
       /** @description Modul, im Prototyp als "Fach" beschriftet (§3.9). Seit Contract v68 an der Kachel, weil "Meine Reviews" eine Spalte dafuer fuehrt. Kann fehlen; es ist kein Pflichtfeld des Einreichens (§3.3). */
       module: components["schemas"]["ReferenceResponse"] | null
       author: components["schemas"]["PersonResponse"]
+      /** @description Weitere Beteiligte des Projekts (§3.13), seit Contract v78 an der Kachel: eine Gruppenarbeit stand sonst ueberall unter einem einzigen Namen. Die Autor:in ist kein Mitglied und steht in "author" (§3.13.1). Nach Nachname und Vorname geordnet, damit die Reihenfolge zwischen zwei Aufrufen stabil bleibt. Leer bei einer Einzelarbeit. */
+      members: components["schemas"]["MemberResponse"][]
       /** @description Freie Schlagwoerter, hoechstens fuenf. Alphabetisch sortiert, damit die Reihenfolge zwischen zwei Aufrufen stabil bleibt. */
       tags: string[]
       /**
@@ -3003,7 +3007,7 @@ export interface operations {
           "*/*": components["schemas"]["Top10EntryResponse"][]
         }
       }
-      /** @description VALIDATION_FAILED: mehr als zehn Eintraege, ein Projekt mehrfach genannt, eine unbekannte ID oder ein nicht veroeffentlichtes Projekt. */
+      /** @description VALIDATION_FAILED: mehr als zehn Eintraege, ein Projekt mehrfach genannt, eine unbekannte ID oder ein nicht veroeffentlichtes Projekt. Ein null-Eintrag ist keiner dieser Faelle: er benennt kein Projekt und darf beliebig oft vorkommen. */
       400: {
         headers: {
           [name: string]: unknown

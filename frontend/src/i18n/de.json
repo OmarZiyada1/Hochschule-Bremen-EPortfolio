@@ -604,7 +604,8 @@
       "loading": "Vorschläge werden geladen …",
       "empty": "Keine Person gefunden.",
       "hits_one": "{{count}} Treffer",
-      "hits_other": "{{count}} Treffer"
+      "hits_other": "{{count}} Treffer",
+      "by": "Von {{names}}"
     },
     "metadata": {
       "breadcrumb": "Projekt-Metadaten",
@@ -1859,16 +1860,8 @@
         "moveDown": "{{title}} von Platz {{position}} nach unten",
         "remove": "{{title}} von seinem Platz nehmen",
         "moved": "{{title}} steht jetzt auf Platz {{position}}.",
-        "removed": "{{title}} ist von seinem Platz genommen. Gespeichert wird erst mit „Reihenfolge speichern“.",
+        "removed": "{{title}} ist von Platz {{position}} genommen. Der Platz bleibt frei.",
         "listLabel": "Plätze der Top 10"
-      },
-      "save": {
-        "action": "Reihenfolge speichern",
-        "title": "Reihenfolge speichern?",
-        "description": "Die Top 10 führt danach {{count}} Projekte in der hier gezeigten Reihenfolge. Sie erscheint so auf der öffentlichen Startseite, und jede Bewegung wird im Protokoll festgehalten.",
-        "removedTitle": "Diese Projekte verlieren ihren Platz ({{count}}):",
-        "confirm": "Speichern",
-        "done": "Die Reihenfolge ist gespeichert. Die Top 10 führt {{count}} Projekte."
       },
       "picker": {
         "label": "Weiteres Projekt suchen",
@@ -1880,7 +1873,7 @@
         "addShort": "Aufnehmen",
         "alreadyAdded": "{{title}} steht bereits in der Liste",
         "addedShort": "Schon dabei",
-        "added": "{{title}} steht auf dem nächsten freien Platz. Gespeichert wird erst mit „Reihenfolge speichern“."
+        "added": "{{title}} steht jetzt auf Platz {{position}}."
       },
       "audit": {
         "from": "Von",
@@ -1899,6 +1892,11 @@
         "emptyTitle": "Kein Eintrag",
         "emptyDescription": "An der Top 10 ist bisher nichts geändert worden.",
         "emptyFiltered": "In diesem Zeitraum ist nichts geändert worden. Ein weiterer Zeitraum oder eine andere Person zeigt mehr."
+      },
+      "remove": {
+        "title": "Projekt von seinem Platz nehmen?",
+        "description": "„{{title}}“ verliert Platz {{position}} und erscheint nicht mehr auf der öffentlichen Startseite. Der Platz bleibt frei, die übrigen Einträge rücken nicht nach. Das Projekt bleibt veröffentlicht und lässt sich über die Suche wieder aufnehmen.",
+        "confirm": "Vom Platz nehmen"
       }
     }
   }

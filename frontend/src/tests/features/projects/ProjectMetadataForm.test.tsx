@@ -261,6 +261,7 @@ describe("ProjectMetadataForm", () => {
         members: [
           {
             userId: "m-1",
+            avatarUrl: null,
             firstName: "Jonas",
             lastName: "Kern",
             projectRole: "Frontend",
@@ -384,6 +385,7 @@ describe("ProjectMetadataForm", () => {
       members: [
         {
           userId: SIGNED_IN_ID,
+          avatarUrl: null,
           firstName: "Mira",
           lastName: "Beispiel",
           projectRole: "Frontend",

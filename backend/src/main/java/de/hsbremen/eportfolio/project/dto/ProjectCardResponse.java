@@ -17,11 +17,26 @@ import java.util.UUID;
  * „Meine Reviews" zeigt eine Spalte „Fach", und ein Nachladen je Zeile waere
  * genau das N+1, das der Lesedienst sonst ueberall vermeidet.
  *
- * <p>Nicht enthalten sind {@code blocks}, {@code members}, {@code editors}, die
- * Statushistorie und {@code version}: das Blockdokument je Treffer zu laden
- * waere fuer eine Liste unverhaeltnismaessig, und die uebrigen Felder
- * unterliegen einer Sichtbarkeitspruefung, die je Projekt zu treffen waere.
- * Wer sie braucht, holt sich {@link ProjectDetailResponse}.
+ * <p>Seit Contract v78 traegt sie ausserdem {@code members} (§3.13). Bis dahin
+ * kannte die Kachel nur die Autor:in, und eine Gruppenarbeit erschien damit
+ * ueberall unter einem einzigen Namen, obwohl mehrere Personen daran gearbeitet
+ * haben. Geladen wird die Liste wie die Profilbilder je Seite und nicht je
+ * Kachel.
+ *
+ * <p><strong>Warum {@code members} und nicht {@code editors}.</strong> Die
+ * Mitgliederliste gehoert zum Projekt selbst: wer das Projekt sehen darf, darf
+ * auch wissen, wer daran gearbeitet hat. Die zugewiesene Redaktion unterliegt
+ * dagegen einer Sichtbarkeitspruefung nach §5 (Fussnote 7): vor der
+ * Veroeffentlichung sehen sie nur die Projektseite, die zugewiesene Redaktion
+ * und der Admin. Diese Pruefung haengt an Rolle und Status und waere damit je
+ * Kachel zu treffen. Die Redaktion bleibt deshalb
+ * {@link ProjectDetailResponse} vorbehalten, wo sie genau einmal geprueft wird.
+ *
+ * <p>Nicht enthalten sind ausserdem {@code blocks}, die Statushistorie und
+ * {@code version}: das Blockdokument je Treffer zu laden waere fuer eine Liste
+ * unverhaeltnismaessig, und die uebrigen Felder unterliegen derselben
+ * Sichtbarkeitspruefung wie {@code editors}. Wer sie braucht, holt sich
+ * {@link ProjectDetailResponse}.
  *
  * @param id              ID des Projekts
  * @param title           Titel; Metadatum, kein Inhaltsblock (§3.3)
@@ -36,6 +51,7 @@ import java.util.UUID;
  * @param studyProgram    (§3.7)
  * @param module          (§3.9)
  * @param author          Ersteller:in und Eigentuemer:in
+ * @param members         weitere Beteiligte (§3.13), ohne die Autor:in
  * @param tags            freie Schlagwoerter, hoechstens fuenf
  * @param reactionCount   {@code COUNT} der Reaktionen (§3.10)
  * @param publishedAt     gesetzt beim Uebergang nach {@code PUBLISHED}
@@ -85,6 +101,13 @@ public record ProjectCardResponse(
 
 		PersonResponse author,
 
+		@Schema(description = "Weitere Beteiligte des Projekts (§3.13), seit Contract v78 an "
+				+ "der Kachel: eine Gruppenarbeit stand sonst ueberall unter einem einzigen "
+				+ "Namen. Die Autor:in ist kein Mitglied und steht in \"author\" (§3.13.1). "
+				+ "Nach Nachname und Vorname geordnet, damit die Reihenfolge zwischen zwei "
+				+ "Aufrufen stabil bleibt. Leer bei einer Einzelarbeit.")
+		List<MemberResponse> members,
+
 		@Schema(description = "Freie Schlagwoerter, hoechstens fuenf. Alphabetisch sortiert, "
 				+ "damit die Reihenfolge zwischen zwei Aufrufen stabil bleibt.")
 		List<String> tags,
@@ -103,7 +126,8 @@ public record ProjectCardResponse(
 	 * nicht am Projekt nachgeladen: der Lesedienst holt beides fuer die ganze
 	 * Seite in je einer Abfrage. Wuerde dieses Record sie selbst vom Projekt
 	 * ziehen, entstuenden pro Kachel zwei zusaetzliche Abfragen und damit genau
-	 * das N+1-Problem, das der Ticket-Hinweis meint.
+	 * das N+1-Problem, das der Ticket-Hinweis meint. Fuer {@code members} und
+	 * die Profilbilder gilt seit Contract v78 dasselbe.
 	 *
 	 * @param project           Projekt mit bereits geladenen Bezuegen (Autor,
 	 *                          Kategorie, Fakultaet, Studiengang)
@@ -114,9 +138,12 @@ public record ProjectCardResponse(
 	 *                          aussen: es haengt am Portfolio und nicht am
 	 *                          Projekt (§3.2), und der Lesedienst holt es fuer
 	 *                          die ganze Seite in einer Abfrage
+	 * @param members           Mitglieder dieses Projekts (§3.13), bereits
+	 *                          geordnet und mit ihren Profilbildern versehen;
+	 *                          leer bei einer Einzelarbeit
 	 */
 	public static ProjectCardResponse from(Project project, List<String> tags, long reactionCount,
-			String authorAvatarUrl) {
+			String authorAvatarUrl, List<MemberResponse> members) {
 
 		return new ProjectCardResponse(
 				project.getId(),
@@ -132,6 +159,7 @@ public record ProjectCardResponse(
 				ReferenceResponse.from(project.getStudyProgram()),
 				ReferenceResponse.from(project.getModule()),
 				PersonResponse.from(project.getAuthor(), authorAvatarUrl),
+				members,
 				tags,
 				reactionCount,
 				project.getPublishedAt());

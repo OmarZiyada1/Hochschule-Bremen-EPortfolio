@@ -89,6 +89,10 @@ export function projectCard(
     studyProgram: null,
     module: null,
     author: person(),
+    /* Einzelarbeit als Grundfall: die Kachel fuehrt seit Contract v78
+       members, und eine leere Liste ist der haeufigere Stand. Wer eine
+       Gruppenarbeit braucht, reicht sie als Ueberschreibung herein. */
+    members: [],
     tags: [],
     reactionCount: 0,
     publishedAt: null,

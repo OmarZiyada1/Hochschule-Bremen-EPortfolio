@@ -1,11 +1,12 @@
 import { TrophyIcon } from "lucide-react"
-import { useRef, useState } from "react"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import type { Top10EntryResponse } from "@/api/types"
-import { Button } from "@/components/ui/button"
+import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent } from "@/components/ui/card"
-import { SaveTop10OrderDialog } from "@/features/administration/components/SaveTop10OrderDialog"
+import { RemoveFromTop10Dialog } from "@/features/administration/components/RemoveFromTop10Dialog"
 import { Top10ProjectPicker } from "@/features/administration/components/Top10ProjectPicker"
 import { Top10SlotList } from "@/features/administration/components/Top10SlotList"
 import { useSaveTop10Order } from "@/features/administration/hooks/useAdminTop10"
@@ -18,27 +19,33 @@ import {
   hasOrderChanged,
   isFull,
   moveSlot,
-  orderedProjectIds,
   TOP10_SLOT_COUNT,
   type Top10Slots,
 } from "@/features/administration/top10Slots"
 
 /**
- * Die zehn Plaetze mit ihren Handlungen (Frame {@code Admin · Top 10},
- * KAN-40): umsortieren, Platz raeumen, Projekt aufnehmen, Reihenfolge
- * speichern.
+ * Die zehn Plaetze der Top-10 mit ihren Handlungen (Frame {@code Admin ·
+ * Top 10}, KAN-40): umsortieren, Platz raeumen, Projekt aufnehmen.
  *
- * <p><strong>Der Arbeitszustand liegt hier und nicht auf dem Server.</strong>
- * Die drei Handlungen aendern zunaechst nur ihn; hinaus geht erst
- * „Reihenfolge speichern", und zwar als vollstaendige, geordnete Liste
- * (§3.11.1 Regel 3). Sonst entstuende je Klick ein Schreibvorgang und je
- * Schreibvorgang eine Protokollzeile, und der Verlauf einer einzigen
- * Umsortierung waere zwanzig Zeilen lang (§3.17).
+ * <p><strong>Jede Handlung wirkt sofort.</strong> Einen Knopf „Reihenfolge
+ * speichern" gibt es nicht mehr. Er war frueher noetig, weil eine Luecke
+ * sich nicht ablegen liess und die Oberflaeche deshalb einen Zustand
+ * mitschleppte, den der Server nicht kannte; seit Contract v78 traegt
+ * {@code PUT /admin/top10} den freien Platz als {@code null} mit, und was zu
+ * sehen ist, ist damit auch gespeichert (Entscheidung zur Nacharbeit an
+ * KAN-40).
  *
- * <p><strong>Gespeichert wird nach einer Rueckfrage</strong>, die nennt, was
- * seinen Platz verliert: {@code PUT /admin/top10} ersetzt die Liste, und das
- * Wegnehmen einer Kachel waere sonst der einzige Schritt dieser Ansicht, der
- * stillschweigend wirkt.
+ * <p><strong>Es gibt deshalb keinen Arbeitszustand mehr.</strong> Die
+ * Plaetze kommen unmittelbar aus der Serverantwort; der Zug wird
+ * vorhergesagt und im Cache abgelegt ({@code useSaveTop10Order}), nicht in
+ * einem zweiten Zustand daneben gehalten. Das ist der eigentliche Gewinn:
+ * ein halb umsortierter Stand, den niemand gespeichert hat, kann nicht mehr
+ * entstehen.
+ *
+ * <p><strong>Nur das Entfernen fragt zurueck.</strong> Ein Zug um einen
+ * Platz ist mit dem Gegenzug erledigt; ein entferntes Projekt ist von der
+ * Startseite verschwunden, und der Papierkorb sitzt neben zwei Pfeilen, die
+ * man mehrfach hintereinander drueckt.
  */
 export function Top10SlotEditor({
   entries,
@@ -50,45 +57,53 @@ export function Top10SlotEditor({
 }) {
   const { t } = useTranslation()
   const save = useSaveTop10Order()
-  const original = buildSlots(entries)
-  const [slots, setSlots] = useState<Top10Slots>(original)
-  const [confirming, setConfirming] = useState(false)
-  const saveTrigger = useRef<HTMLButtonElement | null>(null)
+  const slots = buildSlots(entries)
+  const [removing, setRemoving] = useState<{
+    index: number
+    title: string
+  } | null>(null)
 
-  const changed = hasOrderChanged(slots, original)
   const filled = TOP10_SLOT_COUNT - freePositions(slots).length
-  const removedTitles = original.flatMap((slot) =>
-    slot !== null && !containsProject(slots, slot.project.id)
-      ? [slot.project.title]
-      : []
-  )
+
+  /**
+   * Schickt die neue Belegung, sofern sie sich von der gezeigten
+   * unterscheidet. Ein Klick ohne Wirkung erzeugt sonst einen
+   * Schreibvorgang und damit eine Protokollzeile (§3.17).
+   */
+  function apply(next: Top10Slots, message: string) {
+    if (!hasOrderChanged(next, slots)) {
+      return
+    }
+    save.mutate(next, { onSuccess: () => onNotice(message) })
+  }
 
   return (
     <section aria-labelledby="top10-slots" className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="top10-slots" className="type-h2 flex items-center gap-2">
-          <TrophyIcon aria-hidden="true" className="size-5 text-primary" />
-          {t("administration.top10.slots.title")}
-          <span className="type-body-sm text-muted-foreground">
-            {t("administration.top10.slots.count", {
-              filled,
-              total: TOP10_SLOT_COUNT,
-            })}
-          </span>
-        </h2>
-        <Button
-          ref={saveTrigger}
-          type="button"
-          /* Gesperrt, solange sich nichts geaendert hat: sonst schriebe ein
-             Klick eine Protokollzeile ohne Anlass. Verglichen wird die
-             Nutzlast und nicht die Anzeige, eine bloss verschobene Luecke
-             aendert am Ergebnis nichts. */
-          disabled={!changed || save.isPending}
-          onClick={() => setConfirming(true)}
-        >
-          {t("administration.top10.save.action")}
-        </Button>
-      </div>
+      <h2 id="top10-slots" className="type-h2 flex items-center gap-2">
+        <TrophyIcon aria-hidden="true" className="size-5 text-primary" />
+        {t("administration.top10.slots.title")}
+        <span className="type-body-sm text-muted-foreground">
+          {t("administration.top10.slots.count", {
+            filled,
+            total: TOP10_SLOT_COUNT,
+          })}
+        </span>
+      </h2>
+
+      {/* Der Fehler steht hier und nicht im Dialog: Verschieben und
+          Aufnehmen haben keinen, an dem er stehen koennte. Beim Entfernen
+          zeigt ihn zusaetzlich der Dialog, der dann offen bleibt. */}
+      {save.error !== null && removing === null && (
+        <Alert variant="destructive">
+          <AlertTitle>
+            {isApiError(save.error)
+              ? t(apiErrorMessageKey(save.error), {
+                  defaultValue: save.error.message,
+                })
+              : t("apiError.INTERNAL_ERROR")}
+          </AlertTitle>
+        </Alert>
+      )}
 
       <Top10SlotList
         slots={slots}
@@ -96,14 +111,14 @@ export function Top10SlotEditor({
         onMove={(index, direction) => {
           const moved = slots[index]
           const next = moveSlot(slots, index, direction)
-          setSlots(next)
           if (moved === null) {
             return
           }
           const target = next.findIndex(
             (slot) => slot?.project.id === moved.project.id
           )
-          onNotice(
+          apply(
+            next,
             t("administration.top10.slot.moved", {
               title: moved.project.title,
               position: target + 1,
@@ -111,14 +126,9 @@ export function Top10SlotEditor({
           )
         }}
         onRemove={(index) => {
-          const removed = slots[index]
-          setSlots(clearSlot(slots, index))
-          if (removed !== null) {
-            onNotice(
-              t("administration.top10.slot.removed", {
-                title: removed.project.title,
-              })
-            )
+          const slot = slots[index]
+          if (slot !== null) {
+            setRemoving({ index, title: slot.project.title })
           }
         }}
       />
@@ -128,11 +138,17 @@ export function Top10SlotEditor({
           <Top10ProjectPicker
             full={isFull(slots)}
             isSelected={(projectId) => containsProject(slots, projectId)}
+            pending={save.isPending}
             onAdd={(project) => {
-              setSlots(addProject(slots, project))
-              onNotice(
+              const next = addProject(slots, project)
+              const target = next.findIndex(
+                (slot) => slot?.project.id === project.id
+              )
+              apply(
+                next,
                 t("administration.top10.picker.added", {
                   title: project.title,
+                  position: target + 1,
                 })
               )
             }}
@@ -140,27 +156,34 @@ export function Top10SlotEditor({
         </CardContent>
       </Card>
 
-      <SaveTop10OrderDialog
-        open={confirming}
-        onOpenChange={(next) => {
-          if (!next) {
-            save.reset()
-          }
-          setConfirming(next)
-        }}
-        removedTitles={removedTitles}
-        count={filled}
+      <RemoveFromTop10Dialog
+        title={removing?.title ?? null}
+        position={removing === null ? null : removing.index + 1}
         pending={save.isPending}
         error={save.error}
-        finalFocus={saveTrigger}
-        onConfirm={() =>
-          save.mutate(orderedProjectIds(slots), {
+        onOpenChange={(open) => {
+          if (!open) {
+            save.reset()
+            setRemoving(null)
+          }
+        }}
+        onConfirm={() => {
+          if (removing === null) {
+            return
+          }
+          const { index, title } = removing
+          save.mutate(clearSlot(slots, index), {
             onSuccess: () => {
-              setConfirming(false)
-              onNotice(t("administration.top10.save.done", { count: filled }))
+              setRemoving(null)
+              onNotice(
+                t("administration.top10.slot.removed", {
+                  title,
+                  position: index + 1,
+                })
+              )
             },
           })
-        }
+        }}
       />
     </section>
   )

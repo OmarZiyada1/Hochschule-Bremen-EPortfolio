@@ -13,7 +13,7 @@ import {
   isFull,
   moveSlot,
   orderedProjectIds,
-  slotSignature,
+  placementPayload,
   suggestedPositionFor,
   TOP10_SLOT_COUNT,
 } from "@/features/administration/top10Slots"
@@ -60,16 +60,26 @@ describe("top10Slots", () => {
   describe("Umsortieren", () => {
     const slots = buildSlots([entry(1, "a"), entry(2, "b"), entry(3, "c")])
 
-    /* Ticket KAN-40, Test 3: erste Zeile nach oben und letzte Zeile nach
-       unten sind wirkungslos und im Bedienelement gesperrt. */
-    it("sperrt den ersten besetzten Platz nach oben", () => {
+    /*
+     * Ein Klick ist genau ein Platz. Was an der Ziffer abzulesen ist, soll
+     * auch geschehen: von Platz 2 nach unten fuehrt auf Platz 3, nicht auf
+     * den naechsten besetzten. Gesperrt ist deshalb nur der Rand der Liste,
+     * also Platz 1 nach oben und Platz 10 nach unten.
+     */
+    it("sperrt Platz 1 nach oben", () => {
       expect(canMoveUp(slots, 0)).toBe(false)
       expect(moveSlot(slots, 0, "up")).toBe(slots)
     })
 
-    it("sperrt den letzten besetzten Platz nach unten", () => {
-      expect(canMoveDown(slots, 2)).toBe(false)
-      expect(moveSlot(slots, 2, "down")).toBe(slots)
+    it("sperrt Platz 10 nach unten", () => {
+      const full = buildSlots(
+        Array.from({ length: TOP10_SLOT_COUNT }, (_, index) =>
+          entry(index + 1, `p${index}`)
+        )
+      )
+
+      expect(canMoveDown(full, TOP10_SLOT_COUNT - 1)).toBe(false)
+      expect(moveSlot(full, TOP10_SLOT_COUNT - 1, "down")).toBe(full)
     })
 
     it("tauscht zwei benachbarte Eintraege und laesst das Original unberuehrt", () => {
@@ -80,19 +90,37 @@ describe("top10Slots", () => {
     })
 
     /*
-     * Freie Plaetze werden uebersprungen: getauscht werden immer zwei
-     * Projekte, und die Luecke bleibt, wo sie ist. Ein Tausch mit einer
-     * leeren Zelle verschoebe nur sie und aenderte an der gespeicherten
-     * Reihenfolge nichts, weil PUT /admin/top10 dicht durchnummeriert.
+     * Der Nachbar darf leer sein: dann rueckt das Projekt einen Platz weiter
+     * und laesst seinen alten frei. Getauscht wird die Zelle, nicht das
+     * Projekt mit dem naechsten Projekt.
      */
-    it("ueberspringt eine Luecke und laesst sie an ihrem Platz", () => {
+    it("rueckt in einen freien Nachbarplatz und laesst den alten frei", () => {
       const withGap = buildSlots([entry(1, "a"), entry(4, "d")])
       const moved = moveSlot(withGap, 3, "up")
 
-      expect(moved[0]?.project.id).toBe("d")
-      expect(moved[3]?.project.id).toBe("a")
+      expect(moved[2]?.project.id).toBe("d")
+      expect(moved[3]).toBeNull()
+      /* Kein Sprung ueber die Luecke hinweg: a bleibt auf Platz 1. */
+      expect(moved[0]?.project.id).toBe("a")
       expect(moved[1]).toBeNull()
-      expect(moved[2]).toBeNull()
+    })
+
+    it("laesst einen Eintrag ueber mehrere Klicks Platz fuer Platz wandern", () => {
+      const withGap = buildSlots([entry(1, "a"), entry(4, "d")])
+      const einmal = moveSlot(withGap, 3, "up")
+      const zweimal = moveSlot(einmal, 2, "up")
+
+      expect(zweimal[1]?.project.id).toBe("d")
+      /* Erst der dritte Klick trifft auf a und tauscht die beiden. */
+      const dreimal = moveSlot(zweimal, 1, "up")
+      expect(orderedProjectIds(dreimal)).toEqual(["d", "a"])
+    })
+
+    it("erlaubt den Zug auch am ersten besetzten Platz, solange darueber ein Platz liegt", () => {
+      const withGap = buildSlots([entry(3, "c")])
+
+      expect(canMoveUp(withGap, 2)).toBe(true)
+      expect(moveSlot(withGap, 2, "up")[1]?.project.id).toBe("c")
     })
 
     it("meldet einen leeren Platz als nicht verschiebbar", () => {
@@ -172,15 +200,15 @@ describe("top10Slots", () => {
     })
 
     /*
-     * Eine bloss verschobene Luecke aendert am Ergebnis von PUT
-     * /admin/top10 nichts: „Reihenfolge speichern" bleibt deshalb gesperrt
-     * und verspricht keine Aenderung, die keine waere.
+     * Seit Contract v78 ist der Ort einer Luecke Teil der Nutzlast: eine
+     * verschobene Luecke ist deshalb sehr wohl eine Aenderung. Bis v77 war
+     * sie es nicht, weil der Server ohnehin dicht durchnummerierte.
      */
-    it("meldet eine bloss verschobene Luecke als unveraendert", () => {
+    it("meldet eine verschobene Luecke als veraendert", () => {
       const withGap = buildSlots([entry(1, "a"), entry(3, "c")])
-      const same = buildSlots([entry(1, "a"), entry(2, "c")])
+      const anders = buildSlots([entry(1, "a"), entry(2, "c")])
 
-      expect(hasOrderChanged(same, withGap)).toBe(false)
+      expect(hasOrderChanged(anders, withGap)).toBe(true)
     })
   })
 
@@ -208,16 +236,46 @@ describe("top10Slots", () => {
     })
   })
 
-  describe("slotSignature", () => {
-    it("unterscheidet zwei Staende mit derselben Menge in anderer Ordnung", () => {
-      const a = slotSignature([entry(1, "a"), entry(2, "b")])
-      const b = slotSignature([entry(1, "b"), entry(2, "a")])
+  describe("placementPayload", () => {
+    /*
+     * Contract v78: der Index ist der Platz, null heisst „Platz frei".
+     * Damit laesst sich genau das ablegen, was die Oberflaeche zeigt.
+     */
+    it("traegt den freien Platz als null mit", () => {
+      const slots = buildSlots([entry(1, "a"), entry(3, "c")])
 
-      expect(a).not.toBe(b)
+      expect(placementPayload(slots)).toEqual(["a", null, "c"])
     })
 
-    it("bleibt fuer denselben Stand gleich", () => {
-      expect(slotSignature([entry(1, "a")])).toBe(slotSignature([entry(1, "a")]))
+    it("schneidet nachlaufende freie Plaetze ab", () => {
+      const slots = buildSlots([entry(1, "a"), entry(2, "b")])
+
+      /* Zehn Zellen, aber nur zwei belegt: acht null am Ende waeren
+         bedeutungslos, der Server schneidet sie ohnehin ab. */
+      expect(placementPayload(slots)).toEqual(["a", "b"])
+    })
+
+    it("laesst fuehrende und mittlere freie Plaetze stehen", () => {
+      const slots = buildSlots([entry(2, "b"), entry(5, "e")])
+
+      expect(placementPayload(slots)).toEqual([null, "b", null, null, "e"])
+    })
+
+    it("liefert fuer eine leere Liste eine leere Nutzlast", () => {
+      expect(placementPayload(buildSlots([]))).toEqual([])
+    })
+
+    /*
+     * Der eigentliche Gewinn von v78: ein Zug in einen freien Platz ist
+     * jetzt eine echte Aenderung und kein Zug ins Leere.
+     */
+    it("unterscheidet einen Zug in einen freien Platz vom Ausgangsstand", () => {
+      const slots = buildSlots([entry(1, "a"), entry(4, "d")])
+      const moved = moveSlot(slots, 3, "up")
+
+      expect(placementPayload(slots)).toEqual(["a", null, null, "d"])
+      expect(placementPayload(moved)).toEqual(["a", null, "d"])
+      expect(hasOrderChanged(moved, slots)).toBe(true)
     })
   })
 })

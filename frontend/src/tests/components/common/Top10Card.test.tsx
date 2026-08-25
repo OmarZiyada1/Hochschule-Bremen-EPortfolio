@@ -6,7 +6,7 @@ import { renderWithProviders } from "@/tests/render"
 import { Top10Card } from "@/components/common/Top10Card"
 import { reference } from "@/tests/fixtures"
 
-const author = { firstName: "Mira", lastName: "Beispiel" }
+const people = [{ id: "u-1", firstName: "Mira", lastName: "Beispiel" }]
 
 describe("Top10Card", () => {
   /*
@@ -28,7 +28,7 @@ describe("Top10Card", () => {
 
   it("zeigt den Platz sichtbar zweistellig und vorgelesen als Satz", () => {
     renderWithProviders(
-      <Top10Card position={6} title="Campus-Garten" author={author} />
+      <Top10Card position={6} title="Campus-Garten" people={people} />
     )
 
     expect(screen.getByText("06")).toBeVisible()
@@ -50,7 +50,7 @@ describe("Top10Card", () => {
       <Top10Card
         position={1}
         title="Campus-Garten"
-        author={author}
+        people={people}
         studyProgram={reference({
           name: "Medieninformatik",
           abbreviation: null,
@@ -76,7 +76,7 @@ describe("Top10Card", () => {
         variant="compact"
         position={7}
         title="Campus-Garten"
-        author={author}
+        people={people}
         studyProgram={reference({
           name: "Medieninformatik",
           abbreviation: null,

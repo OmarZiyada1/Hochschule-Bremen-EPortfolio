@@ -7,11 +7,12 @@ import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import { projectQueries } from "@/api/queries/projects"
 import type { ProjectCardResponse } from "@/api/types"
 import { EmptyState } from "@/components/common/EmptyState"
+import { ProjectPeople } from "@/components/common/ProjectPeople"
 import { SearchInput } from "@/components/common/SearchInput"
 import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { fullNameOf } from "@/lib/name"
+import { peopleOfProject } from "@/lib/people"
 
 /**
  * Wartezeit vor der Suchanfrage, wie bei der PersonCombobox (KAN-35) und in
@@ -43,22 +44,28 @@ const RESULT_SIZE = 5
  * Liste der neuesten Projekte saehe wie eine Empfehlung aus, und eine
  * Empfehlung gibt diese Ansicht nicht ab: kuratiert wird von Hand.
  *
- * <p><strong>Aufgenommen wird in den Arbeitszustand, nicht in die
- * Liste.</strong> Der Knopf setzt das Projekt auf den ersten freien Platz;
- * hinaus geht es erst mit „Reihenfolge speichern". Bereits vergebene
- * Projekte und der Fall „alle zehn Plaetze belegt" sind gesperrt, statt in
- * ein 400 {@code VALIDATION_FAILED} zu laufen.
+ * <p><strong>Der Knopf nimmt sofort auf.</strong> Das Projekt kommt auf den
+ * ersten freien Platz und ist damit gespeichert; einen Sammelschritt gibt es
+ * seit der Nacharbeit an KAN-40 nicht mehr. Bereits vergebene Projekte und
+ * der Fall „alle zehn Plaetze belegt" sind gesperrt, statt in ein 400
+ * {@code VALIDATION_FAILED} zu laufen.
  */
 export function Top10ProjectPicker({
   onAdd,
   isSelected,
   full,
+  pending = false,
 }: {
   onAdd: (project: ProjectCardResponse) => void
   /** Steht dieses Projekt schon auf einem Platz? */
   isSelected: (projectId: string) => boolean
   /** Sind alle zehn Plaetze belegt? Dann ist ein elfter nicht anlegbar. */
   full: boolean
+  /**
+   * Laeuft gerade ein Schreibvorgang? Dann bleiben die Knoepfe gesperrt: ein
+   * zweiter Klick schickte eine Liste, die den ersten noch nicht kennt.
+   */
+  pending?: boolean
 }) {
   const { t } = useTranslation()
   const [search, setSearch] = useState("")
@@ -137,15 +144,16 @@ export function Top10ProjectPicker({
                   <span className="type-body-sm font-medium">
                     {project.title}
                   </span>
-                  <span className="type-body-sm text-muted-foreground">
-                    {fullNameOf(project.author)}
-                  </span>
+                  <ProjectPeople
+                    people={peopleOfProject(project)}
+                    className="text-muted-foreground"
+                  />
                 </div>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={already || full}
+                  disabled={already || full || pending}
                   onClick={() => onAdd(project)}
                 >
                   <PlusIcon aria-hidden="true" />

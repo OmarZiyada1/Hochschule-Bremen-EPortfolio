@@ -5,8 +5,9 @@ import { Link } from "react-router-dom"
 import { resolveApiUrl } from "@/api/client"
 import type { Top10EntryResponse } from "@/api/types"
 import { Pill } from "@/components/common/Pill"
+import { ProjectPeople } from "@/components/common/ProjectPeople"
 import { Card, CardContent } from "@/components/ui/card"
-import { fullNameOf } from "@/lib/name"
+import { peopleOfProject } from "@/lib/people"
 import { cn } from "@/lib/utils"
 
 /**
@@ -41,12 +42,6 @@ export function FeaturedTop10Card({
   }
 
   const position = entry.position ?? 1
-  const author = project.author
-    ? {
-        firstName: project.author.firstName,
-        lastName: project.author.lastName,
-      }
-    : null
 
   return (
     <Card
@@ -91,12 +86,29 @@ export function FeaturedTop10Card({
           {t("top10.position", { position })}
         </Pill>
 
-        <h3 className="type-h1 max-w-md">{project.title}</h3>
+        {/* Der Abstand zur Pille darueber ist bewusst groesser als die
+            uebrigen: die Pille ordnet die Karte ein, der Titel ist ihr
+            Inhalt. Ohne diesen Absatz lesen sich beide als eine Zeile mit
+            zwei Schriftgraden. */}
+        <h3 className="type-h1 mt-2 max-w-md">{project.title}</h3>
+
+        {/* Erst der Teaser, dann die Person: die Karte erzaehlt, worum es
+            geht, bevor sie sagt, wer es geschrieben hat. Bis zur Nacharbeit
+            an KAN-40 stand die Zeile mit dem Namen zwischen Titel und
+            Teaser und trennte damit zwei Dinge, die zusammengehoeren. */}
+        {project.summary && (
+          <p className="type-body-sm line-clamp-2 max-w-md text-cover-muted">
+            {project.summary}
+          </p>
+        )}
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          {author && (
-            <p className="type-body-sm font-semibold">{fullNameOf(author)}</p>
-          )}
+          {/* Auf dem Cover, deshalb der Cover-Ton: text-muted-foreground
+              haelt dort die Kontrastzusage nicht (SC 1.4.3). */}
+          <ProjectPeople
+            people={peopleOfProject(project)}
+            className="font-semibold text-cover-foreground"
+          />
           {project.id && (
             <Link
               to={`/projects/${project.id}`}
@@ -108,12 +120,6 @@ export function FeaturedTop10Card({
             </Link>
           )}
         </div>
-
-        {project.summary && (
-          <p className="type-body-sm line-clamp-2 max-w-md text-cover-muted">
-            {project.summary}
-          </p>
-        )}
 
         {project.studyProgram && (
           <p className="type-label-xs text-cover-muted uppercase">

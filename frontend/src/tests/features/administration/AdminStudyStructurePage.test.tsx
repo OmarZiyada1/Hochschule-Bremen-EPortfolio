@@ -342,9 +342,17 @@ describe("AdminStudyStructurePage", () => {
     /* „Noch keine Studiengänge" waere hier eine Falschaussage, nach der die
        Administration einen vorhandenen Eintrag ein zweites Mal anlegt
        (Befund des frontend-reviewers). */
-    expect(
-      await screen.findByText(i18n.t("apiError.INTERNAL_ERROR"))
-    ).toBeInTheDocument()
+    /* Ueber waitFor mit getByText und nicht ueber findByText: die Meldung
+       steht in einer Flaeche, die noch einmal neu gerendert wird, waehrend
+       die uebrigen Abfragen der Seite eintreffen. findByText liefert dann
+       den Knoten von vorher, und der haengt zum Zeitpunkt der Behauptung
+       nicht mehr im Dokument ("element could not be found"). getByText
+       innerhalb von waitFor fragt bei jedem Durchlauf neu. */
+    await waitFor(() =>
+      expect(
+        screen.getByText(i18n.t("apiError.INTERNAL_ERROR"))
+      ).toBeInTheDocument()
+    )
     expect(
       screen.queryByRole("heading", { name: "Noch keine Studiengänge" })
     ).not.toBeInTheDocument()
@@ -365,9 +373,17 @@ describe("AdminStudyStructurePage", () => {
       "/administration/study-structure"
     )
 
-    expect(
-      await screen.findByText(i18n.t("apiError.INTERNAL_ERROR"))
-    ).toBeInTheDocument()
+    /* Ueber waitFor mit getByText und nicht ueber findByText: die Meldung
+       steht in einer Flaeche, die noch einmal neu gerendert wird, waehrend
+       die uebrigen Abfragen der Seite eintreffen. findByText liefert dann
+       den Knoten von vorher, und der haengt zum Zeitpunkt der Behauptung
+       nicht mehr im Dokument ("element could not be found"). getByText
+       innerhalb von waitFor fragt bei jedem Durchlauf neu. */
+    await waitFor(() =>
+      expect(
+        screen.getByText(i18n.t("apiError.INTERNAL_ERROR"))
+      ).toBeInTheDocument()
+    )
     expect(
       screen.queryByRole("heading", { name: "Noch keine Module" })
     ).not.toBeInTheDocument()
@@ -388,8 +404,16 @@ describe("AdminStudyStructurePage", () => {
       "/administration/study-structure"
     )
 
-    expect(
-      await screen.findByText(i18n.t("apiError.NO_PERMISSION"))
-    ).toBeInTheDocument()
+    /* Ueber waitFor mit getByText und nicht ueber findByText: die Meldung
+       steht in einer Flaeche, die noch einmal neu gerendert wird, waehrend
+       die uebrigen Abfragen der Seite eintreffen. findByText liefert dann
+       den Knoten von vorher, und der haengt zum Zeitpunkt der Behauptung
+       nicht mehr im Dokument ("element could not be found"). getByText
+       innerhalb von waitFor fragt bei jedem Durchlauf neu. */
+    await waitFor(() =>
+      expect(
+        screen.getByText(i18n.t("apiError.NO_PERMISSION"))
+      ).toBeInTheDocument()
+    )
   })
 })

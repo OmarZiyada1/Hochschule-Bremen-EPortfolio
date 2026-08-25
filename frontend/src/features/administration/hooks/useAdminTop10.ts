@@ -8,7 +8,11 @@ import {
   top10Queries,
   type Top10AuditParams,
 } from "@/api/queries/top10"
-import type { NominationStatus } from "@/api/types"
+import type { NominationStatus, Top10EntryResponse } from "@/api/types"
+import {
+  placementPayload,
+  type Top10Slots,
+} from "@/features/administration/top10Slots"
 
 /**
  * Die Query- und Mutation-Hooks der Top-10-Verwaltung (§3.11, §3.17, §6.1;
@@ -111,13 +115,25 @@ export function useRejectNomination() {
 }
 
 /**
- * Die Reihenfolge speichern, PUT /api/admin/top10 (200).
+ * Die Belegung der zehn Plaetze speichern, PUT /api/admin/top10 (200).
  *
- * <p><strong>Ein Aufruf je ausdruecklicher Handlung, nicht je Klick.</strong>
- * Geschickt wird die vollstaendige, geordnete Liste; ein Klick auf „nach
- * oben" allein schickt nichts. Sonst entstuende je Klick ein Schreibvorgang
- * und je Schreibvorgang eine Protokollzeile (§3.17), und der Verlauf einer
- * einzigen Umsortierung waere zwanzig Zeilen lang.
+ * <p><strong>Jede Handlung speichert sofort.</strong> Es gibt keinen Knopf
+ * „Reihenfolge speichern" mehr: Verschieben, Aufnehmen und Entfernen wirken
+ * unmittelbar, wie jede andere Verwaltungshandlung des Portals. Der frueher
+ * noetige Sammelschritt kam allein daher, dass eine Luecke sich nicht ablegen
+ * liess; seit Contract v78 laesst sie sich (Entscheidung zur Nacharbeit an
+ * KAN-40).
+ *
+ * <p><strong>Die Anzeige laeuft dem Server voraus.</strong> Der Zug ist
+ * sofort zu sehen, weil {@code onMutate} den vorhergesagten Stand in den
+ * Cache legt; scheitert der Aufruf, kommt der vorherige Stand zurueck. Ohne
+ * das flackerte die Liste bei jedem Klick durch einen Ladezustand, und ein
+ * zweiter Klick traefe eine Liste, die noch die alte Reihenfolge zeigt.
+ *
+ * <p><strong>Vorhergesagt wird nur, was schon bekannt ist.</strong> Ein eben
+ * hinzugefuegtes Projekt hat noch kein {@code addedAt}; einen Zeitpunkt zu
+ * erfinden hiesse, eine Angabe zu behaupten, die der Server erst vergibt.
+ * In diesem Fall unterbleibt die Vorhersage und die Liste laedt kurz nach.
  *
  * <p><strong>Kein zweiter Versuch.</strong> Ein 409
  * {@code PROJECT_NOT_PUBLISHED} und ein 400 {@code VALIDATION_FAILED} haetten
@@ -128,9 +144,62 @@ export function useSaveTop10Order() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (projectIds: string[]) => setTop10Order(projectIds),
-    onSuccess: () => {
+    mutationFn: (slots: Top10Slots) => setTop10Order(placementPayload(slots)),
+
+    onMutate: async (slots) => {
+      /* Laufende Abfragen abbrechen, sonst ueberschreibt eine Antwort, die
+         vor dem Klick losgeschickt wurde, den vorhergesagten Stand wieder. */
+      await queryClient.cancelQueries({ queryKey: top10Key() })
+      const previous = queryClient.getQueryData<Top10EntryResponse[]>(
+        top10Key()
+      )
+
+      const predicted = predictEntries(slots)
+      if (predicted !== null) {
+        queryClient.setQueryData(top10Key(), predicted)
+      }
+      return { previous }
+    },
+
+    onError: (_error, _slots, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(top10Key(), context.previous)
+      }
+    },
+
+    /* Immer nachladen, auch nach einem Erfolg: der Server entscheidet ueber
+       die Plaetze, und mit dem Speichern gehen ausserdem offene
+       Nominierungen auf ACCEPTED (§3.11.1 Regel 5) und das Protokoll bekommt
+       neue Zeilen. */
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: top10Key() })
     },
   })
+}
+
+/**
+ * Der Stand, den {@code PUT /admin/top10} fuer diese Belegung liefern wird,
+ * oder {@code null}, wenn er sich nicht ohne Erfindung bilden laesst.
+ *
+ * <p>Der Platz ist der Index der Zelle (§3.11.1 Regel 3, seit v78), der
+ * Aufnahmezeitpunkt bleibt der des vorhandenen Eintrags: eine Umsortierung
+ * ist keine Aufnahme, und ein mitwanderndes {@code addedAt} hiesse faktisch
+ * „zuletzt umsortiert am" (§3.11).
+ */
+function predictEntries(slots: Top10Slots): Top10EntryResponse[] | null {
+  const predicted: Top10EntryResponse[] = []
+  for (const [index, slot] of slots.entries()) {
+    if (slot === null) {
+      continue
+    }
+    if (slot.addedAt === null) {
+      return null
+    }
+    predicted.push({
+      position: index + 1,
+      addedAt: slot.addedAt,
+      project: slot.project,
+    })
+  }
+  return predicted
 }

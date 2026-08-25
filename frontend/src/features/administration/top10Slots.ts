@@ -17,12 +17,12 @@ import type {
  * mit zehn Zellen und keine Liste der besetzten Eintraege: nur so behaelt
  * eine Luecke ihren Ort.
  *
- * <p><strong>Gespeichert wird trotzdem dicht.</strong> {@code PUT
- * /admin/top10} nimmt die vollstaendige, geordnete Liste der Projekte und
- * nummeriert sie anschliessend lueckenlos ab 1 durch (§3.11.1 Regel 3). Eine
- * Luecke ueberlebt das Speichern also nicht, und das ist kein Fehler,
- * sondern die Zusage des Endpoints: sie entsteht durch ein Ereignis von
- * aussen, nicht durch eine Entscheidung der Administration.
+ * <p><strong>Und so wird es auch gespeichert.</strong> Seit Contract v78
+ * nimmt {@code PUT /admin/top10} {@code null}-Eintraege entgegen; der Index
+ * bleibt der Platz, {@code null} heisst „Platz frei" (§3.11.1 Regel 3). Was
+ * die Oberflaeche zeigt, laesst sich damit genau so ablegen. Bis v77 zog
+ * jeder Aufruf die Liste wieder zusammen, ein entferntes Projekt riss also
+ * die darunterliegenden mit nach oben.
  */
 
 /** Zehn Plaetze, nicht mehr (§3.11). */
@@ -70,45 +70,44 @@ export function buildSlots(entries: readonly Top10EntryResponse[]): Top10Slots {
 }
 
 /**
- * Der Index des naechsten besetzten Platzes in dieser Richtung, oder
- * {@code null}, wenn es keinen gibt.
+ * Der Nachbarplatz in dieser Richtung, oder {@code null} am Rand der Liste.
  *
- * <p>Freie Plaetze werden uebersprungen und bleiben, wo sie sind: getauscht
- * werden immer zwei Projekte. Ein Tausch mit einer leeren Zelle saehe wie
- * eine Bewegung aus, verschoebe aber nur die Luecke und aenderte an der
- * gespeicherten Reihenfolge nichts, weil {@code PUT /admin/top10} ohnehin
- * dicht durchnummeriert.
+ * <p><strong>Genau ein Schritt, nicht der naechste besetzte Platz.</strong>
+ * Ein Klick auf „nach unten" an Platz 2 fuehrt auf Platz 3, gleichgueltig ob
+ * dort ein Projekt steht. Ist der Platz besetzt, tauschen die beiden; ist er
+ * frei, rueckt das Projekt hinein und laesst seinen alten Platz frei. Die
+ * Bewegung ist damit die, die man an der Ziffer ablesen kann, und nicht eine,
+ * die je nach Luecke mal einen und mal drei Plaetze weit springt.
  */
 function neighbourIndex(
   slots: Top10Slots,
   index: number,
   direction: -1 | 1
 ): number | null {
-  for (let i = index + direction; i >= 0 && i < slots.length; i += direction) {
-    if (slots[i] !== null) {
-      return i
-    }
-  }
-  return null
+  const target = index + direction
+  return target >= 0 && target < slots.length ? target : null
 }
 
 /**
- * Laesst sich der Eintrag an dieser Zelle nach oben schieben? Am ersten
- * besetzten Platz nicht, dort ist der Knopf gesperrt (SC 4.1.2: ein Knopf,
- * der nichts tut, sagt das auch).
+ * Laesst sich der Eintrag an dieser Zelle nach oben schieben? Auf Platz 1
+ * nicht, dort ist der Knopf gesperrt (SC 4.1.2: ein Knopf, der nichts tut,
+ * sagt das auch).
  */
 export function canMoveUp(slots: Top10Slots, index: number): boolean {
   return slots[index] !== null && neighbourIndex(slots, index, -1) !== null
 }
 
-/** Dasselbe nach unten, am letzten besetzten Platz gesperrt. */
+/** Dasselbe nach unten, auf Platz 10 gesperrt. */
 export function canMoveDown(slots: Top10Slots, index: number): boolean {
   return slots[index] !== null && neighbourIndex(slots, index, 1) !== null
 }
 
 /**
- * Tauscht den Eintrag mit dem naechsten besetzten Platz darueber
- * beziehungsweise darunter und liefert ein neues Feld.
+ * Tauscht den Eintrag mit dem Nachbarplatz und liefert ein neues Feld.
+ *
+ * <p>Der Nachbar darf leer sein: dann rueckt das Projekt einen Platz weiter
+ * und laesst seinen alten frei. Getauscht wird also die Zelle und nicht das
+ * Projekt mit dem naechsten Projekt.
  *
  * <p>Ist der Zug nicht moeglich, kommt das unveraenderte Feld zurueck: die
  * Funktion ist damit an jedem Rand wirkungslos statt fehlerhaft, und die
@@ -173,31 +172,59 @@ export function addProject(
 }
 
 /**
- * Die Nutzlast von {@code PUT /admin/top10}: die IDs der besetzten Plaetze
- * in ihrer Reihenfolge, freie Plaetze fallen weg.
+ * Die Projekte der Liste in ihrer Reihenfolge, ohne die freien Plaetze.
  *
- * <p>Die Reihenfolge <em>ist</em> die Aussage (§3.11.1 Regel 3): Platz 1 ist
- * das erste Element. Eine Platzangabe geht bewusst nicht mit.
+ * <p>Nicht die Nutzlast des Endpoints, dafuer gibt es
+ * {@link placementPayload}. Diese Funktion beantwortet „welche Projekte
+ * stehen in der Top-10 und in welcher Reihenfolge", etwa fuer eine Anzahl
+ * oder einen Vergleich.
  */
 export function orderedProjectIds(slots: Top10Slots): string[] {
   return slots.flatMap((slot) => (slot === null ? [] : [slot.project.id]))
 }
 
 /**
- * Unterscheidet sich der Arbeitszustand vom zuletzt geladenen Stand?
+ * Die Nutzlast von {@code PUT /admin/top10} (§3.11.1 Regel 3, seit Contract
+ * v78): je Zelle ihr Projekt oder {@code null} fuer „Platz frei".
  *
- * <p>Verglichen wird die gespeicherte Nutzlast und nicht das Feld: eine
- * verschobene Luecke aendert am Ergebnis von {@code PUT /admin/top10}
- * nichts, weil der Server dicht durchnummeriert. „Reihenfolge speichern"
- * bleibt deshalb gesperrt, solange sich nur eine Luecke bewegt hat, und
- * verspricht damit keine Aenderung, die keine waere.
+ * <p><strong>Der Index ist der Platz, auch ueber eine Luecke hinweg.</strong>
+ * {@code [A, null, C]} setzt A auf 1 und C auf 3 und laesst 2 unbesetzt. Eine
+ * Platzangabe geht bewusst nicht mit; Reihenfolge und ausdrueckliche Position
+ * koennten einander widersprechen.
+ *
+ * <p><strong>Nachlaufende freie Plaetze fallen weg.</strong> Ein freier Platz
+ * hinter dem letzten Projekt ist dasselbe wie kein Platz, und der Server
+ * schneidet sie ohnehin ab. Ohne das Abschneiden schickte die Oberflaeche bei
+ * drei Projekten sieben bedeutungslose {@code null} mit, und zwei Aufrufe mit
+ * gleicher Wirkung saehen im Vergleich verschieden aus.
+ */
+export function placementPayload(slots: Top10Slots): (string | null)[] {
+  const cells = slots.map((slot) => slot?.project.id ?? null)
+  let last = cells.length
+  while (last > 0 && cells[last - 1] === null) {
+    last -= 1
+  }
+  return cells.slice(0, last)
+}
+
+/**
+ * Unterscheidet sich diese Belegung von der zuletzt geladenen?
+ *
+ * <p>Verglichen wird die Nutzlast, also das, was tatsaechlich hinausginge.
+ * Seit Contract v78 zaehlt dabei auch der Ort einer Luecke: {@code [A, null,
+ * C]} und {@code [A, C]} sind zwei verschiedene Belegungen, und genau
+ * deshalb ist ein Zug in einen freien Platz jetzt eine echte Aenderung und
+ * kein Zug ins Leere.
+ *
+ * <p>Gebraucht wird der Vergleich, damit ein Klick ohne Wirkung keinen
+ * Schreibvorgang und damit keine Protokollzeile ausloest (§3.17).
  */
 export function hasOrderChanged(
   slots: Top10Slots,
   original: Top10Slots
 ): boolean {
-  const next = orderedProjectIds(slots)
-  const before = orderedProjectIds(original)
+  const next = placementPayload(slots)
+  const before = placementPayload(original)
   return (
     next.length !== before.length ||
     next.some((projectId, index) => projectId !== before[index])
@@ -254,25 +281,4 @@ export function suggestedPositionFor(
       (position) => position >= range.first && position <= range.last
     ) ?? null
   )
-}
-
-/**
- * Die Signatur eines Serverstands: Platz und Projekt je Eintrag.
- *
- * <p>Sie ist der {@code key}, mit dem die Seite diesen Editor rendert, und
- * damit der ganze Mechanismus, der den Arbeitszustand mit dem Server
- * abgleicht. Aendert sich der Stand, aendert sich die Signatur, React baut
- * den Editor neu auf und {@code useState} liest den frischen Stand als
- * Anfangswert. Solange nur lokal umsortiert wird, bleibt sie gleich und die
- * Arbeit steht.
- *
- * <p><strong>Warum nicht ein Effekt mit {@code setSlots}.</strong> Ein
- * {@code setState} im Effektkoerper loest eine zweite Renderrunde aus und
- * ist genau das, wovon „You Might Not Need an Effect" abraet; der
- * React-Compiler-Lint weist es zurueck. Der {@code key} ist der von React
- * vorgesehene Weg, den Zustand einer Teilansicht zurueckzusetzen, und er
- * kommt ohne Effekt und ohne zweite Runde aus.
- */
-export function slotSignature(entries: readonly Top10EntryResponse[]): string {
-  return entries.map((entry) => `${entry.position}:${entry.project.id}`).join(",")
 }

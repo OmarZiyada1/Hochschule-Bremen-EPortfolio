@@ -11,6 +11,7 @@ import type {
   Top10AuditEntryResponse,
   Top10EntryResponse,
   Top10NominationResponse,
+  UserLookupResponse,
   UserResponse,
 } from "@/api/types"
 import { ownPortfolio, projectDetail } from "@/tests/fixtures"
@@ -197,10 +198,12 @@ export function top10AdminHandlers({
   entries = [],
   nominations = [],
   audit = [],
+  people = [],
 }: {
   entries?: Top10EntryResponse[]
   nominations?: Top10NominationResponse[]
   audit?: Top10AuditEntryResponse[]
+  people?: UserLookupResponse[]
 } = {}) {
   return [
     http.get("*/api/top10", () => HttpResponse.json(entries)),
@@ -219,5 +222,11 @@ export function top10AdminHandlers({
         totalPages: audit.length === 0 ? 0 : 1,
       })
     ),
+    /* Die Protokollseite fragt die Personensuche beim Betreten ab, weil ihr
+       Filter ein PersonCombobox ist (§6.1, KAN-44). Ohne diesen Handler
+       laeuft der Aufruf in onUnhandledRequest, und der Fehlschlag zeigt sich
+       nicht an der Stelle, an der er entsteht, sondern als Zeitueberschreitung
+       irgendwo im Lauf. */
+    http.get("*/api/users/lookup", () => HttpResponse.json(people)),
   ]
 }

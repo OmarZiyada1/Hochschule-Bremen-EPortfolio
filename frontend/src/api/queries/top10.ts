@@ -232,17 +232,23 @@ export function rejectNomination(
 
 /**
  * PUT /api/admin/top10 (§3.11.1 Regel 3, §6.1), ergibt <strong>200</strong>
- * mit der neuen, lueckenlos ab 1 durchnummerierten Liste.
+ * mit der neuen Liste.
  *
- * <p><strong>Die Reihenfolge ist der Array-Index.</strong> Platz 1 ist das
- * erste Element; einen eigenen position-Parameter gibt es bewusst nicht,
- * weil Reihenfolge und ausdrueckliche Platzangabe einander widersprechen
- * koennten. Geschickt wird deshalb immer die vollstaendige Liste und nie
- * eine Einzelposition.
+ * <p><strong>Der Array-Index ist der Platz.</strong> Das erste Element steht
+ * auf Platz 1; einen eigenen position-Parameter gibt es bewusst nicht, weil
+ * Reihenfolge und ausdrueckliche Platzangabe einander widersprechen
+ * koennten.
+ *
+ * <p><strong>{@code null} heisst „Platz frei"</strong> (seit Contract v78,
+ * KAN-40). {@code [A, null, C]} setzt A auf 1 und C auf 3 und laesst 2
+ * unbesetzt; eine Liste ohne {@code null} nummeriert der Server weiterhin
+ * lueckenlos ab 1 durch. Damit laesst sich ein Projekt aus der Liste nehmen,
+ * ohne die darunterliegenden mitzuziehen, und genau das war bis v77 nicht
+ * moeglich. Nachlaufende {@code null} schneidet der Server ab; die
+ * Oberflaeche tut es schon vorher ({@code placementPayload}).
  *
  * <p><strong>Der Aufruf ersetzt.</strong> Was nicht genannt ist, faellt
- * heraus; eine leere Liste leert die Top-10. Aus der Liste nehmen heisst
- * also: ohne dieses Projekt speichern.
+ * heraus; eine leere Liste leert die Top-10.
  *
  * <p><strong>Er schliesst offene Nominierungen ab.</strong> Nimmt die
  * Administration ein Projekt unmittelbar auf, gehen dessen PENDING-Vorschlaege
@@ -250,12 +256,13 @@ export function rejectNomination(
  * Nominierungsliste ist danach also neu zu laden.
  *
  * <p>Sichtbar zu behandeln: 400 {@code VALIDATION_FAILED} bei mehr als zehn
- * IDs, einer Wiederholung, einer unbekannten ID oder einem nicht
- * veroeffentlichten Projekt, und 409 {@code PROJECT_NOT_PUBLISHED}, wenn ein
- * genanntes Projekt PUBLISHED inzwischen verlassen hat.
+ * Eintraegen, einem doppelt genannten Projekt, einer unbekannten ID oder
+ * einem nicht veroeffentlichten Projekt, und 409
+ * {@code PROJECT_NOT_PUBLISHED}, wenn ein genanntes Projekt PUBLISHED
+ * inzwischen verlassen hat.
  */
 export function setTop10Order(
-  projectIds: string[]
+  projectIds: readonly (string | null)[]
 ): Promise<Top10EntryResponse[]> {
   return api.put<Top10EntryResponse[]>(apiPaths.admin.top10, { projectIds })
 }

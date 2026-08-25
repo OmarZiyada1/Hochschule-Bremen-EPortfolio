@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
 
 import { resolveApiUrl } from "@/api/client"
+import { ProjectPeople } from "@/components/common/ProjectPeople"
 import { Tag } from "@/components/common/Tag"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -11,7 +12,7 @@ import {
   canMoveUp,
   type Top10Slots,
 } from "@/features/administration/top10Slots"
-import { fullNameOf } from "@/lib/name"
+import { peopleOfProject } from "@/lib/people"
 import { cn } from "@/lib/utils"
 
 /**
@@ -117,13 +118,19 @@ export function Top10SlotList({
                           {slot.project.title}
                         </Link>
                       </h3>
-                      <p className="type-body-sm text-muted-foreground">
-                        {fullNameOf(slot.project.author)}
-                        {slot.addedAt !== null &&
-                          ` · ${t("administration.top10.slot.since", {
-                            date: dateFormat.format(new Date(slot.addedAt)),
-                          })}`}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <ProjectPeople
+                          people={peopleOfProject(slot.project)}
+                          className="text-muted-foreground"
+                        />
+                        {slot.addedAt !== null && (
+                          <span className="type-body-sm text-muted-foreground">
+                            {t("administration.top10.slot.since", {
+                              date: dateFormat.format(new Date(slot.addedAt)),
+                            })}
+                          </span>
+                        )}
+                      </div>
                       {/* Ohne eigene Farbe: Fakultaeten werden nicht
                           farblich codiert (Confluence
                           „Designentscheidungen", Abschnitt 2.4). */}

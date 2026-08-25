@@ -30,6 +30,9 @@ import de.hsbremen.eportfolio.masterdata.TestMasterData;
 import de.hsbremen.eportfolio.masterdata.StudyProgram;
 import de.hsbremen.eportfolio.masterdata.StudyProgramRepository;
 import de.hsbremen.eportfolio.masterdata.TagRepository;
+import de.hsbremen.eportfolio.portfolio.Portfolio;
+import de.hsbremen.eportfolio.portfolio.PortfolioRepository;
+import de.hsbremen.eportfolio.portfolio.PortfolioService;
 import de.hsbremen.eportfolio.reaction.ReactionRepository;
 import de.hsbremen.eportfolio.reaction.TestReaction;
 import de.hsbremen.eportfolio.user.TestUser;
@@ -131,6 +134,13 @@ class ProjectReadIntegrationTest {
 
 	@Autowired
 	private SemesterRepository semesterRepository;
+
+	/** Nur fuer das Profilbild eines Mitglieds: es haengt am Portfolio (§3.2). */
+	@Autowired
+	private PortfolioRepository portfolioRepository;
+
+	@Autowired
+	private PortfolioService portfolioService;
 
 	/** Klammert die Projekte dieses Laufs von allem ab, was sonst in der DB steht. */
 	private Semester semester;
@@ -613,6 +623,114 @@ class ProjectReadIntegrationTest {
 					.andExpect(status().isBadRequest())
 					.andExpect(jsonPath("$.status").value(400))
 					.andExpect(jsonPath("$.errorCode").value(ErrorCodes.VALIDATION_FAILED));
+		}
+	}
+
+	// ==================================================================
+	// GET /api/projects: Mitglieder an der Kachel (§3.13, Contract v78)
+	// ==================================================================
+
+	@Nested
+	@DisplayName("Liste: Mitglieder an der Kachel")
+	class CardMembers {
+
+		@BeforeEach
+		void addMembersToPublishedProject() {
+			/*
+			 * Alle Testkonten heissen "Test Person"; fuer die Reihenfolge und
+			 * die Namensfelder braucht dieser Block unterscheidbare Namen.
+			 */
+			rename(otherStudent, "Ada", "Adler");
+			rename(member, "Bea", "Bauer");
+
+			// Eine Gruppenarbeit mit zwei Beteiligten neben der Autor:in. Nur
+			// eine von beiden hat ein Profilbild hinterlegt.
+			projectMemberRepository.saveAndFlush(
+					TestProject.memberWithoutId(publishedProject, otherStudent, null));
+			projectMemberRepository.saveAndFlush(
+					TestProject.memberWithoutId(publishedProject, member, "Frontend"));
+
+			Portfolio portfolio = portfolioService.createFor(member);
+			portfolio.setAvatarUrl("/api/files/mitglied");
+			portfolioRepository.saveAndFlush(portfolio);
+		}
+
+		@Test
+		@DisplayName("Beide Mitglieder stehen mit Namen an der Kachel, nach Nachnamen "
+				+ "geordnet (§3.13)")
+		void cardCarriesAllMembers() throws Exception {
+			mockMvc.perform(listRequest())
+					.andExpect(status().isOk())
+					// PUBLIC sieht genau das veroeffentlichte Projekt dieses Laufs.
+					.andExpect(jsonPath("$.content.length()").value(1))
+					.andExpect(jsonPath("$.content[0].members.length()").value(2))
+					.andExpect(jsonPath("$.content[0].members[0].userId")
+							.value(otherStudent.getId().toString()))
+					.andExpect(jsonPath("$.content[0].members[0].firstName").value("Ada"))
+					.andExpect(jsonPath("$.content[0].members[0].lastName").value("Adler"))
+					// Ohne Funktionsbezeichnung, seit Contract v65 erlaubt (§3.13).
+					.andExpect(jsonPath("$.content[0].members[0].projectRole").value(nullValue()))
+					.andExpect(jsonPath("$.content[0].members[1].userId")
+							.value(member.getId().toString()))
+					.andExpect(jsonPath("$.content[0].members[1].firstName").value("Bea"))
+					.andExpect(jsonPath("$.content[0].members[1].lastName").value("Bauer"))
+					.andExpect(jsonPath("$.content[0].members[1].projectRole").value("Frontend"))
+					// Die Autor:in ist kein Mitglied und steht weiterhin allein in
+					// "author" (§3.13.1).
+					.andExpect(jsonPath("$.content[0].author.id").value(author.getId().toString()));
+		}
+
+		@Test
+		@DisplayName("Ein Mitglied mit hinterlegtem Profilbild fuehrt avatarUrl, eines "
+				+ "ohne fuehrt null (§3.2)")
+		void cardCarriesMemberAvatar() throws Exception {
+			mockMvc.perform(listRequest())
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.content[0].members[0].avatarUrl").value(nullValue()))
+					.andExpect(jsonPath("$.content[0].members[1].avatarUrl")
+							.value("/api/files/mitglied"));
+		}
+
+		@Test
+		@DisplayName("Ein Projekt ohne Mitglieder fuehrt eine leere Liste und nicht null")
+		void cardOfSoloWorkCarriesEmptyList() throws Exception {
+			// draftOfAuthor hat keine Mitglieder; die Autor:in sieht ihn (§5).
+			String response = body(asUser(listRequest("q", "Alpha"), author));
+
+			JsonNode cards = objectMapper.readTree(response).get("content");
+			assertThat(cards.size()).isEqualTo(1);
+			JsonNode members = cards.get(0).get("members");
+			assertThat(members.isArray())
+					.as("Ohne Mitglieder eine leere Liste, damit das Frontend nicht auf null "
+							+ "pruefen muss")
+					.isTrue();
+			assertThat(members.size()).isZero();
+		}
+
+		@Test
+		@DisplayName("Die Kachel fuehrt keine editors: wer sie sehen darf, haengt nach §5 "
+				+ "an Rolle und Status und wird nur in der Detailantwort geprueft")
+		void cardNeverCarriesEditors() throws Exception {
+			/*
+			 * Der Admin sieht jedes Projekt (§5), darunter das eingereichte mit
+			 * seiner zugewiesenen Redaktion. Selbst ihm gegenueber nennt die
+			 * Kachel sie nicht.
+			 */
+			assertThat(listIds(admin)).contains(submittedForeignProject.getId());
+
+			String response = body(asUser(listRequest(), admin));
+			assertThat(response)
+					.as("Die Redaktion bleibt der Detailantwort vorbehalten (§3.3, §5)")
+					.doesNotContain("editors")
+					.doesNotContain(assignedEditor.getId().toString())
+					// Gegenprobe, dass wirklich die neue Kachel geprueft wurde.
+					.contains("\"members\"");
+		}
+
+		private void rename(User user, String firstName, String lastName) {
+			user.setFirstName(firstName);
+			user.setLastName(lastName);
+			userRepository.saveAndFlush(user);
 		}
 	}
 

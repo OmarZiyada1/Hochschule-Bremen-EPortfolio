@@ -125,8 +125,11 @@ describe("AdminTop10Page", () => {
     await waitFor(() => expect(rejected).toBe(true))
   })
 
-  /* Ticket KAN-40, Test 2. */
-  it("schickt beim Umsortieren erst mit dem Speichern und dann genau eine geordnete Liste", async () => {
+  /*
+   * Ticket KAN-40, Test 2, in der Fassung nach der Nacharbeit: es gibt
+   * keinen Knopf „Reihenfolge speichern" mehr, jede Bewegung wirkt sofort.
+   */
+  it("speichert jeden Zug sofort und schickt die vollstaendige Belegung", async () => {
     const user = userEvent.setup()
     const calls: unknown[] = []
 
@@ -148,94 +151,151 @@ describe("AdminTop10Page", () => {
 
     render()
 
+    expect(
+      screen.queryByRole("button", { name: "Reihenfolge speichern" })
+    ).not.toBeInTheDocument()
+
     await user.click(
       await screen.findByRole("button", {
         name: "BremenConnect von Platz 2 nach oben",
       })
     )
 
-    /* Ein Klick auf „nach oben" allein schickt nichts: sonst entstuende je
-       Klick ein Schreibvorgang und je Schreibvorgang eine Protokollzeile
-       (§3.17). */
-    expect(calls).toHaveLength(0)
-
-    await user.click(
-      screen.getByRole("button", { name: "Reihenfolge speichern" })
-    )
-    const dialog = await screen.findByRole("alertdialog")
-    await user.click(within(dialog).getByRole("button", { name: "Speichern" }))
-
     await waitFor(() => expect(calls).toHaveLength(1))
-    /* §3.11.1 Regel 3: die vollstaendige, geordnete Liste, kein
-       position-Parameter. */
+    /* §3.11.1 Regel 3: die Belegung, kein position-Parameter. */
     expect(calls[0]).toEqual({ projectIds: ["p-2", "p-1", "p-3"] })
   })
 
-  /* Ticket KAN-40, Test 3, an der Oberflaeche. */
-  it("sperrt den ersten Platz nach oben und den letzten nach unten", async () => {
-    server.use(
-      ...base([
-        top10Entry({ position: 1, project: SMART }),
-        top10Entry({ position: 2, project: BREMEN }),
-      ])
-    )
-
-    render()
-
-    expect(
-      await screen.findByRole("button", {
-        name: "SmartCampus von Platz 1 nach oben",
-      })
-    ).toBeDisabled()
-    expect(
-      screen.getByRole("button", { name: "BremenConnect von Platz 2 nach unten" })
-    ).toBeDisabled()
-  })
-
-  /* Ticket KAN-40, Test 4. */
-  it("stellt eine Luecke mitten in der Liste dar und laesst trotzdem speichern", async () => {
+  /*
+   * Ein Klick ist genau ein Platz, auch wenn der Nachbar frei ist. Seit
+   * Contract v78 traegt die Nutzlast den freien Platz als null mit, der Zug
+   * ist damit speicherbar.
+   */
+  it("rueckt einen Schritt in einen freien Platz und traegt ihn als null mit", async () => {
     const user = userEvent.setup()
     const calls: unknown[] = []
 
     server.use(
       ...base([
         top10Entry({ position: 1, project: SMART }),
-        top10Entry({ position: 3, project: GREEN }),
+        top10Entry({ position: 4, project: GREEN }),
       ]),
       http.put("*/api/admin/top10", async ({ request }) => {
         calls.push(await request.json())
-        return HttpResponse.json([])
+        return HttpResponse.json([
+          top10Entry({ position: 1, project: SMART }),
+          top10Entry({ position: 3, project: GREEN }),
+        ])
       })
     )
 
     render()
 
+    await user.click(
+      await screen.findByRole("button", {
+        name: "GreenRoute von Platz 4 nach oben",
+      })
+    )
+
+    await waitFor(() => expect(calls).toHaveLength(1))
+    /* Von Platz 4 auf Platz 3, nicht ueber die Luecke hinweg auf Platz 2. */
+    expect(calls[0]).toEqual({ projectIds: ["p-1", null, "p-3"] })
+  })
+
+  /* Ticket KAN-40, Test 3, in der Fassung nach der Nacharbeit. */
+  it("sperrt Platz 1 nach oben und Platz 10 nach unten", async () => {
+    server.use(
+      ...base(
+        Array.from({ length: 10 }, (_, index) =>
+          top10Entry({
+            position: index + 1,
+            project: projectCard({ id: `p${index}`, title: `Projekt ${index}` }),
+          })
+        )
+      )
+    )
+
+    render()
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Projekt 0 von Platz 1 nach oben",
+      })
+    ).toBeDisabled()
+    expect(
+      screen.getByRole("button", { name: "Projekt 9 von Platz 10 nach unten" })
+    ).toBeDisabled()
+    /* Dazwischen ist jeder Zug moeglich. */
+    expect(
+      screen.getByRole("button", { name: "Projekt 4 von Platz 5 nach oben" })
+    ).toBeEnabled()
+  })
+
+  /* Ticket KAN-40, Test 4. */
+  it("stellt eine Luecke mitten in der Liste dar", async () => {
+    server.use(
+      ...base([
+        top10Entry({ position: 1, project: SMART }),
+        top10Entry({ position: 3, project: GREEN }),
+      ])
+    )
+
     /* Zehn Plaetze, davon acht frei: ein freier Platz steht als eigener
        Eintrag da und nicht als leere Flaeche (SC 1.3.1). Die Luecke liegt
        auf Platz 2, mitten in der Liste. */
+    render()
+
     expect(await screen.findAllByText("Platz frei")).toHaveLength(8)
     const slots = within(
       screen.getByRole("list", { name: "Plätze der Top 10" })
     ).getAllByRole("listitem")
     expect(slots[1]).toHaveTextContent("Platz frei")
     expect(slots[2]).toHaveTextContent("GreenRoute")
+  })
 
-    await user.click(
-      screen.getByRole("button", { name: "GreenRoute von Platz 3 nach oben" })
-    )
-    await user.click(
-      screen.getByRole("button", { name: "Reihenfolge speichern" })
-    )
-    await user.click(
-      within(await screen.findByRole("alertdialog")).getByRole("button", {
-        name: "Speichern",
+  /*
+   * Entfernen fragt zurueck und laesst den Platz danach frei; die uebrigen
+   * Eintraege ruecken nicht nach (§3.11, Contract v78).
+   */
+  it("nimmt ein Projekt nach einer Rueckfrage vom Platz und laesst ihn frei", async () => {
+    const user = userEvent.setup()
+    const calls: unknown[] = []
+
+    server.use(
+      ...base([
+        top10Entry({ position: 1, project: SMART }),
+        top10Entry({ position: 2, project: BREMEN }),
+        top10Entry({ position: 3, project: GREEN }),
+      ]),
+      http.put("*/api/admin/top10", async ({ request }) => {
+        calls.push(await request.json())
+        return HttpResponse.json([
+          top10Entry({ position: 1, project: SMART }),
+          top10Entry({ position: 3, project: GREEN }),
+        ])
       })
     )
 
-    /* Die Luecke blockiert nicht, und sie geht auch nicht als Platzhalter
-       mit: der Server nummeriert dicht durch (§3.11.1 Regel 3). */
+    render()
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "BremenConnect von seinem Platz nehmen",
+      })
+    )
+
+    const dialog = await screen.findByRole("alertdialog")
+    expect(dialog).toHaveTextContent("BremenConnect")
+    /* Vor der Bestaetigung geht nichts hinaus. */
+    expect(calls).toHaveLength(0)
+
+    await user.click(
+      within(dialog).getByRole("button", { name: "Vom Platz nehmen" })
+    )
+
     await waitFor(() => expect(calls).toHaveLength(1))
-    expect(calls[0]).toEqual({ projectIds: ["p-3", "p-1"] })
+    /* Platz 2 bleibt frei, GreenRoute behaelt Platz 3. */
+    expect(calls[0]).toEqual({ projectIds: ["p-1", null, "p-3"] })
   })
 
   /* Ticket KAN-40, Test 5. */

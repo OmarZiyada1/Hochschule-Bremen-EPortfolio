@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import type { ReactNode } from "react"
-import { useEffect, useId, useMemo, useState } from "react"
+import { useEffect, useId, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
@@ -39,7 +39,9 @@ const SEARCH_DEBOUNCE_MS = 300
  * ersetzen.</strong> Angezeigt wird {@code typed ?? Name(value)}: solange
  * niemand tippt, steht die gewaehlte Person da; sobald jemand tippt, sucht
  * das Feld. Ohne diese Trennung braeuchte es einen Effekt, der den
- * Eingabewert nachzieht, und der liefe dem Tippen hinterher.
+ * Eingabewert nachzieht, und der liefe dem Tippen hinterher. Der leere
+ * Eingabewert, den die Primitive nach einer Wahl nachschickt, wird dabei
+ * verschluckt (siehe {@code swallowEmptyEcho}); er ist kein Tippen.
  *
  * <p><strong>Gesucht wird serverseitig, nicht im Browser.</strong> Die Zahl
  * der Konten waechst mit jedem Semester; eine vollstaendige Liste zu laden
@@ -107,6 +109,27 @@ export function PersonCombobox({
   /* null heisst "es wurde nichts getippt"; dann zeigt das Feld die gewaehlte
      Person. Ein leerer String ist etwas anderes: bewusst geleert. */
   const [typed, setTyped] = useState<string | null>(null)
+  /*
+   * Nach einer Wahl gleicht die Primitive ihr Eingabefeld selbst ab und
+   * meldet dabei zwei Werte nach: erst die Beschriftung des gewaehlten
+   * Eintrags, dann eine leere Zeichenkette. Beides geschieht noch im selben
+   * Durchlauf, also mit dem alten value, und beides ist kein Tippen.
+   *
+   * Uebernommen werden darf vor allem der leere Wert nicht: typed merkte
+   * sich sonst "bewusst geleert", und der Name der gewaehlten Person kaeme
+   * nie wieder zum Vorschein.
+   *
+   * Sichtbar wurde das erst am Protokollfilter der Top-10 (Nacharbeit zu
+   * KAN-40). Die beiden aelteren Verwendungen setzen value nach der Wahl
+   * sofort wieder auf null; dort ist ein leeres Feld ohnehin richtig, und
+   * der Fehler blieb verborgen.
+   *
+   * Die Marke wird beim Waehlen gesetzt und im Effekt unten geloescht, der
+   * nach jedem Commit laeuft. Sie deckt damit genau die Nachmeldungen ab,
+   * die noch zum Klick gehoeren, und nichts danach. Ein ref und kein
+   * Zustand: sie soll kein erneutes Rendern ausloesen.
+   */
+  const syncingAfterPick = useRef(false)
   const [debouncedQuery, setDebouncedQuery] = useState("")
   const [open, setOpen] = useState(false)
 
@@ -119,6 +142,14 @@ export function PersonCombobox({
     )
     return () => clearTimeout(handle)
   }, [typed])
+
+  /* Laeuft nach jedem Commit und beendet damit das Fenster, in dem die
+     Nachmeldungen der Primitive zum Klick gehoeren. Ohne Abhaengigkeitsliste
+     mit Absicht: gemeint ist "nach diesem Durchlauf", nicht "wenn sich x
+     aendert". */
+  useEffect(() => {
+    syncingAfterPick.current = false
+  })
 
   const results = useQuery({
     ...userQueries.lookup({ role, q: debouncedQuery }),
@@ -163,6 +194,7 @@ export function PersonCombobox({
         onValueChange={(picked) => {
           /* typed zuruecksetzen: ab jetzt zeigt das Feld wieder den Namen
              der gewaehlten Person, beziehungsweise nichts. */
+          syncingAfterPick.current = true
           setTyped(null)
           setDebouncedQuery("")
           setOpen(false)
@@ -173,7 +205,12 @@ export function PersonCombobox({
           )
         }}
         inputValue={inputValue}
-        onInputValueChange={setTyped}
+        onInputValueChange={(next) => {
+          if (syncingAfterPick.current) {
+            return
+          }
+          setTyped(next)
+        }}
         open={open}
         onOpenChange={setOpen}
         disabled={disabled}

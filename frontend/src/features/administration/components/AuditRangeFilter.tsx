@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useQuery } from "@tanstack/react-query"
-import { useId } from "react"
+import { useId, useState } from "react"
 import { Controller, useForm } from "react-hook-form"
 import { useTranslation } from "react-i18next"
 
@@ -40,11 +40,26 @@ import { PersonCombobox } from "@/features/projects/components/PersonCombobox"
  * Fokusfuehrung und eigenem Zustand, ohne dass die Auswahl dadurch etwas
  * koennte, was sie hier nicht schon kann.
  *
- * <p><strong>Die Person kommt aus der Personensuche.</strong> Wer den Filter
- * ueber die Adresse betritt, hat nur eine UUID; den Namen dazu holt diese
- * Komponente ueber {@code GET /api/admin/users/{id}}, den einzigen
- * Einzelabruf eines Kontos (§6.1). Ohne ihn stuende im Feld eine leere
- * Zeile, waehrend die Liste gefiltert waere.
+ * <p><strong>Zur Auswahl stehen nur Admin-Konten.</strong> Seit Contract v72
+ * sperrt die kuratierte Liste den einzigen Uebergang aus {@code PUBLISHED}
+ * heraus: solange ein Projekt einen Platz belegt, weist der Server den Weg
+ * nach {@code REVISION} mit 409 ab (§3.11.1). Damit kann die Redaktion einen
+ * Platz nicht mehr freimachen, und alle vier Schreibwege des Protokolls
+ * (§3.17) liegen bei der Administration. Nach einer Redakteur:in filtern zu
+ * lassen hiesse, eine Auswahl anzubieten, die verlaesslich kein Ergebnis
+ * liefert. Ältere Zeilen aus der Zeit vor v72 koennen eine Redakteur:in
+ * tragen; sie sind ueber den Zeitraum erreichbar, nicht ueber die Person.
+ *
+ * <p><strong>Die gewaehlte Person steht sofort im Feld.</strong> Der Name
+ * wird beim Auswaehlen mitgenommen und nicht erst nachgeladen. Ohne das
+ * blieb das Feld leer, waehrend die Liste bereits gefiltert war: die
+ * Combobox merkt sich ein leeres Eingabefeld als „bewusst geleert", und der
+ * spaeter eintreffende Name kam dagegen nicht mehr an (Befund aus der
+ * Nacharbeit an KAN-40).
+ *
+ * <p>Wer den Filter ueber die Adresse betritt, hat dagegen nur eine UUID;
+ * den Namen dazu holt {@code GET /api/admin/users/{id}}, der einzige
+ * Einzelabruf eines Kontos (§6.1).
  */
 export function AuditRangeFilter({
   state,
@@ -56,6 +71,10 @@ export function AuditRangeFilter({
   const { t } = useTranslation()
   const fromId = useId()
   const toId = useId()
+  /* Die eben gewaehlte Person, damit ihr Name ohne Umweg ueber den Server
+     im Feld steht. Beim Betreten ueber die Adresse ist sie null und der
+     Abruf unten springt ein. */
+  const [picked, setPicked] = useState<UserLookupResponse | null>(null)
 
   const defaults: AuditRangeFormValues = {
     from: state.from ?? "",
@@ -75,7 +94,7 @@ export function AuditRangeFilter({
     enabled: state.admin !== null,
   })
 
-  const person: UserLookupResponse | null =
+  const resolved: UserLookupResponse | null =
     selected.data === undefined
       ? null
       : {
@@ -83,6 +102,10 @@ export function AuditRangeFilter({
           firstName: selected.data.firstName,
           lastName: selected.data.lastName,
         }
+
+  /* Die eigene Wahl gewinnt, solange sie zur Adresse passt: sonst zeigte das
+     Feld nach einem Zuruecksetzen noch den alten Namen. */
+  const person = picked !== null && picked.id === state.admin ? picked : resolved
 
   const submit = form.handleSubmit((values) => {
     onChange({
@@ -156,8 +179,12 @@ export function AuditRangeFilter({
       <PersonCombobox
         className="sm:w-64"
         label={t("administration.top10.audit.person")}
+        role="ADMIN"
         value={person}
-        onChange={(next) => onChange({ admin: next?.id ?? null })}
+        onChange={(next) => {
+          setPicked(next)
+          onChange({ admin: next?.id ?? null })
+        }}
         placeholder={t("administration.top10.audit.personPlaceholder")}
       />
 
@@ -167,6 +194,7 @@ export function AuditRangeFilter({
           variant="ghost"
           onClick={() => {
             form.reset({ from: "", to: "" })
+            setPicked(null)
             onChange({ from: null, to: null, admin: null })
           }}
         >

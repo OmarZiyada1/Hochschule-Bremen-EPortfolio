@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest"
 
 import AdminTop10AuditPage from "@/features/administration/AdminTop10AuditPage"
 import i18n from "@/i18n"
-import { person, top10AuditEntry } from "@/tests/fixtures"
+import { adminUser, person, top10AuditEntry } from "@/tests/fixtures"
 import { apiErrorResponse, currentUserHandler } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
@@ -41,16 +41,22 @@ function auditHandler(
   entries = [REORDERED, ADDED, REMOVED_DELETED],
   onRequest?: (url: URL) => void
 ) {
-  return http.get("*/api/admin/top10-audit", ({ request }) => {
-    onRequest?.(new URL(request.url))
-    return HttpResponse.json({
-      content: entries,
-      page: 0,
-      size: 20,
-      totalElements: entries.length,
-      totalPages: 1,
-    })
-  })
+  return [
+    http.get("*/api/admin/top10-audit", ({ request }) => {
+      onRequest?.(new URL(request.url))
+      return HttpResponse.json({
+        content: entries,
+        page: 0,
+        size: 20,
+        totalElements: entries.length,
+        totalPages: 1,
+      })
+    }),
+    /* Der Personenfilter ist ein PersonCombobox und fragt beim Betreten ab
+       (§6.1, KAN-44). Ohne Handler liefe der Aufruf in
+       onUnhandledRequest. */
+    http.get("*/api/users/lookup", () => HttpResponse.json([])),
+  ]
 }
 
 function render(route = "/administration/top10/audit") {
@@ -68,7 +74,7 @@ describe("AdminTop10AuditPage", () => {
 
   /* Ticket KAN-40, Test 8. */
   it("zeigt alle drei Aktionsarten aus 2.12 mit ihrem Platzwechsel", async () => {
-    server.use(currentUserHandler({ role: "ADMIN" }), auditHandler())
+    server.use(currentUserHandler({ role: "ADMIN" }), ...auditHandler())
 
     render()
 
@@ -85,7 +91,7 @@ describe("AdminTop10AuditPage", () => {
   it("zeigt eine Zeile ohne Projekt als „Projekt gelöscht“ und verlinkt sie nicht", async () => {
     server.use(
       currentUserHandler({ role: "ADMIN" }),
-      auditHandler([REMOVED_DELETED])
+      ...auditHandler([REMOVED_DELETED])
     )
 
     render()
@@ -101,7 +107,7 @@ describe("AdminTop10AuditPage", () => {
 
   /* Ticket KAN-40, Test 8: das Protokoll ist unveraenderlich (§3.17). */
   it("bietet weder Bearbeiten noch Loeschen an", async () => {
-    server.use(currentUserHandler({ role: "ADMIN" }), auditHandler())
+    server.use(currentUserHandler({ role: "ADMIN" }), ...auditHandler())
 
     render()
 
@@ -112,7 +118,7 @@ describe("AdminTop10AuditPage", () => {
   })
 
   it("verlinkt ein vorhandenes Projekt auf seine Detailseite", async () => {
-    server.use(currentUserHandler({ role: "ADMIN" }), auditHandler([REORDERED]))
+    server.use(currentUserHandler({ role: "ADMIN" }), ...auditHandler([REORDERED]))
 
     render()
 
@@ -127,7 +133,7 @@ describe("AdminTop10AuditPage", () => {
     const urls: URL[] = []
     server.use(
       currentUserHandler({ role: "ADMIN" }),
-      auditHandler([REORDERED], (url) => urls.push(url))
+      ...auditHandler([REORDERED], (url) => urls.push(url))
     )
 
     render("/administration/top10/audit?from=2026-08-01&to=2026-08-25")
@@ -158,7 +164,7 @@ describe("AdminTop10AuditPage", () => {
 
     server.use(
       currentUserHandler({ role: "ADMIN" }),
-      auditHandler([REORDERED], (url) => urls.push(url))
+      ...auditHandler([REORDERED], (url) => urls.push(url))
     )
 
     render(`/administration/top10/audit?to=${iso}`)
@@ -175,7 +181,7 @@ describe("AdminTop10AuditPage", () => {
     const urls: URL[] = []
     server.use(
       currentUserHandler({ role: "ADMIN" }),
-      auditHandler([REORDERED], (url) => urls.push(url))
+      ...auditHandler([REORDERED], (url) => urls.push(url))
     )
 
     render()
@@ -205,7 +211,8 @@ describe("AdminTop10AuditPage", () => {
           "/api/admin/top10-audit",
           "Egal welcher Text hier steht."
         )
-      )
+      ),
+      http.get("*/api/users/lookup", () => HttpResponse.json([]))
     )
 
     render("/administration/top10/audit?from=2026-08-25&to=2026-08-01")
@@ -217,7 +224,7 @@ describe("AdminTop10AuditPage", () => {
   })
 
   it("zeigt den Leerzustand und unterscheidet gefiltert von ungefiltert", async () => {
-    server.use(currentUserHandler({ role: "ADMIN" }), auditHandler([]))
+    server.use(currentUserHandler({ role: "ADMIN" }), ...auditHandler([]))
 
     const { unmount } = render()
     expect(
@@ -231,8 +238,97 @@ describe("AdminTop10AuditPage", () => {
     ).toBeInTheDocument()
   })
 
+  /*
+   * Befund aus der Nacharbeit: nach der Wahl blieb das Feld leer, obwohl die
+   * Liste gefiltert wurde. Der Name muss im Feld stehen, sonst ist nicht
+   * abzulesen, wonach gerade gefiltert wird.
+   */
+  it("zeigt die gewaehlte Person im Feld und filtert danach", async () => {
+    const user = userEvent.setup()
+    const urls: URL[] = []
+    const anna = adminUser({
+      id: "au-9",
+      firstName: "Anna",
+      lastName: "Fischer",
+      role: "ADMIN",
+    })
+
+    server.use(
+      currentUserHandler({ role: "ADMIN" }),
+      http.get("*/api/admin/top10-audit", ({ request }) => {
+        urls.push(new URL(request.url))
+        return HttpResponse.json({
+          content: [REORDERED],
+          page: 0,
+          size: 20,
+          totalElements: 1,
+          totalPages: 1,
+        })
+      }),
+      http.get("*/api/users/lookup", () =>
+        HttpResponse.json([
+          { id: anna.id, firstName: anna.firstName, lastName: anna.lastName },
+        ])
+      ),
+      http.get("*/api/admin/users/au-9", () => HttpResponse.json(anna))
+    )
+
+    render()
+
+    await screen.findByText("Umsortiert")
+
+    const feld = screen.getByLabelText("Person")
+    await user.click(feld)
+    await user.type(feld, "Anna")
+    await user.click(await screen.findByRole("option", { name: "Anna Fischer" }))
+
+    /* Gefiltert wird ueber die UUID (§6.1). */
+    await waitFor(() =>
+      expect(urls[urls.length - 1].searchParams.get("admin")).toBe("au-9")
+    )
+    /* Und das Feld sagt, wonach. */
+    await waitFor(() => expect(feld).toHaveValue("Anna Fischer"))
+  })
+
+  /*
+   * Seit Contract v72 sperrt die kuratierte Liste den einzigen Uebergang aus
+   * PUBLISHED heraus; die Redaktion kann einen Platz also nicht mehr
+   * freimachen, und im Protokoll steht als handelnde Person ausschliesslich
+   * die Administration. Die Auswahl bietet deshalb nur Admin-Konten an, statt
+   * nach Personen filtern zu lassen, die dort nie vorkommen.
+   */
+  it("bietet in der Personensuche nur Admin-Konten an", async () => {
+    const user = userEvent.setup()
+    const rollen: (string | null)[] = []
+
+    server.use(
+      currentUserHandler({ role: "ADMIN" }),
+      http.get("*/api/users/lookup", ({ request }) => {
+        rollen.push(new URL(request.url).searchParams.get("role"))
+        return HttpResponse.json([])
+      }),
+      http.get("*/api/admin/top10-audit", () =>
+        HttpResponse.json({
+          content: [REORDERED],
+          page: 0,
+          size: 20,
+          totalElements: 1,
+          totalPages: 1,
+        })
+      )
+    )
+
+    render()
+
+    await screen.findByText("Umsortiert")
+    await user.click(screen.getByLabelText("Person"))
+
+    await waitFor(() => expect(rollen).not.toHaveLength(0))
+    expect(rollen.every((rolle) => rolle === "ADMIN")).toBe(true)
+  })
+
   it("fuehrt beide Bereiche als Leiste und markiert das Protokoll", async () => {
-    server.use(currentUserHandler({ role: "ADMIN" }), auditHandler())
+    server.use(currentUserHandler({ role: "ADMIN" }), ...auditHandler())
 
     render()
 

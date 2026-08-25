@@ -604,7 +604,8 @@
       "loading": "Loading suggestions …",
       "empty": "No person found.",
       "hits_one": "{{count}} match",
-      "hits_other": "{{count}} matches"
+      "hits_other": "{{count}} matches",
+      "by": "By {{names}}"
     },
     "metadata": {
       "breadcrumb": "Project metadata",
@@ -1859,16 +1860,8 @@
         "moveDown": "Move {{title}} down from place {{position}}",
         "remove": "Remove {{title}} from its place",
         "moved": "{{title}} now holds place {{position}}.",
-        "removed": "{{title}} has been removed from its place. Nothing is stored until you save the order.",
+        "removed": "{{title}} has been removed from place {{position}}. The place stays free.",
         "listLabel": "Top 10 places"
-      },
-      "save": {
-        "action": "Save order",
-        "title": "Save order?",
-        "description": "The Top 10 will then hold {{count}} projects in the order shown here. It appears that way on the public home page, and every move is recorded in the history.",
-        "removedTitle": "These projects lose their place ({{count}}):",
-        "confirm": "Save",
-        "done": "The order has been saved. The Top 10 holds {{count}} projects."
       },
       "picker": {
         "label": "Search for another project",
@@ -1880,7 +1873,7 @@
         "addShort": "Add",
         "alreadyAdded": "{{title}} is already in the list",
         "addedShort": "Already added",
-        "added": "{{title}} holds the next free place. Nothing is stored until you save the order."
+        "added": "{{title}} now holds place {{position}}."
       },
       "audit": {
         "from": "From",
@@ -1899,6 +1892,11 @@
         "emptyTitle": "No entry",
         "emptyDescription": "Nothing has been changed in the Top 10 so far.",
         "emptyFiltered": "Nothing was changed in this range. A wider range or a different person shows more."
+      },
+      "remove": {
+        "title": "Remove project from its place?",
+        "description": "“{{title}}” loses place {{position}} and no longer appears on the public home page. The place stays free, the other entries do not move up. The project stays published and can be added again through the search.",
+        "confirm": "Remove from place"
       }
     }
   }
