@@ -1,10 +1,11 @@
 import { HttpResponse, http } from "msw"
-import { screen } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { setPasswordChangeRequired } from "@/api/auth/authStore"
 import i18n from "@/i18n"
 import {
+  dashboardHandler,
   emptyProjectsHandler,
   ownPortfolioHandler,
   projectBlocksHandler,
@@ -260,17 +261,70 @@ describe("Routenbaum", () => {
     ).toBeInTheDocument()
   })
 
-  it("ADMIN erreicht die Administrationsseite und das Top-10-Protokoll", () => {
+  it("ADMIN erreicht die Administrationsseite und das Top-10-Protokoll", async () => {
     signInAs("ADMIN")
+    server.use(dashboardHandler())
     const { unmount } = renderWithProviders(<AppUnderTest />, "/administration")
+    /* Seit KAN-38 ist die Index-Route die echte Startansicht und kein
+       Platzhalter mehr. Sie kommt als eigener Chunk (AdministrationRoute),
+       deshalb findBy und nicht getBy; im vollstaendigen Lauf dauert das
+       Aufloesen des dynamischen Imports laenger als die voreingestellte
+       Sekunde, im Einzellauf nicht. */
     expect(
-      screen.getByRole("heading", { level: 1, name: "Administrationsseite" })
+      await screen.findByRole(
+        "heading",
+        { level: 1, name: "Dashboard" },
+        { timeout: 10_000 }
+      )
     ).toBeInTheDocument()
     unmount()
 
     renderWithProviders(<AppUnderTest />, "/administration/top10/audit")
     expect(
       screen.getByRole("heading", { level: 1, name: "Top-10-Protokoll" })
+    ).toBeInTheDocument()
+  })
+
+  it("zeigt die Seitennavigation auf jeder Seite der Administration", async () => {
+    signInAs("ADMIN")
+    renderWithProviders(<AppUnderTest />, "/administration/categories")
+
+    /* Der Rahmen liegt ueber allen Admin-Routen, auch ueber denen, die noch
+       einen Platzhalter tragen: sonst waere die Navigation von dort aus
+       nicht erreichbar (KAN-38). */
+    const nav = await screen.findByRole("navigation", {
+      name: "Administrationsseite",
+    })
+    expect(
+      within(nav).getByRole("link", { name: "Semester" })
+    ).toHaveAttribute("href", "/administration/semesters")
+    expect(within(nav).getByRole("link", { name: "Top 10" })).toBeInTheDocument()
+  })
+
+  it("fuehrt die Projektverwaltung als eigene Route", async () => {
+    signInAs("ADMIN")
+    server.use(
+      http.get("*/api/projects", () =>
+        HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 20,
+          totalElements: 0,
+          totalPages: 0,
+        })
+      ),
+      http.get("*/api/study-programs", () => HttpResponse.json([])),
+      http.get("*/api/semesters", () => HttpResponse.json([])),
+      http.get("*/api/modules", () => HttpResponse.json([]))
+    )
+    renderWithProviders(<AppUnderTest />, "/administration/projects")
+
+    expect(
+      await screen.findByRole(
+        "heading",
+        { level: 1, name: "Projekte" },
+        { timeout: 10_000 }
+      )
     ).toBeInTheDocument()
   })
 

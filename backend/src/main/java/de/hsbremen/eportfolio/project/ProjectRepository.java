@@ -124,6 +124,28 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, JpaSpec
 			+ "from Project p group by p.status")
 	List<ProjectStatusCount> countPerStatus();
 
+	/**
+	 * Kennzahl {@code projectsByFaculty} des Admin-Dashboards (§6.1, Contract
+	 * v76), ohne Sichtbarkeitsschranke aus demselben Grund wie
+	 * {@link #countPerStatus()}.
+	 *
+	 * <p><strong>Projekte ohne Fakultaet gehen nicht ein.</strong>
+	 * {@code Project.faculty} ist bis zum Einreichen null (§3.3), ein Entwurf
+	 * traegt also moeglicherweise keine. Ohne die {@code where}-Bedingung
+	 * entstuende eine Ergebniszeile mit {@code facultyId = null}, die der Dienst
+	 * keiner Fakultaet zuordnen koennte; der Contract sieht dafuer bewusst keine
+	 * Sammelzeile vor. Die Summe dieser Liste ist deshalb kleiner oder gleich der
+	 * Summe aus {@link #countPerStatus()} und taugt nicht als Gesamtzahl.
+	 *
+	 * <p>Gruppiert wird ueber die ID und nicht ueber die Entitaet: die Zeile
+	 * braucht nur den Schluessel, weil der Dienst Name und Kuerzel ohnehin aus
+	 * dem vollstaendigen Fakultaetsbestand nimmt (auch die ohne Projekt stehen in
+	 * der Antwort).
+	 */
+	@Query("select new de.hsbremen.eportfolio.project.ProjectFacultyCount(p.faculty.id, count(p)) "
+			+ "from Project p where p.faculty is not null group by p.faculty.id")
+	List<ProjectFacultyCount> countPerFaculty();
+
 	// ------------------------------------------------------------------
 	// Referenzpruefungen fuer das Loeschen von Stammdaten (§6.1, KAN-25)
 	//

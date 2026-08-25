@@ -12,7 +12,8 @@
     },
     "action": {
       "close": "Close",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "save": "Save"
     },
     "breadcrumb": {
       "label": "Breadcrumb",
@@ -310,7 +311,8 @@
       "adminTop10Audit": "Top 10 audit log",
       "imprint": "Legal notice",
       "privacy": "Privacy",
-      "accessibility": "Accessibility"
+      "accessibility": "Accessibility",
+      "adminSemesters": "Semesters"
     }
   },
   "accessDenied": {
@@ -818,6 +820,11 @@
       "REGISTRATION_PENDING": "Registration pending",
       "ACTIVE": "Active",
       "DEACTIVATED": "Deactivated"
+    },
+    "rolePlural": {
+      "STUDENT": "Students",
+      "EDITOR": "Editors",
+      "ADMIN": "Admins"
     }
   },
   "top10": {
@@ -1381,6 +1388,107 @@
           "ownProject": "Own project: no release",
           "inTop10": "In the top 10: remove it there first"
         }
+      }
+    }
+  },
+  "administration": {
+    "label": "Administration",
+    "nav": {
+      "label": "Administration area",
+      "dashboard": "Dashboard",
+      "projects": "Projects",
+      "top10": "Top 10",
+      "users": "Users",
+      "categories": "Categories",
+      "semesters": "Semesters",
+      "studyStructure": "Study structure"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "subtitle": "Overview of all projects and users in the system",
+      "projects": {
+        "title": "All projects in the system",
+        "total": "All"
+      },
+      "users": {
+        "title": "User statistics",
+        "total": "All users"
+      },
+      "openNominations": "Open top 10 proposals",
+      "faculties": {
+        "title": "Projects per faculty",
+        "subtitle": "Distribution of all projects by faculty. Projects without a faculty are not included.",
+        "bar": "Projects",
+        "empty": "No faculties have been set up.",
+        "tableCaption": "Projects per faculty",
+        "columnFaculty": "Faculty",
+        "columnCount": "Projects"
+      }
+    },
+    "projects": {
+      "title": "Projects",
+      "subtitle_one": "{{count}} project, all statuses included",
+      "subtitle_other": "{{count}} projects, all statuses included",
+      "subtitleLoading": "Loading projects …",
+      "statusFilter": "Filter by status",
+      "search": {
+        "label": "Search projects",
+        "placeholder": "Search title or students …"
+      },
+      "empty": {
+        "title": "No projects",
+        "description": "No project has been created yet.",
+        "filtered": "No project matches this search. Change the search term or the filters."
+      },
+      "row": {
+        "menuFor": "Actions for {{title}}",
+        "open": "Open in review mode",
+        "assignEditors": "Assign editors",
+        "delete": "Delete project"
+      },
+      "action": {
+        "publish": "Publish",
+        "requestRevision": "Request revision"
+      },
+      "bulk": {
+        "selected_one": "{{count}} project selected",
+        "selected_other": "{{count}} projects selected",
+        "clear": "Clear selection",
+        "selectAll": "Select all projects on this page",
+        "selectRow": "Select {{title}}",
+        "cleared": "Selection cleared"
+      },
+      "statusDialog": {
+        "title": {
+          "publish_one": "Publish project",
+          "publish_other": "Publish projects",
+          "request-revision_one": "Return project for revision",
+          "request-revision_other": "Return projects for revision"
+        },
+        "description": {
+          "publish_one": "The following project will be published.",
+          "publish_other": "The following {{count}} projects will be published.",
+          "request-revision_one": "The following project goes back for revision. Your reason is stored as a change request on the project.",
+          "request-revision_other": "The following {{count}} projects go back for revision. Your reason is stored on each of them as its own change request."
+        },
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "What needs to be revised?",
+        "reasonRequired": "Without a reason the author gets no assignment. Please fill this in.",
+        "reasonNotAllowed": "Publishing does not take a reason.",
+        "summary": "{{succeeded}} of {{total}} projects changed.",
+        "rowSuccess": "changed"
+      },
+      "deleteDialog": {
+        "title": "Delete project?",
+        "description": "“{{title}}” will be deleted for good, together with all content blocks and uploaded files. This cannot be undone.",
+        "confirm": "Delete permanently"
+      },
+      "deleteDone": "“{{title}}” has been deleted.",
+      "editorsDialog": {
+        "title": "Assign editors",
+        "description": "Who reviews “{{title}}”? The list replaces the previous assignment entirely.",
+        "emptyHint": "Without an assignment the project does not show up for anyone to review.",
+        "done": "The editors of “{{title}}” have been changed."
       }
     }
   }

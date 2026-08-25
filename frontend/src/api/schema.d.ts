@@ -1249,7 +1249,7 @@ export interface paths {
     }
     /**
      * Dashboard-Kennzahlen lesen
-     * @description Projekte je Status, Konten insgesamt sowie je Rolle und Status, offene Top-10-Nominierungen und Inhaltsbloecke je Typ. Jede Aufschluesselung enthaelt alle Werte ihres Enums, auch die mit dem Wert 0. Alle Zahlen sind Bestandsgroessen zum Zeitpunkt des Aufrufs.
+     * @description Projekte je Status und je Fakultaet, Konten insgesamt sowie je Rolle und Status, offene Top-10-Nominierungen und Inhaltsbloecke je Typ. Jede Aufschluesselung ist vollstaendig: die Enum-Karten tragen alle Werte ihres Enums, projectsByFaculty jede Fakultaet, beides auch mit dem Wert 0. Projekte ohne Fakultaet gehen in projectsByFaculty nicht ein; die Summe dort ist also nicht die Gesamtzahl der Projekte. Alle Zahlen sind Bestandsgroessen zum Zeitpunkt des Aufrufs.
      */
     get: operations["dashboard"]
     put?: never
@@ -2319,7 +2319,7 @@ export interface components {
        */
       email: string
     }
-    /** @description Kennzahlen der Administrationsseite (§6.1). Jede Aufschluesselung enthaelt alle Werte ihres Enums, auch die mit dem Wert 0. */
+    /** @description Kennzahlen der Administrationsseite (§6.1). Jede Aufschluesselung ist vollstaendig: die Enum-Karten tragen alle Werte ihres Enums, projectsByFaculty jede Fakultaet, beides auch mit dem Wert 0. */
     DashboardResponse: {
       /**
        * @description Projekte je Status (§2.2).
@@ -2334,6 +2334,8 @@ export interface components {
       projectsByStatus: {
         [key: string]: number
       }
+      /** @description Projekte je Fakultaet (§3.8), sortiert nach Kuerzel. Enthaelt jede Fakultaet, auch die ohne Projekte. Projekte ohne Fakultaet gehen nicht ein; die Summe ist daher nicht die Gesamtzahl der Projekte. */
+      projectsByFaculty: components["schemas"]["FacultyProjectCountResponse"][]
       /**
        * Format: int64
        * @description Zahl aller Konten, einschliesslich deaktivierter und noch nicht abgeschlossener Registrierungen.
@@ -2372,6 +2374,16 @@ export interface components {
       blocksByType: {
         [key: string]: number
       }
+    }
+    /** @description Projekte einer Fakultaet, Zeile von projectsByFaculty (§6.1). */
+    FacultyProjectCountResponse: {
+      faculty: components["schemas"]["ReferenceResponse"]
+      /**
+       * Format: int64
+       * @description Zahl ihrer Projekte ueber alle Status, mindestens 0.
+       * @example 26
+       */
+      count: number
     }
   }
   responses: never

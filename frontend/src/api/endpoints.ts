@@ -90,6 +90,37 @@ export const apiPaths = {
      * gar nicht erst.
      */
     editorSelf: (projectId: string) => `/api/projects/${projectId}/editors/me`,
+    /*
+     * Die Redaktionszuweisung eines fremden Projekts umverteilen (§6.1,
+     * KAN-38). Ausschliesslich ADMIN, dafuer jederzeit und unabhaengig vom
+     * Status; die Autor:in aendert dieselbe Liste ueber detail (PUT
+     * /projects/{id}) und nur in DRAFT und REVISION.
+     *
+     * Der Plural steht neben editorSelf und nicht darunter: dies ist die
+     * ganze Liste, jenes die eigene Zeile darin.
+     */
+    editors: (projectId: string) => `/api/projects/${projectId}/editors`,
+  },
+  /*
+   * Die Administrationsseite (§6.1, Abschnitt „Administration (ADMIN)",
+   * KAN-38). Eingetragen mit ihren ersten Verwendern: dashboard mit der
+   * Startansicht, bulkStatus mit dem Sammel-Statuswechsel der
+   * Projektverwaltung. Die uebrigen Admin-Pfade (Nutzerverwaltung,
+   * Stammdaten, Top-10) entstehen mit KAN-39 und KAN-40, nicht auf Vorrat.
+   *
+   * Bewusst ein eigener Schluessel und nicht unter projects: was hier steht,
+   * ist ausschliesslich fuer ADMIN erreichbar, und die Filterkette behandelt
+   * /api/admin/** als geschlossenen Bereich (§5).
+   */
+  admin: {
+    dashboard: "/api/admin/dashboard",
+    /*
+     * Sammel-Statuswechsel, Body { projectIds, action, reason? }, Antwort 200
+     * mit einer Ergebniszeile je angefragter ID (§6.1, seit Contract v17,
+     * Koerper seit v32). Ein eigener Endpoint und keine Folge von
+     * Einzelaufrufen: nur so bleiben Teilerfolge unterscheidbar.
+     */
+    bulkStatus: "/api/admin/projects/status",
   },
   /*
    * Ein einzelner Kommentar (§6.1, §2.4, KAN-37). Bewusst neben projects und

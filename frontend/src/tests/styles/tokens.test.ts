@@ -369,12 +369,42 @@ describe("Grenzen der Tokenschicht", () => {
     /\.(ts|tsx|css)$/.test(file)
   )
 
+  /*
+   * Eine einzige Ausnahme, und sie ist keine Farbe: components/ui/chart.tsx
+   * kommt unveraendert aus der Registry (KAN-38) und nennt die beiden
+   * Vorgabewerte von recharts, ein Grau und ein Weiss, ausschliesslich in
+   * Attributselektoren der Form [&_… [stroke='…']]:stroke-border/50. Die
+   * Zeilen greifen die Vorgabefarben von recharts ab, um sie durch
+   * Tokenfarben zu ersetzen; sie setzen also genau das Gegenteil einer
+   * eigenen Farbe. Von Hand geaendert werden darf die Datei ohnehin nicht
+   * (Frontend-Regel 11), und ein Selektor auf einen fremden Vorgabewert ist
+   * kein zweiter Ort, an dem eine Projektfarbe steht.
+   */
+  const chartPrimitive = join(srcDir, "components", "ui", "chart.tsx")
+
   it("haelt jeden Hex-Wert in styles/tokens", () => {
     for (const file of sourceFiles) {
       if (file.startsWith(tokensDir)) continue
+      if (file === chartPrimitive) continue
 
       const hits = readFileSync(file, "utf8").match(/#[0-9a-fA-F]{3,8}\b/g)
       expect(hits, `${file} enthaelt einen Hex-Wert`).toBeNull()
+    }
+  })
+
+  it("nennt in chart.tsx nur die Vorgabewerte von recharts", () => {
+    /* Die Ausnahme oben bleibt eng: taucht dort je ein Hex-Wert auf, der
+       nicht in einem stroke- oder fill-Selektor auf einen Fremdwert zeigt,
+       schlaegt dieser Test an. */
+    const source = readFileSync(chartPrimitive, "utf8")
+    const hits = source.match(/#[0-9a-fA-F]{3,8}\b/g) ?? []
+
+    for (const hit of hits) {
+      expect(
+        source.includes(`[stroke='${hit}']`) ||
+          source.includes(`[fill='${hit}']`),
+        `${hit} steht nicht in einem Selektor auf eine recharts-Vorgabe`
+      ).toBe(true)
     }
   })
 

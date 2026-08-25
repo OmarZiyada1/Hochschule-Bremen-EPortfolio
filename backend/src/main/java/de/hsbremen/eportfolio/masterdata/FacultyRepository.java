@@ -14,6 +14,17 @@ public interface FacultyRepository extends JpaRepository<Faculty, UUID> {
 	List<Faculty> findAllByOrderByNameAsc();
 
 	/**
+	 * Alle Fakultaeten nach Kuerzel aufsteigend, im Bestand also FK1 bis FK5.
+	 *
+	 * <p>Fuer die Kennzahl {@code projectsByFaculty} des Admin-Dashboards (§6.1,
+	 * Contract v76). Der Contract legt genau diese Reihenfolge fest, weil das
+	 * Template die Balkenreihe so beschriftet; nach dem Namen sortiert stuende
+	 * FK2 („Architektur, Bau und Umwelt") vor FK1 („Wirtschaftswissenschaften").
+	 * Die Spalte ist unique, die Reihenfolge damit eindeutig.
+	 */
+	List<Faculty> findAllByOrderByAbbreviationAsc();
+
+	/**
 	 * Suche ueber das Kuerzel ({@code faculty.abbreviation} ist unique). Wird vom
 	 * {@link DevMasterDataSeeder} gebraucht, damit ein zweiter Lauf nichts
 	 * doppelt anlegt.

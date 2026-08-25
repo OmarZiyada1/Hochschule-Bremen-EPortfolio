@@ -15,6 +15,9 @@ import de.hsbremen.eportfolio.common.enums.NominationTier;
 import de.hsbremen.eportfolio.common.enums.ProjectStatus;
 import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
+import de.hsbremen.eportfolio.masterdata.Faculty;
+import de.hsbremen.eportfolio.masterdata.FacultyRepository;
+import de.hsbremen.eportfolio.masterdata.TestMasterData;
 import de.hsbremen.eportfolio.project.Block;
 import de.hsbremen.eportfolio.project.BlockRepository;
 import de.hsbremen.eportfolio.project.Project;
@@ -26,6 +29,9 @@ import de.hsbremen.eportfolio.user.TestUser;
 import de.hsbremen.eportfolio.user.User;
 import de.hsbremen.eportfolio.user.UserRepository;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -50,6 +56,11 @@ import org.springframework.transaction.annotation.Transactional;
  * Aufschluesselung muss <em>alle</em> Werte ihres Enums tragen, auch die mit 0.
  * Eine {@code group by}-Abfrage liefert das nicht von selbst, und ohne das
  * Auffuellen muesste das Frontend die Enums aus §2 ein zweites Mal kennen.
+ *
+ * <p>Fuer {@code projectsByFaculty} (Contract v76, KAN-38) gilt dasselbe, nur
+ * gegen den Fakultaetsbestand der Datenbank statt gegen ein Enum. Dazu kommt
+ * eine Zusage, die keine der Enum-Karten kennt: Projekte ohne Fakultaet gehen
+ * nicht ein, weil {@code Project.facultyId} bis zum Einreichen null ist (§3.3).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -78,6 +89,9 @@ class AdminDashboardIntegrationTest {
 
 	@Autowired
 	private Top10NominationRepository nominationRepository;
+
+	@Autowired
+	private FacultyRepository facultyRepository;
 
 	private User admin;
 
@@ -177,6 +191,94 @@ class AdminDashboardIntegrationTest {
 				.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
 	}
 
+	@Test
+	@DisplayName("projectsByFaculty fuehrt jede Fakultaet, sortiert nach Kuerzel")
+	void listsEveryFaculty() throws Exception {
+		JsonNode faculties = read().get("projectsByFaculty");
+
+		List<String> actual = new ArrayList<>();
+		faculties.forEach(entry -> actual.add(entry.get("faculty").get("abbreviation").asText()));
+
+		/*
+		 * Zwei getrennte Zusicherungen, und das mit Absicht. Die Vollstaendigkeit
+		 * darf gegen das Repository pruefen, denn "alle Zeilen der Tabelle" hat
+		 * keine zweite Quelle. Die Reihenfolge dagegen nicht: sie kaeme aus
+		 * derselben Methode, die der Dienst benutzt, und ein Umbenennen auf
+		 * findAllByOrderByNameAsc zoege Soll und Ist gemeinsam mit. Sie wird
+		 * deshalb unabhaengig zugesichert.
+		 */
+		List<String> everyFaculty = facultyRepository.findAll().stream()
+				.map(Faculty::getAbbreviation)
+				.sorted()
+				.toList();
+		assertThat(everyFaculty).as("Die Testdatenbank fuehrt Fakultaeten").isNotEmpty();
+		assertThat(actual)
+				.as("jede Fakultaet steht genau einmal in der Liste")
+				.containsExactlyInAnyOrderElementsOf(everyFaculty);
+		assertThat(actual).as("aufsteigend nach Kuerzel").isSorted();
+
+		faculties.forEach(entry -> {
+			assertThat(entry.get("faculty").get("name").asText()).isNotBlank();
+			assertThat(entry.get("faculty").get("id").asText()).isNotBlank();
+		});
+	}
+
+	@Test
+	@DisplayName("Eine Fakultaet ohne Projekte steht mit 0 in der Liste, nicht als Luecke")
+	void fillsFacultiesWithoutProjects() throws Exception {
+		/*
+		 * Eine eigene Fakultaet mit unverwechselbarem Kuerzel: der Seeder fuehrt
+		 * FK1 bis FK5, und faculty.abbreviation ist unique. Ohne diesen Fall
+		 * waere das Auffuellen nur zufaellig gedeckt, naemlich dann, wenn im
+		 * Bestand gerade eine Fakultaet ohne Projekt steht.
+		 *
+		 * <p>Das Kuerzel kommt ohne Sonderzeichen aus: die Datenbank sortiert
+		 * nach ihrer Collation, {@code isSorted()} im Test daneben nach der
+		 * Java-Ordnung, und bei einem Bindestrich laufen die beiden
+		 * auseinander. Heute traegt das nicht, weil jeder Test seine eigene
+		 * Transaktion zurueckrollt; es soll auch dann nicht brechen, wenn das
+		 * einmal nicht mehr gilt.
+		 */
+		Faculty empty = facultyRepository.saveAndFlush(
+				TestMasterData.facultyWithoutId("FKTEST9", "Fakultaet ohne Projekte"));
+
+		assertThat(facultyCount(read(), empty.getId()))
+				.as("aufgefuellt mit 0 statt zu fehlen")
+				.isZero();
+	}
+
+	@Test
+	@DisplayName("projectsByFaculty zaehlt je Fakultaet, ueber alle Status hinweg")
+	void countsProjectsByFaculty() throws Exception {
+		Faculty faculty = facultyRepository.findAllByOrderByAbbreviationAsc().getFirst();
+		JsonNode before = read();
+
+		projectAt(faculty, ProjectStatus.DRAFT);
+		projectAt(faculty, ProjectStatus.PUBLISHED);
+
+		JsonNode after = read();
+
+		assertThat(facultyCount(after, faculty.getId()) - facultyCount(before, faculty.getId()))
+				.isEqualTo(2);
+	}
+
+	@Test
+	@DisplayName("Ein Projekt ohne Fakultaet geht nicht ein (§3.3: facultyId ist bis zum Einreichen null)")
+	void ignoresProjectsWithoutFaculty() throws Exception {
+		JsonNode before = read();
+
+		project(ProjectStatus.DRAFT);
+
+		JsonNode after = read();
+
+		assertThat(facultySum(after) - facultySum(before))
+				.as("die Summe der Liste waechst nicht, obwohl ein Projekt dazukam")
+				.isZero();
+		assertThat(delta(before, after, "projectsByStatus", "DRAFT"))
+				.as("in projectsByStatus steht es dagegen sehr wohl")
+				.isEqualTo(1);
+	}
+
 	// ==================================================================
 	// Hilfsmittel
 	// ==================================================================
@@ -210,6 +312,32 @@ class AdminDashboardIntegrationTest {
 	private Project project(ProjectStatus status) {
 		Project project = TestProject.withoutId(student, status, "Kennzahlenprojekt");
 		return projectRepository.saveAndFlush(project);
+	}
+
+	/** Dasselbe, aber an einer Fakultaet: fuer projectsByFaculty (§6.1, v76). */
+	private Project projectAt(Faculty faculty, ProjectStatus status) {
+		Project project = TestProject.withoutId(student, status, "Kennzahlenprojekt");
+		project.setFaculty(faculty);
+		return projectRepository.saveAndFlush(project);
+	}
+
+	/** Die Zahl einer bestimmten Fakultaet aus projectsByFaculty. */
+	private static long facultyCount(JsonNode dashboard, UUID facultyId) {
+		for (JsonNode entry : dashboard.get("projectsByFaculty")) {
+			if (entry.get("faculty").get("id").asText().equals(facultyId.toString())) {
+				return entry.get("count").asLong();
+			}
+		}
+		throw new AssertionError("Fakultaet " + facultyId + " fehlt in projectsByFaculty");
+	}
+
+	/** Summe ueber alle Zeilen; sie zaehlt nur Projekte mit Fakultaet. */
+	private static long facultySum(JsonNode dashboard) {
+		long sum = 0;
+		for (JsonNode entry : dashboard.get("projectsByFaculty")) {
+			sum += entry.get("count").asLong();
+		}
+		return sum;
 	}
 
 	private void block(Project project, BlockType type, int orderIndex) throws Exception {

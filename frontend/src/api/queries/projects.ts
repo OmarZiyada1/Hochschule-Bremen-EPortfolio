@@ -8,6 +8,7 @@ import type {
   ProjectCardResponse,
   ProjectCreateRequest,
   ProjectDetailResponse,
+  ProjectEditorsRequest,
   ProjectStatus,
   ProjectType,
   ProjectUpdateRequest,
@@ -72,6 +73,38 @@ export interface OwnProjectListParams {
  */
 export interface ReviewListParams {
   /** Suchbegriff q, durchsucht Titel, Kurzbeschreibung und Autorenname. */
+  q?: string
+  /** Seite, 0-basiert (§6.6). */
+  page?: number
+  /** Seitengroesse; ohne Angabe gilt der Serverstandard 20 (§6.6). */
+  size?: number
+  /** Projektstatus (§2.2), oder undefined fuer den Filterwert „Alle". */
+  status?: ProjectStatus
+  /** ID eines Studiengangs aus GET /api/study-programs (§3.7). */
+  studyProgram?: string
+  /** ID eines Semesters aus GET /api/semesters (§3.18). */
+  semester?: string
+  /** ID eines Moduls aus GET /api/modules (§3.9), im Template „Fach". */
+  module?: string
+}
+
+/**
+ * Parameter der Projektverwaltung auf der Administrationsseite (KAN-38).
+ *
+ * <p><strong>Formgleich mit {@link ReviewListParams} und trotzdem eigen.</strong>
+ * Beide Ansichten zeigen dieselbe Projektliste in unterschiedlichem Umfang
+ * (§6.1). Der Unterschied steckt nicht in den Feldern, sondern in dem, was
+ * die Fabrik fest hinzufuegt: „Meine Reviews" schneidet auf {@code editor=me}
+ * zu, die Administrationsseite auf gar nichts. Ein gemeinsamer Typ machte aus
+ * dieser Zusage eine Zufaelligkeit; die naechste Aenderung an einer der
+ * beiden Seiten zoege stillschweigend die andere mit.
+ *
+ * <p>Die Filter sind Einzelwerte wie bei den Reviews, weil das Template je
+ * Gruppe ein Auswahlfeld zeigt und keine Mehrfachauswahl. Wiederholbar waeren
+ * sie serverseitig trotzdem (§6.1 seit v43).
+ */
+export interface AdminProjectListParams {
+  /** Suchbegriff q, durchsucht Titel, Kurzbeschreibung und Autorenname (§6.1, seit v47). */
   q?: string
   /** Seite, 0-basiert (§6.6). */
   page?: number
@@ -179,6 +212,33 @@ export const projectQueries = {
       queryFn: () =>
         api.get<PageResponse<ProjectCardResponse>>(apiPaths.projects.list, {
           query: { editor: "me", ...params },
+        }),
+      placeholderData: keepPreviousData,
+    }),
+
+  /**
+   * Die Projektverwaltung der Administrationsseite (§6.1, KAN-38).
+   *
+   * <p><strong>Kein fester Statusfilter, und das ist der ganze
+   * Unterschied.</strong> ADMIN sieht alle Projekte in allen Status (§5
+   * Fussnote 11); die oeffentliche Bibliothek ist dagegen fest auf
+   * {@code PUBLISHED} gestellt (Contract v42). Diese Ansicht ist damit die
+   * einzige Stelle, an der ein fremder Entwurf ueberhaupt sichtbar wird. Die
+   * Schranke liegt weiterhin im Server: ein Nicht-Admin bekaeme hier
+   * dieselbe Liste, die §5 ihm zugesteht, und keine Zeile mehr.
+   *
+   * <p>Der Statuswert aus dem Parameter engt nur weiter ein und ist die
+   * Statusleiste der Oberflaeche, nicht ihre Berechtigung.
+   *
+   * <p>placeholderData wie in Bibliothek und Reviews: beim Blaettern bleibt
+   * die vorige Seite stehen, statt die Tabelle auf Skelette zurueckzuwerfen.
+   */
+  administration: (params: AdminProjectListParams = {}) =>
+    queryOptions({
+      queryKey: ["projects", "administration", params] as const,
+      queryFn: () =>
+        api.get<PageResponse<ProjectCardResponse>>(apiPaths.projects.list, {
+          query: { ...params },
         }),
       placeholderData: keepPreviousData,
     }),
@@ -386,4 +446,29 @@ export function resignAsEditor(
   return api.delete<ProjectDetailResponse>(
     apiPaths.projects.editorSelf(projectId)
   )
+}
+
+/**
+ * PUT /projects/{id}/editors (§6.1, KAN-38): die Administration verteilt die
+ * Redaktion eines fremden Projekts neu.
+ *
+ * <p><strong>Jederzeit und unabhaengig vom Status</strong>, anders als die
+ * Zuweisung durch die Autor:in, die nur in DRAFT und REVISION geht (§5
+ * Fussnote 3). Der Endpoint traegt deshalb auch keine Version: er aendert
+ * keine Metadaten und laeuft nicht gegen das Optimistic Locking aus §6.4.
+ *
+ * <p><strong>Die Liste ersetzt die bisherige vollstaendig</strong>, ein
+ * leeres Array hebt die Zuweisung auf. Wer zur Projektseite gehoert, also
+ * Autor:in oder Projektmitglied ist, wird nicht neu als Redaktion
+ * eingetragen: das ergibt 400 {@code VALIDATION_FAILED} (§5 Fussnote 3, seit
+ * Contract v61). Eine bereits bestehende Ueberschneidung laesst sich
+ * weiterhin aufloesen.
+ */
+export function reassignEditors(
+  projectId: string,
+  editorIds: string[]
+): Promise<ProjectDetailResponse> {
+  return api.put<ProjectDetailResponse>(apiPaths.projects.editors(projectId), {
+    editorIds,
+  } satisfies ProjectEditorsRequest)
 }
