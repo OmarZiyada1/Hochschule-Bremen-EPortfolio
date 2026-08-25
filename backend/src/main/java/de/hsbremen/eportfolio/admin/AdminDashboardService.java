@@ -1,20 +1,28 @@
 package de.hsbremen.eportfolio.admin;
 
 import de.hsbremen.eportfolio.admin.dto.DashboardResponse;
+import de.hsbremen.eportfolio.admin.dto.FacultyProjectCountResponse;
 import de.hsbremen.eportfolio.auth.AuthenticatedUser;
 import de.hsbremen.eportfolio.common.enums.BlockType;
 import de.hsbremen.eportfolio.common.enums.NominationStatus;
 import de.hsbremen.eportfolio.common.enums.ProjectStatus;
 import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
+import de.hsbremen.eportfolio.masterdata.Faculty;
+import de.hsbremen.eportfolio.masterdata.FacultyRepository;
 import de.hsbremen.eportfolio.project.BlockRepository;
+import de.hsbremen.eportfolio.project.ProjectFacultyCount;
 import de.hsbremen.eportfolio.project.ProjectPermissionService;
 import de.hsbremen.eportfolio.project.ProjectRepository;
+import de.hsbremen.eportfolio.project.dto.ReferenceResponse;
 import de.hsbremen.eportfolio.top10.Top10NominationRepository;
 import de.hsbremen.eportfolio.user.UserRepository;
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.ToLongFunction;
 import org.springframework.security.access.AccessDeniedException;
@@ -24,12 +32,17 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Die Kennzahlen von {@code GET /api/admin/dashboard} (§6.1).
  *
- * <p><strong>Vier Abfragen mit {@code group by} und eine Zaehlung, nicht
- * fuenfundzwanzig einzelne.</strong> Die vier Aufschluesselungen umfassen
- * zusammen fuenf Projektstatus, drei Rollen, drei Kontostatus und vierzehn
- * Blocktypen. Jeden Wert einzeln zu zaehlen waere derselbe Inhalt in
- * fuenfundzwanzig Datenbankrunden, und jede neue Enum-Konstante brauchte eine
- * weitere Zeile Code.
+ * <p><strong>Fuenf Abfragen mit {@code group by}, zwei Zaehlungen und eine
+ * Stammdatenliste.</strong> Die vier Enum-Aufschluesselungen umfassen zusammen
+ * fuenf Projektstatus, drei Rollen, drei Kontostatus und vierzehn Blocktypen,
+ * dazu kommt je eine Zeile fuer jede Fakultaet. Jeden Wert einzeln zu zaehlen
+ * waere derselbe Inhalt in fuenfundzwanzig Datenbankrunden plus einer je
+ * Fakultaet, und jede neue Enum-Konstante brauchte eine weitere Zeile Code.
+ *
+ * <p><strong>{@code projectsByFaculty} faellt aus dem Muster</strong> (Contract
+ * v76): es gruppiert nicht ueber ein Enum, sondern ueber Stammdaten, und braucht
+ * deshalb den vollstaendigen Fakultaetsbestand als zweite Abfrage statt einer
+ * Werteliste aus dem Code. Begruendung an {@link #byFaculty()}.
  *
  * <p><strong>Ohne Sichtbarkeitsschranke.</strong> Gezaehlt wird der gesamte
  * Bestand, auch Entwuerfe und deaktivierte Konten. Das ist keine Ausnahme von
@@ -44,10 +57,16 @@ import org.springframework.transaction.annotation.Transactional;
  * der Statushistorie und waere ein eigenes Ticket.
  */
 @Service
-// Klassenweit, weil dieser Dienst ausschliesslich zaehlt. Die fuenf Abfragen
-// laufen damit zudem in derselben Transaktion und sehen denselben Stand; sonst
-// koennte zwischen zwei von ihnen ein Projekt entstehen und die Summen passten
-// nicht zueinander.
+// Klassenweit, weil dieser Dienst ausschliesslich zaehlt: kein Dirty-Check, kein
+// Flush, eine Verbindung statt sieben, und die Leseabsicht steht am Typ.
+//
+// Einen gemeinsamen Snapshot ergibt das nicht. PostgreSQL laeuft hier auf der
+// Voreinstellung READ COMMITTED, und dort bekommt jedes Statement seinen eigenen
+// Stand; zwischen zwei der Abfragen kann also weiterhin ein Projekt entstehen.
+// Fuer Bestandsgroessen einer Anzeige ist das hinnehmbar: im schlimmsten Fall
+// steht eine gerade angelegte Fakultaet mit 0 in der Liste. Wer wirklich einen
+// Zeitpunkt braeuchte, muesste Isolation.REPEATABLE_READ setzen, und das ist
+// fuer ein Dashboard nicht angemessen.
 @Transactional(readOnly = true)
 public class AdminDashboardService {
 
@@ -59,22 +78,26 @@ public class AdminDashboardService {
 
 	private final Top10NominationRepository nominationRepository;
 
+	private final FacultyRepository facultyRepository;
+
 	private final ProjectPermissionService permissions;
 
 	public AdminDashboardService(ProjectRepository projectRepository,
 			UserRepository userRepository,
 			BlockRepository blockRepository,
 			Top10NominationRepository nominationRepository,
+			FacultyRepository facultyRepository,
 			ProjectPermissionService permissions) {
 		this.projectRepository = projectRepository;
 		this.userRepository = userRepository;
 		this.blockRepository = blockRepository;
 		this.nominationRepository = nominationRepository;
+		this.facultyRepository = facultyRepository;
 		this.permissions = permissions;
 	}
 
 	/**
-	 * Alle sechs Kennzahlen aus §6.1.
+	 * Alle sieben Kennzahlen aus §6.1.
 	 *
 	 * @param user angemeldete Person; die Filterkette laesst auf
 	 *             {@code /api/admin/**} nur ADMIN durch
@@ -89,6 +112,7 @@ public class AdminDashboardService {
 		return new DashboardResponse(
 				byEnum(ProjectStatus.class, projectRepository.countPerStatus(),
 						count -> count.status(), count -> count.count()),
+				byFaculty(),
 				userRepository.count(),
 				byEnum(Role.class, userRepository.countPerRole(),
 						count -> count.role(), count -> count.count()),
@@ -97,6 +121,44 @@ public class AdminDashboardService {
 				nominationRepository.countByStatus(NominationStatus.PENDING),
 				byEnum(BlockType.class, blockRepository.countPerType(),
 						count -> count.type(), count -> count.count()));
+	}
+
+	/**
+	 * Die Kennzahl {@code projectsByFaculty} (§6.1, Contract v76): je Fakultaet
+	 * eine Zeile, sortiert nach dem Kuerzel, auch fuer Fakultaeten ohne Projekt.
+	 *
+	 * <p><strong>Warum die Fakultaeten getrennt geladen werden.</strong> Dieselbe
+	 * Aufgabe wie in {@link #byEnum}, nur ohne Enum: der vollstaendige Bestand,
+	 * gegen den aufgefuellt wird, steht nicht im Code, sondern in der Tabelle. Die
+	 * Zaehlabfrage allein liefert nur Fakultaeten mit mindestens einem Projekt;
+	 * eine ohne Projekt verschwaende sonst stillschweigend, statt als Null
+	 * dazustehen.
+	 *
+	 * <p>Ein {@code left join} von der Fakultaet aus kaeme mit einer Abfrage aus
+	 * und laedt als Konstruktor-Projektion ebenfalls keine Entitaeten. Der
+	 * zweistufige Weg ist trotzdem der bessere: er benutzt die vorhandene
+	 * Abbildung {@link ReferenceResponse#from(Faculty)} weiter, statt Name und
+	 * Kuerzel ein zweites Mal in einer eigenen Projektion zu fuehren, und die
+	 * Zaehlabfrage bleibt symmetrisch zu {@code countPerStatus()}. Die zweite
+	 * Abfrage kostet bei einer Handvoll Stammdatenzeilen nichts.
+	 *
+	 * <p>{@code HashMap} und nicht {@code EnumMap}: der Schluessel ist eine UUID.
+	 * Die Reihenfolge der Antwort kommt deshalb nicht aus der Karte, sondern aus
+	 * der sortierten Fakultaetsliste.
+	 */
+	private List<FacultyProjectCountResponse> byFaculty() {
+		Map<UUID, Long> counts = new HashMap<>();
+		for (ProjectFacultyCount row : projectRepository.countPerFaculty()) {
+			counts.put(row.facultyId(), row.count());
+		}
+
+		List<Faculty> faculties = facultyRepository.findAllByOrderByAbbreviationAsc();
+		List<FacultyProjectCountResponse> result = new ArrayList<>(faculties.size());
+		for (Faculty faculty : faculties) {
+			result.add(new FacultyProjectCountResponse(ReferenceResponse.from(faculty),
+					counts.getOrDefault(faculty.getId(), 0L)));
+		}
+		return result;
 	}
 
 	/**

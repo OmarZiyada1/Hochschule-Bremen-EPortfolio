@@ -12,7 +12,8 @@
     },
     "action": {
       "close": "Schließen",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "save": "Speichern"
     },
     "breadcrumb": {
       "label": "Seitenpfad",
@@ -310,7 +311,8 @@
       "adminTop10Audit": "Top-10-Protokoll",
       "imprint": "Impressum",
       "privacy": "Datenschutz",
-      "accessibility": "Barrierefreiheit"
+      "accessibility": "Barrierefreiheit",
+      "adminSemesters": "Semester"
     }
   },
   "accessDenied": {
@@ -818,6 +820,11 @@
       "REGISTRATION_PENDING": "Registrierung offen",
       "ACTIVE": "Aktiv",
       "DEACTIVATED": "Deaktiviert"
+    },
+    "rolePlural": {
+      "STUDENT": "Studierende",
+      "EDITOR": "Redakteur:innen",
+      "ADMIN": "Admins"
     }
   },
   "top10": {
@@ -1381,6 +1388,107 @@
           "ownProject": "Eigenes Projekt: keine Freigabe",
           "inTop10": "Steht in der Top-10: erst dort entfernen"
         }
+      }
+    }
+  },
+  "administration": {
+    "label": "Administration",
+    "nav": {
+      "label": "Administrationsseite",
+      "dashboard": "Dashboard",
+      "projects": "Projekte",
+      "top10": "Top 10",
+      "users": "Nutzer:innen",
+      "categories": "Kategorien",
+      "semesters": "Semester",
+      "studyStructure": "Studienstruktur"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "subtitle": "Überblick über alle Projekte und Nutzer im System",
+      "projects": {
+        "title": "Alle Projekte im System",
+        "total": "Alle"
+      },
+      "users": {
+        "title": "Nutzerstatistik",
+        "total": "Alle Nutzer:innen"
+      },
+      "openNominations": "Offene Top-10-Vorschläge",
+      "faculties": {
+        "title": "Projekt je Fakultäten",
+        "subtitle": "Verteilung aller Projekte nach Fakultät. Projekte ohne Fakultät sind nicht enthalten.",
+        "bar": "Projekte",
+        "empty": "Es sind keine Fakultäten hinterlegt.",
+        "tableCaption": "Projekte je Fakultät",
+        "columnFaculty": "Fakultät",
+        "columnCount": "Projekte"
+      }
+    },
+    "projects": {
+      "title": "Projekte",
+      "subtitle_one": "{{count}} Projekt, alle Status eingeschlossen",
+      "subtitle_other": "{{count}} Projekte, alle Status eingeschlossen",
+      "subtitleLoading": "Projekte werden geladen …",
+      "statusFilter": "Nach Status filtern",
+      "search": {
+        "label": "Projekte durchsuchen",
+        "placeholder": "Titel oder Studierende suchen …"
+      },
+      "empty": {
+        "title": "Keine Projekte",
+        "description": "Im System ist noch kein Projekt angelegt.",
+        "filtered": "Zu dieser Suche gibt es kein Projekt. Ändern Sie Suchbegriff oder Filter."
+      },
+      "row": {
+        "menuFor": "Aktionen für {{title}}",
+        "open": "Im Review-Modus öffnen",
+        "assignEditors": "Redaktion zuweisen",
+        "delete": "Projekt löschen"
+      },
+      "action": {
+        "publish": "Veröffentlichen",
+        "requestRevision": "Zur Überarbeitung"
+      },
+      "bulk": {
+        "selected_one": "{{count}} Projekt ausgewählt",
+        "selected_other": "{{count}} Projekte ausgewählt",
+        "clear": "Auswahl aufheben",
+        "selectAll": "Alle Projekte dieser Seite auswählen",
+        "selectRow": "{{title}} auswählen",
+        "cleared": "Auswahl aufgehoben"
+      },
+      "statusDialog": {
+        "title": {
+          "publish_one": "Projekt veröffentlichen",
+          "publish_other": "Projekte veröffentlichen",
+          "request-revision_one": "Projekt zur Überarbeitung zurückgeben",
+          "request-revision_other": "Projekte zur Überarbeitung zurückgeben"
+        },
+        "description": {
+          "publish_one": "Das folgende Projekt wird veröffentlicht.",
+          "publish_other": "Die folgenden {{count}} Projekte werden veröffentlicht.",
+          "request-revision_one": "Das folgende Projekt geht zur Überarbeitung zurück. Ihre Begründung wird als Änderungswunsch am Projekt hinterlegt.",
+          "request-revision_other": "Die folgenden {{count}} Projekte gehen zur Überarbeitung zurück. Ihre Begründung wird an jedem davon als eigener Änderungswunsch hinterlegt."
+        },
+        "reasonLabel": "Begründung",
+        "reasonPlaceholder": "Was ist zu überarbeiten?",
+        "reasonRequired": "Ohne Begründung bekommt die Autor:in keinen Arbeitsauftrag. Bitte ausfüllen.",
+        "reasonNotAllowed": "Beim Veröffentlichen ist keine Begründung vorgesehen.",
+        "summary": "{{succeeded}} von {{total}} Projekten geändert.",
+        "rowSuccess": "geändert"
+      },
+      "deleteDialog": {
+        "title": "Projekt löschen?",
+        "description": "„{{title}}“ wird endgültig gelöscht, zusammen mit allen Inhaltsblöcken und hochgeladenen Dateien. Das lässt sich nicht rückgängig machen.",
+        "confirm": "Endgültig löschen"
+      },
+      "deleteDone": "„{{title}}“ wurde gelöscht.",
+      "editorsDialog": {
+        "title": "Redaktion zuweisen",
+        "description": "Wer begutachtet „{{title}}“? Die Liste ersetzt die bisherige Zuweisung vollständig.",
+        "emptyHint": "Ohne Zuweisung taucht das Projekt bei niemandem zur Begutachtung auf.",
+        "done": "Die Redaktion von „{{title}}“ wurde geändert."
       }
     }
   }

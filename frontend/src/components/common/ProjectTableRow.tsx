@@ -24,6 +24,13 @@ import { fullNameOf, type PersonName } from "@/lib/name"
  * actions ist ein Platz und keine fertige Aktion: welche Handlungen an
  * einer Zeile haengen, entscheidet die Rechtematrix je Seite (§5). Die
  * Zeile weiss davon nichts.
+ *
+ * <p>{@code selection} ist derselbe Gedanke am anderen Ende (KAN-38): die
+ * Projektverwaltung waehlt mehrere Zeilen aus und wechselt ihren Status in
+ * einem Aufruf, „Meine Reviews" tut das nicht. Die Zelle entsteht deshalb nur,
+ * wenn der Aufrufer etwas hineingibt; ohne sie hat die Zeile genau so viele
+ * Spalten wie zuvor. Ein Kaestchen fest einzubauen und es andernorts
+ * auszublenden haette die Kopfzeile beider Seiten auseinandergebracht.
  */
 export function ProjectTableRow({
   title,
@@ -34,6 +41,7 @@ export function ProjectTableRow({
   status,
   href,
   actions,
+  selection,
 }: {
   title: string
   author?: PersonName | null
@@ -43,9 +51,18 @@ export function ProjectTableRow({
   status?: ProjectStatus
   href?: string
   actions?: ReactNode
+  /**
+   * Auswahlkaestchen als erste Zelle, fuer Ansichten mit Mehrfachauswahl.
+   * Der Zustand liegt beim Aufrufer: welche Zeilen ausgewaehlt sind, weiss
+   * die Tabelle und nicht die Zeile.
+   */
+  selection?: ReactNode
 }) {
   return (
     <TableRow>
+      {selection !== undefined && (
+        <TableCell className="w-0">{selection}</TableCell>
+      )}
       <TableCell className="font-semibold">
         {href ? (
           <a href={href} className="hover:underline focus-visible:underline">

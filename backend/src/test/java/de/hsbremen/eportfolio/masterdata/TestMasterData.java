@@ -80,6 +80,21 @@ public final class TestMasterData {
 	}
 
 	/**
+	 * Wie {@link #faculty(String, String)}, aber ohne vorbelegte ID: fuer Tests,
+	 * die die Fakultaet tatsaechlich speichern.
+	 *
+	 * <p><strong>Das Kuerzel gehoert dem Test.</strong> {@code faculty.abbreviation}
+	 * ist unique, und die Entwicklungsdatenbank traegt bereits FK1 bis FK5 aus
+	 * dem Seeder; ein zweites FK4 scheiterte erst beim Flush. Wer diese Methode
+	 * benutzt, waehlt deshalb ein Kuerzel, das im Bestand nicht vorkommt.
+	 */
+	public static Faculty facultyWithoutId(String abbreviation, String name) {
+		Faculty faculty = faculty(abbreviation, name);
+		ReflectionTestUtils.setField(faculty, "id", null);
+		return faculty;
+	}
+
+	/**
 	 * Wie {@link #tag(String)}, aber ohne vorbelegte ID: fuer Tests, die das
 	 * Schlagwort tatsaechlich speichern.
 	 */

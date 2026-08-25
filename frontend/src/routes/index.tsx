@@ -16,6 +16,7 @@ import ProjectDetailPage from "@/features/projects/ProjectDetailPage"
 import ProjectListPage from "@/features/projects/ProjectListPage"
 import NewProjectPage from "@/features/projects/NewProjectPage"
 import ProjectMetadataPage from "@/features/projects/ProjectMetadataPage"
+import { AdministrationLayout } from "@/features/administration/AdministrationLayout"
 import ProjectReviewPage from "@/features/reviews/ProjectReviewPage"
 import PublicPortfolioPage from "@/features/portfolio/PublicPortfolioPage"
 import RegisterDetailsPage from "@/features/auth/RegisterDetailsPage"
@@ -25,6 +26,10 @@ import RegisterVerifyHsbEmailPage from "@/features/auth/RegisterVerifyHsbEmailPa
 import ResetPasswordPage from "@/features/auth/ResetPasswordPage"
 import ReviewListPage from "@/features/reviews/ReviewListPage"
 import TokenGalleryPage from "@/features/token-gallery/TokenGalleryPage"
+import {
+  AdminDashboardRoute,
+  AdminProjectListRoute,
+} from "@/routes/AdministrationRoute"
 import { AppLayout } from "@/routes/AppLayout"
 import { AuthLayout } from "@/routes/AuthLayout"
 import { EditorLayout } from "@/routes/EditorLayout"
@@ -129,73 +134,83 @@ export const routes: RouteObject[] = [
         element: <RequireRole roles={["ADMIN"]} />,
         children: [
           {
+            /* Der Rahmen der Administrationsseite mit der Seitennavigation
+               (KAN-38). Er liegt im Anwendungsrahmen und nicht daneben:
+               beide Frames zeichnen NavBar und Fusszeile, anders als beim
+               Editor. Die noch offenen Bereiche behalten ihren Platzhalter,
+               erscheinen aber innerhalb desselben Rahmens, damit die
+               Navigation von jeder Admin-Seite aus vollstaendig ist. */
             path: "/administration",
-            element: (
-              <PlaceholderPage
-                titleKey="placeholder.title.administration"
-                ticket="KAN-38"
-              />
-            ),
-          },
-          {
-            path: "/administration/projects",
-            element: (
-              <PlaceholderPage
-                titleKey="placeholder.title.adminProjects"
-                ticket="KAN-38"
-              />
-            ),
-          },
-          {
-            path: "/administration/users",
-            element: (
-              <PlaceholderPage
-                titleKey="placeholder.title.adminUsers"
-                ticket="KAN-39"
-              />
-            ),
-          },
-          {
-            path: "/administration/categories",
-            element: (
-              <PlaceholderPage
-                titleKey="placeholder.title.adminCategories"
-                ticket="KAN-39"
-              />
-            ),
-          },
-          {
-            path: "/administration/study-structure",
-            element: (
-              <PlaceholderPage
-                titleKey="placeholder.title.adminStudyStructure"
-                ticket="KAN-39"
-              />
-            ),
-          },
-          {
-            /* Das Protokoll liegt unter der Top-10-Verwaltung, weil es
-               deren Verlauf zeigt; die Verwaltung selbst ist die
-               Index-Route (Ticket KAN-7, Umfang 2). */
-            path: "/administration/top10",
+            element: <AdministrationLayout />,
             children: [
+              { index: true, element: <AdminDashboardRoute /> },
+              { path: "projects", element: <AdminProjectListRoute /> },
               {
-                index: true,
+                path: "users",
                 element: (
                   <PlaceholderPage
-                    titleKey="placeholder.title.adminTop10"
-                    ticket="KAN-40"
+                    titleKey="placeholder.title.adminUsers"
+                    ticket="KAN-39"
                   />
                 ),
               },
               {
-                path: "audit",
+                path: "categories",
                 element: (
                   <PlaceholderPage
-                    titleKey="placeholder.title.adminTop10Audit"
-                    ticket="KAN-40"
+                    titleKey="placeholder.title.adminCategories"
+                    ticket="KAN-39"
                   />
                 ),
+              },
+              {
+                /* Der siebte Eintrag der Figma-Komponente Sidebar, am
+                   17.08.2026 zwischen Kategorien und Studienstruktur
+                   dazugekommen (Confluence "Template-Abdeckung"). Die
+                   Oberflaeche dazu baut KAN-39, das Backend steht seit
+                   KAN-65. */
+                path: "semesters",
+                element: (
+                  <PlaceholderPage
+                    titleKey="placeholder.title.adminSemesters"
+                    ticket="KAN-39"
+                  />
+                ),
+              },
+              {
+                path: "study-structure",
+                element: (
+                  <PlaceholderPage
+                    titleKey="placeholder.title.adminStudyStructure"
+                    ticket="KAN-39"
+                  />
+                ),
+              },
+              {
+                /* Das Protokoll liegt unter der Top-10-Verwaltung, weil es
+                   deren Verlauf zeigt; die Verwaltung selbst ist die
+                   Index-Route (Ticket KAN-7, Umfang 2). */
+                path: "top10",
+                children: [
+                  {
+                    index: true,
+                    element: (
+                      <PlaceholderPage
+                        titleKey="placeholder.title.adminTop10"
+                        ticket="KAN-40"
+                      />
+                    ),
+                  },
+                  {
+                    path: "audit",
+                    element: (
+                      <PlaceholderPage
+                        titleKey="placeholder.title.adminTop10Audit"
+                        ticket="KAN-40"
+                      />
+                    ),
+                  },
+                ],
               },
             ],
           },

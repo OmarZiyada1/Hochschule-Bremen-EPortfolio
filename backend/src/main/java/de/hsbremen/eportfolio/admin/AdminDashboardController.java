@@ -34,10 +34,14 @@ public class AdminDashboardController {
 	}
 
 	@Operation(summary = "Dashboard-Kennzahlen lesen",
-			description = "Projekte je Status, Konten insgesamt sowie je Rolle und Status, "
-					+ "offene Top-10-Nominierungen und Inhaltsbloecke je Typ. Jede "
-					+ "Aufschluesselung enthaelt alle Werte ihres Enums, auch die mit dem "
-					+ "Wert 0. Alle Zahlen sind Bestandsgroessen zum Zeitpunkt des Aufrufs.")
+			description = "Projekte je Status und je Fakultaet, Konten insgesamt sowie je "
+					+ "Rolle und Status, offene Top-10-Nominierungen und Inhaltsbloecke je "
+					+ "Typ. Jede Aufschluesselung ist vollstaendig: die Enum-Karten tragen "
+					+ "alle Werte ihres Enums, projectsByFaculty jede Fakultaet, beides "
+					+ "auch mit dem Wert 0. Projekte ohne Fakultaet gehen in "
+					+ "projectsByFaculty nicht ein; die Summe dort ist also nicht die "
+					+ "Gesamtzahl der Projekte. Alle Zahlen sind Bestandsgroessen zum "
+					+ "Zeitpunkt des Aufrufs.")
 	@ApiResponse(responseCode = "200", description = "Die Kennzahlen.")
 	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
 	@ApiResponse(responseCode = "403", description = "NO_PERMISSION: die Rolle ist nicht ADMIN.")

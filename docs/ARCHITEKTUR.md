@@ -53,7 +53,7 @@ Was in welchem Paket steckt:
 
 | Paket        | Inhalt (Stand `main`) |
 |--------------|------------------------|
-| `admin`      | `AdminDashboardController`, `AdminDashboardService`, `AdminUserController`, `AdminUserService`, `AdminUserSpecifications`, `dto/{DashboardResponse, AdminUserResponse, AdminUserCreateRequest, AdminUserUpdateRequest}`. Seit KAN-25, siehe Kapitel 12 |
+| `admin`      | `AdminDashboardController`, `AdminDashboardService`, `AdminUserController`, `AdminUserService`, `AdminUserSpecifications`, `dto/{DashboardResponse, FacultyProjectCountResponse, AdminUserResponse, AdminUserCreateRequest, AdminUserUpdateRequest}`. Seit KAN-25, siehe Kapitel 12 |
 | `auth`       | `AuthController`, `AuthService`, `JwtService`, `JwtAuthenticationFilter`, `AttemptCounter`, `LoginAttemptService`, `DatabaseUserDetailsService`, `AuthenticatedUser`, `RestAuthenticationEntryPoint`, `RestAccessDeniedHandler`, `dto/{LoginRequest, LoginResponse, UserResponse}`. Seit KAN-26 zusätzlich die Registrierung: `RegistrationService`, `VerificationCode`, `VerificationCodeRepository`, `VerificationCodeService`, `VerificationAttemptService`, `EmailAddresses`, `PasswordPolicy`, `dto/{RegisterRequest, VerifyRequest, ResendVerificationRequest, VerificationStatusResponse}`. Die Properties-Records liegen seit KAN-50 in `config` |
 | `comment`    | `Comment`, `CommentRepository` |
 | `common.domain` | `BaseEntity`, `AuditableEntity` |
@@ -716,15 +716,27 @@ Zwei Bausteine passen in kein Feature und begründen das Paket `admin`:
    der heute einseitigen Abhängigkeit würde ein Kreis. Von `admin` aus zeigen
    dagegen alle Pfeile nach außen.
 
-### Das Dashboard: vier Gruppenabfragen statt fünfundzwanzig Zählungen
+### Das Dashboard: fünf Gruppenabfragen statt dreißig Zählungen
 
-Die vier Aufschlüsselungen umfassen fünf Projektstatus, drei Rollen, drei
-Kontostatus und vierzehn Blocktypen. Jeden Wert einzeln zu zählen wäre derselbe
-Inhalt in fünfundzwanzig Datenbankrunden, und jede neue Enum-Konstante bräuchte
-eine weitere Zeile Code. Stattdessen liefert je ein `group by` die
-Ergebniszeilen (`ProjectStatusCount`, `BlockTypeCount`, `UserRoleCount`,
+Die vier Enum-Aufschlüsselungen umfassen fünf Projektstatus, drei Rollen, drei
+Kontostatus und vierzehn Blocktypen, dazu kommen seit Contract v76 die
+Fakultäten. Jeden Wert einzeln zu zählen wäre derselbe Inhalt in dreißig
+Datenbankrunden, und jede neue Enum-Konstante bräuchte eine weitere Zeile Code.
+Stattdessen liefert je ein `group by` die Ergebniszeilen
+(`ProjectStatusCount`, `ProjectFacultyCount`, `BlockTypeCount`, `UserRoleCount`,
 `UserStatusCount`, im Stil von `ReactionCount`), und der Dienst füllt die
 fehlenden Enum-Werte mit 0 auf.
+
+**`projectsByFaculty` fällt aus dem Muster** (Contract v76, KAN-38). Es
+gruppiert nicht über ein Enum, sondern über eine Stammdatenzeile (§3.8), und ist
+deshalb eine Liste aus `{ faculty, count }` und keine Karte: eine Karte über die
+UUID zwänge die Oberfläche, zusätzlich `GET /faculties` zu laden, nur um eine
+Balkenreihe zu beschriften. Der vollständige Bestand, gegen den aufgefüllt wird,
+steht nicht im Code, sondern in der Tabelle; deshalb braucht diese Kennzahl als
+einzige eine zweite Abfrage (`FacultyRepository.findAllByOrderByAbbreviationAsc`).
+Projekte ohne Fakultät gehen nicht ein, weil `Project.facultyId` bis zum
+Einreichen null ist (§3.3); die Summe der Liste ist daher nicht die Gesamtzahl
+der Projekte.
 
 **Das Auffüllen ist Teil der Zusage** (Contract v26): eine Karte enthält immer
 alle Werte ihres Enums. Ohne das müsste das Frontend die Listen aus §2 ein

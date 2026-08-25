@@ -197,3 +197,44 @@ export type BlockType = BlockResponse["type"]
  */
 export type StatusHistoryResponse = ApiSchemas["StatusHistoryResponse"]
 export type ReactionResponse = ApiSchemas["ReactionResponse"]
+
+/**
+ * Kennzahlen der Administrationsseite, GET /api/admin/dashboard (§6.1,
+ * KAN-38). Die vier Aufschluesselungen kommen als Karte ueber ihr Enum und
+ * enthalten jeden Wert, auch die mit 0; der Client interpretiert einen
+ * fehlenden Schluessel deshalb nie als Null, sondern als Fehler.
+ *
+ * <p>projectsByFaculty faellt aus dem Muster (Contract v76): die Fakultaet
+ * ist keine Enum-Konstante, sondern eine Stammdatenzeile, und die Kennzahl
+ * ist deshalb eine Liste aus { faculty, count } statt einer Karte. Sie
+ * enthaelt jede Fakultaet, auch die ohne Projekte, aber keine Projekte ohne
+ * Fakultaet: ihre Summe ist nicht die Gesamtzahl.
+ */
+export type DashboardResponse = ApiSchemas["DashboardResponse"]
+export type FacultyProjectCountResponse =
+  ApiSchemas["FacultyProjectCountResponse"]
+
+/**
+ * Sammel-Statuswechsel der Projektverwaltung, POST
+ * /api/admin/projects/status (§6.1, KAN-38).
+ *
+ * <p><strong>Die Antwort ist eine Ergebnisliste, kein Sammelerfolg.</strong>
+ * Je angefragter ID steht eine Zeile darin, in der Reihenfolge des Bodys,
+ * und jede traegt success und im Fehlerfall den errorCode aus §6.2. Einen
+ * Meldungstext liefert sie bewusst nicht: angezeigt wird nach dem Code ueber
+ * i18n (Frontend-Regel 3).
+ */
+export type ProjectBulkStatusRequest = ApiSchemas["ProjectBulkStatusRequest"]
+export type ProjectBulkStatusResponse = ApiSchemas["ProjectBulkStatusResponse"]
+export type ProjectBulkStatusResultResponse =
+  ApiSchemas["ProjectBulkStatusResultResponse"]
+
+/** Der auszufuehrende Uebergang des Sammel-Aufrufs: publish oder request-revision. */
+export type BulkStatusAction = NonNullable<ProjectBulkStatusRequest["action"]>
+
+/**
+ * Redaktion eines fremden Projekts umverteilen, PUT
+ * /api/projects/{id}/editors (§6.1, ADMIN). Die Liste ersetzt die bisherige
+ * vollstaendig; [] hebt die Zuweisung auf.
+ */
+export type ProjectEditorsRequest = ApiSchemas["ProjectEditorsRequest"]

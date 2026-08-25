@@ -5,6 +5,7 @@ import { emptyPage } from "@/api/page"
 import type {
   BlockResponse,
   CommentResponse,
+  DashboardResponse,
   OwnPortfolioResponse,
   ProjectDetailResponse,
   UserResponse,
@@ -77,6 +78,39 @@ export function currentUserHandler(overrides: Partial<UserResponse> = {}) {
  */
 export function emptyProjectsHandler() {
   return http.get("*/api/projects", () => HttpResponse.json(emptyPage()))
+}
+
+/**
+ * GET /api/admin/dashboard (§6.1, KAN-38), als Grundantwort fuer Tests, die
+ * das Dashboard nur streifen.
+ *
+ * <p>Vollstaendig sind hier die drei Aufschluesselungen, auf die sich die
+ * Oberflaeche stuetzt: projectsByStatus, usersByRole und usersByStatus tragen
+ * jeden Wert ihres Enums, auch die mit 0, genau wie der Server es seit
+ * Contract v26 zusagt. blocksByType bleibt dagegen leer und projectsByFaculty
+ * ebenso: keine Ansicht liest sie in dieser Grundform, und vierzehn
+ * Blocktypen in jeder Attrappe waeren Ballast. Wer sie braucht, reicht sie
+ * als Ueberschreibung herein.
+ */
+export function dashboardHandler(overrides: Partial<DashboardResponse> = {}) {
+  return http.get("*/api/admin/dashboard", () =>
+    HttpResponse.json({
+      projectsByStatus: {
+        DRAFT: 0,
+        SUBMITTED: 0,
+        APPROVED: 0,
+        PUBLISHED: 0,
+        REVISION: 0,
+      },
+      projectsByFaculty: [],
+      usersTotal: 0,
+      usersByRole: { STUDENT: 0, EDITOR: 0, ADMIN: 0 },
+      usersByStatus: { REGISTRATION_PENDING: 0, ACTIVE: 0, DEACTIVATED: 0 },
+      openNominations: 0,
+      blocksByType: {},
+      ...overrides,
+    } satisfies DashboardResponse)
+  )
 }
 
 /**
