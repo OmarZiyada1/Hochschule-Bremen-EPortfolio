@@ -238,3 +238,62 @@ export type BulkStatusAction = NonNullable<ProjectBulkStatusRequest["action"]>
  * vollstaendig; [] hebt die Zuweisung auf.
  */
 export type ProjectEditorsRequest = ApiSchemas["ProjectEditorsRequest"]
+
+/**
+ * Nutzerverwaltung, GET/POST /api/admin/users und GET/PATCH/DELETE
+ * /api/admin/users/{id} (§3.1, §6.1, KAN-39).
+ *
+ * <p><strong>AdminUserResponse ist der einzige Antworttyp mit fremder
+ * hsbEmail</strong> (§3.1). Sie erscheint deshalb ausschliesslich in der
+ * Nutzerverwaltung; die eigene Adresse fuehren seit Contract v50 auch die
+ * Auth-Antworten an die Person selbst. Fuer Auswahlfelder gibt es
+ * {@link UserLookupResponse}, das keine Adresse traegt.
+ *
+ * <p><strong>Anlegen und Aendern sind nicht dasselbe.</strong>
+ * AdminUserCreateRequest fuehrt alle sechs Felder als Pflicht,
+ * einschliesslich des Initialpassworts, das der Client erzeugt (Contract
+ * v27). AdminUserUpdateRequest fuehrt vier optionale Felder; ein fehlendes
+ * heisst „unveraendert", nicht „loeschen".
+ */
+export type AdminUserResponse = ApiSchemas["AdminUserResponse"]
+export type AdminUserCreateRequest = ApiSchemas["AdminUserCreateRequest"]
+export type AdminUserUpdateRequest = ApiSchemas["AdminUserUpdateRequest"]
+
+/**
+ * Antwort von POST /api/admin/users/{id}/reset-password (§6.7, KAN-43): das
+ * vom Server erzeugte Initialpasswort. Es erscheint in genau dieser einen
+ * Antwort und wird nirgends gespeichert.
+ */
+export type AdminPasswordResetResponse =
+  ApiSchemas["AdminPasswordResetResponse"]
+
+/**
+ * Stammdaten schreiben (§3.6 bis §3.9, §3.18, §6.1, KAN-39). Gelesen wird
+ * ueber die PUBLIC-Listen; hier stehen allein die Koerper der
+ * Admin-Endpoints.
+ *
+ * <p><strong>Create und Update unterscheiden sich in der Pflicht.</strong>
+ * Beim Anlegen ist der Name Pflicht und beim Studiengang zusaetzlich die
+ * facultyId, beim Modul die studyProgramId; beim Aendern ist jedes Feld
+ * optional und ein fehlendes heisst „unveraendert". Die Kurzform ist nur an
+ * der Fakultaet Pflicht (unique, not null, §3.8), an Studiengang und Modul
+ * darf sie fehlen.
+ */
+export type CategoryCreateRequest = ApiSchemas["CategoryCreateRequest"]
+export type CategoryUpdateRequest = ApiSchemas["CategoryUpdateRequest"]
+export type CategoryMergeRequest = ApiSchemas["CategoryMergeRequest"]
+export type FacultyCreateRequest = ApiSchemas["FacultyCreateRequest"]
+export type FacultyUpdateRequest = ApiSchemas["FacultyUpdateRequest"]
+export type StudyProgramCreateRequest = ApiSchemas["StudyProgramCreateRequest"]
+export type StudyProgramUpdateRequest = ApiSchemas["StudyProgramUpdateRequest"]
+export type ModuleCreateRequest = ApiSchemas["ModuleCreateRequest"]
+export type ModuleUpdateRequest = ApiSchemas["ModuleUpdateRequest"]
+export type SemesterCreateRequest = ApiSchemas["SemesterCreateRequest"]
+export type SemesterUpdateRequest = ApiSchemas["SemesterUpdateRequest"]
+
+/**
+ * Richtung des Verschiebens, POST /api/admin/semesters/{id}/move (§3.18).
+ * UP tauscht mit der Zeile darueber, DOWN mit der darunter.
+ */
+export type SemesterMoveRequest = ApiSchemas["SemesterMoveRequest"]
+export type SemesterMoveDirection = SemesterMoveRequest["direction"]

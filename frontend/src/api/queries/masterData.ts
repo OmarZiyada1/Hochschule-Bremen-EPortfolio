@@ -3,11 +3,24 @@ import { queryOptions } from "@tanstack/react-query"
 import { api } from "@/api/client"
 import { apiPaths } from "@/api/endpoints"
 import type {
+  CategoryCreateRequest,
+  CategoryMergeRequest,
   CategoryResponse,
+  CategoryUpdateRequest,
+  FacultyCreateRequest,
   FacultyResponse,
+  FacultyUpdateRequest,
+  ModuleCreateRequest,
   ModuleResponse,
+  ModuleUpdateRequest,
+  SemesterCreateRequest,
+  SemesterMoveDirection,
+  SemesterMoveRequest,
   SemesterResponse,
+  SemesterUpdateRequest,
+  StudyProgramCreateRequest,
   StudyProgramResponse,
+  StudyProgramUpdateRequest,
 } from "@/api/types"
 
 /**
@@ -94,4 +107,172 @@ export const masterDataQueries = {
           query: { studyProgram: studyProgramId },
         }),
     }),
+}
+
+/*
+ * Die schreibende Seite der Stammdaten (§6.1, KAN-39).
+ *
+ * <p><strong>Hier und nicht in admin.ts</strong>, obwohl die Pfade unter
+ * /api/admin liegen: der Zuschnitt ist die Ressource, nicht die Rolle. Was
+ * hier geaendert wird, ist genau das, was die Fabriken oben lesen, und das
+ * Backend buendelt es ebenso (MasterDataAdminController im Paket masterdata,
+ * AdminUserController im Paket admin). In admin.ts steht, was es nur fuer
+ * ADMIN ueberhaupt gibt.
+ *
+ * <p><strong>Zwei Fehler tragen denselben Code.</strong> 409
+ * RESOURCE_IN_USE meint beim Anlegen und Umbenennen den bereits vergebenen
+ * eindeutigen Wert, beim Loeschen die noch referenzierte Zeile (Contract
+ * v26). Unterschieden wird nach der ausgeloesten Aktion, nie nach dem Code
+ * allein; die aufrufende Ansicht weiss, welche sie war.
+ *
+ * <p><strong>Eine unbekannte ID im Body ergibt 400, nicht 404</strong>
+ * (§6.3.1): ein Studiengang mit unbekannter facultyId ist eine unbrauchbare
+ * Anfrage und keine fehlende Ressource. Der 404 bleibt der unbekannten ID im
+ * Pfad vorbehalten.
+ */
+
+export function createCategory(
+  request: CategoryCreateRequest
+): Promise<CategoryResponse> {
+  return api.post<CategoryResponse>(apiPaths.admin.categories, request)
+}
+
+export function updateCategory(
+  categoryId: string,
+  request: CategoryUpdateRequest
+): Promise<CategoryResponse> {
+  return api.patch<CategoryResponse>(
+    apiPaths.admin.category(categoryId),
+    request
+  )
+}
+
+export function deleteCategory(categoryId: string): Promise<void> {
+  return api.delete<void>(apiPaths.admin.category(categoryId))
+}
+
+/**
+ * Zusammenfuehren zweier Kategorien (§6.1, seit Contract v32, KAN-46).
+ *
+ * <p>Haengt alle Projekte der Quelle an das Ziel um und loescht die Quelle;
+ * die Antwort ist die <em>Ziel</em>kategorie. Quelle gleich Ziel ergibt
+ * <strong>400</strong>, eine unbekannte targetCategoryId ebenfalls; nur die
+ * unbekannte ID im Pfad ergibt <strong>404</strong>.
+ *
+ * <p>Der Vorgang erfasst auch veroeffentlichte Projekte und gibt ihnen eine
+ * neue version (§6.4). Die Liste wird danach neu geladen, denn die Quelle
+ * gibt es nicht mehr.
+ */
+export function mergeCategories(
+  sourceCategoryId: string,
+  targetCategoryId: string
+): Promise<CategoryResponse> {
+  return api.post<CategoryResponse>(
+    apiPaths.admin.categoryMerge(sourceCategoryId),
+    { targetCategoryId } satisfies CategoryMergeRequest
+  )
+}
+
+export function createFaculty(
+  request: FacultyCreateRequest
+): Promise<FacultyResponse> {
+  return api.post<FacultyResponse>(apiPaths.admin.faculties, request)
+}
+
+export function updateFaculty(
+  facultyId: string,
+  request: FacultyUpdateRequest
+): Promise<FacultyResponse> {
+  return api.patch<FacultyResponse>(apiPaths.admin.faculty(facultyId), request)
+}
+
+export function deleteFaculty(facultyId: string): Promise<void> {
+  return api.delete<void>(apiPaths.admin.faculty(facultyId))
+}
+
+export function createStudyProgram(
+  request: StudyProgramCreateRequest
+): Promise<StudyProgramResponse> {
+  return api.post<StudyProgramResponse>(apiPaths.admin.studyPrograms, request)
+}
+
+export function updateStudyProgram(
+  studyProgramId: string,
+  request: StudyProgramUpdateRequest
+): Promise<StudyProgramResponse> {
+  return api.patch<StudyProgramResponse>(
+    apiPaths.admin.studyProgram(studyProgramId),
+    request
+  )
+}
+
+export function deleteStudyProgram(studyProgramId: string): Promise<void> {
+  return api.delete<void>(apiPaths.admin.studyProgram(studyProgramId))
+}
+
+export function createModule(
+  request: ModuleCreateRequest
+): Promise<ModuleResponse> {
+  return api.post<ModuleResponse>(apiPaths.admin.modules, request)
+}
+
+export function updateModule(
+  moduleId: string,
+  request: ModuleUpdateRequest
+): Promise<ModuleResponse> {
+  return api.patch<ModuleResponse>(apiPaths.admin.module(moduleId), request)
+}
+
+export function deleteModule(moduleId: string): Promise<void> {
+  return api.delete<void>(apiPaths.admin.module(moduleId))
+}
+
+/**
+ * Semester anlegen (§3.18, §6.1). Die neue Zeile bekommt den hoechsten
+ * sortOrder und steht damit am Ende der Reihenfolge; {@code active} fehlt
+ * bewusst im Koerper, denn ohne Angabe ist ein Semester aktiv.
+ */
+export function createSemester(
+  request: SemesterCreateRequest
+): Promise<SemesterResponse> {
+  return api.post<SemesterResponse>(apiPaths.admin.semesters, request)
+}
+
+/**
+ * Semester umbenennen oder aus der Auswahl nehmen (§3.18, §6.1).
+ *
+ * <p>Ein eigener Endpoint fuer das Deaktivieren gibt es nicht, und das ist
+ * kein Versaeumnis: {@code active} ist ein gewoehnliches Attribut der Zeile
+ * und kein Zustandsuebergang im Sinne von §4.1.
+ */
+export function updateSemester(
+  semesterId: string,
+  request: SemesterUpdateRequest
+): Promise<SemesterResponse> {
+  return api.patch<SemesterResponse>(
+    apiPaths.admin.semester(semesterId),
+    request
+  )
+}
+
+export function deleteSemester(semesterId: string): Promise<void> {
+  return api.delete<void>(apiPaths.admin.semester(semesterId))
+}
+
+/**
+ * Ein Semester in der Reihenfolge verschieben (§3.18, §6.1).
+ *
+ * <p><strong>Die Antwort ist die vollstaendige neue Reihenfolge</strong> und
+ * nicht die eine verschobene Zeile: der Tausch betrifft immer zwei. Am
+ * oberen oder unteren Rand ist der Aufruf wirkungslos und ergibt trotzdem
+ * <strong>200</strong>, weil der gewuenschte Zustand bereits besteht; die
+ * Oberflaeche sperrt die Pfeile dort trotzdem.
+ */
+export function moveSemester(
+  semesterId: string,
+  direction: SemesterMoveDirection
+): Promise<SemesterResponse[]> {
+  return api.post<SemesterResponse[]>(apiPaths.admin.semesterMove(semesterId), {
+    direction,
+  } satisfies SemesterMoveRequest)
 }

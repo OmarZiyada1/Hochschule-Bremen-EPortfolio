@@ -27,8 +27,12 @@ import ResetPasswordPage from "@/features/auth/ResetPasswordPage"
 import ReviewListPage from "@/features/reviews/ReviewListPage"
 import TokenGalleryPage from "@/features/token-gallery/TokenGalleryPage"
 import {
+  AdminCategoryListRoute,
   AdminDashboardRoute,
   AdminProjectListRoute,
+  AdminSemesterListRoute,
+  AdminStudyStructureRoute,
+  AdminUserListRoute,
 } from "@/routes/AdministrationRoute"
 import { AppLayout } from "@/routes/AppLayout"
 import { AuthLayout } from "@/routes/AuthLayout"
@@ -145,46 +149,19 @@ export const routes: RouteObject[] = [
             children: [
               { index: true, element: <AdminDashboardRoute /> },
               { path: "projects", element: <AdminProjectListRoute /> },
-              {
-                path: "users",
-                element: (
-                  <PlaceholderPage
-                    titleKey="placeholder.title.adminUsers"
-                    ticket="KAN-39"
-                  />
-                ),
-              },
-              {
-                path: "categories",
-                element: (
-                  <PlaceholderPage
-                    titleKey="placeholder.title.adminCategories"
-                    ticket="KAN-39"
-                  />
-                ),
-              },
+              { path: "users", element: <AdminUserListRoute /> },
+              { path: "categories", element: <AdminCategoryListRoute /> },
               {
                 /* Der siebte Eintrag der Figma-Komponente Sidebar, am
                    17.08.2026 zwischen Kategorien und Studienstruktur
                    dazugekommen (Confluence "Template-Abdeckung"). Die
-                   Oberflaeche dazu baut KAN-39, das Backend steht seit
-                   KAN-65. */
+                   Oberflaeche steht seit KAN-39, das Backend seit KAN-65. */
                 path: "semesters",
-                element: (
-                  <PlaceholderPage
-                    titleKey="placeholder.title.adminSemesters"
-                    ticket="KAN-39"
-                  />
-                ),
+                element: <AdminSemesterListRoute />,
               },
               {
                 path: "study-structure",
-                element: (
-                  <PlaceholderPage
-                    titleKey="placeholder.title.adminStudyStructure"
-                    ticket="KAN-39"
-                  />
-                ),
+                element: <AdminStudyStructureRoute />,
               },
               {
                 /* Das Protokoll liegt unter der Top-10-Verwaltung, weil es

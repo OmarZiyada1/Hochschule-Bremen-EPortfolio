@@ -3,8 +3,8 @@ import { lazy, Suspense, type ComponentType } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 
 /**
- * Die beiden Seiten der Administrationsseite als eigener Chunk (KAN-38),
- * nach demselben Muster und aus demselben Grund wie der Editor
+ * Die Seiten der Administrationsseite als eigener Chunk (KAN-38, erweitert
+ * mit KAN-39), nach demselben Muster und aus demselben Grund wie der Editor
  * ({@code EditorRoute}).
  *
  * <p><strong>Warum nachgeladen wird.</strong> Die Startansicht zieht ueber die
@@ -25,6 +25,18 @@ const AdminDashboardPage = lazy(
 )
 const AdminProjectListPage = lazy(
   () => import("@/features/administration/AdminProjectListPage")
+)
+const AdminUserListPage = lazy(
+  () => import("@/features/administration/AdminUserListPage")
+)
+const AdminCategoryListPage = lazy(
+  () => import("@/features/administration/AdminCategoryListPage")
+)
+const AdminSemesterListPage = lazy(
+  () => import("@/features/administration/AdminSemesterListPage")
+)
+const AdminStudyStructurePage = lazy(
+  () => import("@/features/administration/AdminStudyStructurePage")
 )
 
 /**
@@ -55,4 +67,20 @@ export function AdminDashboardRoute() {
 
 export function AdminProjectListRoute() {
   return withFallback(AdminProjectListPage)
+}
+
+export function AdminUserListRoute() {
+  return withFallback(AdminUserListPage)
+}
+
+export function AdminCategoryListRoute() {
+  return withFallback(AdminCategoryListPage)
+}
+
+export function AdminSemesterListRoute() {
+  return withFallback(AdminSemesterListPage)
+}
+
+export function AdminStudyStructureRoute() {
+  return withFallback(AdminStudyStructurePage)
 }

@@ -1,4 +1,5 @@
 import type {
+  AdminUserResponse,
   ApiSchemas,
   CommentResponse,
   OwnPortfolioResponse,
@@ -186,6 +187,35 @@ export function nomination(
     decidedBy: null,
     decidedAt: null,
     createdAt: "2026-01-03T10:00:00Z",
+    ...overrides,
+  }
+}
+
+/**
+ * Ein Konto der Nutzerverwaltung (§3.1, §6.1; KAN-39). Ohne Ueberschreibung
+ * ein aktives studentisches Konto mit beiden bestaetigten Adressen und ohne
+ * offenen Passwortwechsel.
+ *
+ * <p>Es ist der einzige Antworttyp mit fremder hsbEmail; die Fabrik fuehrt
+ * sie deshalb ausdruecklich, damit ein Test die Zusage aus §3.1 an genau
+ * dieser Stelle pruefen kann.
+ */
+export function adminUser(
+  overrides: Partial<AdminUserResponse> = {}
+): AdminUserResponse {
+  return {
+    id: "au-1",
+    email: "lena.mueller@example.org",
+    hsbEmail: "lena.mueller@stud.hs-bremen.de",
+    emailVerified: true,
+    hsbEmailVerified: true,
+    passwordChangeRequired: false,
+    firstName: "Lena",
+    lastName: "Mueller",
+    role: "STUDENT",
+    status: "ACTIVE",
+    createdAt: "2026-03-14T09:00:00Z",
+    updatedAt: "2026-03-14T09:00:00Z",
     ...overrides,
   }
 }

@@ -1,8 +1,11 @@
 import type { ReactNode } from "react"
+import { useTranslation } from "react-i18next"
 
-import type { Role } from "@/api/types"
+import type { Role, UserStatus } from "@/api/types"
+import { Pill } from "@/components/common/Pill"
 import { RoleBadge } from "@/components/common/RoleBadge"
 import { UserAvatar } from "@/components/common/UserAvatar"
+import { UserStatusBadge } from "@/components/common/UserStatusBadge"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { fullNameOf, type PersonName } from "@/lib/name"
 
@@ -10,25 +13,54 @@ import { fullNameOf, type PersonName } from "@/lib/name"
  * Nutzerzeile der Administrationsseite (Figma "User Row"): Avatar, Name
  * und E-Mail, Rolle, Aktionen.
  *
- * Die gezeigte Adresse ist die Anmeldeadresse aus §3.1, nie hsbEmail: das
- * Feld verlaesst den Server nicht und steht deshalb auch in keiner Prop.
+ * Die gezeigte Adresse in {@code email} ist die Anmeldeadresse aus §3.1.
  *
  * actions ist wie in der Projektzeile nur ein Platz; welche Handlungen dort
  * erscheinen, entscheidet die Seite anhand der Rechtematrix (§5).
+ *
+ * <p><strong>Drei Spalten sind seit KAN-39 zuschaltbar</strong>, und die
+ * Zeile bleibt ohne sie genau die alte: {@code hsbEmail}, {@code status} und
+ * {@code createdAt} erscheinen nur, wenn die Seite sie mitgibt. Erweitert
+ * statt daneben nachgebaut, weil eine zweite Nutzerzeile beim naechsten
+ * Feinschliff auseinanderliefe (Befund aus KAN-7).
+ *
+ * <p><strong>hsbEmail steht ausschliesslich in der
+ * Nutzerverwaltung.</strong> §3.1 laesst die HSB-Adresse fremder Konten
+ * genau dort ausgeben; jede andere Ansicht dieser Zeile laesst die Prop weg,
+ * und dann gibt es die Spalte nicht.
  */
 export function UserTableRow({
   person,
   email,
   role,
   avatarUrl,
+  hsbEmail,
+  status,
+  passwordChangeRequired = false,
+  createdAt,
   actions,
 }: {
   person: PersonName
   email: string
   role: Role
   avatarUrl?: string | null
+  /** Hochschuladresse, nur in der Nutzerverwaltung (§3.1). */
+  hsbEmail?: string
+  /** Kontostatus (§2.9). Ohne Angabe entfaellt die Spalte. */
+  status?: UserStatus
+  /**
+   * Traegt das Konto noch ein administrativ gesetztes Initialpasswort
+   * (§6.7)? Wirkt nur zusammen mit {@code status}: der Hinweis steht als
+   * zweite Marke in derselben Zelle, weil er den Status naeher bestimmt und
+   * keine eigene Spalte fuellt.
+   */
+  passwordChangeRequired?: boolean
+  /** Anlegezeitpunkt, bereits in der Sprache der lesenden Person. */
+  createdAt?: string
   actions?: ReactNode
 }) {
+  const { t } = useTranslation()
+
   return (
     <TableRow>
       <TableCell>
@@ -40,9 +72,25 @@ export function UserTableRow({
           </div>
         </div>
       </TableCell>
+      {hsbEmail !== undefined && (
+        <TableCell className="break-all">{hsbEmail}</TableCell>
+      )}
       <TableCell>
         <RoleBadge role={role} />
       </TableCell>
+      {status !== undefined && (
+        <TableCell>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <UserStatusBadge status={status} />
+            {passwordChangeRequired && (
+              <Pill tone="warning">{t("user.passwordChangeRequired")}</Pill>
+            )}
+          </div>
+        </TableCell>
+      )}
+      {createdAt !== undefined && (
+        <TableCell className="whitespace-nowrap">{createdAt}</TableCell>
+      )}
       <TableCell className="text-right">{actions}</TableCell>
     </TableRow>
   )

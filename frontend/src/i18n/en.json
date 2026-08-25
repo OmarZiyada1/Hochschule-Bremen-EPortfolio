@@ -83,7 +83,9 @@
         "de": "Switch to German",
         "en": "Switch to English"
       }
-    }
+    },
+    "yes": "Yes",
+    "no": "No"
   },
   "home": {
     "hero": {
@@ -291,6 +293,20 @@
     "revision": {
       "reasonRequired": "Please enter a reason.",
       "reasonTooLong": "The reason is too long (5000 characters at most)."
+    },
+    "role": {
+      "required": "Please select a role."
+    },
+    "masterData": {
+      "nameRequired": "Please enter a name.",
+      "nameTooLong": "The name may be at most 255 characters long.",
+      "categoryNameTooLong": "The name may be at most 255 characters long.",
+      "semesterNameTooLong": "The name may be at most 64 characters long.",
+      "abbreviationRequired": "Please enter an abbreviation.",
+      "abbreviationTooLong": "The short form may be at most 64 characters long.",
+      "facultyRequired": "Please select a faculty.",
+      "studyProgramRequired": "Please select a study programme.",
+      "targetRequired": "Please select a target category."
     }
   },
   "placeholder": {
@@ -825,7 +841,8 @@
       "STUDENT": "Students",
       "EDITOR": "Editors",
       "ADMIN": "Admins"
-    }
+    },
+    "passwordChangeRequired": "Password change pending"
   },
   "top10": {
     "position": "Rank {{position}}",
@@ -1490,6 +1507,300 @@
         "emptyHint": "Without an assignment the project does not show up for anyone to review.",
         "done": "The editors of “{{title}}” have been changed."
       }
+    },
+    "users": {
+      "title": "Users",
+      "subtitle_one": "{{shown}} of {{count}} account",
+      "subtitle_other": "{{shown}} of {{count}} accounts",
+      "subtitleLoading": "Loading accounts …",
+      "search": {
+        "label": "Search accounts",
+        "placeholder": "Search name or email …"
+      },
+      "filter": {
+        "roleLabel": "Filter by role",
+        "statusLabel": "Filter by account status",
+        "allStatuses": "Status (all)"
+      },
+      "column": {
+        "name": "Name",
+        "email": "Private email",
+        "hsbEmail": "HSB email",
+        "role": "Role",
+        "status": "Status",
+        "createdAt": "Created",
+        "actions": "Actions"
+      },
+      "empty": {
+        "title": "No accounts",
+        "description": "No account has been created yet.",
+        "filtered": "No account matches this search. Change the search term or the filters."
+      },
+      "row": {
+        "menuFor": "Actions for {{name}}",
+        "details": "Details",
+        "changeRole": "Change role",
+        "activate": "Activate account",
+        "deactivate": "Deactivate account",
+        "resetPassword": "Reset password"
+      },
+      "created": "“{{name}}” has been created.",
+      "roleChanged": "“{{name}}” now has the role {{role}}.",
+      "activated": "“{{name}}” is active again.",
+      "deactivated": "“{{name}}” has been deactivated.",
+      "passwordReset": "A new initial password is ready for “{{name}}”.",
+      "roleDialog": {
+        "title": "Change role?",
+        "description": "The role of “{{name}}” changes when you save. It takes effect immediately, even for a session that is already signed in.",
+        "confirm": "Change role"
+      },
+      "deactivateDialog": {
+        "title": "Deactivate account?",
+        "description": "“{{name}}” will no longer be able to sign in, immediately, even for a session that is already signed in. Nothing is deleted: projects, comments and reactions remain.",
+        "confirm": "Deactivate account"
+      },
+      "resetDialog": {
+        "title": "Reset password?",
+        "description": "A new initial password will be generated for “{{name}}”. The previous one stops working.",
+        "doneDescription": "“{{name}}” signs in with this initial password and has to change it right away.",
+        "confirm": "Reset password",
+        "passwordLabel": "Initial password",
+        "hint": "It appears here only. Note it down or copy it before you close the dialog."
+      },
+      "detail": {
+        "title": "Account",
+        "subtitle": "Everything this account holds.",
+        "emailVerified": "Private email verified",
+        "hsbEmailVerified": "HSB email verified",
+        "passwordChangeRequired": "Password change pending",
+        "updatedAt": "Last changed"
+      },
+      "create": {
+        "trigger": "Create account",
+        "title": "Create account",
+        "subtitle": "The account works right away. The person has to change the initial password on first sign-in.",
+        "doneSubtitle": "The account has been created.",
+        "doneHint": "The account is active. A password change is required on first sign-in.",
+        "field": {
+          "firstName": "First name",
+          "lastName": "Last name",
+          "email": "Private email",
+          "hsbEmail": "HSB email",
+          "role": "Role",
+          "password": "Initial password"
+        },
+        "placeholder": {
+          "firstName": "Erika",
+          "lastName": "Musterfrau",
+          "email": "erika@example.org",
+          "hsbEmail": "emusterfrau@stud.hs-bremen.de",
+          "password": "At least 12 characters"
+        },
+        "hint": {
+          "email": "Sign-in identifier. Stays reachable after graduation.",
+          "hsbEmail": "Proof of university affiliation. Must end in @stud.hs-bremen.de or @hs-bremen.de.",
+          "password": "At least 12, at most 72 characters. Hand it over in person."
+        },
+        "rolePlaceholder": "Select a role",
+        "roleOption": {
+          "STUDENT": "Students: create and submit their own projects",
+          "EDITOR": "Editorial: reviews, approves and publishes",
+          "ADMIN": "Administration: full management of the portal"
+        },
+        "adminHint": "This account gets full access to the administration area.",
+        "generatePassword": "Generate password",
+        "copyPassword": "Copy",
+        "copyCredentials": "Copy credentials",
+        "credentials": "{{name}}\nSign-in: {{email}}\nInitial password: {{password}}",
+        "credentialsCopied": "Credentials copied.",
+        "passwordCopied": "Password copied.",
+        "passwordGenerated": "Password generated.",
+        "copyFailed": "Copying was not possible. Please take the value over by hand.",
+        "submit": "Create account",
+        "done": "Done",
+        "leave": {
+          "title": "Discard your entries?",
+          "description": "The account has not been created yet. Closing loses the entries and the generated initial password.",
+          "confirm": "Discard",
+          "cancel": "Keep editing"
+        }
+      },
+      "actionNotAllowed": "This action is not allowed on this account."
+    },
+    "masterData": {
+      "menuFor": "Actions for {{name}}",
+      "rename": "Rename",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Delete permanently",
+      "optional": "(optional)",
+      "nameInUse": "That value already exists."
+    },
+    "categories": {
+      "title": "Categories",
+      "subtitle_one": "{{count}} category in total",
+      "subtitle_other": "{{count}} categories in total",
+      "subtitleLoading": "Loading categories …",
+      "search": {
+        "label": "Search categories",
+        "placeholder": "Search categories …"
+      },
+      "create": {
+        "label": "Name of the new category",
+        "placeholder": "Add a category …",
+        "submit": "Create category"
+      },
+      "group": {
+        "range": "{{from}} – {{to}}",
+        "other": "Digits and other",
+        "count": "({{count}})"
+      },
+      "merge": "Merge",
+      "created": "“{{name}}” has been created.",
+      "renamed": "The category is now called “{{name}}”.",
+      "deleted": "“{{name}}” has been deleted.",
+      "merged": "“{{source}}” is now part of “{{target}}”.",
+      "empty": {
+        "title": "No category yet",
+        "description": "Create the first category using the field above.",
+        "filteredTitle": "No matches",
+        "filtered": "No category matches this search."
+      },
+      "deleteDialog": {
+        "title": "Delete category?",
+        "description": "“{{name}}” will be deleted. As long as projects still use it, the server refuses; move them over with “Merge” first."
+      },
+      "renameDialog": {
+        "title": "Rename category",
+        "description": "The new name appears everywhere projects carry this category."
+      },
+      "mergeDialog": {
+        "title": "Merge category",
+        "description": "Every project in “{{name}}” gets the target category. Afterwards “{{name}}” is deleted.",
+        "targetLabel": "Target category",
+        "targetPlaceholder": "Select a target category",
+        "targetHint": "This cannot be undone and also covers published projects.",
+        "confirm": "Merge"
+      },
+      "deleteBlocked": "“{{name}}” cannot be deleted while projects carry this category. Merge it into another one first."
+    },
+    "semesters": {
+      "title": "Semesters",
+      "subtitleLoading": "Loading semesters …",
+      "activeHint": "Only active semesters can be picked when a project is created.",
+      "search": {
+        "label": "Search semesters",
+        "placeholder": "Search semesters …"
+      },
+      "create": {
+        "label": "Name of the new semester",
+        "placeholder": "e.g. WiSe 2026/27",
+        "submit": "Create semester"
+      },
+      "column": {
+        "name": "Semester",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "state": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "created": "“{{name}}” has been created.",
+      "renamed": "The semester is now called “{{name}}”.",
+      "deleted": "“{{name}}” has been deleted.",
+      "moved": "The order changed, “{{name}}” sits in a new place.",
+      "activated": "“{{name}}” can be picked again.",
+      "deactivated": "“{{name}}” can no longer be picked.",
+      "empty": {
+        "title": "No semester yet",
+        "description": "Create the first semester using the field above.",
+        "filteredTitle": "No matches",
+        "filtered": "No semester matches this search."
+      },
+      "deleteDialog": {
+        "title": "Delete semester?",
+        "description": "“{{name}}” will be deleted. As long as projects point to it, the server refuses; take it out of the selection instead."
+      },
+      "renameDialog": {
+        "title": "Rename semester",
+        "description": "The new name appears everywhere projects carry this semester."
+      },
+      "moveUpFor": "Move up, {{name}}",
+      "moveDownFor": "Move down, {{name}}",
+      "deleteBlocked": "“{{name}}” cannot be deleted while projects point to it. Take it out of the selection with the toggle instead.",
+      "subtitle_one": "{{count}} semester · {{selectable}} selectable",
+      "subtitle_other": "{{count}} semesters · {{selectable}} selectable"
+    },
+    "studyStructure": {
+      "title": "Study structure",
+      "subtitle": "Hierarchical management: faculty, study programme, module",
+      "column": {
+        "faculties": "Faculties",
+        "studyPrograms": "Study programmes",
+        "modules": "Modules"
+      },
+      "columnCount_one": "{{count}} entry in this column",
+      "columnCount_other": "{{count}} entries in this column",
+      "create": {
+        "faculty": "Add faculty",
+        "studyProgram": "Add study programme",
+        "module": "Add module"
+      },
+      "empty": {
+        "faculties": "No faculties yet",
+        "studyPrograms": "No study programmes yet",
+        "modules": "No modules yet",
+        "noStudyProgram": "No study programme selected"
+      },
+      "selectFacultyFirst": "Pick a faculty on the left to create a study programme.",
+      "selectStudyProgramFirst": "Pick a study programme to create a module.",
+      "field": {
+        "name": "Name",
+        "abbreviation": "Short form",
+        "facultyId": "Faculty",
+        "studyProgramId": "Study programme"
+      },
+      "parentPlaceholder": {
+        "studyProgram": "Select a faculty",
+        "module": "Select a study programme"
+      },
+      "dialog": {
+        "create": {
+          "faculty": "Create faculty",
+          "studyProgram": "Create study programme",
+          "module": "Create module"
+        },
+        "edit": {
+          "faculty": "Edit faculty",
+          "studyProgram": "Edit study programme",
+          "module": "Edit module"
+        },
+        "description": {
+          "faculty": "Name and abbreviation. The abbreviation is required and has to be unique, FK4 for instance.",
+          "studyProgram": "Name, short form and faculty. The short form may stay empty.",
+          "module": "Name, short form and study programme. The short form may stay empty."
+        }
+      },
+      "deleteDialog": {
+        "faculty": "Delete faculty?",
+        "facultyDescription": "“{{name}}” will be deleted. As long as a study programme belongs to it, the server refuses.",
+        "studyProgram": "Delete study programme?",
+        "studyProgramDescription": "“{{name}}” will be deleted. As long as a module belongs to it or projects point to it, the server refuses.",
+        "module": "Delete module?",
+        "moduleDescription": "“{{name}}” will be deleted. As long as projects point to it, the server refuses."
+      },
+      "saved": {
+        "create": "“{{name}}” has been created.",
+        "edit": "“{{name}}” has been changed."
+      },
+      "deleted": "“{{name}}” has been deleted.",
+      "deleteBlocked": {
+        "faculty": "“{{name}}” cannot be deleted while a study programme belongs to it.",
+        "studyProgram": "“{{name}}” cannot be deleted while a module belongs to it or projects point to it.",
+        "module": "“{{name}}” cannot be deleted while projects point to it."
+      },
+      "columnTitle": "{{title}} · {{count}}"
     }
   }
 }

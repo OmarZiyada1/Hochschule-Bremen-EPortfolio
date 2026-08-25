@@ -83,7 +83,9 @@
         "de": "Auf Deutsch umschalten",
         "en": "Auf Englisch umschalten"
       }
-    }
+    },
+    "yes": "Ja",
+    "no": "Nein"
   },
   "home": {
     "hero": {
@@ -291,6 +293,20 @@
     "revision": {
       "reasonRequired": "Bitte eine Begründung eingeben.",
       "reasonTooLong": "Die Begründung ist zu lang (höchstens 5000 Zeichen)."
+    },
+    "role": {
+      "required": "Bitte eine Rolle auswählen."
+    },
+    "masterData": {
+      "nameRequired": "Bitte einen Namen eingeben.",
+      "nameTooLong": "Der Name darf höchstens 255 Zeichen lang sein.",
+      "categoryNameTooLong": "Der Name darf höchstens 255 Zeichen lang sein.",
+      "semesterNameTooLong": "Der Name darf höchstens 64 Zeichen lang sein.",
+      "abbreviationRequired": "Bitte ein Kürzel eingeben.",
+      "abbreviationTooLong": "Die Kurzform darf höchstens 64 Zeichen lang sein.",
+      "facultyRequired": "Bitte eine Fakultät auswählen.",
+      "studyProgramRequired": "Bitte einen Studiengang auswählen.",
+      "targetRequired": "Bitte eine Zielkategorie auswählen."
     }
   },
   "placeholder": {
@@ -825,7 +841,8 @@
       "STUDENT": "Studierende",
       "EDITOR": "Redakteur:innen",
       "ADMIN": "Admins"
-    }
+    },
+    "passwordChangeRequired": "Passwortwechsel offen"
   },
   "top10": {
     "position": "Platz {{position}}",
@@ -1490,6 +1507,300 @@
         "emptyHint": "Ohne Zuweisung taucht das Projekt bei niemandem zur Begutachtung auf.",
         "done": "Die Redaktion von „{{title}}“ wurde geändert."
       }
+    },
+    "users": {
+      "title": "Nutzer:innen",
+      "subtitle_one": "{{shown}} von {{count}} Konto",
+      "subtitle_other": "{{shown}} von {{count}} Konten",
+      "subtitleLoading": "Konten werden geladen …",
+      "search": {
+        "label": "Konten durchsuchen",
+        "placeholder": "Name oder E-Mail suchen …"
+      },
+      "filter": {
+        "roleLabel": "Nach Rolle filtern",
+        "statusLabel": "Nach Kontostatus filtern",
+        "allStatuses": "Status (alle)"
+      },
+      "column": {
+        "name": "Name",
+        "email": "Private E-Mail",
+        "hsbEmail": "HSB-E-Mail",
+        "role": "Rolle",
+        "status": "Status",
+        "createdAt": "Angelegt am",
+        "actions": "Aktionen"
+      },
+      "empty": {
+        "title": "Keine Konten",
+        "description": "Im System ist noch kein Konto angelegt.",
+        "filtered": "Zu dieser Suche gibt es kein Konto. Ändern Sie Suchbegriff oder Filter."
+      },
+      "row": {
+        "menuFor": "Aktionen für {{name}}",
+        "details": "Details",
+        "changeRole": "Rolle ändern",
+        "activate": "Konto aktivieren",
+        "deactivate": "Konto deaktivieren",
+        "resetPassword": "Passwort zurücksetzen"
+      },
+      "created": "„{{name}}“ wurde angelegt.",
+      "roleChanged": "„{{name}}“ hat jetzt die Rolle {{role}}.",
+      "activated": "„{{name}}“ ist wieder aktiv.",
+      "deactivated": "„{{name}}“ wurde deaktiviert.",
+      "passwordReset": "Für „{{name}}“ steht ein neues Initialpasswort bereit.",
+      "roleDialog": {
+        "title": "Rolle ändern?",
+        "description": "Die Rolle von „{{name}}“ ändert sich mit dem Speichern. Sie wirkt sofort, auch bei einer bereits bestehenden Anmeldung.",
+        "confirm": "Rolle ändern"
+      },
+      "deactivateDialog": {
+        "title": "Konto deaktivieren?",
+        "description": "„{{name}}“ kommt danach nicht mehr herein, und zwar sofort, auch bei einer bereits bestehenden Anmeldung. Gelöscht wird nichts: Projekte, Kommentare und Reaktionen bleiben erhalten.",
+        "confirm": "Konto deaktivieren"
+      },
+      "resetDialog": {
+        "title": "Passwort zurücksetzen?",
+        "description": "Für „{{name}}“ wird ein neues Initialpasswort erzeugt. Das bisherige gilt danach nicht mehr.",
+        "doneDescription": "„{{name}}“ meldet sich mit diesem Initialpasswort an und muss es dabei ändern.",
+        "confirm": "Passwort zurücksetzen",
+        "passwordLabel": "Initialpasswort",
+        "hint": "Es erscheint nur hier. Notieren oder kopieren Sie es, bevor Sie den Dialog schließen."
+      },
+      "detail": {
+        "title": "Konto",
+        "subtitle": "Alle Angaben zu diesem Konto.",
+        "emailVerified": "Private E-Mail bestätigt",
+        "hsbEmailVerified": "HSB-E-Mail bestätigt",
+        "passwordChangeRequired": "Passwortwechsel offen",
+        "updatedAt": "Zuletzt geändert"
+      },
+      "create": {
+        "trigger": "Konto anlegen",
+        "title": "Konto anlegen",
+        "subtitle": "Das Konto ist sofort nutzbar. Die Person muss das Initialpasswort bei der ersten Anmeldung ändern.",
+        "doneSubtitle": "Das Konto wurde angelegt.",
+        "doneHint": "Das Konto ist aktiv. Beim ersten Login ist eine Passwortänderung erforderlich.",
+        "field": {
+          "firstName": "Vorname",
+          "lastName": "Nachname",
+          "email": "Private E-Mail",
+          "hsbEmail": "HSB-E-Mail",
+          "role": "Rolle",
+          "password": "Initialpasswort"
+        },
+        "placeholder": {
+          "firstName": "Erika",
+          "lastName": "Musterfrau",
+          "email": "erika@example.org",
+          "hsbEmail": "emusterfrau@stud.hs-bremen.de",
+          "password": "Mindestens 12 Zeichen"
+        },
+        "hint": {
+          "email": "Login-Kennung. Bleibt auch nach dem Studium erreichbar.",
+          "hsbEmail": "Nachweis der Hochschulzugehörigkeit. Muss auf @stud.hs-bremen.de oder @hs-bremen.de enden.",
+          "password": "Mindestens 12, höchstens 72 Zeichen. Teilen Sie es der Person persönlich mit."
+        },
+        "rolePlaceholder": "Rolle auswählen",
+        "roleOption": {
+          "STUDENT": "Studierende: eigene Projekte anlegen und einreichen",
+          "EDITOR": "Redaktion: prüft, gibt frei und veröffentlicht",
+          "ADMIN": "Administration: volle Verwaltung des Portals"
+        },
+        "adminHint": "Dieses Konto erhält vollen Zugriff auf die Administrationsseite.",
+        "generatePassword": "Passwort erzeugen",
+        "copyPassword": "Kopieren",
+        "copyCredentials": "Zugangsdaten kopieren",
+        "credentials": "{{name}}\nLogin: {{email}}\nInitialpasswort: {{password}}",
+        "credentialsCopied": "Zugangsdaten kopiert.",
+        "passwordCopied": "Passwort kopiert.",
+        "passwordGenerated": "Passwort erzeugt.",
+        "copyFailed": "Kopieren war nicht möglich. Bitte den Wert von Hand übernehmen.",
+        "submit": "Konto anlegen",
+        "done": "Fertig",
+        "leave": {
+          "title": "Eingaben verwerfen?",
+          "description": "Das Konto ist noch nicht angelegt. Beim Schließen gehen die Eingaben und das erzeugte Initialpasswort verloren.",
+          "confirm": "Verwerfen",
+          "cancel": "Weiter bearbeiten"
+        }
+      },
+      "actionNotAllowed": "Diese Aktion ist an diesem Konto nicht zulässig."
+    },
+    "masterData": {
+      "menuFor": "Aktionen für {{name}}",
+      "rename": "Umbenennen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "deleteConfirm": "Endgültig löschen",
+      "optional": "(optional)",
+      "nameInUse": "Diesen Wert gibt es schon."
+    },
+    "categories": {
+      "title": "Kategorien",
+      "subtitle_one": "{{count}} Kategorie insgesamt",
+      "subtitle_other": "{{count}} Kategorien insgesamt",
+      "subtitleLoading": "Kategorien werden geladen …",
+      "search": {
+        "label": "Kategorien durchsuchen",
+        "placeholder": "Kategorien durchsuchen …"
+      },
+      "create": {
+        "label": "Name der neuen Kategorie",
+        "placeholder": "Neue Kategorie hinzufügen …",
+        "submit": "Kategorie anlegen"
+      },
+      "group": {
+        "range": "{{from}} – {{to}}",
+        "other": "Ziffern und Sonstiges",
+        "count": "({{count}})"
+      },
+      "merge": "Zusammenführen",
+      "created": "„{{name}}“ wurde angelegt.",
+      "renamed": "Die Kategorie heißt jetzt „{{name}}“.",
+      "deleted": "„{{name}}“ wurde gelöscht.",
+      "merged": "„{{source}}“ ist jetzt Teil von „{{target}}“.",
+      "empty": {
+        "title": "Noch keine Kategorie angelegt",
+        "description": "Legen Sie die erste Kategorie über das Feld oben an.",
+        "filteredTitle": "Keine Treffer",
+        "filtered": "Zu dieser Suche gibt es keine Kategorie."
+      },
+      "deleteDialog": {
+        "title": "Kategorie löschen?",
+        "description": "„{{name}}“ wird gelöscht. Solange noch Projekte daran hängen, lehnt der Server das ab; hängen Sie sie vorher über „Zusammenführen“ um."
+      },
+      "renameDialog": {
+        "title": "Kategorie umbenennen",
+        "description": "Der neue Name erscheint überall dort, wo Projekte diese Kategorie tragen."
+      },
+      "mergeDialog": {
+        "title": "Kategorie zusammenführen",
+        "description": "Alle Projekte aus „{{name}}“ bekommen die Zielkategorie. Danach ist „{{name}}“ gelöscht.",
+        "targetLabel": "Zielkategorie",
+        "targetPlaceholder": "Zielkategorie auswählen",
+        "targetHint": "Der Vorgang lässt sich nicht rückgängig machen und erfasst auch veröffentlichte Projekte.",
+        "confirm": "Zusammenführen"
+      },
+      "deleteBlocked": "„{{name}}“ lässt sich nicht löschen, solange Projekte diese Kategorie tragen. Führen Sie sie vorher mit einer anderen zusammen."
+    },
+    "semesters": {
+      "title": "Semester",
+      "subtitleLoading": "Semester werden geladen …",
+      "activeHint": "Nur aktive Semester stehen beim Erstellen eines Projekts zur Auswahl.",
+      "search": {
+        "label": "Semester durchsuchen",
+        "placeholder": "Semester durchsuchen …"
+      },
+      "create": {
+        "label": "Name des neuen Semesters",
+        "placeholder": "z. B. WiSe 2026/27",
+        "submit": "Semester anlegen"
+      },
+      "column": {
+        "name": "Semester",
+        "status": "Status",
+        "actions": "Aktionen"
+      },
+      "state": {
+        "active": "Aktiv",
+        "inactive": "Inaktiv"
+      },
+      "created": "„{{name}}“ wurde angelegt.",
+      "renamed": "Das Semester heißt jetzt „{{name}}“.",
+      "deleted": "„{{name}}“ wurde gelöscht.",
+      "moved": "Die Reihenfolge wurde geändert, „{{name}}“ steht an neuer Stelle.",
+      "activated": "„{{name}}“ steht jetzt zur Auswahl.",
+      "deactivated": "„{{name}}“ steht nicht mehr zur Auswahl.",
+      "empty": {
+        "title": "Noch kein Semester angelegt",
+        "description": "Legen Sie das erste Semester über das Feld oben an.",
+        "filteredTitle": "Keine Treffer",
+        "filtered": "Zu dieser Suche gibt es kein Semester."
+      },
+      "deleteDialog": {
+        "title": "Semester löschen?",
+        "description": "„{{name}}“ wird gelöscht. Solange Projekte darauf verweisen, lehnt der Server das ab; nehmen Sie es dann lieber aus der Auswahl."
+      },
+      "renameDialog": {
+        "title": "Semester umbenennen",
+        "description": "Der neue Name erscheint überall dort, wo Projekte dieses Semester tragen."
+      },
+      "moveUpFor": "Nach oben, {{name}}",
+      "moveDownFor": "Nach unten, {{name}}",
+      "deleteBlocked": "„{{name}}“ lässt sich nicht löschen, solange Projekte darauf verweisen. Nehmen Sie es stattdessen über den Umschalter aus der Auswahl.",
+      "subtitle_one": "{{count}} Semester · {{selectable}} auswählbar",
+      "subtitle_other": "{{count}} Semester · {{selectable}} auswählbar"
+    },
+    "studyStructure": {
+      "title": "Studienstruktur",
+      "subtitle": "Hierarchische Verwaltung: Fakultät, Studiengang, Modul",
+      "column": {
+        "faculties": "Fakultäten",
+        "studyPrograms": "Studiengänge",
+        "modules": "Module"
+      },
+      "columnCount_one": "{{count}} Eintrag in dieser Spalte",
+      "columnCount_other": "{{count}} Einträge in dieser Spalte",
+      "create": {
+        "faculty": "Fakultät hinzufügen",
+        "studyProgram": "Studiengang hinzufügen",
+        "module": "Modul hinzufügen"
+      },
+      "empty": {
+        "faculties": "Noch keine Fakultäten",
+        "studyPrograms": "Noch keine Studiengänge",
+        "modules": "Noch keine Module",
+        "noStudyProgram": "Kein Studiengang gewählt"
+      },
+      "selectFacultyFirst": "Wählen Sie links eine Fakultät, um einen Studiengang anzulegen.",
+      "selectStudyProgramFirst": "Wählen Sie einen Studiengang, um ein Modul anzulegen.",
+      "field": {
+        "name": "Name",
+        "abbreviation": "Kurzform",
+        "facultyId": "Fakultät",
+        "studyProgramId": "Studiengang"
+      },
+      "parentPlaceholder": {
+        "studyProgram": "Fakultät auswählen",
+        "module": "Studiengang auswählen"
+      },
+      "dialog": {
+        "create": {
+          "faculty": "Fakultät anlegen",
+          "studyProgram": "Studiengang anlegen",
+          "module": "Modul anlegen"
+        },
+        "edit": {
+          "faculty": "Fakultät bearbeiten",
+          "studyProgram": "Studiengang bearbeiten",
+          "module": "Modul bearbeiten"
+        },
+        "description": {
+          "faculty": "Name und Kürzel. Das Kürzel ist Pflicht und muss eindeutig sein, zum Beispiel FK4.",
+          "studyProgram": "Name, Kurzform und Fakultät. Die Kurzform darf fehlen.",
+          "module": "Name, Kurzform und Studiengang. Die Kurzform darf fehlen."
+        }
+      },
+      "deleteDialog": {
+        "faculty": "Fakultät löschen?",
+        "facultyDescription": "„{{name}}“ wird gelöscht. Solange ein Studiengang daran hängt, lehnt der Server das ab.",
+        "studyProgram": "Studiengang löschen?",
+        "studyProgramDescription": "„{{name}}“ wird gelöscht. Solange ein Modul daran hängt oder Projekte darauf verweisen, lehnt der Server das ab.",
+        "module": "Modul löschen?",
+        "moduleDescription": "„{{name}}“ wird gelöscht. Solange Projekte darauf verweisen, lehnt der Server das ab."
+      },
+      "saved": {
+        "create": "„{{name}}“ wurde angelegt.",
+        "edit": "„{{name}}“ wurde geändert."
+      },
+      "deleted": "„{{name}}“ wurde gelöscht.",
+      "deleteBlocked": {
+        "faculty": "„{{name}}“ lässt sich nicht löschen, solange ein Studiengang daran hängt.",
+        "studyProgram": "„{{name}}“ lässt sich nicht löschen, solange ein Modul daran hängt oder Projekte darauf verweisen.",
+        "module": "„{{name}}“ lässt sich nicht löschen, solange Projekte darauf verweisen."
+      },
+      "columnTitle": "{{title}} · {{count}}"
     }
   }
 }
