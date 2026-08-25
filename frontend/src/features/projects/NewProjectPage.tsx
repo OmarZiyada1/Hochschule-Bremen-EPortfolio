@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next"
 import { Link, useNavigate } from "react-router-dom"
 
 import { apiErrorMessageKey, isApiError, type ApiError } from "@/api/errors"
-import { BreadcrumbBar } from "@/components/common/BreadcrumbBar"
 import { Alert, AlertTitle } from "@/components/ui/alert"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -67,14 +66,6 @@ export default function NewProjectPage() {
 
   return (
     <>
-      <BreadcrumbBar
-        items={[
-          { label: t("common.nav.home"), to: "/" },
-          { label: t("common.nav.myPortfolio"), to: PORTFOLIO_PATH },
-          { label: t("project.metadata.breadcrumb") },
-        ]}
-      />
-
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
         <h1 className="type-h2 font-semibold text-primary">
           {t("project.metadata.heading")}

@@ -1,4 +1,4 @@
-import { ArrowDownIcon } from "lucide-react"
+import { ArrowDownIcon, ArrowRightIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
 
@@ -30,6 +30,22 @@ import { peopleOfProject } from "@/lib/people"
  * (CLAUDE.md, Schreibstil), und die Jahreszahl der Bestenliste kommt aus
  * dem Datum statt fest "2026", weil der Contract kein Jahr am Eintrag kennt
  * (§3.11) und ein fest verdrahtetes Jahr im Januar falsch wuerde.
+ *
+ * <p><strong>Der Hero fuellt eine Fensterhoehe</strong> abzueglich der
+ * Kopfleiste (KAN-80). Er empfaengt und traegt genau eine Aussage; alles
+ * Weitere beginnt darunter. Die beiden Sektionen danach wachsen mit ihrem
+ * Inhalt: die Top-10-Sektion mit ihren zehn Kacheln, die Abschlusssektion mit
+ * ihren drei Kennzahlen. Die Abschlusssektion hatte zwischenzeitlich
+ * ebenfalls eine volle Fensterhoehe und ist wieder auf ihre Polsterung
+ * zurueckgenommen: drei Zahlen und ein Link in einem sonst leeren Bildschirm
+ * lasen sich wie ein Ladefehler.
+ *
+ * <p>Gemessen wird in {@code svh} und nicht in {@code vh}: Auf dem Handy
+ * meint {@code vh} die Hoehe ohne eingeblendete Browserleisten, und der
+ * Abschnitt raegte beim Laden unter den Bildschirmrand. {@code min-h} statt
+ * {@code h}, damit ein langer Text die Sektion waechst laesst, statt aus ihr
+ * herauszulaufen. Der Abzug ist {@code --spacing-nav} aus index.css, dieselbe
+ * Zahl, die die Kopfleiste hoch ist.
  */
 export default function HomePage() {
   const { t, i18n } = useTranslation()
@@ -50,8 +66,8 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col">
-      <section className="mx-auto w-full max-w-6xl px-4 py-16 sm:py-24">
-        <p className="type-overline tracking-widest text-muted-foreground uppercase">
+      <section className="mx-auto flex min-h-[calc(100svh-var(--spacing-nav))] w-full max-w-6xl flex-col justify-center px-4 py-16 sm:py-24">
+        <p className="type-overline text-muted-foreground">
           {t("home.hero.label")}
         </p>
         <h1 className="type-display mt-4 max-w-3xl text-accent-foreground">
@@ -69,7 +85,13 @@ export default function HomePage() {
           href="#top10"
           className="type-body-sm mt-8 inline-flex items-center gap-2 font-medium text-primary underline-offset-4 hover:underline focus-visible:underline"
         >
-          <ArrowDownIcon aria-hidden="true" className="size-4" />
+          {/* Der Pfeil huepft, damit der Weg nach unten auffaellt (KAN-80).
+              animate-bounce ist Tailwinds eigene Kurve; wer weniger Bewegung
+              eingestellt hat, sieht sie nicht (Grundregel in tokens.css). */}
+          <ArrowDownIcon
+            aria-hidden="true"
+            className="size-4 animate-bounce motion-reduce:animate-none"
+          />
           {t("home.hero.exploreTop10")}
         </a>
       </section>
@@ -81,7 +103,7 @@ export default function HomePage() {
       >
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div>
-            <p className="type-overline tracking-widest text-primary uppercase">
+            <p className="type-overline text-primary">
               {t("home.top10.label")}
             </p>
             <h2
@@ -148,9 +170,7 @@ export default function HomePage() {
 
       <section aria-labelledby="cta-heading" className="bg-muted">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-5 px-4 py-16 text-center sm:py-20">
-          <p className="type-overline tracking-widest text-primary uppercase">
-            {t("home.cta.label")}
-          </p>
+          <p className="type-overline text-primary">{t("home.cta.label")}</p>
           <h2 id="cta-heading" className="type-title text-accent-foreground">
             {t("home.cta.title")}
           </h2>
@@ -213,27 +233,26 @@ export default function HomePage() {
             render={<Link to="/projects" />}
           >
             {t("home.cta.openLibrary")}
+            {/* Der Pfeil wandert waagerecht, wie der Pfeil im Hero senkrecht
+                huepft (KAN-80). Er steht rechts vom Text und zeigt nach
+                rechts, weil er weiterfuehrt und nicht zurueck; bewegt wird er
+                nach links und wieder heraus, damit die Bewegung im Wortlaut
+                „von rechts nach links" bleibt und die Schaltflaeche dabei
+                nicht breiter wird. */}
+            <ArrowRightIcon
+              aria-hidden="true"
+              className="size-4 animate-nudge-x motion-reduce:animate-none"
+            />
           </Button>
         </div>
       </section>
 
-      {/* Bewusst kein <nav>: ein Navigationsbereich ohne zugaenglichen Namen
-          erschiene als zweites, unbenanntes "navigation" neben der
-          Hauptnavigation. Zwei Links, die es nur im Entwicklungs-Build gibt,
-          rechtfertigen keine Landmarke. */}
-      {import.meta.env.DEV ? (
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-6">
-          <Link className="type-body text-primary underline" to="/dev/tokens">
-            {t("home.tokenGallery")}
-          </Link>
-          <Link
-            className="type-body text-primary underline"
-            to="/dev/components"
-          >
-            {t("home.componentGallery")}
-          </Link>
-        </div>
-      ) : null}
+      {/* Bis KAN-80 standen hier zwei Links auf die Pruefflaechen
+          /dev/tokens und /dev/components. Sie sind weg: die Adressen sind
+          bekannt und werden von Hand eingegeben, und die Startseite endet
+          jetzt mit der Abschlusssektion statt mit zwei Entwicklungslinks
+          darunter. Die Routen selbst bleiben (routes/index.tsx, nur im
+          Entwicklungs-Build). */}
     </div>
   )
 }

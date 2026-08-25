@@ -1,9 +1,11 @@
 import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
+import { Link } from "react-router-dom"
 
 import type { ProjectDetailResponse } from "@/api/types"
 import { Tag } from "@/components/common/Tag"
-import { fullNameOf } from "@/lib/name"
+import { fullNameOf, type PersonName } from "@/lib/name"
+import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
 
 /**
  * Eine Zeile der Seitenleiste: Beschriftung und Wert.
@@ -132,6 +134,7 @@ export function ProjectMetaSidebar({
 
   const author = project.author
     ? {
+        id: project.author.id,
         firstName: project.author.firstName,
         lastName: project.author.lastName,
       }
@@ -159,15 +162,23 @@ export function ProjectMetaSidebar({
         {project.faculty?.name}
       </MetaRow>
 
-      {/* Ohne Kuerzel: der volle Name steht hier bereits, das Kuerzel
-          daneben wiederholt ihn nur in kurz und traegt allein keine
-          Bedeutung (Vorgabe zur Abnahme von KAN-32). Auf der Kachel bleibt
-          es, dort ist aus Platzgruenden nur das Kuerzel zu sehen. */}
+      {/* Mit Kuerzel in Klammern (Entscheidung zu KAN-80). Bis dahin stand
+          hier allein der Name, weil das Kuerzel ihn nur in kurz wiederholte
+          (Vorgabe zur Abnahme von KAN-32). Seit Contract v81 ist es Pflicht
+          und steht auch auf der Kachel, wo aus Platzgruenden nur die
+          Kurzform passt; wer sie dort sieht, findet hier ihre Aufloesung.
+          Ohne Kuerzel kann die Antwort seit v81 nicht mehr kommen; die
+          Bedingung bleibt trotzdem stehen, weil sie nichts kostet und der
+          Typ das Feld an der Referenz weiterhin als nullable fuehrt (Semester
+          und Kategorie fuehren keines). */}
       <MetaRow
         label={t("project.detail.meta.studyProgram")}
         showEmpty={showEmptyFields}
       >
-        {project.studyProgram?.name}
+        {project.studyProgram &&
+          (project.studyProgram.abbreviation
+            ? `${project.studyProgram.name} (${project.studyProgram.abbreviation})`
+            : project.studyProgram.name)}
       </MetaRow>
 
       <MetaRow
@@ -219,7 +230,7 @@ export function ProjectMetaSidebar({
              */}
             {author && (
               <li>
-                {fullNameOf(author)}
+                <PersonLink id={author.id} person={author} />
                 {project.authorRole && (
                   <span className="type-body-sm font-normal text-muted-foreground">
                     {` · ${project.authorRole}`}
@@ -229,10 +240,13 @@ export function ProjectMetaSidebar({
             )}
             {members.map((member, index) => (
               <li key={member.userId ?? index}>
-                {fullNameOf({
-                  firstName: member.firstName,
-                  lastName: member.lastName,
-                })}
+                <PersonLink
+                  id={member.userId}
+                  person={{
+                    firstName: member.firstName,
+                    lastName: member.lastName,
+                  }}
+                />
                 {member.projectRole && (
                   <span className="type-body-sm font-normal text-muted-foreground">
                     {` · ${member.projectRole}`}
@@ -255,10 +269,13 @@ export function ProjectMetaSidebar({
             <ul className="flex flex-col gap-1">
               {editors.map((editor, index) => (
                 <li key={editor.id ?? index}>
-                  {fullNameOf({
-                    firstName: editor.firstName,
-                    lastName: editor.lastName,
-                  })}
+                  <PersonLink
+                    id={editor.id}
+                    person={{
+                      firstName: editor.firstName,
+                      lastName: editor.lastName,
+                    }}
+                  />
                 </li>
               ))}
             </ul>
@@ -281,5 +298,37 @@ export function ProjectMetaSidebar({
         )}
       </MetaRow>
     </dl>
+  )
+}
+
+/**
+ * Ein Personenname als Weg zu ihrem Portfolio (KAN-80).
+ *
+ * <p>Namen sind in dieser Anwendung ueberall Wege zu einer Person: an der
+ * Projektkachel, in der Nutzerverwaltung und hier. Ohne ID bleibt es beim
+ * Text; der Contract fuehrt die ID an allen drei Listen (§3.3, §3.13), der
+ * generierte Typ laesst sie aber offen, und ein Link auf
+ * {@code /portfolios/undefined} endete in einem 404.
+ */
+function PersonLink({
+  id,
+  person,
+}: {
+  id: string | undefined
+  person: PersonName
+}) {
+  const origin = useBreadcrumbOrigin()
+  const name = fullNameOf(person)
+  if (id === undefined) {
+    return <>{name}</>
+  }
+  return (
+    <Link
+      to={`/portfolios/${id}`}
+      state={origin}
+      className="hover:underline focus-visible:underline"
+    >
+      {name}
+    </Link>
   )
 }

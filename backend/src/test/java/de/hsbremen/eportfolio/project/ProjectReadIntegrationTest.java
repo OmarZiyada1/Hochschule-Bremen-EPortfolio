@@ -440,6 +440,48 @@ class ProjectReadIntegrationTest {
 					.containsExactly(publishedProject.getId());
 		}
 
+		// --- Suche ueber Schlagwoerter (v81, KAN-80) --------------------
+
+		@Test
+		@DisplayName("q findet Projekte ueber ihre Schlagwoerter (§3.19)")
+		void searchByTag() throws Exception {
+			// Das veroeffentlichte Projekt traegt "ux-test" und "react-test";
+			// weder das eine noch das andere Wort kommt in Titel oder Teaser vor.
+			assertThat(listIds(admin, "q", "ux-test"))
+					.containsExactly(publishedProject.getId());
+			assertThat(listIds(admin, "q", "REACT-TEST"))
+					.containsExactly(publishedProject.getId());
+		}
+
+		@Test
+		@DisplayName("Auch ein Teil eines Schlagworts trifft, wie bei Titel und Teaser")
+		void searchByTagIsSubstring() throws Exception {
+			assertThat(listIds(admin, "q", "react"))
+					.containsExactly(publishedProject.getId());
+		}
+
+		@Test
+		@DisplayName("Ein Projekt mit mehreren passenden Schlagwoertern erscheint einmal")
+		void tagSearchDoesNotDuplicate() throws Exception {
+			// "test" trifft beide Schlagwoerter des Projekts. Ein Join statt der
+			// Unterabfrage lieferte die Kachel hier zweimal und verfaelschte
+			// damit Trefferzahl und Seitenaufteilung.
+			assertThat(listIds(admin, "q", "-test"))
+					.containsExactly(publishedProject.getId());
+		}
+
+		@Test
+		@DisplayName("Die Schlagwortsuche weicht die Sichtbarkeitsschranke nicht auf (§5)")
+		void tagSearchOpensNothing() throws Exception {
+			draftOfAuthor.getTags().add(
+					TestMasterData.existingOrNewTag(tagRepository, "geheim-test"));
+			projectRepository.saveAndFlush(draftOfAuthor);
+
+			assertThat(listIds(null, "q", "geheim-test")).isEmpty();
+			assertThat(listIds(admin, "q", "geheim-test"))
+					.containsExactly(draftOfAuthor.getId());
+		}
+
 		@Test
 		@DisplayName("Platzhalter im Suchbegriff werden maskiert und wirken nicht als Joker")
 		void wildcardsAreEscaped() throws Exception {

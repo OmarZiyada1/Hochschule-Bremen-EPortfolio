@@ -293,8 +293,14 @@ describe("Routenbaum", () => {
         { timeout: 10_000 }
       )
     ).toBeInTheDocument()
+    /* Innerhalb der Bereichsleiste gesucht: seit KAN-80 nennt auch die
+       letzte Ebene des Brotkrumenpfades das Protokoll, und die traegt als
+       aktuelle Seite ebenfalls role="link" und aria-current. */
+    const sectionNav = screen.getByRole("navigation", {
+      name: "Bereiche der Top 10",
+    })
     expect(
-      screen.getByRole("link", { name: "Protokoll" })
+      within(sectionNav).getByRole("link", { name: "Protokoll" })
     ).toHaveAttribute("aria-current", "page")
   })
 
@@ -308,10 +314,13 @@ describe("Routenbaum", () => {
     const nav = await screen.findByRole("navigation", {
       name: "Administrationsseite",
     })
+    expect(within(nav).getByRole("link", { name: "Semester" })).toHaveAttribute(
+      "href",
+      "/administration/semesters"
+    )
     expect(
-      within(nav).getByRole("link", { name: "Semester" })
-    ).toHaveAttribute("href", "/administration/semesters")
-    expect(within(nav).getByRole("link", { name: "Top 10" })).toBeInTheDocument()
+      within(nav).getByRole("link", { name: "Top 10" })
+    ).toBeInTheDocument()
   })
 
   it("fuehrt die Projektverwaltung als eigene Route", async () => {

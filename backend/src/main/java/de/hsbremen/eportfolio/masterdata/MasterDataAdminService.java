@@ -270,7 +270,7 @@ public class MasterDataAdminService {
 
 		StudyProgram studyProgram = new StudyProgram();
 		studyProgram.setName(requireFilled(request.name(), "name"));
-		studyProgram.setAbbreviation(emptyAsNull(request.abbreviation()));
+		studyProgram.setAbbreviation(requireFilled(request.abbreviation(), "abbreviation"));
 		studyProgram.setFaculty(referencedFaculty(request.facultyId()));
 
 		return StudyProgramResponse.from(studyProgramRepository.save(studyProgram));
@@ -287,9 +287,10 @@ public class MasterDataAdminService {
 			studyProgram.setName(requireFilled(request.name(), "name"));
 		}
 		if (request.abbreviation() != null) {
-			// Leere Zeichenkette loescht die Kurzform, siehe
-			// StudyProgramUpdateRequest.
-			studyProgram.setAbbreviation(emptyAsNull(request.abbreviation()));
+			// Seit Contract v81 ist das Kuerzel Pflicht: die leere Zeichenkette
+			// loescht es nicht mehr, sie ist ein 400. Zum Beibehalten bleibt das
+			// Feld weg, siehe StudyProgramUpdateRequest.
+			studyProgram.setAbbreviation(requireFilled(request.abbreviation(), "abbreviation"));
 		}
 		if (request.facultyId() != null) {
 			studyProgram.setFaculty(referencedFaculty(request.facultyId()));
@@ -327,7 +328,7 @@ public class MasterDataAdminService {
 
 		Module module = new Module();
 		module.setName(requireFilled(request.name(), "name"));
-		module.setAbbreviation(emptyAsNull(request.abbreviation()));
+		module.setAbbreviation(requireFilled(request.abbreviation(), "abbreviation"));
 		module.setStudyProgram(referencedStudyProgram(request.studyProgramId()));
 
 		return ModuleResponse.from(moduleRepository.save(module));
@@ -344,7 +345,8 @@ public class MasterDataAdminService {
 			module.setName(requireFilled(request.name(), "name"));
 		}
 		if (request.abbreviation() != null) {
-			module.setAbbreviation(emptyAsNull(request.abbreviation()));
+			// Pflicht seit Contract v81, wie beim Studiengang.
+			module.setAbbreviation(requireFilled(request.abbreviation(), "abbreviation"));
 		}
 		if (request.studyProgramId() != null) {
 			module.setStudyProgram(referencedStudyProgram(request.studyProgramId()));
@@ -672,15 +674,6 @@ public class MasterDataAdminService {
 					field + ": Das Feld darf nicht leer sein. Zum Beibehalten weglassen.");
 		}
 		return trimmed;
-	}
-
-	/** Leere Kurzform wie eine fehlende behandeln; die Spalte ist {@code nullable}. */
-	private static String emptyAsNull(String value) {
-		if (value == null) {
-			return null;
-		}
-		String trimmed = value.trim();
-		return trimmed.isEmpty() ? null : trimmed;
 	}
 
 	private static ResourceNotFoundException notFound(String what, UUID id) {

@@ -5,11 +5,14 @@ import type { FacultyProjectCountResponse } from "@/api/types"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
+import { CHART_MUTED_COLOR, chartColor } from "@/lib/chartColors"
 
 /**
  * Die Karte „Projekt je Fakultaeten" (Template „Dashboard", KAN-38): je
@@ -28,6 +31,29 @@ import { Skeleton } from "@/components/ui/skeleton"
  * Balken steht seine Zahl, und die Tabelle darunter im {@code sr-only}-Bereich
  * nennt Kuerzel, Namen und Anzahl im Klartext: eine Grafik allein waere fuer
  * Screenreader und bei abgeschalteten Farben nichts (SC 1.1.1, SC 1.4.1).
+ *
+ * <p><strong>Seit KAN-80 ist der Balken gestapelt</strong> (Contract v82): Er
+ * sagt nicht mehr nur, wie viele Projekte eine Fakultaet hat, sondern auch,
+ * wie viel davon in der Kuratierung steckt. Drei Abschnitte, zusammen die
+ * Gesamtzahl:
+ *
+ * <ul>
+ * <li><strong>In der Top 10</strong>: belegt gerade einen Platz
+ *     ({@code inTop10}, §3.11).</li>
+ * <li><strong>Angenommen, ohne Platz</strong>: hat eine angenommene
+ *     Nominierung, steht aber nicht (mehr) auf der Liste.</li>
+ * <li><strong>Uebrige</strong>: der Rest des Bestands.</li>
+ * </ul>
+ *
+ * <p><strong>Warum die Oberflaeche das ausrechnet und nicht der Server.</strong>
+ * {@code inTop10} und {@code accepted} sind zwei unabhaengige Teilmengen von
+ * {@code count} und ueberschneiden sich in beide Richtungen: die
+ * Administration kann ein Projekt ohne Nominierung aufnehmen, und ein
+ * angenommenes Projekt kann seinen Platz wieder verlieren. Der Contract
+ * liefert deshalb die Rohzahlen, und welche disjunkten Abschnitte ein
+ * gestapelter Balken daraus macht, entscheidet die Darstellung. Die
+ * Differenzen werden bei null abgeschnitten, damit ein ohne Nominierung
+ * aufgenommenes Projekt keinen negativen Abschnitt erzeugt.
  */
 export function FacultyDistributionCard({
   data,
@@ -40,21 +66,43 @@ export function FacultyDistributionCard({
 }) {
   const { t } = useTranslation()
 
-  /* Eine einzige Reihe, deshalb eine einzige Konfigurationszeile. Die Farbe
-     kommt aus der Tokenschicht und steht nicht als Hex daneben
-     (Frontend-Regel 5). */
+  /* Drei Abschnitte, drei Konfigurationszeilen. Die Farben kommen aus der
+     Diagrammpalette (lib/chartColors.ts) und stehen nicht als Hex daneben
+     (Frontend-Regel 5). Die beiden Abschnitte der Kuratierung nehmen die
+     ersten beiden Eintraege nach ihrer Position, der Rest den ruhigen Ton:
+     er ist gerade nicht die Aussage des Diagramms. */
   const config = {
-    count: {
-      label: t("administration.dashboard.faculties.bar"),
-      color: "var(--color-primary)",
+    inTop10: {
+      label: t("administration.dashboard.faculties.inTop10"),
+      color: chartColor(0),
+    },
+    acceptedOnly: {
+      label: t("administration.dashboard.faculties.accepted"),
+      color: chartColor(1),
+    },
+    rest: {
+      label: t("administration.dashboard.faculties.rest"),
+      color: CHART_MUTED_COLOR,
     },
   } satisfies ChartConfig
 
-  const rows = (data ?? []).map((entry) => ({
-    abbreviation: entry.faculty.abbreviation ?? entry.faculty.name,
-    name: entry.faculty.name,
-    count: entry.count,
-  }))
+  const rows = (data ?? []).map((entry) => {
+    /* Bei null abschneiden: die Administration kann ein Projekt ohne
+       Nominierung aufnehmen, dann ist accepted kleiner als inTop10. */
+    const inTop10 = Math.min(entry.inTop10, entry.count)
+    const acceptedOnly = Math.max(
+      0,
+      Math.min(entry.accepted, entry.count) - inTop10
+    )
+    return {
+      abbreviation: entry.faculty.abbreviation ?? entry.faculty.name,
+      name: entry.faculty.name,
+      count: entry.count,
+      inTop10,
+      acceptedOnly,
+      rest: Math.max(0, entry.count - inTop10 - acceptedOnly),
+    }
+  })
 
   return (
     <Card>
@@ -89,7 +137,8 @@ export function FacultyDistributionCard({
                    bestimmt sie, nicht ein Seitenverhaeltnis. Fuenf Zeilen
                    ergeben die Hoehe des Templates, sechs wachsen mit. */
                 className="aspect-auto w-full"
-                style={{ height: `${rows.length * 4}rem` }}
+                /* Zwei rem Zuschlag fuer die Legende unter dem Diagramm. */
+                style={{ height: `${rows.length * 4 + 2}rem` }}
               >
                 <BarChart
                   /*
@@ -116,10 +165,28 @@ export function FacultyDistributionCard({
                     width={40}
                   />
                   <XAxis type="number" hide />
-                  <ChartTooltip
-                    content={<ChartTooltipContent nameKey="name" />}
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  {/* Ein Stapel, drei Abschnitte: gleiche stackId, und nur
+                      der letzte traegt die Gesamtzahl am Ende des Balkens.
+                      Gerundet wird allein die rechte Kante, ein Radius je
+                      Abschnitt zerlegte den Stapel optisch in drei Balken. */}
+                  <Bar
+                    dataKey="inTop10"
+                    stackId="faculty"
+                    fill="var(--color-inTop10)"
                   />
-                  <Bar dataKey="count" fill="var(--color-count)" radius={4}>
+                  <Bar
+                    dataKey="acceptedOnly"
+                    stackId="faculty"
+                    fill="var(--color-acceptedOnly)"
+                  />
+                  <Bar
+                    dataKey="rest"
+                    stackId="faculty"
+                    fill="var(--color-rest)"
+                    radius={[0, 4, 4, 0]}
+                  >
                     <LabelList
                       dataKey="count"
                       position="right"
@@ -145,6 +212,12 @@ export function FacultyDistributionCard({
                   <th scope="col">
                     {t("administration.dashboard.faculties.columnCount")}
                   </th>
+                  <th scope="col">
+                    {t("administration.dashboard.faculties.inTop10")}
+                  </th>
+                  <th scope="col">
+                    {t("administration.dashboard.faculties.accepted")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -154,6 +227,8 @@ export function FacultyDistributionCard({
                       {row.abbreviation}, {row.name}
                     </th>
                     <td>{numberFormat.format(row.count)}</td>
+                    <td>{numberFormat.format(row.inTop10)}</td>
+                    <td>{numberFormat.format(row.acceptedOnly)}</td>
                   </tr>
                 ))}
               </tbody>

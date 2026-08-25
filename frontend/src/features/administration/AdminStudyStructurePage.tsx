@@ -185,8 +185,6 @@ export default function AdminStudyStructurePage() {
       return
     }
     setRowError(null)
-    const abbreviationOnCreate =
-      values.abbreviation === "" ? null : values.abbreviation
 
     if (dialog.kind === "faculty") {
       if (dialog.mode === "create") {
@@ -202,16 +200,20 @@ export default function AdminStudyStructurePage() {
       }
     } else if (dialog.kind === "studyProgram") {
       if (dialog.mode === "create") {
+        /* Das Kuerzel ist seit Contract v81 auf allen drei Ebenen Pflicht
+           (KAN-80); die leere Zeichenkette kommt aus dem Formular nicht mehr
+           durch, und der Server wiese sie mit 400 ab. */
         await createStudyProgram.mutateAsync({
           name: values.name,
-          abbreviation: abbreviationOnCreate,
+          abbreviation: values.abbreviation,
           facultyId: values.parentId,
         })
       } else {
         await updateStudyProgram.mutateAsync({
           studyProgramId: dialog.entityId ?? "",
-          /* Beim Aendern loescht eine leere Zeichenkette die Kurzform
-             (§6.1); null hiesse dort „unveraendert". */
+          /* Beim Aendern hiesse null „unveraendert" (§6.1); die leere
+             Zeichenkette loescht seit Contract v81 nichts mehr, sondern
+             ergibt 400. Das Formular laesst sie deshalb gar nicht erst zu. */
           request: {
             name: values.name,
             abbreviation: values.abbreviation,
@@ -223,7 +225,7 @@ export default function AdminStudyStructurePage() {
       if (dialog.mode === "create") {
         await createModule.mutateAsync({
           name: values.name,
-          abbreviation: abbreviationOnCreate,
+          abbreviation: values.abbreviation,
           studyProgramId: values.parentId,
         })
       } else {
@@ -263,7 +265,7 @@ export default function AdminStudyStructurePage() {
   return (
     <>
       <header className="flex flex-col gap-2">
-        <p className="type-overline tracking-widest text-muted-foreground uppercase">
+        <p className="type-overline text-muted-foreground">
           {t("administration.label")}
         </p>
         <h1 className="type-title text-primary">

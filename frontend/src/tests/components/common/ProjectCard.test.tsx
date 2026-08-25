@@ -65,30 +65,32 @@ describe("ProjectCard", () => {
     expect(screen.getByText("142 Reaktionen")).toBeInTheDocument()
   })
 
-  it("zeigt das Fakultaetskuerzel und sagt den vollen Namen an", () => {
+  /*
+   * Punkt 1 aus KAN-80: das Fakultaetsbadge ist weg. Fakultaet und
+   * Studiengang standen nebeneinander und sagten dieselbe Einordnung zweimal,
+   * nur unterschiedlich grob; die genauere Angabe bleibt.
+   */
+  it("zeigt kein Fakultaetskuerzel mehr auf dem Cover", () => {
     renderWithProviders(<ProjectCard project={projectCard({ faculty })} />)
 
-    /* Sichtbar das Kuerzel, vorgelesen der volle Name. Beides ueber die
-       Erreichbarkeit geprueft und nicht ueber ein title-Attribut: das
-       erreicht weder Tastatur noch Touch und wird an einem span meist gar
-       nicht vorgelesen. */
-    expect(screen.getByText("FK4")).toHaveAttribute("aria-hidden", "true")
-
-    const full = screen.getByText("Fakultät 4")
-    expect(full).toHaveClass("sr-only")
-    expect(full.closest("[aria-hidden]")).toBeNull()
+    expect(screen.queryByText("FK4")).not.toBeInTheDocument()
+    expect(screen.queryByText("Fakultät 4")).not.toBeInTheDocument()
   })
 
-  it("faellt ohne Kuerzel auf den ausgeschriebenen Namen zurueck", () => {
+  it("faellt ohne Kuerzel auf den ausgeschriebenen Studiengang zurueck", () => {
     renderWithProviders(
       <ProjectCard
         project={projectCard({
-          faculty: reference({ name: "Fakultät 4", abbreviation: null }),
+          studyProgram: reference({
+            id: "sp-1",
+            name: "Medieninformatik",
+            abbreviation: null,
+          }),
         })}
       />
     )
 
-    expect(screen.getByText("Fakultät 4")).toBeVisible()
+    expect(screen.getByText("Medieninformatik")).toBeVisible()
   })
 
   it("zeigt ohne Coverbild den Platzhalter statt eines leeren Bildes", () => {
@@ -156,6 +158,56 @@ describe("ProjectCard", () => {
     )
     expect(screen.queryByText("Fakultät 4")).not.toBeInTheDocument()
     expect(screen.queryByText("Veröffentlicht")).not.toBeInTheDocument()
+  })
+
+  /*
+   * Punkt 1 aus KAN-80: das Studiengangskuerzel steht oben links auf der
+   * Coverflaeche, dort wo bis dahin die Fakultaet stand. Es laeuft
+   * zweispurig: sichtbar die Kurzform, vorgelesen der volle Name. Beides
+   * ueber die Erreichbarkeit geprueft und nicht ueber ein title-Attribut:
+   * das erreicht weder Tastatur noch Touch und wird an einem span meist gar
+   * nicht vorgelesen.
+   */
+  it("zeigt das Studiengangskuerzel auf dem Cover", () => {
+    renderWithProviders(
+      <ProjectCard
+        project={projectCard({
+          faculty,
+          studyProgram: reference({
+            id: "sp-1",
+            name: "Medieninformatik",
+            abbreviation: "MIN",
+          }),
+        })}
+      />
+    )
+
+    expect(screen.getByText("MIN")).toHaveAttribute("aria-hidden", "true")
+
+    const full = screen.getByText("Medieninformatik")
+    expect(full).toHaveClass("sr-only")
+    expect(full.closest("[aria-hidden]")).toBeNull()
+  })
+
+  /*
+   * Punkt 3 aus KAN-80: die ganze Kachel fuehrt ins Projekt. Die Flaeche ist
+   * ein echter Link, damit Mittelklick und „in neuem Tab oeffnen"
+   * weiterhin funktionieren; fuer Hilfsmittel bleibt sie unsichtbar, sonst
+   * gaebe es je Kachel zwei Tabstopps auf dasselbe Ziel.
+   */
+  it("legt eine Klickflaeche ueber die ganze Kachel", () => {
+    const { container } = renderWithProviders(
+      <ProjectCard project={projectCard()} />
+    )
+
+    const overlay = container.querySelector('a[aria-hidden="true"]')
+    expect(overlay).toHaveAttribute("href", "/projects/1")
+    expect(overlay).toHaveAttribute("tabindex", "-1")
+    /* Genau ein Tabstopp auf das Projekt: der Titel. Die Personenzeile
+       fuehrt daneben auf das Portfolio und zaehlt nicht mit. */
+    expect(screen.getAllByRole("link", { name: "Campus-Garten" })).toHaveLength(
+      1
+    )
   })
 
   it("zeigt den Status nur, wenn die Seite showStatus setzt", () => {

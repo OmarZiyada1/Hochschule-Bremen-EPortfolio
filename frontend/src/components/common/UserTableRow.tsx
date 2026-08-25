@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
+import { Link } from "react-router-dom"
 
 import type { Role, UserStatus } from "@/api/types"
 import { Pill } from "@/components/common/Pill"
@@ -8,6 +9,7 @@ import { UserAvatar } from "@/components/common/UserAvatar"
 import { UserStatusBadge } from "@/components/common/UserStatusBadge"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { fullNameOf, type PersonName } from "@/lib/name"
+import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
 
 /**
  * Nutzerzeile der Administrationsseite (Figma "User Row"): Avatar, Name
@@ -28,9 +30,18 @@ import { fullNameOf, type PersonName } from "@/lib/name"
  * Nutzerverwaltung.</strong> §3.1 laesst die HSB-Adresse fremder Konten
  * genau dort ausgeben; jede andere Ansicht dieser Zeile laesst die Prop weg,
  * und dann gibt es die Spalte nicht.
+ *
+ * <p><strong>Der Name fuehrt zum Portfolio</strong> (KAN-80), sobald der
+ * Aufrufer die {@code userId} mitgibt. Namen sind in dieser Anwendung
+ * ueberall Wege zu einer Person, an der Projektkachel wie hier; die Zeile
+ * ohne ID bleibt reiner Text, denn ein Link ohne Ziel ist keiner. Anders als
+ * die Projektzeile wird die Nutzerzeile <strong>nicht</strong> als Ganzes
+ * anklickbar: Sie traegt Auswahl und Menue, und ein Klick daneben oeffnete
+ * eine fremde Seite mitten in der Verwaltung.
  */
 export function UserTableRow({
   person,
+  userId,
   email,
   role,
   avatarUrl,
@@ -41,6 +52,8 @@ export function UserTableRow({
   actions,
 }: {
   person: PersonName
+  /** ID der Person; ohne sie bleibt der Name unverlinkter Text. */
+  userId?: string
   email: string
   role: Role
   avatarUrl?: string | null
@@ -60,6 +73,7 @@ export function UserTableRow({
   actions?: ReactNode
 }) {
   const { t } = useTranslation()
+  const origin = useBreadcrumbOrigin()
 
   return (
     <TableRow>
@@ -67,7 +81,19 @@ export function UserTableRow({
         <div className="flex items-center gap-3">
           <UserAvatar person={person} imageUrl={avatarUrl} size="lg" />
           <div className="flex flex-col">
-            <span className="font-semibold">{fullNameOf(person)}</span>
+            <span className="font-semibold">
+              {userId === undefined ? (
+                fullNameOf(person)
+              ) : (
+                <Link
+                  to={`/portfolios/${userId}`}
+                  state={origin}
+                  className="hover:underline focus-visible:underline"
+                >
+                  {fullNameOf(person)}
+                </Link>
+              )}
+            </span>
             <span className="type-caption text-muted-foreground">{email}</span>
           </div>
         </div>

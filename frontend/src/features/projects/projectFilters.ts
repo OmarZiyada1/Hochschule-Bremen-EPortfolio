@@ -94,3 +94,34 @@ export function toggleValue<V extends string>(
     ? values.filter((entry) => entry !== value)
     : [...values, value]
 }
+
+/**
+ * Ein leerer Auswahlzustand: alle Gruppen ohne Wert.
+ *
+ * <p>Als Fabrik und nicht als Konstante, weil die Listen veraenderlich
+ * typisiert sind: eine geteilte Konstante liesse sich versehentlich
+ * fuellen, und die naechste Zuruecksetzung setzte nicht mehr zurueck.
+ */
+export function emptyFilterSelection(): ProjectFilterSelection {
+  return {
+    faculty: [],
+    studyProgram: [],
+    degree: [],
+    semester: [],
+    type: [],
+    category: [],
+  }
+}
+
+/**
+ * Wie viele Werte insgesamt gesetzt sind, ueber alle Gruppen hinweg
+ * (KAN-80).
+ *
+ * <p>Gezaehlt werden Werte und nicht Gruppen: Wer drei Fakultaeten
+ * angehakt hat, hat drei Filter gesetzt und nicht einen. Danach richtet sich
+ * die Zahl am Weg zurueck auf null, und dieselbe Zaehlung je Gruppe steht
+ * neben dem Gruppennamen.
+ */
+export function activeFilterCount(selection: ProjectFilterSelection): number {
+  return FILTER_KEYS.reduce((sum, key) => sum + selection[key].length, 0)
+}

@@ -20,7 +20,7 @@ import type {
   ProjectDetailResponse,
   ProjectStatus,
 } from "@/api/types"
-import { BreadcrumbBar } from "@/components/common/BreadcrumbBar"
+import { useBreadcrumbTitle } from "@/routes/useBreadcrumb"
 import { CommentPanel } from "@/components/common/CommentPanel"
 import { EmptyState } from "@/components/common/EmptyState"
 import { ProjectInfoSection } from "@/components/common/ProjectInfoSection"
@@ -112,20 +112,15 @@ export default function ProjectReviewPage() {
     isApiError(error) &&
     error.errorCode === "PROJECT_NOT_FOUND"
 
+  /* Titel als letzte Ebene des Pfades; das Band zeichnet der Rahmen (KAN-80). */
+  useBreadcrumbTitle(data?.title)
+
   return (
     <>
       {/* Das Brotkrumenband traegt den Weg zurueck vollstaendig; ein
           zweiter Link „Zurueck zu Meine Reviews" daneben sagte dasselbe ein
           zweites Mal und schoebe die Ueberschrift nach unten (stehende
           Entscheidung, Skill frontend-modul Abschnitt 0a). */}
-      <BreadcrumbBar
-        items={[
-          { label: t("common.nav.home"), to: "/" },
-          { label: t("common.nav.reviews"), to: "/reviews" },
-          { label: data?.title ?? t("review.detail.breadcrumb") },
-        ]}
-      />
-
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
         {notFound && (
           <EmptyState
@@ -207,7 +202,7 @@ export default function ProjectReviewPage() {
                 <article className="flex min-w-0 flex-col gap-6">
                   <div className="flex flex-col gap-3">
                     <div className="flex flex-wrap items-center gap-3">
-                      <p className="type-overline tracking-widest text-muted-foreground uppercase">
+                      <p className="type-overline text-muted-foreground">
                         {t("project.list.label")}
                       </p>
                       <StatusBadge status={data.status} />
@@ -658,10 +653,7 @@ function ReviewActionsCard({ project }: { project: ProjectDetailResponse }) {
           />
         )}
 
-        <AlertDialog
-          open={confirmOpen}
-          onOpenChange={setConfirmOpen}
-        >
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
           <AlertDialogContent
             className="rounded-modal"
             finalFocus={statusMenuRef}

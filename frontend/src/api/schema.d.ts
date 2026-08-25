@@ -1530,7 +1530,7 @@ export interface components {
       /** Format: uuid */
       id: string
       name: string
-      /** @description Kurzform, z. B. "FK4". Fehlt bei Kategorien und kann auch bei Studiengang und Modul null sein. */
+      /** @description Kurzform, z. B. "FK4". Bei Fakultaet, Studiengang und Modul seit Contract v81 immer gesetzt; bei Kategorie und Semester immer null, die beiden fuehren keine. */
       abbreviation: string | null
     }
     /** @description Aktivitaetsverlauf, aufsteigend nach Zeitpunkt (§3.12). Ausdruecklich null, wenn die anfragende Person ihn nicht sehen darf (§5, Fussnote 7); das Feld fehlt nicht, es steht auf null. Damit zugleich das Kennzeichen, an dem ein Client erkennt, dass die lesende Person die Interna sehen darf, also Projektseite, zugewiesene Redaktion oder Admin ist, ohne aus der Rolle zu raten. */
@@ -1990,10 +1990,10 @@ export interface components {
        */
       name?: string
       /**
-       * @description Kurzform des Studiengangs. Darf fehlen.
+       * @description Kurzform des Studiengangs.
        * @example MI
        */
-      abbreviation?: string | null
+      abbreviation?: string
       /**
        * Format: uuid
        * @description ID der Fakultaet aus GET /api/faculties.
@@ -2004,8 +2004,11 @@ export interface components {
       /** Format: uuid */
       id: string
       name: string
-      /** @description Kurzform des Studiengangs. Kann fehlen. */
-      abbreviation: string | null
+      /**
+       * @description Kurzform des Studiengangs, z. B. "MIN".
+       * @example MIN
+       */
+      abbreviation: string
       /**
        * Format: uuid
        * @description Fakultaet, zu der der Studiengang gehoert. Derselbe Wert dient als Filter: GET /api/study-programs?faculty={id}.
@@ -2089,10 +2092,10 @@ export interface components {
        */
       name?: string
       /**
-       * @description Kurzform des Moduls. Darf fehlen.
+       * @description Kurzform des Moduls.
        * @example MCI
        */
-      abbreviation?: string | null
+      abbreviation?: string
       /**
        * Format: uuid
        * @description ID des Studiengangs aus GET /api/study-programs.
@@ -2103,8 +2106,11 @@ export interface components {
       /** Format: uuid */
       id: string
       name: string
-      /** @description Kurzform des Moduls. Kann fehlen. */
-      abbreviation: string | null
+      /**
+       * @description Kurzform des Moduls, z. B. "MMI".
+       * @example MMI
+       */
+      abbreviation: string
       /**
        * Format: uuid
        * @description Studiengang, zu dem das Modul gehoert. Derselbe Wert dient als Filter: GET /api/modules?studyProgram={id}.
@@ -2200,10 +2206,10 @@ export interface components {
        */
       name?: string
       /**
-       * @description Neue Kurzform. Fehlt das Feld, bleibt sie unveraendert; eine leere Zeichenkette loescht sie.
+       * @description Neue Kurzform. Fehlt das Feld, bleibt sie unveraendert; eine leere Zeichenkette ergibt 400.
        * @example MI
        */
-      abbreviation?: string | null
+      abbreviation?: string
       /**
        * Format: uuid
        * @description Neue Fakultaet. Fehlt das Feld, bleibt die Zuordnung unveraendert.
@@ -2229,10 +2235,10 @@ export interface components {
        */
       name?: string
       /**
-       * @description Neue Kurzform. Fehlt das Feld, bleibt sie unveraendert; eine leere Zeichenkette loescht sie.
+       * @description Neue Kurzform. Fehlt das Feld, bleibt sie unveraendert; eine leere Zeichenkette ergibt 400.
        * @example MCI
        */
-      abbreviation?: string | null
+      abbreviation?: string
       /**
        * Format: uuid
        * @description Neuer Studiengang. Fehlt das Feld, bleibt die Zuordnung unveraendert.
@@ -2388,6 +2394,18 @@ export interface components {
        * @example 26
        */
       count: number
+      /**
+       * Format: int64
+       * @description Zahl ihrer Projekte, die gerade einen Top-10-Platz belegen (§3.11). Teilmenge von count, aber nicht von accepted: die Administration kann ein Projekt auch ohne Nominierung aufnehmen.
+       * @example 3
+       */
+      inTop10: number
+      /**
+       * Format: int64
+       * @description Zahl ihrer Projekte mit mindestens einer angenommenen Nominierung (§2.8). Teilmenge von count, aber nicht von inTop10: ein angenommenes Projekt kann seinen Platz spaeter wieder verlieren.
+       * @example 4
+       */
+      accepted: number
     }
     /** @description Verweis auf ein Projekt: ID und Titel. */
     ProjectReferenceResponse: {
@@ -3112,7 +3130,7 @@ export interface operations {
         type?: ("REGULAR" | "PAPER" | "THESIS")[]
         /** @description Filter: IDs von Semestern aus GET /api/semesters (§3.18). Seit Contract v45 die ID und nicht mehr die Schreibweise. Wiederholbar, mehrere Werte ODER-verknuepft. */
         semester?: string[]
-        /** @description Suchbegriff fuer Titel, Kurzbeschreibung und die Namen der Autor:in (seit Contract v47 auch der volle Name), unabhaengig von Gross- und Kleinschreibung. */
+        /** @description Suchbegriff fuer Titel, Kurzbeschreibung, die Namen der Autor:in (seit Contract v47 auch der volle Name) und die Schlagwoerter (seit Contract v81), unabhaengig von Gross- und Kleinschreibung. */
         q?: string
         /** @description Filter: Projektstatus (§2.2). Wirkt nur innerhalb dessen, was ohne Anmeldung ohnehin sichtbar ist. */
         status?: "DRAFT" | "SUBMITTED" | "APPROVED" | "PUBLISHED" | "REVISION"

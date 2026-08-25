@@ -12,6 +12,7 @@ import {
 import { useId, useRef, useState, type KeyboardEvent } from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { useTranslation } from "react-i18next"
+import { Link } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
 import {
@@ -76,6 +77,7 @@ import {
   useSetCommentStatus,
 } from "@/features/comments/hooks/useComments"
 import { fullNameOf } from "@/lib/name"
+import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
 import { cn } from "@/lib/utils"
 
 /**
@@ -390,7 +392,11 @@ export function CommentPanel({
              * wieder ganz oben (SC 2.4.3). Die Liste selbst bleibt stehen und
              * nimmt ihn deshalb auf.
              */
-            <ol ref={list} tabIndex={-1} className="flex min-w-0 flex-col gap-2 outline-none">
+            <ol
+              ref={list}
+              tabIndex={-1}
+              className="flex min-w-0 flex-col gap-2 outline-none"
+            >
               {ordered.map((comment) => (
                 <li key={comment.id}>
                   <CommentItem
@@ -546,6 +552,7 @@ function CommentItem({
   onDelete: () => void
 }) {
   const { t, i18n } = useTranslation()
+  const origin = useBreadcrumbOrigin()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const deleteTrigger = useRef<HTMLButtonElement | null>(null)
 
@@ -576,9 +583,16 @@ function CommentItem({
         )}
       >
         <MessageHeader className="justify-between gap-2 px-0 text-current">
-          <span className="type-body-sm truncate">
+          {/* Der Name fuehrt zum Portfolio der Person (KAN-80): auch im
+              Kommentarstrang ist ein Name ein Weg zu ihr und nicht nur eine
+              Beschriftung. */}
+          <Link
+            to={`/portfolios/${comment.author.id}`}
+            state={origin}
+            className="type-body-sm truncate hover:underline focus-visible:underline"
+          >
             {fullNameOf(comment.author)}
-          </span>
+          </Link>
           <span className="type-label-xs flex shrink-0 items-center gap-1 tracking-wide uppercase">
             {resolvedChangeRequest
               ? t("comment.changeRequest.resolvedLabel")
@@ -950,7 +964,9 @@ function CommentForm({
           Abschnitt 3, wie in den Auth-Formularen). */}
       {form.formState.errors.root?.server?.message && (
         <Alert variant="destructive">
-          <AlertTitle>{t(form.formState.errors.root.server.message)}</AlertTitle>
+          <AlertTitle>
+            {t(form.formState.errors.root.server.message)}
+          </AlertTitle>
         </Alert>
       )}
 

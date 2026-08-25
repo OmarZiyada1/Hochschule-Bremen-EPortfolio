@@ -18,7 +18,10 @@ public class StudyProgram extends BaseEntity {
 	@Column(nullable = false, length = 255)
 	private String name;
 
-	@Column(length = 64)
+	// Seit Contract v81 (KAN-80) Pflicht: das Kuerzel steht auf der
+	// Projektkachel und in den Projektdetails, eine leere Stelle waere dort
+	// nicht sinnvoll zu fuellen.
+	@Column(nullable = false, length = 64)
 	private String abbreviation;
 
 	@ManyToOne(fetch = FetchType.LAZY)

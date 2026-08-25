@@ -104,16 +104,14 @@
       "freeBadge": "Top 10"
     },
     "cta": {
-      "label": "Ranks 1 to 10",
+      "label": "HSB · in numbers",
       "title": "That was just the beginning.",
-      "description": "{{works}} works from {{faculties}} faculties are waiting in the project library: find the one that sparks your next idea.",
-      "statWorks": "Works",
+      "description": "{{works}} projects from {{faculties}} faculties are waiting in the project library: find the one that sparks your next idea.",
+      "statWorks": "Projects",
       "statFaculties": "Faculties",
       "statPrograms": "Degree programmes",
       "openLibrary": "Open the project library"
-    },
-    "tokenGallery": "Open the token layer",
-    "componentGallery": "Open the component library"
+    }
   },
   "login": {
     "title": "Log in",
@@ -520,6 +518,10 @@
       "filter": {
         "title": "Filter",
         "noOptions": "No options available.",
+        "reset_one": "Reset ({{count}})",
+        "reset_other": "Reset ({{count}})",
+        "groupCount_one": "{{count}} filter set",
+        "groupCount_other": "{{count}} filters set",
         "group": {
           "faculty": "Faculty/Institution",
           "studyProgram": "Degree programme",
@@ -605,7 +607,7 @@
       "empty": "No person found.",
       "hits_one": "{{count}} match",
       "hits_other": "{{count}} matches",
-      "by": "By {{names}}"
+      "label": "Contributors"
     },
     "metadata": {
       "breadcrumb": "Project metadata",
@@ -1439,13 +1441,22 @@
       },
       "users": {
         "title": "User statistics",
-        "total": "All users"
+        "total": "All users",
+        "roles": "By role",
+        "statuses": "By account status",
+        "emptyChart": "No accounts in this breakdown.",
+        "tableCaption": "Accounts by role and account status",
+        "columnGroup": "Group",
+        "columnCount": "Accounts"
       },
       "openNominations": "Open top 10 proposals",
       "faculties": {
         "title": "Projects per faculty",
         "subtitle": "Distribution of all projects by faculty. Projects without a faculty are not included.",
         "bar": "Projects",
+        "inTop10": "In the top 10",
+        "accepted": "Accepted, no slot",
+        "rest": "Other projects",
         "empty": "No faculties have been set up.",
         "tableCaption": "Projects per faculty",
         "columnFaculty": "Faculty",

@@ -9,11 +9,12 @@ import java.util.UUID;
  *
  * <p>Alle drei Felder sind optional: {@code null} heisst „unveraendert lassen".
  * Zur leeren Zeichenkette bei {@link #abbreviation} siehe
- * {@link StudyProgramUpdateRequest}.
+ * {@link StudyProgramUpdateRequest}: sie loescht die Kurzform seit Contract v81
+ * nicht mehr, sondern ergibt 400.
  *
  * @param name           neuer Name; {@code null} laesst ihn unveraendert.
  * @param abbreviation   neue Kurzform; {@code null} laesst sie unveraendert,
- *                       eine leere Zeichenkette loescht sie.
+ *                       eine leere Zeichenkette ergibt 400.
  * @param studyProgramId neuer Studiengang; {@code null} laesst die Zuordnung
  *                       unveraendert. Eine unbekannte ID ergibt 400.
  */
@@ -25,8 +26,8 @@ public record ModuleUpdateRequest(
 		String name,
 
 		@Schema(description = "Neue Kurzform. Fehlt das Feld, bleibt sie unveraendert; eine "
-				+ "leere Zeichenkette loescht sie.", example = "MCI", nullable = true)
-		@Size(max = 64, message = "Kurzform ist zu lang.")
+				+ "leere Zeichenkette ergibt 400.", example = "MCI")
+		@Size(min = 1, max = 64, message = "Kurzform ist zu lang oder leer.")
 		String abbreviation,
 
 		@Schema(description = "Neuer Studiengang. Fehlt das Feld, bleibt die Zuordnung "

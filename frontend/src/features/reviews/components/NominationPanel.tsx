@@ -42,6 +42,7 @@ import {
   tierTones,
   type NominationFilterValue,
 } from "@/features/reviews/nominations"
+import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
 
 /** Zahl der Plaetze, die die kuratierte Liste hoechstens fuehrt (§3.11). */
 const TOP10_SIZE = 10
@@ -253,6 +254,8 @@ function NominationRow({
   onNotice: (message: string) => void
 }) {
   const { t } = useTranslation()
+  /* Herkunft fuer den Brotkrumenpfad des Ziels (KAN-80). */
+  const origin = useBreadcrumbOrigin()
   const TierIcon = tierIcons[nomination.proposedTier]
 
   return (
@@ -269,6 +272,7 @@ function NominationRow({
         <ItemTitle>
           <Link
             to={`/projects/${nomination.project.id}`}
+            state={origin}
             className="type-body-sm font-semibold hover:underline focus-visible:underline"
           >
             {nomination.project.title}

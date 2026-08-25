@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { BreadcrumbBar } from "@/components/common/BreadcrumbBar"
 
 import { useAuth } from "@/api/auth/AuthContext"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
@@ -67,14 +66,6 @@ export default function ProfileEditPage() {
 
   return (
     <>
-      <BreadcrumbBar
-        items={[
-          { label: t("common.nav.home"), to: "/" },
-          { label: t("common.nav.myPortfolio"), to: "/my-portfolio" },
-          { label: t("portfolio.profile.breadcrumb") },
-        ]}
-      />
-
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8">
         <Card className="mx-auto w-full max-w-xl">
           <CardContent className="flex flex-col gap-6 px-6">

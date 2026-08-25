@@ -219,7 +219,7 @@ export default function AdminUserListPage() {
   return (
     <>
       <header className="flex flex-col gap-2">
-        <p className="type-overline tracking-widest text-muted-foreground uppercase">
+        <p className="type-overline text-muted-foreground">
           {t("administration.label")}
         </p>
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -353,6 +353,7 @@ export default function AdminUserListPage() {
                     <UserTableRow
                       key={account.id}
                       person={account}
+                      userId={account.id}
                       email={account.email}
                       hsbEmail={account.hsbEmail}
                       role={account.role}

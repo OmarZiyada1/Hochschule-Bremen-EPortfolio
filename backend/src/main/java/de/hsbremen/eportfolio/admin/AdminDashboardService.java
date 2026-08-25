@@ -15,6 +15,8 @@ import de.hsbremen.eportfolio.project.ProjectFacultyCount;
 import de.hsbremen.eportfolio.project.ProjectPermissionService;
 import de.hsbremen.eportfolio.project.ProjectRepository;
 import de.hsbremen.eportfolio.project.dto.ReferenceResponse;
+import de.hsbremen.eportfolio.top10.Top10EntryRepository;
+import de.hsbremen.eportfolio.top10.Top10FacultyCount;
 import de.hsbremen.eportfolio.top10.Top10NominationRepository;
 import de.hsbremen.eportfolio.user.UserRepository;
 import java.util.ArrayList;
@@ -78,6 +80,8 @@ public class AdminDashboardService {
 
 	private final Top10NominationRepository nominationRepository;
 
+	private final Top10EntryRepository top10EntryRepository;
+
 	private final FacultyRepository facultyRepository;
 
 	private final ProjectPermissionService permissions;
@@ -86,12 +90,14 @@ public class AdminDashboardService {
 			UserRepository userRepository,
 			BlockRepository blockRepository,
 			Top10NominationRepository nominationRepository,
+			Top10EntryRepository top10EntryRepository,
 			FacultyRepository facultyRepository,
 			ProjectPermissionService permissions) {
 		this.projectRepository = projectRepository;
 		this.userRepository = userRepository;
 		this.blockRepository = blockRepository;
 		this.nominationRepository = nominationRepository;
+		this.top10EntryRepository = top10EntryRepository;
 		this.facultyRepository = facultyRepository;
 		this.permissions = permissions;
 	}
@@ -145,18 +151,40 @@ public class AdminDashboardService {
 	 * <p>{@code HashMap} und nicht {@code EnumMap}: der Schluessel ist eine UUID.
 	 * Die Reihenfolge der Antwort kommt deshalb nicht aus der Karte, sondern aus
 	 * der sortierten Fakultaetsliste.
+	 *
+	 * <p><strong>Seit Contract v82 drei Zaehlungen statt einer.</strong> Neben dem
+	 * Bestand stehen die Projekte mit Top-10-Platz und die mit angenommener
+	 * Nominierung. Beide werden roh ausgeliefert und nicht gegeneinander
+	 * verrechnet: sie ueberschneiden sich in beide Richtungen, und welche
+	 * Abschnitte daraus ein gestapelter Balken macht, ist eine Frage der
+	 * Darstellung (Begruendung an {@link FacultyProjectCountResponse}).
 	 */
 	private List<FacultyProjectCountResponse> byFaculty() {
 		Map<UUID, Long> counts = new HashMap<>();
 		for (ProjectFacultyCount row : projectRepository.countPerFaculty()) {
 			counts.put(row.facultyId(), row.count());
 		}
+		Map<UUID, Long> inTop10 = perFaculty(top10EntryRepository.countPerFaculty());
+		Map<UUID, Long> accepted = perFaculty(nominationRepository
+				.countProjectsPerFacultyByStatus(NominationStatus.ACCEPTED));
 
 		List<Faculty> faculties = facultyRepository.findAllByOrderByAbbreviationAsc();
 		List<FacultyProjectCountResponse> result = new ArrayList<>(faculties.size());
 		for (Faculty faculty : faculties) {
+			UUID id = faculty.getId();
 			result.add(new FacultyProjectCountResponse(ReferenceResponse.from(faculty),
-					counts.getOrDefault(faculty.getId(), 0L)));
+					counts.getOrDefault(id, 0L),
+					inTop10.getOrDefault(id, 0L),
+					accepted.getOrDefault(id, 0L)));
+		}
+		return result;
+	}
+
+	/** Ergebniszeilen der Kuratierungs-Abfragen als Karte ueber die Fakultaets-ID. */
+	private static Map<UUID, Long> perFaculty(List<Top10FacultyCount> rows) {
+		Map<UUID, Long> result = new HashMap<>();
+		for (Top10FacultyCount row : rows) {
+			result.put(row.facultyId(), row.count());
 		}
 		return result;
 	}

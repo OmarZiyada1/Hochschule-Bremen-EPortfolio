@@ -13,6 +13,7 @@ import {
   type Top10Slots,
 } from "@/features/administration/top10Slots"
 import { peopleOfProject } from "@/lib/people"
+import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
 import { cn } from "@/lib/utils"
 
 /**
@@ -52,6 +53,8 @@ export function Top10SlotList({
   disabled?: boolean
 }) {
   const { t, i18n } = useTranslation()
+  /* Herkunft fuer den Brotkrumenpfad des Ziels (KAN-80). */
+  const origin = useBreadcrumbOrigin()
   const dateFormat = new Intl.DateTimeFormat(i18n.language, {
     dateStyle: "medium",
   })
@@ -113,6 +116,7 @@ export function Top10SlotList({
                       <h3 className="type-body font-semibold">
                         <Link
                           to={`/projects/${slot.project.id}`}
+                          state={origin}
                           className="text-primary hover:underline focus-visible:underline"
                         >
                           {slot.project.title}

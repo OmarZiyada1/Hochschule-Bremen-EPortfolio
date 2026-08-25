@@ -29,6 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
 
 /**
  * Das Zeilenmenue der Projektverwaltung (Template „Admin Projects", KAN-38):
@@ -83,6 +84,8 @@ export function AdminProjectRowMenu({
   onDelete: () => void
 }) {
   const { t } = useTranslation()
+  /* Herkunft fuer den Brotkrumenpfad des Ziels (KAN-80). */
+  const origin = useBreadcrumbOrigin()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
 
@@ -112,7 +115,9 @@ export function AdminProjectRowMenu({
 
         <DropdownMenuContent align="end">
           <DropdownMenuItem
-            render={<Link to={`/projects/${project.id}/review`} />}
+            render={
+              <Link to={`/projects/${project.id}/review`} state={origin} />
+            }
             nativeButton={false}
           >
             <MessageSquareIcon aria-hidden="true" />

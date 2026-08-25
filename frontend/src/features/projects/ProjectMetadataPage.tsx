@@ -5,7 +5,6 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import type { ProjectDetailResponse, ProjectUpdateRequest } from "@/api/types"
-import { BreadcrumbBar } from "@/components/common/BreadcrumbBar"
 import { EmptyState } from "@/components/common/EmptyState"
 import { VersionConflictDialog } from "@/components/common/VersionConflictDialog"
 import {
@@ -32,6 +31,7 @@ import {
 } from "@/features/projects/ProjectMetadataForm"
 import { submitProject } from "@/api/queries/projects"
 import { missingForSubmit } from "@/features/project-content/submitRequirements"
+import { useBreadcrumbTitle } from "@/routes/useBreadcrumb"
 
 /** Wohin "Abbrechen" fuehrt: die eigene Projektliste. */
 const PORTFOLIO_PATH = "/my-portfolio"
@@ -91,6 +91,15 @@ export default function ProjectMetadataPage() {
    * Navigationszustand, damit ein Neuladen den Weg nicht vergisst.
    */
   const submitting = params.get("submit") === "1"
+
+  /*
+   * Auf dem Einreichweg heisst die letzte Ebene des Brotkrumenpfades
+   * „Einreichen" und nicht „Projekt-Metadaten": es ist dieselbe Seite, aber
+   * ein anderer Schritt. Die Station davor (der Editor) kommt als Herkunft
+   * mit dem Aufruf, siehe EditorPage. Das Band selbst zeichnet der
+   * Anwendungsrahmen (KAN-80).
+   */
+  useBreadcrumbTitle(submitting ? t("project.metadata.breadcrumbSubmit") : null)
 
   const detail = useProjectDetail(projectId)
   const update = useUpdateProject(projectId)
@@ -219,32 +228,6 @@ export default function ProjectMetadataPage() {
 
   return (
     <>
-      <BreadcrumbBar
-        /*
-         * Der Weg unterscheidet sich, je nachdem woher man kommt: aus dem
-         * Portfolio zum Bearbeiten, oder aus dem Editor auf dem Weg ins
-         * Einreichen. Im zweiten Fall steht der Editor als Station davor,
-         * damit der Rueckweg dorthin sichtbar ist und nicht nur ueber die
-         * Schaltflaechen unten geht.
-         */
-        items={
-          submitting
-            ? [
-                { label: t("common.nav.myPortfolio"), to: PORTFOLIO_PATH },
-                {
-                  label: t("project.metadata.breadcrumbEditor"),
-                  to: `/projects/${projectId}/editor`,
-                },
-                { label: t("project.metadata.breadcrumbSubmit") },
-              ]
-            : [
-                { label: t("common.nav.home"), to: "/" },
-                { label: t("common.nav.myPortfolio"), to: PORTFOLIO_PATH },
-                { label: t("project.metadata.breadcrumb") },
-              ]
-        }
-      />
-
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
         {notFound ? (
           <EmptyState

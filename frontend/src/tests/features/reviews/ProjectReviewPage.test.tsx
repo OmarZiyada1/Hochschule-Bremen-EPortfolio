@@ -427,7 +427,7 @@ describe("ProjectReviewPage", () => {
     )
   })
 
-  it("fuehrt ueber ein Brotkrumenband zurueck und nicht ueber einen zweiten Link", async () => {
+  it("fuehrt keinen zweiten Weg zurueck neben dem Brotkrumenband", async () => {
     server.use(...handlers(review()))
 
     renderPage()
@@ -435,13 +435,9 @@ describe("ProjectReviewPage", () => {
     await screen.findByRole("heading", { level: 1, name: "RoboNav" })
     /* Der Pfad traegt den Weg zurueck vollstaendig; ein Knopf „Zurueck zu
        Meine Reviews" daneben sagte dasselbe ein zweites Mal (stehende
-       Entscheidung, Skill frontend-modul Abschnitt 0a). */
-    const path = screen.getByRole("navigation", {
-      name: i18n.t("common.breadcrumb.label"),
-    })
-    expect(
-      within(path).getByRole("link", { name: i18n.t("common.nav.reviews") })
-    ).toHaveAttribute("href", "/reviews")
+       Entscheidung, Skill frontend-modul Abschnitt 0a). Das Band selbst
+       zeichnet seit KAN-80 der Anwendungsrahmen und nicht mehr diese Seite;
+       geprueft wird es in tests/routes/AppBreadcrumb.test.tsx. */
     expect(
       screen.queryByRole("link", { name: i18n.t("review.detail.back") })
     ).not.toBeInTheDocument()
@@ -733,7 +729,9 @@ describe("ProjectReviewPage", () => {
 
     const dialog = await screen.findByRole("alertdialog")
     await userEvent.click(
-      within(dialog).getByRole("button", { name: i18n.t("common.action.cancel") })
+      within(dialog).getByRole("button", {
+        name: i18n.t("common.action.cancel"),
+      })
     )
 
     expect(calls).toBe(0)

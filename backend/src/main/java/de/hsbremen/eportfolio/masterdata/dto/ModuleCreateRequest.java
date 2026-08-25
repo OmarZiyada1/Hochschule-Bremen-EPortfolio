@@ -10,8 +10,8 @@ import java.util.UUID;
  * Body von {@code POST /api/admin/modules} (§6.1, §3.9).
  *
  * @param name           ausgeschriebener Name.
- * @param abbreviation   Kurzform; in der Tabelle {@code nullable} und deshalb
- *                       auch hier optional.
+ * @param abbreviation   Kurzform. Pflicht seit Contract v81, wie beim
+ *                       Studiengang.
  * @param studyProgramId Studiengang, zu dem das Modul gehoert. Pflicht, weil die
  *                       Fremdschluesselspalte {@code not null} ist; eine
  *                       unbekannte ID ergibt 400.
@@ -24,8 +24,8 @@ public record ModuleCreateRequest(
 		@Size(max = 255, message = "Name ist zu lang.")
 		String name,
 
-		@Schema(description = "Kurzform des Moduls. Darf fehlen.", example = "MCI",
-				nullable = true)
+		@Schema(description = "Kurzform des Moduls.", example = "MCI")
+		@NotBlank(message = "Kurzform fehlt.")
 		@Size(max = 64, message = "Kurzform ist zu lang.")
 		String abbreviation,
 

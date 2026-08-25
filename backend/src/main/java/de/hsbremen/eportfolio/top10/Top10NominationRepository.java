@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 /**
  * Datenbankzugriff auf Top-10-Nominierungen.
@@ -63,6 +65,27 @@ public interface Top10NominationRepository extends JpaRepository<Top10Nomination
 	 * (§2.8).
 	 */
 	long countByStatus(NominationStatus status);
+
+	/**
+	 * Je Fakultaet die Zahl der <em>Projekte</em> mit einer Nominierung in
+	 * diesem Stand (§6.1, Contract v82).
+	 *
+	 * <p><strong>{@code count(distinct n.project.id)} und nicht
+	 * {@code count(n)}.</strong> Ein Projekt kann mehrfach nominiert worden
+	 * sein, etwa nachdem ein erster Vorschlag zurueckgezogen wurde (§2.8).
+	 * Gezaehlt werden sollen aber Projekte und keine Vorgaenge, sonst stuende
+	 * im Balken eine Zahl, die groesser sein kann als der Bestand der Fakultaet.
+	 *
+	 * <p>Projekte ohne Fakultaet fallen heraus, wie bei
+	 * {@link Top10EntryRepository#countPerFaculty()}.
+	 */
+	@Query("select new de.hsbremen.eportfolio.top10.Top10FacultyCount("
+			+ "n.project.faculty.id, count(distinct n.project.id)) "
+			+ "from Top10Nomination n "
+			+ "where n.status = :status and n.project.faculty is not null "
+			+ "group by n.project.faculty.id")
+	List<Top10FacultyCount> countProjectsPerFacultyByStatus(
+			@Param("status") NominationStatus status);
 
 	/**
 	 * Die offenen Nominierungen zu einer Menge von Projekten, fuer den Fall, dass

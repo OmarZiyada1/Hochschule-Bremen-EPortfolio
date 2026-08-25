@@ -1,7 +1,6 @@
 import { FolderOpenIcon, SearchXIcon } from "lucide-react"
 import { useEffect, useState, type MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
-import { BreadcrumbBar } from "@/components/common/BreadcrumbBar"
 import { Link, useSearchParams } from "react-router-dom"
 
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
@@ -182,16 +181,9 @@ export default function ProjectListPage() {
 
   return (
     <>
-      <BreadcrumbBar
-        items={[
-          { label: t("common.nav.home"), to: "/" },
-          { label: t("common.nav.projects") },
-        ]}
-      />
-
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
         <header className="flex flex-col gap-2">
-          <p className="type-overline tracking-widest text-primary uppercase">
+          <p className="type-overline text-primary">
             {t("project.list.label")}
           </p>
           {/* Blau, weil die Vorlage "Projekte (Oeffentlich)" den Seitentitel in
@@ -206,23 +198,17 @@ export default function ProjectListPage() {
 
         <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[16rem_1fr] lg:items-start">
           {/*
-           * Bleibt beim Scrollen der Trefferliste oben stehen: die Bibliothek
-           * ist lang, und ein Filter, den man erst zurueckscrollen muss, wird
-           * nicht benutzt. Moeglich, weil die Gitterzeile items-start fuehrt;
-           * ohne das zoege der Rasterplatz die Leiste auf volle Hoehe und
-           * sticky haette nichts, woran es kleben koennte. Erst ab lg:
-           * darunter steht sie ueber der Liste und scrollt mit.
-           *
-           * Bewusst ohne eigene Bildlaufleiste: die Leiste bleibt so hoch,
-           * wie ihre Gruppen sie machen. Ist sie hoeher als das Fenster,
-           * bleibt ihr unteres Ende im geklebten Zustand ausserhalb des
-           * sichtbaren Bereichs; das ist der Preis dafuer, dass sie sonst
-           * nirgends einen zweiten Scrollbalken erzeugt.
+           * Scrollt mit, statt oben stehen zu bleiben (Vorgabe zu KAN-80).
+           * Bis dahin klebte die Leiste ab lg am oberen Rand. Zwei Gruende
+           * sprechen dagegen: Ist sie hoeher als das Fenster, bleibt ihr
+           * unteres Ende im geklebten Zustand unerreichbar, und seit dem
+           * Akkordeon ist ohnehin nur noch eine Gruppe offen, die Leiste
+           * also kurz genug, um beim Zurueckscrollen schnell wieder da zu
+           * sein.
            */}
           <FilterSidebar
             selection={selection}
             onSelectionChange={applyFilterSelection}
-            className="lg:sticky lg:top-4"
           />
 
           <div className="flex flex-col gap-4">

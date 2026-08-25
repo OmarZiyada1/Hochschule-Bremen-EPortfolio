@@ -76,3 +76,77 @@
     }
   }
 }
+
+/*
+ * Hoehe der Kopfleiste als Mass, nicht als Zahl an zwei Orten (KAN-80).
+ *
+ * Die Startseite verlangt fuer Hero und Abschlusssektion je eine volle
+ * Fensterhoehe abzueglich der Leiste. Ohne dieses Mass stuende die 4rem
+ * einmal in NavBar.tsx und einmal in HomePage.tsx, und die zweite Stelle
+ * bliebe stehen, sobald die erste sich aendert. Sie gehoert nicht in
+ * tokens.css: dort liegen die Rollen aus der Figma-Foundation, und die
+ * Tests dort zaehlen sie.
+ *
+ * @theme statt @theme inline, damit die Variable im gebauten CSS steht und
+ * ein calc() sie lesen kann.
+ */
+@theme {
+  --spacing-nav: 4rem;
+}
+
+/*
+ * Waagerechtes Wandern eines Pfeils (KAN-80): der Weg in die
+ * Projektbibliothek traegt ihn rechts vom Text. Das Gegenstueck nach unten
+ * ist Tailwinds animate-bounce am Sprunglink in die Top 10; eine eigene
+ * Kurve dafuer waere derselbe Effekt ein zweites Mal.
+ *
+ * Wer weniger Bewegung eingestellt hat, sieht keine: die Grundregel in
+ * tokens.css setzt animation-duration und iteration-count global herunter
+ * (prefers-reduced-motion).
+ */
+@theme inline {
+  --animate-nudge-x: nudge-x 1.4s ease-in-out infinite;
+
+  @keyframes nudge-x {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    50% {
+      transform: translateX(-0.25rem);
+    }
+  }
+}
+
+/*
+ * Auf- und Zuklappen des Akkordeons (KAN-80). Wie beim Caret der
+ * input-otp-Primitive nutzt die erzeugte Datei accordion.tsx die Klassen
+ * animate-accordion-down und animate-accordion-up, bringt aber weder die
+ * Theme-Variablen noch die Keyframes mit; ohne beides springt das Panel
+ * auf, und weder Typecheck noch Lint noch ein roter Test melden es.
+ *
+ * Die Zielhoehe steht in --accordion-panel-height, die Base UI zur Laufzeit
+ * am Panel setzt. Werte wie in der shadcn-Referenz.
+ */
+@theme inline {
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--accordion-panel-height);
+    }
+  }
+
+  @keyframes accordion-up {
+    from {
+      height: var(--accordion-panel-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+}

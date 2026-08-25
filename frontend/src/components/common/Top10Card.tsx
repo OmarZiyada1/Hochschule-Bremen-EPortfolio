@@ -4,6 +4,7 @@ import { Link } from "react-router-dom"
 
 import { resolveApiUrl } from "@/api/client"
 import type { ProjectReference } from "@/api/types"
+import { CardLinkOverlay } from "@/components/common/CardLinkOverlay"
 import {
   ProjectPeople,
   type DisplayPerson,
@@ -121,12 +122,12 @@ export function Top10Card({
           </div>
           {heading}
           {people && (
-            <ProjectPeople
-              people={people}
-              className="text-muted-foreground"
-            />
+            <ProjectPeople people={people} className="text-muted-foreground" />
           )}
         </CardContent>
+        {/* Die ganze Kachel fuehrt ins Projekt, nicht nur der Titel
+            (KAN-80). */}
+        {href && <CardLinkOverlay to={href} />}
       </Card>
     )
   }
@@ -167,6 +168,7 @@ export function Top10Card({
           />
         )}
       </CardContent>
+      {href && <CardLinkOverlay to={href} />}
     </Card>
   )
 }

@@ -34,6 +34,10 @@ function dashboard(overrides: Partial<DashboardResponse> = {}) {
           abbreviation: "F1",
         }),
         count: 6,
+        /* Zwei Plaetze belegt, drei Projekte angenommen: eines davon hat
+           seinen Platz wieder verloren (Contract v82). */
+        inTop10: 2,
+        accepted: 3,
       },
       {
         faculty: reference({
@@ -42,6 +46,8 @@ function dashboard(overrides: Partial<DashboardResponse> = {}) {
           abbreviation: "F2",
         }),
         count: 0,
+        inTop10: 0,
+        accepted: 0,
       },
     ],
     usersTotal: 9,
@@ -110,19 +116,81 @@ describe("AdminDashboardPage", () => {
 
     renderWithProviders(<AdminDashboardPage />, "/administration")
 
-    expect(await screen.findByText("Alle Nutzer:innen")).toBeInTheDocument()
-    /* Rollen im Plural: die Zeile zaehlt Konten. */
-    expect(screen.getByText("Admins")).toBeInTheDocument()
-    expect(screen.getByText("Redakteur:innen")).toBeInTheDocument()
+    /* Die beiden Diagramme sind aria-hidden; zugaenglich ist die Tabelle
+       daneben, und genau sie traegt die Aussage (KAN-80). */
+    const table = await screen.findByRole("table", {
+      name: "Konten nach Rolle und Kontostatus",
+    })
+    /* Rollen im Plural: gezaehlt werden Konten. */
+    expect(within(table).getByText("Admins")).toBeInTheDocument()
+    expect(within(table).getByText("Redakteur:innen")).toBeInTheDocument()
     /* Die drei Kontostatus und die offenen Vorschlaege zeichnet der Frame
        nicht; sie stehen laut Klaerungsrunde zu KAN-38 trotzdem hier. */
-    expect(screen.getByText("Deaktiviert")).toBeInTheDocument()
-    expect(screen.getByText("Registrierung offen")).toBeInTheDocument()
+    expect(within(table).getByText("Deaktiviert")).toBeInTheDocument()
+    expect(within(table).getByText("Registrierung offen")).toBeInTheDocument()
+
+    /* Die Gesamtzahl steht in der Mitte des Rings und in der Tabelle. */
+    const total = within(table).getByText("Alle Nutzer:innen").closest("tr")
+    expect(total).not.toBeNull()
+    expect(within(total!).getByText("9")).toBeInTheDocument()
 
     const nominations = screen.getByRole("link", {
       name: "Offene Top-10-Vorschläge",
     })
     expect(nominations).toHaveAttribute("href", "/administration/top10")
+  })
+
+  /*
+   * Punkt 8 aus KAN-80: der Balken je Fakultaet ist gestapelt. Die drei
+   * Abschnitte rechnet die Oberflaeche aus zwei Rohzahlen des Servers, weil
+   * inTop10 und accepted sich in beide Richtungen ueberschneiden koennen.
+   */
+  it("schluesselt die Kuratierung je Fakultaet auf", async () => {
+    server.use(...baseHandlers())
+
+    renderWithProviders(<AdminDashboardPage />, "/administration")
+
+    const table = await screen.findByRole("table", {
+      name: "Projekte je Fakultät",
+    })
+    const row = within(table).getByText("F1, Wirtschaft").closest("tr")
+    expect(row).not.toBeNull()
+
+    const cells = within(row!).getAllByRole("cell")
+    /* Bestand 6, davon 2 mit Platz und 1 angenommen ohne Platz (3 minus 2). */
+    expect(cells.map((cell) => cell.textContent)).toEqual(["6", "2", "1"])
+  })
+
+  it("erzeugt keinen negativen Abschnitt, wenn ein Platz ohne Nominierung entstand", async () => {
+    server.use(
+      ...baseHandlers(
+        dashboard({
+          projectsByFaculty: [
+            {
+              faculty: reference({
+                id: "f-1",
+                name: "Wirtschaft",
+                abbreviation: "F1",
+              }),
+              count: 4,
+              /* Die Administration kann ein Projekt ohne Nominierung
+                 aufnehmen; dann ist accepted kleiner als inTop10. */
+              inTop10: 3,
+              accepted: 1,
+            },
+          ],
+        })
+      )
+    )
+
+    renderWithProviders(<AdminDashboardPage />, "/administration")
+
+    const table = await screen.findByRole("table", {
+      name: "Projekte je Fakultät",
+    })
+    const row = within(table).getByText("F1, Wirtschaft").closest("tr")
+    const cells = within(row!).getAllByRole("cell")
+    expect(cells.map((cell) => cell.textContent)).toEqual(["4", "3", "0"])
   })
 
   it("fuehrt jede Fakultaet, auch die ohne Projekte", async () => {
@@ -138,7 +206,13 @@ describe("AdminDashboardPage", () => {
     expect(within(table).getByText("F1, Wirtschaft")).toBeInTheDocument()
     const zero = within(table).getByText("F2, Architektur").closest("tr")
     expect(zero).not.toBeNull()
-    expect(within(zero!).getByText("0")).toBeInTheDocument()
+    /* Seit KAN-80 traegt die Zeile drei Zahlen; bei einer Fakultaet ohne
+       Projekte stehen alle drei auf 0 statt zu fehlen. */
+    expect(
+      within(zero!)
+        .getAllByRole("cell")
+        .map((cell) => cell.textContent)
+    ).toEqual(["0", "0", "0"])
   })
 
   it("zeigt eine Fehlerantwort sichtbar und nicht als leere Flaeche", async () => {

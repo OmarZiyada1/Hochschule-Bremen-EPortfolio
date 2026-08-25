@@ -6,6 +6,7 @@ import { Link } from "react-router-dom"
 import type { Top10Action, Top10AuditEntryResponse } from "@/api/types"
 import { Card, CardContent } from "@/components/ui/card"
 import { fullNameOf } from "@/lib/name"
+import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
 
 /*
  * Symbol und Ton je Aktion (§2.12). Record ueber den Enum-Typ ohne
@@ -61,6 +62,8 @@ export function Top10AuditList({
   entries: readonly Top10AuditEntryResponse[]
 }) {
   const { t, i18n } = useTranslation()
+  /* Herkunft fuer den Brotkrumenpfad des Ziels (KAN-80). */
+  const origin = useBreadcrumbOrigin()
   const timestampFormat = new Intl.DateTimeFormat(i18n.language, {
     dateStyle: "medium",
     timeStyle: "short",
@@ -103,6 +106,7 @@ export function Top10AuditList({
                     <h3 className="type-body font-semibold">
                       <Link
                         to={`/projects/${entry.project.id}`}
+                        state={origin}
                         className="text-primary hover:underline focus-visible:underline"
                       >
                         {entry.project.title}

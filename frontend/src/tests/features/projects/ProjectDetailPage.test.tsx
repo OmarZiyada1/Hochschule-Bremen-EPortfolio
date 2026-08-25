@@ -374,11 +374,11 @@ describe("Inhalt und Gliederung", () => {
     expect(screen.getByText("WiSe 2025/26")).toBeInTheDocument()
     expect(screen.getByText(publishedMonth())).toBeInTheDocument()
 
-    /* Der Studiengang steht mit vollem Namen und ohne Kuerzel: das Kuerzel
-       wiederholte ihn nur in kurz (Vorgabe zur Abnahme von KAN-32). Auf der
-       Kachel bleibt es, dort ist der volle Name nicht zu sehen. */
-    expect(screen.getByText("Informatik")).toBeInTheDocument()
-    expect(screen.queryByText("INF")).toBeNull()
+    /* Der Studiengang steht mit vollem Namen und dem Kuerzel in Klammern
+       (Entscheidung zu KAN-80): auf der Kachel ist aus Platzgruenden nur die
+       Kurzform zu sehen, und hier steht ihre Aufloesung. Bis dahin fehlte
+       das Kuerzel hier ganz (Vorgabe zur Abnahme von KAN-32). */
+    expect(screen.getByText("Informatik (INF)")).toBeInTheDocument()
 
     const members = screen.getByText("Projektmitglieder").parentElement
     const names = within(members as HTMLElement).getAllByRole("listitem")

@@ -104,7 +104,7 @@ export default function AdminCategoryListPage() {
   return (
     <>
       <header className="flex flex-col gap-2">
-        <p className="type-overline tracking-widest text-muted-foreground uppercase">
+        <p className="type-overline text-muted-foreground">
           {t("administration.label")}
         </p>
         <h1 className="type-title text-primary">

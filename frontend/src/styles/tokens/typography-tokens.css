@@ -148,7 +148,17 @@
      SC 1.4.12 verlangt mindestens das 1,5-Fache (Foundation 5.3). */
   --lh-body: 1.5;
 
-  /* Laufweite der Overline, 4px (Foundation 5.2). */
+  /*
+   * Laufweite der Overline, 4px (Foundation 5.2), also rund 0,36em auf den
+   * 11px der Rolle.
+   *
+   * <strong>Der Wert kam bis KAN-80 nirgends an.</strong> Fast jede
+   * Aufrufstelle setzte neben type-overline zusaetzlich tracking-widest, und
+   * die Utility schlaegt die Klasse aus dem Komponentenlayer: sichtbar waren
+   * 0,1em statt 4px. Dieselbe Doppelung gab es beim uppercase, das die Rolle
+   * ohnehin mitbringt. Beides ist an den fuenfzehn Fundstellen entfernt; wer
+   * die Laufweite aendern will, aendert sie hier.
+   */
   --ls-overline: 0.25rem;
 }
 
