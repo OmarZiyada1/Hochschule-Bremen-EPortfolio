@@ -17,6 +17,7 @@ import {
 } from "@/features/home/hooks/useHomeStats"
 import { useTop10List } from "@/features/home/hooks/useTop10List"
 import { top10Slots, type Top10Slot } from "@/features/home/top10Slots"
+import { peopleOfProject } from "@/lib/people"
 
 /**
  * Oeffentliche Startseite nach Template "Startseite (Oeffentlich)"
@@ -260,14 +261,7 @@ function Top10SlotTile({
       variant={variant}
       position={slot.position}
       title={project.title}
-      author={
-        project.author
-          ? {
-              firstName: project.author.firstName,
-              lastName: project.author.lastName,
-            }
-          : null
-      }
+      people={peopleOfProject(project)}
       studyProgram={project.studyProgram ?? null}
       coverImageUrl={project.coverImageUrl}
       href={project.id ? `/projects/${project.id}` : undefined}

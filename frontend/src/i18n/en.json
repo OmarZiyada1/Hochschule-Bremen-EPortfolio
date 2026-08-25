@@ -307,6 +307,12 @@
       "facultyRequired": "Please select a faculty.",
       "studyProgramRequired": "Please select a study programme.",
       "targetRequired": "Please select a target category."
+    },
+    "top10": {
+      "positionRequired": "Please choose a place.",
+      "positionOutOfRange": "The place must be between 1 and 10.",
+      "dateInvalid": "Please enter a valid date.",
+      "rangeReversed": "The end must not be before the start."
     }
   },
   "placeholder": {
@@ -323,8 +329,6 @@
       "adminUsers": "Users",
       "adminCategories": "Categories",
       "adminStudyStructure": "Study structure",
-      "adminTop10": "Top 10 management",
-      "adminTop10Audit": "Top 10 audit log",
       "imprint": "Legal notice",
       "privacy": "Privacy",
       "accessibility": "Accessibility",
@@ -600,7 +604,8 @@
       "loading": "Loading suggestions …",
       "empty": "No person found.",
       "hits_one": "{{count}} match",
-      "hits_other": "{{count}} matches"
+      "hits_other": "{{count}} matches",
+      "by": "By {{names}}"
     },
     "metadata": {
       "breadcrumb": "Project metadata",
@@ -856,6 +861,11 @@
       "ACCEPTED": "Accepted",
       "REJECTED": "Rejected",
       "WITHDRAWN": "Withdrawn"
+    },
+    "action": {
+      "ADDED": "Added",
+      "REMOVED": "Removed",
+      "REORDERED": "Reordered"
     }
   },
   "projectContent": {
@@ -1801,6 +1811,93 @@
         "module": "“{{name}}” cannot be deleted while projects point to it."
       },
       "columnTitle": "{{title}} · {{count}}"
+    },
+    "top10": {
+      "title": "Top 10 management",
+      "subtitle": "Decide on nominations, curate the places and follow the history",
+      "nav": {
+        "label": "Top 10 sections",
+        "manage": "Management",
+        "audit": "History"
+      },
+      "nominations": {
+        "title": "Nominations",
+        "filterLabel": "Filter nominations by state",
+        "emptyTitle": "No nominations",
+        "emptyPending": "No proposal is waiting for a decision right now.",
+        "emptyFiltered": "No proposal is in this state. Another filter shows more."
+      },
+      "nomination": {
+        "by": "Nominated by {{person}}",
+        "decidedBy": "Decided by {{person}} on {{date}}"
+      },
+      "accept": {
+        "action": "Accept",
+        "title": "Accept nomination",
+        "description": "{{title}}, proposed by {{person}} as {{tier}}. The project then appears on the public home page.",
+        "positionLabel": "Place",
+        "positionPlaceholder": "Choose a place",
+        "positionHint": "Only free places can be chosen. The proposed tier is a hint and does not bind the decision.",
+        "confirm": "Accept",
+        "done": "{{title}} now holds place {{position}}.",
+        "noFreeSlot": "All ten places are taken. Free a place first and save the order."
+      },
+      "reject": {
+        "action": "Reject",
+        "title": "Reject nomination?",
+        "description": "The proposal for “{{title}}” counts as rejected afterwards. This cannot be undone; a new proposal would be a new case.",
+        "confirm": "Reject",
+        "done": "The proposal for {{title}} has been rejected."
+      },
+      "slots": {
+        "title": "Current Top 10",
+        "count": "{{filled}} of {{total}} places taken"
+      },
+      "slot": {
+        "free": "Place free",
+        "since": "in the Top 10 since {{date}}",
+        "moveUp": "Move {{title}} up from place {{position}}",
+        "moveDown": "Move {{title}} down from place {{position}}",
+        "remove": "Remove {{title}} from its place",
+        "moved": "{{title}} now holds place {{position}}.",
+        "removed": "{{title}} has been removed from place {{position}}. The place stays free.",
+        "listLabel": "Top 10 places"
+      },
+      "picker": {
+        "label": "Search for another project",
+        "placeholder": "Title, summary or author name",
+        "full": "All ten places are taken. Free a place first, then another project can join.",
+        "emptyTitle": "No match",
+        "emptyDescription": "No published project was found for “{{query}}”. Only published projects can be added.",
+        "add": "Put {{title}} on the next free place",
+        "addShort": "Add",
+        "alreadyAdded": "{{title}} is already in the list",
+        "addedShort": "Already added",
+        "added": "{{title}} now holds place {{position}}."
+      },
+      "audit": {
+        "from": "From",
+        "to": "To",
+        "applyRange": "Apply range",
+        "person": "Person",
+        "personPlaceholder": "Search by name",
+        "reset": "Reset filters",
+        "projectDeleted": "Project deleted",
+        "by": "by {{person}}",
+        "moved": "From place {{from}} to place {{to}}",
+        "onto": "Onto place {{position}}",
+        "fromPosition": "From place {{position}}",
+        "noPosition": "No place recorded",
+        "total": "{{count}} entries",
+        "emptyTitle": "No entry",
+        "emptyDescription": "Nothing has been changed in the Top 10 so far.",
+        "emptyFiltered": "Nothing was changed in this range. A wider range or a different person shows more."
+      },
+      "remove": {
+        "title": "Remove project from its place?",
+        "description": "“{{title}}” loses place {{position}} and no longer appears on the public home page. The place stays free, the other entries do not move up. The project stays published and can be added again through the search.",
+        "confirm": "Remove from place"
+      }
     }
   }
 }

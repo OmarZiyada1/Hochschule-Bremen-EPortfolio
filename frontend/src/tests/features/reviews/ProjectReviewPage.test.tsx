@@ -319,6 +319,7 @@ describe("ProjectReviewPage", () => {
           members: [
             {
               userId: SESSION_USER,
+              avatarUrl: null,
               firstName: "Mira",
               lastName: "Beispiel",
               projectRole: "Backend",

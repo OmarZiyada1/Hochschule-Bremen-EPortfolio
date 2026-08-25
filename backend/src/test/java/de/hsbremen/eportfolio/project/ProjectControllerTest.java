@@ -28,6 +28,7 @@ import de.hsbremen.eportfolio.common.error.ValidationException;
 import de.hsbremen.eportfolio.config.CorsProperties;
 import de.hsbremen.eportfolio.config.JwtProperties;
 import de.hsbremen.eportfolio.config.SecurityConfig;
+import de.hsbremen.eportfolio.project.dto.MemberResponse;
 import de.hsbremen.eportfolio.project.dto.ProjectCardResponse;
 import de.hsbremen.eportfolio.project.dto.ProjectFilterRequest;
 import de.hsbremen.eportfolio.project.dto.ReferenceResponse;
@@ -379,10 +380,14 @@ class ProjectControllerTest {
 				new ReferenceResponse(UUID.randomUUID(), "WiSe 2025/26", null);
 		ReferenceResponse module =
 				new ReferenceResponse(UUID.randomUUID(), "Interaktive Systeme", "IS");
+		// Seit Contract v78 traegt die Kachel die Mitglieder (§3.13).
+		MemberResponse member = new MemberResponse(UUID.randomUUID(), "Ada", "Adler",
+				"/api/files/2", "Frontend");
 		ProjectCardResponse card = new ProjectCardResponse(
 				id, "Titel", "Teaser", "/api/files/1", ProjectStatus.PUBLISHED,
 				ProjectType.THESIS, Degree.BACHELOR, semester,
-				null, null, null, module, null, List.of("react", "ux"), 3, null);
+				null, null, null, module, null, List.of(member),
+				List.of("react", "ux"), 3, null);
 		when(projectReadService.list(any(), any(), any()))
 				.thenReturn(new PageResponse<>(List.of(card), 0, 20, 1, 1));
 
@@ -398,6 +403,11 @@ class ProjectControllerTest {
 				// „Fach" ohne zweiten Aufruf fuellen kann (KAN-37).
 				.andExpect(jsonPath("$.content[0].module.name").value("Interaktive Systeme"))
 				.andExpect(jsonPath("$.content[0].module.abbreviation").value("IS"))
+				// Seit Contract v78: eine Gruppenarbeit stand sonst ueberall unter
+				// dem Namen der Autor:in (§3.13).
+				.andExpect(jsonPath("$.content[0].members[0].lastName").value("Adler"))
+				.andExpect(jsonPath("$.content[0].members[0].avatarUrl").value("/api/files/2"))
+				.andExpect(jsonPath("$.content[0].members[0].projectRole").value("Frontend"))
 				.andExpect(jsonPath("$.content[0].tags[0]").value("react"))
 				.andExpect(jsonPath("$.content[0].reactionCount").value(3));
 	}
@@ -407,7 +417,7 @@ class ProjectControllerTest {
 	void cardWithoutModule() throws Exception {
 		ProjectCardResponse card = new ProjectCardResponse(
 				UUID.randomUUID(), "Ohne Fach", null, null, ProjectStatus.DRAFT,
-				null, null, null, null, null, null, null, null, List.of(), 0, null);
+				null, null, null, null, null, null, null, null, List.of(), List.of(), 0, null);
 		when(projectReadService.list(any(), any(), any()))
 				.thenReturn(new PageResponse<>(List.of(card), 0, 20, 1, 1));
 

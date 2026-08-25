@@ -38,6 +38,7 @@ function fullProject() {
     members: [
       {
         userId: "u-9",
+        avatarUrl: null,
         firstName: "Jonas",
         lastName: "Berg",
         projectRole: "Frontend",

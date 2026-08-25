@@ -38,6 +38,12 @@ const AdminSemesterListPage = lazy(
 const AdminStudyStructurePage = lazy(
   () => import("@/features/administration/AdminStudyStructurePage")
 )
+const AdminTop10Page = lazy(
+  () => import("@/features/administration/AdminTop10Page")
+)
+const AdminTop10AuditPage = lazy(
+  () => import("@/features/administration/AdminTop10AuditPage")
+)
 
 /**
  * Derselbe Umriss wie der Ladezustand der Seiten selbst, damit der Wechsel
@@ -83,4 +89,12 @@ export function AdminSemesterListRoute() {
 
 export function AdminStudyStructureRoute() {
   return withFallback(AdminStudyStructurePage)
+}
+
+export function AdminTop10Route() {
+  return withFallback(AdminTop10Page)
+}
+
+export function AdminTop10AuditRoute() {
+  return withFallback(AdminTop10AuditPage)
 }

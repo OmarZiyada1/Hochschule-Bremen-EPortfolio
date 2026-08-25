@@ -171,6 +171,46 @@ export const apiPaths = {
      */
     semesterMove: (semesterId: string) =>
       `/api/admin/semesters/${semesterId}/move`,
+    /*
+     * Die Top-10-Verwaltung (§6.1, KAN-40). Vier Pfade, die es ausserhalb
+     * der Administrationsseite nicht gibt; das Zurueckziehen einer
+     * Nominierung steht bewusst nicht darunter, sondern unter top10, weil
+     * es in erster Linie der nominierenden Person zusteht (§3.11.1).
+     *
+     * top10Nominations ist der vollstaendige Spiegel aller Vorschlaege,
+     * offene wie entschiedene, mit dem Filter status (§2.8). Die Antwort
+     * ist eine blanke Liste ohne PageResponse, neueste zuerst; das
+     * Gegenstueck der Redaktion ist top10.nominations mit
+     * nominatedBy=me.
+     */
+    top10Nominations: "/api/admin/top10-nominations",
+    /*
+     * Entscheiden (§3.11.1, §6.1). accept traegt { position } zwischen 1
+     * und 10 und legt den Top-10-Eintrag an; reject hat keinen Koerper.
+     * Zwei Pfade und nicht ein Pfad mit einem Feld „decision": die
+     * Handlung steht im Pfad, wie bei approve und publish am Projekt.
+     *
+     * accept raeumt keinen belegten Platz, sondern antwortet mit 409
+     * RESOURCE_IN_USE und aendert nichts. Umsortiert wird ueber top10.
+     */
+    top10NominationAccept: (nominationId: string) =>
+      `/api/admin/top10-nominations/${nominationId}/accept`,
+    top10NominationReject: (nominationId: string) =>
+      `/api/admin/top10-nominations/${nominationId}/reject`,
+    /*
+     * Reihenfolge setzen, Body { projectIds }, geordnet und hoechstens
+     * zehn (§3.11.1 Regel 3). Der Aufruf <em>ersetzt</em> die Liste: was
+     * nicht genannt ist, faellt heraus, eine leere Liste leert die Top-10.
+     * Deshalb gibt es hier kein DELETE je Platz.
+     */
+    top10: "/api/admin/top10",
+    /*
+     * Das Aenderungsprotokoll (§3.17, §6.1, KAN-45). Paginiert nach §6.6,
+     * ohne sort nach timestamp absteigend; Filter from, to (Zeitpunkte
+     * nach §1, beide Grenzen eingeschlossen) und admin (UUID). Lesend und
+     * sonst nichts: das Protokoll ist unveraenderlich.
+     */
+    top10Audit: "/api/admin/top10-audit",
   },
   /*
    * Ein einzelner Kommentar (§6.1, §2.4, KAN-37). Bewusst neben projects und

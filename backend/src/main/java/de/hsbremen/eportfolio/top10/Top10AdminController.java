@@ -171,13 +171,17 @@ public class Top10AdminController {
 			description = "Ersetzt Bestand und Reihenfolge vollstaendig: der Index in "
 					+ "projectIds ist der Platz, das erste Element steht auf Platz 1 (§3.11.1). "
 					+ "Was nicht genannt ist, faellt aus der Liste; eine leere Liste leert sie. "
-					+ "Zulaessig sind hoechstens zehn verschiedene, veroeffentlichte Projekte. "
+					+ "Ein null-Eintrag laesst den Platz frei (seit Contract v78): [A, null, C] "
+					+ "setzt A auf 1 und C auf 3. Nachlaufende null-Eintraege schneidet der Server "
+					+ "ab. Zulaessig sind hoechstens zehn Eintraege, freie Plaetze zaehlen mit; die "
+					+ "genannten Projekte muessen verschieden und veroeffentlicht sein. "
 					+ "Offene Nominierungen der aufgenommenen Projekte gelten damit als "
 					+ "angenommen. Antwort ist die neue Liste wie bei GET /api/top10.")
 	@ApiResponse(responseCode = "200", description = "Die neue Top-10, geordnet nach Platz.")
 	@ApiResponse(responseCode = "400", description = "VALIDATION_FAILED: mehr als zehn Eintraege, "
 			+ "ein Projekt mehrfach genannt, eine unbekannte ID oder ein nicht "
-			+ "veroeffentlichtes Projekt.")
+			+ "veroeffentlichtes Projekt. Ein null-Eintrag ist keiner dieser Faelle: er "
+			+ "benennt kein Projekt und darf beliebig oft vorkommen.")
 	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
 	@ApiResponse(responseCode = "403", description = "NO_PERMISSION: die Rolle ist nicht ADMIN.")
 	@PutMapping("/top10")

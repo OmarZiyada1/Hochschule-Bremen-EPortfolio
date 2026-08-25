@@ -1017,6 +1017,9 @@ function ProjectCardDemos() {
     studyProgram: null,
     module: null,
     author: { ...person, id: "demo-person", avatarUrl: null },
+    /* Einzelarbeit: die Kachel fuehrt seit Contract v78 members, die
+       Gruppendarstellung zeigt der eigene Demoblock. */
+    members: [],
     tags: [],
     reactionCount: 142,
     publishedAt: null,
@@ -1072,7 +1075,7 @@ function Top10CardDemos() {
           className="w-full max-w-xs"
           position={1}
           title={t("tokens.components.demo.projectTitle")}
-          author={person}
+          people={[{ ...person, id: "demo-person" }]}
           studyProgram={studyProgram}
           href="#"
         />
@@ -1083,7 +1086,7 @@ function Top10CardDemos() {
           variant="compact"
           position={6}
           title={t("tokens.components.demo.projectTitle")}
-          author={person}
+          people={[{ ...person, id: "demo-person" }]}
           href="#"
         />
       </DemoVariant>

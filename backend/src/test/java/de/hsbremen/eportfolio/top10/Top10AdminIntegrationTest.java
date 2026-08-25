@@ -14,6 +14,7 @@ import de.hsbremen.eportfolio.common.enums.NominationStatus;
 import de.hsbremen.eportfolio.common.enums.NominationTier;
 import de.hsbremen.eportfolio.common.enums.ProjectStatus;
 import de.hsbremen.eportfolio.common.enums.Role;
+import de.hsbremen.eportfolio.common.enums.Top10Action;
 import de.hsbremen.eportfolio.project.Project;
 import de.hsbremen.eportfolio.project.ProjectRepository;
 import de.hsbremen.eportfolio.project.TestProject;
@@ -48,7 +49,8 @@ import org.springframework.transaction.annotation.Transactional;
  * Protokoll bleibt nach einer Entscheidung vollstaendig, die Grenze von zehn
  * Plaetzen ist nicht ueberschreitbar, ein belegter Platz wird nicht geraeumt,
  * und {@code PUT /api/admin/top10} ersetzt die Liste vollstaendig, ohne
- * {@code addedAt} zu verschieben.
+ * {@code addedAt} zu verschieben. Seit Contract v78 (KAN-40) kommt §3.11.1
+ * Regel 3 dazu: ein {@code null}-Eintrag laesst den Platz frei.
  *
  * <p>Aufbau, Anmeldung und Rollback wie in {@code Top10IntegrationTest}.
  */
@@ -78,6 +80,9 @@ class Top10AdminIntegrationTest {
 
 	@Autowired
 	private Top10NominationRepository nominationRepository;
+
+	@Autowired
+	private Top10AuditEntryRepository auditRepository;
 
 	private User author;
 
@@ -490,6 +495,123 @@ class Top10AdminIntegrationTest {
 		}
 
 		@Test
+		@DisplayName("Ein null-Eintrag laesst den Platz frei: [A, null, C] belegt 1 und 3 "
+				+ "(§3.11.1 Regel 3, Contract v78)")
+		void freeSlotKeepsThePosition() throws Exception {
+			setOrder(admin, first, null, second)
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.length()").value(2))
+					.andExpect(jsonPath("$[0].position").value(1))
+					.andExpect(jsonPath("$[0].project.title").value("Erster"))
+					.andExpect(jsonPath("$[1].position").value(3))
+					.andExpect(jsonPath("$[1].project.title").value("Zweiter"));
+
+			assertThat(entryRepository.findAll()).hasSize(2);
+			assertThat(entryRepository.existsByPosition(2)).isFalse();
+		}
+
+		@Test
+		@DisplayName("Nachlaufende null-Eintraege schneidet der Server ab: ein freier Platz "
+				+ "hinter dem letzten Projekt ist kein Platz")
+		void cutsTrailingFreeSlots() throws Exception {
+			setOrder(admin, first, null, null)
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.length()").value(1))
+					.andExpect(jsonPath("$[0].position").value(1))
+					.andExpect(jsonPath("$[0].project.title").value("Erster"));
+
+			assertThat(entryRepository.findAll()).hasSize(1);
+
+			// Eine Liste, die nur aus freien Plaetzen besteht, bleibt nach dem
+			// Abschneiden die leere Liste, und die leert die Top-10.
+			mockMvc.perform(as(admin, put(ORDER)).contentType(MediaType.APPLICATION_JSON)
+							.content("{\"projectIds\":[null,null]}"))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.length()").value(0));
+
+			assertThat(entryRepository.findAll()).isEmpty();
+		}
+
+		@Test
+		@DisplayName("Eine Liste ohne null verhaelt sich unveraendert: sie nummeriert lueckenlos "
+				+ "ab 1 durch und schliesst eine vorhandene Luecke")
+		void listWithoutFreeSlotsStaysContiguous() throws Exception {
+			setOrder(admin, first, null, second).andExpect(status().isOk());
+
+			setOrder(admin, first, second, third)
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.length()").value(3))
+					.andExpect(jsonPath("$[0].position").value(1))
+					.andExpect(jsonPath("$[1].position").value(2))
+					.andExpect(jsonPath("$[2].position").value(3));
+
+			assertThat(entryRepository.findAll()).hasSize(3);
+		}
+
+		@Test
+		@DisplayName("Zwei null in derselben Liste sind zulaessig: geprueft wird die Eindeutigkeit "
+				+ "unter den genannten Projekten")
+		void repeatedFreeSlotsAreNoDuplicate() throws Exception {
+			setOrder(admin, first, null, null, second)
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.length()").value(2))
+					.andExpect(jsonPath("$[0].position").value(1))
+					.andExpect(jsonPath("$[1].position").value(4));
+
+			assertThat(entryRepository.existsByPosition(2)).isFalse();
+			assertThat(entryRepository.existsByPosition(3)).isFalse();
+		}
+
+		@Test
+		@DisplayName("Die Obergrenze zaehlt die Eintraege, nicht die Projekte: zehn Eintraege mit "
+				+ "drei null vergeben sieben Plaetze")
+		void theLimitCountsEntries() throws Exception {
+			List<Project> candidates = new ArrayList<>();
+			for (int i = 1; i <= 7; i++) {
+				candidates.add(project(ProjectStatus.PUBLISHED, "Kandidat " + i));
+			}
+
+			// Zehn Eintraege: Projekt, frei, Projekt, frei, Projekt, frei, dann vier
+			// Projekte am Stueck. Der letzte steht auf Platz 10; mehr laesst der
+			// Check-Constraint ck_top10_entry_position nicht zu.
+			setOrder(admin, candidates.get(0), null, candidates.get(1), null,
+							candidates.get(2), null, candidates.get(3), candidates.get(4),
+							candidates.get(5), candidates.get(6))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.length()").value(7))
+					.andExpect(jsonPath("$[0].position").value(1))
+					.andExpect(jsonPath("$[1].position").value(3))
+					.andExpect(jsonPath("$[2].position").value(5))
+					.andExpect(jsonPath("$[6].position").value(10));
+
+			assertThat(entryRepository.findAll()).hasSize(7);
+		}
+
+		@Test
+		@DisplayName("Ein Projekt auf unveraendertem Platz bekommt keine Protokollzeile, auch "
+				+ "wenn daneben ein Platz frei wird (§3.17)")
+		void unchangedPositionWritesNoAuditRow() throws Exception {
+			entry(first, 1);
+			entry(second, 2);
+
+			// Erster bleibt auf Platz 1, Platz 2 wird frei, Zweiter wandert auf 3.
+			setOrder(admin, first, null, second).andExpect(status().isOk());
+
+			// Gefiltert statt gezaehlt: das Protokoll ist global und wird hier
+			// bewusst nicht geleert. Die beiden Projekte entstehen je Testlauf neu,
+			// ein Altbestand der Entwicklungsdatenbank kann sie also nicht nennen.
+			List<Top10AuditEntry> rows = auditRepository.findAll();
+			assertThat(rows).filteredOn(row -> mentions(row, first)).isEmpty();
+			assertThat(rows).filteredOn(row -> mentions(row, second))
+					.singleElement()
+					.satisfies(row -> {
+						assertThat(row.getAction()).isEqualTo(Top10Action.REORDERED);
+						assertThat(row.getPreviousPosition()).isEqualTo(2);
+						assertThat(row.getNewPosition()).isEqualTo(3);
+					});
+		}
+
+		@Test
 		@DisplayName("Mehr als zehn Eintraege ergeben 400 und veraendern nichts")
 		void rejectsMoreThanTen() throws Exception {
 			entry(first, 1);
@@ -598,10 +720,15 @@ class Top10AdminIntegrationTest {
 				.content("{\"position\":" + position + "}"));
 	}
 
+	/**
+	 * Setzt die Liste. Ein {@code null} in {@code projects} steht fuer einen
+	 * freien Platz und geht als JSON-{@code null} in den Body (§3.11.1
+	 * Regel 3).
+	 */
 	private ResultActions setOrder(User user, Project... projects) throws Exception {
 		List<UUID> ids = new ArrayList<>();
 		for (Project project : projects) {
-			ids.add(project.getId());
+			ids.add(project == null ? null : project.getId());
 		}
 		return mockMvc.perform(as(user, put(ORDER)).contentType(MediaType.APPLICATION_JSON)
 				.content(body(ids)));
@@ -610,9 +737,14 @@ class Top10AdminIntegrationTest {
 	private static String body(List<UUID> projectIds) {
 		return "{\"projectIds\":["
 				+ projectIds.stream()
-						.map(id -> "\"" + id + "\"")
+						.map(id -> id == null ? "null" : "\"" + id + "\"")
 						.collect(Collectors.joining(","))
 				+ "]}";
+	}
+
+	/** Nennt diese Protokollzeile dieses Projekt? Zeilen ohne Verweis nie. */
+	private static boolean mentions(Top10AuditEntry row, Project project) {
+		return row.getProject() != null && row.getProject().getId().equals(project.getId());
 	}
 
 	/** Haengt ein echtes Bearer-Token an; ohne Aufruf bleibt die Anfrage anonym. */

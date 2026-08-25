@@ -356,6 +356,7 @@ describe("CommentPanel", () => {
           members: [
             {
               userId: SESSION_USER,
+              avatarUrl: null,
               firstName: "Mira",
               lastName: "Beispiel",
               projectRole: "Frontend",
@@ -498,6 +499,7 @@ describe("Rechte der Kommentarspalte", () => {
             members: [
               {
                 userId: "member-1",
+                avatarUrl: null,
                 firstName: "Mira",
                 lastName: "Beispiel",
                 projectRole: null,

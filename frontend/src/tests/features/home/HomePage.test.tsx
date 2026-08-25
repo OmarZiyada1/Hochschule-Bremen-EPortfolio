@@ -1,5 +1,5 @@
 import { HttpResponse, http } from "msw"
-import { screen } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import HomePage from "@/features/home/HomePage"
@@ -18,7 +18,7 @@ function pageOf(content: unknown[], totalElements = content.length) {
   }
 }
 
-function entryAt(position: number, title: string) {
+function entryAt(position: number, title: string, members: unknown[] = []) {
   return {
     position,
     addedAt: "2026-08-01T12:00:00Z",
@@ -27,12 +27,28 @@ function entryAt(position: number, title: string) {
       title,
       status: "PUBLISHED",
       summary: "Ein Teaser.",
-      author: { firstName: "Lena", lastName: "Müller" },
+      author: {
+        id: "50000000-0000-0000-0000-000000000001",
+        firstName: "Lena",
+        lastName: "Müller",
+      },
+      members,
       studyProgram: {
         id: "20000000-0000-0000-0000-000000000001",
         name: "Informatik",
       },
     },
+  }
+}
+
+/** Ein:e Mitwirkende:r an der Kachel, wie ihn §3.13 seit Contract v78 fuehrt. */
+function member(index: number, firstName: string, lastName: string) {
+  return {
+    userId: `60000000-0000-0000-0000-00000000000${index}`,
+    firstName,
+    lastName,
+    avatarUrl: null,
+    projectRole: null,
   }
 }
 
@@ -137,6 +153,62 @@ describe("HomePage", () => {
     /* Der vorgelesene Platz des freien Slots ist erreichbar, nicht nur im
        DOM vorhanden (Befund aus KAN-29). */
     expect(screen.getByText("Platz 4").closest("[aria-hidden]")).toBeNull()
+  })
+
+  /*
+   * Die Featured-Card liest sich wie die Kacheln daneben: Studiengang als
+   * Vorspann, dann der Titel, dann der Teaser, der ihn fortsetzt, und erst
+   * zuletzt, wer daran gearbeitet hat (Nacharbeit an KAN-40). Der Frame
+   * 359:13 ordnet anders; die Abweichung ist entschieden und steht im Kopf
+   * der Komponente.
+   */
+  it("ordnet die Featured-Card Studiengang, Titel, Teaser, Personen", async () => {
+    stubHome({ top10: [entryAt(1, "SmartCampus")] })
+    renderWithProviders(<HomePage />)
+
+    const heading = await screen.findByRole("heading", {
+      level: 3,
+      name: "SmartCampus",
+    })
+    const text = heading.closest('[data-slot="card"]')?.textContent ?? ""
+
+    expect(text).toContain("Informatik")
+    expect(text.indexOf("Informatik")).toBeLessThan(text.indexOf("SmartCampus"))
+    expect(text.indexOf("SmartCampus")).toBeLessThan(text.indexOf("Ein Teaser."))
+    expect(text.indexOf("Ein Teaser.")).toBeLessThan(
+      text.indexOf("Lena Müller")
+    )
+  })
+
+  /*
+   * Ab zwei Personen tritt die Gruppe an die Stelle des Namens, hier mit
+   * vier Beteiligten also drei Gesichter und "+1". Der Satz fuer Hilfsmittel
+   * nennt trotzdem jede von ihnen.
+   */
+  it("zeigt in der Featured-Card ab zwei Personen die Gruppe mit Zaehler", async () => {
+    stubHome({
+      top10: [
+        entryAt(1, "SmartCampus", [
+          member(1, "Frederike", "Ahlers"),
+          member(2, "Lennart", "Brinkmann"),
+          member(3, "Aylin", "Kesici"),
+        ]),
+      ],
+    })
+    renderWithProviders(<HomePage />)
+
+    const heading = await screen.findByRole("heading", {
+      level: 3,
+      name: "SmartCampus",
+    })
+    const card = heading.closest('[data-slot="card"]') as HTMLElement
+
+    expect(within(card).queryByText("Lena Müller")).not.toBeInTheDocument()
+    expect(within(card).getByText("+1")).toBeInTheDocument()
+    expect(
+      card.querySelectorAll('[data-slot="avatar-group"] [data-slot="avatar"]')
+    ).toHaveLength(3)
+    expect(within(card).getByText(/^Von /)).toHaveTextContent("Aylin Kesici")
   })
 
   it("zeigt eine leere Antwort als zehn freie Plaetze, nicht als Fehler", async () => {

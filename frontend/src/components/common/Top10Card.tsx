@@ -4,8 +4,11 @@ import { Link } from "react-router-dom"
 
 import { resolveApiUrl } from "@/api/client"
 import type { ProjectReference } from "@/api/types"
+import {
+  ProjectPeople,
+  type DisplayPerson,
+} from "@/components/common/ProjectPeople"
 import { Card, CardContent } from "@/components/ui/card"
-import { fullNameOf, type PersonName } from "@/lib/name"
 import { cn } from "@/lib/utils"
 
 /**
@@ -29,7 +32,7 @@ import { cn } from "@/lib/utils"
 export function Top10Card({
   position,
   title,
-  author,
+  people,
   studyProgram,
   coverImageUrl,
   href,
@@ -38,7 +41,13 @@ export function Top10Card({
 }: {
   position: number
   title: string
-  author?: PersonName | null
+  /**
+   * Alle Beteiligten, die Autor:in zuerst (§3.3, §3.13). Eine Person
+   * erscheint mit Namen, ab zwei als Gruppe mit Zaehler; die Regel liegt in
+   * {@link ProjectPeople} und nicht hier, damit sie an Kachel, Top-10 und
+   * Administration dieselbe ist (Nacharbeit an KAN-40).
+   */
+  people?: readonly DisplayPerson[]
   studyProgram?: ProjectReference | null
   coverImageUrl?: string | null
   href?: string
@@ -111,10 +120,11 @@ export function Top10Card({
             {cover}
           </div>
           {heading}
-          {author && (
-            <p className="type-body-sm font-medium text-muted-foreground">
-              {fullNameOf(author)}
-            </p>
+          {people && (
+            <ProjectPeople
+              people={people}
+              className="text-muted-foreground"
+            />
           )}
         </CardContent>
       </Card>
@@ -148,10 +158,13 @@ export function Top10Card({
           </p>
         )}
         {heading}
-        {author && (
-          <p className="type-body-sm font-semibold text-cover-muted">
-            {fullNameOf(author)}
-          </p>
+        {/* Auf dem Cover, deshalb der Cover-Ton: text-muted-foreground
+            haelt dort die Kontrastzusage nicht (SC 1.4.3). */}
+        {people && (
+          <ProjectPeople
+            people={people}
+            className="font-semibold text-cover-muted"
+          />
         )}
       </CardContent>
     </Card>

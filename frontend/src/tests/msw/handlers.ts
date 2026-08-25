@@ -8,6 +8,10 @@ import type {
   DashboardResponse,
   OwnPortfolioResponse,
   ProjectDetailResponse,
+  Top10AuditEntryResponse,
+  Top10EntryResponse,
+  Top10NominationResponse,
+  UserLookupResponse,
   UserResponse,
 } from "@/api/types"
 import { ownPortfolio, projectDetail } from "@/tests/fixtures"
@@ -179,4 +183,50 @@ export function fileBlobHandler() {
       headers: { "Content-Type": "image/png" },
     })
   )
+}
+
+/**
+ * Die drei lesenden Antworten der Top-10-Verwaltung (§6.1, KAN-40), als
+ * Grundantwort fuer Tests, die den Bereich nur streifen.
+ *
+ * <p>Sie stehen zusammen, weil die Seite alle drei zugleich braucht: die
+ * besetzten Plaetze aus der oeffentlichen Liste, den Spiegel der
+ * Nominierungen und das Protokoll. Ein Test, der nur einen davon anmeldet,
+ * laeuft in {@code onUnhandledRequest}.
+ */
+export function top10AdminHandlers({
+  entries = [],
+  nominations = [],
+  audit = [],
+  people = [],
+}: {
+  entries?: Top10EntryResponse[]
+  nominations?: Top10NominationResponse[]
+  audit?: Top10AuditEntryResponse[]
+  people?: UserLookupResponse[]
+} = {}) {
+  return [
+    http.get("*/api/top10", () => HttpResponse.json(entries)),
+    /* Eine blanke Liste ohne PageResponse: der Endpoint paginiert nicht
+       (§6.1). Der Statusfilter wird hier bewusst nicht nachgebildet, wer
+       ihn prueft, meldet einen eigenen Handler an. */
+    http.get("*/api/admin/top10-nominations", () =>
+      HttpResponse.json(nominations)
+    ),
+    http.get("*/api/admin/top10-audit", () =>
+      HttpResponse.json({
+        content: audit,
+        page: 0,
+        size: 20,
+        totalElements: audit.length,
+        totalPages: audit.length === 0 ? 0 : 1,
+      })
+    ),
+    /* Die Protokollseite fragt die Personensuche beim Betreten ab, weil ihr
+       Filter ein PersonCombobox ist (§6.1, KAN-44). Ohne diesen Handler
+       laeuft der Aufruf in onUnhandledRequest, und der Fehlschlag zeigt sich
+       nicht an der Stelle, an der er entsteht, sondern als Zeitueberschreitung
+       irgendwo im Lauf. */
+    http.get("*/api/users/lookup", () => HttpResponse.json(people)),
+  ]
 }

@@ -3,14 +3,13 @@ import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
 
-import { resolveApiUrl } from "@/api/client"
 import { useFileUrl } from "@/api/useFileUrl"
 import type { ProjectCardResponse } from "@/api/types"
 import { ClapIcon } from "@/components/common/ClapIcon"
+import { ProjectPeople } from "@/components/common/ProjectPeople"
 import { StatusBadge } from "@/components/common/StatusBadge"
-import { UserAvatar } from "@/components/common/UserAvatar"
 import { Card, CardContent } from "@/components/ui/card"
-import { fullNameOf } from "@/lib/name"
+import { peopleOfProject } from "@/lib/people"
 import { cn } from "@/lib/utils"
 
 /**
@@ -61,14 +60,6 @@ export function ProjectCard({
 }) {
   const { t } = useTranslation()
   const Heading = `h${headingLevel}` as "h2" | "h3"
-
-  /* Das Profilbild kommt seit Contract v49 an der Kachel mit (§6.1); es
-     haengt am Portfolio und nicht am Projekt, der Lesedienst holt es fuer
-     die ganze Seite in einer Abfrage. Ohne hinterlegtes Bild bleibt es bei
-     den Initialen. */
-  const authorAvatarUrl = project.author.avatarUrl
-    ? resolveApiUrl(project.author.avatarUrl)
-    : null
 
   /*
    * Das Kachelbild eines noch nicht veroeffentlichten Projekts ist nicht
@@ -160,18 +151,16 @@ export function ProjectCard({
       </div>
 
       <CardContent className="flex flex-col gap-2.5 px-5 py-4">
-        <p className="flex items-center gap-2">
-          {/* 24px nach Template (Figma-Knoten "Avatar" der ProjectCard);
-              die Groesse der Initialen bringt die Stufe mit. */}
-          <UserAvatar
-            person={project.author}
-            imageUrl={authorAvatarUrl}
-            size="sm"
-          />
-          <span className="type-body-sm font-medium text-muted-foreground">
-            {fullNameOf(project.author)}
-          </span>
-        </p>
+        {/* Eine Person mit Namen, ab zwei die Gruppe mit Zaehler
+            (Nacharbeit an KAN-40). Die Bilder kommen seit Contract v49 fuer
+            die Autor:in und seit v78 auch fuer die Mitwirkenden an der
+            Kachel mit; der Lesedienst holt sie fuer die ganze Seite in einer
+            Abfrage. 24px nach Template (Figma-Knoten "Avatar"). */}
+        <ProjectPeople
+          people={peopleOfProject(project)}
+          size="sm"
+          className="text-muted-foreground"
+        />
 
         {project.summary && (
           <p className="type-body-sm line-clamp-3 text-muted-foreground">

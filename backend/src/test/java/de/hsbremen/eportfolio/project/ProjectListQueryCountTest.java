@@ -78,6 +78,9 @@ class ProjectListQueryCountTest {
 	private ReactionRepository reactionRepository;
 
 	@Autowired
+	private ProjectMemberRepository projectMemberRepository;
+
+	@Autowired
 	private CategoryRepository categoryRepository;
 
 	@Autowired
@@ -111,6 +114,9 @@ class ProjectListQueryCountTest {
 
 	private User reacting;
 
+	/** Mitglied jedes Testprojekts, mit hinterlegtem Profilbild (§3.13, §3.2). */
+	private User groupMate;
+
 	@BeforeEach
 	void createUsers() {
 		semester = semesterRepository.saveAndFlush(
@@ -126,6 +132,7 @@ class ProjectListQueryCountTest {
 		tagB = tagRepository.saveAndFlush(TestMasterData.tagWithoutId("kan16-b-" + UUID.randomUUID()));
 		author = userRepository.saveAndFlush(TestUser.activeWithoutId(Role.STUDENT, "nicht-relevant"));
 		reacting = userRepository.saveAndFlush(TestUser.activeWithoutId(Role.STUDENT, "nicht-relevant"));
+		groupMate = userRepository.saveAndFlush(TestUser.activeWithoutId(Role.STUDENT, "nicht-relevant"));
 
 		/*
 		 * Mit hinterlegtem Profilbild, damit die Sammelabfrage der Avatare
@@ -137,6 +144,15 @@ class ProjectListQueryCountTest {
 		Portfolio portfolio = portfolioService.createFor(author);
 		portfolio.setAvatarUrl("/api/files/" + UUID.randomUUID());
 		portfolioRepository.saveAndFlush(portfolio);
+
+		/*
+		 * Dasselbe fuer das Mitglied: seit Contract v78 traegt die Kachel die
+		 * Mitglieder samt ihren Bildern (§3.13). Ohne hinterlegtes Bild liefe
+		 * die Messung an der zweiten Sammelabfrage vorbei.
+		 */
+		Portfolio mateProfile = portfolioService.createFor(groupMate);
+		mateProfile.setAvatarUrl("/api/files/" + UUID.randomUUID());
+		portfolioRepository.saveAndFlush(mateProfile);
 	}
 
 	@Test
@@ -157,8 +173,9 @@ class ProjectListQueryCountTest {
 
 	/**
 	 * Legt Projekte an, die jede in der Kachel gezeigte Beziehung benutzen:
-	 * Stammdatenbezuege, Tags und Reaktionen. Ohne sie liefe der Test ins
-	 * Leere, weil es gar nichts nachzuladen gaebe.
+	 * Stammdatenbezuege, Tags, Reaktionen und seit Contract v78 ein
+	 * Projektmitglied. Ohne sie liefe der Test ins Leere, weil es gar nichts
+	 * nachzuladen gaebe.
 	 */
 	private void create(int count) {
 		var category = categoryRepository.findAllByOrderByNameAsc().getFirst();
@@ -176,6 +193,8 @@ class ProjectListQueryCountTest {
 			projectRepository.saveAndFlush(project);
 
 			reactionRepository.saveAndFlush(TestReaction.withoutId(project, reacting));
+			projectMemberRepository.saveAndFlush(
+					TestProject.memberWithoutId(project, groupMate, "Frontend"));
 		}
 	}
 
@@ -195,7 +214,9 @@ class ProjectListQueryCountTest {
 				// Gegenprobe, dass wirklich etwas nachzuladen war.
 				.andExpect(jsonPath("$.content[0].tags.length()").value(2))
 				.andExpect(jsonPath("$.content[0].reactionCount").value(1))
-				.andExpect(jsonPath("$.content[0].category.name").exists());
+				.andExpect(jsonPath("$.content[0].category.name").exists())
+				.andExpect(jsonPath("$.content[0].members.length()").value(1))
+				.andExpect(jsonPath("$.content[0].members[0].avatarUrl").exists());
 
 		return statistics.getPrepareStatementCount();
 	}

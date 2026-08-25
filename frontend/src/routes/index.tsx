@@ -32,6 +32,8 @@ import {
   AdminProjectListRoute,
   AdminSemesterListRoute,
   AdminStudyStructureRoute,
+  AdminTop10AuditRoute,
+  AdminTop10Route,
   AdminUserListRoute,
 } from "@/routes/AdministrationRoute"
 import { AppLayout } from "@/routes/AppLayout"
@@ -169,24 +171,8 @@ export const routes: RouteObject[] = [
                    Index-Route (Ticket KAN-7, Umfang 2). */
                 path: "top10",
                 children: [
-                  {
-                    index: true,
-                    element: (
-                      <PlaceholderPage
-                        titleKey="placeholder.title.adminTop10"
-                        ticket="KAN-40"
-                      />
-                    ),
-                  },
-                  {
-                    path: "audit",
-                    element: (
-                      <PlaceholderPage
-                        titleKey="placeholder.title.adminTop10Audit"
-                        ticket="KAN-40"
-                      />
-                    ),
-                  },
+                  { index: true, element: <AdminTop10Route /> },
+                  { path: "audit", element: <AdminTop10AuditRoute /> },
                 ],
               },
             ],

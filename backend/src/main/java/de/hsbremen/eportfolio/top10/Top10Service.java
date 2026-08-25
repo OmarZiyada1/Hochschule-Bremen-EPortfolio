@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -50,8 +51,11 @@ import org.springframework.transaction.annotation.Transactional;
  * Es gibt genau zehn Plaetze, jeder hoechstens einmal belegt: der
  * Check-Constraint {@code ck_top10_entry_position} laesst nur 1 bis 10 zu,
  * {@link #addAt} weist einen belegten Platz ab, und {@link #setOrder} nimmt
- * hoechstens zehn IDs entgegen. Eine elfte Zeile kann damit nicht entstehen,
- * ohne dass irgendwo eine Anzahl mitgefuehrt werden muesste.
+ * hoechstens zehn Eintraege entgegen. Gezaehlt werden dort seit Contract v78
+ * die Eintraege und nicht die Projekte: ein {@code null}-Eintrag belegt keinen
+ * Platz, verbraucht aber einen, und damit bleibt der Index des letzten
+ * Eintrags hoechstens 10. Eine elfte Zeile kann so nicht entstehen, ohne dass
+ * irgendwo eine Anzahl mitgefuehrt werden muesste.
  *
  * <p><strong>Jede Aenderung an der Liste laeuft durch
  * {@link Top10AuditService#record}</strong> (§3.17, KAN-45). Drei der vier
@@ -138,6 +142,34 @@ public class Top10Service {
 	 * Regel 3): der Array-Index ist der Platz, das erste Element steht auf
 	 * Platz 1.
 	 *
+	 * <p><strong>Ein {@code null}-Eintrag laesst den Platz frei</strong> (seit
+	 * Contract v78, KAN-40). Der Index bleibt der Platz: {@code [A, null, C]}
+	 * setzt A auf 1 und C auf 3 und laesst 2 unbesetzt. Der Grund ist die
+	 * Asymmetrie, die bis v77 bestand: freie Plaetze gibt es in §3.11 laengst,
+	 * sie bleiben beim Entzug eines Platzes zurueck und werden bewusst nicht
+	 * aufgefuellt (siehe Klassenkommentar), aber <em>herstellen</em> konnte die
+	 * Administration keinen. Dieser Endpoint nummerierte lueckenlos ab 1 durch,
+	 * und wer Platz 2 frei lassen wollte, musste den Umweg ueber eine Nominierung
+	 * und {@link #addAt} nehmen.
+	 *
+	 * <p><strong>Eine Liste ohne {@code null} verhaelt sich unveraendert.</strong>
+	 * Sie wird weiterhin lueckenlos ab 1 durchnummeriert; nur wer eine Luecke
+	 * will, nennt sie ausdruecklich. Jeder bestehende Aufruf bleibt damit
+	 * gueltig, und die Regel kostet niemanden etwas, der sie nicht braucht.
+	 *
+	 * <p><strong>Nachlaufende {@code null}-Eintraege schneidet der Server
+	 * ab</strong> ({@link #trimTrailingFreeSlots}). Ein freier Platz hinter dem
+	 * letzten Projekt ist dasselbe wie kein Platz; ohne das Abschneiden haette
+	 * derselbe Zustand beliebig viele Schreibweisen, und die angehaengten
+	 * Eintraege verbrauchten von den zehn welche, ohne dass ein Platz entstuende.
+	 *
+	 * <p><strong>Die Obergrenze von zehn zaehlt die Eintraege der Liste, nicht
+	 * die Projekte darin</strong> ({@code @Size} an {@link Top10OrderRequest}):
+	 * eine Liste aus zehn Eintraegen mit drei {@code null} vergibt sieben
+	 * Plaetze. Anders gezaehlt entstuende ein elfter Platz, denn der Index des
+	 * letzten Eintrags ist seine Position, und die weist der Check-Constraint
+	 * {@code ck_top10_entry_position} ab.
+	 *
 	 * <p><strong>Alles Nichtgenannte faellt heraus.</strong> Der Endpoint ersetzt
 	 * die Liste vollstaendig, es gibt kein Hinzufuegen und kein Entfernen
 	 * einzelner Zeilen. Das ist der Grund, warum die Reihenfolge hier ohne
@@ -159,7 +191,9 @@ public class Top10Service {
 	 * <p>Fehlerpolitik: unbekannte, doppelte oder nicht veroeffentlichte
 	 * Projekt-IDs ergeben <strong>400</strong> {@code VALIDATION_FAILED}, wie es
 	 * das Ticket festlegt. Ein 409 waere hier falsch: geprueft wird der Body und
-	 * nicht der Zustand der Top-10.
+	 * nicht der Zustand der Top-10. Auf {@code null} trifft davon nichts zu: ein
+	 * freier Platz benennt kein Projekt, ist also weder unbekannt noch doppelt
+	 * noch unveroeffentlicht.
 	 *
 	 * @param user    angemeldete Person; die Filterkette laesst auf
 	 *                {@code /api/admin/**} nur ADMIN durch
@@ -171,8 +205,9 @@ public class Top10Service {
 	public List<Top10EntryResponse> setOrder(AuthenticatedUser user, Top10OrderRequest request) {
 		requireCurator(user);
 
-		List<UUID> projectIds = requireDistinct(request.projectIds());
-		Map<UUID, Project> projects = loadPublished(projectIds);
+		List<UUID> slots = trimTrailingFreeSlots(request.projectIds());
+		List<UUID> named = requireDistinctProjects(slots);
+		Map<UUID, Project> projects = loadPublished(named);
 
 		Map<UUID, Top10Entry> existing = new HashMap<>();
 		List<Top10Placement> before = new ArrayList<>();
@@ -185,10 +220,16 @@ public class Top10Service {
 		}
 
 		Instant now = Instant.now();
-		List<Top10Entry> kept = new ArrayList<>(projectIds.size());
-		List<Top10Placement> after = new ArrayList<>(projectIds.size());
-		for (int index = 0; index < projectIds.size(); index++) {
-			UUID projectId = projectIds.get(index);
+		List<Top10Entry> kept = new ArrayList<>(named.size());
+		List<Top10Placement> after = new ArrayList<>(named.size());
+		for (int index = 0; index < slots.size(); index++) {
+			UUID projectId = slots.get(index);
+			if (projectId == null) {
+				// Freier Platz (§3.11.1 Regel 3): der Index laeuft weiter, eine
+				// Zeile entsteht nicht. Genau so sieht die Luecke aus, die beim
+				// Entzug eines Platzes zurueckbleibt.
+				continue;
+			}
 			Top10Entry entry = existing.remove(projectId);
 			if (entry == null) {
 				entry = new Top10Entry();
@@ -217,7 +258,7 @@ public class Top10Service {
 
 		User admin = currentUser(user);
 		auditService.record(admin, before, after);
-		closeOpenNominations(admin, projectIds, now);
+		closeOpenNominations(admin, named, now);
 
 		return list();
 	}
@@ -505,7 +546,29 @@ public class Top10Service {
 	}
 
 	/**
-	 * Weist eine Liste mit Wiederholungen ab.
+	 * Schneidet die nachlaufenden freien Plaetze ab (§3.11.1 Regel 3, seit
+	 * Contract v78).
+	 *
+	 * <p>Ein freier Platz hinter dem letzten Projekt ist dasselbe wie kein Platz:
+	 * die Liste endet in beiden Faellen mit demselben Bestand. Ohne das
+	 * Abschneiden haette derselbe Zustand beliebig viele Schreibweisen, und
+	 * {@code [A, null, null]} verbrauchte zwei der zehn Eintraege, ohne dass
+	 * irgendwo ein Platz entstuende.
+	 *
+	 * <p>Innenliegende {@code null} bleiben stehen: sie sind der Zweck der Regel
+	 * und keine Nachlaessigkeit im Aufruf.
+	 */
+	private static List<UUID> trimTrailingFreeSlots(List<UUID> slots) {
+		int last = slots.size();
+		while (last > 0 && slots.get(last - 1) == null) {
+			last--;
+		}
+		return slots.subList(0, last);
+	}
+
+	/**
+	 * Die genannten Projekte in der Reihenfolge der Liste, ohne die freien
+	 * Plaetze, und weist dabei Wiederholungen ab.
 	 *
 	 * <p>Ohne diese Pruefung bekaeme dasselbe Projekt zwei Plaetze zugewiesen, von
 	 * denen der Unique-Constraint auf {@code project_id} nur einen zulaesst: der
@@ -513,14 +576,25 @@ public class Top10Service {
 	 * stilles Entdoppeln waere die schlechtere Alternative: die Plaetze aller
 	 * nachfolgenden Projekte verschoeben sich dann gegenueber dem, was der Client
 	 * geschickt hat, ohne dass er davon erfaehrt.
+	 *
+	 * <p><strong>{@code null} ist keine Wiederholung</strong> (§3.11.1 Regel 3,
+	 * seit Contract v78). Geprueft wird die Eindeutigkeit unter den
+	 * <em>genannten</em> Projekten; ein freier Platz benennt keines und darf
+	 * deshalb beliebig oft vorkommen. Zaehlte er mit, waere schon die zweite
+	 * Luecke einer Liste ein 400.
+	 *
+	 * <p>Das Ergebnis ist zugleich das, was {@link #loadPublished} und
+	 * {@link #closeOpenNominations} brauchen: beide arbeiten mit Projekten und
+	 * kaemen mit einem {@code null} in der Liste nicht zurecht.
 	 */
-	private List<UUID> requireDistinct(List<UUID> projectIds) {
-		if (new LinkedHashSet<>(projectIds).size() != projectIds.size()) {
+	private List<UUID> requireDistinctProjects(List<UUID> slots) {
+		List<UUID> named = slots.stream().filter(Objects::nonNull).toList();
+		if (new LinkedHashSet<>(named).size() != named.size()) {
 			throw new ValidationException(ErrorCodes.VALIDATION_FAILED,
 					"In projectIds steht mindestens ein Projekt mehrfach. Jedes Projekt belegt "
 							+ "genau einen Platz.");
 		}
-		return projectIds;
+		return named;
 	}
 
 	/**
@@ -537,6 +611,12 @@ public class Top10Service {
 	 * <p>Die Meldung nennt die beanstandeten IDs. Der Aufrufer hat sie selbst
 	 * geschickt, und ohne sie muesste er bei zehn Eintraegen raten, welcher nicht
 	 * passt.
+	 *
+	 * <p>Uebergeben werden ausschliesslich die <em>genannten</em> Projekte; die
+	 * freien Plaetze hat {@link #requireDistinctProjects} bereits herausgenommen.
+	 * Das ist keine Bequemlichkeit, sondern noetig: {@code findAllById} vertruege
+	 * ein {@code null} in der Liste nicht, und eine Meldung „dieses Projekt gibt
+	 * es nicht: null" waere sinnlos.
 	 */
 	private Map<UUID, Project> loadPublished(List<UUID> projectIds) {
 		if (projectIds.isEmpty()) {
@@ -578,6 +658,10 @@ public class Top10Service {
 	 * offene Nominierung dabei erledigt ist, ist die Nebenwirkung. Der Platz
 	 * steht in diesem Fall im {@link Top10Entry}, und dort ist er ohnehin die
 	 * verbindliche Angabe. Entschieden in der Klaerungsrunde zu KAN-37.
+	 *
+	 * <p><strong>Nur die genannten Projekte</strong>, seit Contract v78: ein
+	 * freier Platz nimmt kein Projekt auf und erledigt deshalb auch keinen
+	 * Vorschlag.
 	 */
 	private void closeOpenNominations(User admin, List<UUID> projectIds, Instant now) {
 		if (projectIds.isEmpty()) {

@@ -195,6 +195,7 @@ function projectResponse(
     members: [
       {
         userId: "u-3",
+        avatarUrl: null,
         firstName: "Tobias",
         lastName: "Lang",
         projectRole: "Frontend",

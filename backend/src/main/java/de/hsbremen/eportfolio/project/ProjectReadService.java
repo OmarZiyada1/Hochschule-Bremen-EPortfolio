@@ -22,6 +22,7 @@ import de.hsbremen.eportfolio.reaction.ReactionRepository;
 import de.hsbremen.eportfolio.user.User;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -110,6 +111,19 @@ public class ProjectReadService {
 	 */
 	private static final Sort DEFAULT_SORT = Sort.by(Sort.Direction.DESC, "updatedAt");
 
+	/**
+	 * Reihenfolge der Projektmitglieder: Nachname, dann Vorname.
+	 *
+	 * <p>Die Zuordnungstabelle hat keine eigene Ordnung, und eine
+	 * Mitgliederliste, die bei jedem Aufruf anders sortiert ist, wirkt in der
+	 * Oberflaeche wie ein Fehler. Kachel und Detailantwort teilen sich die
+	 * Konstante, damit dasselbe Projekt an beiden Stellen dieselbe Reihenfolge
+	 * zeigt (§3.13; an der Kachel seit Contract v78).
+	 */
+	private static final Comparator<ProjectMember> BY_MEMBER_NAME = Comparator
+			.comparing((ProjectMember member) -> nameOrEmpty(member.getUser(), true))
+			.thenComparing(member -> nameOrEmpty(member.getUser(), false));
+
 	private final ProjectRepository projectRepository;
 
 	private final ProjectMemberRepository projectMemberRepository;
@@ -121,9 +135,9 @@ public class ProjectReadService {
 	private final ReactionRepository reactionRepository;
 
 	/**
-	 * Nur fuer die Profilbilder der Autor:innen: die Kachel zeigt sie, das
-	 * Projekt kennt sie nicht (§3.2). Gelesen wird ausschliesslich, und zwar
-	 * gesammelt je Seite.
+	 * Nur fuer die Profilbilder der Autor:innen und, seit Contract v78, der
+	 * Projektmitglieder: die Kachel zeigt sie, das Projekt kennt sie nicht
+	 * (§3.2). Gelesen wird ausschliesslich, und zwar gesammelt je Seite.
 	 */
 	private final PortfolioRepository portfolioRepository;
 
@@ -317,8 +331,12 @@ public class ProjectReadService {
 	 * <p>Die Tags kommen aus dem Lazy-Loading der Entity; {@code Project.tags}
 	 * traegt dafuer ein {@code @BatchSize}, sodass auch sie eine Seite mit einer
 	 * Abfrage abdecken. Zusammen mit dem {@code @EntityGraph} des Repositories
-	 * kostet eine Seite damit vier Abfragen (Treffer, Anzahl, Tags,
-	 * Reaktionen) statt vier plus dem Dreifachen der Seitengroesse.
+	 * kostet eine Seite damit sechs Abfragen (Treffer, Anzahl, Tags, Reaktionen,
+	 * Mitglieder, Profilbilder) statt sechs plus einem Vielfachen der
+	 * Seitengroesse. Die letzten beiden kamen mit Contract v78 dazu, als
+	 * {@code members} an die Kachel rueckte (§3.13). Dass ihre Zahl an der
+	 * Seite haengt und nicht an der Zahl der Kacheln, haelt
+	 * {@code ProjectListQueryCountTest} fest.
 	 *
 	 * <p><strong>Oeffentlich, damit andere Module dieselbe Kachel bekommen.</strong>
 	 * {@code GET /api/top10} und {@code GET /api/admin/top10-nominations} (KAN-24)
@@ -338,16 +356,16 @@ public class ProjectReadService {
 	 */
 	public List<ProjectCardResponse> cards(List<Project> projects) {
 		Map<UUID, Long> reactions = reactionsPerProject(projects);
-		Map<UUID, String> avatars = avatarsPerAuthor(projects);
+		Map<UUID, List<ProjectMember>> members = membersPerProject(projects);
+		Map<UUID, String> avatars = avatarsPerPerson(projects, members);
 
 		return projects.stream()
 				.map(project -> ProjectCardResponse.from(
 						project,
 						sortedTags(project),
 						reactions.getOrDefault(project.getId(), 0L),
-						project.getAuthor() == null
-								? null
-								: avatars.get(project.getAuthor().getId())))
+						avatarOf(project.getAuthor(), avatars),
+						memberCards(members.getOrDefault(project.getId(), List.of()), avatars)))
 				.toList();
 	}
 
@@ -363,28 +381,83 @@ public class ProjectReadService {
 	}
 
 	/**
-	 * Die Profilbilder aller Autor:innen einer Seite in einer Abfrage.
+	 * Die Mitglieder aller Projekte einer Seite in einer Abfrage (§3.13, seit
+	 * Contract v78).
+	 *
+	 * <p>Dieselbe Ueberlegung wie bei {@link #avatarsPerPerson}: die
+	 * Mitgliederliste je Kachel zu holen waere genau das N+1-Verhalten, das
+	 * diese Klasse fuer Tags, Reaktionen und Profilbilder bereits vermeidet.
+	 * Zugeordnet wird ueber {@code member.getProject().getId()}; das Projekt
+	 * steht deshalb im {@code @EntityGraph} der Abfrage.
+	 *
+	 * <p>Projekte ohne Mitglieder fehlen in der Zuordnung. Ein fehlender
+	 * Schluessel bedeutet dasselbe wie eine leere Liste, naemlich eine
+	 * Einzelarbeit; der Aufrufer setzt dafuer {@code List.of()} ein.
+	 */
+	private Map<UUID, List<ProjectMember>> membersPerProject(List<Project> projects) {
+		List<UUID> ids = projects.stream().map(Project::getId).toList();
+		if (ids.isEmpty()) {
+			return Map.of();
+		}
+		return projectMemberRepository.findByProjectIdIn(ids).stream()
+				.collect(Collectors.groupingBy(member -> member.getProject().getId()));
+	}
+
+	/**
+	 * Die Profilbilder aller auf einer Seite gezeigten Personen in einer
+	 * Abfrage: Autor:innen und, seit Contract v78, Projektmitglieder.
 	 *
 	 * <p>Das Bild haengt am Portfolio und nicht am Projekt (§3.2); es je
 	 * Kachel nachzuladen waere genau das N+1-Verhalten, das diese Klasse fuer
 	 * Tags und Reaktionen bereits vermeidet. Eine Seite kostet damit eine
 	 * Abfrage mehr, unabhaengig von ihrer Groesse.
 	 *
+	 * <p><strong>Eine Abfrage fuer beide Personenkreise</strong> und nicht je
+	 * eine: die Mengen ueberschneiden sich (wer an einem Projekt mitwirkt, ist
+	 * am naechsten oft Autor:in), und zwei Abfragen ergaeben zwei Zuordnungen
+	 * fuer dieselbe Frage.
+	 *
 	 * <p>Die IDs laufen ueber ein Set: eine Person kann mehrere Projekte auf
 	 * derselben Seite haben, und unter "My Portfolio" ist das der Normalfall.
 	 */
-	private Map<UUID, String> avatarsPerAuthor(List<Project> projects) {
-		Set<UUID> authorIds = projects.stream()
+	private Map<UUID, String> avatarsPerPerson(List<Project> projects,
+			Map<UUID, List<ProjectMember>> membersPerProject) {
+
+		Set<UUID> userIds = projects.stream()
 				.map(Project::getAuthor)
 				.filter(Objects::nonNull)
 				.map(User::getId)
-				.collect(Collectors.toSet());
+				.collect(Collectors.toCollection(HashSet::new));
 
-		if (authorIds.isEmpty()) {
+		membersPerProject.values().stream()
+				.flatMap(List::stream)
+				.map(ProjectMember::getUser)
+				.filter(Objects::nonNull)
+				.map(User::getId)
+				.forEach(userIds::add);
+
+		if (userIds.isEmpty()) {
 			return Map.of();
 		}
-		return portfolioRepository.findAvatarsByUserIds(authorIds).stream()
+		return portfolioRepository.findAvatarsByUserIds(userIds).stream()
 				.collect(Collectors.toMap(PortfolioAvatar::userId, PortfolioAvatar::avatarUrl));
+	}
+
+	/**
+	 * Die Mitglieder einer Kachel, geordnet und mit ihren bereits geladenen
+	 * Profilbildern (§3.13).
+	 */
+	private static List<MemberResponse> memberCards(List<ProjectMember> members,
+			Map<UUID, String> avatars) {
+		return members.stream()
+				.sorted(BY_MEMBER_NAME)
+				.map(member -> MemberResponse.from(member, avatarOf(member.getUser(), avatars)))
+				.toList();
+	}
+
+	/** Bild aus der Sammelabfrage, {@code null} fuer Personen ohne hinterlegtes. */
+	private static String avatarOf(User user, Map<UUID, String> avatars) {
+		return user == null ? null : avatars.get(user.getId());
 	}
 
 	// ------------------------------------------------------------------
@@ -489,14 +562,14 @@ public class ProjectReadService {
 				statusHistory(projectId));
 	}
 
+	/**
+	 * Die Mitglieder der Detailantwort (§3.13), ohne Profilbild: die
+	 * Detailansicht zeigt keines, auch nicht bei der Autor:in. Wer eines
+	 * braucht, gibt es wie die Kachel von aussen mit.
+	 */
 	private List<MemberResponse> members(UUID projectId) {
 		return projectMemberRepository.findByProjectId(projectId).stream()
-				// Stabile Reihenfolge: die Zuordnungstabelle hat keine, und eine
-				// Mitgliederliste, die bei jedem Aufruf anders sortiert ist,
-				// wirkt in der UI wie ein Fehler.
-				.sorted(Comparator
-						.comparing((ProjectMember member) -> nameOrEmpty(member.getUser(), true))
-						.thenComparing(member -> nameOrEmpty(member.getUser(), false)))
+				.sorted(BY_MEMBER_NAME)
 				.map(MemberResponse::from)
 				.toList();
 	}
