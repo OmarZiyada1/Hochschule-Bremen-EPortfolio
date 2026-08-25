@@ -307,6 +307,12 @@
       "facultyRequired": "Bitte eine Fakultät auswählen.",
       "studyProgramRequired": "Bitte einen Studiengang auswählen.",
       "targetRequired": "Bitte eine Zielkategorie auswählen."
+    },
+    "top10": {
+      "positionRequired": "Bitte einen Platz wählen.",
+      "positionOutOfRange": "Der Platz muss zwischen 1 und 10 liegen.",
+      "dateInvalid": "Bitte ein gültiges Datum angeben.",
+      "rangeReversed": "Das Ende darf nicht vor dem Anfang liegen."
     }
   },
   "placeholder": {
@@ -323,8 +329,6 @@
       "adminUsers": "Nutzer:innen",
       "adminCategories": "Kategorien",
       "adminStudyStructure": "Studienstruktur",
-      "adminTop10": "Top-10-Verwaltung",
-      "adminTop10Audit": "Top-10-Protokoll",
       "imprint": "Impressum",
       "privacy": "Datenschutz",
       "accessibility": "Barrierefreiheit",
@@ -856,6 +860,11 @@
       "ACCEPTED": "Angenommen",
       "REJECTED": "Abgelehnt",
       "WITHDRAWN": "Zurückgezogen"
+    },
+    "action": {
+      "ADDED": "Hinzugefügt",
+      "REMOVED": "Entfernt",
+      "REORDERED": "Umsortiert"
     }
   },
   "projectContent": {
@@ -1801,6 +1810,96 @@
         "module": "„{{name}}“ lässt sich nicht löschen, solange Projekte darauf verweisen."
       },
       "columnTitle": "{{title}} · {{count}}"
+    },
+    "top10": {
+      "title": "Top 10 Verwaltung",
+      "subtitle": "Nominierungen entscheiden, Platzierungen verwalten und den Verlauf nachvollziehen",
+      "nav": {
+        "label": "Bereiche der Top 10",
+        "manage": "Verwaltung",
+        "audit": "Protokoll"
+      },
+      "nominations": {
+        "title": "Nominierungen",
+        "filterLabel": "Nominierungen nach Stand filtern",
+        "emptyTitle": "Keine Nominierungen",
+        "emptyPending": "Zurzeit wartet kein Vorschlag auf eine Entscheidung.",
+        "emptyFiltered": "In diesem Stand steht kein Vorschlag. Ein anderer Filter zeigt mehr."
+      },
+      "nomination": {
+        "by": "Nominiert von {{person}}",
+        "decidedBy": "Entschieden von {{person}} am {{date}}"
+      },
+      "accept": {
+        "action": "Annehmen",
+        "title": "Nominierung annehmen",
+        "description": "{{title}}, vorgeschlagen von {{person}} als {{tier}}. Das Projekt erscheint danach auf der öffentlichen Startseite.",
+        "positionLabel": "Platz",
+        "positionPlaceholder": "Platz wählen",
+        "positionHint": "Zur Auswahl stehen nur freie Plätze. Die vorgeschlagene Stufe ist ein Hinweis und bindet die Entscheidung nicht.",
+        "confirm": "Annehmen",
+        "done": "{{title}} steht jetzt auf Platz {{position}}.",
+        "noFreeSlot": "Alle zehn Plätze sind belegt. Zuerst einen Platz räumen und die Reihenfolge speichern."
+      },
+      "reject": {
+        "action": "Ablehnen",
+        "title": "Nominierung ablehnen?",
+        "description": "Der Vorschlag zu „{{title}}“ gilt danach als abgelehnt. Das lässt sich nicht rückgängig machen; ein neuer Vorschlag wäre ein neuer Vorgang.",
+        "confirm": "Ablehnen",
+        "done": "Der Vorschlag zu {{title}} ist abgelehnt."
+      },
+      "slots": {
+        "title": "Aktuelle Top 10",
+        "count": "{{filled}} von {{total}} Plätzen belegt"
+      },
+      "slot": {
+        "free": "Platz frei",
+        "since": "in der Top 10 seit {{date}}",
+        "moveUp": "{{title}} von Platz {{position}} nach oben",
+        "moveDown": "{{title}} von Platz {{position}} nach unten",
+        "remove": "{{title}} von seinem Platz nehmen",
+        "moved": "{{title}} steht jetzt auf Platz {{position}}.",
+        "removed": "{{title}} ist von seinem Platz genommen. Gespeichert wird erst mit „Reihenfolge speichern“.",
+        "listLabel": "Plätze der Top 10"
+      },
+      "save": {
+        "action": "Reihenfolge speichern",
+        "title": "Reihenfolge speichern?",
+        "description": "Die Top 10 führt danach {{count}} Projekte in der hier gezeigten Reihenfolge. Sie erscheint so auf der öffentlichen Startseite, und jede Bewegung wird im Protokoll festgehalten.",
+        "removedTitle": "Diese Projekte verlieren ihren Platz ({{count}}):",
+        "confirm": "Speichern",
+        "done": "Die Reihenfolge ist gespeichert. Die Top 10 führt {{count}} Projekte."
+      },
+      "picker": {
+        "label": "Weiteres Projekt suchen",
+        "placeholder": "Titel, Kurzbeschreibung oder Name der Autor:in",
+        "full": "Alle zehn Plätze sind belegt. Erst einen Platz räumen, dann kommt ein weiteres Projekt hinein.",
+        "emptyTitle": "Kein Treffer",
+        "emptyDescription": "Zu „{{query}}“ ist kein veröffentlichtes Projekt gefunden worden. Nur veröffentlichte Projekte lassen sich aufnehmen.",
+        "add": "{{title}} auf den nächsten freien Platz setzen",
+        "addShort": "Aufnehmen",
+        "alreadyAdded": "{{title}} steht bereits in der Liste",
+        "addedShort": "Schon dabei",
+        "added": "{{title}} steht auf dem nächsten freien Platz. Gespeichert wird erst mit „Reihenfolge speichern“."
+      },
+      "audit": {
+        "from": "Von",
+        "to": "Bis",
+        "applyRange": "Zeitraum anwenden",
+        "person": "Person",
+        "personPlaceholder": "Nach Name suchen",
+        "reset": "Filter zurücksetzen",
+        "projectDeleted": "Projekt gelöscht",
+        "by": "von {{person}}",
+        "moved": "Von Platz {{from}} auf Platz {{to}}",
+        "onto": "Auf Platz {{position}}",
+        "fromPosition": "Von Platz {{position}}",
+        "noPosition": "Ohne Platzangabe",
+        "total": "{{count}} Einträge",
+        "emptyTitle": "Kein Eintrag",
+        "emptyDescription": "An der Top 10 ist bisher nichts geändert worden.",
+        "emptyFiltered": "In diesem Zeitraum ist nichts geändert worden. Ein weiterer Zeitraum oder eine andere Person zeigt mehr."
+      }
     }
   }
 }

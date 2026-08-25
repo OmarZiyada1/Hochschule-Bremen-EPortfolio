@@ -10,6 +10,7 @@ import {
   ownPortfolioHandler,
   projectBlocksHandler,
   projectDetailHandler,
+  top10AdminHandlers,
 } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
@@ -279,10 +280,22 @@ describe("Routenbaum", () => {
     ).toBeInTheDocument()
     unmount()
 
+    /* Seit KAN-40 steht auch hier die echte Seite. Ueberschrift und
+       Untertitel sind dieselben wie in der Verwaltung, so zeigt es der
+       Frame „Admin · Top 10 Protokoll"; unterschieden wird ueber die
+       Leiste darunter. */
+    server.use(...top10AdminHandlers())
     renderWithProviders(<AppUnderTest />, "/administration/top10/audit")
     expect(
-      screen.getByRole("heading", { level: 1, name: "Top-10-Protokoll" })
+      await screen.findByRole(
+        "heading",
+        { level: 1, name: "Top 10 Verwaltung" },
+        { timeout: 10_000 }
+      )
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole("link", { name: "Protokoll" })
+    ).toHaveAttribute("aria-current", "page")
   })
 
   it("zeigt die Seitennavigation auf jeder Seite der Administration", async () => {

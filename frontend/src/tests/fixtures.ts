@@ -7,6 +7,7 @@ import type {
   ProjectDetailResponse,
   ProjectReference,
   StatusHistoryResponse,
+  Top10AuditEntryResponse,
   Top10EntryResponse,
   Top10NominationResponse,
   UserResponse,
@@ -102,6 +103,30 @@ export function top10Entry(
     position: 1,
     addedAt: "2026-01-01T10:00:00Z",
     project: projectCard(),
+    ...overrides,
+  }
+}
+
+/**
+ * Eine Zeile des Top-10-Protokolls (§3.17, §6.1; KAN-40). Ohne
+ * Ueberschreibung eine Umsortierung von Platz 2 auf Platz 1, also der
+ * einzige Fall, in dem beide Positionen gesetzt sind.
+ *
+ * <p>{@code project} ist ein blosser Verweis und keine Projektkachel: im
+ * Protokoll wird ein Projekt nur genannt, nicht gezeigt. Ist es geloescht,
+ * steht dort {@code null}, und die Zeile bleibt trotzdem stehen.
+ */
+export function top10AuditEntry(
+  overrides: Partial<Top10AuditEntryResponse> = {}
+): Top10AuditEntryResponse {
+  return {
+    id: "ta-1",
+    timestamp: "2026-06-22T10:27:00Z",
+    admin: person(),
+    project: { id: "p-1", title: "SmartCampus" },
+    action: "REORDERED",
+    previousPosition: 2,
+    newPosition: 1,
     ...overrides,
   }
 }

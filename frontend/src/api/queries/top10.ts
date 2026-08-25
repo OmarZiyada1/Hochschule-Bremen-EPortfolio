@@ -2,9 +2,11 @@ import { queryOptions } from "@tanstack/react-query"
 
 import { api } from "@/api/client"
 import { apiPaths } from "@/api/endpoints"
+import type { PageResponse } from "@/api/page"
 import type {
   NominationStatus,
   NominationTier,
+  Top10AuditEntryResponse,
   Top10EntryResponse,
   Top10NominationResponse,
 } from "@/api/types"
@@ -33,8 +35,8 @@ export const top10Queries = {
    * <p><strong>nominatedBy=me ist fest verdrahtet</strong> und kein
    * Parameter dieser Fabrik: der Wert ist der Zuschnitt der Ressource, und
    * der Server laesst ohnehin keinen anderen zu (400 VALIDATION_FAILED).
-   * Den vollstaendigen Spiegel fuehrt GET /api/admin/top10-nominations und
-   * bekommt mit KAN-40 seine eigene Fabrik.
+   * Den vollstaendigen Spiegel fuehrt GET /api/admin/top10-nominations; er
+   * steht seit KAN-40 als eigene Fabrik in {@link top10AdminQueries}.
    *
    * <p>Der optionale Filter status grenzt auf einen Stand ein (§2.8) und
    * steht deshalb im Key: sonst zeigte ein Wechsel das Ergebnis des vorigen
@@ -96,4 +98,164 @@ export function nominateProject(
     apiPaths.projects.top10Nomination(projectId),
     { proposedTier }
   )
+}
+
+/**
+ * Die Parameter der Protokollseite (§6.1, §6.6). Alle optional; was fehlt,
+ * schraenkt nicht ein.
+ *
+ * <p><strong>from und to sind Zeitpunkte, keine Tage</strong> (§1): ISO-8601
+ * in UTC, etwa {@code 2026-08-01T00:00:00Z}, und beide Grenzen sind
+ * eingeschlossen. Der Server legt keine Zeitzone fest; die Tagesgrenzen
+ * eines gewaehlten Datums bildet die Oberflaeche in der Zeitzone der
+ * lesenden Person.
+ *
+ * <p>page ist 0-basiert wie im Seitenformat. Die Adresse zaehlt ab 1,
+ * umgerechnet wird beim Zusammenbauen der Parameter: der Typ beschreibt den
+ * Request und nicht die Oberflaeche.
+ */
+export interface Top10AuditParams {
+  from?: string
+  to?: string
+  admin?: string
+  page?: number
+}
+
+/**
+ * queryOptions-Fabriken der Top-10-Verwaltung (§6.1, Abschnitt
+ * „Administration (ADMIN)", KAN-40).
+ *
+ * <p><strong>Hier und nicht in admin.ts</strong>, obwohl beide Endpoints
+ * unter {@code /api/admin/} liegen: der Zuschnitt ist die Ressource, und die
+ * Ressource ist die Top-10. Die Fabriken teilen sich mit den oeffentlichen
+ * den Schluesselpraefix {@code ["top10"]}, und das ist der eigentliche
+ * Grund. Jede Aenderung an der Kuratierung verschiebt mehrere dieser Listen
+ * zugleich: eine angenommene Nominierung aendert den Stand des Vorschlags,
+ * belegt einen Platz <em>und</em> schreibt eine Protokollzeile. Mit einem
+ * gemeinsamen Praefix laedt ein einziges {@code invalidateQueries} alle drei
+ * nach, statt drei Schluessel von Hand aufzuzaehlen und beim vierten einen
+ * zu vergessen.
+ */
+export const top10AdminQueries = {
+  /**
+   * Der vollstaendige Spiegel der Nominierungen (§6.1), neueste zuerst.
+   *
+   * <p><strong>Eine blanke Liste, kein PageResponse.</strong> Der Endpoint
+   * paginiert nicht; die Zahl der Vorschlaege ist durch §3.11.1 Regel 2
+   * ohnehin begrenzt, weil je Projekt hoechstens einer offen sein kann.
+   *
+   * <p>Der Filter steht im Schluessel: sonst zeigte ein Wechsel das Ergebnis
+   * des vorigen Filters. Ohne ihn liefert der Server alle vier Staende aus
+   * §2.8, einschliesslich WITHDRAWN.
+   */
+  nominations: (params: { status?: NominationStatus } = {}) =>
+    queryOptions({
+      queryKey: ["top10", "admin", "nominations", params] as const,
+      queryFn: () =>
+        api.get<Top10NominationResponse[]>(apiPaths.admin.top10Nominations, {
+          query: { status: params.status },
+        }),
+    }),
+
+  /**
+   * Das Aenderungsprotokoll (§3.17, §6.6), paginiert.
+   *
+   * <p><strong>Ohne sort bleibt es beim Serverstandard</strong>, also
+   * {@code timestamp,desc} (§6.6). Die Oberflaeche bietet keine Sortierung
+   * an und schickt deshalb auch keine: sortierbar waere ohnehin allein
+   * {@code timestamp}, jedes andere Feld ergaebe 400 VALIDATION_FAILED.
+   *
+   * <p>Alle Zeilen eines {@code PUT /admin/top10} tragen denselben
+   * Zeitpunkt (§3.17); den Gleichstand bricht serverseitig {@code id,asc},
+   * damit beim Blaettern keine Zeile doppelt und keine gar nicht erscheint.
+   */
+  audit: (params: Top10AuditParams = {}) =>
+    queryOptions({
+      queryKey: ["top10", "admin", "audit", params] as const,
+      queryFn: () =>
+        api.get<PageResponse<Top10AuditEntryResponse>>(
+          apiPaths.admin.top10Audit,
+          {
+            query: {
+              from: params.from,
+              to: params.to,
+              admin: params.admin,
+              page: params.page,
+            },
+          }
+        ),
+    }),
+}
+
+/**
+ * POST /api/admin/top10-nominations/{id}/accept (§3.11.1, §6.1), ergibt
+ * <strong>200</strong> mit der entschiedenen Nominierung.
+ *
+ * <p><strong>Der Platz kommt aus dem Koerper und nirgendwo sonst.</strong>
+ * Die vorgeschlagene Stufe (§2.13) bereitet die Entscheidung vor, bindet sie
+ * aber nicht: der Server prueft nicht, ob der vergebene Platz in den Bereich
+ * der Stufe faellt. Nebenbei schreibt der Aufruf den Platz in
+ * {@code proposedPosition} der Nominierung (seit Contract v69).
+ *
+ * <p>Sichtbar zu behandeln, jeweils ohne zweiten Versuch: 409
+ * {@code RESOURCE_IN_USE}, wenn der Platz belegt ist (er wird nicht
+ * geraeumt), 409 {@code PROJECT_NOT_PUBLISHED}, wenn das Projekt den Status
+ * verlassen hat, und 409 {@code NOMINATION_ALREADY_DECIDED} bei einem
+ * zweiten Klick oder einem zweiten Tab.
+ */
+export function acceptNomination(
+  nominationId: string,
+  position: number
+): Promise<Top10NominationResponse> {
+  return api.post<Top10NominationResponse>(
+    apiPaths.admin.top10NominationAccept(nominationId),
+    { position }
+  )
+}
+
+/**
+ * POST /api/admin/top10-nominations/{id}/reject (§3.11.1, §6.1), ohne
+ * Koerper, ergibt <strong>200</strong>.
+ *
+ * <p>Ablehnen verlangt kein {@code PUBLISHED}: nur die Aufnahme tut das. Ein
+ * Vorschlag zu einem inzwischen zurueckgezogenen Projekt laesst sich also
+ * abraeumen, statt offen stehen zu bleiben. Der einzige sichtbar zu
+ * behandelnde Fehler ist 409 {@code NOMINATION_ALREADY_DECIDED}.
+ */
+export function rejectNomination(
+  nominationId: string
+): Promise<Top10NominationResponse> {
+  return api.post<Top10NominationResponse>(
+    apiPaths.admin.top10NominationReject(nominationId)
+  )
+}
+
+/**
+ * PUT /api/admin/top10 (§3.11.1 Regel 3, §6.1), ergibt <strong>200</strong>
+ * mit der neuen, lueckenlos ab 1 durchnummerierten Liste.
+ *
+ * <p><strong>Die Reihenfolge ist der Array-Index.</strong> Platz 1 ist das
+ * erste Element; einen eigenen position-Parameter gibt es bewusst nicht,
+ * weil Reihenfolge und ausdrueckliche Platzangabe einander widersprechen
+ * koennten. Geschickt wird deshalb immer die vollstaendige Liste und nie
+ * eine Einzelposition.
+ *
+ * <p><strong>Der Aufruf ersetzt.</strong> Was nicht genannt ist, faellt
+ * heraus; eine leere Liste leert die Top-10. Aus der Liste nehmen heisst
+ * also: ohne dieses Projekt speichern.
+ *
+ * <p><strong>Er schliesst offene Nominierungen ab.</strong> Nimmt die
+ * Administration ein Projekt unmittelbar auf, gehen dessen PENDING-Vorschlaege
+ * auf ACCEPTED, allerdings ohne {@code proposedPosition}. Die
+ * Nominierungsliste ist danach also neu zu laden.
+ *
+ * <p>Sichtbar zu behandeln: 400 {@code VALIDATION_FAILED} bei mehr als zehn
+ * IDs, einer Wiederholung, einer unbekannten ID oder einem nicht
+ * veroeffentlichten Projekt, und 409 {@code PROJECT_NOT_PUBLISHED}, wenn ein
+ * genanntes Projekt PUBLISHED inzwischen verlassen hat.
+ */
+export function setTop10Order(
+  projectIds: string[]
+): Promise<Top10EntryResponse[]> {
+  return api.put<Top10EntryResponse[]>(apiPaths.admin.top10, { projectIds })
 }

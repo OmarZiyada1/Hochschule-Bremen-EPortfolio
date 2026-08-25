@@ -123,6 +123,51 @@ export type NominationTier = Top10NominationRequest["proposedTier"]
 export type NominationStatus = Top10NominationResponse["status"]
 
 /**
+ * Eine Zeile des Top-10-Aenderungsprotokolls (Contract 3.17, 6.1; KAN-40).
+ *
+ * <p><strong>project ist nullbar, und das ist kein Randfall.</strong> Der
+ * Fremdschluessel steht auf {@code on delete set null}: wird ein Projekt
+ * geloescht, verliert die Zeile ihren Verweis und bleibt trotzdem stehen
+ * (§3.17). Die Oberflaeche stellt solche Zeilen als „Projekt geloescht" dar
+ * und verlinkt sie nicht.
+ *
+ * <p><strong>admin heisst „wer veranlasst hat" und nicht „welcher
+ * Admin".</strong> Den Entzug eines Platzes beim Verlassen von PUBLISHED
+ * loest die Redaktion aus; die Anzeige nennt deshalb den Namen und keine
+ * Rolle (§3.17).
+ *
+ * <p>Der Typ steht seit KAN-40 in der Generierung. Bis dahin fehlte er, weil
+ * er ausschliesslich als Elementtyp von {@code PageResponse<T>} vorkommt und
+ * springdoc den generischen Parameter genau einmal aufloest; nachgetragen
+ * wird er in {@code config/OpenApiConfig} des Backends.
+ */
+export type Top10AuditEntryResponse = ApiSchemas["Top10AuditEntryResponse"]
+
+/**
+ * Art der protokollierten Aenderung nach Contract 2.12: ADDED, REMOVED,
+ * REORDERED. Die drei Werte beschreiben die Wirkung auf die Liste und nicht
+ * den Anlass; ein Platz wird auch dann REMOVED, wenn ihn niemand aktiv
+ * geraeumt hat.
+ */
+export type Top10Action = Top10AuditEntryResponse["action"]
+
+/**
+ * Der Koerper von POST /api/admin/top10-nominations/{id}/accept (§6.1): der
+ * Platz, den die Administration vergibt. Die vorgeschlagene Stufe bindet ihn
+ * nicht (§2.13, §3.11.1 Regel 4).
+ */
+export type Top10AcceptRequest = ApiSchemas["Top10AcceptRequest"]
+
+/**
+ * Der Koerper von PUT /api/admin/top10 (§3.11.1 Regel 3): die vollstaendige,
+ * geordnete Liste. <strong>Die Reihenfolge ist der Array-Index</strong>,
+ * Platz 1 ist das erste Element; einen eigenen position-Parameter gibt es
+ * bewusst nicht. Der Aufruf ersetzt die Liste, was nicht genannt ist, faellt
+ * heraus.
+ */
+export type Top10OrderRequest = ApiSchemas["Top10OrderRequest"]
+
+/**
  * Kommentare eines Projekts (Contract 2.3, 2.4, 3.5, 6.1; KAN-37).
  *
  * <p>Die drei Typen und die beiden Staende laufen unveraendert durch den

@@ -2385,6 +2385,39 @@ export interface components {
        */
       count: number
     }
+    /** @description Verweis auf ein Projekt: ID und Titel. */
+    ProjectReferenceResponse: {
+      /** Format: uuid */
+      id: string
+      title: string
+    }
+    /** @description Eine Zeile des unveraenderlichen Top-10-Protokolls (§3.17). */
+    Top10AuditEntryResponse: {
+      /** Format: uuid */
+      id: string
+      /**
+       * Format: date-time
+       * @description Zeitpunkt der Aenderung. Mehrere Zeilen desselben Aufrufs tragen denselben Wert.
+       */
+      timestamp: string
+      admin: components["schemas"]["PersonResponse"]
+      /** @description Betroffenes Projekt. Null, wenn das Projekt inzwischen geloescht wurde; die Protokollzeile bleibt trotzdem stehen. */
+      project: components["schemas"]["ProjectReferenceResponse"] | null
+      /** @enum {string} */
+      action: "ADDED" | "REMOVED" | "REORDERED"
+      /**
+       * Format: int32
+       * @description Platz vor der Aenderung. Null bei ADDED.
+       * @example 3
+       */
+      previousPosition: number | null
+      /**
+       * Format: int32
+       * @description Platz nach der Aenderung. Null bei REMOVED.
+       * @example 1
+       */
+      newPosition: number | null
+    }
   }
   responses: never
   parameters: never

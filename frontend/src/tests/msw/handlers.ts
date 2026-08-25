@@ -8,6 +8,9 @@ import type {
   DashboardResponse,
   OwnPortfolioResponse,
   ProjectDetailResponse,
+  Top10AuditEntryResponse,
+  Top10EntryResponse,
+  Top10NominationResponse,
   UserResponse,
 } from "@/api/types"
 import { ownPortfolio, projectDetail } from "@/tests/fixtures"
@@ -179,4 +182,42 @@ export function fileBlobHandler() {
       headers: { "Content-Type": "image/png" },
     })
   )
+}
+
+/**
+ * Die drei lesenden Antworten der Top-10-Verwaltung (§6.1, KAN-40), als
+ * Grundantwort fuer Tests, die den Bereich nur streifen.
+ *
+ * <p>Sie stehen zusammen, weil die Seite alle drei zugleich braucht: die
+ * besetzten Plaetze aus der oeffentlichen Liste, den Spiegel der
+ * Nominierungen und das Protokoll. Ein Test, der nur einen davon anmeldet,
+ * laeuft in {@code onUnhandledRequest}.
+ */
+export function top10AdminHandlers({
+  entries = [],
+  nominations = [],
+  audit = [],
+}: {
+  entries?: Top10EntryResponse[]
+  nominations?: Top10NominationResponse[]
+  audit?: Top10AuditEntryResponse[]
+} = {}) {
+  return [
+    http.get("*/api/top10", () => HttpResponse.json(entries)),
+    /* Eine blanke Liste ohne PageResponse: der Endpoint paginiert nicht
+       (§6.1). Der Statusfilter wird hier bewusst nicht nachgebildet, wer
+       ihn prueft, meldet einen eigenen Handler an. */
+    http.get("*/api/admin/top10-nominations", () =>
+      HttpResponse.json(nominations)
+    ),
+    http.get("*/api/admin/top10-audit", () =>
+      HttpResponse.json({
+        content: audit,
+        page: 0,
+        size: 20,
+        totalElements: audit.length,
+        totalPages: audit.length === 0 ? 0 : 1,
+      })
+    ),
+  ]
 }

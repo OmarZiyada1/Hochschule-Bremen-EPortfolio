@@ -1,6 +1,8 @@
 package de.hsbremen.eportfolio.config;
 
+import de.hsbremen.eportfolio.top10.dto.Top10AuditEntryResponse;
 import io.swagger.v3.core.converter.AnnotatedType;
+import io.swagger.v3.core.converter.ModelConverters;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
@@ -9,10 +11,13 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
+import java.util.List;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springdoc.core.customizers.PropertyCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 
 /**
  * Beschreibung der API fuer OpenAPI/Swagger-UI (KAN-11).
@@ -36,6 +41,20 @@ public class OpenApiConfig {
 	 * „Authorize"-Dialog auf.
 	 */
 	private static final String BEARER_SCHEMA = "bearerAuth";
+
+	/**
+	 * Elementtypen paginierter Antworten, die sonst in keinem Schema landen.
+	 *
+	 * <p>Aufgenommen wird ein Typ hier genau dann, wenn er ausschliesslich als
+	 * {@code T} in {@code PageResponse<T>} vorkommt. Wer daneben einen eigenen
+	 * Endpoint hat, ist ohnehin da: {@code AdminUserResponse} etwa steht schon
+	 * wegen {@code GET /api/admin/users/{id}} unter {@code components}, und
+	 * {@code ProjectCardResponse} wegen {@code GET /api/projects/{id}}.
+	 *
+	 * <p>Begruendung im Haken {@link #pagedElementSchemasCustomizer()}.
+	 */
+	private static final List<Class<?>> PAGED_ELEMENT_TYPES =
+			List.of(Top10AuditEntryResponse.class);
 
 	@Bean
 	public OpenAPI eportfolioOpenApi() {
@@ -77,6 +96,63 @@ public class OpenApiConfig {
 				// tatsaechlich ein Token verlangen, entscheidet allein die
 				// SecurityFilterChain.
 				.addSecurityItem(new SecurityRequirement().addList(BEARER_SCHEMA));
+	}
+
+	/**
+	 * Traegt die Elementtypen paginierter Antworten nach, die springdoc sonst
+	 * verliert (KAN-40).
+	 *
+	 * <p>{@code PageResponse<T>} traegt {@code @Schema(name = "PageResponse")}
+	 * und ist damit <strong>ein</strong> benanntes Schema fuer alle
+	 * Verwendungen. swagger-core loest den generischen Parameter deshalb genau
+	 * einmal auf und schreibt das Ergebnis fest: {@code content} steht im
+	 * Dokument als {@code ProjectCardResponse[]}, gleichgueltig welcher
+	 * Endpoint darauf verweist. Ein {@code T}, das nirgends sonst vorkommt,
+	 * wird dabei nie zu einem Schema und fehlt unter {@code components}
+	 * vollstaendig.
+	 *
+	 * <p>Genau das trifft {@code Top10AuditEntryResponse} (§3.17): das
+	 * Protokoll ist unveraenderlich und hat deshalb weder einen schreibenden
+	 * noch einen Einzelabruf, an dem der Typ ein zweites Mal auftauchte.
+	 * {@code GET /api/admin/top10-audit} verwies damit auf eine Antwort, die
+	 * es dort nicht gibt, und {@code frontend/src/api/schema.d.ts} kannte die
+	 * Protokollzeile gar nicht. Das Frontend haette den Typ von Hand
+	 * nachbauen muessen, was Frontend-Regel 2 gerade verbietet.
+	 *
+	 * <p><strong>Warum nicht das {@code name} am PageResponse fallen
+	 * lassen.</strong> Ohne den festen Namen erzeugte springdoc je Elementtyp
+	 * ein eigenes Schema ({@code PageResponseProjectCardResponse} und so
+	 * weiter). Das waere die genauere Dokumentation, benennt aber das heute
+	 * verwendete Schema um und zieht {@code frontend/src/api/page.ts} samt
+	 * jeder paginierten Ansicht nach. Der Nachtrag hier kostet dagegen keine
+	 * einzige bestehende Zeile im Dokument.
+	 *
+	 * <p><strong>Nichts wird ueberschrieben.</strong> {@code readAll} liefert
+	 * den Typ samt seiner Bestandteile, hier also auch {@code PersonResponse}
+	 * und {@code ProjectReferenceResponse}. Eingesetzt wird nur, was noch
+	 * fehlt: die bereits aufgebauten Schemas sind durch die Haken unten
+	 * gelaufen und duerfen nicht durch eine rohe Fassung ersetzt werden.
+	 *
+	 * <p><strong>Die Reihenfolge ist kein Zufall.</strong> Der Haken laeuft
+	 * ueber {@link Order} als erster, damit die drei Nachbearbeitungen unten
+	 * die nachgetragenen Schemas genauso behandeln wie alle anderen:
+	 * {@code nullable} vom Typ nehmen (KAN-74) und die Eigenschaften als
+	 * Pflicht auszeichnen (KAN-76). Liefe er zuletzt, stuende die
+	 * Protokollzeile als einziges Schema ohne {@code required} da.
+	 */
+	@Bean
+	@Order(Ordered.HIGHEST_PRECEDENCE)
+	public OpenApiCustomizer pagedElementSchemasCustomizer() {
+		return openApi -> {
+			Components components = openApi.getComponents();
+			if (components == null || components.getSchemas() == null) {
+				return;
+			}
+			for (Class<?> type : PAGED_ELEMENT_TYPES) {
+				ModelConverters.getInstance().readAll(type)
+						.forEach(components.getSchemas()::putIfAbsent);
+			}
+		};
 	}
 
 	/**
