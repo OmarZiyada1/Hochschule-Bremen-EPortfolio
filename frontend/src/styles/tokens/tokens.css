@@ -116,6 +116,39 @@
      sie erneut und der Wert stuende nirgends fest. Beide werden
      ausschliesslich von der Rolle overlay referenziert, je Modus eine.
      Achtstelliges Hex: die letzten beiden Ziffern sind der Alphakanal. */
+
+  /* Kuehle Toene fuer Diagramme und Kennzahlen (KAN-80).
+     Sechs Familien quer durch die kalte Haelfte des Spektrums, damit sechs
+     Reihen nebeneinander unterscheidbar bleiben: Petrol, Tuerkis, Salbei,
+     Indigo, Flieder, Taubenblau. Kein Braun, kein Rot, kein Grau.
+
+     Je Familie zwei Stufen mit klarer Aufgabe. Die 400er ist die
+     Fuellfarbe eines Segments; sie muss sich von der Nachbarfarbe
+     unterscheiden und nicht Text tragen. Die 700er ist die Schriftfarbe
+     einer Kennzahl auf der Karte und deshalb dunkel genug fuer den
+     Kontrast: gemessen gegen die Kartenflaeche (basis/weiss) liegen alle
+     sechs zwischen 5,4 und 8,1:1, gegen den Seitengrund (neutral/50)
+     zwischen 5,1 und 7,7:1. Beides ueber den 4,5:1 aus SC 1.4.3, und damit
+     nicht nur als grosse Zahl, sondern auch als normaler Text tragfaehig.
+     Im dunklen Modus uebernimmt die 400er Stufe die Schrift und liegt auf
+     der dunklen Karte (neutral/900) zwischen 5,7 und 8,0:1.
+     Taubenblau traegt eine dritte, blasse Stufe: sie
+     fuellt im hellen Modus den Rest eines gestapelten Balkens, also das,
+     was gerade nicht die Aussage ist. */
+  --petrol-400: #14b8a6;
+  --petrol-700: #0f766e;
+  --tuerkis-400: #38bdf8;
+  --tuerkis-700: #0e7490;
+  --salbei-400: #86b8a4;
+  --salbei-700: #3f6d5e;
+  --indigo-400: #818cf8;
+  --indigo-700: #4338ca;
+  --flieder-400: #b39ddb;
+  --flieder-700: #6d28d9;
+  --taubenblau-200: #c2d5ec;
+  --taubenblau-400: #7f9fc9;
+  --taubenblau-700: #33517a;
+
   --neutral-950-a50: #0b122080;
   --neutral-950-a70: #0b1220b3;
 }
@@ -214,6 +247,71 @@
   --pill-warning-fg: var(--bernstein-800);
   --pill-danger-bg: var(--rot-100);
   --pill-danger-fg: var(--rot-800);
+
+  /* Diagrammpalette (KAN-80). Sechs kuehle Farbtoene fuer Reihen und
+     Segmente, dazu ein ruhiger Ton fuer den Rest eines Stapels und je Ton
+     eine dunklere Schriftfassung fuer Kennzahlen.
+
+     <strong>Die Fuellfarben liegen auf der 400er Stufe</strong> und sind
+     damit deutlich leichter als die 700er und 800er Toene der Badges. Eine
+     Flaeche im Diagramm ist keine Schrift: sie muss sich von der Flaeche
+     daneben unterscheiden, nicht Text tragen. Die dunklen Badge-Toene sassen
+     als grosse Kreissegmente schwer auf der Karte, und drei davon
+     nebeneinander waren kaum noch auseinanderzuhalten.
+
+     <strong>Kuehl und ruhig, ohne Grau und ohne Schwarz</strong> (Vorgabe zu
+     KAN-80). Die Kennzahlen des Dashboards trugen bis dahin die Toene der
+     Status-Badges, darunter ein Grau, ein Braun und ein dunkles Rot; sie
+     lasen sich als Warnung, obwohl sie nur zaehlen. Die kuehle Familie nimmt
+     der Karte diese Schaerfe.
+
+     <strong>--chart-text-* ist dieselbe Familie, eine Stufe dunkler.</strong>
+     Eine Kennzahl ist Text und braucht Kontrast; die Fuellfarbe eines
+     Segments braucht ihn nicht. Im dunklen Modus fallen beide zusammen: dort
+     ist die 400er Stufe hell genug fuer Schrift auf dunklem Grund, dieselbe
+     Bewegung wie bei den Inhaltsfarben in &sect;2.5.
+
+     <strong>Dieselben Primitives in beiden Modi</strong>, anders als bei
+     jeder anderen Rolle hier. Der Grund ist derselbe wie bei der Wahl der
+     Stufe: die Palette trennt Reihen voneinander und nicht Vordergrund von
+     Hintergrund. Die 400er Stufe hat gegen den hellen wie gegen den dunklen
+     Kartengrund genug Abstand, und ein Umschalten zwischen 700 und 400
+     aenderte die Reihenfolge der wahrgenommenen Helligkeit, also genau das,
+     woran ein Auge die Segmente wiedererkennt. Ausgenommen ist
+     --chart-muted: es ist die Restflaeche und folgt dem Grund.
+
+     <strong>Die Reihenfolge ist die Vergaberegel.</strong> Eine Reihe ohne
+     eigene Bedeutung nimmt den naechsten Eintrag nach ihrer Position
+     (lib/chartColors.ts); kommt eine Kategorie dazu, bekommt sie ohne
+     Codeaenderung die naechste Farbe. Nach dem achten Eintrag beginnt die
+     Palette von vorn, und dann sind es zwei Reihen zu viel fuer ein
+     Diagramm. Die Aussage traegt ohnehin die Legende und die Tabelle
+     daneben, nie die Farbe allein (SC 1.4.1).
+
+     <strong>Ohne Bindung an Tailwind</strong>, anders als jede andere Rolle
+     hier, und das ist kein Versehen. Die Palette wird nie als Utility
+     geschrieben, sondern als Fuellfarbe an recharts gereicht, und der Name
+     entsteht dabei zur Laufzeit aus dem Index. Ein --color-chart-* im Block
+     @theme inline saehe fuer Tailwind deshalb unbenutzt aus und fiele beim
+     Buendeln heraus; im gebauten CSS stuenden am Ende nur die zwei bis drei
+     Namen, die woanders zufaellig ausgeschrieben vorkommen, und die uebrigen
+     Segmente waeren farblos. Als gewoehnliche Deklaration unter :root steht
+     jeder Eintrag dagegen sicher im Ergebnis. Dieselbe Ausnahme wie bei den
+     beiden Verlaufsrollen weiter unten, nur aus dem umgekehrten Grund. */
+  --chart-1: var(--petrol-400);
+  --chart-2: var(--tuerkis-400);
+  --chart-3: var(--salbei-400);
+  --chart-4: var(--indigo-400);
+  --chart-5: var(--flieder-400);
+  --chart-6: var(--taubenblau-400);
+  --chart-muted: var(--taubenblau-200);
+
+  --chart-text-1: var(--petrol-700);
+  --chart-text-2: var(--tuerkis-700);
+  --chart-text-3: var(--salbei-700);
+  --chart-text-4: var(--indigo-700);
+  --chart-text-5: var(--flieder-700);
+  --chart-text-6: var(--taubenblau-700);
 
   /* Inhaltsfarben der Bloecke (KAN-10, API-Contract 2.5 seit v51). Fuenf
      Rollen als Textfarbe, dieselben fuenf als Hervorhebung, zusammen zehn.
@@ -384,6 +482,26 @@
   --pill-warning-fg: var(--bernstein-400);
   --pill-danger-bg: var(--rot-950);
   --pill-danger-fg: var(--rot-400);
+
+  /* Diagrammpalette, Begruendung im hellen Block: sechs kuehle Toene der
+     400er Stufe, in beiden Modi dieselben Primitives. Zwei Rollen folgen dem
+     Grund: die Restflaeche wird im Dunkeln dunkler, und die Schriftfassung
+     faellt hier mit der Fuellfarbe zusammen, weil die 400er Stufe auf
+     dunklem Grund bereits genug Kontrast traegt. */
+  --chart-1: var(--petrol-400);
+  --chart-2: var(--tuerkis-400);
+  --chart-3: var(--salbei-400);
+  --chart-4: var(--indigo-400);
+  --chart-5: var(--flieder-400);
+  --chart-6: var(--taubenblau-400);
+  --chart-muted: var(--taubenblau-700);
+
+  --chart-text-1: var(--petrol-400);
+  --chart-text-2: var(--tuerkis-400);
+  --chart-text-3: var(--salbei-400);
+  --chart-text-4: var(--indigo-400);
+  --chart-text-5: var(--flieder-400);
+  --chart-text-6: var(--taubenblau-400);
 
   /* Inhaltsfarben im dunklen Modus (KAN-10). Dieselben Rollennamen,
      dieselbe Bauart wie die Status- und Rollenpaare daneben: die 950er

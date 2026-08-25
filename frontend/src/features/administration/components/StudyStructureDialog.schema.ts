@@ -15,10 +15,13 @@ import {
  * deshalb gibt es eine Fabrik statt dreier Abschriften, die auseinanderlaufen
  * wuerden.
  *
- * <p><strong>Die Kurzform ist nur an der Fakultaet Pflicht.</strong>
- * {@code Faculty.abbreviation} ist unique und not null (§3.8): ein Name
- * allein ergaebe dort 400 VALIDATION_FAILED. An Studiengang und Modul darf
- * sie fehlen (§3.7, §3.9), und eine leere Eingabe heisst dort „keine".
+ * <p><strong>Die Kurzform ist auf allen drei Ebenen Pflicht.</strong> An der
+ * Fakultaet war sie es immer ({@code Faculty.abbreviation} ist unique und
+ * not null, §3.8); an Studiengang und Modul ist sie es seit Contract v81
+ * (§3.7, §3.9, KAN-80), weil die Projektkachel das Studiengangskuerzel zeigt
+ * und die Projektdetails es hinter dem Namen nennen. Eine leere Eingabe
+ * ergibt an allen dreien 400 VALIDATION_FAILED, dieselbe Antwort wie hier
+ * die Formularpruefung.
  *
  * <p><strong>Die uebergeordnete Zeile ist eine ID im Koerper.</strong> Eine
  * unbekannte ergibt <strong>400</strong>, nicht 404 (§6.3.1): sie macht die
@@ -28,7 +31,7 @@ export type StudyStructureKind = "faculty" | "studyProgram" | "module"
 
 export interface StudyStructureFormValues {
   name: string
-  /** Leer heisst „keine"; an der Fakultaet ist das Feld Pflicht. */
+  /** Pflicht auf allen drei Ebenen (Contract v81). */
   abbreviation: string
   /**
    * {@code facultyId} beim Studiengang, {@code studyProgramId} beim Modul.
@@ -46,23 +49,14 @@ export function studyStructureSchema(kind: StudyStructureKind) {
       .trim()
       .min(1, "validation.masterData.nameRequired")
       .max(MASTER_DATA_NAME_MAX, "validation.masterData.nameTooLong"),
-    abbreviation:
-      kind === "faculty"
-        ? z
-            .string()
-            .trim()
-            .min(1, "validation.masterData.abbreviationRequired")
-            .max(
-              MASTER_DATA_ABBREVIATION_MAX,
-              "validation.masterData.abbreviationTooLong"
-            )
-        : z
-            .string()
-            .trim()
-            .max(
-              MASTER_DATA_ABBREVIATION_MAX,
-              "validation.masterData.abbreviationTooLong"
-            ),
+    abbreviation: z
+      .string()
+      .trim()
+      .min(1, "validation.masterData.abbreviationRequired")
+      .max(
+        MASTER_DATA_ABBREVIATION_MAX,
+        "validation.masterData.abbreviationTooLong"
+      ),
     parentId:
       kind === "faculty"
         ? z.string()

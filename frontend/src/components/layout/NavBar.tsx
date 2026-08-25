@@ -166,7 +166,11 @@ export function NavBar({
 
   return (
     <header className="surface-nav">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
+      {/* h-nav statt h-16: dieselbe Hoehe steht auf der Startseite noch
+          einmal, dort als Abzug von der Fensterhoehe (KAN-80). Das Mass
+          liegt deshalb als --spacing-nav in index.css und nicht als Zahl an
+          zwei Orten. */}
+      <div className="mx-auto flex h-nav max-w-6xl items-center justify-between gap-4 px-4">
         {/* Ein Link mit zwei Zeilen, aber einem Namen: vorgelesen wird der
             Projektname, sichtbar bleibt die Zweiteilung aus dem Design. */}
         <Link

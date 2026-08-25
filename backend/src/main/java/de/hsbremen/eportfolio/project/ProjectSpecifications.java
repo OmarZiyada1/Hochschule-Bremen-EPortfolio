@@ -6,6 +6,7 @@ import de.hsbremen.eportfolio.common.enums.ProjectStatus;
 import de.hsbremen.eportfolio.common.enums.ProjectType;
 import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
+import de.hsbremen.eportfolio.masterdata.Tag;
 import de.hsbremen.eportfolio.user.User;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -157,9 +158,10 @@ public final class ProjectSpecifications {
 	}
 
 	/**
-	 * Filter {@code q}: Volltextsuche ueber Titel, Kurzbeschreibung und die
-	 * Namen der Autor:in, unabhaengig von Gross- und Kleinschreibung (§6.1,
-	 * seit Contract v47; bis v46 bewusst ohne Autor:innennamen).
+	 * Filter {@code q}: Volltextsuche ueber Titel, Kurzbeschreibung, die Namen
+	 * der Autor:in und die Schlagwoerter, unabhaengig von Gross- und
+	 * Kleinschreibung (§6.1, seit Contract v47 mit den Autor:innennamen, seit
+	 * v81 mit den Schlagwoertern).
 	 *
 	 * <p>Die Namenssuche laeuft ueber einen einzigen Zweig auf der Verkettung
 	 * {@code firstName + " " + lastName}: jeder Teilstring des Vor- oder
@@ -177,6 +179,13 @@ public final class ProjectSpecifications {
 	 * <p>{@code summary} ist nullable; ein Vergleich gegen NULL ergibt in SQL
 	 * weder wahr noch falsch, das ODER bleibt also korrekt und Projekte ohne
 	 * Teaser fallen nur aus diesem einen Zweig heraus.
+	 *
+	 * <p><strong>Die Schlagwoerter kamen mit KAN-80 dazu</strong> (Contract
+	 * v81). Wer ein Schlagwort ins Suchfeld der Projektbibliothek tippt,
+	 * erwartet die Projekte, die es tragen; bis v80 blieb die Liste leer, sofern
+	 * das Wort nicht zufaellig auch im Titel stand. Der Zweig sucht als
+	 * Teilstring wie die uebrigen, damit „nachhaltig" auch
+	 * „Nachhaltigkeit" trifft.
 	 */
 	public static Specification<Project> searchText(String q) {
 		return (root, query, cb) -> {
@@ -187,8 +196,31 @@ public final class ProjectSpecifications {
 			return cb.or(
 					cb.like(cb.lower(root.get("title")), pattern, ESCAPE_CHARACTER),
 					cb.like(cb.lower(root.get("summary")), pattern, ESCAPE_CHARACTER),
-					cb.like(cb.lower(authorName), pattern, ESCAPE_CHARACTER));
+					cb.like(cb.lower(authorName), pattern, ESCAPE_CHARACTER),
+					hasMatchingTag(root, query, cb, pattern));
 		};
+	}
+
+	/**
+	 * „Dieses Projekt traegt ein passendes Schlagwort" als Unterabfrage
+	 * (§3.19).
+	 *
+	 * <p>Aus demselben Grund {@code exists} statt Join wie bei
+	 * {@link #isMember}: {@code tags} ist eine Sammlung, ein innerer Join wuerfe
+	 * jedes Projekt ohne Schlagwort aus den drei anderen ODER-Zweigen, und ein
+	 * aeusserer Join zaehlte ein Projekt mit fuenf Schlagwoertern fuenfmal.
+	 * Beides verfaelschte Trefferzahl und Seitenaufteilung.
+	 */
+	private static Predicate hasMatchingTag(Root<Project> root, CriteriaQuery<?> query,
+			CriteriaBuilder cb, String pattern) {
+		Subquery<UUID> tagged = query.subquery(UUID.class);
+		Root<Project> candidate = tagged.from(Project.class);
+		Join<Project, Tag> tags = candidate.join("tags", JoinType.INNER);
+		tagged.select(candidate.get("id"))
+				.where(cb.and(
+						cb.equal(candidate.get("id"), root.get("id")),
+						cb.like(cb.lower(tags.get("name")), pattern, ESCAPE_CHARACTER)));
+		return cb.exists(tagged);
 	}
 
 	/**

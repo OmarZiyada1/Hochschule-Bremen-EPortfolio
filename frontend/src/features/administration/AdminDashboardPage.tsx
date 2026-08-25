@@ -9,8 +9,8 @@ import { useAdminDashboard } from "@/features/administration/hooks/useAdministra
 
 /**
  * Die Startansicht der Administrationsseite (Template „Dashboard", KAN-38):
- * Kennzahlen zum Bestand, oben die Projekte und die Nutzerstatistik
- * nebeneinander, darunter die Verteilung je Fakultaet.
+ * Kennzahlen zum Bestand, untereinander die Projekte, die Nutzerstatistik und
+ * die Verteilung je Fakultaet. Jede Karte nimmt die volle Breite (KAN-80).
  *
  * <p><strong>Bestandsgroessen, kein Verlauf.</strong> Alle Zahlen gelten zum
  * Zeitpunkt des Aufrufs; §6.1 sieht keine Zeitreihe vor. Eine Kachel mit
@@ -49,7 +49,7 @@ export default function AdminDashboardPage() {
   return (
     <>
       <header className="flex flex-col gap-2">
-        <p className="type-overline tracking-widest text-muted-foreground uppercase">
+        <p className="type-overline text-muted-foreground">
           {t("administration.label")}
         </p>
         <h1 className="type-title text-primary">
@@ -75,23 +75,24 @@ export default function AdminDashboardPage() {
 
       {dashboard.error === null && (
         <>
-          {/* Zwei Drittel zu einem Drittel wie im Frame; darunter
-              untereinander, weil sechs Kacheln nebeneinander sonst zu
-              Ziffernsaeulen werden. */}
-          <div className="grid gap-6 xl:grid-cols-3">
-            <div className="xl:col-span-2">
-              <ProjectStatusCard
-                data={dashboard.data}
-                isPending={dashboard.isPending}
-                numberFormat={numberFormat}
-              />
-            </div>
-            <UserStatisticsCard
-              data={dashboard.data}
-              isPending={dashboard.isPending}
-              numberFormat={numberFormat}
-            />
-          </div>
+          {/* Drei Karten untereinander, jede ueber die volle Breite
+              (Vorgabe zu KAN-80). Bis dahin teilten sich die Projektkacheln
+              und die Nutzerstatistik eine Zeile im Verhaeltnis zwei zu eins;
+              die sechs Kacheln standen dadurch auf einem Drittel weniger
+              Platz und wurden zu Ziffernsaeulen. Beide Karten tragen
+              inzwischen so viel, dass jede ihre eigene Zeile braucht: sechs
+              Kennzahlen die eine, zwei Diagramme die andere. */}
+          <ProjectStatusCard
+            data={dashboard.data}
+            isPending={dashboard.isPending}
+            numberFormat={numberFormat}
+          />
+
+          <UserStatisticsCard
+            data={dashboard.data}
+            isPending={dashboard.isPending}
+            numberFormat={numberFormat}
+          />
 
           <FacultyDistributionCard
             data={dashboard.data?.projectsByFaculty}

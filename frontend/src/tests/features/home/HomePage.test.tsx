@@ -174,7 +174,9 @@ describe("HomePage", () => {
 
     expect(text).toContain("Informatik")
     expect(text.indexOf("Informatik")).toBeLessThan(text.indexOf("SmartCampus"))
-    expect(text.indexOf("SmartCampus")).toBeLessThan(text.indexOf("Ein Teaser."))
+    expect(text.indexOf("SmartCampus")).toBeLessThan(
+      text.indexOf("Ein Teaser.")
+    )
     expect(text.indexOf("Ein Teaser.")).toBeLessThan(
       text.indexOf("Lena Müller")
     )
@@ -203,12 +205,20 @@ describe("HomePage", () => {
     })
     const card = heading.closest('[data-slot="card"]') as HTMLElement
 
-    expect(within(card).queryByText("Lena Müller")).not.toBeInTheDocument()
+    /* Der Name steht nur noch als sr-only-Text da, als zugaenglicher Name
+       des Personenlinks (KAN-80); sichtbar bleibt die Gruppe. */
+    expect(within(card).getByText("Lena Müller")).toHaveClass("sr-only")
     expect(within(card).getByText("+1")).toBeInTheDocument()
+    /* Vier Personen, vier Avatare: seit KAN-80 stehen auch die verdeckten im
+       DOM, nur zusammengeschoben, damit die Tastatur sie erreicht. */
     expect(
       card.querySelectorAll('[data-slot="avatar-group"] [data-slot="avatar"]')
-    ).toHaveLength(3)
-    expect(within(card).getByText(/^Von /)).toHaveTextContent("Aylin Kesici")
+    ).toHaveLength(4)
+    /* Auch die Person hinter dem Zaehler ist erreichbar: sie steht als
+       eigener Link mit ihrem Namen da (KAN-80). */
+    expect(
+      within(card).getByRole("link", { name: "Aylin Kesici" })
+    ).toBeInTheDocument()
   })
 
   it("zeigt eine leere Antwort als zehn freie Plaetze, nicht als Fehler", async () => {
@@ -244,18 +254,28 @@ describe("HomePage", () => {
     renderWithProviders(<HomePage />)
 
     expect(await screen.findByText("137")).toBeInTheDocument()
-    expect(screen.getByText("Arbeiten")).toBeInTheDocument()
+    /* „Projekte" statt „Arbeiten" seit KAN-80: die Kachel zaehlt Projekte,
+       und so heissen sie im Rest der Oberflaeche auch. */
+    expect(screen.getByText("Projekte")).toBeInTheDocument()
     expect(screen.getByText("Fakultäten")).toBeInTheDocument()
     expect(screen.getByText("42")).toBeInTheDocument()
     expect(screen.getByText("Studiengänge")).toBeInTheDocument()
   })
 
-  it("fuehrt im Entwicklungs-Build zur Pruefflaeche der Tokenschicht", () => {
+  /*
+   * Die beiden Links auf /dev/tokens und /dev/components sind mit KAN-80
+   * weg; die Adressen werden von Hand eingegeben. Die Routen selbst bleiben
+   * (routes/index.tsx, nur im Entwicklungs-Build).
+   */
+  it("fuehrt keine Entwicklungslinks mehr unter der Seite", () => {
     stubHome()
     renderWithProviders(<HomePage />)
 
     expect(
-      screen.getByRole("link", { name: "Zur Tokenschicht" })
-    ).toHaveAttribute("href", "/dev/tokens")
+      screen.queryByRole("link", { name: "Zur Tokenschicht" })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("link", { name: "Zur Komponentenbibliothek" })
+    ).not.toBeInTheDocument()
   })
 })

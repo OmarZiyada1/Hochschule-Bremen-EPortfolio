@@ -402,28 +402,85 @@ describe("ProjectListPage", () => {
     ]) {
       expect(screen.getByRole("button", { name: group })).toBeInTheDocument()
     }
-    /* Die offenen Gruppen zeigen ihre Optionen aus Stammdaten und Enums. */
+    /* Genau eine Gruppe steht offen (Akkordeon seit KAN-80): die
+       Fakultaet. Ihre Optionen kommen aus den Stammdaten. */
     expect(
       await screen.findByRole("checkbox", {
         name: "Fakultät Elektrotechnik und Informatik",
       })
     ).not.toBeChecked()
     expect(
-      screen.getByRole("checkbox", { name: "Bachelor" })
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole("checkbox", { name: "WiSe 2025/26" })
-    ).toBeInTheDocument()
-    expect(screen.getByRole("checkbox", { name: "Paper" })).toBeInTheDocument()
-    /* Studiengang und Kategorie starten zugeklappt wie im Template; ihre
-       Optionen erscheinen erst nach dem Aufklappen. */
+      screen.queryByRole("checkbox", { name: "Bachelor" })
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("checkbox", { name: "Webentwicklung" })
     ).not.toBeInTheDocument()
+
+    /* Aufklappen zeigt die Optionen der neuen Gruppe und schliesst die
+       vorige: mehr als eine offen gibt es nicht mehr. */
     await userEvent.click(screen.getByRole("button", { name: "Kategorie" }))
     expect(
       await screen.findByRole("checkbox", { name: "Webentwicklung" })
     ).toBeInTheDocument()
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("checkbox", {
+          name: "Fakultät Elektrotechnik und Informatik",
+        })
+      ).not.toBeInTheDocument()
+    )
+  })
+
+  /*
+   * Punkt 11 aus KAN-80: Jede Gruppe zaehlt ihre gesetzten Werte, offen wie
+   * zugeklappt, und oben rechts steht der Weg zurueck auf null mit der
+   * Gesamtzahl. Ohne gesetzten Filter gibt es ihn nicht.
+   */
+  it("zeigt je Gruppe die Zahl der gesetzten Werte und einen Weg zurueck auf null", async () => {
+    const requests: URLSearchParams[] = []
+    server.use(
+      http.get("*/api/projects", ({ request }) => {
+        requests.push(new URL(request.url).searchParams)
+        return HttpResponse.json(pageOf([]))
+      })
+    )
+    renderWithProviders(
+      <ProjectListPage />,
+      `/projects?faculty=${FACULTY_FK1}&faculty=${FACULTY_FK4}&degree=BACHELOR`
+    )
+
+    /* Zwei Fakultaeten, ein Abschluss: die Gruppe zaehlt ihre eigenen
+       Werte, der Weg zurueck alle drei. */
+    const facultyGroup = await screen.findByRole("button", {
+      name: /Fakultät\/Institution/,
+    })
+    expect(facultyGroup).toHaveTextContent("2")
+    expect(screen.getByRole("button", { name: /Abschluss/ })).toHaveTextContent(
+      "1"
+    )
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Zurücksetzen (3)" })
+    )
+    await waitFor(() => {
+      expect(requests.at(-1)?.getAll("faculty")).toEqual([])
+    })
+    expect(requests.at(-1)?.getAll("degree")).toEqual([])
+    expect(
+      screen.queryByRole("button", { name: /Zurücksetzen/ })
+    ).not.toBeInTheDocument()
+  })
+
+  it("zeigt den Weg zurueck auf null erst, wenn ein Filter gesetzt ist", async () => {
+    server.use(http.get("*/api/projects", () => HttpResponse.json(pageOf([]))))
+    renderWithProviders(<ProjectListPage />)
+
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "Filter" })
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /Zurücksetzen/ })
+    ).not.toBeInTheDocument()
   })
 
   it("liest die Mehrfachauswahl aus der URL: Haekchen gesetzt, Parameter wiederholt im Request", async () => {
@@ -450,7 +507,12 @@ describe("ProjectListPage", () => {
         name: "Fakultät Elektrotechnik und Informatik",
       })
     ).toBeChecked()
-    expect(screen.getByRole("checkbox", { name: "Bachelor" })).toBeChecked()
+    /* Offen steht die erste Gruppe mit Auswahl, hier die Fakultaet; der
+       Abschluss ist zugeklappt und zeigt seine Zahl (KAN-80). */
+    await userEvent.click(screen.getByRole("button", { name: /Abschluss/ }))
+    expect(
+      await screen.findByRole("checkbox", { name: "Bachelor" })
+    ).toBeChecked()
     /* Zum Server geht die wiederholte Parameterform aus §6.1 (v43). */
     await waitFor(() => {
       expect(requests.at(-1)?.getAll("faculty")).toEqual([
@@ -471,7 +533,8 @@ describe("ProjectListPage", () => {
     )
     renderWithProviders(<ProjectListPage />, `/projects?type=PAPER&page=3`)
 
-    /* Anwahl ergaenzt den zweiten Wert desselben Parameters und setzt die
+    /* Offen ist die Gruppe mit Auswahl, hier der Projekttyp (KAN-80).
+       Anwahl ergaenzt den zweiten Wert desselben Parameters und setzt die
        Seite zurueck: die alte Seitenzahl gehoerte zur alten Treffermenge. */
     await userEvent.click(
       await screen.findByRole("checkbox", { name: "Thesis" })
@@ -537,9 +600,8 @@ describe("ProjectListPage", () => {
       `/projects?category=${CATEGORY_WEB}`
     )
 
-    /* Kategorie startet laut Template zugeklappt; mit aktiver Auswahl aus
-       der URL waere die wirksame Filterung sonst nach einem Reload
-       unsichtbar. */
+    /* Offen steht die erste Gruppe mit Auswahl; ohne diese Regel waere die
+       wirksame Filterung nach einem Reload unsichtbar. */
     expect(
       await screen.findByRole("checkbox", { name: "Webentwicklung" })
     ).toBeChecked()
@@ -588,6 +650,11 @@ describe("ProjectListPage", () => {
     )
     renderWithProviders(<ProjectListPage />)
 
+    /* Die Semester-Gruppe steht seit KAN-80 zugeklappt: offen ist beim Start
+       nur die Fakultaet. */
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Semester/ })
+    )
     await userEvent.click(
       await screen.findByRole("checkbox", { name: "WiSe 2025/26" })
     )

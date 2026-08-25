@@ -212,7 +212,7 @@ export default function ReviewListPage() {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
       <header className="flex flex-col gap-2">
-        <p className="type-overline tracking-widest text-muted-foreground uppercase">
+        <p className="type-overline text-muted-foreground">
           {t("project.list.label")}
         </p>
         <h1 className="type-title text-primary">{t("review.list.title")}</h1>

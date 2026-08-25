@@ -10,8 +10,8 @@ import java.util.UUID;
  * @param id           technischer Schluessel, zugleich der Filterwert von
  *                     {@code GET /api/modules?studyProgram={id}}
  * @param name         ausgeschriebener Name
- * @param abbreviation Kurzform; in der Tabelle nullable und deshalb auch hier
- *                     moeglicherweise {@code null}
+ * @param abbreviation Kurzform; seit Contract v81 Pflicht und damit nie
+ *                     {@code null}
  * @param facultyId    Fakultaet, zu der der Studiengang gehoert
  */
 public record StudyProgramResponse(
@@ -19,10 +19,10 @@ public record StudyProgramResponse(
 
 		String name,
 
-		// Anders als bei der Fakultaet ist diese Spalte nullable (Migration 2).
-		// Ohne den Hinweis baut das Frontend die Anzeige auf einen Wert, den es
-		// nicht immer gibt.
-		@Schema(description = "Kurzform des Studiengangs. Kann fehlen.", nullable = true)
+		// Seit Contract v81 wie bei der Fakultaet: not null. Bis dahin war die
+		// Spalte nullable, und die Projektkachel haette das Kuerzel nicht
+		// verlaesslich zeigen koennen (Migration 23).
+		@Schema(description = "Kurzform des Studiengangs, z. B. \"MIN\".", example = "MIN")
 		String abbreviation,
 
 		@Schema(description = "Fakultaet, zu der der Studiengang gehoert. Derselbe Wert "

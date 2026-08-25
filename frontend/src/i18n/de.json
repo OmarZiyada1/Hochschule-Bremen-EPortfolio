@@ -104,16 +104,14 @@
       "freeBadge": "Top 10"
     },
     "cta": {
-      "label": "Platz 1 bis 10",
+      "label": "HSB · in Zahlen",
       "title": "Das war nur der Anfang.",
-      "description": "{{works}} Arbeiten aus {{faculties}} Fakultäten warten in der Projektbibliothek: finde die eine, die deine nächste Idee auslöst.",
-      "statWorks": "Arbeiten",
+      "description": "{{works}} Projekte aus {{faculties}} Fakultäten warten in der Projektbibliothek: finde die eine, die deine nächste Idee auslöst.",
+      "statWorks": "Projekte",
       "statFaculties": "Fakultäten",
       "statPrograms": "Studiengänge",
       "openLibrary": "Projektbibliothek öffnen"
-    },
-    "tokenGallery": "Zur Tokenschicht",
-    "componentGallery": "Zur Komponentenbibliothek"
+    }
   },
   "login": {
     "title": "Anmelden",
@@ -520,6 +518,10 @@
       "filter": {
         "title": "Filter",
         "noOptions": "Keine Optionen verfügbar.",
+        "reset_one": "Zurücksetzen ({{count}})",
+        "reset_other": "Zurücksetzen ({{count}})",
+        "groupCount_one": "{{count}} Filter gesetzt",
+        "groupCount_other": "{{count}} Filter gesetzt",
         "group": {
           "faculty": "Fakultät/Institution",
           "studyProgram": "Studiengang",
@@ -605,7 +607,7 @@
       "empty": "Keine Person gefunden.",
       "hits_one": "{{count}} Treffer",
       "hits_other": "{{count}} Treffer",
-      "by": "Von {{names}}"
+      "label": "Beteiligte"
     },
     "metadata": {
       "breadcrumb": "Projekt-Metadaten",
@@ -1439,13 +1441,22 @@
       },
       "users": {
         "title": "Nutzerstatistik",
-        "total": "Alle Nutzer:innen"
+        "total": "Alle Nutzer:innen",
+        "roles": "Nach Rolle",
+        "statuses": "Nach Kontostatus",
+        "emptyChart": "Keine Konten in dieser Aufteilung.",
+        "tableCaption": "Konten nach Rolle und Kontostatus",
+        "columnGroup": "Gruppe",
+        "columnCount": "Konten"
       },
       "openNominations": "Offene Top-10-Vorschläge",
       "faculties": {
         "title": "Projekt je Fakultäten",
         "subtitle": "Verteilung aller Projekte nach Fakultät. Projekte ohne Fakultät sind nicht enthalten.",
         "bar": "Projekte",
+        "inTop10": "In der Top 10",
+        "accepted": "Angenommen, ohne Platz",
+        "rest": "Übrige Projekte",
         "empty": "Es sind keine Fakultäten hinterlegt.",
         "tableCaption": "Projekte je Fakultät",
         "columnFaculty": "Fakultät",

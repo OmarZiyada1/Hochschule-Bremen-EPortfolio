@@ -24,16 +24,18 @@ import java.util.UUID;
  * @param id           ID der Stammdatenzeile, zugleich Filterwert von
  *                     {@code GET /api/projects}
  * @param name         ausgeschriebener Name
- * @param abbreviation Kurzform; bei der Kategorie gibt es keine, dort immer
- *                     {@code null}
+ * @param abbreviation Kurzform; Fakultaet, Studiengang und Modul fuehren seit
+ *                     Contract v81 durchgehend eine, Kategorie und Semester
+ *                     fuehren keine und stehen dort auf {@code null}
  */
 public record ReferenceResponse(
 		UUID id,
 
 		String name,
 
-		@Schema(description = "Kurzform, z. B. \"FK4\". Fehlt bei Kategorien und kann "
-				+ "auch bei Studiengang und Modul null sein.", nullable = true)
+		@Schema(description = "Kurzform, z. B. \"FK4\". Bei Fakultaet, Studiengang und "
+				+ "Modul seit Contract v81 immer gesetzt; bei Kategorie und Semester "
+				+ "immer null, die beiden fuehren keine.", nullable = true)
 		String abbreviation) {
 
 	/** Die Kategorie fuehrt kein Kuerzel (§3.6). */

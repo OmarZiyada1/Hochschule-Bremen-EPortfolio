@@ -1,7 +1,6 @@
 import { FolderOpenIcon, SearchXIcon } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { BreadcrumbBar } from "@/components/common/BreadcrumbBar"
 import { Link, useSearchParams } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
@@ -99,20 +98,13 @@ export default function MyPortfolioPage() {
 
   return (
     <>
-      <BreadcrumbBar
-        items={[
-          { label: t("common.nav.home"), to: "/" },
-          { label: t("portfolio.breadcrumb") },
-        ]}
-      />
-
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
         {/* 21.25rem sind die 340px der Profilkarte aus dem Template. */}
         <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[1fr_21.25rem] lg:items-start">
           <div className="flex flex-col gap-6">
             <header className="flex flex-wrap items-end justify-between gap-4 border-b pb-4">
               <div className="flex flex-col gap-2">
-                <p className="type-overline tracking-widest text-primary uppercase">
+                <p className="type-overline text-primary">
                   {t("portfolio.myPortfolio.label")}
                 </p>
                 {/* Blau wie in der Vorlage; dieselbe Fuehrung wie in der

@@ -24,11 +24,13 @@ import de.hsbremen.eportfolio.project.Project;
 import de.hsbremen.eportfolio.project.ProjectRepository;
 import de.hsbremen.eportfolio.project.TestProject;
 import de.hsbremen.eportfolio.top10.TestTop10;
+import de.hsbremen.eportfolio.top10.Top10EntryRepository;
 import de.hsbremen.eportfolio.top10.Top10NominationRepository;
 import de.hsbremen.eportfolio.user.TestUser;
 import de.hsbremen.eportfolio.user.User;
 import de.hsbremen.eportfolio.user.UserRepository;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -61,6 +63,12 @@ import org.springframework.transaction.annotation.Transactional;
  * gegen den Fakultaetsbestand der Datenbank statt gegen ein Enum. Dazu kommt
  * eine Zusage, die keine der Enum-Karten kennt: Projekte ohne Fakultaet gehen
  * nicht ein, weil {@code Project.facultyId} bis zum Einreichen null ist (§3.3).
+ *
+ * <p>Seit Contract v82 (KAN-80) traegt jede Zeile zusaetzlich {@code inTop10}
+ * und {@code accepted}. Beide sind Teilmengen von {@code count}, aber nicht
+ * voneinander: die Administration kann ein Projekt ohne Nominierung aufnehmen,
+ * und ein angenommenes Projekt kann seinen Platz wieder verlieren. Genau diese
+ * beiden Faelle stehen unten als eigene Tests.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -89,6 +97,9 @@ class AdminDashboardIntegrationTest {
 
 	@Autowired
 	private Top10NominationRepository nominationRepository;
+
+	@Autowired
+	private Top10EntryRepository top10EntryRepository;
 
 	@Autowired
 	private FacultyRepository facultyRepository;
@@ -263,6 +274,89 @@ class AdminDashboardIntegrationTest {
 	}
 
 	@Test
+	@DisplayName("inTop10 zaehlt die Projekte mit Platz, accepted die angenommenen (v82)")
+	void countsCurationPerFaculty() throws Exception {
+		Faculty faculty = facultyRepository.findAllByOrderByAbbreviationAsc().getFirst();
+		JsonNode before = read();
+
+		Project placed = projectAt(faculty, ProjectStatus.PUBLISHED);
+		top10EntryRepository.saveAndFlush(TestTop10.entry(placed, freePosition(), Instant.now()));
+		nominationRepository.saveAndFlush(
+				TestTop10.decided(placed, student, admin, NominationStatus.ACCEPTED));
+
+		JsonNode after = read();
+
+		assertThat(facultyField(after, faculty.getId(), "inTop10")
+				- facultyField(before, faculty.getId(), "inTop10")).isEqualTo(1);
+		assertThat(facultyField(after, faculty.getId(), "accepted")
+				- facultyField(before, faculty.getId(), "accepted")).isEqualTo(1);
+	}
+
+	@Test
+	@DisplayName("Zwei angenommene Nominierungen desselben Projekts zaehlen einmal")
+	void countsProjectsAndNotNominations() throws Exception {
+		Faculty faculty = facultyRepository.findAllByOrderByAbbreviationAsc().getFirst();
+		JsonNode before = read();
+
+		/*
+		 * Ein Projekt kann mehrfach nominiert worden sein, etwa nachdem ein
+		 * erster Vorschlag zurueckgezogen wurde (§2.8). Ohne count(distinct …)
+		 * stuende im Balken eine Zahl, die groesser sein kann als der Bestand
+		 * der Fakultaet.
+		 */
+		Project project = projectAt(faculty, ProjectStatus.PUBLISHED);
+		nominationRepository.saveAndFlush(
+				TestTop10.decided(project, student, admin, NominationStatus.ACCEPTED));
+		nominationRepository.saveAndFlush(
+				TestTop10.decided(project, student, admin, NominationStatus.ACCEPTED));
+
+		JsonNode after = read();
+
+		assertThat(facultyField(after, faculty.getId(), "accepted")
+				- facultyField(before, faculty.getId(), "accepted")).isEqualTo(1);
+	}
+
+	@Test
+	@DisplayName("Ein ohne Nominierung aufgenommenes Projekt zaehlt in inTop10, nicht in accepted")
+	void placementWithoutNominationCountsOnlyInTop10() throws Exception {
+		Faculty faculty = facultyRepository.findAllByOrderByAbbreviationAsc().getFirst();
+		JsonNode before = read();
+
+		Project placed = projectAt(faculty, ProjectStatus.PUBLISHED);
+		top10EntryRepository.saveAndFlush(TestTop10.entry(placed, freePosition(), Instant.now()));
+
+		JsonNode after = read();
+
+		assertThat(facultyField(after, faculty.getId(), "inTop10")
+				- facultyField(before, faculty.getId(), "inTop10")).isEqualTo(1);
+		assertThat(facultyField(after, faculty.getId(), "accepted")
+				- facultyField(before, faculty.getId(), "accepted"))
+				.as("die beiden Zahlen sind nicht ineinander enthalten")
+				.isZero();
+	}
+
+	@Test
+	@DisplayName("Eine offene Nominierung zaehlt in keiner der beiden Zahlen")
+	void pendingNominationCountsNowhere() throws Exception {
+		Faculty faculty = facultyRepository.findAllByOrderByAbbreviationAsc().getFirst();
+		JsonNode before = read();
+
+		Project project = projectAt(faculty, ProjectStatus.PUBLISHED);
+		nominationRepository.saveAndFlush(
+				TestTop10.pending(project, student, NominationTier.TOP_10));
+
+		JsonNode after = read();
+
+		assertThat(facultyField(after, faculty.getId(), "accepted")
+				- facultyField(before, faculty.getId(), "accepted")).isZero();
+		assertThat(facultyField(after, faculty.getId(), "inTop10")
+				- facultyField(before, faculty.getId(), "inTop10")).isZero();
+		/* Offen bleibt sie trotzdem sichtbar, nur an anderer Stelle. */
+		assertThat(after.get("openNominations").asLong()
+				- before.get("openNominations").asLong()).isEqualTo(1);
+	}
+
+	@Test
 	@DisplayName("Ein Projekt ohne Fakultaet geht nicht ein (§3.3: facultyId ist bis zum Einreichen null)")
 	void ignoresProjectsWithoutFaculty() throws Exception {
 		JsonNode before = read();
@@ -323,12 +417,31 @@ class AdminDashboardIntegrationTest {
 
 	/** Die Zahl einer bestimmten Fakultaet aus projectsByFaculty. */
 	private static long facultyCount(JsonNode dashboard, UUID facultyId) {
+		return facultyField(dashboard, facultyId, "count");
+	}
+
+	/** Ein beliebiges Zahlenfeld der Zeile: count, inTop10 oder accepted (v82). */
+	private static long facultyField(JsonNode dashboard, UUID facultyId, String field) {
 		for (JsonNode entry : dashboard.get("projectsByFaculty")) {
 			if (entry.get("faculty").get("id").asText().equals(facultyId.toString())) {
-				return entry.get("count").asLong();
+				return entry.get(field).asLong();
 			}
 		}
 		throw new AssertionError("Fakultaet " + facultyId + " fehlt in projectsByFaculty");
+	}
+
+	/**
+	 * Ein Platz, den gerade niemand belegt. {@code top10_entry.position} ist
+	 * eindeutig, und die Entwicklungsdatenbank kann bereits Eintraege tragen;
+	 * eine fest verdrahtete 1 scheiterte dann am Constraint.
+	 */
+	private int freePosition() {
+		for (int position = 1; position <= 10; position++) {
+			if (!top10EntryRepository.existsByPosition(position)) {
+				return position;
+			}
+		}
+		throw new AssertionError("Alle zehn Plaetze sind belegt");
 	}
 
 	/** Summe ueber alle Zeilen; sie zaehlt nur Projekte mit Fakultaet. */

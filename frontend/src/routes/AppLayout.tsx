@@ -6,6 +6,7 @@ import { resolveApiUrl } from "@/api/client"
 import { Footer } from "@/components/layout/Footer"
 import { NavBar } from "@/components/layout/NavBar"
 import { useOwnPortfolio } from "@/features/portfolio/hooks/usePortfolio"
+import { BreadcrumbProvider } from "@/routes/AppBreadcrumb"
 import { navLinksFor, userMenuFor } from "@/routes/navLinks"
 
 /**
@@ -18,6 +19,10 @@ import { navLinksFor, userMenuFor } from "@/routes/navLinks"
  * Der Sprunglink ist das erste fokussierbare Element (SC 2.4.1): ohne ihn
  * durchlaeuft jede Tastaturbedienung auf jeder Seite erneut die gesamte
  * Navigation. Sichtbar wird er erst mit dem Fokus.
+ *
+ * <p>Seit KAN-80 zeichnet der Rahmen auch das Brotkrumenband, und zwar
+ * innerhalb der {@code main}-Landmarke: Es beschreibt, wo im Inhalt man ist,
+ * und der Sprunglink soll davor landen und nicht dahinter.
  */
 export function AppLayout() {
   const { t } = useTranslation()
@@ -73,7 +78,15 @@ export function AppLayout() {
         }}
       />
       <main id="content" className="flex-1">
-        <Outlet />
+        {/* Das Brotkrumenband steht im Rahmen und nicht mehr in jeder Seite
+            (KAN-80): es gehoert zur Orientierung wie die Kopfleiste, und je
+            Seite geschrieben fehlte es zuletzt auf der Administrationsseite
+            und unter „Meine Reviews" ganz. Der Pfad wird aus der Route
+            abgeleitet; Seiten mit eigenem Namen melden ihn ueber
+            useBreadcrumbTitle nach. */}
+        <BreadcrumbProvider>
+          <Outlet />
+        </BreadcrumbProvider>
       </main>
       <Footer />
     </div>

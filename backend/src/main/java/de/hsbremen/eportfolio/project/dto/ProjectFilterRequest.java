@@ -31,7 +31,9 @@ import java.util.UUID;
  * @param degree       angestrebte Abschluesse (§2.7)
  * @param type         Projekttypen (§2.6)
  * @param semester     IDs von Semestern (§3.18)
- * @param q            Suchbegriff fuer Titel und Kurzbeschreibung
+ * @param q            Suchbegriff fuer Titel, Kurzbeschreibung, Namen der
+ *                     Autor:in und Schlagwoerter (§6.1, Suchumfang seit
+ *                     Contract v81)
  * @param status       Projektstatus (§2.2); wirkt nur innerhalb dessen, was die
  *                     Sichtbarkeitsschranke ohnehin freigibt
  * @param author       ID der Autor:in

@@ -348,8 +348,8 @@ class MasterDataAdminIntegrationTest {
 		void deleteIsBlockedByStudyPrograms() throws Exception {
 			UUID facultyId = createdId(FACULTIES,
 					Map.of("name", "Mit Studiengang " + marker, "abbreviation", "FZ" + marker));
-			createdId(STUDY_PROGRAMS,
-					Map.of("name", "Studiengang " + marker, "facultyId", facultyId.toString()));
+			createdId(STUDY_PROGRAMS, Map.of("name", "Studiengang " + marker,
+					"abbreviation", "SZ", "facultyId", facultyId.toString()));
 
 			mockMvc.perform(as(admin, delete(FACULTIES + "/" + facultyId)))
 					.andExpect(status().isConflict())
@@ -387,14 +387,29 @@ class MasterDataAdminIntegrationTest {
 			mockMvc.perform(as(admin, post(STUDY_PROGRAMS)
 							.contentType(MediaType.APPLICATION_JSON)
 							.content(json(Map.of("name", "Ins Leere " + marker,
+									"abbreviation", "IL",
 									"facultyId", UUID.randomUUID().toString())))))
 					.andExpect(status().isBadRequest())
 					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
 		}
 
 		@Test
-		@DisplayName("Eine leere abbreviation loescht die Kurzform, ein fehlendes Feld nicht")
-		void emptyAbbreviationClearsIt() throws Exception {
+		@DisplayName("Ohne abbreviation ergibt POST 400 (§3.7, Contract v81)")
+		void abbreviationIsRequiredOnCreate() throws Exception {
+			UUID facultyId = createdId(FACULTIES,
+					Map.of("name", "Ohne Kurzform " + marker, "abbreviation", "FB" + marker));
+
+			mockMvc.perform(as(admin, post(STUDY_PROGRAMS)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(json(Map.of("name", "Kurzformlos " + marker,
+									"facultyId", facultyId.toString())))))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
+		}
+
+		@Test
+		@DisplayName("Ein fehlendes Feld laesst die Kurzform stehen, eine leere ergibt 400")
+		void emptyAbbreviationIsRejected() throws Exception {
 			UUID facultyId = createdId(FACULTIES,
 					Map.of("name", "Traeger " + marker, "abbreviation", "FA" + marker));
 
@@ -411,14 +426,15 @@ class MasterDataAdminIntegrationTest {
 					.andExpect(status().isOk())
 					.andExpect(jsonPath("$.abbreviation").value("MK"));
 
-			// Leere Zeichenkette: die Kurzform wird geleert.
+			// Leere Zeichenkette: seit Contract v81 kein Leeren mehr, sondern 400.
 			mockMvc.perform(as(admin, patch(STUDY_PROGRAMS + "/" + id)
 							.contentType(MediaType.APPLICATION_JSON)
 							.content(json(Map.of("abbreviation", "")))))
-					.andExpect(status().isOk())
-					.andExpect(jsonPath("$.abbreviation").doesNotExist());
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
 
-			assertThat(studyProgramRepository.findById(id).orElseThrow().getAbbreviation()).isNull();
+			assertThat(studyProgramRepository.findById(id).orElseThrow().getAbbreviation())
+					.isEqualTo("MK");
 		}
 
 		@Test
@@ -426,10 +442,10 @@ class MasterDataAdminIntegrationTest {
 		void deleteIsBlockedByModules() throws Exception {
 			UUID facultyId = createdId(FACULTIES,
 					Map.of("name", "Fakultaet " + marker, "abbreviation", "FM" + marker));
-			UUID programId = createdId(STUDY_PROGRAMS,
-					Map.of("name", "Mit Modul " + marker, "facultyId", facultyId.toString()));
-			UUID moduleId = createdId(MODULES,
-					Map.of("name", "Modul " + marker, "studyProgramId", programId.toString()));
+			UUID programId = createdId(STUDY_PROGRAMS, Map.of("name", "Mit Modul " + marker,
+					"abbreviation", "MM", "facultyId", facultyId.toString()));
+			UUID moduleId = createdId(MODULES, Map.of("name", "Modul " + marker,
+					"abbreviation", "MOD", "studyProgramId", programId.toString()));
 
 			mockMvc.perform(as(admin, delete(STUDY_PROGRAMS + "/" + programId)))
 					.andExpect(status().isConflict())
@@ -450,10 +466,10 @@ class MasterDataAdminIntegrationTest {
 		void moduleDeleteIsBlockedByProjects() throws Exception {
 			UUID facultyId = createdId(FACULTIES,
 					Map.of("name", "Fakultaet " + marker, "abbreviation", "FP" + marker));
-			UUID programId = createdId(STUDY_PROGRAMS,
-					Map.of("name", "Studiengang " + marker, "facultyId", facultyId.toString()));
-			UUID moduleId = createdId(MODULES,
-					Map.of("name", "Belegtes Modul " + marker, "studyProgramId", programId.toString()));
+			UUID programId = createdId(STUDY_PROGRAMS, Map.of("name", "Studiengang " + marker,
+					"abbreviation", "SGP", "facultyId", facultyId.toString()));
+			UUID moduleId = createdId(MODULES, Map.of("name", "Belegtes Modul " + marker,
+					"abbreviation", "BMO", "studyProgramId", programId.toString()));
 
 			Project project = TestProject.withoutId(admin, ProjectStatus.DRAFT, "Mit Modul");
 			project.setModule(moduleRepository.findById(moduleId).orElseThrow());

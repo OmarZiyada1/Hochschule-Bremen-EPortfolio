@@ -14,6 +14,23 @@ import {
 export type Crumb = {
   /** Bereits uebersetzte Beschriftung; diese Huelle uebersetzt nichts. */
   label: string
+  /**
+   * Der ungekuerzte Text, wenn {@code label} eine Kuerzung ist (KAN-80).
+   *
+   * <p>Gekuerzt wird ausserhalb, weil die Regel dieselbe ist wie in den
+   * Tabellen ({@code lib/text.ts}). Diese Huelle setzt nur die Folge daraus:
+   * Sichtbar bleibt die Kuerzung, vorgelesen wird der volle Text
+   * ({@code aria-label}), und der Mauszeiger zeigt ihn ebenfalls
+   * ({@code title}). Ohne das waere „Nachhaltige Mobilit…" fuer einen
+   * Screenreader alles, was von dem Titel uebrig bleibt.
+   *
+   * <p>Ueber {@code aria-label} und nicht ueber einen zweiten, versteckten
+   * Textknoten daneben: Beide Ebenen tragen eine Rolle, an der es wirkt
+   * ({@code BreadcrumbLink} ist ein Anker, {@code BreadcrumbPage} ein
+   * {@code role="link"}), und ein doppelter Text im DOM waere an jeder
+   * Fundstelle zweimal zu finden.
+   */
+  fullLabel?: string
   to?: string
 }
 
@@ -40,6 +57,10 @@ export type Crumb = {
  * Kind eines Fragments, nicht in die Spalte mit dem Inhalt: sonst bekaeme das
  * Band die Polsterung der Seite und liefe nicht mehr bis an den Rand.
  *
+ * <p>Der Pfad selbst wird nicht hier gebaut, sondern aus der Route abgeleitet
+ * ({@code routes/breadcrumbs.ts}, KAN-80) und im Anwendungsrahmen gezeichnet.
+ * Diese Huelle bleibt reine Darstellung und uebersetzt nichts.
+ *
  * <p>Die letzte Ebene ist die aktuelle Seite und wird nie verlinkt. Der Weg
  * zurueck steht in primary, die aktuelle Ebene in muted-foreground; die
  * Registry haelt es genau umgekehrt (Befund aus KAN-8).
@@ -62,12 +83,18 @@ export function BreadcrumbBar({ items }: { items: readonly Crumb[] }) {
                 <Fragment key={crumb.to ?? crumb.label}>
                   <BreadcrumbItem>
                     {last || crumb.to === undefined ? (
-                      <BreadcrumbPage className="text-muted-foreground">
+                      <BreadcrumbPage
+                        aria-label={crumb.fullLabel}
+                        title={crumb.fullLabel}
+                        className="text-muted-foreground"
+                      >
                         {crumb.label}
                       </BreadcrumbPage>
                     ) : (
                       <BreadcrumbLink
                         render={<Link to={crumb.to} />}
+                        aria-label={crumb.fullLabel}
+                        title={crumb.fullLabel}
                         className="text-primary hover:text-primary-hover"
                       >
                         {crumb.label}

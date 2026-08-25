@@ -791,21 +791,4 @@ describe("ProjectMetadataPage auf dem Einreichweg (?submit=1)", () => {
       )
     )
   })
-
-  it("zeigt im Brotkrumenband den Editor als Station davor", async () => {
-    renderSubmitRoute(draft())
-
-    const crumbs = await screen.findByRole(
-      "navigation",
-      { name: "Seitenpfad" },
-      { timeout: 20000 }
-    )
-    /* Der Unterschied zum Bearbeiten-Weg: dort steht die Startseite davor,
-       hier der Editor, aus dem man kommt. */
-    expect(within(crumbs).getByRole("link", { name: "Editor" })).toBeVisible()
-    expect(within(crumbs).getByText("Einreichen: Pflichtangaben")).toBeVisible()
-    expect(
-      within(crumbs).queryByRole("link", { name: "Startseite" })
-    ).not.toBeInTheDocument()
-  })
 })

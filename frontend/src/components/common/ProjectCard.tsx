@@ -5,6 +5,7 @@ import { Link } from "react-router-dom"
 
 import { useFileUrl } from "@/api/useFileUrl"
 import type { ProjectCardResponse } from "@/api/types"
+import { CardLinkOverlay } from "@/components/common/CardLinkOverlay"
 import { ClapIcon } from "@/components/common/ClapIcon"
 import { ProjectPeople } from "@/components/common/ProjectPeople"
 import { StatusBadge } from "@/components/common/StatusBadge"
@@ -15,9 +16,10 @@ import { cn } from "@/lib/utils"
 /**
  * Projektkachel der Listenansichten (Figma "Project Card").
  *
- * Aufbau: eine Coverflaeche mit Fakultaetskuerzel, Projektart und dem Titel,
+ * Aufbau: eine Coverflaeche mit Studiengangskuerzel, Projektart und dem Titel,
  * darunter Autor:in, Teaser und eine Fusszeile aus Semester und
- * Reaktionszahl. Die Kachel nimmt die ProjectCardResponse aus §6.1 als
+ * Reaktionszahl. Bis KAN-80 stand links das Fakultaetskuerzel; Fakultaet und
+ * Studiengang nebeneinander sagten dieselbe Einordnung zweimal. Die Kachel nimmt die ProjectCardResponse aus §6.1 als
  * Ganzes entgegen (Review zu KAN-8): jede Verwendung reicht `project`
  * durch, statt die Felder einzeln zu verdrahten; nichts davon ist erfunden,
  * und alles ausser dem Titel darf fehlen, weil der Contract es im DRAFT als
@@ -78,7 +80,7 @@ export function ProjectCard({
      liegt randlos, den Abstand setzt erst der Inhalt darunter. Beides laeuft
      ueber className, die erzeugte Datei bleibt unberuehrt. */
   return (
-    <Card className={cn("gap-0 py-0", className)}>
+    <Card className={cn("relative gap-0 py-0", className)}>
       <div className="surface-cover relative isolate">
         {/* Bildflaeche. Liegt ein Cover vor, fuellt es die Flaeche; sonst
             bleibt der Verlauf mit dem Platzhaltersymbol stehen. Das Symbol
@@ -107,24 +109,40 @@ export function ProjectCard({
         </div>
 
         <div className="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
-          {project.faculty && (
-            /* Das Kuerzel ist kurz genug, um allein unverstaendlich zu sein,
-               deshalb laeuft es zweispurig: sichtbar das Kuerzel, vorgelesen
-               der volle Name. Ueber title allein geht das nicht, den erreicht
-               weder Tastatur noch Touch, und die meisten Screenreader lesen
-               ihn an einem span gar nicht vor. Ohne Kuerzel steht der Name
-               einfach da; ihn dann zweimal einzusetzen, sichtbar und
-               sr-only, waere derselbe Text an zwei Stellen. */
+          {/* Links das Studiengangskuerzel, rechts die Projektart
+              (Vorgabe zu KAN-80). Das Fakultaetsbadge ist weg: Fakultaet und
+              Studiengang standen nebeneinander und sagten dieselbe Einordnung
+              zweimal, nur unterschiedlich grob. Der Studiengang ist die
+              genauere Angabe und traegt seine Fakultaet implizit; wer die
+              Fakultaet ausgeschrieben braucht, findet sie in den
+              Projektdetails.
+
+              Das Kuerzel laeuft zweispurig: sichtbar die Kurzform, vorgelesen
+              der volle Name. Ueber title allein geht das nicht, den erreicht
+              weder Tastatur noch Touch, und die meisten Screenreader lesen ihn
+              an einem span gar nicht vor. */}
+          {project.studyProgram ? (
             <span className="type-label-xs rounded-pill bg-cover-badge px-2.5 py-1 font-bold text-cover-muted">
-              {project.faculty.abbreviation ? (
+              {project.studyProgram.abbreviation ? (
                 <>
-                  <span className="sr-only">{project.faculty.name}</span>
-                  <span aria-hidden="true">{project.faculty.abbreviation}</span>
+                  <span className="sr-only">{project.studyProgram.name}</span>
+                  <span aria-hidden="true">
+                    {project.studyProgram.abbreviation}
+                  </span>
                 </>
               ) : (
-                project.faculty.name
+                /* Seit Contract v81 kann das nicht mehr eintreten; die
+                   Referenz fuehrt das Feld weiterhin als nullable, weil
+                   Kategorie und Semester keines haben. Den Namen dann zweimal
+                   einzusetzen, sichtbar und sr-only, waere derselbe Text an
+                   zwei Stellen. */
+                project.studyProgram.name
               )}
             </span>
+          ) : (
+            /* Platzhalter, damit die Projektart rechts bleibt: ohne
+               Studiengang zoege justify-between sie sonst nach links. */
+            <span />
           )}
           {project.projectType && (
             <span className="type-label-xs rounded-pill bg-card px-2.5 py-1 font-semibold text-card-foreground">
@@ -185,7 +203,9 @@ export function ProjectCard({
               {project.semester?.name}
             </span>
             {action !== undefined ? (
-              action
+              /* Ueber der Klickflaeche der Karte, sonst fuehrte ein Klick
+                 auf „Bearbeiten" ins Projekt (KAN-80). */
+              <span className="relative z-20">{action}</span>
             ) : (
               <span className="type-caption flex items-center gap-1 text-muted-foreground">
                 {/* Klatschen, nicht Herz: die Reaktion ist ein Applaus
@@ -205,6 +225,9 @@ export function ProjectCard({
           </div>
         </>
       </CardContent>
+
+      {/* Die ganze Kachel fuehrt ins Projekt, nicht nur der Titel (KAN-80). */}
+      <CardLinkOverlay to={`/projects/${project.id}`} />
     </Card>
   )
 }

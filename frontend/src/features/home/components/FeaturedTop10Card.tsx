@@ -4,6 +4,7 @@ import { Link } from "react-router-dom"
 
 import { resolveApiUrl } from "@/api/client"
 import type { Top10EntryResponse } from "@/api/types"
+import { CardLinkOverlay } from "@/components/common/CardLinkOverlay"
 import { Pill } from "@/components/common/Pill"
 import { ProjectPeople } from "@/components/common/ProjectPeople"
 import { Card, CardContent } from "@/components/ui/card"
@@ -100,8 +101,13 @@ export function FeaturedTop10Card({
         {/* Die Pille bleibt oben, der Text sitzt in der Mitte der Restflaeche.
             Ein fester Abstand darunter waere hier eine Zahl, die nur bei einer
             Karte stimmt: die Hoehe kommt aus der Coverspalte daneben, und die
-            waechst mit der Breite des Fensters. */}
-        <div className="flex flex-1 flex-col justify-center gap-3 pt-6">
+            waechst mit der Breite des Fensters.
+
+            Der Abstand nach oben ist mit KAN-80 gewachsen: Platzpille und
+            Rangziffer standen dem Studiengang darunter zu nah und lasen sich
+            als eine Zeile mit ihm. Jetzt trennt sie eine klare Lucke, und die
+            Ziffer hat den Raum, den ihre Groesse braucht. */}
+        <div className="flex flex-1 flex-col justify-center gap-3 pt-10 sm:pt-16">
           {/* Studiengang, Titel, Teaser, Personen: dieselbe Reihenfolge wie
               in den Kacheln der Reihe darunter (Top10Card). Overline statt
               type-label-xs wie dort, weil die Zeile hier ueber dem Titel als
@@ -144,7 +150,7 @@ export function FeaturedTop10Card({
                 )}
                 <Link
                   to={`/projects/${project.id}`}
-                  className="type-body-sm inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline focus-visible:underline"
+                  className="type-body-sm relative z-20 inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline focus-visible:underline"
                 >
                   {t("home.top10.viewProject")}
                   <span className="sr-only">: {project.title}</span>
@@ -155,6 +161,10 @@ export function FeaturedTop10Card({
           </div>
         </div>
       </CardContent>
+
+      {/* Die ganze Karte fuehrt ins Projekt, nicht nur „Projekt ansehen"
+          (KAN-80). */}
+      {project.id && <CardLinkOverlay to={`/projects/${project.id}`} />}
     </Card>
   )
 }

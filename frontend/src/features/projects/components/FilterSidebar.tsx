@@ -1,21 +1,25 @@
 import type { UseQueryResult } from "@tanstack/react-query"
-import { ChevronRightIcon } from "lucide-react"
+import { RotateCcwIcon } from "lucide-react"
 import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import type { StudyProgramResponse } from "@/api/types"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useFilterOptions } from "@/features/projects/hooks/useFilterOptions"
 import {
+  activeFilterCount,
+  emptyFilterSelection,
   FILTER_DEGREES,
   FILTER_KEYS,
   FILTER_PROJECT_TYPES,
@@ -25,20 +29,14 @@ import {
 
 type FilterGroupKey = (typeof FILTER_KEYS)[number]
 
-/*
- * Aufklappzustand beim ersten Rendern, wie im Template "Projekte
- * (Oeffentlich)": Studiengang und Kategorie starten zugeklappt, die
- * uebrigen offen. Eine Gruppe mit aktiver Auswahl aus der URL startet
- * immer offen, sonst versteckte ein Reload die wirksame Filterung.
+/**
+ * Die Gruppe, die offen steht, wenn keine Auswahl etwas anderes verlangt.
+ *
+ * <p>Seit KAN-80 ist immer genau eine Gruppe offen (Akkordeon), und die erste
+ * des Templates ist die naheliegende: Die Fakultaet ist der Einstieg in die
+ * Hierarchie, und der Studiengang darunter richtet sich nach ihr.
  */
-const OPEN_BY_TEMPLATE: Record<FilterGroupKey, boolean> = {
-  faculty: true,
-  studyProgram: false,
-  degree: true,
-  semester: true,
-  type: true,
-  category: false,
-}
+const DEFAULT_OPEN_GROUP: FilterGroupKey = "faculty"
 
 /**
  * Schraenkt die Studiengang-Optionen auf die gewaehlten Fakultaeten ein
@@ -75,22 +73,45 @@ function programsOfFaculties(
  * weiter (der Server beantwortet sie ohnehin, §6.1), die URL wird beim
  * Laden bewusst nicht umgeschrieben: ein geteilter Link bleibt, was er
  * ist, und die Historie bekommt keinen stillen Ersatz-Eintrag.
+ *
+ * <p><strong>Drei Aenderungen aus KAN-80.</strong>
+ *
+ * <p>Erstens ist immer <em>genau eine</em> Gruppe offen: Wer eine aufklappt,
+ * schliesst die vorige. Bis dahin standen vier der sechs Gruppen gleichzeitig
+ * offen, und die Leiste war laenger als das Fenster. Deshalb steht hier jetzt
+ * das Akkordeon aus der Registry und nicht mehr eine Reihe einzelner
+ * Aufklapper: „nur eines offen" ist eine Aussage ueber die Gruppe und nicht
+ * ueber ein Glied, und die Primitive fuehrt sie samt Pfeiltastenbedienung.
+ *
+ * <p>Zweitens zaehlt jede Gruppe ihre gesetzten Werte, offen wie zugeklappt.
+ * Zugeklappt war sonst nicht zu sehen, dass ein Filter wirkt, und die
+ * Trefferliste sah aus wie ein Fehler.
+ *
+ * <p>Drittens gibt es oben rechts einen Weg zurueck auf null, mit der Zahl
+ * aller gesetzten Werte. Er erscheint erst, sobald etwas gesetzt ist: eine
+ * Schaltflaeche, die nichts zuruecksetzen kann, ist nur Platz und
+ * Tabstopp. Sie raeumt allein die Filtergruppen; der Suchbegriff daneben
+ * gehoert dem Suchfeld und bleibt stehen.
  */
 export function FilterSidebar({
   selection,
   onSelectionChange,
-  className,
 }: {
   selection: ProjectFilterSelection
   onSelectionChange: (selection: ProjectFilterSelection) => void
-  className?: string
 }) {
   const { t } = useTranslation()
   const { faculties, studyPrograms, categories, semesters } = useFilterOptions()
 
-  function isOpenByDefault(group: FilterGroupKey): boolean {
-    return OPEN_BY_TEMPLATE[group] || selection[group].length > 0
-  }
+  const activeCount = activeFilterCount(selection)
+
+  /*
+   * Beim ersten Rendern steht die Gruppe offen, in der bereits etwas
+   * ausgewaehlt ist; sonst die Vorgabe. Ein Reload versteckte sonst die
+   * wirksame Filterung. Nur die erste: mehr als eine Gruppe kann seit
+   * KAN-80 nicht offen stehen.
+   */
+  const preselected = FILTER_KEYS.find((key) => selection[key].length > 0)
 
   function changeFaculty(facultyId: string) {
     const faculty = toggleValue(selection.faculty, facultyId)
@@ -109,13 +130,40 @@ export function FilterSidebar({
   }
 
   return (
-    <Card className={className}>
+    <Card>
       <CardContent className="flex flex-col gap-3">
-        <h2 className="type-label-xs tracking-widest text-muted-foreground uppercase">
-          {t("project.list.filter.title")}
-        </h2>
-        <div className="flex flex-col">
-          <FilterGroup group="faculty" defaultOpen={isOpenByDefault("faculty")}>
+        {/* Feste Zeilenhoehe, damit das Erscheinen und Verschwinden des Weges
+            zurueck auf null die Leiste nicht springen laesst (Befund zu
+            KAN-80): die Schaltflaeche ist hoeher als die Ueberschrift, und
+            ohne min-h wanderte beim Zuruecksetzen die ganze Karte samt
+            Trefferliste daneben nach oben. */}
+        <div className="flex min-h-7 items-center justify-between gap-2">
+          <h2 className="type-label-xs tracking-widest text-muted-foreground uppercase">
+            {t("project.list.filter.title")}
+          </h2>
+          {activeCount > 0 && (
+            <Button
+              variant="link"
+              size="sm"
+              className="type-label-xs h-auto p-0"
+              onClick={() => onSelectionChange(emptyFilterSelection())}
+            >
+              <RotateCcwIcon aria-hidden="true" className="size-3.5" />
+              {t("project.list.filter.reset", { count: activeCount })}
+            </Button>
+          )}
+        </div>
+
+        {/* multiple={false} ist der ganze Unterschied zur Reihe einzelner
+            Aufklapper von zuvor: die Primitive schliesst die vorige Gruppe
+            selbst. defaultValue statt value, weil der Aufklappzustand der
+            Leiste gehoert und nicht der URL; geteilt wird die Auswahl, nicht
+            die Ansicht. */}
+        <Accordion
+          multiple={false}
+          defaultValue={[preselected ?? DEFAULT_OPEN_GROUP]}
+        >
+          <FilterGroup group="faculty" count={selection.faculty.length}>
             <OptionsState query={faculties}>
               {(options) =>
                 options.map((faculty) => {
@@ -138,7 +186,7 @@ export function FilterSidebar({
 
           <FilterGroup
             group="studyProgram"
-            defaultOpen={isOpenByDefault("studyProgram")}
+            count={selection.studyProgram.length}
           >
             <OptionsState query={studyPrograms}>
               {(options) => {
@@ -169,7 +217,7 @@ export function FilterSidebar({
             </OptionsState>
           </FilterGroup>
 
-          <FilterGroup group="degree" defaultOpen={isOpenByDefault("degree")}>
+          <FilterGroup group="degree" count={selection.degree.length}>
             {FILTER_DEGREES.map((degree) => (
               <FilterOption
                 key={degree}
@@ -185,10 +233,7 @@ export function FilterSidebar({
             ))}
           </FilterGroup>
 
-          <FilterGroup
-            group="semester"
-            defaultOpen={isOpenByDefault("semester")}
-          >
+          <FilterGroup group="semester" count={selection.semester.length}>
             <OptionsState query={semesters}>
               {(options) =>
                 options.map((semester) => {
@@ -214,7 +259,7 @@ export function FilterSidebar({
             </OptionsState>
           </FilterGroup>
 
-          <FilterGroup group="type" defaultOpen={isOpenByDefault("type")}>
+          <FilterGroup group="type" count={selection.type.length}>
             {FILTER_PROJECT_TYPES.map((type) => (
               <FilterOption
                 key={type}
@@ -230,10 +275,7 @@ export function FilterSidebar({
             ))}
           </FilterGroup>
 
-          <FilterGroup
-            group="category"
-            defaultOpen={isOpenByDefault("category")}
-          >
+          <FilterGroup group="category" count={selection.category.length}>
             <OptionsState query={categories}>
               {(options) =>
                 options.map((category) => {
@@ -258,44 +300,63 @@ export function FilterSidebar({
               }
             </OptionsState>
           </FilterGroup>
-        </div>
+        </Accordion>
       </CardContent>
     </Card>
   )
 }
 
 /**
- * Eine aufklappbare Filtergruppe: Trigger mit Gruppenname und Chevron
- * (zugeklappt nach rechts, offen nach unten gedreht, wie im Template),
- * darunter die Optionsliste. Base UI meldet den Zustand ueber
- * data-panel-open am Trigger und aria-expanded fuer Screenreader.
+ * Eine Filtergruppe des Akkordeons: Gruppenname, Zahl der gesetzten Werte,
+ * Pfeil, darunter die Optionsliste.
+ *
+ * <p><strong>Die Zahl steht zwischen Name und Pfeil</strong> (Vorgabe zu
+ * KAN-80). Sie erscheint nur, wenn etwas gesetzt ist: eine Null an jeder der
+ * sechs Gruppen waere sechsmal die Auskunft, dass nichts passiert.
+ *
+ * <p>Sichtbar ist sie eine blosse Ziffer, und die sagt allein nicht, was sie
+ * zaehlt; vorgelesen wird deshalb der ganze Satz. Derselbe Kunstgriff wie am
+ * Fakultaetskuerzel der Projektkachel.
+ *
+ * <p>Der Wert des Akkordeon-Glieds ist der Gruppenschluessel und nicht die
+ * Position: eine neue Gruppe in der Mitte verschoebe sonst, welche offen
+ * steht.
  */
 function FilterGroup({
   group,
-  defaultOpen,
+  count,
   children,
 }: {
   group: FilterGroupKey
-  defaultOpen: boolean
+  count: number
   children: ReactNode
 }) {
   const { t } = useTranslation()
   return (
-    <Collapsible
-      defaultOpen={defaultOpen}
-      className="border-b py-3 last:border-b-0 last:pb-0"
-    >
-      <CollapsibleTrigger className="group type-label-xs flex w-full items-center justify-between gap-2 rounded-selection tracking-wide uppercase outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+    <AccordionItem value={group} className="last:border-b-0">
+      <AccordionTrigger className="type-label-xs gap-2 tracking-wide uppercase hover:no-underline">
         {t(`project.list.filter.group.${group}`)}
-        <ChevronRightIcon
-          aria-hidden="true"
-          className="size-4 shrink-0 text-muted-foreground transition-transform group-data-panel-open:rotate-90"
-        />
-      </CollapsibleTrigger>
-      <CollapsibleContent className="flex flex-col gap-1 pt-3">
+        {count > 0 && (
+          <span
+            /* Ein Kreis und keine Ellipse (Vorgabe zu KAN-80): die Zahl steht
+               mittig in einer quadratischen Flaeche (h-5 zu min-w-5), statt
+               aus einer Polsterung links und rechts eine liegende Form zu
+               machen. Ab zwei Ziffern wird daraus eine Pille, und das ist
+               richtig so: eine Zwoelf in einem Kreis von 20px waere nicht
+               mehr lesbar. */
+            className="type-label-xs ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-pill bg-surface-brand px-1 font-bold text-surface-brand-foreground normal-case"
+          >
+            <span className="sr-only">
+              {t("project.list.filter.groupCount", { count })}
+            </span>
+            <span aria-hidden="true">{count}</span>
+          </span>
+        )}
+      </AccordionTrigger>
+      <AccordionContent className="flex flex-col gap-1">
         {children}
-      </CollapsibleContent>
-    </Collapsible>
+      </AccordionContent>
+    </AccordionItem>
   )
 }
 

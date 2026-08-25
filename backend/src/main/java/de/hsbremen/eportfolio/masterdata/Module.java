@@ -20,7 +20,10 @@ public class Module extends BaseEntity {
 	@Column(nullable = false, length = 255)
 	private String name;
 
-	@Column(length = 64)
+	// Seit Contract v81 (KAN-80) Pflicht, wie beim Studiengang. Angezeigt wird
+	// das Modulkuerzel derzeit nirgends; gepflegt wird es trotzdem, damit die
+	// Hierarchie Fakultaet, Studiengang, Modul durchgehend eines fuehrt.
+	@Column(nullable = false, length = 64)
 	private String abbreviation;
 
 	@ManyToOne(fetch = FetchType.LAZY)

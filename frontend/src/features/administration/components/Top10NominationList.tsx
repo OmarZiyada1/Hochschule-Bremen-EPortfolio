@@ -19,6 +19,7 @@ import {
   tierTones,
 } from "@/features/reviews/nominations"
 import { fullNameOf } from "@/lib/name"
+import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
 
 /**
  * Die Nominierungen der Top-10-Verwaltung (Frame {@code Admin · Top 10},
@@ -91,6 +92,8 @@ function NominationRow({
   onNotice: (message: string) => void
 }) {
   const { t, i18n } = useTranslation()
+  /* Herkunft fuer den Brotkrumenpfad des Ziels (KAN-80). */
+  const origin = useBreadcrumbOrigin()
   const accept = useAcceptNomination()
   const [accepting, setAccepting] = useState(false)
   const [rejecting, setRejecting] = useState(false)
@@ -125,12 +128,15 @@ function NominationRow({
                 {t(`top10.nominationStatus.${nomination.status}`)}
               </Pill>
             )}
-            <span className="type-body-sm text-muted-foreground">{created}</span>
+            <span className="type-body-sm text-muted-foreground">
+              {created}
+            </span>
           </div>
 
           <h3 className="type-body font-semibold">
             <Link
               to={`/projects/${nomination.project.id}`}
+              state={origin}
               className="text-primary hover:underline focus-visible:underline"
             >
               {nomination.project.title}

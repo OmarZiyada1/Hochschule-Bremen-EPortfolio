@@ -1,10 +1,23 @@
 import { useTranslation } from "react-i18next"
+import { Link } from "react-router-dom"
 
 import { resolveApiUrl } from "@/api/client"
-import { UserAvatar, type UserAvatarSize } from "@/components/common/UserAvatar"
+import { UserAvatar } from "@/components/common/UserAvatar"
 import { AvatarGroup, AvatarGroupCount } from "@/components/ui/avatar"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
+  AVATAR_SIZES,
+  fannedGroupWidthRem,
+  type UserAvatarSize,
+} from "@/lib/avatarSize"
 import { fullNameOf, type PersonName } from "@/lib/name"
 import { cn } from "@/lib/utils"
+import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
 
 /**
  * Eine Person, wie sie an einer Projektantwort haengt: Name und, wenn
@@ -17,7 +30,7 @@ export interface DisplayPerson extends PersonName {
 }
 
 /**
- * So viele Gesichter zeigt die Gruppe, bevor der Rest zur Zahl wird.
+ * So viele Gesichter zeigt die Gruppe, solange niemand darauf zeigt.
  *
  * <p>Drei, weil eine Gruppenarbeit typischerweise zwei bis vier Personen
  * umfasst: darunter zeigt die Kachel fast immer alle, darueber bleibt sie
@@ -27,28 +40,65 @@ export interface DisplayPerson extends PersonName {
 const MAX_FACES = 3
 
 /**
- * Die Personen eines Projekts (§3.3, §3.13; Nacharbeit an KAN-40).
+ * Die Personen eines Projekts (§3.3, §3.13; Nacharbeit an KAN-40, verlinkt
+ * seit KAN-80).
+ *
+ * <p><strong>Jeder Name fuehrt zu seinem Portfolio.</strong> Bis KAN-80 waren
+ * die Gesichter Bilder ohne Ziel: Wer wissen wollte, was jemand sonst noch
+ * gemacht hat, musste den Namen von Hand in die Suche tippen. Jetzt ist jede
+ * Person ein Link auf {@code /portfolios/{id}}, an der Kachel wie in der
+ * Top-10 und in den Projektdetails.
  *
  * <p><strong>Eine Person bekommt ihren Namen, mehrere bekommen eine
  * Gruppe.</strong> Steht genau eine Person am Projekt, erscheint sie mit
- * Avatar und ausgeschriebenem Namen wie bisher. Ab zwei Personen zeigt die
- * Flaeche nur noch die Gesichter und, sobald es mehr als
- * {@link MAX_FACES} sind, eine Zahl fuer den Rest.
+ * Avatar und ausgeschriebenem Namen. Ab zwei Personen zeigt die Flaeche die
+ * uebereinanderliegenden Gesichter und, sobald es mehr als {@link MAX_FACES}
+ * sind, eine Zahl fuer den Rest. Alle Namen nebeneinander zu setzen ist die
+ * naheliegende, aber falsche Antwort: auf einer Kachel bricht die Zeile nach
+ * zwei Namen um, und die Reihenfolge liest sich sofort wieder als Rangfolge.
  *
- * <p><strong>Warum die Namen dann verschwinden.</strong> Bis zur Nacharbeit
- * an KAN-40 stand an jeder Kachel allein die Autor:in. Eine Gruppenarbeit
- * lief damit ueberall unter einem einzigen Namen, und die Mitwirkenden waren
- * unsichtbar. Alle Namen nebeneinander zu setzen ist die naheliegende, aber
- * falsche Antwort: auf einer Kachel bricht die Zeile nach zwei Namen um, und
- * die Reihenfolge der Namen liest sich sofort wieder als Rangfolge. Die
- * Gruppe sagt stattdessen, was zutrifft, naemlich dass mehrere daran
- * gearbeitet haben; wer wissen will, wer, oeffnet das Projekt.
+ * <p><strong>Die Gruppe faechert auf, sobald man sie beruehrt</strong>
+ * (Entscheidung zu KAN-80). Bei Zeigerkontakt und ebenso, sobald der Fokus
+ * hineinlaeuft, ruecken die Kreise auseinander und die verdeckten Personen
+ * kommen dazu; die Zahl fuer den Rest verschwindet dabei, sie zaehlt dann
+ * nichts mehr. <strong>Reines Hovern genuegt nicht</strong>, deshalb steht
+ * {@code group-focus-within} ueberall neben {@code group-hover}: mit der
+ * Tastatur gibt es kein Zeigen, und die verdeckten Kreise waeren sonst
+ * unerreichbar. Aus demselben Grund sind sie zusammengeschoben und nicht
+ * ausgeblendet: was {@code display: none} traegt, nimmt keinen Fokus an, und
+ * die Gruppe liesse sich nie oeffnen.
  *
- * <p><strong>Verschwunden sind die Namen nur optisch.</strong> Fuer
- * Hilfsmittel steht der vollstaendige Satz da, mit allen Namen und in der
- * Sprache der Oberflaeche zusammengefuegt. Ein Bild ohne Namen waere fuer
- * einen Screenreader nichts, und der Befund aus KAN-29 gilt hier genauso:
- * ein Text im DOM, den {@code aria-hidden} verdeckt, wird nie vorgelesen.
+ * <p><strong>Der Platz dafuer ist von Anfang an reserviert.</strong> Die
+ * Gruppe traegt als Mindestbreite die Breite ihres aufgefaecherten Zustands
+ * ({@code fannedGroupWidthRem}), auch solange sie zugeklappt ist. Ohne das
+ * wuchs sie beim Hovern ueber ihre Zeile hinaus, die Kachel brach um und
+ * sprang unter dem Zeiger weg; wer dann weiterklicken wollte, traf ins Leere
+ * (Befund zu KAN-80). Bezahlt wird das mit etwas leerem Raum rechts der
+ * zugeklappten Gruppe, und das ist der guenstigere Preis: eine Kachel, die
+ * sich beim Zeigen bewegt, ist nicht bedienbar.
+ *
+ * <p><strong>Die Zahl ist so gross wie ein Gesicht.</strong> Die Primitive
+ * gibt ihr {@code size-8} und schaltet auf {@code size-6} nur um, wenn die
+ * Gruppe ein {@code data-size="sm"} enthaelt. Das kann sie hier nie: die
+ * Avatarhuelle reicht der Primitive immer {@code size="default"} und setzt
+ * ihr Mass selbst (Befund aus KAN-34). Die Zahl war deshalb groesser als die
+ * Kreise daneben, und ihr Verschwinden riss ein entsprechend grosses Loch.
+ * Sie bekommt jetzt dieselbe Stufe wie die Gesichter.
+ *
+ * <p><strong>Nichts an der Geometrie wird animiert.</strong> Zusammengeschoben
+ * und aufgefaechert sind zwei verschiedene Layouts, und ein Uebergang zwischen
+ * ihnen animiert Breiten und Aussenabstaende, also genau die Eigenschaften,
+ * die den Browser bei jedem Einzelbild neu rechnen lassen. Das war als
+ * Ruckeln zu sehen, und die Elemente daneben tanzten mit. Der Wechsel
+ * geschieht deshalb sofort; weich bleibt allein die Deckkraft, und die kostet
+ * kein Neuberechnen des Layouts.
+ *
+ * <p><strong>Der Name steht am Link, nicht daneben.</strong> Frueher trug die
+ * Gruppe einen {@code sr-only}-Satz mit allen Namen und war selbst
+ * {@code aria-hidden}. Das geht nicht mehr: ein Link ohne zugaenglichen Namen
+ * ist ein Verstoss gegen SC 2.4.4, und ein versteckter Satz daneben nennt die
+ * Ziele nicht. Jede Person traegt ihren Namen deshalb selbst, sichtbar im
+ * Tooltip und vorgelesen als Linktext.
  *
  * <p><strong>Die Schriftfarbe setzt der Aufrufer.</strong> Dieselbe Gruppe
  * steht mal auf einer Karte und mal auf einer Coverflaeche, und dort traegt
@@ -76,7 +126,8 @@ export function ProjectPeople({
   size?: UserAvatarSize
   className?: string
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
+  const origin = useBreadcrumbOrigin()
 
   if (people.length === 0) {
     return null
@@ -87,59 +138,116 @@ export function ProjectPeople({
     return (
       <span
         className={cn(
-          "type-body-sm flex items-center gap-2 font-medium",
+          "type-body-sm relative z-20 flex items-center gap-2 font-medium",
           className
         )}
       >
-        <UserAvatar
-          person={person}
-          imageUrl={
-            person.avatarUrl ? resolveApiUrl(person.avatarUrl) : undefined
-          }
-          size={size}
-        />
-        <span>{fullNameOf(person)}</span>
+        {/* z-20: die Kachel ist als Ganzes anklickbar (KAN-80), und ohne
+            eigene Ebene laege dieser Link unter der Klickflaeche. */}
+        <Link
+          to={portfolioPath(person)}
+          state={origin}
+          className="flex items-center gap-2 rounded-selection hover:underline focus-visible:underline"
+        >
+          <UserAvatar
+            person={person}
+            imageUrl={avatarSrc(person)}
+            size={size}
+          />
+          <span>{fullNameOf(person)}</span>
+        </Link>
       </span>
     )
   }
 
-  const faces = people.slice(0, MAX_FACES)
-  const rest = people.length - faces.length
-
-  /* Ueber Intl statt ueber einen i18n-Schluessel mit Komma: die Konjunktion
-     und ihre Zeichensetzung unterscheiden sich je Sprache ("A, B und C"
-     gegen "A, B, and C"), und genau das ist die Aufgabe von ListFormat. */
-  const names = new Intl.ListFormat(i18n.language, {
-    style: "long",
-    type: "conjunction",
-  }).format(people.map(fullNameOf))
+  const rest = people.length - MAX_FACES
 
   return (
-    <span
-      className={cn("type-body-sm flex items-center gap-2 font-medium", className)}
-    >
-      <span className="sr-only">{t("project.people.by", { names })}</span>
-      <AvatarGroup aria-hidden="true">
-        {faces.map((person) => (
-          <UserAvatar
-            key={person.id}
-            person={person}
-            imageUrl={
-              person.avatarUrl ? resolveApiUrl(person.avatarUrl) : undefined
-            }
-            size={size}
-          />
-        ))}
-        {rest > 0 && (
-          /* Die Zahl nennt den Rest und nicht die Gesamtzahl, wie im
-             Registry-Beispiel: neben drei Gesichtern liest sich "+2" als
-             "zwei weitere", "5" dagegen als Widerspruch zu dem, was
-             danebensteht. */
-          <AvatarGroupCount className="type-label-xs">
-            +{rest}
-          </AvatarGroupCount>
+    <TooltipProvider>
+      <span
+        className={cn(
+          "group/people type-body-sm relative z-20 flex items-center gap-2 font-medium",
+          className
         )}
-      </AvatarGroup>
-    </span>
+      >
+        <span className="sr-only">{t("project.people.label")}</span>
+        {/* -space-x-2 kommt aus der Primitive; aufgefaechert wird ueber den
+            Abstand, damit die Kreise dabei nicht springen. */}
+        <AvatarGroup
+          /* Der Platz des aufgefaecherten Zustands, schon im zugeklappten:
+             so aendert das Auffaechern die Zeilenbreite nicht mehr. max-w-full
+             ist die Reissleine fuer den unwahrscheinlichen Fall einer sehr
+             grossen Gruppe in einer schmalen Kachel; dort ueberlappen die
+             Kreise dann eben staerker, statt aus der Karte zu laufen. */
+          style={{ minWidth: `${fannedGroupWidthRem(people.length, size)}rem` }}
+          className="max-w-full group-focus-within/people:space-x-1 group-hover/people:space-x-1"
+        >
+          {people.map((person, index) => (
+            <Tooltip key={person.id}>
+              <TooltipTrigger
+                render={
+                  <Link
+                    to={portfolioPath(person)}
+                    state={origin}
+                    className={cn(
+                      "rounded-pill transition-opacity",
+                      /* Die verdeckten Personen sind zusammengeschoben statt
+                         ausgeblendet: nur so bleiben sie fokussierbar, und
+                         der erste Tabstopp oeffnet die ganze Gruppe. Die
+                         Breite springt ohne Uebergang, siehe Klassenkopf. */
+                      index >= MAX_FACES &&
+                        "max-w-0 opacity-0 group-focus-within/people:max-w-none group-focus-within/people:opacity-100 group-hover/people:max-w-none group-hover/people:opacity-100"
+                    )}
+                  />
+                }
+              >
+                <UserAvatar
+                  person={person}
+                  imageUrl={avatarSrc(person)}
+                  size={size}
+                  labelled
+                />
+              </TooltipTrigger>
+              <TooltipContent>{fullNameOf(person)}</TooltipContent>
+            </Tooltip>
+          ))}
+          {rest > 0 && (
+            /* Die Zahl nennt den Rest und nicht die Gesamtzahl, wie im
+               Registry-Beispiel: neben drei Gesichtern liest sich "+2" als
+               "zwei weitere", "5" dagegen als Widerspruch zu dem, was
+               danebensteht. Aufgefaechert zaehlt sie nichts mehr und
+               verschwindet; vorgelesen wird sie nie, die Namen stehen an
+               den Links.
+
+               Sie geht ueber max-w-0 und Deckkraft und nicht ueber hidden:
+               ein display:none nimmt sie schlagartig aus dem Fluss, und die
+               Kreise daneben sprangen im selben Augenblick nach links. */
+            <AvatarGroupCount
+              aria-hidden="true"
+              className={cn(
+                "type-label-xs shrink-0 overflow-hidden transition-opacity",
+                AVATAR_SIZES[size].box,
+                "group-focus-within/people:max-w-0 group-focus-within/people:opacity-0 group-hover/people:max-w-0 group-hover/people:opacity-0"
+              )}
+            >
+              +{rest}
+            </AvatarGroupCount>
+          )}
+        </AvatarGroup>
+      </span>
+    </TooltipProvider>
   )
+}
+
+/** Das oeffentliche Portfolio einer Person (§6.1, Route aus KAN-7). */
+function portfolioPath(person: DisplayPerson): string {
+  return `/portfolios/${person.id}`
+}
+
+/**
+ * Die Referenz {@code /api/files/{id}} wird zur abrufbaren Adresse; ohne
+ * Bild bleibt es bei den Initialen (§3.15.1).
+ */
+function avatarSrc(person: DisplayPerson): string | undefined {
+  return person.avatarUrl ? resolveApiUrl(person.avatarUrl) : undefined
 }

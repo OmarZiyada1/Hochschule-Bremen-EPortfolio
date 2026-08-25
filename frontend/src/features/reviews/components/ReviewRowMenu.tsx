@@ -33,6 +33,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { nominationBlockReason } from "@/features/reviews/nominationBlock"
+import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
 
 /**
  * Das Zeilenmenue der Reviewliste (Template „Meine Reviews", KAN-37):
@@ -98,6 +99,8 @@ export function ReviewRowMenu({
   onResign: () => void
 }) {
   const { t } = useTranslation()
+  /* Herkunft fuer den Brotkrumenpfad des Ziels (KAN-80). */
+  const origin = useBreadcrumbOrigin()
   const [confirmResign, setConfirmResign] = useState(false)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
 
@@ -126,7 +129,9 @@ export function ReviewRowMenu({
               der Weg auf die Detailseite, und ein zweiter daneben sagt
               dasselbe ein zweites Mal. */}
           <DropdownMenuItem
-            render={<Link to={`/projects/${project.id}/review`} />}
+            render={
+              <Link to={`/projects/${project.id}/review`} state={origin} />
+            }
             nativeButton={false}
           >
             <MessageSquareIcon aria-hidden="true" />

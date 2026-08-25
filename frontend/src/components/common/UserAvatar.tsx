@@ -1,35 +1,28 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AVATAR_SIZES, type UserAvatarSize } from "@/lib/avatarSize"
 import { initialsOf, fullNameOf, type PersonName } from "@/lib/name"
 import { cn } from "@/lib/utils"
 
-/** Die Stufen, die das Figma-Designsystem tatsaechlich verwendet. */
-export type UserAvatarSize = "sm" | "md" | "lg" | "xl"
-
 /*
- * Vier Stufen, jede mit ihrer Fundstelle im Template: 24px in der
- * Autorenzeile der ProjectCard, 28px in der Kopfleiste, 40px in der
- * Nutzertabelle, 96px in der Profilkarte. Ein Wert ohne Fundstelle kommt
- * nicht dazu, wie bei den Token (Skill frontend-design, Abschnitt 1).
+ * Die Masstabelle liegt in lib/avatarSize.ts, weil ProjectPeople daraus die
+ * Breite einer aufgefaecherten Gruppe rechnet (KAN-80). Der Typ wird hier
+ * weiterexportiert, damit die Aufrufstellen ihn wie bisher von der Komponente
+ * beziehen.
  *
- * <strong>Warum das Mass hier steht und nicht am size-Prop der Primitive:</strong>
- * deren Stufen kommen als data-[size=…]:size-… und tragen damit eine
- * hoehere Spezifitaet als eine schlichte size-Klasse von aussen. Ein
- * size-24 an der Aufrufstelle bleibt deshalb wirkungslos, und nichts warnt
- * davor: kein Compilerfehler, keine Lint-Warnung, kein roter Test, der
- * Avatar ist einfach zu klein (Befund aus KAN-34). Die Huelle gibt der
- * Primitive darum immer dieselbe Stufe und setzt das Mass selbst; so loest
+ * <strong>Warum das Mass an der Huelle steht und nicht am size-Prop der
+ * Primitive:</strong> deren Stufen kommen als data-[size=…]:size-… und tragen
+ * damit eine hoehere Spezifitaet als eine schlichte size-Klasse von aussen.
+ * Ein size-24 an der Aufrufstelle bleibt deshalb wirkungslos, und nichts warnt
+ * davor: kein Compilerfehler, keine Lint-Warnung, kein roter Test, der Avatar
+ * ist einfach zu klein (Befund aus KAN-34). Die Huelle gibt der Primitive
+ * darum immer dieselbe Stufe und setzt das Mass selbst; so loest
  * tailwind-merge size-8 gegen size-N auf.
  *
  * Die Initialen laufen aus demselben Grund ueber text-*, nicht ueber eine
  * type-Rolle: AvatarFallback bringt text-sm mit, und verdraengt wird das
  * nur von einer Klasse aus derselben Gruppe.
  */
-const avatarSizes: Record<UserAvatarSize, { box: string; initials: string }> = {
-  sm: { box: "size-6", initials: "text-xs" },
-  md: { box: "size-7", initials: "text-xs" },
-  lg: { box: "size-10", initials: "text-sm" },
-  xl: { box: "size-24", initials: "text-3xl" },
-}
+export type { UserAvatarSize }
 
 /**
  * Avatarflaeche einer Person: Bild, sonst Initialen auf der Markenflaeche
@@ -82,7 +75,7 @@ export function UserAvatar({
   className?: string
 }) {
   const name = fullNameOf(person)
-  const step = avatarSizes[size]
+  const step = AVATAR_SIZES[size]
 
   return (
     <Avatar

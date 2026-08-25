@@ -9,18 +9,18 @@ import java.util.UUID;
  *
  * <p>Alle drei Felder sind optional: {@code null} heisst „unveraendert lassen".
  *
- * <p><strong>Wie sich eine Kurzform loeschen laesst.</strong>
- * {@code abbreviation} ist als einziges Feld dieser Stammdaten
- * {@code nullable}, {@code null} kann hier also nicht zugleich „unveraendert"
- * und „leeren" bedeuten. Es heisst „unveraendert"; zum Leeren dient die leere
- * Zeichenkette, die der Dienst als {@code null} speichert. Die umgekehrte
- * Belegung waere schlechter: dann liesse ein Aufruf, der nur den Namen aendern
- * will, die Kurzform stillschweigend verschwinden. Dasselbe gilt fuer
+ * <p><strong>Eine Kurzform laesst sich seit Contract v81 nicht mehr
+ * loeschen.</strong> Bis v80 war {@code abbreviation} das einzige
+ * {@code nullable} Feld dieser Stammdaten, und die leere Zeichenkette war der
+ * Weg, es zu leeren. Mit v81 ist die Spalte {@code not null}: das Kuerzel steht
+ * auf der Projektkachel und in den Projektdetails, eine leere Stelle waere dort
+ * nicht zu fuellen. {@code null} heisst weiterhin „unveraendert", die leere
+ * Zeichenkette ist jetzt ein 400 {@code VALIDATION_FAILED}. Dasselbe gilt fuer
  * {@link ModuleUpdateRequest}.
  *
  * @param name         neuer Name; {@code null} laesst ihn unveraendert.
  * @param abbreviation neue Kurzform; {@code null} laesst sie unveraendert, eine
- *                     leere Zeichenkette loescht sie.
+ *                     leere Zeichenkette ergibt 400.
  * @param facultyId    neue Fakultaet; {@code null} laesst die Zuordnung
  *                     unveraendert. Eine unbekannte ID ergibt 400.
  */
@@ -32,8 +32,8 @@ public record StudyProgramUpdateRequest(
 		String name,
 
 		@Schema(description = "Neue Kurzform. Fehlt das Feld, bleibt sie unveraendert; eine "
-				+ "leere Zeichenkette loescht sie.", example = "MI", nullable = true)
-		@Size(max = 64, message = "Kurzform ist zu lang.")
+				+ "leere Zeichenkette ergibt 400.", example = "MI")
+		@Size(min = 1, max = 64, message = "Kurzform ist zu lang oder leer.")
 		String abbreviation,
 
 		@Schema(description = "Neue Fakultaet. Fehlt das Feld, bleibt die Zuordnung unveraendert.")

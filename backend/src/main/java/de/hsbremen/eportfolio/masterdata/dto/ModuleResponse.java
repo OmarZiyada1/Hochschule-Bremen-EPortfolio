@@ -9,8 +9,8 @@ import java.util.UUID;
  *
  * @param id             technischer Schluessel
  * @param name           ausgeschriebener Name
- * @param abbreviation   Kurzform; in der Tabelle nullable und deshalb auch hier
- *                       moeglicherweise {@code null}
+ * @param abbreviation   Kurzform; seit Contract v81 Pflicht und damit nie
+ *                       {@code null}
  * @param studyProgramId Studiengang, zu dem das Modul gehoert
  */
 public record ModuleResponse(
@@ -18,7 +18,7 @@ public record ModuleResponse(
 
 		String name,
 
-		@Schema(description = "Kurzform des Moduls. Kann fehlen.", nullable = true)
+		@Schema(description = "Kurzform des Moduls, z. B. \"MMI\".", example = "MMI")
 		String abbreviation,
 
 		@Schema(description = "Studiengang, zu dem das Modul gehoert. Derselbe Wert "

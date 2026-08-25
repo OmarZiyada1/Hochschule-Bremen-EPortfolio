@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest"
 
 import { projectQueries } from "@/api/queries/projects"
 import {
+  activeFilterCount,
+  emptyFilterSelection,
   FILTER_DEGREES,
+  FILTER_KEYS,
   FILTER_PROJECT_TYPES,
   readFilterSelection,
   toggleValue,
@@ -45,6 +48,42 @@ describe("toggleValue", () => {
   it("waehlt einen fehlenden Wert an und einen vorhandenen ab", () => {
     expect(toggleValue(["a"], "b")).toEqual(["a", "b"])
     expect(toggleValue(["a", "b"], "a")).toEqual(["b"])
+  })
+})
+
+/* Punkt 11 aus KAN-80: die Zahl neben der Gruppe und am Weg zurueck auf null. */
+describe("activeFilterCount", () => {
+  it("zaehlt Werte und nicht Gruppen", () => {
+    expect(
+      activeFilterCount({
+        ...emptyFilterSelection(),
+        faculty: ["a", "b"],
+        degree: ["BACHELOR"],
+      })
+    ).toBe(3)
+  })
+
+  it("ist ohne Auswahl null", () => {
+    expect(activeFilterCount(emptyFilterSelection())).toBe(0)
+  })
+})
+
+describe("emptyFilterSelection", () => {
+  it("liefert jede Gruppe leer", () => {
+    const empty = emptyFilterSelection()
+
+    for (const key of FILTER_KEYS) {
+      expect(empty[key]).toEqual([])
+    }
+  })
+
+  /* Als Fabrik und nicht als geteilte Konstante: eine gefuellte Konstante
+     setzte beim naechsten Aufruf nicht mehr zurueck. */
+  it("gibt bei jedem Aufruf frische Listen aus", () => {
+    const first = emptyFilterSelection()
+    first.faculty.push("a")
+
+    expect(emptyFilterSelection().faculty).toEqual([])
   })
 })
 

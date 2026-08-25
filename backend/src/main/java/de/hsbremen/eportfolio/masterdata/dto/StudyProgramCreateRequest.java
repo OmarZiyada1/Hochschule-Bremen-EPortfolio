@@ -10,8 +10,8 @@ import java.util.UUID;
  * Body von {@code POST /api/admin/study-programs} (§6.1, §3.7).
  *
  * @param name         ausgeschriebener Name.
- * @param abbreviation Kurzform; in der Tabelle {@code nullable} und deshalb auch
- *                     hier optional.
+ * @param abbreviation Kurzform. Pflicht seit Contract v81, weil die
+ *                     Projektkachel und die Projektdetails sie anzeigen.
  * @param facultyId    Fakultaet, zu der der Studiengang gehoert. Pflicht, weil
  *                     die Fremdschluesselspalte {@code not null} ist; eine
  *                     unbekannte ID ergibt 400.
@@ -24,8 +24,8 @@ public record StudyProgramCreateRequest(
 		@Size(max = 255, message = "Name ist zu lang.")
 		String name,
 
-		@Schema(description = "Kurzform des Studiengangs. Darf fehlen.", example = "MI",
-				nullable = true)
+		@Schema(description = "Kurzform des Studiengangs.", example = "MI")
+		@NotBlank(message = "Kurzform fehlt.")
 		@Size(max = 64, message = "Kurzform ist zu lang.")
 		String abbreviation,
 

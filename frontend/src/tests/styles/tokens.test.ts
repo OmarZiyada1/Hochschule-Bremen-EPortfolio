@@ -83,12 +83,15 @@ const themeInline = declarationsOf(blocksOf(tokensCss, "@theme inline")[0])
 const radius = declarationsOf(blocksOf(tokensCss, "@theme static")[0])
 
 describe("Primitives (Foundation, Abschnitt 2)", () => {
-  it("fuehrt 54 Stufen: 38 aus dem Abgleich vom 07.08.2026 plus die vier Inhaltsrampen", () => {
+  it("fuehrt 67 Stufen: 54 wie bisher plus die kuehle Diagrammfamilie", () => {
     /* 36 aus dem Abgleich vom 07.08.2026, dazu die zwei transparenten, dazu
        seit Contract v63 vier Inhaltsrampen mit je vier Stufen (KAN-36):
        braun, orange, violett und pink, ausschliesslich fuer die Farbauswahl
-       im Editor. */
-    expect(primitives.size).toBe(54)
+       im Editor. Mit KAN-80 kommen dreizehn kuehle Stufen dazu: sechs
+       Familien mit je einer Fuell- und einer Schriftstufe fuer Diagramme und
+       Kennzahlen, dazu eine blasse Taubenblau-Stufe fuer den Rest eines
+       gestapelten Balkens. */
+    expect(primitives.size).toBe(67)
   })
 
   it("enthaelt ausschliesslich Rohwerte, keine Aliase", () => {
@@ -144,13 +147,28 @@ describe("Primitives (Foundation, Abschnitt 2)", () => {
  */
 const gradientRoles = ["cover", "nav"]
 
+/*
+ * Die Diagrammpalette (KAN-80) wird bewusst nicht an Tailwind gebunden. Sie
+ * wird nie als Utility geschrieben, sondern als Fuellfarbe an recharts
+ * gereicht, und der Name entsteht dabei zur Laufzeit aus dem Index. Ein
+ * --color-chart-* im Block @theme inline saehe fuer Tailwind deshalb
+ * unbenutzt aus und fiele beim Buendeln heraus; die Segmente waeren im
+ * gebauten Stand farblos. Als gewoehnliche Deklaration unter :root steht
+ * jeder Eintrag dagegen sicher im Ergebnis.
+ */
+const chartRoles = [...semanticLight.keys()].filter((name) =>
+  name.startsWith("chart-")
+)
+
 describe("Semantic-Rollen (Foundation, Abschnitt 3)", () => {
-  it("fuehrt 88 Rollen je Modus", () => {
+  it("fuehrt 101 Rollen je Modus", () => {
     /* 70 seit KAN-29, dazu die Inhaltsfarb-Rollen aus API-Contract 2.5: mit
        KAN-10 zehn (fuenf Textfarben, fuenf Hervorhebungen), mit Contract
-       v63 acht weitere fuer brown, orange, purple und pink (KAN-36). */
-    expect(semanticLight.size).toBe(88)
-    expect(semanticDark.size).toBe(88)
+       v63 acht weitere fuer brown, orange, purple und pink (KAN-36). Mit
+       KAN-80 kommt die Diagrammpalette dazu: sechs Fuellfarben, sechs
+       Schriftfassungen und die Restflaeche eines Stapels. */
+    expect(semanticLight.size).toBe(101)
+    expect(semanticDark.size).toBe(101)
   })
 
   it("nutzt in beiden Modi dieselben Rollennamen", () => {
@@ -193,6 +211,12 @@ describe("Semantic-Rollen (Foundation, Abschnitt 3)", () => {
 
   it("bindet jede Rolle ueber @theme inline an Tailwind an", () => {
     for (const name of semanticLight.keys()) {
+      if (chartRoles.includes(name)) {
+        /* Umgekehrt zu den Verlaufsrollen: hier ist die fehlende Bindung die
+           Zusage. Sie wird als CSS-Variable gelesen und nie als Klasse. */
+        expect(themeInline.has(`color-${name}`)).toBe(false)
+        continue
+      }
       if (gradientRoles.includes(name)) {
         /* Ein Verlauf darf gerade nicht als Farbe erscheinen. Die Flaeche
            kommt stattdessen ueber die Klassen surface-cover und

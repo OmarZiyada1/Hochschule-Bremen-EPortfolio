@@ -1,21 +1,35 @@
 import { useTranslation } from "react-i18next"
 
-import type { DashboardResponse, ProjectStatus } from "@/api/types"
+import type { DashboardResponse } from "@/api/types"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { OWN_PROJECT_STATUSES } from "@/features/portfolio/ownProjectStatus"
+import { chartTextColor } from "@/lib/chartColors"
 import { cn } from "@/lib/utils"
 
 /** Sechs Platzhalter: die Summe und die fuenf Status. */
 const SKELETON_TILES = [0, 1, 2, 3, 4, 5]
 
-const STATUS_TONE: Record<ProjectStatus, string> = {
-  DRAFT: "text-status-draft-fg",
-  SUBMITTED: "text-status-submitted-fg",
-  APPROVED: "text-status-approved-fg",
-  PUBLISHED: "text-status-published-fg",
-  REVISION: "text-status-revision-fg",
-}
+/*
+ * Die Zahl je Kachel traegt einen kuehlen Ton aus der Diagrammpalette
+ * (lib/chartColors.ts), vergeben nach der Position in der Reihe: die Summe
+ * nimmt den ersten Eintrag, danach folgen die fuenf Status in der
+ * Reihenfolge des Zustandsautomaten (§4.1).
+ *
+ * <p><strong>Nicht mehr die Toene der Status-Badges</strong> (Vorgabe zu
+ * KAN-80). Bis dahin standen hier ein Grau, ein Braun und ein dunkles Rot;
+ * die Reihe las sich als Warnung, obwohl sie nur zaehlt. Damit loest sich
+ * die Kachel bewusst vom StatusBadge: das Badge sagt, in welchem Zustand ein
+ * einzelnes Projekt ist, und dafuer traegt es seine gewohnte Bedeutung
+ * weiter. Die Kachel sagt, wie viele es sind, und gehoert damit zu den
+ * Diagrammen darunter, mit denen sie sich jetzt eine Palette teilt.
+ *
+ * <p>{@code chartTextColor} und nicht {@code chartColor}: die Zahl ist Text
+ * und braucht Kontrast. Genommen wird die dunklere Stufe derselben Familie,
+ * gemessen zwischen 5,4 und 8,1:1 gegen die weisse Kartenflaeche und zwischen
+ * 5,7 und 8,0:1 auf der dunklen Karte.
+ */
+const TILE_COLORS = [0, 1, 2, 3, 4, 5].map((index) => chartTextColor(index))
 
 /**
  * Die Karte „Alle Projekte im System" (Template „Dashboard", KAN-38): sechs
@@ -32,9 +46,9 @@ const STATUS_TONE: Record<ProjectStatus, string> = {
  * Der Server fuellt auf; wer hier ein {@code ?? 0} schriebe, machte aus einer
  * kaputten Antwort stillschweigend eine plausible.
  *
- * <p>Die Farbe je Status kommt aus derselben Zuordnung wie das
- * {@code StatusBadge}, damit dieselbe Sache auf der Seite nicht zweimal
- * verschieden aussieht. Sie ist Beiwerk: die Beschriftung darunter benennt
+ * <p>Die Farbe je Kachel kommt seit KAN-80 aus der Diagrammpalette und nicht
+ * mehr aus der Zuordnung des {@code StatusBadge}; die Begruendung steht an
+ * {@link TILE_COLORS}. Sie ist Beiwerk: die Beschriftung darunter benennt
  * den Status, die Farbe traegt keine eigene Aussage (SC 1.4.1).
  */
 export function ProjectStatusCard({
@@ -72,9 +86,9 @@ export function ProjectStatusCard({
               <CountTile
                 value={total === undefined ? "" : numberFormat.format(total)}
                 label={t("administration.dashboard.projects.total")}
-                tone="text-accent-foreground"
+                color={TILE_COLORS[0]}
               />
-              {OWN_PROJECT_STATUSES.map((status) => (
+              {OWN_PROJECT_STATUSES.map((status, index) => (
                 <CountTile
                   key={status}
                   value={
@@ -83,7 +97,8 @@ export function ProjectStatusCard({
                       : numberFormat.format(counts[status])
                   }
                   label={t(`project.status.${status}`)}
-                  tone={STATUS_TONE[status]}
+                  /* Um eins versetzt: die Summe hat den ersten Eintrag. */
+                  color={TILE_COLORS[index + 1]}
                 />
               ))}
             </>
@@ -108,15 +123,23 @@ export function ProjectStatusCard({
 function CountTile({
   value,
   label,
-  tone,
+  color,
 }: {
   value: string
   label: string
-  tone: string
+  /** Schriftfarbe der Zahl als CSS-Wert aus der Diagrammpalette. */
+  color: string
 }) {
   return (
     <div className="flex flex-col items-center gap-1 rounded-card border px-3 py-3.5 text-center">
-      <p className={cn("type-num-stat font-extrabold tabular-nums", tone)}>
+      {/* Die Farbe kommt als Stil und nicht als Klasse: sie wird nach der
+          Position vergeben, und ein zur Laufzeit gebauter Klassenname stuende
+          in keiner Datei, die Tailwind durchsucht. Die Werte selbst bleiben
+          in der Tokenschicht (Frontend-Regel 5). */}
+      <p
+        className={cn("type-num-stat font-extrabold tabular-nums")}
+        style={{ color }}
+      >
         {value}
       </p>
       <p className="type-label-xs text-muted-foreground">{label}</p>

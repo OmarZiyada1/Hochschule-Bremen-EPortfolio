@@ -39,6 +39,7 @@ import { TableControlsLayer } from "@/features/project-content/components/TableC
 import { blocksToDoc } from "@/features/project-content/blockSerialization"
 import type { ProjectDocument } from "@/features/project-content/blockTypes"
 import { createEditorExtensions } from "@/features/project-content/editorSchema"
+import type { BreadcrumbOriginState } from "@/routes/useBreadcrumb"
 import { useAutosave } from "@/features/project-content/hooks/useAutosave"
 import {
   toProjectIntroUpdateRequest,
@@ -367,9 +368,9 @@ export default function EditorPage() {
   })
 
   /** Vor jedem Weg aus der Seite heraus wird der Speichertakt geleert. */
-  const leaveTo = async (path: string) => {
+  const leaveTo = async (path: string, state?: BreadcrumbOriginState) => {
     await autosave.flush()
-    void navigate(path)
+    void navigate(path, state ? { state } : undefined)
   }
 
   if (project.isPending || blocks.isPending) {
@@ -428,7 +429,13 @@ export default function EditorPage() {
            * geschrieben wurde.
            */
           onSubmit={() => {
-            void leaveTo(`/projects/${projectId}/metadata?submit=1`)
+            /* Die Herkunft macht den Editor zur Station im Brotkrumenpfad
+               der Metadatenseite (KAN-80): Der Weg zurueck in die
+               Schreibflaeche steht damit im Pfad und nicht nur an den
+               Schaltflaechen unten. */
+            void leaveTo(`/projects/${projectId}/metadata?submit=1`, {
+              breadcrumbFrom: `/projects/${projectId}/editor`,
+            })
           }}
           onWithdraw={() => setWithdrawOpen(true)}
           onBack={() => void leaveTo("/my-portfolio")}

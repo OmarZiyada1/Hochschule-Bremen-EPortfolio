@@ -207,18 +207,18 @@ class MasterDataServiceTest {
 		verifyNoMoreInteractions(semesterRepository);
 	}
 
-	// --- Nullable Kuerzel --------------------------------------------------
+	// --- Kuerzel (§3.7, Pflicht seit Contract v81) -------------------------
 
 	@Test
-	@DisplayName("Fehlendes Kuerzel bleibt null und wird nicht zu einem leeren String")
-	void abbreviationMayBeMissing() {
+	@DisplayName("Das Kuerzel des Studiengangs steht unveraendert in der Antwort")
+	void abbreviationIsPassedThrough() {
 		Faculty fk4 = TestMasterData.faculty("FK4", "Elektrotechnik und Informatik");
-		StudyProgram withoutAbbreviation = TestMasterData.studyProgram(null, "Informatik", fk4);
-		when(studyProgramRepository.findAllByOrderByNameAsc()).thenReturn(List.of(withoutAbbreviation));
+		StudyProgram informatik = TestMasterData.studyProgram("INF", "Informatik", fk4);
+		when(studyProgramRepository.findAllByOrderByNameAsc()).thenReturn(List.of(informatik));
 
 		assertThat(service.studyPrograms(null)).singleElement()
 				.extracting(StudyProgramResponse::abbreviation)
-				.isNull();
+				.isEqualTo("INF");
 	}
 
 	// --- Schlagwoerter (§3.19) ---------------------------------------------

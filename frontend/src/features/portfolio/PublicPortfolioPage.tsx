@@ -1,6 +1,5 @@
 import { FolderOpenIcon, UserXIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
-import { BreadcrumbBar } from "@/components/common/BreadcrumbBar"
 import { Link, useParams } from "react-router-dom"
 
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
@@ -12,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ProfileCard } from "@/features/portfolio/components/ProfileCard"
 import { usePublicPortfolio } from "@/features/portfolio/hooks/usePortfolio"
 import { fullNameOf } from "@/lib/name"
+import { useBreadcrumbTitle } from "@/routes/useBreadcrumb"
 
 /**
  * Das oeffentliche Profil einer Person nach Template "Portfolio (extern)"
@@ -49,15 +49,12 @@ export default function PublicPortfolioPage() {
       }
     : null
 
+  /* Der Name der Person statt des Platzhalters „Portfolio" in der letzten
+     Ebene des Pfades (KAN-80). */
+  useBreadcrumbTitle(person ? fullNameOf(person) : null)
+
   return (
     <>
-      <BreadcrumbBar
-        items={[
-          { label: t("common.nav.home"), to: "/" },
-          { label: t("portfolio.breadcrumb") },
-        ]}
-      />
-
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
         {notFound && (
           <EmptyState

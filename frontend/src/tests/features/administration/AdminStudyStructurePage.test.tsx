@@ -28,7 +28,7 @@ const FK4: FacultyResponse = {
 const BAU: StudyProgramResponse = {
   id: "sp-1",
   name: "Bauingenieurwesen",
-  abbreviation: null,
+  abbreviation: "BIW",
   facultyId: "f-1",
 }
 const MI: StudyProgramResponse = {
@@ -40,7 +40,7 @@ const MI: StudyProgramResponse = {
 const MECHANIK: ModuleResponse = {
   id: "m-1",
   name: "Technische Mechanik",
-  abbreviation: null,
+  abbreviation: "TME",
   studyProgramId: "sp-1",
 }
 
@@ -112,17 +112,28 @@ describe("AdminStudyStructurePage", () => {
     )
 
     /* Ohne Vorauswahl stuenden die beiden rechten Spalten leer da und die
-       Seite saehe aus, als sei nichts angelegt. */
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: FK1.name })).toHaveAttribute(
-        "aria-pressed",
-        "true"
-      )
+       Seite saehe aus, als sei nichts angelegt.
+
+       Die Wartezeit steht ausdruecklich da und liegt ueber der Vorgabe von
+       einer Sekunde: die Vorauswahl entsteht erst, nachdem zwei Abfragen
+       nacheinander geantwortet haben (Fakultaeten, dann deren
+       Studiengaenge). Im Einzellauf reicht die Vorgabe, im vollstaendigen
+       Lauf nicht immer, und der Test war zeitweise rot ohne dass sich etwas
+       am Verhalten geaendert haette. */
+    await waitFor(
+      () =>
+        expect(screen.getByRole("button", { name: FK1.name })).toHaveAttribute(
+          "aria-pressed",
+          "true"
+        ),
+      { timeout: 10_000 }
     )
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Bauingenieurwesen" })
-      ).toHaveAttribute("aria-pressed", "true")
+    await waitFor(
+      () =>
+        expect(
+          screen.getByRole("button", { name: "Bauingenieurwesen" })
+        ).toHaveAttribute("aria-pressed", "true"),
+      { timeout: 10_000 }
     )
     /* Und die Module des vorgewaehlten Studiengangs stehen daneben. */
     expect(await screen.findByText("Technische Mechanik")).toBeInTheDocument()
@@ -253,15 +264,25 @@ describe("AdminStudyStructurePage", () => {
       FK4.name
     )
     await user.type(within(dialog).getByLabelText("Name"), "Medieninformatik")
+
+    /* Seit Contract v81 ist die Kurzform auch am Studiengang Pflicht
+       (§3.7, KAN-80): ohne sie geht nichts hinaus. */
+    await user.click(within(dialog).getByRole("button", { name: "Speichern" }))
+    expect(
+      await within(dialog).findByText(
+        i18n.t("validation.masterData.abbreviationRequired")
+      )
+    ).toBeInTheDocument()
+    expect(bodies).toHaveLength(0)
+
+    await user.type(within(dialog).getByLabelText("Kurzform"), "MI")
     await user.click(within(dialog).getByRole("button", { name: "Speichern" }))
 
     await waitFor(() =>
       expect(bodies).toEqual([
         {
           name: "Medieninformatik",
-          /* Die Kurzform darf am Studiengang fehlen (§3.7); leer heisst
-             „keine" und nicht die leere Zeichenkette. */
-          abbreviation: null,
+          abbreviation: "MI",
           facultyId: "f-4",
         },
       ])

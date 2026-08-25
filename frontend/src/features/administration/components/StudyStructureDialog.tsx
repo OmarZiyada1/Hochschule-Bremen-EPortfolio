@@ -37,9 +37,10 @@ const LABEL_CLASS =
  * Ebenen und fuer Anlegen wie Aendern.
  *
  * <p><strong>Warum ein Dialog und kein Feld in der Spalte.</strong> Der Frame
- * zeichnet je Spalte ein Textfeld mit Plus-Schaltflaeche. Fuer die Fakultaet
- * reicht das nicht: {@code abbreviation} ist unique und not null (§3.8), ein
- * Name allein ergaebe 400. Entschieden ist deshalb, dass jedes Plus dieses
+ * zeichnet je Spalte ein Textfeld mit Plus-Schaltflaeche. Das reicht auf
+ * keiner der drei Ebenen: {@code abbreviation} ist an der Fakultaet unique
+ * und not null (§3.8) und seit Contract v81 auch an Studiengang und Modul
+ * Pflicht (§3.7, §3.9); ein Name allein ergaebe 400. Entschieden ist deshalb, dass jedes Plus dieses
  * Formular oeffnet (Klaerungsrunde zu KAN-39); das Feld aus dem Frame bleibt
  * als Einstieg stehen und der getippte Name steht schon darin. Dasselbe
  * Formular traegt das Aendern, sonst gaebe es zwei Fassungen derselben drei
@@ -138,11 +139,9 @@ export function StudyStructureDialog({
 
   const rootError = form.formState.errors.root?.server?.message
 
-  const textField = (
-    name: "name" | "abbreviation",
-    label: string,
-    optional: boolean
-  ) => (
+  /* Ohne Optional-Zusatz: seit Contract v81 sind beide Felder auf allen drei
+     Ebenen Pflicht (KAN-80). */
+  const textField = (name: "name" | "abbreviation", label: string) => (
     <Controller
       name={name}
       control={form.control}
@@ -150,11 +149,6 @@ export function StudyStructureDialog({
         <Field data-invalid={fieldState.invalid} className="gap-1.5">
           <FieldLabel htmlFor={`${fieldId}-${name}`} className={LABEL_CLASS}>
             {label}
-            {optional && (
-              <span className="ml-1 lowercase">
-                {t("administration.masterData.optional")}
-              </span>
-            )}
           </FieldLabel>
           <Input
             {...field}
@@ -208,15 +202,10 @@ export function StudyStructureDialog({
             </Alert>
           )}
 
-          {textField(
-            "name",
-            t("administration.studyStructure.field.name"),
-            false
-          )}
+          {textField("name", t("administration.studyStructure.field.name"))}
           {textField(
             "abbreviation",
-            t("administration.studyStructure.field.abbreviation"),
-            kind !== "faculty"
+            t("administration.studyStructure.field.abbreviation")
           )}
 
           {parentField !== null && (

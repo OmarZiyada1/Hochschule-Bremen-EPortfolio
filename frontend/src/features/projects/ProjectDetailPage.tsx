@@ -14,7 +14,6 @@ import type { BlockResponse, ProjectDetailResponse } from "@/api/types"
 import { EmptyState } from "@/components/common/EmptyState"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { Alert, AlertTitle } from "@/components/ui/alert"
-import { BreadcrumbBar } from "@/components/common/BreadcrumbBar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -33,6 +32,7 @@ import { ProjectMetaSidebar } from "@/features/projects/components/ProjectMetaSi
 import { ReactionPanel } from "@/features/projects/components/ReactionPanel"
 import { useProjectDetail } from "@/features/projects/hooks/useProjectDetail"
 import { fullNameOf } from "@/lib/name"
+import { useBreadcrumbTitle } from "@/routes/useBreadcrumb"
 import { cn } from "@/lib/utils"
 
 /**
@@ -139,19 +139,16 @@ export default function ProjectDetailPage() {
   const statusHistory = data?.statusHistory ?? null
   const participates = statusHistory !== null
 
+  /* Der Projekttitel wird zur letzten Ebene des Brotkrumenpfades; das Band
+     selbst zeichnet der Anwendungsrahmen (KAN-80). Solange der Titel laedt,
+     steht dort der Platzhalter „Projekt". */
+  useBreadcrumbTitle(data?.title)
+
   return (
     <>
       {/* Die Ebene "Projekte" ersetzt den fruheren Knopf "Zurueck zu
           Projekte": ohne ihn braucht die Seite trotzdem einen Weg zurueck
           in die Liste, und im Pfad steht er ohnehin. */}
-      <BreadcrumbBar
-        items={[
-          { label: t("common.nav.home"), to: "/" },
-          { label: t("common.nav.projects"), to: "/projects" },
-          { label: data?.title ?? t("project.detail.breadcrumb") },
-        ]}
-      />
-
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
         {/*
          * 404 PROJECT_NOT_FOUND bleibt auf dieser Route stehen, statt auf die
@@ -267,7 +264,7 @@ export default function ProjectDetailPage() {
                 <article className="flex min-w-0 flex-col gap-6">
                   <div className="flex flex-col gap-3">
                     <div className="flex flex-wrap items-center gap-3">
-                      <p className="type-overline tracking-widest text-muted-foreground uppercase">
+                      <p className="type-overline text-muted-foreground">
                         {t("project.list.label")}
                       </p>
                       {/* Nur fuer Beteiligte: oeffentlich ist ohnehin alles

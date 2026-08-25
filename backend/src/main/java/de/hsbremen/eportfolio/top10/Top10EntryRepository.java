@@ -62,4 +62,28 @@ public interface Top10EntryRepository extends JpaRepository<Top10Entry, UUID> {
 	boolean existsByProjectId(UUID projectId);
 
 	boolean existsByPosition(int position);
+
+	/**
+	 * Je Fakultaet die Zahl der Projekte, die gerade einen Top-10-Platz belegen
+	 * (§6.1, Contract v82).
+	 *
+	 * <p>Grundlage des gestapelten Balkens im Admin-Dashboard: die Karte
+	 * „Projekte je Fakultaet" zeigt seit v82, wie viel des Bestands in der
+	 * Kuratierung steckt.
+	 *
+	 * <p><strong>Ohne Statusfilter, anders als {@link #findVisible}.</strong>
+	 * Gezaehlt wird der belegte Platz und nicht die oeffentliche Sichtbarkeit:
+	 * ein Eintrag, dessen Projekt gerade nicht {@code PUBLISHED} ist, belegt
+	 * seinen Platz weiterhin, und genau das soll die Zahl sagen. Dieselbe
+	 * Lesart wie in {@link #findAllByOrderByPositionAsc()}.
+	 *
+	 * <p>Projekte ohne Fakultaet fallen heraus, wie in
+	 * {@code ProjectRepository.countPerFaculty()}: eine Zeile mit
+	 * {@code facultyId = null} liesse sich keiner Fakultaet zuordnen.
+	 */
+	@Query("select new de.hsbremen.eportfolio.top10.Top10FacultyCount("
+			+ "e.project.faculty.id, count(e)) "
+			+ "from Top10Entry e where e.project.faculty is not null "
+			+ "group by e.project.faculty.id")
+	List<Top10FacultyCount> countPerFaculty();
 }
