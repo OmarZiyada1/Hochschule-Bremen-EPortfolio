@@ -105,12 +105,20 @@ export const apiPaths = {
    * Die Administrationsseite (§6.1, Abschnitt „Administration (ADMIN)",
    * KAN-38). Eingetragen mit ihren ersten Verwendern: dashboard mit der
    * Startansicht, bulkStatus mit dem Sammel-Statuswechsel der
-   * Projektverwaltung. Die uebrigen Admin-Pfade (Nutzerverwaltung,
-   * Stammdaten, Top-10) entstehen mit KAN-39 und KAN-40, nicht auf Vorrat.
+   * Projektverwaltung, die Nutzerverwaltung und die schreibenden
+   * Stammdaten-Pfade mit KAN-39. Die Top-10-Pfade entstehen mit KAN-40,
+   * nicht auf Vorrat.
    *
    * Bewusst ein eigener Schluessel und nicht unter projects: was hier steht,
    * ist ausschliesslich fuer ADMIN erreichbar, und die Filterkette behandelt
    * /api/admin/** als geschlossenen Bereich (§5).
+   *
+   * <p><strong>Die Stammdaten stehen hier nur schreibend.</strong> Gelesen
+   * werden Kategorie, Fakultaet, Studiengang, Modul und Semester weiterhin
+   * ueber die PUBLIC-Listen unter masterData; unter /api/admin gibt es zu
+   * ihnen ausschliesslich POST, PATCH und DELETE (§6.1). Beides nicht
+   * verwechseln: die oeffentlichen Listen sind vollstaendig und ohne
+   * Paginierung, die Nutzerverwaltung ist paginiert (§6.6).
    */
   admin: {
     dashboard: "/api/admin/dashboard",
@@ -121,6 +129,48 @@ export const apiPaths = {
      * Einzelaufrufen: nur so bleiben Teilerfolge unterscheidbar.
      */
     bulkStatus: "/api/admin/projects/status",
+    /*
+     * Nutzerverwaltung (§6.1, KAN-39). users traegt die paginierte Liste
+     * (GET, Filter role, status, q) und das Anlegen (POST, 201); user traegt
+     * das einzelne Konto (GET), die Aenderung (PATCH mit
+     * { firstName?, lastName?, role?, status? }) und die Deaktivierung
+     * (DELETE, 204, kein Hard-Delete).
+     */
+    users: "/api/admin/users",
+    user: (userId: string) => `/api/admin/users/${userId}`,
+    /*
+     * Neues Initialpasswort setzen (§6.1, §6.7, KAN-43): 200 mit
+     * { initialPassword }. Hier erzeugt der Server, anders als beim Anlegen,
+     * wo der Client das Passwort mitschickt (Contract v27).
+     */
+    userResetPassword: (userId: string) =>
+      `/api/admin/users/${userId}/reset-password`,
+    categories: "/api/admin/categories",
+    category: (categoryId: string) => `/api/admin/categories/${categoryId}`,
+    /*
+     * Zusammenfuehren (§6.1, seit Contract v32, KAN-46): Body
+     * { targetCategoryId }, Antwort 200 mit der Zielkategorie. Die Quelle
+     * steht im Pfad und ist danach geloescht.
+     */
+    categoryMerge: (categoryId: string) =>
+      `/api/admin/categories/${categoryId}/merge`,
+    faculties: "/api/admin/faculties",
+    faculty: (facultyId: string) => `/api/admin/faculties/${facultyId}`,
+    studyPrograms: "/api/admin/study-programs",
+    studyProgram: (studyProgramId: string) =>
+      `/api/admin/study-programs/${studyProgramId}`,
+    modules: "/api/admin/modules",
+    module: (moduleId: string) => `/api/admin/modules/${moduleId}`,
+    semesters: "/api/admin/semesters",
+    semester: (semesterId: string) => `/api/admin/semesters/${semesterId}`,
+    /*
+     * Reihenfolge aendern (§3.18, §6.1, KAN-65): Body { direction } mit UP
+     * oder DOWN, Antwort 200 mit der vollstaendigen neuen Reihenfolge. Am
+     * oberen und unteren Rand wirkungslos und trotzdem 200, weil der
+     * gewuenschte Zustand bereits besteht.
+     */
+    semesterMove: (semesterId: string) =>
+      `/api/admin/semesters/${semesterId}/move`,
   },
   /*
    * Ein einzelner Kommentar (§6.1, §2.4, KAN-37). Bewusst neben projects und
