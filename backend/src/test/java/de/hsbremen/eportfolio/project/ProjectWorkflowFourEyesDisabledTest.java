@@ -110,15 +110,26 @@ class ProjectWorkflowFourEyesDisabledTest {
 				.andExpect(jsonPath("$.publishedAt").exists());
 	}
 
+	@Test
+	@DisplayName("Abgeschaltet: auch ein Admin gibt sein eigenes Projekt frei (KAN-82)")
+	void adminMayApproveOwnProject() throws Exception {
+		User admin = userRepository.saveAndFlush(
+				TestUser.activeWithoutId(Role.ADMIN, "nicht-relevant"));
+		// Ohne Zuweisung, anders als beim Editor darueber: ein Admin steht nie
+		// in project_editor und entscheidet trotzdem (§5, Fussnote 11). Mit
+		// eingeschaltetem Prinzip endet derselbe Aufruf seit KAN-82 mit 403,
+		// siehe ProjectWorkflowIntegrationTest.
+		Project ownProject = projectRepository.saveAndFlush(
+				complete(admin, ProjectStatus.SUBMITTED, "Projekt des Admins"));
+
+		mockMvc.perform(as(admin, post("/api/projects/" + ownProject.getId() + "/approve")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("APPROVED"));
+	}
+
 	private Project ownProject(ProjectStatus status) {
-		Project project = TestProject.withoutId(editor, status, "Projekt der Redaktion");
-		project.setProjectType(ProjectType.REGULAR);
-		project.setFaculty(facultyRepository.findAllByOrderByNameAsc().getFirst());
-		project.setStudyProgram(studyProgramRepository.findAllByOrderByNameAsc().getFirst());
-		project.setDegree(Degree.MASTER);
-		project.setCategory(categoryRepository.findAllByOrderByNameAsc().getFirst());
-		project.setSemester(semesterRepository.findAllByOrderBySortOrderAsc().getFirst());
-		Project stored = projectRepository.saveAndFlush(project);
+		Project stored = projectRepository.saveAndFlush(
+				complete(editor, status, "Projekt der Redaktion"));
 		// Seit v42 entscheidet nur die zugewiesene Redaktion (§5 Fussnote 11);
 		// ohne die Zuweisung pruefte der Test die Zustaendigkeitsregel statt des
 		// Vier-Augen-Schalters. Die Zeile entsteht bewusst am Endpoint vorbei:
@@ -127,6 +138,21 @@ class ProjectWorkflowFourEyesDisabledTest {
 		// lassen.
 		stored.getEditors().add(editor);
 		return projectRepository.saveAndFlush(stored);
+	}
+
+	/**
+	 * Ein Projekt mit allen Pflichtfeldern des Einreichens (§3.3), noch ohne
+	 * Zuweisung: die haengt davon ab, wer entscheiden soll.
+	 */
+	private Project complete(User owner, ProjectStatus status, String title) {
+		Project project = TestProject.withoutId(owner, status, title);
+		project.setProjectType(ProjectType.REGULAR);
+		project.setFaculty(facultyRepository.findAllByOrderByNameAsc().getFirst());
+		project.setStudyProgram(studyProgramRepository.findAllByOrderByNameAsc().getFirst());
+		project.setDegree(Degree.MASTER);
+		project.setCategory(categoryRepository.findAllByOrderByNameAsc().getFirst());
+		project.setSemester(semesterRepository.findAllByOrderBySortOrderAsc().getFirst());
+		return project;
 	}
 
 	private MockHttpServletRequestBuilder as(User user, MockHttpServletRequestBuilder request) {

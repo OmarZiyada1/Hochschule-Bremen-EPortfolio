@@ -52,9 +52,11 @@ import { RequireRole } from "@/routes/RequireRole"
  * Ticket steht auf der Confluence-Seite "Template-Abdeckung".
  *
  * Die Zugriffsebenen (Contract 2.1, 5) liegen als elternlose
- * Wrapper-Routen im Baum: "angemeldet" fuer das eigene Profil, STUDENT
- * oder EDITOR fuer eigene Projekte (nicht ADMIN, Fussnote 10), EDITOR oder
- * ADMIN fuer die Redaktion, ADMIN fuer die Administrationsseite.
+ * Wrapper-Routen im Baum: "angemeldet" fuer das eigene Profil und fuer
+ * eigene Projekte, EDITOR oder ADMIN fuer die Redaktion, ADMIN fuer die
+ * Administrationsseite. Bis KAN-82 waren die eigenen Projekte auf STUDENT
+ * und EDITOR eingegrenzt; seither ist ADMIN die Obermenge und faehrt sein
+ * eigenes Portfolio wie jedes andere Konto.
  *
  * /projects/new steht bewusst vor /projects/:projectId, sonst wuerde "new"
  * als Projekt-ID gelesen.
@@ -82,7 +84,7 @@ export const routes: RouteObject[] = [
         element: <ProjectListPage />,
       },
       {
-        element: <RequireRole roles={["STUDENT", "EDITOR"]} />,
+        element: <RequireAuth />,
         children: [
           {
             /* Legt das Projekt mit einem vorlaeufigen Titel an und fuehrt
@@ -200,15 +202,19 @@ export const routes: RouteObject[] = [
     /* Der blockbasierte Editor (KAN-36) liegt ausserhalb des
        Anwendungsrahmens: die Schreibflaeche fuehrt mit dem EditorHeader
        eine eigene Kopfzeile samt Zurueck-Weg, NavBar und Footer entfallen
-       dort. Das EditorLayout steht ueber der Rollenschranke, damit auch
-       die AccessDeniedPage im Rahmen mit main-Landmarke erscheint. Die
-       Rollenschranke ist dieselbe wie an den Metadatenseiten; die
-       Ressourcenebene (Autor:in oder Projektmitglied) prueft der
-       Server (§5). */
+       dort. Das EditorLayout steht ueber der Zugriffsschranke und gibt der
+       Route damit ihre main-Landmarke, auch waehrend die Schranke noch
+       entscheidet. Bis KAN-82 trug dieselbe Reihenfolge zusaetzlich eine
+       sichtbare Zugriffsmeldung im Rahmen; die kann hier nicht mehr
+       entstehen, seit RequireAuth statt RequireRole steht und in beiden
+       Fehlfaellen umleitet. Die Schranke ist dieselbe wie an den
+       Metadatenseiten: seit KAN-82 genuegt die Anmeldung, weil jede Rolle
+       eigene Projekte fuehren kann. Die Ressourcenebene (Autor:in oder
+       Projektmitglied) prueft der Server (§5). */
     element: <EditorLayout />,
     children: [
       {
-        element: <RequireRole roles={["STUDENT", "EDITOR"]} />,
+        element: <RequireAuth />,
         children: [
           {
             path: "/projects/:projectId/editor",

@@ -214,22 +214,33 @@ public class ProjectPermissionService {
 	// ------------------------------------------------------------------
 
 	/**
-	 * Zeile „Projekt anlegen": STUDENT ✓, EDITOR ✓, ADMIN ✗ (Fussnote 10).
+	 * Zeile „Projekt anlegen": STUDENT ✓, EDITOR ✓, ADMIN ✓.
 	 *
-	 * <p><strong>Warum ein Admin-Konto aussen vor bleibt:</strong> bis v32 trug
-	 * die Zeile einen Haken fuer alle angemeldeten Rollen und widersprach damit
-	 * der Zeile „Projekt einreichen", die {@code ADMIN} seit jeher ein Kreuz
-	 * gibt. Ein vom Admin angelegtes Projekt haette {@code DRAFT} nie verlassen
-	 * koennen und waere dauerhaft liegen geblieben. Die Administrationsseite
-	 * verwaltet fremde Projekte, sie verfasst keine eigenen; wer beides tut, hat
-	 * dafuer ein Konto mit {@code STUDENT} oder {@code EDITOR}.
+	 * <p><strong>Bis v82 stand hier ein Kreuz fuer {@code ADMIN}</strong>, und
+	 * der Grund war stimmig: die Zeile „Projekt einreichen" gab {@code ADMIN}
+	 * ebenfalls eines, ein vom Admin angelegtes Projekt haette {@code DRAFT}
+	 * also nie verlassen koennen und waere liegen geblieben (Fussnote 10, seit
+	 * v32). Aufgehoben ist nicht dieser Gedanke, sondern seine Voraussetzung:
+	 * Einreichen und Zurueckziehen stehen einem Admin jetzt offen, siehe
+	 * {@link #mayTrigger}. Ohne diesen zweiten Schritt waere die Zeile hier
+	 * nicht zu oeffnen gewesen.
 	 *
-	 * <p>Unberuehrt bleibt die Zeile „Eigenes Portfolio bearbeiten": Name,
-	 * Biografie und Avatar pflegt auch ein Admin-Konto (§3.2). Gesperrt ist
-	 * allein das Anlegen neuer Projekte, nicht der Zugriff auf bestehende.
+	 * <p><strong>Anlass ist ein Konto, das beides ist</strong> (KAN-82). Wer mit
+	 * einer Mitarbeitendenadresse als {@code EDITOR} ein eigenes Portfolio
+	 * fuehrt und zusaetzlich mit der Administration beauftragt wird, kann dafuer
+	 * kein zweites Konto bekommen: {@code hsbEmail} ist eindeutig (§3.1). Die
+	 * Hochstufung ueber {@code PATCH /admin/users/{id}} haette dieser Person
+	 * Portfolio und Projektanlage genommen, ohne dass die Anwendung einen
+	 * Ausweg anbietet. {@code ADMIN} ist deshalb die Obermenge und keine
+	 * Parallelwelt: erlaubt ist, was mindestens eine der niedrigeren Ebenen
+	 * erlaubt. In Kauf genommen ist dabei, dass diese Rechte auch ein reines
+	 * Verwaltungskonto traegt, das sie nie benutzt.
+	 *
+	 * <p>Die Kehrseite steht in {@link #mayDecideEditorially}: wer eigene
+	 * Projekte hat, faellt auch als Admin unter das Vier-Augen-Prinzip.
 	 */
 	public boolean mayCreateProject(AuthenticatedUser user) {
-		return isLoggedIn(user) && !user.hasRole(Role.ADMIN);
+		return isLoggedIn(user);
 	}
 
 	/**
@@ -412,11 +423,14 @@ public class ProjectPermissionService {
 			return false;
 		}
 		return switch (transition) {
-			// „Projekt einreichen": STUDENT (✓), EDITOR (✓), ADMIN ✗. §4.1 und
+			// „Projekt einreichen": STUDENT (✓), EDITOR (✓), ADMIN (✓). §4.1 und
 			// §6.1 nennen beide ausdruecklich die Autor:in und nicht die
 			// Projektseite: Mitglieder duerfen mitschreiben, aber nicht
-			// einreichen. Der Haken bei ADMIN fehlt in der Matrix selbst dann,
-			// wenn er das Projekt angelegt hat.
+			// einreichen. Das gilt unveraendert; allein der Ausschluss von
+			// ADMIN ist mit KAN-82 gefallen, weil ein Admin jetzt selbst
+			// anlegen darf (mayCreateProject) und sein Entwurf sonst dauerhaft
+			// in DRAFT laege. Eingereicht wird auch hier nur das eigene
+			// Projekt: die Klammer um den Haken bleibt.
 			// Seit Contract v73 hat die Zeile ein Gegenstueck: „Projekt zurueck
 			// in die Pruefung geben" (§5), also REVISION nach SUBMITTED durch
 			// die zugewiesene Redaktion oder die Administration. Bis v72 konnte
@@ -435,7 +449,7 @@ public class ProjectPermissionService {
 			// heruntergestuft wird (§3.1.1). Ohne hasRole(EDITOR) kaeme diese
 			// Person durch die Rechtepruefung und scheiterte erst beim Lesen
 			// der Antwort, also nach dem geschriebenen Statuswechsel.
-			case SUBMIT -> (!user.hasRole(Role.ADMIN) && isAuthor(user, project))
+			case SUBMIT -> isAuthor(user, project)
 					|| (project.getStatus() == ProjectStatus.REVISION
 							&& (isAdmin(user)
 									|| (user.hasRole(Role.EDITOR)
@@ -444,8 +458,9 @@ public class ProjectPermissionService {
 			// „Projekt zurueckziehen" (§4.1, seit v50): dieselbe Spalte wie beim
 			// Einreichen, denn es ist dessen Gegenstueck. Wer einreichen darf,
 			// darf die eigene Einreichung zurueckholen, solange die Redaktion
-			// nicht entschieden hat; ADMIN bleibt aussen vor wie beim SUBMIT.
-			case WITHDRAW -> !user.hasRole(Role.ADMIN) && isAuthor(user, project);
+			// nicht entschieden hat; ADMIN geht seit KAN-82 denselben Weg wie
+			// beim SUBMIT.
+			case WITHDRAW -> isAuthor(user, project);
 
 			// „Projekt genehmigen" und „veroeffentlichen": EDITOR ✓¹, ADMIN ✓⁵.
 			case APPROVE, PUBLISH -> mayDecideEditorially(user, project);
@@ -520,11 +535,21 @@ public class ProjectPermissionService {
 	 * werden nicht zugewiesen und entscheiden deshalb unabhaengig von der
 	 * Join-Tabelle.
 	 *
-	 * <p><strong>Zur Reichweite des Vier-Augen-Prinzips:</strong> Fussnote ¹
-	 * der Matrix haengt ausschliesslich an den EDITOR-Zellen; die ADMIN-Spalte
-	 * traegt einen unmarkierten Haken. Deshalb greift die Sperre hier nur fuer
-	 * EDITOR. Ob ein Admin sein eigenes Projekt freigeben koennen soll, ist mit
-	 * den Pruefern zu klaeren (§7, offener Punkt 7).
+	 * <p><strong>Die Sperre gilt fuer beide Rollen</strong> (KAN-82, zuvor §7,
+	 * offener Punkt 7). Bis dahin kehrte {@code ADMIN} hier bedingungslos mit
+	 * {@code true} zurueck, weil Fussnote ¹ nur an den EDITOR-Zellen hing. Das
+	 * fiel nicht auf, solange ein Admin gar keine eigenen Projekte haben
+	 * konnte; seit {@link #mayCreateProject} ihm das erlaubt, faellt es auf.
+	 * Inhaltlich lautet das Prinzip „niemand gibt die eigene Arbeit frei", und
+	 * das ist eine Aussage ueber die Person und nicht ueber die Rolle.
+	 *
+	 * <p><strong>Was fuer {@code ADMIN} weiterhin nicht gilt</strong>, ist
+	 * Fussnote ¹¹: Ein Admin steht nie in {@code project_editor} und entscheidet
+	 * trotzdem. Nur diese eine Pruefung ueberspringt er, nicht die auf die
+	 * eigene Beteiligung. Wo dadurch niemand mehr freigeben koennte, etwa bei
+	 * einer einzigen Admin-Person ohne zugewiesene Redaktion, hilft dieselbe
+	 * Property, die schon fuer EDITOR den Ausweg bildet; ein Sonderweg im Code
+	 * entsteht dafuer nicht.
 	 *
 	 * <p><strong>Geprueft wird die gesamte Projektseite</strong> (Fussnote ¹ in
 	 * der Fassung von Contract v61, KAN-77), also {@link #isProjectSide} und
@@ -547,10 +572,12 @@ public class ProjectPermissionService {
 	 * Freigabe, sie gibt die Arbeit an die Projektseite zurueck.
 	 */
 	private boolean mayDecideEditorially(AuthenticatedUser user, Project project) {
-		if (user.hasRole(Role.ADMIN)) {
-			return true;
-		}
-		if (!user.hasRole(Role.EDITOR) || !isAssignedEditor(user, project)) {
+		// Erst die Zustaendigkeit (Fussnote 11), dann die Beteiligung
+		// (Fussnote 1). Bewusst in zwei Schritten und nicht als eine
+		// verneinte Bedingung: die Reihenfolge ist die Aussage.
+		boolean responsible = isAdmin(user)
+				|| (user.hasRole(Role.EDITOR) && isAssignedEditor(user, project));
+		if (!responsible) {
 			return false;
 		}
 		return !properties.fourEyesPrinciple() || !isProjectSide(user, project);

@@ -17,10 +17,14 @@ import { AccessDeniedPage } from "@/routes/AccessDeniedPage"
  *
  * Die erlaubten Rollen kommen als Prop, weil ein festes
  * RequireRole="STUDENT" an den Projektrouten Redakteur:innen aussperren
- * wuerde, die der Server durchlaesst (Contract 5, Fussnote 10). Ohne
- * Anmeldung geht es zum Login (die angefragte Route wird fuer die Rueckkehr
- * gemerkt, Klaerungsrunde KAN-33); mit falscher Rolle erscheint eine
- * sichtbare Meldung, keine leere Seite. Bei gesetztem
+ * wuerde, die der Server durchlaesst (Contract 5). Wo am Ende jede
+ * angemeldete Rolle durchkommt, steht deshalb RequireAuth und keine
+ * Rollenliste, die alle drei Werte aufzaehlt und damit nichts mehr pruefte
+ * (KAN-82).
+ *
+ * Ohne Anmeldung geht es zum Login (die angefragte Route wird fuer die
+ * Rueckkehr gemerkt, Klaerungsrunde KAN-33); mit falscher Rolle erscheint
+ * eine sichtbare Meldung, keine leere Seite. Bei gesetztem
  * passwordChangeRequired fuehrt die Route zur Passwortseite (Contract 6.7),
  * wie in RequireAuth. Verbindlich prueft der Server (§5).
  */

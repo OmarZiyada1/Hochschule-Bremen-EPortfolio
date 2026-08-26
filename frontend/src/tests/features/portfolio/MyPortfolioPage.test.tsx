@@ -76,8 +76,9 @@ const APPROVED_PROJECT = {
 
 /**
  * "My Portfolio" (KAN-34): eigene Projekte mit Status, der Statusfilter in
- * der URL, die Profilkarte aus zwei Quellen und die Rollengrenze aus §5
- * (Fussnote 10), nach der ein Admin-Konto hier keine Projekte fuehrt.
+ * der URL und die Profilkarte aus zwei Quellen. Eine Rollengrenze gibt es
+ * hier seit KAN-82 nicht mehr: jede angemeldete Rolle fuehrt eigene
+ * Projekte, auch ADMIN.
  */
 describe("MyPortfolioPage", () => {
   beforeEach(async () => {
@@ -182,14 +183,14 @@ describe("MyPortfolioPage", () => {
     expect(requestUrl!.searchParams.get("status")).toBe("PUBLISHED")
   })
 
-  it("zeigt einem Admin-Konto weder Projektliste noch den Knopf Neues Projekt", async () => {
-    /* §5, Fussnote 10 (serverseitig mit KAN-57): ADMIN legt keine eigenen
-       Projekte an. Das Profil pflegt das Konto trotzdem (§3.2). */
+  it("zeigt einem Admin-Konto dieselbe Seite wie jeder anderen Rolle", async () => {
+    /* Seit KAN-82 fuehrt auch ein Admin-Konto eigene Projekte (§5, Zeile
+       „Projekt anlegen"). Bis dahin sah es hier allein die Profilkarte. */
     server.use(
       ownPortfolioHandler({ biography: "Verwaltet das Portal." }),
-      http.get("*/api/projects", () => {
-        throw new Error("Ein Admin-Konto fragt hier keine Projekte ab.")
-      })
+      http.get("*/api/projects", () =>
+        HttpResponse.json(projectsPage([DRAFT_PROJECT]))
+      )
     )
     signInAs("ADMIN")
     renderWithProviders(<AppUnderTest />, "/my-portfolio")
@@ -198,12 +199,13 @@ describe("MyPortfolioPage", () => {
     /* Die Button-Primitive rendert ein Navigationsziel als a mit
        role="button" (Base UI, nativeButton={false}); abgefragt wird
        deshalb die Rolle button, wie schon in KAN-31. */
+    expect(screen.getByRole("button", { name: "Neues Projekt" })).toBeVisible()
     expect(
-      screen.queryByRole("button", { name: "Neues Projekt" })
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("button", { name: "Entwurf" })
-    ).not.toBeInTheDocument()
+      await screen.findByRole("heading", {
+        level: 2,
+        name: DRAFT_PROJECT.title,
+      })
+    ).toBeVisible()
     expect(
       screen.getByRole("button", { name: "Profil bearbeiten" })
     ).toBeVisible()

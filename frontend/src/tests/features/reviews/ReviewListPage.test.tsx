@@ -100,6 +100,30 @@ describe("ReviewListPage", () => {
     }
   })
 
+  it("zeigt einem Admin-Konto ohne Zuweisung den Leerzustand statt eines Fehlers", async () => {
+    /* Seit KAN-82 fuehrt die Leiste den Bereich auch fuer ADMIN. Die Liste
+       bleibt dabei zuweisungsbasiert: editor=me haengt an project_editor und
+       nicht an der Rolle (§6.1). Ein Admin-Konto, dem nie ein Projekt
+       zugewiesen wurde, landet deshalb im Leerzustand, und der sagt genau
+       das. Ein hochgestuftes Redaktionskonto behaelt seine Zuweisungen und
+       sieht sie hier weiter. */
+    signInAs("ADMIN")
+    server.use(currentUserHandler({ role: "ADMIN" }), ...baseHandlers())
+
+    renderWithProviders(<ReviewListPage />, "/reviews")
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Keine zugewiesenen Projekte",
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "Sobald Ihnen ein Projekt als Redaktion zugewiesen wird, erscheint es hier."
+      )
+    ).toBeInTheDocument()
+  })
+
   it("zeigt Studiengang, Semester und Fach in der Zeile", async () => {
     server.use(...baseHandlers({ projects: [ASSIGNED] }))
 

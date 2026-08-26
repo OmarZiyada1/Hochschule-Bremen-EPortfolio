@@ -36,9 +36,11 @@ export function usePublicPortfolio(userId: string) {
 /**
  * Die eigenen Projekte, gefiltert ueber author und optional status.
  *
- * enabled bleibt der Seite ueberlassen: unter "My Portfolio" fragt ein
- * Admin-Konto die Liste gar nicht erst ab, weil §5 (Fussnote 10) ihm keine
- * eigenen Projekte zugesteht und das Template dort keine Liste fuehrt.
+ * enabled bleibt der Seite ueberlassen: unter "My Portfolio" wartet die
+ * Abfrage darauf, dass die eigene ID aus dem Auth-Kontext steht. Bis KAN-82
+ * hing daneben eine Rollenbedingung, weil §5 einem Admin-Konto keine eigenen
+ * Projekte zugestand; seit ADMIN die Obermenge ist, fuehrt jede angemeldete
+ * Rolle eine eigene Liste.
  */
 export function useOwnProjects(params: OwnProjectListParams, enabled = true) {
   return useQuery({ ...projectQueries.mine(params), enabled })

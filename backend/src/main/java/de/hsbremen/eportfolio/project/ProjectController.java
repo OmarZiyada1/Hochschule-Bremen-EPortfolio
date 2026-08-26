@@ -218,8 +218,12 @@ public class ProjectController {
 			+ "dieselbe Person steht in members und in editorIds: zugewiesene Redaktion und "
 			+ "Projektseite schliessen einander aus (§5, Fussnote 3).")
 	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
-	@ApiResponse(responseCode = "403", description = "Ein Admin-Konto darf grundsaetzlich nicht "
-			+ "anlegen (§5, Fussnote 10), oder angemeldet, aber sonst ohne Recht zum Anlegen.")
+	@ApiResponse(responseCode = "403", description = "Angemeldet, aber ohne Recht zum Anlegen. "
+			+ "Seit KAN-82 legt jede Rolle an, auch ADMIN (§5, Zeile Projekt anlegen), womit "
+			+ "praktisch nur noch die erzwungene Passwortaenderung hierher fuehrt (§6.7). Die "
+			+ "Rechtepruefung im ProjectWriteService bleibt als Rueckfallebene stehen. Ein nicht "
+			+ "aktives Konto endet dagegen mit 401 ACCOUNT_NOT_ACTIVE und erreicht diesen "
+			+ "Endpoint nie (§2.9).")
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	public ProjectDetailResponse create(

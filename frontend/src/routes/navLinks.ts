@@ -11,20 +11,24 @@ import type { NavBarLink } from "@/components/layout/NavBar"
  * Bereich (Mein Portfolio, Meine Reviews, Administration). "Neues Projekt"
  * ist kein Leisteneintrag, sondern liegt im Nutzermenue (userMenuFor).
  *
- * Sichtbarkeit ist Bequemlichkeit, keine Sicherheitsmassnahme (Contract 5):
- * ein Admin-Konto sieht kein "Neues Projekt", weil POST /projects ihm mit
- * 403 antwortet (Fussnote 10). Redakteur:innen sehen beides, Reviews und
- * den eigenen Bereich, denn die Ebenen schliessen einander nicht aus.
+ * Sichtbarkeit ist Bequemlichkeit, keine Sicherheitsmassnahme (Contract 5);
+ * verbindlich prueft der Server. Die Ebenen schliessen einander nicht aus:
+ * seit KAN-82 ist ADMIN die Obermenge und traegt deshalb alles, was ein
+ * Konto mit EDITOR traegt, dazu die Administration. Ein Konto, das
+ * redaktionell arbeitet und zusaetzlich verwaltet, verliert damit beim
+ * Rollenwechsel weder sein Portfolio noch die Reviews. Der Preis ist
+ * bewusst in Kauf genommen: auch ein reines Verwaltungskonto sieht die
+ * beiden Eintraege, ohne sie je zu benutzen.
  */
 export function navLinksFor(role: Role | null): NavBarLink[] {
   const links: NavBarLink[] = [
     { key: "home", href: "/" },
     { key: "projects", href: "/projects" },
   ]
-  if (role === "EDITOR") {
+  if (role === "EDITOR" || role === "ADMIN") {
     links.push({ key: "reviews", href: "/reviews" })
   }
-  if (role === "STUDENT" || role === "EDITOR") {
+  if (role !== null) {
     links.push({ key: "myPortfolio", href: "/my-portfolio" })
   }
   if (role === "ADMIN") {
@@ -40,6 +44,9 @@ export function navLinksFor(role: Role | null): NavBarLink[] {
  *
  * "Mein Portfolio" ersetzt den frueheren Eintrag "Profil": das Template
  * kennt keinen eigenen Profil-Punkt, das Profil wird im Portfolio gepflegt.
+ * Das ist zugleich der einzige Weg, auf dem ein Konto seinen eigenen Namen
+ * und Avatar pflegt (§3.2), und er steht seit KAN-82 auch einem
+ * Admin-Konto offen.
  */
 export function userMenuFor(role: Role | null): NavBarLink[] {
   switch (role) {
@@ -55,7 +62,12 @@ export function userMenuFor(role: Role | null): NavBarLink[] {
         { key: "newProject", href: "/projects/new" },
       ]
     case "ADMIN":
-      return [{ key: "administration", href: "/administration" }]
+      return [
+        { key: "reviews", href: "/reviews" },
+        { key: "myPortfolio", href: "/my-portfolio" },
+        { key: "newProject", href: "/projects/new" },
+        { key: "administration", href: "/administration" },
+      ]
     default:
       return []
   }

@@ -736,7 +736,6 @@
       "newProject": "Neues Projekt",
       "filterLabel": "Nach Status filtern",
       "editProfile": "Profil bearbeiten",
-      "noProjectsForRole": "Dieses Konto legt keine eigenen Projekte an. Sie können hier Ihr Profil pflegen.",
       "empty": {
         "title": "Noch kein Projekt",
         "description": "Legen Sie Ihr erstes Projekt an; es erscheint dann hier mit seinem Status."
