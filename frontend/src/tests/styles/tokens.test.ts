@@ -75,6 +75,11 @@ const semanticLight = declarationsOf(semanticLightBlock)
 const semanticDark = declarationsOf(blocksOf(tokensCss, ".dark")[0])
 const themeInline = declarationsOf(blocksOf(tokensCss, "@theme inline")[0])
 
+/* Die dritte Belegung derselben Rollen: der Ausdruck (KAN-41). Sie steht
+   hier und nicht in project-content.css, weil nur die Tokenschicht
+   Primitives lesen darf. */
+const printBlock = blocksOf(tokensCss, "@media print")[0]
+
 /* Die Radien stehen im Block "@theme static" und nicht unter :root:
    Tailwinds Namensraum --radius-* und die Namen der Figma-Collection fallen
    zusammen, ein Alias waere ein Verweis auf sich selbst. "static" sorgt
@@ -259,6 +264,52 @@ describe("Semantic-Rollen (Foundation, Abschnitt 3)", () => {
     /* "Oeffentlich" ist keine Rolle, sondern der Zustand "nicht
        angemeldet": Contract 2.1 kennt genau drei Werte. */
     expect(semanticLight.has("role-public-bg")).toBe(false)
+  })
+
+  it("belegt dieselben Rollen fuer den Ausdruck hell (KAN-41)", () => {
+    /*
+     * Der Ausdruck ist hell, unabhaengig vom eingestellten Modus: eine
+     * dunkle Flaeche auf Papier verbraucht Farbe und ist schlechter
+     * lesbar. Das entscheidet die Tokenschicht und nicht die
+     * Blockdarstellung, denn nur hier duerfen Primitives gelesen werden.
+     *
+     * Geprueft wird dreierlei: dass es die Belegung gibt, dass sie
+     * ausschliesslich auf Primitives zeigt, und dass jede Rolle darin auch
+     * im dunklen Modus vorkommt. Die letzte Bedingung ist der Zweck der
+     * Uebung: eine Rolle, die dunkel gar nicht umbelegt wird, braucht im
+     * Druck nichts, und eine, die dort steht, aber im Druck fehlt, bliebe
+     * auf dem Blatt dunkel.
+     */
+    const printRoles = declarationsOf(blocksOf(printBlock, ":root.dark")[0])
+
+    expect(printRoles.size).toBeGreaterThan(20)
+
+    for (const [name, value] of printRoles) {
+      expect(value, `--${name} zeigt nicht auf ein Primitive`).toMatch(
+        /^var\(--[a-z0-9-]+\)$/
+      )
+      expect(
+        semanticLight.get(name),
+        `--${name} weicht im Druck von der hellen Belegung ab`
+      ).toBe(value)
+      expect(
+        semanticDark.has(name),
+        `--${name} wird im dunklen Modus gar nicht umbelegt`
+      ).toBe(true)
+    }
+
+    /* Stichproben ueber die Gruppen: Flaeche, Schrift, Akzent und beide
+       Inhaltsfarbgruppen aus Contract 2.5. */
+    for (const name of [
+      "background",
+      "foreground",
+      "border",
+      "primary",
+      "content-text-blue",
+      "content-highlight-blue",
+    ]) {
+      expect(printRoles.has(name), `--${name} fehlt im Druck`).toBe(true)
+    }
   })
 })
 

@@ -383,6 +383,73 @@ function renderTableRow(
 }
 
 /* ------------------------------------------------------------------ */
+/* Nur im Ausdruck                                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Der benannte Platzhalter fuer alles, was auf Papier nicht ankommt
+ * (KAN-41).
+ *
+ * <p><strong>Warum er im DOM steht und nicht erst beim Drucken
+ * entsteht.</strong> Es gibt genau einen Renderer, und der Ausdruck ist
+ * dieselbe Ansicht mit anderen Regeln. Der Hinweis haengt deshalb am selben
+ * Knoten wie das Medium und traegt {@code data-print="only"}; am Bildschirm
+ * nimmt ihn {@code project-content.css} mit {@code display: none} heraus,
+ * im Druck tritt er an die Stelle des Mediums. Entstuende er erst beim
+ * Drucken, gaebe es eine zweite Blockdarstellung, und die liefe beim
+ * naechsten Blocktyp auseinander.
+ *
+ * <p><strong>Die Quellangabe ist der eigentliche Zweck.</strong> Ein
+ * {@code iframe} erscheint im Ausdruck gar nicht, ein Medienstrom hat kein
+ * Papieraequivalent: ohne die Adresse waere der Inhalt danach nicht mehr
+ * auffindbar. Eine {@code blob:}-Adresse bleibt weg, denn sie gilt nur in
+ * der Sitzung, die sie erzeugt hat (die Vorschau eines Entwurfs holt ihre
+ * Dateien mit Token, siehe {@code useProjectFileUrls}).
+ */
+function printNote(
+  context: RenderContext,
+  text: string,
+  source?: string
+): ReactNode {
+  const printable = printableUrl(source)
+  return (
+    <>
+      <p data-print="only">{text}</p>
+      {printable !== undefined ? (
+        <p data-print="only">
+          {context.t("projectContent.print.source", { url: printable })}
+        </p>
+      ) : null}
+    </>
+  )
+}
+
+/**
+ * Die Adresse, wie sie auf Papier taugt: vollstaendig, oder gar nicht.
+ *
+ * <p><strong>Ein Pfad allein hilft niemandem.</strong> Ohne gesetztes
+ * {@code VITE_API_BASE_URL} laufen die Requests gegen den eigenen Ursprung,
+ * und {@code resolveApiUrl} liefert dann {@code /api/files/8f3c…}. Auf dem
+ * Blatt steht damit eine Adresse ohne Host, die sich nicht abtippen laesst,
+ * und genau dafuer steht die Zeile da. Ergaenzt wird deshalb der Ursprung
+ * der Seite, von der gedruckt wird.
+ *
+ * <p>Eine {@code blob:}-Adresse bleibt weg: sie gilt nur in der Sitzung,
+ * die sie erzeugt hat. Und was sich nicht als Adresse lesen laesst, bleibt
+ * ebenfalls weg, statt als Bruchstueck auf dem Papier zu landen.
+ */
+function printableUrl(source: string | undefined): string | undefined {
+  if (source === undefined || source.startsWith("blob:")) {
+    return undefined
+  }
+  try {
+    return new URL(source, window.location.origin).href
+  } catch {
+    return undefined
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Medien                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -493,17 +560,15 @@ function renderVideo(
   const caption = attrs.caption
 
   if (attrs.fileId !== undefined) {
+    const fileUrl = context.resolveFileUrl(attrs.fileId)
     return (
       <MediaFigure caption={caption} captionId={captionId}>
-        <MediaSlot
-          key={context.resolveFileUrl(attrs.fileId)}
-          state={stateOf(context, attrs.fileId)}
-        >
+        <MediaSlot key={fileUrl} state={stateOf(context, attrs.fileId)}>
           {(fail) => (
             <video
               controls
               preload="metadata"
-              src={context.resolveFileUrl(attrs.fileId as string)}
+              src={fileUrl}
               onError={fail}
               {...namedBy(
                 captionId,
@@ -513,10 +578,12 @@ function renderVideo(
             />
           )}
         </MediaSlot>
+        {printNote(context, context.t("projectContent.print.video"), fileUrl)}
       </MediaFigure>
     )
   }
 
+  const embedUrl = embedUrlFor(attrs.provider, attrs.videoId, attrs.hash)
   return (
     <MediaFigure caption={caption} captionId={captionId}>
       <iframe
@@ -524,10 +591,17 @@ function renderVideo(
           provider: context.t(`projectContent.provider.${attrs.provider}`),
         })}
         aria-describedby={caption.trim().length > 0 ? captionId : undefined}
-        src={embedUrlFor(attrs.provider, attrs.videoId, attrs.hash)}
+        src={embedUrl}
         loading="lazy"
         allowFullScreen
       />
+      {printNote(
+        context,
+        context.t("projectContent.print.videoEmbed", {
+          provider: context.t(`projectContent.provider.${attrs.provider}`),
+        }),
+        embedUrl
+      )}
     </MediaFigure>
   )
 }
@@ -539,17 +613,15 @@ function renderAudio(
 ): ReactNode {
   const captionId = `${context.idPrefix}-${nodeKey}-caption`
   const caption = node.attrs.caption
+  const fileUrl = context.resolveFileUrl(node.attrs.fileId)
   return (
     <MediaFigure caption={caption} captionId={captionId}>
-      <MediaSlot
-        key={context.resolveFileUrl(node.attrs.fileId)}
-        state={stateOf(context, node.attrs.fileId)}
-      >
+      <MediaSlot key={fileUrl} state={stateOf(context, node.attrs.fileId)}>
         {(fail) => (
           <audio
             controls
             preload="metadata"
-            src={context.resolveFileUrl(node.attrs.fileId)}
+            src={fileUrl}
             onError={fail}
             {...namedBy(
               captionId,
@@ -559,6 +631,7 @@ function renderAudio(
           />
         )}
       </MediaSlot>
+      {printNote(context, context.t("projectContent.print.audio"), fileUrl)}
     </MediaFigure>
   )
 }
@@ -584,29 +657,35 @@ function renderDocument(
   const formattedSize = formatFileSize(size, context.locale)
   const href = context.resolveFileUrl(fileId)
   return (
-    <p data-block="document">
-      {/* Ein Link hat kein onError: ob die Datei da ist, merkt der Browser
+    <>
+      <p data-block="document">
+        {/* Ein Link hat kein onError: ob die Datei da ist, merkt der Browser
           erst nach dem Klick. Beim angemeldeten Abruf weiss die Seite es
           vorher, und dann steht hier die Meldung statt eines Links, der in
           einen 403 fuehrt. */}
-      <MediaSlot state={stateOf(context, fileId)}>
-        {() => (
-          <>
-            <a
-              href={href}
-              download={href.startsWith("blob:") ? fileName : undefined}
-              aria-label={context.t("projectContent.document.accessibleName", {
-                fileName,
-                size: formattedSize,
-              })}
-            >
-              {fileName}
-            </a>{" "}
-            <span aria-hidden="true">{formattedSize}</span>
-          </>
-        )}
-      </MediaSlot>
-    </p>
+        <MediaSlot state={stateOf(context, fileId)}>
+          {() => (
+            <>
+              <a
+                href={href}
+                download={href.startsWith("blob:") ? fileName : undefined}
+                aria-label={context.t(
+                  "projectContent.document.accessibleName",
+                  { fileName, size: formattedSize }
+                )}
+              >
+                {fileName}
+              </a>{" "}
+              <span aria-hidden="true">{formattedSize}</span>
+            </>
+          )}
+        </MediaSlot>
+      </p>
+      {/* Auf Papier ist ein Link tot: Dateityp und Adresse stehen deshalb
+          als Text darunter. Der Dateiname und die Groesse stehen schon oben
+          (Ticket KAN-41, Abschnitt 3). */}
+      {printNote(context, context.t("projectContent.print.documentType"), href)}
+    </>
   )
 }
 
@@ -637,14 +716,23 @@ export function formatFileSize(bytes: number, locale: string): string {
 function renderEmbed(node: EmbedBlockNode, context: RenderContext): ReactNode {
   const { provider, embedUrl, height } = node.attrs
   return (
-    <iframe
-      title={context.t("projectContent.embed.title", {
-        provider: context.t(`projectContent.provider.${provider}`),
-      })}
-      src={embedUrl}
-      height={displayHeight(height)}
-      loading="lazy"
-    />
+    <>
+      <iframe
+        title={context.t("projectContent.embed.title", {
+          provider: context.t(`projectContent.provider.${provider}`),
+        })}
+        src={embedUrl}
+        height={displayHeight(height)}
+        loading="lazy"
+      />
+      {printNote(
+        context,
+        context.t("projectContent.print.embed", {
+          provider: context.t(`projectContent.provider.${provider}`),
+        }),
+        embedUrl
+      )}
+    </>
   )
 }
 

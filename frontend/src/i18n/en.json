@@ -1117,6 +1117,21 @@
       "withdraw": "Withdraw",
       "menu": "More actions"
     },
+    "print": {
+      "actionLabel": "Print as PDF",
+      "author": "Author",
+      "studyProgram": "Study programme",
+      "semester": "Semester",
+      "status": "Status",
+      "printedAt": "Printed on",
+      "abstract": "Abstract",
+      "video": "Video, cannot be played on paper.",
+      "videoEmbed": "Embedded video from {{provider}}, cannot be played on paper.",
+      "audio": "Audio recording, cannot be played on paper.",
+      "embed": "Embedded content from {{provider}}, cannot be shown on paper.",
+      "documentType": "PDF",
+      "source": "Source: {{url}}"
+    },
     "autosave": {
       "saving": "Saving",
       "saved": "Saved",

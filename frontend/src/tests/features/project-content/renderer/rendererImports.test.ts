@@ -248,3 +248,45 @@ describe("Review-Modus ohne Tiptap", () => {
     }
   })
 })
+
+describe("Druckbereich ohne Tiptap", () => {
+  /*
+   * Der dritte Einstieg in den Lesepfad seit KAN-41. Der Druckbereich haengt
+   * an der oeffentlichen Detailseite und liegt damit im Hauptbuendel: zoege
+   * er ueber eine Zwischendatei etwas aus @tiptap/*, kaeme das
+   * ProseMirror-Buendel dorthin zurueck. Dass er zugleich im Editor steht,
+   * aendert daran nichts, denn der Editor liegt hinter einem eigenen Chunk.
+   *
+   * <p>Ohne printableBlocks.ts: die Datei uebersetzt das Dokument der
+   * Schreibflaeche und wird allein vom Editor gebraucht, sie liegt also
+   * nicht im Buendel der Detailseite.
+   */
+  const closure = importClosure(
+    [
+      join(srcDir, "features", "project-content", "print", "ProjectPrintView"),
+      join(srcDir, "features", "project-content", "print", "usePrintProject"),
+    ].map((base) => (existsSync(`${base}.tsx`) ? `${base}.tsx` : `${base}.ts`)),
+    true
+  )
+
+  it("umfasst den Druckbereich und seine Zulieferer", () => {
+    expect(closure.size).toBeGreaterThanOrEqual(8)
+    expect(
+      [...closure.keys()].some((file) => file.endsWith("ProjectPrintView.tsx"))
+    ).toBe(true)
+    expect(
+      [...closure.keys()].some((file) => file.endsWith("ProjectContent.tsx"))
+    ).toBe(true)
+  })
+
+  it("importiert in keinem Modul des Baums aus @tiptap oder prosemirror", () => {
+    for (const [file, specifiers] of closure) {
+      for (const specifier of specifiers) {
+        expect(
+          FORBIDDEN_IN_READ_PATH.test(specifier),
+          `${file} importiert ${specifier}`
+        ).toBe(false)
+      }
+    }
+  })
+})

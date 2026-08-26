@@ -36,12 +36,14 @@ function Harness({
   mayWrite = true,
   onPreview = () => undefined,
   onShowInfo = () => undefined,
+  onPrint = () => undefined,
   mayRunWorkflow = false,
   autosaveState = "idle",
 }: {
   mayWrite?: boolean
   onPreview?: () => void
   onShowInfo?: () => void
+  onPrint?: () => void
   mayRunWorkflow?: boolean
   autosaveState?: AutosaveState
 }) {
@@ -72,6 +74,8 @@ function Harness({
         onWithdraw={() => undefined}
         onBack={() => undefined}
         onPreview={onPreview}
+        onPrint={onPrint}
+        printing={false}
         onShowInfo={onShowInfo}
       />
       <EditorContent editor={editor} />
@@ -216,5 +220,25 @@ describe("EditorHeader", () => {
       await screen.findByRole("button", { name: "Vorschau" }, WAIT)
     )
     expect(onPreview).toHaveBeenCalledTimes(1)
+  })
+  it("loest den Ausdruck aus, ohne Schreibrecht ebenso", async () => {
+    /*
+     * Die Aktion „PDF" (KAN-41) steht am Ende der Werkzeugzeile, hinter der
+     * Formatierung. Sie haengt nicht am Schreibrecht: gedruckt werden darf,
+     * was gelesen werden darf, und ein eingereichter Beitrag ist read-only,
+     * aber nicht ungedruckt.
+     */
+    const onPrint = vi.fn()
+    renderWithProviders(<Harness mayWrite={false} onPrint={onPrint} />)
+
+    const print = await screen.findByRole(
+      "button",
+      { name: "Als PDF drucken" },
+      WAIT
+    )
+    expect(print).not.toBeDisabled()
+
+    await userEvent.click(print)
+    expect(onPrint).toHaveBeenCalledTimes(1)
   })
 })
