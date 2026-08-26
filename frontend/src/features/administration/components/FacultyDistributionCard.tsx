@@ -55,6 +55,16 @@ import { CHART_MUTED_COLOR, chartColor } from "@/lib/chartColors"
  * Differenzen werden bei null abgeschnitten, damit ein ohne Nominierung
  * aufgenommenes Projekt keinen negativen Abschnitt erzeugt.
  */
+/**
+ * Breite der Trennlinie zwischen zwei Abschnitten eines Stapels, in Pixeln.
+ *
+ * <p>Zwei, weil die Kontur je Abschnitt zur Haelfte nach innen und zur
+ * Haelfte nach aussen zeichnet: sichtbar bleibt an der Naht ein Spalt von
+ * zwei Pixeln, und der Balken selbst verliert an seinen Aussenkanten nur
+ * einen. Mehr trennte auch die duennsten Abschnitte weg.
+ */
+const SEGMENT_GAP = 2
+
 export function FacultyDistributionCard({
   data,
   isPending,
@@ -170,21 +180,42 @@ export function FacultyDistributionCard({
                   {/* Ein Stapel, drei Abschnitte: gleiche stackId, und nur
                       der letzte traegt die Gesamtzahl am Ende des Balkens.
                       Gerundet wird allein die rechte Kante, ein Radius je
-                      Abschnitt zerlegte den Stapel optisch in drei Balken. */}
+                      Abschnitt zerlegte den Stapel optisch in drei Balken.
+
+                      Zwischen den Abschnitten steht eine Luecke wie zwischen
+                      den Segmenten von Ring und Kuchen (KAN-80). Sie entsteht
+                      hier nicht ueber einen Winkel, den es an einem Balken
+                      nicht gibt, sondern ueber eine Kontur in der Farbe der
+                      Karte: der Grund scheint durch, und benachbarte Toene
+                      laufen nicht mehr ineinander, sobald ein Abschnitt
+                      schmal wird.
+
+                      var(--card) und nicht var(--color-card): die erste ist
+                      eine gewoehnliche Deklaration unter :root und steht
+                      sicher im gebauten CSS, die zweite eine Bindung im Block
+                      @theme inline, die Tailwind bei fehlender Verwendung als
+                      Klasse herausnimmt (Befund aus KAN-80 an der
+                      Diagrammpalette). */}
                   <Bar
                     dataKey="inTop10"
                     stackId="faculty"
                     fill="var(--color-inTop10)"
+                    stroke="var(--card)"
+                    strokeWidth={SEGMENT_GAP}
                   />
                   <Bar
                     dataKey="acceptedOnly"
                     stackId="faculty"
                     fill="var(--color-acceptedOnly)"
+                    stroke="var(--card)"
+                    strokeWidth={SEGMENT_GAP}
                   />
                   <Bar
                     dataKey="rest"
                     stackId="faculty"
                     fill="var(--color-rest)"
+                    stroke="var(--card)"
+                    strokeWidth={SEGMENT_GAP}
                     radius={[0, 4, 4, 0]}
                   >
                     <LabelList

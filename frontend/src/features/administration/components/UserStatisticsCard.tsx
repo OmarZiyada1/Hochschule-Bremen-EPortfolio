@@ -40,16 +40,16 @@ const USER_STATUSES = (Object.keys(STATUS_ORDER) as UserStatus[]).sort(
  * ihrer Position: eine vierte Rolle bekaeme ohne Codeaenderung die naechste
  * Farbe.
  *
- * Der Kontostatus hat eine: „aktiv" ist gruen, „deaktiviert" rot. Die
- * Zuordnung bleibt deshalb ausgeschrieben, nimmt die Toene aber aus
- * derselben Palette und damit von derselben Stufe. Record ueber den Enum-Typ
- * und ohne Standardzweig, wie in UserStatusBadge: ein vierter Wert bricht
- * den Typecheck, statt still farblos zu bleiben.
+ * Der Kontostatus hat eine: er laeuft von Minze ueber Gelb nach Orange, also
+ * von „aktiv" ueber „Registrierung offen" nach „deaktiviert". Die Zuordnung
+ * bleibt deshalb ausgeschrieben, nimmt die Toene aber aus derselben Palette.
+ * Record ueber den Enum-Typ und ohne Standardzweig, wie in UserStatusBadge:
+ * ein vierter Wert bricht den Typecheck, statt still farblos zu bleiben.
  */
 const STATUS_COLORS: Record<UserStatus, string> = {
   ACTIVE: chartColor(1),
   REGISTRATION_PENDING: chartColor(2),
-  DEACTIVATED: chartColor(6),
+  DEACTIVATED: chartColor(3),
 }
 
 /**
@@ -224,6 +224,29 @@ export function UserStatisticsCard({
   )
 }
 
+/** Winkel zwischen zwei Segmenten, in Grad. */
+const SLICE_GAP_DEGREES = 3
+
+/** Abrundung der Segmentenden im Ring, in Pixeln. */
+const SLICE_CORNER_RADIUS = 6
+
+/*
+ * Die beiden Zeilen in der Mitte des Rings, gemessen in Pixeln von seinem
+ * Mittelpunkt aus (Vorgabe zu KAN-80: die Zahl sass ein paar Pixel zu tief).
+ *
+ * <p><strong>Warum das gerechnet wird und nicht geschaetzt.</strong> Die Zahl
+ * steht in text-2xl, also 24px, die Beschriftung in text-xs, also 12px. Damit
+ * beide zusammen mittig sitzen, muss die Oberkante der Zahl so weit ueber dem
+ * Mittelpunkt liegen wie die Unterkante der Beschriftung darunter. Mit 2px
+ * Luft dazwischen ist der Block 24 + 2 + 12 = 38px hoch, reicht also von
+ * minus 19 bis plus 19; die Mitte der Zahl liegt dann bei minus 7, die der
+ * Beschriftung bei plus 13. Ein Pixel mehr nach oben, weil Ziffern bis zur
+ * Versalhoehe reichen und die Beschriftung Unterlaengen hat: optisch wiegt
+ * die untere Zeile leichter, als ihr Kasten sagt.
+ */
+const CENTER_VALUE_OFFSET = -8
+const CENTER_LABEL_OFFSET = 12
+
 /**
  * Ein Ring oder ein Kuchen ueber eine Aufschluesselung, mit Legende darunter.
  *
@@ -231,9 +254,25 @@ export function UserStatisticsCard({
  * Mitte, ohne ein voller Kuchen. Ein Loch ohne Inhalt waere nur ein Loch, und
  * eine Zahl im Kuchen laege auf den Segmenten.
  *
- * <p><strong>Ein Kuchen ohne Daten wird nicht gezeichnet.</strong> Stehen alle
- * Werte auf 0, hat recharts keinen Winkel zu verteilen und malt einen leeren
- * Kreis; die Stelle bekommt stattdessen einen Satz. Das ist kein
+ * <p><strong>Zwischen den Segmenten steht eine Luecke</strong> (Vorgabe zu
+ * KAN-80). Bis dahin stiessen sie stumpf aneinander, und zwei benachbarte
+ * Toene liefen ineinander, sobald ein Segment schmal wurde. Drei Grad
+ * genuegen: sie sind bei jedem Anteil zu sehen und kosten bei zehn Segmenten
+ * noch keine dreissig Grad des Kreises.
+ *
+ * <p><strong>Abgerundet wird nur der Ring.</strong> Im Kuchen laufen die
+ * Segmente in der Mitte zu einer Spitze zusammen; ein Radius darauf schnitte
+ * sie stumpf ab und die Mitte saehe ausgefranst aus. Der Ring hat an beiden
+ * Enden eine Kante, und dort traegt die Rundung.
+ *
+ * <p><strong>Ein Segment mit dem Wert 0 wird nicht gezeichnet.</strong> Es
+ * haette keinen Winkel, bekaeme aber trotzdem seine Luecke und stuende als
+ * schmaler Strich da, der nichts bedeutet. Die Zahl bleibt in der Tabelle der
+ * Karte; verloren geht sie also nicht, sie taucht nur nicht als Flaeche auf.
+ *
+ * <p><strong>Ein Kuchen ohne Daten wird gar nicht gezeichnet.</strong> Stehen
+ * alle Werte auf 0, hat recharts keinen Winkel zu verteilen und malt einen
+ * leeren Kreis; die Stelle bekommt stattdessen einen Satz. Das ist kein
  * Ausnahmefall auf Verdacht: eine frische Installation hat noch keine
  * deaktivierten Konten.
  */
@@ -252,6 +291,8 @@ function SliceChart({
 }) {
   const { t } = useTranslation()
   const total = slices.reduce((sum, slice) => sum + slice.value, 0)
+  const drawn = slices.filter((slice) => slice.value > 0)
+  const isRing = centerValue !== undefined
 
   return (
     <div className="flex flex-col gap-1">
@@ -272,14 +313,19 @@ function SliceChart({
             <PieChart accessibilityLayer={false}>
               <ChartTooltip content={<ChartTooltipContent nameKey="key" />} />
               <Pie
-                data={[...slices]}
+                data={drawn}
                 dataKey="value"
                 nameKey="key"
-                innerRadius={centerValue === undefined ? 0 : 52}
+                innerRadius={isRing ? 52 : 0}
                 outerRadius={78}
-                strokeWidth={2}
+                paddingAngle={SLICE_GAP_DEGREES}
+                cornerRadius={isRing ? SLICE_CORNER_RADIUS : 0}
+                /* Ohne Kontur: die Trennung machen die Luecken, und eine
+                   Linie darum haette auf der Karte keinen Ton, der in beiden
+                   Modi passt. */
+                strokeWidth={0}
               >
-                {centerValue !== undefined && (
+                {isRing && (
                   <Label
                     content={({ viewBox }) => {
                       if (
@@ -291,22 +337,28 @@ function SliceChart({
                         return null
                       }
                       return (
+                        /* central und nicht middle: middle richtet in SVG an
+                           der halben x-Hoehe aus und nicht an der Mitte der
+                           Schriftflaeche, und der Block sass damit ein paar
+                           Pixel zu tief. central nimmt die Mitte zwischen
+                           Ober- und Unterlaenge, also das, was das Auge als
+                           Mitte liest. */
                         <text
                           x={viewBox.cx}
                           y={viewBox.cy}
                           textAnchor="middle"
-                          dominantBaseline="middle"
+                          dominantBaseline="central"
                         >
                           <tspan
                             x={viewBox.cx}
-                            y={viewBox.cy - 6}
+                            y={viewBox.cy + CENTER_VALUE_OFFSET}
                             className="fill-foreground text-2xl font-bold"
                           >
                             {centerValue}
                           </tspan>
                           <tspan
                             x={viewBox.cx}
-                            y={viewBox.cy + 14}
+                            y={viewBox.cy + CENTER_LABEL_OFFSET}
                             className="fill-muted-foreground text-xs"
                           >
                             {centerLabel}

@@ -88,15 +88,14 @@ const printBlock = blocksOf(tokensCss, "@media print")[0]
 const radius = declarationsOf(blocksOf(tokensCss, "@theme static")[0])
 
 describe("Primitives (Foundation, Abschnitt 2)", () => {
-  it("fuehrt 67 Stufen: 54 wie bisher plus die kuehle Diagrammfamilie", () => {
+  it("fuehrt 63 Stufen: 54 wie bisher plus die Diagrammfamilien", () => {
     /* 36 aus dem Abgleich vom 07.08.2026, dazu die zwei transparenten, dazu
        seit Contract v63 vier Inhaltsrampen mit je vier Stufen (KAN-36):
        braun, orange, violett und pink, ausschliesslich fuer die Farbauswahl
-       im Editor. Mit KAN-80 kommen dreizehn kuehle Stufen dazu: sechs
-       Familien mit je einer Fuell- und einer Schriftstufe fuer Diagramme und
-       Kennzahlen, dazu eine blasse Taubenblau-Stufe fuer den Rest eines
-       gestapelten Balkens. */
-    expect(primitives.size).toBe(67)
+       im Editor. Mit KAN-80 kommen neun Stufen fuer Diagramme und Kennzahlen
+       dazu: vier Familien mit je einer Fuell- und einer Schriftstufe, dazu
+       ein blasser Himmelston fuer den Rest eines gestapelten Balkens. */
+    expect(primitives.size).toBe(63)
   })
 
   it("enthaelt ausschliesslich Rohwerte, keine Aliase", () => {
@@ -166,14 +165,14 @@ const chartRoles = [...semanticLight.keys()].filter((name) =>
 )
 
 describe("Semantic-Rollen (Foundation, Abschnitt 3)", () => {
-  it("fuehrt 101 Rollen je Modus", () => {
+  it("fuehrt 97 Rollen je Modus", () => {
     /* 70 seit KAN-29, dazu die Inhaltsfarb-Rollen aus API-Contract 2.5: mit
        KAN-10 zehn (fuenf Textfarben, fuenf Hervorhebungen), mit Contract
        v63 acht weitere fuer brown, orange, purple und pink (KAN-36). Mit
-       KAN-80 kommt die Diagrammpalette dazu: sechs Fuellfarben, sechs
+       KAN-80 kommt die Diagrammpalette dazu: vier Fuellfarben, vier
        Schriftfassungen und die Restflaeche eines Stapels. */
-    expect(semanticLight.size).toBe(101)
-    expect(semanticDark.size).toBe(101)
+    expect(semanticLight.size).toBe(97)
+    expect(semanticDark.size).toBe(97)
   })
 
   it("nutzt in beiden Modi dieselben Rollennamen", () => {
