@@ -149,7 +149,7 @@ describe("AppLayout", () => {
     ).toBeInTheDocument()
   })
 
-  it("zeigt einem Admin-Konto die Administration und keine Projektanlage", async () => {
+  it("zeigt einem Admin-Konto die Administration und dazu Reviews und Portfolio", async () => {
     const user = userEvent.setup()
     signInAs("ADMIN")
     renderWithProviders(<AppUnderTest />, "/")
@@ -157,25 +157,34 @@ describe("AppLayout", () => {
     expect(
       screen.getByRole("link", { name: "Administration" })
     ).toBeInTheDocument()
-    /* Contract 5, Fussnote 10: keine Projektanlage und keine eigene
-       Projektliste fuer ADMIN. */
+    /* Seit KAN-82 ist ADMIN die Obermenge: die Leiste fuehrt zusaetzlich,
+       was ein Konto mit EDITOR fuehrt. Bis dahin stand hier das Gegenteil,
+       mit Verweis auf Fussnote 10. */
+    expect(
+      screen.getByRole("link", { name: "Meine Reviews" })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("link", { name: "Mein Portfolio" })
+    ).toBeInTheDocument()
+
+    /* "Neues Projekt" bleibt auch fuer ADMIN ein Punkt des Nutzermenues und
+       kein Leisteneintrag: die Aufteilung folgt dem Template, nicht der
+       Rolle. */
     expect(
       screen.queryByRole("link", { name: "Neues Projekt" })
     ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("link", { name: "Mein Portfolio" })
-    ).not.toBeInTheDocument()
 
-    /* Das Nutzermenue folgt dem Template: Rollenbeschriftung, Administration
-       und Abmelden, kein Portfolio-Eintrag fuer ADMIN. */
     await user.click(screen.getByRole("button", { name: /Mira Beispiel/ }))
     expect(
       await screen.findByRole("menuitem", { name: "Administration" })
     ).toBeInTheDocument()
     expect(screen.getByText("Admin")).toBeInTheDocument()
     expect(
-      screen.queryByRole("menuitem", { name: "Mein Portfolio" })
-    ).not.toBeInTheDocument()
+      screen.getByRole("menuitem", { name: "Mein Portfolio" })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("menuitem", { name: "Neues Projekt" })
+    ).toBeInTheDocument()
   })
 
   it("meldet ab und kehrt zur oeffentlichen Startseite zurueck", async () => {

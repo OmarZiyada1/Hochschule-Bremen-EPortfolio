@@ -397,19 +397,19 @@ class ProjectWriteIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Ein Admin-Konto darf nicht anlegen: 403 NO_PERMISSION "
-				+ "(§5, Fussnote 10)")
-		void adminMayNotCreate() throws Exception {
+		@DisplayName("Seit KAN-82 legt auch ein Admin-Konto an: 201 (§5)")
+		void adminMayCreate() throws Exception {
 			mockMvc.perform(asUser(postRequest(json("title", "Projekt der Verwaltung")), admin))
-					.andExpect(status().isForbidden())
-					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+					.andExpect(status().isCreated())
+					.andExpect(jsonPath("$.status").value("DRAFT"))
+					.andExpect(jsonPath("$.author.id").value(admin.getId().toString()));
 		}
 
 		@Test
 		@DisplayName("Derselbe Koerper mit STUDENT- und mit EDITOR-Token: je 201 (§5)")
 		void studentAndEditorMayCreate() throws Exception {
-			// Bewusst derselbe Body wie in adminMayNotCreate: der Unterschied
-			// liegt allein an der Rolle, nicht am Inhalt der Anfrage.
+			// Bewusst derselbe Body wie in adminMayCreate: die Rolle aendert am
+			// Ergebnis nichts mehr, seit die Zeile fuer alle drei gilt.
 			String body = json("title", "Projekt der Verwaltung");
 
 			mockMvc.perform(asUser(postRequest(body), author))

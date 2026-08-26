@@ -150,7 +150,11 @@ describe("Routenbaum", () => {
 
     /* Der Editor liegt ausserhalb des Anwendungsrahmens: seine Kopfzeile
        ist der EditorHeader, NavBar und Footer entfallen. Kennzeichen des
-       Rahmens sind Sprunglink, Hauptnavigation und contentinfo. */
+       Rahmens sind Sprunglink, Hauptnavigation und contentinfo. Eine
+       main-Landmarke hat der Editor trotzdem, die gibt ihm das
+       EditorLayout (SC 1.3.1); belegt wurde sie bis KAN-82 vom
+       ADMIN-Zugriffsfall, den es nicht mehr gibt. */
+    expect(screen.getByRole("main")).toBeInTheDocument()
     expect(
       screen.queryByRole("link", { name: "Zum Inhalt springen" })
     ).not.toBeInTheDocument()
@@ -161,9 +165,11 @@ describe("Routenbaum", () => {
   }, 60000)
 
   it("Editor ohne Anmeldung fuehrt sichtbar zum Login", () => {
-    /* Die Rollenschranke wirkt auch nach dem Umzug der Route aus dem
-       Anwendungsrahmen; die uebrigen RequireRole-Tests laufen alle gegen
-       Instanzen unter dem AppLayout und fingen einen Wegfall hier nicht. */
+    /* Die Zugriffsschranke wirkt auch nach dem Umzug der Route aus dem
+       Anwendungsrahmen; die uebrigen Schrankentests laufen alle gegen
+       Instanzen unter dem AppLayout und fingen einen Wegfall hier nicht.
+       Welche angemeldete Rolle durchkommt, prueft die Schranke seit KAN-82
+       nicht mehr: eigene Projekte fuehrt jede. */
     renderWithProviders(
       <>
         <AppUnderTest />
@@ -176,25 +182,6 @@ describe("Routenbaum", () => {
       screen.getByRole("heading", { level: 1, name: "Anmelden" })
     ).toBeInTheDocument()
     expect(screen.getByTestId("pathname")).toHaveTextContent("/login")
-  })
-
-  it("ADMIN: direkter Aufruf des Editors endet in einer sichtbaren Meldung", () => {
-    signInAs("ADMIN")
-    renderWithProviders(
-      <AppUnderTest />,
-      "/projects/1f9d7a10-0000-0000-0000-000000000000/editor"
-    )
-
-    /* Contract 5, Fussnote 10: ein Admin-Konto bearbeitet keine eigenen
-       Projekte. Die Meldung erscheint im Rahmen des EditorLayout und
-       damit in einer main-Landmarke, auch ohne NavBar und Footer. */
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Kein Zugriff" })
-    ).toBeInTheDocument()
-    expect(screen.getByRole("main")).toBeInTheDocument()
-    expect(
-      screen.queryByRole("navigation", { name: "Hauptnavigation" })
-    ).not.toBeInTheDocument()
   })
 
   it("EDITOR erreicht die Redaktionsebene", () => {
@@ -234,16 +221,23 @@ describe("Routenbaum", () => {
     ).toBeInTheDocument()
   })
 
-  it("ADMIN: direkter Aufruf von /projects/new endet in einer sichtbaren Meldung", () => {
+  it("ADMIN erreicht /projects/new", () => {
+    /* Seit KAN-82 legt auch ein Admin-Konto an (Contract 5, Zeile „Projekt
+       anlegen"). Bis dahin stand hier die Meldung „Kein Zugriff", weil
+       POST /projects ihm mit 403 antwortete. Derselbe Wrapper traegt auch
+       den Editor-Zweig; dass er eine angemeldete Rolle durchlaesst, zeigt
+       hier die guenstigere Route.
+
+       Geprueft wird die Schranke, nicht der ganze Anlegeweg: die
+       Ueberschrift steht schon vor der Antwort des Servers, genau wie im
+       EDITOR-Fall weiter oben. Dass ein Admin bis ins Formular kommt,
+       belegt ProjectMetadataPage.test.tsx mit dem Feld „Projekttitel". */
+    server.use(ownPortfolioHandler(), createProjectHandler())
     signInAs("ADMIN")
     renderWithProviders(<AppUnderTest />, "/projects/new")
 
-    /* Contract 5, Fussnote 10: ein Admin-Konto legt keine Projekte an,
-       POST /projects antwortet ihm mit 403. Das Routing zeigt dieselbe
-       Grenze sichtbar, statt eine Seite anzubieten, deren Absenden nur
-       scheitern kann. */
     expect(
-      screen.getByRole("heading", { level: 1, name: "Kein Zugriff" })
+      screen.getByRole("heading", { level: 1, name: "Projekt-Metadaten" })
     ).toBeInTheDocument()
   })
 

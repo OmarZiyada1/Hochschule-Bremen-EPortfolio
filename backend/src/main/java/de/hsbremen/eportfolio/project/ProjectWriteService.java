@@ -788,9 +788,18 @@ public class ProjectWriteService {
 	 * {@link #loadEditorAccount}.</strong> Die Aussage betrifft die
 	 * <em>anfragende</em> Person, nicht das zugewiesene Konto. Auf
 	 * {@code PUT /projects/{id}/editors} verteilt die Administration fremde
-	 * Zustaendigkeiten, dort greift allein die Zustandspruefung: ein Admin-Konto
-	 * gehoert nicht zur Projektseite, seine Zuweisung ist nach §5 Fussnote ¹¹
-	 * ohnehin wirkungslos und keine Umgehung des Vier-Augen-Prinzips.
+	 * Zustaendigkeiten, dort greift allein die Zustandspruefung.
+	 *
+	 * <p><strong>Deren Begruendung hat sich mit KAN-82 verschoben, ihr Ergebnis
+	 * nicht.</strong> Bis v82 lautete sie: ein Admin-Konto gehoert nicht zur
+	 * Projektseite, seine Zuweisung ist nach §5 Fussnote ¹¹ ohnehin wirkungslos.
+	 * Der erste Halbsatz stimmt nicht mehr, seit ein Admin eigene Projekte
+	 * anlegen darf: an seinem eigenen Projekt ist er sehr wohl die Projektseite.
+	 * Die Trennung greift dort trotzdem, und zwar ohne Zutun, weil
+	 * {@link #requireProjectSideSeparateFromEditors} die Ueberschneidung von
+	 * Projektseite und Redaktion prueft und nicht die Rolle. Ein Admin, der sich
+	 * dem eigenen Projekt als Redaktion zuweist, bekommt deshalb 400
+	 * {@code VALIDATION_FAILED} wie jede andere Person auch.
 	 *
 	 * <p><strong>Die Meldung beginnt mit dem Feldnamen und einem Doppelpunkt</strong>,
 	 * wie {@code semesterId: …} weiter oben. Das ist keine Kosmetik: das Formular

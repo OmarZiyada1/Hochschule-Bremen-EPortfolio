@@ -373,8 +373,8 @@ class ProjectWorkflowIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Mitglieder, fremde Studierende, Redaktion und Admin duerfen nicht einreichen: "
-				+ "403 (§4.1 nennt die Autor:in, ADMIN steht in §5 mit ✗)")
+		@DisplayName("Mitglieder, fremde Studierende, Redaktion und ein fremder Admin duerfen "
+				+ "nicht einreichen: 403 (§4.1 nennt die Autor:in)")
 		void onlyTheAuthorMaySubmit() throws Exception {
 			for (User user : List.of(member, otherStudent, assignedEditor, otherEditor, admin)) {
 				mockMvc.perform(as(user, action(draft, "submit")))
@@ -383,6 +383,18 @@ class ProjectWorkflowIntegrationTest {
 			}
 
 			assertThat(reload(draft).getStatus()).isEqualTo(ProjectStatus.DRAFT);
+		}
+
+		@Test
+		@DisplayName("Seit KAN-82 reicht ein Admin sein eigenes Projekt ein: 200")
+		void adminSubmitsOwnProject() throws Exception {
+			// Der Weg geht nur mit zugewiesener Redaktion, seit editorIds mit
+			// v59 zum Pflichtfeld wurde (§3.3); saved() haengt sie an. Genau
+			// hier haette der neue Weg praktisch scheitern koennen, denn sich
+			// selbst zuweisen darf auch ein Admin nicht (§5, Fussnote 3).
+			Project own = saved(complete(admin, ProjectStatus.DRAFT, "Projekt des Admins"));
+
+			assertThat(ok(admin, own, "submit").get("status").asText()).isEqualTo("SUBMITTED");
 		}
 
 		@ParameterizedTest(name = "aus {0}")
@@ -525,6 +537,14 @@ class ProjectWorkflowIntegrationTest {
 			// Anders als bei request-revision entsteht kein Aenderungswunsch: die
 			// Autor:in schuldet sich selbst keine Begruendung.
 			assertThat(commentRepository.findByProjectId(submitted.getId())).isEmpty();
+		}
+
+		@Test
+		@DisplayName("Seit KAN-82 holt ein Admin die eigene Einreichung zurueck: 200")
+		void adminWithdrawsOwnProject() throws Exception {
+			Project own = saved(complete(admin, ProjectStatus.SUBMITTED, "Projekt des Admins"));
+
+			assertThat(ok(admin, own, "withdraw").get("status").asText()).isEqualTo("DRAFT");
 		}
 
 		@Test
@@ -687,12 +707,19 @@ class ProjectWorkflowIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Fussnote ⁵: fuer den Admin greift die Sperre nicht, er genehmigt sein eigenes "
-				+ "Projekt (offener Punkt 7)")
-		void adminIsNotBlockedByFourEyes() throws Exception {
+		@DisplayName("Seit KAN-82 greift die Sperre auch beim Admin: sein eigenes Projekt "
+				+ "genehmigt er nicht")
+		void adminIsBlockedByFourEyes() throws Exception {
 			Project ownProject = saved(complete(admin, ProjectStatus.SUBMITTED, "Projekt des Admins"));
 
-			assertThat(ok(admin, ownProject, "approve").get("status").asText()).isEqualTo("APPROVED");
+			mockMvc.perform(as(admin, action(ownProject, "approve")))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+
+			// Fremdes bleibt unberuehrt: ein Admin entscheidet weiterhin ohne
+			// Zuweisung, nur eben nicht ueber die eigene Arbeit.
+			assertThat(ok(admin, submitted(), "approve").get("status").asText())
+					.isEqualTo("APPROVED");
 		}
 
 		@ParameterizedTest(name = "aus {0}")

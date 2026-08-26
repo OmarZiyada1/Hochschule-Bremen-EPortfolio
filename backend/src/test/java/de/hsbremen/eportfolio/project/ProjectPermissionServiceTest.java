@@ -43,6 +43,9 @@ class ProjectPermissionServiceTest {
 
 	private User otherEditorUser;
 
+	/** Das Admin-Konto als Entity, fuer Projekte, deren Autor:in es selbst ist. */
+	private User adminUser;
+
 	private static final AuthenticatedUser PUBLIC = null;
 
 	@BeforeEach
@@ -59,7 +62,8 @@ class ProjectPermissionServiceTest {
 
 		otherEditorUser = TestUser.active(Role.EDITOR, "hash");
 		otherEditor = AuthenticatedUser.from(otherEditorUser);
-		admin = AuthenticatedUser.from(TestUser.active(Role.ADMIN, "hash"));
+		adminUser = TestUser.active(Role.ADMIN, "hash");
+		admin = AuthenticatedUser.from(adminUser);
 	}
 
 	private static ProjectPermissionService withProperties(boolean fourEyes, boolean adminMayEditContent) {
@@ -229,7 +233,7 @@ class ProjectPermissionServiceTest {
 	class Creating {
 
 		@Test
-		@DisplayName("PUBLIC nein, STUDENT und EDITOR ja")
+		@DisplayName("PUBLIC nein, jede angemeldete Rolle ja")
 		void create() {
 			assertThat(service.mayCreateProject(PUBLIC)).isFalse();
 			assertThat(service.mayCreateProject(otherStudent)).isTrue();
@@ -237,11 +241,11 @@ class ProjectPermissionServiceTest {
 		}
 
 		@Test
-		@DisplayName("Fussnote ¹⁰: ein Admin-Konto legt keine Projekte an")
-		void adminMayNot() {
-			// Nicht der Status sperrt hier, sondern die Rolle: das Konto ist
-			// aktiv und darf verwalten, nur eben nicht selbst verfassen.
-			assertThat(service.mayCreateProject(admin)).isFalse();
+		@DisplayName("Seit KAN-82 legt auch ein Admin-Konto an")
+		void adminMayToo() {
+			// Bis dahin stand hier ein Kreuz (Fussnote 10). Die Zeile war die
+			// einzige, an der die Rolle allein ueber das Recht entschied.
+			assertThat(service.mayCreateProject(admin)).isTrue();
 			assertThat(service.mayManageUsers(admin)).isTrue();
 		}
 	}
@@ -397,15 +401,24 @@ class ProjectPermissionServiceTest {
 	class Submitting {
 
 		@Test
-		@DisplayName("Autor:in ja, Redaktion und Admin nein")
+		@DisplayName("Autor:in ja, Redaktion und ein fremder Admin nein")
 		void submit() {
 			Project p = project(ProjectStatus.DRAFT);
 
 			assertThat(service.maySubmit(author, p)).isTrue();
 			assertThat(service.maySubmit(otherStudent, p)).isFalse();
 			assertThat(service.maySubmit(PUBLIC, p)).isFalse();
-			// Matrix: ADMIN ausdruecklich ✗.
+			// Seit KAN-82 sperrt hier nicht mehr die Rolle, sondern die
+			// fehlende Autorschaft: eingereicht wird das eigene Projekt.
 			assertThat(service.maySubmit(admin, p)).isFalse();
+		}
+
+		@Test
+		@DisplayName("Seit KAN-82 reicht ein Admin sein eigenes Projekt ein")
+		void adminSubmitsOwn() {
+			Project own = TestProject.withAuthor(adminUser, ProjectStatus.DRAFT);
+
+			assertThat(service.maySubmit(admin, own)).isTrue();
 		}
 
 		@Test
@@ -434,8 +447,16 @@ class ProjectPermissionServiceTest {
 			assertThat(service.mayWithdraw(otherStudent, p)).isFalse();
 			assertThat(service.mayWithdraw(editor, p)).isFalse();
 			assertThat(service.mayWithdraw(PUBLIC, p)).isFalse();
-			// Wie beim Einreichen: ADMIN ausdruecklich ✗.
+			// Wie beim Einreichen: ein fremder Admin ist nicht die Autor:in.
 			assertThat(service.mayWithdraw(admin, p)).isFalse();
+		}
+
+		@Test
+		@DisplayName("Seit KAN-82 holt ein Admin die eigene Einreichung zurueck")
+		void adminWithdrawsOwn() {
+			Project own = TestProject.withAuthor(adminUser, ProjectStatus.SUBMITTED);
+
+			assertThat(service.mayWithdraw(admin, own)).isTrue();
 		}
 
 		@Test
@@ -550,12 +571,40 @@ class ProjectPermissionServiceTest {
 		}
 
 		@Test
-		@DisplayName("Fussnote ¹ steht nur an den EDITOR-Zellen: der Admin ist nicht gesperrt")
-		void adminNotAffectedByFourEyes() {
-			User adminUser = TestUser.active(Role.ADMIN, "hash");
+		@DisplayName("Seit KAN-82 gilt Fussnote ¹ auch fuer ADMIN: das eigene Projekt gibt er "
+				+ "nicht frei")
+		void adminAffectedByFourEyes() {
 			Project own = TestProject.withAuthor(adminUser, ProjectStatus.SUBMITTED);
 
-			assertThat(service.mayApprove(AuthenticatedUser.from(adminUser), own)).isTrue();
+			assertThat(service.mayApprove(admin, own)).isFalse();
+			assertThat(service.mayPublish(admin, TestProject.withAuthor(adminUser,
+					ProjectStatus.APPROVED))).isFalse();
+
+			// Die Sperre haengt an isProjectSide und damit an der ganzen
+			// Projektseite (Fussnote ¹ seit v61), nicht allein an der
+			// Autorschaft: ein Admin, der an einem fremden Projekt
+			// mitgeschrieben hat, entscheidet darueber ebenfalls nicht.
+			assertThat(service.mayApprove(admin,
+					TestProject.withMember(project(ProjectStatus.SUBMITTED), adminUser)))
+					.isFalse();
+		}
+
+		@Test
+		@DisplayName("Fremde Projekte entscheidet der Admin weiter ohne Zuweisung (Fussnote ¹¹)")
+		void adminDecidesWithoutAssignment() {
+			// Die eine Pruefung, die ein Admin weiterhin ueberspringt: er steht
+			// nie in project_editor und entscheidet trotzdem.
+			assertThat(service.mayApprove(admin, project(ProjectStatus.SUBMITTED))).isTrue();
+		}
+
+		@Test
+		@DisplayName("Der Notausgang gilt fuer beide Rollen: abgeschaltet gibt der Admin auch "
+				+ "das eigene Projekt frei")
+		void adminFourEyesSwitchable() {
+			ProjectPermissionService withoutFourEyes = withProperties(false, false);
+			Project own = TestProject.withAuthor(adminUser, ProjectStatus.SUBMITTED);
+
+			assertThat(withoutFourEyes.mayApprove(admin, own)).isTrue();
 		}
 	}
 
@@ -591,6 +640,12 @@ class ProjectPermissionServiceTest {
 					TestProject.withAuthor(editorUser, ProjectStatus.SUBMITTED), editorUser);
 
 			assertThat(service.mayRequestRevision(editor, own)).isTrue();
+
+			// Dasselbe fuer den Admin, der seit KAN-82 selbst Autor:in sein
+			// kann: er holt das eigene Projekt zurueck in die Ueberarbeitung.
+			// Das ist keine Freigabe und deshalb keine Umgehung von Fussnote ¹.
+			assertThat(service.mayRequestRevision(admin,
+					TestProject.withAuthor(adminUser, ProjectStatus.SUBMITTED))).isTrue();
 		}
 
 		@Test
@@ -885,13 +940,10 @@ class ProjectPermissionServiceTest {
 			AuthenticatedUser user = AuthenticatedUser.from(blockedAdmin);
 			Project p = project(ProjectStatus.SUBMITTED);
 
-			// Fuer das Anlegen wird eine zweite Rolle geprueft: einem
-			// Admin-Konto ist es nach Fussnote 10 ohnehin verwehrt, der Status
-			// waere an dieser Zeile also nicht mehr abzulesen.
-			User blockedStudent = TestUser.create(UUID.randomUUID(), "gesperrt2@example.org",
-					"gesperrt2@hs-bremen.de", Role.STUDENT, status, "hash");
-			assertThat(service.mayCreateProject(AuthenticatedUser.from(blockedStudent))).isFalse();
-
+			// Bis KAN-82 stand hier zusaetzlich ein STUDENT-Konto, weil einem
+			// Admin das Anlegen ohnehin verwehrt war und die Zeile deshalb
+			// nichts ueber den Status aussagte. Jetzt sagt sie es selbst: das
+			// Recht haengt allein daran, dass das Konto aktiv ist.
 			assertThat(service.mayCreateProject(user)).isFalse();
 			assertThat(service.mayApprove(user, p)).isFalse();
 			assertThat(service.mayManageUsers(user)).isFalse();

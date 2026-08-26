@@ -464,11 +464,12 @@ class PortfolioIntegrationTest {
 	class EveryRoleKeepsItsProfile {
 
 		/**
-		 * Seit v33 verwehrt §5 einem Admin-Konto das Anlegen von Projekten
-		 * (Fussnote 10). Die Zeile „Eigenes Portfolio bearbeiten" ist davon
-		 * ausdruecklich nicht betroffen: Name, Biografie und Avatar pflegt auch
-		 * ein Admin-Konto (§3.2). Der Test haelt die Grenze fest, damit die
-		 * Sperre nicht spaeter auf das Profil ausgeweitet wird.
+		 * Das eigene Profil hing nie an der Rolle: Name, Biografie und Avatar
+		 * pflegt jedes Konto (§3.2). Zwischen v33 und KAN-82 war das die
+		 * Ausnahme von der Sperre, die einem Admin-Konto das Anlegen von
+		 * Projekten verwehrte (Fussnote 10); seit die Sperre gefallen ist, ist
+		 * es der Regelfall. Der Test bleibt trotzdem stehen: er haelt fest,
+		 * dass die Rolle an dieser Zeile nichts entscheidet.
 		 */
 		@Test
 		@DisplayName("Ein Admin-Konto liest und aendert sein Profil weiterhin: je 200 (§3.2)")

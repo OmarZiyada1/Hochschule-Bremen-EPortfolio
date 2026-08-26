@@ -506,15 +506,16 @@ function ReviewActionsCard({ project }: { project: ProjectDetailResponse }) {
 
   /*
    * Vier-Augen-Prinzip (§4.1 seit v61, §5 Fussnote 1): wer zur Projektseite
-   * gehoert, gibt sie nicht frei, auch nicht als zugewiesene Redaktion. Fuer
-   * ADMIN greift die Sperre nicht (§7, offener Punkt 7). Die Oberflaeche
-   * blendet aus, was nicht greift; verbindlich bleibt der Server.
+   * gehoert, gibt sie nicht frei, auch nicht als zugewiesene Redaktion. Seit
+   * KAN-82 gilt das fuer jede Rolle; bis dahin stand hier eine Ausnahme fuer
+   * ADMIN, weil ein Admin-Konto gar keine eigenen Projekte haben konnte. Die
+   * Oberflaeche blendet aus, was nicht greift; verbindlich bleibt der Server.
    */
   const onProjectSide =
     user !== null &&
     (project.author.id === user.id ||
       (project.members ?? []).some((member) => member.userId === user.id))
-  const mayRelease = user?.role === "ADMIN" || !onProjectSide
+  const mayRelease = !onProjectSide
 
   const mayApprove = project.status === "SUBMITTED" && mayRelease
   const mayPublish = project.status === "APPROVED" && mayRelease
@@ -525,13 +526,15 @@ function ReviewActionsCard({ project }: { project: ProjectDetailResponse }) {
     project.status === "PUBLISHED"
 
   /*
-   * Die Freigabe ist am eigenen Projekt gesperrt, und der Status waere
-   * sonst einer, in dem sie ginge. Ohne die zweite Haelfte stuende der
-   * Hinweis auch in REVISION, wo ohnehin niemand freigibt.
+   * Die Freigabe ist am eigenen Projekt gesperrt, und der Status waere sonst
+   * einer, in dem sie ginge. Ohne die zweite Haelfte stuende der Hinweis auch
+   * in REVISION, wo ohnehin niemand freigibt. Bis KAN-82 stand hier zusaetzlich
+   * !mayRelease, weil die Sperre eine Ausnahme fuer ADMIN trug und aus
+   * onProjectSide nicht folgte; seit sie fuer jede Rolle gilt, sagte die
+   * Bedingung zweimal dasselbe.
    */
   const releaseBlocked =
     onProjectSide &&
-    !mayRelease &&
     (project.status === "SUBMITTED" || project.status === "APPROVED")
   /*
    * Seit Contract v73 gibt es aus REVISION heraus einen redaktionellen Weg

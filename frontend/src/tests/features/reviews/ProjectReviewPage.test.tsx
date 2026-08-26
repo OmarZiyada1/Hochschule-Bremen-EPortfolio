@@ -312,6 +312,23 @@ describe("ProjectReviewPage", () => {
     expect(statusItem("REVISION")).not.toHaveAttribute("aria-disabled")
   })
 
+  it("sperrt die Freigabe seit KAN-82 auch fuer ein Admin-Konto", async () => {
+    /* Bis dahin stand hier eine Ausnahme: ein Admin gab sein eigenes
+       Projekt frei, weil Fussnote 1 nur an den EDITOR-Zellen hing. Fremde
+       Projekte entscheidet er weiterhin ohne Zuweisung. */
+    signInAs("ADMIN")
+    server.use(...handlers(review({ author: person({ id: SESSION_USER }) })))
+
+    renderPage()
+
+    expect(
+      await screen.findByText(i18n.t("review.detail.actions.ownProject"))
+    ).toBeInTheDocument()
+
+    await openStatusMenu()
+    expect(statusItem("APPROVED")).toHaveAttribute("aria-disabled", "true")
+  })
+
   it("sperrt die Freigabe auch fuer ein Projektmitglied", async () => {
     server.use(
       ...handlers(

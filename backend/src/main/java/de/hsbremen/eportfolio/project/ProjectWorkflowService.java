@@ -199,10 +199,13 @@ public class ProjectWorkflowService {
 	 * Genehmigen: {@code SUBMITTED} nach {@code APPROVED} durch die Redaktion
 	 * oder die Administration (§4.1).
 	 *
-	 * <p>Das Vier-Augen-Prinzip steckt in der Rechtepruefung: eine Redakteur:in
-	 * genehmigt ihr eigenes Projekt nicht (§4.1, §7 offener Punkt 1), abschaltbar
-	 * ueber {@code app.permission.four-eyes-principle}. Fuer ADMIN greift die
-	 * Sperre nicht (offener Punkt 7).
+	 * <p>Das Vier-Augen-Prinzip steckt in der Rechtepruefung: wer zur
+	 * Projektseite gehoert, genehmigt sie nicht (§4.1, §5 Fussnote 1),
+	 * abschaltbar ueber {@code app.permission.four-eyes-principle}. Seit KAN-82
+	 * gilt das auch fuer {@code ADMIN}, sobald er selbst zur Projektseite
+	 * gehoert; der frueher hier genannte offene Punkt 7 ist damit entschieden.
+	 * Die Einzelheiten stehen an {@code mayDecideEditorially} im
+	 * {@link ProjectPermissionService}.
 	 *
 	 * <p>Genehmigt heisst noch nicht oeffentlich: {@code APPROVED} und
 	 * {@code PUBLISHED} sind getrennt, damit die fachliche Freigabe und die

@@ -210,21 +210,32 @@ describe("ProjectMetadataPage", () => {
     expect(current.closest("a")).toBeNull()
   })
 
-  it("laesst ein Admin-Konto nicht auf /projects/new (§5, Fussnote 10)", async () => {
+  it("laesst ein Admin-Konto auf /projects/new (§5, seit KAN-82)", async () => {
     signInAs("ADMIN")
+    /* Die Anlage antwortet mit dem fertigen Entwurf, damit der Test den
+       ganzen Weg belegt: Route offen, Anlage angenommen, Formular da. */
+    const created = draft()
     server.use(
       ...masterDataHandlers(),
       ownPortfolioHandler(),
-      currentUserHandler()
+      currentUserHandler(),
+      detailHandler(created),
+      http.post("*/api/projects", () =>
+        HttpResponse.json(created, { status: 201 })
+      )
     )
 
     renderWithProviders(<AppUnderTest />, "/projects/new")
 
+    /* Bis KAN-82 stand hier die Meldung „Kein Zugriff" und das Formular
+       entstand gar nicht erst. */
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Kein Zugriff" })
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "Projekt-Metadaten",
+      })
     ).toBeVisible()
-    /* Das Formular entsteht gar nicht erst. */
-    expect(screen.queryByLabelText("Projekttitel")).not.toBeInTheDocument()
+    expect(await screen.findByLabelText("Projekttitel")).toBeInTheDocument()
   })
 
   it("setzt Studiengang und Fach zurueck, wenn die Fakultaet wechselt, und sagt es an", async () => {

@@ -31,10 +31,11 @@ const PORTFOLIO_PATH = "/my-portfolio"
  * und das faellt erst in der Projektliste auf. Ein Ref statt eines Zustands,
  * weil die Sperre kein Rendern ausloesen soll.
  *
- * <p>Ein Admin-Konto kommt hier nicht an: {@code RequireRole} laesst nur
- * STUDENT und EDITOR durch (§5, Fussnote 10). Ein trotzdem eintreffendes
- * <strong>403</strong> {@code NO_PERMISSION} erscheint sichtbar, statt in
- * einer leeren Seite zu enden.
+ * <p>Die Route steht jedem angemeldeten Konto offen, seit KAN-82 auch einem
+ * mit der Rolle ADMIN (§5, Zeile „Projekt anlegen"). Ein dennoch
+ * eintreffendes <strong>403</strong> {@code NO_PERMISSION} erscheint
+ * sichtbar, statt in einer leeren Seite zu enden: verbindlich entscheidet
+ * der Server, nicht die Routenschranke.
  */
 export default function NewProjectPage() {
   const { t } = useTranslation()

@@ -273,9 +273,9 @@ export const projectQueries = {
  *
  * <p><strong>title ist das einzige Pflichtfeld.</strong> Alles Weitere darf
  * fehlen, weil ein Entwurf ein Arbeitszustand ist; die Vollstaendigkeit
- * verlangt erst das Einreichen (§3.3). Ein Admin-Konto bekommt hier
- * <strong>403</strong> {@code NO_PERMISSION}: die Administrationsseite
- * verwaltet fremde Projekte, sie verfasst keine eigenen (§5, Fussnote 10).
+ * verlangt erst das Einreichen (§3.3). Seit KAN-82 legt jede angemeldete
+ * Rolle an, auch ADMIN; <strong>403</strong> {@code NO_PERMISSION} bleibt
+ * fuer den Fall, dass der Server das Recht anders beurteilt.
  */
 export function createProject(
   request: ProjectCreateRequest
@@ -399,8 +399,8 @@ export function approveProject(
 
 /**
  * POST /projects/{id}/publish (§4.1, §6.1): APPROVED nach PUBLISHED.
- * Dieselbe Sperre wie beim Genehmigen; fuer ADMIN greift sie nicht (§7,
- * offener Punkt 7).
+ * Dieselbe Sperre wie beim Genehmigen, und seit KAN-82 gilt sie fuer jede
+ * Rolle: auch ein Admin gibt das eigene Projekt nicht frei (§5 Fussnote 1).
  */
 export function publishProject(
   projectId: string
