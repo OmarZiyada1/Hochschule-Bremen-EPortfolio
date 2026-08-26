@@ -562,6 +562,69 @@
 }
 
 /* ============================================================
+ * Ebene 2: Semantic, Ausdruck (KAN-41)
+ *
+ * Der Ausdruck ist hell, unabhaengig vom eingestellten Modus: eine dunkle
+ * Flaeche auf Papier verbraucht Farbe und ist schlechter lesbar, und was
+ * am Bildschirm eingestellt ist, geht das Blatt nichts an.
+ *
+ * Deshalb steht hier ein dritter Satz derselben Rollen, und er steht in
+ * dieser Datei und nicht bei den Druckregeln in project-content.css.
+ * Beides hat einen Grund. Nur die Tokenschicht darf Primitives lesen; eine
+ * Komponente, die var(--neutral-50) selbst einsetzt, ist ein Befund
+ * (tokens.test.ts prueft es). Und die Zuordnung Rolle zu Primitive gehoert
+ * ohnehin hierher: hell, dunkel und Druck sind drei Belegungen derselben
+ * Tabelle, und drei Belegungen an drei Orten liefen auseinander.
+ *
+ * Aufgefuehrt sind die Rollen, die im Ausdruck tatsaechlich vorkommen:
+ * Flaeche, Schrift, Rahmen, die beiden Akzente und die achtzehn
+ * Inhaltsfarben aus 2.5. Alles Uebrige (Nav, Cover, Charts, Badges)
+ * erscheint auf dem Blatt nicht, weil der Druckbereich nur Kopfteil und
+ * Beitrag traegt.
+ *
+ * :root.dark steht ausdruecklich neben :root: .dark oben ist genauso
+ * spezifisch wie :root, und ohne den zweiten Selektor haenge das Ergebnis
+ * allein an der Reihenfolge im Stylesheet.
+ * ============================================================ */
+@media print {
+  :root,
+  :root.dark {
+    color-scheme: light;
+
+    --background: var(--neutral-50);
+    --foreground: var(--neutral-900);
+    --card: var(--basis-weiss);
+    --card-foreground: var(--neutral-900);
+    --muted: var(--neutral-100);
+    --muted-foreground: var(--neutral-600);
+    --border: var(--neutral-200);
+    --primary: var(--blau-600);
+    --primary-foreground: var(--basis-weiss);
+    --primary-hover: var(--blau-700);
+
+    --content-text-neutral: var(--neutral-600);
+    --content-text-blue: var(--blau-600);
+    --content-text-green: var(--gruen-700);
+    --content-text-amber: var(--bernstein-800);
+    --content-text-red: var(--rot-700);
+    --content-text-brown: var(--braun-700);
+    --content-text-orange: var(--orange-700);
+    --content-text-purple: var(--violett-700);
+    --content-text-pink: var(--pink-700);
+
+    --content-highlight-neutral: var(--neutral-200);
+    --content-highlight-blue: var(--blau-100);
+    --content-highlight-green: var(--gruen-100);
+    --content-highlight-amber: var(--bernstein-100);
+    --content-highlight-red: var(--rot-100);
+    --content-highlight-brown: var(--braun-100);
+    --content-highlight-orange: var(--orange-100);
+    --content-highlight-purple: var(--violett-100);
+    --content-highlight-pink: var(--pink-100);
+  }
+}
+
+/* ============================================================
  * Tailwind-Anbindung. Erzeugt bg-primary, text-muted-foreground,
  * border-border, rounded-card und so weiter.
  *

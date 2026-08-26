@@ -4,6 +4,7 @@ import {
   EyeIcon,
   InfoIcon,
   MenuIcon,
+  PrinterIcon,
   Redo2Icon,
   SendIcon,
   Undo2Icon,
@@ -56,11 +57,21 @@ import type { AutosaveState } from "@/features/project-content/hooks/useAutosave
  * (ein stiller Fehlschlag des Autosave waere Datenverlust mit Ansage);
  * sein Platz ist vor dem Umschalter im rechten Block.
  *
- * <p><strong>Ohne PDF-Schaltflaeche.</strong> Das Template zeichnet sie,
- * aber den Export gibt es nicht: KAN-41 ist offen, und einen Endpoint dafuer
- * fuehrt Contract §6.1 nicht. Eine Schaltflaeche, die nichts tut, waere eine
- * Attrappe im ausgelieferten Code (Frontend-Regel 10). Sie kommt mit KAN-41
- * an genau diese Stelle.
+ * <p><strong>Die PDF-Schaltflaeche steht bei den Werkzeugen</strong>
+ * (KAN-41, Nutzerentscheidung). Das Template zeichnet sie rechts neben
+ * „Einreichen"; sie steht stattdessen am Ende der Werkzeugzeile, hinter der
+ * Formatierung und durch einen Trenner davon abgesetzt. Der Grund ist die
+ * Nachbarschaft: Rueckgaengig, Wiederholen und Formatierung wirken auf den
+ * Beitrag, „Einreichen" und „Zurueckziehen" auf seinen Status (§4.1). Der
+ * Ausdruck gehoert zur ersten Gruppe, und er steht damit auch schmal in der
+ * sichtbaren Zeile statt im Menue: er ist keine Workflow-Aktion, die nur
+ * die Autor:in sieht, sondern fuer jede Person da, die den Beitrag lesen
+ * darf. Genau deshalb ist er nicht an {@code mayWrite} gebunden.
+ *
+ * <p>Gedruckt wird nicht die Schreibflaeche, sondern der Bereich aus
+ * {@code print/ProjectPrintView}: dort steht der Beitrag durch den
+ * Read-Only-Renderer, also mit Bild und Galerie statt der Bedienkarten, die
+ * die Schreibflaeche fuer Video, Ton, Dokument und Einbettung zeigt.
  *
  * <p><strong>Einreichen und Zurueckziehen teilen sich den Platz.</strong>
  * Welche der beiden erscheint, entscheidet der Status (§4.1): aus
@@ -119,6 +130,8 @@ export function EditorHeader({
   onWithdraw,
   onBack,
   onPreview,
+  onPrint,
+  printing,
   onShowInfo,
   backButtonRef,
   menuButtonRef,
@@ -140,6 +153,10 @@ export function EditorHeader({
   onBack: () => void
   /** Wechselt in die oeffentliche Ansicht; die Seite speichert vorher. */
   onPreview: () => void
+  /** Druckt den Beitrag (KAN-41); die Seite besorgt den Druckbereich. */
+  onPrint: () => void
+  /** Solange der Ausdruck vorbereitet wird, ist die Schaltflaeche gesperrt. */
+  printing: boolean
   /**
    * Oeffnet die Projektinformationen als Schublade.
    *
@@ -284,6 +301,55 @@ export function EditorHeader({
             />
           </>
         )}
+
+        {/*
+         * Der Ausdruck, hinter der Formatierung und durch einen Trenner
+         * davon abgesetzt (KAN-41). Er steht ausserhalb der
+         * Formatierungsleiste und nicht darin: die Leiste ist ein
+         * Tabstopp mit Roving-Tabindex ueber ihre Werkzeuge, und ein
+         * Eintrag, der nichts formatiert, gehoerte dort nicht hinein.
+         * Dieselbe Bauform wie Rueckgaengig und Wiederholen daneben,
+         * Symbol mit Tooltip und Text fuer Hilfsmittel: auf Touch
+         * erscheint kein Tooltip, der Name muss also im Element stehen.
+         *
+         * <p>Waehrend der Vorbereitung meldet sie {@code aria-disabled} und
+         * nicht {@code disabled}, wie die Ausrichtung im {@code AlignMenu}:
+         * eine Schaltflaeche, die im Augenblick des Klicks {@code disabled}
+         * wird, verliert den Fokus an den Seitenanfang (SC 2.4.3). Das
+         * zweite Ausloesen faengt der Handler ab.
+         */}
+        <Separator
+          orientation="vertical"
+          className="h-5 self-center"
+          aria-hidden="true"
+        />
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-disabled={printing}
+                className={printing ? "opacity-50" : undefined}
+                onClick={(event) => {
+                  if (printing) {
+                    event.preventDefault()
+                    return
+                  }
+                  onPrint()
+                }}
+              />
+            }
+          >
+            <PrinterIcon aria-hidden="true" />
+            <span className="sr-only">
+              {t("projectContent.print.actionLabel")}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            {t("projectContent.print.actionLabel")}
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       <div

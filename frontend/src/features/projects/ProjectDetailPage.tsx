@@ -3,6 +3,7 @@ import {
   FileTextIcon,
   InfoIcon,
   LockIcon,
+  PrinterIcon,
 } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -26,6 +27,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ViewModeSwitch } from "@/features/project-content/components/ViewModeSwitch"
 import { useProjectFileUrls } from "@/features/project-content/hooks/useProjectFileUrls"
 import { useFileUrl } from "@/api/useFileUrl"
+import { ProjectPrintView } from "@/features/project-content/print/ProjectPrintView"
+import { usePrintProject } from "@/features/project-content/print/usePrintProject"
 import { ProjectContent } from "@/features/project-content/renderer/ProjectContent"
 import { CommentPanel } from "@/components/common/CommentPanel"
 import { ProjectMetaSidebar } from "@/features/projects/components/ProjectMetaSidebar"
@@ -68,9 +71,14 @@ import { cn } from "@/lib/utils"
  * uebrigen Feldern nicht tut. Den Aktivitaetsverlauf zeigt sie nicht: er
  * gehoert in den Editor (KAN-36), nicht in die Leseansicht.
  *
- * <p>Der Platz fuer die Aktion „PDF" bleibt frei, bis KAN-41 sie liefert.
- * Ein dauerhaft gesperrter Knopf ist fuer die Tastatur ein Ziel ohne Zweck
- * (Frontend-Regel 10).
+ * <p><strong>Die Aktion „PDF" steht am Titelbild oben rechts</strong>
+ * (KAN-41, Nutzerentscheidung). Das Template zeichnet sie auf dieser Seite
+ * nicht, anders als in der Editor-Kopfzeile; sie sitzt deshalb dort, wo sie
+ * zum Titel gehoert und in jeder Breite sichtbar ist, gegenueber dem Knopf
+ * fuer die Projektdaten. Ohne Titelbild gibt es die Flaeche nicht, dann
+ * steht sie in der Zeile ueber dem Titel. Gedruckt wird der Bereich aus
+ * {@code ProjectPrintView}, nicht diese Seite: er traegt Kopfbereich und
+ * Beitrag und sonst nichts.
  */
 /* Eine Liste, nicht bei jedem Rendern eine neue: sie steht in den
    Abhaengigkeiten der Bildaufloesung. */
@@ -103,6 +111,10 @@ export default function ProjectDetailPage() {
   /* Nur schmal gebraucht: ab lg steht das Panel dauerhaft daneben, und die
      Schublade wird dann gar nicht erst geoeffnet. */
   const [infoOpen, setInfoOpen] = useState(false)
+
+  /* Der Ausdruck (KAN-41): clientseitig aus dem Read-Only-Renderer, ohne
+     Endpoint und ohne zusaetzliches Paket. */
+  const { print, printing } = usePrintProject()
 
   /*
    * 403 bleibt hier, 401 nicht: den Weg zur Anmeldung geht der QueryClient
@@ -258,6 +270,15 @@ export default function ProjectDetailPage() {
                     Rahmen um das Bild: ein Rahmen naehme dem Bild die
                     randlose Ausrichtung, die an "erstes Kind" haengt. */}
                   <InfoTrigger onOpen={() => setInfoOpen(true)} floating />
+                  {/* Und gegenueber, oben rechts, der Ausdruck. Anders als
+                    der Info-Knopf bleibt er in jeder Breite stehen: die
+                    Projektdaten stehen breit ohnehin daneben, ein Ausdruck
+                    nicht. */}
+                  <PrintTrigger
+                    onPrint={() => void print()}
+                    busy={printing}
+                    floating
+                  />
                 </>
               )}
               <CardContent>
@@ -275,13 +296,19 @@ export default function ProjectDetailPage() {
                       {participates && data.status && (
                         <StatusBadge status={data.status} />
                       )}
-                      {/* Ohne sichtbares Titelbild fehlt die Flaeche fuer den
-                        schwebenden Knopf; dann steht er in dieser Zeile. Das
-                        gilt auch, solange das Bild eines Entwurfs noch
-                        geladen wird: sonst gaebe es kurz keinen Weg zu den
-                        Projektdaten. */}
+                      {/* Ohne sichtbares Titelbild fehlt die Flaeche fuer die
+                        beiden schwebenden Knoepfe; dann stehen sie in dieser
+                        Zeile. Das gilt auch, solange das Bild eines Entwurfs
+                        noch geladen wird: sonst gaebe es kurz keinen Weg zu
+                        den Projektdaten. */}
                       {cover.url === null && (
-                        <InfoTrigger onOpen={() => setInfoOpen(true)} />
+                        <div className="ms-auto flex items-center gap-2">
+                          <PrintTrigger
+                            onPrint={() => void print()}
+                            busy={printing}
+                          />
+                          <InfoTrigger onOpen={() => setInfoOpen(true)} />
+                        </div>
                       )}
                     </div>
 
@@ -372,6 +399,21 @@ export default function ProjectDetailPage() {
             Von links, von derselben Seite, an der ihr Knopf auf dem
             Titelbild sitzt: eine Flaeche, die dort aufgeht, wo man sie
             angetippt hat, folgt der Hand. */}
+        {/* Der Druckbereich (KAN-41). Er haengt als Portal unmittelbar an
+            body und ist am Bildschirm verborgen; im Ausdruck bleibt allein
+            er stehen, also Kopfbereich und Beitrag ohne Navigation,
+            Fusszeile, Seitenleiste und Reaktionen. Derselbe Renderer wie
+            oben, nur mit anderen Regeln. */}
+        {data !== undefined && (
+          <ProjectPrintView
+            project={data}
+            blocks={data.blocks ?? EMPTY_BLOCKS}
+            coverUrl={cover.url}
+            resolveFileUrl={resolveFileUrl}
+            fileState={fileState}
+          />
+        )}
+
         {data !== undefined && (
           <Sheet open={infoOpen} onOpenChange={setInfoOpen}>
             <SheetContent side="left" className="overflow-y-auto lg:hidden">
@@ -503,6 +545,10 @@ function ProjectInfoPanel({ project }: { project: ProjectDetailResponse }) {
  * {@code floating} legt ihn auf das Titelbild; er traegt dort eine gedeckte
  * Flaeche, damit er auf jedem Foto sichtbar bleibt (SC 1.4.11), und ist mit
  * 2rem groesser als das Mindestmass aus SC 2.5.8.
+ *
+ * <p>Rund wie der Druckknopf gegenueber (KAN-41): zwei gleich grosse
+ * Symbolknoepfe auf demselben Titelbild mit verschiedenem Radius fallen
+ * sofort auf.
  */
 function InfoTrigger({
   onOpen,
@@ -521,11 +567,67 @@ function InfoTrigger({
       onClick={onOpen}
       aria-label={t("project.detail.meta.open")}
       className={cn(
-        "lg:hidden",
-        floating ? "absolute top-4 left-4 z-10 shadow-md" : "ml-auto"
+        "rounded-full lg:hidden",
+        floating ? "absolute top-4 left-4 z-10 shadow-md" : undefined
       )}
     >
       <InfoIcon aria-hidden="true" />
+    </Button>
+  )
+}
+
+/**
+ * Der Knopf, der das Projekt ausdruckt (KAN-41).
+ *
+ * <p>Rund und mit Symbol, wie im Prototyp verabredet, und in jeder Breite
+ * sichtbar: der Ausdruck ist keine Beigabe der schmalen Ansicht. Auf dem
+ * Titelbild traegt er dieselbe gedeckte Flaeche wie der Knopf gegenueber,
+ * damit er auf jedem Foto sichtbar bleibt (SC 1.4.11); mit 2rem liegt er
+ * ueber dem Mindestmass aus SC 2.5.8.
+ *
+ * <p>Der zugaengliche Name sagt, was geschieht, und nicht nur „PDF": ein
+ * Symbol ohne Text braucht ihn, und „PDF" allein waere fuer sich genommen
+ * keine Handlung (SC 2.4.6).
+ *
+ * <p><strong>Waehrend der Vorbereitung meldet er {@code aria-disabled} und
+ * nicht {@code disabled}</strong>, wie die Ausrichtung im
+ * {@code AlignMenu}: eine Schaltflaeche, die im Augenblick des Klicks
+ * {@code disabled} wird, verliert den Fokus an den Seitenanfang
+ * (SC 2.4.3). Ein zweites Ausloesen faengt der Handler ab, damit kein
+ * zweiter Druckdialog aufgeht.
+ */
+function PrintTrigger({
+  onPrint,
+  busy,
+  floating = false,
+}: {
+  onPrint: () => void
+  busy: boolean
+  floating?: boolean
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      size="icon"
+      onClick={(event) => {
+        if (busy) {
+          event.preventDefault()
+          return
+        }
+        onPrint()
+      }}
+      aria-disabled={busy}
+      aria-label={t("projectContent.print.actionLabel")}
+      className={cn(
+        "rounded-full",
+        busy && "opacity-50",
+        floating ? "absolute top-4 right-4 z-10 shadow-md" : undefined
+      )}
+    >
+      <PrinterIcon aria-hidden="true" />
     </Button>
   )
 }

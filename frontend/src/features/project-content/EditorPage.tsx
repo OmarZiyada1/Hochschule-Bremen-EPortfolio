@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { EditorContent, useEditor } from "@tiptap/react"
 import { LockIcon, TriangleAlertIcon } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { flushSync } from "react-dom"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useParams } from "react-router-dom"
 
@@ -9,7 +10,12 @@ import { useAuth } from "@/api/auth/AuthContext"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import { blockQueries } from "@/api/queries/blocks"
 import { projectQueries, withdrawProject } from "@/api/queries/projects"
-import type { ProjectDetailResponse, ProjectUpdateRequest } from "@/api/types"
+import type {
+  BlockResponse,
+  ProjectDetailResponse,
+  ProjectUpdateRequest,
+} from "@/api/types"
+import { useFileUrl } from "@/api/useFileUrl"
 import { VersionConflictDialog } from "@/components/common/VersionConflictDialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
@@ -39,6 +45,10 @@ import { TableControlsLayer } from "@/features/project-content/components/TableC
 import { blocksToDoc } from "@/features/project-content/blockSerialization"
 import type { ProjectDocument } from "@/features/project-content/blockTypes"
 import { createEditorExtensions } from "@/features/project-content/editorSchema"
+import { useProjectFileUrls } from "@/features/project-content/hooks/useProjectFileUrls"
+import { printableBlocks } from "@/features/project-content/print/printableBlocks"
+import { ProjectPrintView } from "@/features/project-content/print/ProjectPrintView"
+import { usePrintProject } from "@/features/project-content/print/usePrintProject"
 import type { BreadcrumbOriginState } from "@/routes/useBreadcrumb"
 import { useAutosave } from "@/features/project-content/hooks/useAutosave"
 import {
@@ -46,6 +56,10 @@ import {
   toProjectIntroValues,
   type ProjectIntroValues,
 } from "@/features/projects/ProjectMetadataForm.schema"
+
+/* Eine Liste, nicht bei jedem Rendern eine neue: sie steht in den
+   Abhaengigkeiten der Dateiaufloesung des Druckbereichs. */
+const EMPTY_BLOCKS: readonly BlockResponse[] = []
 
 /**
  * Die Schreibflaeche des Editors auf {@code /projects/:projectId/editor}
@@ -112,6 +126,37 @@ export default function EditorPage() {
 
   const project = useQuery(projectQueries.detail(projectId))
   const blocks = useQuery(blockQueries.list(projectId))
+
+  /*
+   * Der Ausdruck (KAN-41).
+   *
+   * <p><strong>Gedruckt wird der Read-Only-Renderer, nicht die
+   * Schreibflaeche.</strong> Video, Ton, Dokument und Einbettung stehen
+   * dort bewusst als benannte Bedienkarte und nicht als Medium (Template
+   * „Editor (Bearbeiten)"), dazu kommen Platzhaltertexte und die
+   * Blockbedienung: ein Ausdruck davon zeigte Ablageflaechen statt des
+   * Beitrags. {@code ProjectPrintView} rendert stattdessen dieselbe Ansicht
+   * wie die Detailseite, und der Ausdruck ist an beiden Stellen derselbe.
+   *
+   * <p><strong>Der Stand kommt aus dem Dokument, nicht aus der
+   * Abfrage.</strong> Der Speichertakt laeuft dem Tippen mit gut einer
+   * Sekunde hinterher; ohne {@code printBlocks} bekaeme man das Blatt von
+   * vorhin. Genommen wird er bei jedem Druck neu ({@code takePrintBlocks}),
+   * auf beiden Wegen; vor dem ersten Druck steht der gelesene Stand darin.
+   *
+   * <p>Die Dateien laufen ueber denselben angemeldeten Weg wie in der
+   * Vorschau (§3.15): ein Beitrag im Editor ist nicht veroeffentlicht, und
+   * ohne Token beantwortet der Server jede Medienanfrage mit 401. Dieselben
+   * Abfrageschluessel wie {@code useFileObjectUrl} der Knotenansichten, also
+   * kein zweiter Abruf.
+   */
+  const [printBlocks, setPrintBlocks] = useState<BlockResponse[] | null>(null)
+  const { print, printing } = usePrintProject()
+  const printNeedsToken =
+    project.data !== undefined && project.data.status !== "PUBLISHED"
+  const printSource = printBlocks ?? blocks.data?.blocks ?? EMPTY_BLOCKS
+  const printFiles = useProjectFileUrls(printSource, printNeedsToken)
+  const printCover = useFileUrl(project.data?.coverImageUrl, printNeedsToken)
 
   const announce = useCallback((message: string) => {
     setAnnouncement(message)
@@ -327,6 +372,30 @@ export default function EditorPage() {
     [editor]
   )
 
+  /*
+   * Der Stand, der gedruckt wird: das Dokument der Schreibflaeche, nicht
+   * die zuletzt gespeicherte Blockliste. Genommen wird er bei jedem Druck
+   * neu, und zwar auf beiden Wegen: die Schaltflaeche ruft ihn selbst,
+   * Strg+P ueber {@code beforeprint} (Effekt darunter). Sonst druckte, wer
+   * einen Satz schreibt und sofort druckt, das Blatt von vorhin.
+   */
+  const takePrintBlocks = useCallback(() => {
+    const doc = readDocument()
+    setPrintBlocks(doc === null ? null : printableBlocks(doc))
+  }, [readDocument])
+
+  useEffect(() => {
+    /* flushSync, weil der Browser unmittelbar nach diesem Ereignis den
+       Seiteninhalt abgreift; ein spaeter eingeplantes Rendern kaeme zu
+       spaet. Denselben Griff macht ProjectPrintView fuer den Druckbereich
+       selbst. */
+    const refresh = () => flushSync(takePrintBlocks)
+    window.addEventListener("beforeprint", refresh)
+    return () => {
+      window.removeEventListener("beforeprint", refresh)
+    }
+  }, [takePrintBlocks])
+
   const autosave = useAutosave({
     projectId,
     enabled: mayWrite,
@@ -371,6 +440,30 @@ export default function EditorPage() {
   const leaveTo = async (path: string, state?: BreadcrumbOriginState) => {
     await autosave.flush()
     void navigate(path, state ? { state } : undefined)
+  }
+
+  /*
+   * Erst den Druckbereich mit dem aktuellen Dokument fuellen, dann drucken.
+   *
+   * <p>{@code flushSync} ist hier kein Beiwerk: {@code window.print()} haelt
+   * den Ablauf an, bis der Druckdialog zurueck ist. Ein Rendern, das React
+   * erst nach dem Ereignis einplant, kaeme also zu spaet, und gedruckt
+   * wuerde der Stand von vor dem Klick.
+   *
+   * <p><strong>Zurueckgesetzt wird der Stand nicht.</strong> Er wird bei
+   * jedem Druck neu genommen, auch bei Strg+P (Effekt oben). Ein
+   * Zuruecksetzen unmittelbar nach {@code window.print()} waere sogar
+   * falsch: in Chrome kehrt der Aufruf zurueck, bevor die Vorschau den
+   * Seiteninhalt abgreift, und der Ausdruck fiele mitten im Vorgang auf den
+   * zuletzt gespeicherten Stand zurueck.
+   *
+   * <p>Gespeichert wird dabei nicht: der Ausdruck zeigt, was auf der
+   * Schreibflaeche steht, und ein Druckbefehl ist kein Anlass, den Server
+   * anzufassen. Der Speichertakt laeuft ohnehin weiter.
+   */
+  const handlePrint = () => {
+    flushSync(takePrintBlocks)
+    void print()
   }
 
   if (project.isPending || blocks.isPending) {
@@ -440,6 +533,8 @@ export default function EditorPage() {
           onWithdraw={() => setWithdrawOpen(true)}
           onBack={() => void leaveTo("/my-portfolio")}
           onPreview={() => void leaveTo(`/projects/${projectId}`)}
+          onPrint={handlePrint}
+          printing={printing}
           onShowInfo={() => setInfoOpen(true)}
           menuButtonRef={menuButtonRef}
           backButtonRef={backButtonRef}
@@ -578,6 +673,18 @@ export default function EditorPage() {
           />
         </div>
       </div>
+
+      {/* Der Druckbereich (KAN-41). Er haengt als Portal unmittelbar an
+          body und ist am Bildschirm verborgen; im Ausdruck bleibt allein er
+          stehen, also Kopfbereich und Beitrag ohne Kopfzeile, Seitenleiste
+          und Blockbedienung. */}
+      <ProjectPrintView
+        project={detail}
+        blocks={printSource}
+        coverUrl={printCover.url}
+        resolveFileUrl={printFiles.resolveFileUrl}
+        fileState={printFiles.fileState}
+      />
 
       {/*
        * Dieselbe Seitenleiste als Schublade, ueber die volle Breite.

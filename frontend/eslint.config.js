@@ -48,7 +48,7 @@ export default defineConfig([
       Renderer-Moduls prueft dasselbe ein zweites Mal, denn diese Regel
       sieht nur den direkten Import und nicht den ueber eine Zwischendatei.
     */
-    files: ['src/features/project-content/renderer/**/*.{ts,tsx}'],
+    files: ['src/features/project-content/{renderer,print}/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',

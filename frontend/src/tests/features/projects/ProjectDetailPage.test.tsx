@@ -836,3 +836,40 @@ describe("Medien eines noch nicht veroeffentlichten Beitrags (KAN-36)", () => {
     ).toBeNull()
   })
 })
+
+describe("Die Aktion PDF", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("de")
+  })
+
+  it("druckt die Seite, auch ohne Anmeldung", async () => {
+    /*
+     * Der Ausdruck (KAN-41) ist clientseitig und braucht keinen Endpoint:
+     * wer die Seite sehen darf, darf sie drucken. Gedruckt wird der
+     * Druckbereich, den ProjectPrintView an body haengt; hier steht nur der
+     * Durchstich von der Schaltflaeche zu window.print.
+     */
+    const print = vi.spyOn(window, "print").mockImplementation(() => undefined)
+    /*
+     * Ein Beitrag ohne Bild: die Aktion holt vor dem Druck die Bilder des
+     * Druckbereichs, und in jsdom laedt kein Bild je fertig. Der Lauf
+     * wartete sonst bis zur Obergrenze aus usePrintProject. Dass Bild und
+     * Galerie im Ausdruck stehen, prueft ProjectPrintView.test.tsx.
+     */
+    server.use(
+      detailHandler(
+        projectResponse({ blocks: blocksOf([paragraph("Nur Text")]) })
+      )
+    )
+
+    renderPage()
+    const trigger = await screen.findByRole("button", {
+      name: i18n.t("projectContent.print.actionLabel"),
+    })
+
+    await userEvent.click(trigger)
+    await waitFor(() => {
+      expect(print).toHaveBeenCalledTimes(1)
+    })
+  })
+})

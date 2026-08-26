@@ -771,3 +771,264 @@
     padding-inline-start: var(--editor-block-gutter, 5rem);
   }
 }
+
+/* ============================================================
+ * Der Ausdruck (KAN-41)
+ *
+ * Alle Druckregeln stehen hier, unmittelbar bei den Bildschirmregeln
+ * derselben Klasse. Der Ausdruck ist keine zweite Ansicht, sondern
+ * dieselbe mit anderen Regeln: gedruckt wird der Baum, den
+ * print/ProjectPrintView als [data-print="area"] an body haengt, und darin
+ * steckt derselbe .project-content wie auf der Detailseite.
+ *
+ * Drei Festlegungen erklaeren fast jede Regel unten:
+ *
+ * 1. Dieser Abschnitt steht AUSSERHALB von @layer components, anders als
+ *    alles darueber. Zwei Regeln brauchen das. Die Isolierung des
+ *    Druckbereichs muss ein display: flex aus @layer utilities schlagen,
+ *    das auf jedem Rahmen der Anwendung sitzt; eine Regel in einer Ebene
+ *    verliert gegen jede Utility, egal wie spezifisch sie ist. Und die
+ *    helle Rollenbelegung muss den .dark-Block aus tokens/tokens.css
+ *    schlagen, der ebenfalls ungeschichtet steht.
+ * 2. Hier steht keine Farbe. Dass der Ausdruck hell ist, unabhaengig vom
+ *    eingestellten Modus, entscheidet die Tokenschicht: tokens/tokens.css
+ *    fuehrt neben hell und dunkel eine dritte Belegung derselben Rollen
+ *    fuer @media print. Nur sie darf Primitives lesen (Frontend-Regel 5),
+ *    und die Zuordnung Rolle zu Wert gehoert ohnehin an einen Ort.
+ * 3. Was auf Papier nicht ankommt, wird benannt und nicht verschwiegen.
+ *    Video, Ton und Einbettung verschwinden, und an ihrer Stelle steht der
+ *    Hinweis samt Quellangabe, den der Renderer als [data-print="only"]
+ *    ohnehin mitfuehrt (renderer/renderBlockNode).
+ * ============================================================ */
+
+/* Am Bildschirm unsichtbar: die Hinweise gelten dem Papier, und ein
+   Screenreader laese sonst neben dem Video auch noch dessen Ersatztext
+   vor. display: none nimmt sie aus dem Baum der Hilfsmittel; visibility
+   oder eine Klasse fuer Screenreader taeten das nicht. */
+.project-content [data-print="only"] {
+  display: none;
+}
+
+/* Und derselbe Griff am Druckbereich als Ganzem. Ueber eine eigene Regel
+   und nicht ueber das Attribut hidden: manche Browser fuehren
+   [hidden] { display: none } in ihrem Standard-Stylesheet als !important,
+   und dann liesse sich der Bereich im Druck nicht wieder einblenden. */
+[data-print="area"] {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 2cm;
+  }
+
+  /* ------------------------------------------------------------
+   * 1. Nur der Druckbereich
+   *
+   * Eine Regel statt eines Dutzends: Navigation, Fusszeile, Seitenleiste,
+   * Werkzeugleiste, Blockbedienung, Reaktionsschaltflaeche und jedes
+   * andere Bedienelement liegen unterhalb eines anderen Kindes von body
+   * und verschwinden damit gemeinsam. Wuerde stattdessen jede Stelle
+   * einzeln markiert, waere die naechste neue Leiste die erste, die jemand
+   * vergisst.
+   *
+   * :has haelt die Regel bei sich: nur eine Seite, die einen Druckbereich
+   * mitbringt, blendet ihre Umgebung aus. Ohne diese Bedingung ergaebe
+   * Strg+P auf jeder anderen Seite der Anwendung ein leeres Blatt.
+   * ------------------------------------------------------------ */
+  body:has(> [data-print="area"]) > *:not([data-print="area"]) {
+    display: none;
+  }
+
+  [data-print="area"] {
+    display: block;
+    font-family: var(--font-body);
+    color: var(--foreground);
+  }
+
+  body {
+    /* Der Bogen ist schon weiss; eine Flaeche darauf kostet nur Farbe. */
+    background: none;
+  }
+
+  /* ------------------------------------------------------------
+   * 2. Der Kopfbereich
+   * ------------------------------------------------------------ */
+  [data-print="header"] img {
+    max-inline-size: 100%;
+    block-size: auto;
+    border-radius: var(--radius-card);
+    margin-block-end: 1rem;
+  }
+
+  [data-print="header"] h1 {
+    color: var(--primary);
+  }
+
+  /* Zwei Spalten aus einer Beschreibungsliste: display: contents an der
+     Zeile laesst dt und dd unmittelbar im Raster liegen, ohne dass das
+     Markup seine Paarbildung verliert. */
+  [data-print="header"] dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    column-gap: 1rem;
+    row-gap: 0.25rem;
+    margin-block: 1rem 0;
+    font-size: var(--fs-body-sm);
+  }
+
+  [data-print="header"] dl > div {
+    display: contents;
+  }
+
+  [data-print="header"] dt {
+    color: var(--muted-foreground);
+  }
+
+  [data-print="header"] dd {
+    margin: 0;
+  }
+
+  [data-print="header"] section {
+    margin-block-start: 1rem;
+  }
+
+  [data-print="header"] section p {
+    margin-block-start: 0.25rem;
+  }
+
+  /* Eine Linie zwischen Kopf und Beitrag, damit der Ausdruck seine beiden
+     Teile zeigt. */
+  [data-print="header"] + .project-content {
+    border-block-start: 1px solid var(--border);
+    padding-block-start: 1.5rem;
+    margin-block-start: 1.5rem;
+  }
+
+  /* ------------------------------------------------------------
+   * 3. Der Beitrag
+   * ------------------------------------------------------------ */
+
+  /* Die Hinweise zu Video, Ton, Einbettung und Dokument treten an die
+     Stelle dessen, was auf Papier fehlt. */
+  .project-content [data-print="only"] {
+    display: block;
+    color: var(--muted-foreground);
+    font-size: var(--fs-body-sm);
+    /* Eine Adresse ohne Leerzeichen darf die Spalte nicht sprengen. */
+    overflow-wrap: anywhere;
+  }
+
+  /* Ein iframe erscheint im Ausdruck ohnehin nicht, und ein Medienstrom hat
+     kein Papieraequivalent. Beide werden deshalb ausgeblendet, statt eine
+     leere Flaeche oder einen schwarzen Kasten zu hinterlassen; was sie
+     bedeuten, sagt der Hinweis darunter. Ein Standbild wird nicht erzeugt:
+     es stuende nicht im Dokument (Ticket KAN-41). */
+  .project-content video,
+  .project-content audio,
+  .project-content iframe {
+    display: none;
+  }
+
+  /* Eine Ueberschrift steht nie allein am Seitenende. */
+  .project-content :is(h2, h3, h4, h5, h6, [role="heading"]) {
+    break-after: avoid;
+  }
+
+  .project-content p,
+  .project-content li,
+  .project-content blockquote {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* Quelltext bricht um, statt waagerecht zu rollen: ein Bildlauf auf
+     Papier schneidet die rechte Haelfte jeder langen Zeile ab. */
+  .project-content pre {
+    white-space: pre-wrap;
+    overflow: visible;
+    border: 1px solid var(--border);
+  }
+
+  /* Derselbe Grund am Tabellenbereich und an der Formel: am Bildschirm
+     haelt overflow-x: auto die Seite frei von waagerechtem Bildlauf, auf
+     Papier schnitte dieselbe Regel den Inhalt ab. */
+  .project-content [data-block="table-scroll"],
+  .project-content [data-block="math"] {
+    overflow: visible;
+  }
+
+  .project-content thead {
+    display: table-header-group;
+  }
+
+  .project-content tr {
+    break-inside: avoid;
+  }
+
+  /* KaTeX gibt jede Formel zweimal aus: als HTML fuer das Auge und als
+     MathML fuer die Hilfsmittel (output: "htmlAndMathml", renderMath.ts).
+     Am Bildschirm haelt das Stylesheet von KaTeX die MathML-Haelfte
+     beschnitten; im Druck geben manche Browser sie trotzdem aus, und jede
+     Formel stuende doppelt auf dem Blatt. */
+  .project-content .katex-mathml {
+    display: none;
+  }
+
+  /* Bild und Galeriezelle bleiben auf einer Seite. Die Galerie selbst
+     nicht: sie kann laenger sein als ein Blatt, und dann bliebe der Rest
+     der Seite darueber leer. */
+  .project-content figure[data-width],
+  .project-content figure[data-columns] li {
+    break-inside: avoid;
+  }
+
+  /* Die drei Bildbreiten aus dem Dokument gelten auch auf Papier. Sie
+     stehen hier ein zweites Mal, weil der Satzspiegel eines Blattes
+     schmaler ist als eine breite Ansicht und die Regel fuer schmale
+     Ansichten sie sonst auf volle Breite zoege. */
+  .project-content figure[data-width="100"] {
+    inline-size: 100%;
+  }
+
+  .project-content figure[data-width="75"] {
+    inline-size: 75%;
+  }
+
+  .project-content figure[data-width="50"] {
+    inline-size: 50%;
+  }
+
+  /* Hoechstens zwei Spalten: drei Bilder nebeneinander waeren auf einem
+     bedruckten Blatt briefmarkengross. */
+  .project-content figure[data-columns="2"] ul,
+  .project-content figure[data-columns="3"] ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Eine Hervorhebung traegt Bedeutung und keine Zierde: sie ueberlebt die
+     Voreinstellung des Browsers, Hintergruende beim Drucken wegzulassen.
+     Fuer die uebrigen Flaechen gilt das nicht, sie sparen Farbe. */
+  .project-content mark[data-color] {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Ein Link ohne Adresse ist auf Papier tot. Gedruckt wird nur, was der
+     Protokollfilter durchgelassen hat: http und https stehen im Dokument,
+     mailto nennt seine Adresse schon im Linktext, und die Adresse einer
+     Datei steht als eigener Hinweis darunter. */
+  .project-content a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: var(--fs-body-sm);
+    color: var(--muted-foreground);
+    overflow-wrap: anywhere;
+  }
+
+  /* Nicht am Dokumentlink: dort steht die Adresse schon als eigene Zeile
+     darunter (data-print="only"), und mit dieser Regel stuende sie zweimal
+     untereinander, sobald die API auf demselben Ursprung laeuft. */
+  .project-content p[data-block="document"] a::after {
+    content: none;
+  }
+}

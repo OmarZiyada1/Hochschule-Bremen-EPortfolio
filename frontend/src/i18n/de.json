@@ -1117,6 +1117,21 @@
       "withdraw": "Zurückziehen",
       "menu": "Weitere Aktionen"
     },
+    "print": {
+      "actionLabel": "Als PDF drucken",
+      "author": "Autor:in",
+      "studyProgram": "Studiengang",
+      "semester": "Semester",
+      "status": "Status",
+      "printedAt": "Ausdruck vom",
+      "abstract": "Abstract",
+      "video": "Video, auf Papier nicht abspielbar.",
+      "videoEmbed": "Eingebettetes Video von {{provider}}, auf Papier nicht abspielbar.",
+      "audio": "Tonaufnahme, auf Papier nicht abspielbar.",
+      "embed": "Eingebetteter Inhalt von {{provider}}, auf Papier nicht darstellbar.",
+      "documentType": "PDF",
+      "source": "Quelle: {{url}}"
+    },
     "autosave": {
       "saving": "Wird gespeichert",
       "saved": "Gespeichert",
