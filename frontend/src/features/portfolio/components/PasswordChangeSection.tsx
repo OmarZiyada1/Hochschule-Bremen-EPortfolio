@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
+import { KeyRoundIcon } from "lucide-react"
 import { useId, useState } from "react"
 import {
   Controller,
@@ -75,7 +76,6 @@ import {
 export function PasswordChangeSection({
   email,
   unsavedChanges = false,
-  headingLevel = 2,
 }: {
   /** Die private Adresse; an sie geht der Ruecksetzcode (§6.1). */
   email: string
@@ -85,7 +85,6 @@ export function PasswordChangeSection({
    * frontend-design, Abschnitt 5).
    */
   unsavedChanges?: boolean
-  headingLevel?: 2 | 3
 }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -95,7 +94,6 @@ export function PasswordChangeSection({
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [changed, setChanged] = useState(false)
   const formId = useId()
-  const Heading = `h${headingLevel}` as "h2" | "h3"
 
   const form = useForm<ChangePasswordFormValues>({
     resolver: zodResolver(changePasswordFormSchema),
@@ -240,14 +238,12 @@ export function PasswordChangeSection({
   )
 
   return (
-    <section className="flex flex-col items-start gap-3">
-      <Heading className="type-h3 font-semibold text-primary">
-        {t("portfolio.profile.passwordChange.title")}
-      </Heading>
-      <p className="type-body-sm text-muted-foreground">
-        {t("portfolio.profile.passwordChange.description")}
-      </p>
-
+    /* Ein div und kein section (KAN-83): ein section ohne Ueberschrift hat
+       keinen zugaenglichen Namen und behauptet eine Gliederungsebene, die
+       es dann nicht einloest (WCAG 2.2, SC 1.3.1). Uebrig bleibt der
+       Knopf; Ueberschrift und Erklaersatz standen ueber einer einzigen
+       Schaltflaeche und sagten dasselbe wie sie. */
+    <div className="flex flex-col items-start gap-3">
       {changed && (
         /* role=status: die Bestaetigung wird beim Erscheinen angesagt, ohne
            den Fokus zu verschieben. Sie steht im Abschnitt und nicht im
@@ -261,6 +257,10 @@ export function PasswordChangeSection({
         {/* type=button: der Trigger liegt unterhalb des Profilformulars und
             darf es nicht absenden. */}
         <DialogTrigger render={<Button type="button" variant="outline" />}>
+          {/* Das Symbol traegt keine eigene Aussage, der Text daneben sagt
+              alles; es macht die Zeile nur wiedererkennbar, seit die
+              Ueberschrift darueber weg ist. */}
+          <KeyRoundIcon aria-hidden="true" />
           {t("portfolio.profile.passwordChange.open")}
         </DialogTrigger>
 
@@ -360,6 +360,6 @@ export function PasswordChangeSection({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </section>
+    </div>
   )
 }

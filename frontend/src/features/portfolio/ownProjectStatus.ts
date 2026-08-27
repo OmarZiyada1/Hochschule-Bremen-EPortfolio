@@ -78,16 +78,30 @@ export function statusQueryValue(
 }
 
 /**
- * Traegt eine eigene Kachel in diesem Status eine Handlung (KAN-69)?
- * Bearbeiten in DRAFT und REVISION, Loeschen in DRAFT, Zurueckziehen in
- * SUBMITTED; APPROVED und PUBLISHED bekommen keine, damit die
- * veroeffentlichte Kachel ihre Reaktionszahl behaelt.
+ * Traegt eine Kachel unter „Mein Portfolio" eine Handlung (KAN-69, erweitert
+ * mit KAN-83)?
+ *
+ * <p><strong>Als Autor:in</strong> haengt es am Status: Bearbeiten in DRAFT
+ * und REVISION, Loeschen in DRAFT, Zurueckziehen in SUBMITTED; APPROVED und
+ * PUBLISHED bekommen keine, damit die veroeffentlichte Kachel ihre
+ * Reaktionszahl behaelt.
+ *
+ * <p><strong>Als blosses Mitglied</strong> gibt es genau eine Handlung, und
+ * zwar in jedem Status: das Verlassen (§3.13.1, seit Contract v84). Die
+ * Statusschranke gilt dort ausdruecklich nicht, sonst kaeme niemand je aus
+ * einem veroeffentlichten Projekt heraus.
  *
  * <p>Die Antwort steht hier und nicht zusaetzlich in der Seite: sonst
  * muesste ein neuer Status an zwei Stellen nachgezogen werden (Befund aus
  * dem Review zu KAN-69). Welche Handlung es genau ist, entscheidet
  * {@code OwnProjectCardActions}.
  */
-export function hasOwnCardAction(status: ProjectStatus | undefined): boolean {
+export function hasOwnCardAction(
+  status: ProjectStatus | undefined,
+  isAuthor: boolean
+): boolean {
+  if (!isAuthor) {
+    return true
+  }
   return status === "DRAFT" || status === "REVISION" || status === "SUBMITTED"
 }

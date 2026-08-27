@@ -14,6 +14,7 @@ import { masterDataQueries } from "@/api/queries/masterData"
 import type { SemesterResponse } from "@/api/types"
 import { EmptyState } from "@/components/common/EmptyState"
 import { SearchInput } from "@/components/common/SearchInput"
+import { TruncatedText } from "@/components/common/TruncatedText"
 import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -263,8 +264,17 @@ export default function AdminSemesterListPage() {
 
                   return (
                     <TableRow key={semester.id}>
+                      {/* Der Name ist wie jeder Tabelleneintrag auf zwanzig
+                          Zeichen Breite geklemmt (KAN-83). Der Schalter
+                          daneben verweist ueber aria-labelledby auf diese
+                          Zelle und bekommt dadurch den vollen Namen: Geklemmt
+                          wird allein in der Darstellung, der Text selbst steht
+                          ungekuerzt im Dokument und geht vollstaendig in die
+                          Namensberechnung ein. Zuvor hing das an einem
+                          aria-hidden am gekappten Teil und einem
+                          sr-only-Zwilling daneben. */}
                       <TableCell id={`semester-${semester.id}-name`}>
-                        {semester.name}
+                        <TruncatedText text={semester.name} />
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">

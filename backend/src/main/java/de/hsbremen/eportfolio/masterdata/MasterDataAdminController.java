@@ -271,7 +271,10 @@ public class MasterDataAdminController {
 	}
 
 	@Operation(summary = "Studiengang loeschen",
-			description = "Gesperrt, solange noch Module oder Projekte darauf verweisen (409).")
+			description = "Gesperrt, solange noch Fachmodule oder Projekte darauf verweisen "
+					+ "(409). Das Sammelmodul des Studiengangs zaehlt dabei nicht mit und wird "
+					+ "mitgeloescht (§3.9, seit Contract v84); verweist ein Projekt darauf, "
+					+ "bleibt es bei 409.")
 	@ApiResponse(responseCode = "204", description = "Der Studiengang ist geloescht.")
 	@ApiResponse(responseCode = "401", description = UNAUTHORIZED)
 	@ApiResponse(responseCode = "403", description = FORBIDDEN)
@@ -310,10 +313,12 @@ public class MasterDataAdminController {
 
 	@Operation(summary = "Modul aendern",
 			description = "Alle drei Felder sind optional; was fehlt, bleibt stehen. Eine leere "
-					+ "Zeichenkette in \"abbreviation\" loescht die Kurzform.")
+					+ "Zeichenkette in \"abbreviation\" loescht die Kurzform. Das Sammelmodul "
+					+ "(collective) laesst sich umbenennen, aber nicht umhaengen (§3.9).")
 	@ApiResponse(responseCode = "200", description = "Das geaenderte Modul.")
 	@ApiResponse(responseCode = "400", description = "VALIDATION_FAILED: uebermittelter Name ist "
-			+ "leer, oder unter der studyProgramId gibt es keinen Studiengang.")
+			+ "leer, unter der studyProgramId gibt es keinen Studiengang, oder es soll das "
+			+ "Sammelmodul an einen anderen Studiengang gehaengt werden.")
 	@ApiResponse(responseCode = "401", description = UNAUTHORIZED)
 	@ApiResponse(responseCode = "403", description = FORBIDDEN)
 	@ApiResponse(responseCode = "404", description = NOT_FOUND)
@@ -330,7 +335,9 @@ public class MasterDataAdminController {
 	}
 
 	@Operation(summary = "Modul loeschen",
-			description = "Gesperrt, solange noch Projekte darauf verweisen (409).")
+			description = "Gesperrt, solange noch Projekte darauf verweisen (409). Das "
+					+ "Sammelmodul eines Studiengangs laesst sich gar nicht einzeln loeschen "
+					+ "und faellt mit seinem Studiengang (§3.9, seit Contract v84).")
 	@ApiResponse(responseCode = "204", description = "Das Modul ist geloescht.")
 	@ApiResponse(responseCode = "401", description = UNAUTHORIZED)
 	@ApiResponse(responseCode = "403", description = FORBIDDEN)

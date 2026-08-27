@@ -14,7 +14,9 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useEditorContext } from "@/features/project-content/EditorContext"
 import { MediaShell } from "@/features/project-content/components/MediaShell"
+import { MediaWidthToolbar } from "@/features/project-content/components/nodeviews/MediaWidthToolbar"
 import { UploadDropzone } from "@/features/project-content/components/UploadDropzone"
+import type { ImageWidth } from "@/features/project-content/blockTypes"
 import { useFileObjectUrl } from "@/features/project-content/hooks/useFileObjectUrl"
 import { parseVideoInput } from "@/features/project-content/providerInput"
 import {
@@ -67,6 +69,8 @@ export function VideoNodeView({ node, updateAttributes }: ReactNodeViewProps) {
     videoId: string | null
     hash: string | null
     caption: string | null
+    /* Dieselben drei Stufen wie am Bild (2.5 seit v84). */
+    width: ImageWidth
   }
   const [url, setUrl] = useState("")
   const [urlError, setUrlError] = useState<string | null>(null)
@@ -107,7 +111,10 @@ export function VideoNodeView({ node, updateAttributes }: ReactNodeViewProps) {
       }
     >
       {hasFile || hasEmbed ? (
-        <figure>
+        /* data-width traegt die Stufe, gerechnet wird sie im Stylesheet,
+           genau wie am Bild. group/media macht die Leiste beim Zeigen
+           sichtbar. */
+        <figure data-width={attrs.width} className="group/media relative">
           {hasEmbed ? (
             <iframe
               title={t("projectContent.video.embedTitle", {
@@ -134,6 +141,14 @@ export function VideoNodeView({ node, updateAttributes }: ReactNodeViewProps) {
               preload="metadata"
               src={file.url}
               aria-label={t("projectContent.video.label")}
+            />
+          )}
+
+          {editable && !file.isError && (
+            <MediaWidthToolbar
+              kind="video"
+              value={attrs.width}
+              onChange={(width) => updateAttributes({ width })}
             />
           )}
 

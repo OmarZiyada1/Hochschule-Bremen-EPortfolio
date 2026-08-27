@@ -40,6 +40,7 @@ import { AppLayout } from "@/routes/AppLayout"
 import { AuthLayout } from "@/routes/AuthLayout"
 import { EditorLayout } from "@/routes/EditorLayout"
 import { EditorRoute } from "@/routes/EditorRoute"
+import { RootLayout } from "@/routes/RootLayout"
 import { PlaceholderPage } from "@/routes/PlaceholderPage"
 import { RequireAuth } from "@/routes/RequireAuth"
 import { RequireRole } from "@/routes/RequireRole"
@@ -276,4 +277,12 @@ export const routes: RouteObject[] = [
   { path: "*", element: <NotFoundPage /> },
 ]
 
-export const router = createBrowserRouter(routes)
+/*
+ * Alle Routen haengen unter einer pfadlosen Elternroute, die allein die
+ * Bildlaufposition wiederherstellt (KAN-83). Sie liegt hier und nicht in den
+ * Layouts, weil die 404-Route und die Entwicklungsflaechen ausserhalb der
+ * Layouts stehen und sonst ohne blieben.
+ */
+export const router = createBrowserRouter([
+  { element: <RootLayout />, children: routes },
+])

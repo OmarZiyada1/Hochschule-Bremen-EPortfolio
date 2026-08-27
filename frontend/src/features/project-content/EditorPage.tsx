@@ -284,14 +284,28 @@ export default function EditorPage() {
    * allein vom Ansehen eine neue Project.version (§6.4). Mit dem Absatz von
    * vornherein gibt es nichts zu ergaenzen; gespeichert wird er ohnehin
    * nicht, docToBlocks laesst den leeren Schlussabsatz weg.
+   *
+   * Aus demselben Grund haengt der Schlussblock aus KAN-83 schon hier an und
+   * nicht erst beim ersten Tastendruck: TrailingBlock arbeitet ueber
+   * appendTransaction und laeuft deshalb erst mit der ersten Aenderung. Ein
+   * Beitrag, der auf ein Bild endet, haette bis dahin keine Stelle zum
+   * Hineinklicken, und eine stille Transaktion beim Oeffnen loeste denselben
+   * Speicherlauf aus, den dieser Absatz vermeidet.
    */
   const initialContent = useMemo(() => {
     if (read === null) {
       return undefined
     }
-    return read.doc.content.length > 0
-      ? read.doc
-      : ({ type: "doc", content: [{ type: "paragraph" }] } as ProjectDocument)
+    const content = [...read.doc.content]
+    const last = content[content.length - 1]
+    const endsOpen =
+      last !== undefined &&
+      last.type === "paragraph" &&
+      (last.content === undefined || last.content.length === 0)
+    if (!endsOpen) {
+      content.push({ type: "paragraph" })
+    }
+    return { type: "doc", content } as ProjectDocument
   }, [read])
 
   const scheduleRef = useRef<() => void>(() => undefined)
@@ -506,6 +520,7 @@ export default function EditorPage() {
       <div className="flex flex-col">
         <EditorHeader
           editor={editor}
+          onAnnounce={announce}
           status={detail.status}
           autosaveState={autosave.state}
           busy={withdraw.isPending}

@@ -12,6 +12,7 @@ import de.hsbremen.eportfolio.common.enums.BlockType;
 import de.hsbremen.eportfolio.common.error.ErrorCodes;
 import de.hsbremen.eportfolio.common.error.ValidationException;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.DisplayName;
@@ -23,7 +24,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Prueft die Blockvalidierung aus API-Contract §2.5 ohne Datenbank und ohne
- * Spring-Kontext: alle vierzehn Blocktypen in gueltiger Form, und je Regel ein
+ * Spring-Kontext: alle fuenfzehn Blocktypen in gueltiger Form, und je Regel ein
  * Verstoss mit dem Fehlercode, den §6.2 dafuer vorsieht.
  *
  * <p><strong>Warum die gueltigen Beispiele hier stehen und nicht nur im
@@ -55,7 +56,7 @@ class BlockValidationServiceTest {
 
 	@ParameterizedTest
 	@EnumSource(BlockType.class)
-	@DisplayName("Jeder der vierzehn Blocktypen aus §2.5 hat eine gueltige Form")
+	@DisplayName("Jeder der fuenfzehn Blocktypen aus §2.5 hat eine gueltige Form")
 	void everyBlockTypeHasAValidForm(BlockType type) {
 		assertThatCode(() -> service.validate(type, VALID_CONTENT.get(type), 0))
 				.doesNotThrowAnyException();
@@ -977,6 +978,155 @@ class BlockValidationServiceTest {
 		return node;
 	}
 
+	@Nested
+	@DisplayName("VIDEO: width aus 100, 75 und 50 (§2.5, seit Contract v84)")
+	class VideoWidth {
+
+		@ParameterizedTest
+		@ValueSource(ints = {100, 75, 50})
+		@DisplayName("Die drei Stufen sind gueltig, an der Einbettung wie an der Datei")
+		void allowedWidths(int width) {
+			assertThatCode(() -> service.validate(BlockType.VIDEO,
+					node("videoBlock", MAPPER.createObjectNode()
+							.put("provider", "youtube")
+							.put("videoId", "dQw4w9WgXcQ")
+							.put("width", width)), 0)).doesNotThrowAnyException();
+
+			assertThatCode(() -> service.validate(BlockType.VIDEO,
+					node("videoBlock", MAPPER.createObjectNode()
+							.put("fileId", FILE_ID)
+							.put("width", width)), 0)).doesNotThrowAnyException();
+		}
+
+		@Test
+		@DisplayName("Fehlende width ist gueltig: es gilt 100, der Server ergaenzt nichts")
+		void widthMayBeAbsent() {
+			assertThatCode(() -> service.validate(BlockType.VIDEO,
+					VALID_CONTENT.get(BlockType.VIDEO), 0)).doesNotThrowAnyException();
+		}
+
+		@Test
+		@DisplayName("Ein Wert ausserhalb der drei Stufen ergibt BLOCK_CONTENT_INVALID")
+		void widthOutsideTheThreeSteps() {
+			assertThatThrownBy(() -> service.validate(BlockType.VIDEO,
+					node("videoBlock", MAPPER.createObjectNode()
+							.put("fileId", FILE_ID)
+							.put("width", 80)), 0))
+					.isInstanceOf(ValidationException.class)
+					.extracting(ex -> ((ValidationException) ex).getErrorCode())
+					.isEqualTo(ErrorCodes.BLOCK_CONTENT_INVALID);
+		}
+	}
+
+	@Nested
+	@DisplayName("TABLE_OF_CONTENTS: entries als Momentaufnahme (§2.5, seit Contract v84)")
+	class TableOfContents {
+
+		@Test
+		@DisplayName("Eine leere Liste ist gueltig: ein Beitrag ohne Ueberschriften")
+		void emptyEntriesAreValid() {
+			ObjectNode attrs = MAPPER.createObjectNode();
+			attrs.set("entries", MAPPER.createArrayNode());
+
+			assertThatCode(() -> service.validate(BlockType.TABLE_OF_CONTENTS,
+					node("tableOfContents", attrs), 0)).doesNotThrowAnyException();
+		}
+
+		@Test
+		@DisplayName("Ohne entries: BLOCK_CONTENT_INVALID")
+		void missingEntries() {
+			assertInvalid(BlockType.TABLE_OF_CONTENTS,
+					node("tableOfContents", MAPPER.createObjectNode()));
+		}
+
+		@Test
+		@DisplayName("Ein Eintrag mit Ebene 0 oder 7 faellt durch: es gelten 1 bis 6 wie "
+				+ "am HEADING")
+		void levelOutsideRange() {
+			assertInvalid(BlockType.TABLE_OF_CONTENTS, toc(entry(0, "Zu flach", 0)));
+			assertInvalid(BlockType.TABLE_OF_CONTENTS, toc(entry(7, "Zu tief", 0)));
+		}
+
+		@Test
+		@DisplayName("Ein negativer index faellt durch: gezaehlt wird ab 0")
+		void negativeIndex() {
+			assertInvalid(BlockType.TABLE_OF_CONTENTS, toc(entry(1, "Einleitung", -1)));
+		}
+
+		@Test
+		@DisplayName("text muss eine Zeichenkette sein und hoechstens 300 Zeichen haben")
+		void textRules() {
+			assertInvalid(BlockType.TABLE_OF_CONTENTS,
+					toc(MAPPER.createObjectNode().put("level", 1).put("text", 42).put("index", 0)));
+			assertInvalid(BlockType.TABLE_OF_CONTENTS,
+					toc(entry(1, "x".repeat(301), 0)));
+		}
+
+		@Test
+		@DisplayName("Mehr als 200 Eintraege faellt durch: die Grenze fangt ein von Hand "
+				+ "gebautes JSON ab, keinen langen Beitrag")
+		void tooManyEntries() {
+			ArrayNode entries = MAPPER.createArrayNode();
+			for (int i = 0; i <= 200; i++) {
+				entries.add(entry(1, "Kapitel " + i, i));
+			}
+			ObjectNode attrs = MAPPER.createObjectNode();
+			attrs.set("entries", entries);
+
+			assertInvalid(BlockType.TABLE_OF_CONTENTS, node("tableOfContents", attrs));
+		}
+
+		@Test
+		@DisplayName("Der Server prueft nicht, ob die Momentaufnahme zum Beitrag passt: "
+				+ "sie darf veralten (§2.5)")
+		void staleSnapshotIsValid() {
+			/*
+			 * Aktualisiert wird im Editor von Hand. Eine serverseitige
+			 * Abgleichpruefung machte aus der Momentaufnahme wieder eine
+			 * Ableitung und liesse ein gueltiges Dokument beim Speichern
+			 * scheitern, nur weil jemand eine Ueberschrift ergaenzt hat.
+			 */
+			assertThatCode(() -> service.validate(BlockType.TABLE_OF_CONTENTS,
+					toc(entry(3, "Laengst geloeschtes Kapitel", 99)), 0))
+					.doesNotThrowAnyException();
+		}
+
+		@Test
+		@DisplayName("Zwei Verzeichnisse in einer Liste ergeben BLOCK_CONTENT_INVALID")
+		void atMostOnePerProject() {
+			assertThatCode(() -> service.requireAtMostOneTableOfContents(List.of(
+					BlockType.TABLE_OF_CONTENTS, BlockType.TEXT, BlockType.HEADING)))
+					.doesNotThrowAnyException();
+
+			assertThatThrownBy(() -> service.requireAtMostOneTableOfContents(List.of(
+					BlockType.TABLE_OF_CONTENTS, BlockType.TEXT, BlockType.TABLE_OF_CONTENTS)))
+					.isInstanceOf(ValidationException.class)
+					.extracting(ex -> ((ValidationException) ex).getErrorCode())
+					.isEqualTo(ErrorCodes.BLOCK_CONTENT_INVALID);
+		}
+
+		private JsonNode toc(JsonNode singleEntry) {
+			ObjectNode attrs = MAPPER.createObjectNode();
+			attrs.set("entries", MAPPER.createArrayNode().add(singleEntry));
+			return node("tableOfContents", attrs);
+		}
+
+		private void assertInvalid(BlockType type, JsonNode content) {
+			assertThatThrownBy(() -> service.validate(type, content, 0))
+					.isInstanceOf(ValidationException.class)
+					.extracting(ex -> ((ValidationException) ex).getErrorCode())
+					.isEqualTo(ErrorCodes.BLOCK_CONTENT_INVALID);
+		}
+	}
+
+	/** Ein Eintrag eines Inhaltsverzeichnisses (§2.5, seit Contract v84). */
+	private static ObjectNode entry(int level, String text, int index) {
+		return MAPPER.createObjectNode()
+				.put("level", level)
+				.put("text", text)
+				.put("index", index);
+	}
+
 	private static Map<BlockType, JsonNode> validContent() {
 		Map<BlockType, JsonNode> samples = new EnumMap<>(BlockType.class);
 
@@ -1031,6 +1181,14 @@ class BlockValidationServiceTest {
 						.put("provider", "figma")
 						.put("embedUrl", "https://embed.figma.com/design/o6SECXRMKGOzCfG5xZebPV/Name?embed-host=share")
 						.put("height", 480)));
+
+		// §2.5 seit Contract v84: die gespeicherte Momentaufnahme der
+		// Gliederung, je Eintrag level, text und index.
+		ObjectNode tocAttrs = MAPPER.createObjectNode();
+		tocAttrs.set("entries", MAPPER.createArrayNode()
+				.add(entry(1, "Einleitung", 0))
+				.add(entry(2, "Vorgehen", 1)));
+		samples.put(BlockType.TABLE_OF_CONTENTS, node("tableOfContents", tocAttrs));
 
 		return Map.copyOf(samples);
 	}

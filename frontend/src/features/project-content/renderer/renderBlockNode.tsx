@@ -28,6 +28,7 @@ import {
   type FileState,
 } from "@/features/project-content/renderer/MediaSlot"
 import { renderInline } from "@/features/project-content/renderer/renderInline"
+import { TableOfContents } from "@/features/project-content/renderer/TableOfContents"
 
 /**
  * Die Knotenabbildung des Read-Only-Renderers: aus einem
@@ -89,6 +90,24 @@ export type RenderContext = {
   fileState?: (fileId: string) => FileState
   /** Praefix erzeugter Kennungen, damit zwei Ansichten auf einer Seite sich nicht ins Gehege kommen. */
   idPrefix: string
+  /**
+   * Die laufende Nummer einer Ueberschrift in Dokumentreihenfolge, ab 0,
+   * nachgeschlagen ueber den Schluessel des Blocks (§2.5, seit Contract
+   * v84).
+   *
+   * <p>Aus ihr entsteht die Sprungmarke, auf die das Inhaltsverzeichnis
+   * zeigt. Sie steht nicht im Dokument: {@code HEADING} bekommt dafuer kein
+   * Attribut, und Anzeige wie Druck vergeben sie einheitlich. Wer sie
+   * speicherte, muesste sie beim Umsortieren nachfuehren und haette eine
+   * zweite Wahrheit neben der Dokumentreihenfolge.
+   *
+   * <p>Fehlt die Funktion, tragen die Ueberschriften keine Kennung. Das ist
+   * der Fall in Ansichten ohne Verzeichnis, etwa der Vorschau eines
+   * einzelnen Blocks.
+   */
+  headingOrdinal?: (nodeKey: string) => number | undefined
+  /** Ansicht fuer das Papier: Aufklappbares steht offen (§2.5 seit v84). */
+  forPrint?: boolean
 }
 
 export function renderBlockNode(
@@ -98,7 +117,7 @@ export function renderBlockNode(
 ): ReactNode {
   switch (node.type) {
     case "heading":
-      return renderHeading(node)
+      return renderHeading(node, nodeKey, context)
     case "paragraph":
       return renderParagraph(node)
     case "bulletList":
@@ -127,6 +146,8 @@ export function renderBlockNode(
       return renderEmbed(node, context)
     case "mathBlock":
       return <LazyMathBlock latex={node.attrs.latex} />
+    case "tableOfContents":
+      return <TableOfContents entries={node.attrs.entries} context={context} />
     default: {
       /* Ein kuenftiger Knotentyp soll hier den Uebersetzer anhalten und
          nicht still undefined liefern. */
@@ -174,15 +195,28 @@ function namedBy(
  * ueberlassen: {@code .type-content-h1} steht an einem {@code h2}, und die
  * sechste Ebene ist gar kein Ueberschriftenelement.
  */
-function renderHeading(node: HeadingNode): ReactNode {
+function renderHeading(
+  node: HeadingNode,
+  nodeKey: string,
+  context: RenderContext
+): ReactNode {
   const {
     tag: Tag,
     role,
     ariaLevel,
     className,
   } = headingRendering(node.attrs.level)
+  const ordinal = context.headingOrdinal?.(nodeKey)
   return (
     <Tag
+      /* Sprungziel des Inhaltsverzeichnisses (§2.5 seit v84). Der Praefix
+         haelt zwei Ansichten auf derselben Seite auseinander, etwa
+         Leseansicht und Druckbereich. */
+      id={
+        ordinal === undefined
+          ? undefined
+          : headingAnchorId(context.idPrefix, ordinal)
+      }
       className={className}
       role={role}
       aria-level={ariaLevel}
@@ -191,6 +225,11 @@ function renderHeading(node: HeadingNode): ReactNode {
       {renderInline(node.content)}
     </Tag>
   )
+}
+
+/** Die Sprungmarke einer Ueberschrift, an einer Stelle gebildet. */
+export function headingAnchorId(idPrefix: string, ordinal: number): string {
+  return `${idPrefix}-heading-${ordinal}`
 }
 
 function renderParagraph(node: ParagraphNode): ReactNode {
@@ -562,7 +601,7 @@ function renderVideo(
   if (attrs.fileId !== undefined) {
     const fileUrl = context.resolveFileUrl(attrs.fileId)
     return (
-      <MediaFigure caption={caption} captionId={captionId}>
+      <MediaFigure caption={caption} captionId={captionId} width={attrs.width}>
         <MediaSlot key={fileUrl} state={stateOf(context, attrs.fileId)}>
           {(fail) => (
             <video
@@ -585,7 +624,7 @@ function renderVideo(
 
   const embedUrl = embedUrlFor(attrs.provider, attrs.videoId, attrs.hash)
   return (
-    <MediaFigure caption={caption} captionId={captionId}>
+    <MediaFigure caption={caption} captionId={captionId} width={attrs.width}>
       <iframe
         title={context.t("projectContent.video.embedTitle", {
           provider: context.t(`projectContent.provider.${attrs.provider}`),

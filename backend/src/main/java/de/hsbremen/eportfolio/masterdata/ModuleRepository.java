@@ -30,9 +30,21 @@ public interface ModuleRepository extends JpaRepository<Module, UUID> {
 	Optional<Module> findByStudyProgramIdAndName(UUID studyProgramId, String name);
 
 	/**
-	 * Haengt an diesem Studiengang noch ein Modul? Sperrt das Loeschen des
-	 * Studiengangs mit 409 {@code RESOURCE_IN_USE}, aus demselben Grund wie
-	 * {@link StudyProgramRepository#existsByFacultyId}.
+	 * Haengt an diesem Studiengang noch ein <em>Fachmodul</em>? Sperrt das
+	 * Loeschen des Studiengangs mit 409 {@code RESOURCE_IN_USE}, aus demselben
+	 * Grund wie {@link StudyProgramRepository#existsByFacultyId}.
+	 *
+	 * <p><strong>Das Sammelmodul zaehlt bewusst nicht mit</strong> (§3.9, seit
+	 * Contract v84). Es entsteht als Nebenwirkung des Studiengangs und wird mit
+	 * ihm geloescht; zaehlte es mit, waere vom Tag der Einfuehrung an kein
+	 * Studiengang mehr loeschbar, weil jeder eines traegt.
 	 */
-	boolean existsByStudyProgramId(UUID studyProgramId);
+	boolean existsByStudyProgramIdAndCollectiveFalse(UUID studyProgramId);
+
+	/**
+	 * Das Sammelmodul eines Studiengangs, sofern es da ist (§3.9). Der partielle
+	 * Unique-Index {@code uq_module_collective} sichert zu, dass es hoechstens
+	 * eines gibt.
+	 */
+	Optional<Module> findByStudyProgramIdAndCollectiveTrue(UUID studyProgramId);
 }

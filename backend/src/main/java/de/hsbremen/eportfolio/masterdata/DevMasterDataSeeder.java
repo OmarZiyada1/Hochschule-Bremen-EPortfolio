@@ -239,7 +239,23 @@ public class DevMasterDataSeeder implements ApplicationRunner {
 		for (ModuleSeed module : seed.modules()) {
 			created += createModule(studyProgram, module);
 		}
+		created += createCollectiveModule(studyProgram);
 		return created;
+	}
+
+	/**
+	 * Das Sammelmodul (§3.9, seit Contract v84). Im Betrieb entsteht es als
+	 * Nebenwirkung von {@code POST /api/admin/study-programs}; die Saatdaten
+	 * gehen am Dienst vorbei und legen es deshalb selbst an, ueber dieselbe
+	 * Fabrik, damit der Name nicht an zwei Stellen gebildet wird.
+	 */
+	private int createCollectiveModule(StudyProgram studyProgram) {
+		if (moduleRepository.findByStudyProgramIdAndCollectiveTrue(studyProgram.getId())
+				.isPresent()) {
+			return 0;
+		}
+		moduleRepository.save(Module.collectiveFor(studyProgram));
+		return 1;
 	}
 
 	private int createModule(StudyProgram studyProgram, ModuleSeed seed) {

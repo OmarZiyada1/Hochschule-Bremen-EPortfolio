@@ -159,6 +159,9 @@ export function projectDetail(
   return {
     ...projectCard(),
     module: null,
+    /* Seit Contract v84: ob die lesende Person selbst geklatscht hat
+       (§3.10). Ohne Token immer false, und das ist hier der Regelfall. */
+    hasReacted: false,
     /* Freiwillig seit Contract v66; die Autor:in bleibt Autor:in und wird
        kein Mitglied (§3.13.1). */
     authorRole: null,

@@ -37,6 +37,7 @@ export function ProjectContent({
   blocks,
   resolveFileUrl,
   fileState,
+  forPrint = false,
   className,
 }: {
   blocks: readonly BlockResponse[]
@@ -52,12 +53,43 @@ export function ProjectContent({
    * Angabe gilt jede als abrufbar; Naeheres an {@code MediaSlot}.
    */
   fileState?: (fileId: string) => FileState
+  /**
+   * Ansicht fuer das Papier: das Inhaltsverzeichnis steht dann
+   * aufgeschlagen da (§2.5, seit Contract v84).
+   *
+   * <p>Als Eigenschaft und nicht als CSS-Regel: ein zugeklapptes
+   * {@code details} verbirgt seinen Inhalt ueber den eigenen Mechanismus
+   * des Browsers, und der laesst sich mit {@code display} nicht wieder
+   * aufmachen. Aufgeschlagen sein muss es, weil ein Blatt nichts
+   * aufklappen kann.
+   */
+  forPrint?: boolean
   className?: string
 }) {
   const { t, i18n } = useTranslation()
   const idPrefix = useId()
 
   const { entries } = useMemo(() => blocksToDoc(blocks), [blocks])
+
+  /*
+   * Die laufende Nummer je Ueberschrift, in Dokumentreihenfolge ab 0
+   * (§2.5 seit v84). Sie steht nicht im Dokument: das Inhaltsverzeichnis
+   * merkt sie sich in seinen Eintraegen, und Anzeige wie Druck vergeben die
+   * Sprungmarke daraus. Gezaehlt wird ueber alle Eintraege, auch die
+   * verworfenen: der Schluessel ist der Index in dieser Liste, und ihn hier
+   * anders zu zaehlen als beim Rendern ergaebe verschobene Anker.
+   */
+  const headingOrdinals = useMemo(() => {
+    const ordinals = new Map<string, number>()
+    let next = 0
+    entries.forEach((entry, index) => {
+      if (entry.kind === "node" && entry.node.type === "heading") {
+        ordinals.set(String(index), next)
+        next += 1
+      }
+    })
+    return ordinals
+  }, [entries])
 
   const context: RenderContext = useMemo(
     () => ({
@@ -76,8 +108,18 @@ export function ProjectContent({
         ((fileId: string) => resolveApiUrl(apiPaths.files.detail(fileId))),
       fileState,
       idPrefix,
+      headingOrdinal: (nodeKey: string) => headingOrdinals.get(nodeKey),
+      forPrint,
     }),
-    [t, i18n.language, resolveFileUrl, fileState, idPrefix]
+    [
+      t,
+      i18n.language,
+      resolveFileUrl,
+      fileState,
+      idPrefix,
+      headingOrdinals,
+      forPrint,
+    ]
   )
 
   return (

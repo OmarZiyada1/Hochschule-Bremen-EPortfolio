@@ -77,6 +77,7 @@ import {
   useSetCommentStatus,
 } from "@/features/comments/hooks/useComments"
 import { fullNameOf } from "@/lib/name"
+import { usePortfolioPath } from "@/features/portfolio/hooks/usePortfolioPath"
 import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
 import { cn } from "@/lib/utils"
 
@@ -552,6 +553,7 @@ function CommentItem({
   onDelete: () => void
 }) {
   const { t, i18n } = useTranslation()
+  const portfolioPath = usePortfolioPath()
   const origin = useBreadcrumbOrigin()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const deleteTrigger = useRef<HTMLButtonElement | null>(null)
@@ -585,9 +587,10 @@ function CommentItem({
         <MessageHeader className="justify-between gap-2 px-0 text-current">
           {/* Der Name fuehrt zum Portfolio der Person (KAN-80): auch im
               Kommentarstrang ist ein Name ein Weg zu ihr und nicht nur eine
-              Beschriftung. */}
+              Beschriftung. Beim eigenen Namen ins eigene Portfolio
+              (KAN-83). */}
           <Link
-            to={`/portfolios/${comment.author.id}`}
+            to={portfolioPath(comment.author.id)}
             state={origin}
             className="type-body-sm truncate hover:underline focus-visible:underline"
           >
@@ -839,16 +842,30 @@ function CommentForm({
   )
 
   /*
-   * Strg+Enter beziehungsweise Cmd+Enter sendet, wie die Fusszeile es
-   * ankuendigt. Enter allein bleibt der Zeilenumbruch: ein Kommentar ist
-   * oft mehrzeilig, und ein Feld, das beim ersten Absatzende absendet,
-   * verliert den Rest.
+   * Enter sendet, Umschalt und Enter macht den Zeilenumbruch (KAN-83).
+   * Umgedreht gegenueber KAN-20: dort war Enter der Umbruch und
+   * Strg+Enter das Senden. Ein Kommentar ist in der Praxis meist einzeilig,
+   * und der eingeuebte Griff aus jedem Chatfenster ist Enter.
+   *
+   * Strg+Enter und Cmd+Enter senden weiterhin mit, weil sie die Bedingung
+   * ebenfalls erfuellen; die eingeuebte Belegung geht also nicht verloren,
+   * und im Code steht dafuer kein zweiter Zweig.
+   *
+   * isComposing ist kein Beiwerk: eine ostasiatische Eingabemethode
+   * schliesst ihr Auswahlfenster mit Enter ab. Ohne diese Abfrage schickte
+   * genau dieser Tastendruck den halben Satz ab.
    */
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-      event.preventDefault()
-      void submit()
+    if (
+      event.key !== "Enter" ||
+      event.shiftKey ||
+      event.altKey ||
+      event.nativeEvent.isComposing
+    ) {
+      return
     }
+    event.preventDefault()
+    void submit()
   }
 
   return (

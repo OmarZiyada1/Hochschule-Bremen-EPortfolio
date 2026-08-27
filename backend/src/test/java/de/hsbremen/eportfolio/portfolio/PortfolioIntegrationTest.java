@@ -101,6 +101,9 @@ class PortfolioIntegrationTest {
 
 	private Project publishedLater;
 
+	/** Fremdes Projekt, an dem {@code owner} nur Mitglied ist (§3.13). */
+	private Project groupWork;
+
 	@BeforeEach
 	void buildData() {
 		owner = save(TestUser.activeWithoutId(Role.STUDENT, "nicht-relevant"));
@@ -122,9 +125,11 @@ class PortfolioIntegrationTest {
 		project(owner, ProjectStatus.SUBMITTED, "Eingereicht", null);
 		project(otherAuthor, ProjectStatus.PUBLISHED, "Fremde Arbeit", Instant.now());
 
-		Project foreign = project(otherAuthor, ProjectStatus.PUBLISHED, "Gruppenarbeit", Instant.now());
+		// Seit Contract v84 gehoert das ins Profil von owner, es ist die neueste
+		// Beteiligung. Bis v83 fehlte es dort.
+		groupWork = project(otherAuthor, ProjectStatus.PUBLISHED, "Gruppenarbeit", Instant.now());
 		projectMemberRepository.saveAndFlush(
-				TestProject.memberWithoutId(foreign, owner, "Frontend"));
+				TestProject.memberWithoutId(groupWork, owner, "Frontend"));
 	}
 
 	// ==================================================================
@@ -171,13 +176,19 @@ class PortfolioIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Listet nur eigene veroeffentlichte Projekte, neueste zuerst (§3.2)")
-		void listsOwnPublishedProjectsOnly() throws Exception {
+		@DisplayName("Listet veroeffentlichte Beteiligungen, neueste zuerst (§3.2, v84)")
+		void listsPublishedParticipationsNewestFirst() throws Exception {
+			/*
+			 * Drei Zusagen in einer Pruefung: Entwurf und Eingereichtes bleiben
+			 * draussen, die Gruppenarbeit kommt seit v84 herein, obwohl owner dort
+			 * nur Mitglied ist, und die Reihenfolge folgt publishedAt absteigend.
+			 */
 			mockMvc.perform(get(path(owner)))
 					.andExpect(status().isOk())
-					.andExpect(jsonPath("$.projects.length()").value(2))
-					.andExpect(jsonPath("$.projects[0].id").value(publishedLater.getId().toString()))
-					.andExpect(jsonPath("$.projects[1].id").value(publishedEarlier.getId().toString()));
+					.andExpect(jsonPath("$.projects.length()").value(3))
+					.andExpect(jsonPath("$.projects[0].id").value(groupWork.getId().toString()))
+					.andExpect(jsonPath("$.projects[1].id").value(publishedLater.getId().toString()))
+					.andExpect(jsonPath("$.projects[2].id").value(publishedEarlier.getId().toString()));
 		}
 
 		@Test
@@ -189,11 +200,13 @@ class PortfolioIntegrationTest {
 			 * Ohne dieses Feld zeigte die Kachel neben dem Namen dauerhaft
 			 * die Initialen, obwohl ein Bild hinterlegt ist.
 			 */
+			// Index 1 und 2: an Position 0 steht seit v84 die Gruppenarbeit, deren
+			// Autor:in otherAuthor ist und kein Bild hinterlegt hat.
 			mockMvc.perform(get(path(owner)))
 					.andExpect(status().isOk())
-					.andExpect(jsonPath("$.projects[0].author.avatarUrl")
-							.value("https://example.org/avatar.png"))
 					.andExpect(jsonPath("$.projects[1].author.avatarUrl")
+							.value("https://example.org/avatar.png"))
+					.andExpect(jsonPath("$.projects[2].author.avatarUrl")
 							.value("https://example.org/avatar.png"));
 		}
 
@@ -208,12 +221,19 @@ class PortfolioIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Eine blosse Projektmitgliedschaft zaehlt nicht zum eigenen Profil "
-				+ "(Entscheidung aus der Klaerungsrunde zu KAN-22)")
-		void ignoresMembership() throws Exception {
+		@DisplayName("Eine Projektmitgliedschaft zaehlt seit Contract v84 zum Profil "
+				+ "(KAN-83; bis v83 war sie ausgeschlossen, Klaerungsrunde zu KAN-22)")
+		void includesMembership() throws Exception {
+			/*
+			 * Umgedreht mit KAN-83: eine Gruppenarbeit erschien bis v83 nur im
+			 * Profil der Autor:in, obwohl die Kachel seit v78 alle Mitwirkenden
+			 * namentlich nennt. Die Autorschaft bleibt an der Kachel ablesbar, die
+			 * Rechte haengen unveraendert an ihr.
+			 */
 			String response = raw(get(path(owner)));
 
-			assertThat(response).doesNotContain("Gruppenarbeit");
+			assertThat(response).contains("Gruppenarbeit");
+			assertThat(response).doesNotContain("Fremde Arbeit");
 		}
 
 		@Test

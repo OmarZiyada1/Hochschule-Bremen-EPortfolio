@@ -44,10 +44,25 @@ export function reactToSessionError(error: unknown): void {
     case "TOKEN_INVALID":
     case "TOKEN_EXPIRED":
       /*
+       * Ohne Sitzung ist dieser 401 der Nachhall einer bereits beendeten
+       * und kein Sitzungsende: Beim Abmelden leert der Store den
+       * Query-Cache (client.clear() weiter unten), noch montierte
+       * Abfragen laden daraufhin ohne Token nach, und ihre Antwort trifft
+       * erst ein, wenn die Sitzung laengst verworfen ist. Hier bleibt dann
+       * nichts zu tun: zu beenden ist nichts, und ein Merkzettel oder eine
+       * Weiterleitung zum Login machten aus einem gewollten Abmelden
+       * nachtraeglich einen Rauswurf.
+       */
+      if (getAuthState().session === null) {
+        break
+      }
+      /*
        * Die aktuelle Route merken, bevor sie verlassen wird: nach der
        * erneuten Anmeldung geht es dorthin zurueck statt zur Projektliste
-       * (Klaerungsrunde KAN-33). window.location, weil diese Reaktion
-       * ausserhalb von Komponenten laeuft und keinen Router-Hook hat.
+       * (Klaerungsrunde KAN-33). Das gilt fuer den Sitzungsablauf und
+       * nicht fuer das Abmelden, das oben schon ausgeschieden ist.
+       * window.location, weil diese Reaktion ausserhalb von Komponenten
+       * laeuft und keinen Router-Hook hat.
        */
       rememberRequestedRoute(window.location.pathname + window.location.search)
       endSession(error.errorCode)

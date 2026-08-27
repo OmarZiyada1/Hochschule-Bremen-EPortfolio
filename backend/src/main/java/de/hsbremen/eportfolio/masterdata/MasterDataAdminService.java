@@ -262,7 +262,15 @@ public class MasterDataAdminService {
 	// Studiengaenge (§3.7)
 	// ==================================================================
 
-	/** {@code POST /api/admin/study-programs}, <strong>201</strong>. */
+	/**
+	 * {@code POST /api/admin/study-programs}, <strong>201</strong>.
+	 *
+	 * <p><strong>Legt das Sammelmodul gleich mit an</strong> (§3.9, seit Contract
+	 * v84). Es entsteht hier und nicht von Hand, weil ein Studiengang ohne
+	 * Auffangzeile genau das Loch zurueckliesse, das der Punkt schliessen soll:
+	 * ein Projekt ohne passendes Fachmodul haette wieder keine Zuordnung, und
+	 * gemerkt haette es niemand, bis jemand ein Projekt anlegt.
+	 */
 	public StudyProgramResponse createStudyProgram(AuthenticatedUser user,
 			StudyProgramCreateRequest request) {
 
@@ -273,7 +281,10 @@ public class MasterDataAdminService {
 		studyProgram.setAbbreviation(requireFilled(request.abbreviation(), "abbreviation"));
 		studyProgram.setFaculty(referencedFaculty(request.facultyId()));
 
-		return StudyProgramResponse.from(studyProgramRepository.save(studyProgram));
+		StudyProgram saved = studyProgramRepository.save(studyProgram);
+		moduleRepository.save(Module.collectiveFor(saved));
+
+		return StudyProgramResponse.from(saved);
 	}
 
 	/** {@code PATCH /api/admin/study-programs/{id}}. */
@@ -302,17 +313,35 @@ public class MasterDataAdminService {
 	/**
 	 * {@code DELETE /api/admin/study-programs/{id}}, <strong>204</strong>.
 	 *
-	 * <p>Gesperrt, solange noch ein Modul oder ein Projekt darauf verweist.
+	 * <p>Gesperrt, solange noch ein Fachmodul oder ein Projekt darauf verweist.
+	 *
+	 * <p><strong>Das Sammelmodul sperrt nicht</strong> (§3.9, seit Contract v84):
+	 * es gehoert dem Studiengang und faellt mit ihm. Zaehlte es mit, waere vom
+	 * Tag der Einfuehrung an kein Studiengang mehr loeschbar. Verweist ein
+	 * Projekt darauf, bleibt es dagegen bei 409: eine Zuordnung geht auch dann
+	 * nicht verloren, wenn sie die Auffangzeile ist.
 	 */
 	public void deleteStudyProgram(AuthenticatedUser user, UUID id) {
 		StudyProgram studyProgram = loadStudyProgram(id);
 		requireMasterDataAdministration(user);
 
-		if (moduleRepository.existsByStudyProgramId(id)) {
+		if (moduleRepository.existsByStudyProgramIdAndCollectiveFalse(id)) {
 			throw inUse("Dieser Studiengang", "Module");
 		}
 		if (projectRepository.existsByStudyProgramId(id)) {
 			throw inUse("Dieser Studiengang", "Projekte");
+		}
+
+		Optional<Module> collective = moduleRepository.findByStudyProgramIdAndCollectiveTrue(id);
+		if (collective.isPresent()) {
+			// Eigene Meldung: hier haengen die Projekte am Sammelmodul und nicht
+			// am Studiengang (Project.module und Project.studyProgram werden
+			// unabhaengig gesetzt). Die allgemeine Meldung schickte die
+			// Administration an die falsche Stelle (Befund des code-reviewers).
+			if (projectRepository.existsByModuleId(collective.get().getId())) {
+				throw inUse("Das Sammelmodul dieses Studiengangs", "Projekte");
+			}
+			moduleRepository.delete(collective.get());
 		}
 
 		studyProgramRepository.delete(studyProgram);
@@ -349,17 +378,52 @@ public class MasterDataAdminService {
 			module.setAbbreviation(requireFilled(request.abbreviation(), "abbreviation"));
 		}
 		if (request.studyProgramId() != null) {
-			module.setStudyProgram(referencedStudyProgram(request.studyProgramId()));
+			StudyProgram target = referencedStudyProgram(request.studyProgramId());
+			// Das Sammelmodul gehoert seinem Studiengang (§3.9). Ein Umhaengen
+			// liesse den einen ohne Auffangzeile zurueck und braechte dem anderen
+			// eine zweite, was der partielle Index uq_module_collective mit einem
+			// Datenbankfehler beantworten wuerde statt mit einer Meldung.
+			//
+			// Verglichen wird das Ziel und nicht bloss die Anwesenheit des Feldes:
+			// die Administrationsseite schickt beim Aendern eines Moduls immer alle
+			// drei Felder mit, also auch den eigenen Studiengang. Eine Sperre auf
+			// das blosse Vorhandensein liesse jedes Umbenennen mit 400 scheitern,
+			// obwohl §3.9 es ausdruecklich erlaubt (Befund des code-reviewers).
+			if (module.isCollective()
+					&& !target.getId().equals(module.getStudyProgram().getId())) {
+				throw new ValidationException(ErrorCodes.VALIDATION_FAILED,
+						"Das Sammelmodul gehoert zu seinem Studiengang und laesst sich nicht "
+								+ "umhaengen (§3.9). Der Name ist dagegen frei aenderbar.");
+			}
+			module.setStudyProgram(target);
 		}
 
 		return ModuleResponse.from(moduleRepository.save(module));
 	}
 
-	/** {@code DELETE /api/admin/modules/{id}}, <strong>204</strong>. */
+	/**
+	 * {@code DELETE /api/admin/modules/{id}}, <strong>204</strong>.
+	 *
+	 * <p>Das Sammelmodul laesst sich nicht einzeln loeschen (§3.9, seit Contract
+	 * v84): jeder Studiengang traegt genau eines, und ohne es haette ein Projekt
+	 * ohne passendes Fachmodul wieder keine Zuordnung. Es faellt mit seinem
+	 * Studiengang.
+	 */
 	public void deleteModule(AuthenticatedUser user, UUID id) {
 		Module module = loadModule(id);
 		requireMasterDataAdministration(user);
 
+		// Die absolute Regel zuerst: das Sammelmodul faellt nie einzeln, gleich
+		// ob Projekte darauf verweisen. Andersherum bekaeme die Administration
+		// die unpraezisere Auskunft ("weil noch Projekte darauf verweisen") und
+		// suchte an der falschen Stelle (Befund des code-reviewers).
+		if (module.isCollective()) {
+			throw ConflictException.resourceInUse(
+					"Dieses Modul ist das Sammelmodul seines Studiengangs und laesst sich nicht "
+							+ "einzeln loeschen (§3.9). Es faellt mit dem Studiengang; ohne es "
+							+ "haette ein Projekt ohne passendes Fachmodul wieder keine "
+							+ "Zuordnung.");
+		}
 		if (projectRepository.existsByModuleId(id)) {
 			throw inUse("Dieses Modul", "Projekte");
 		}

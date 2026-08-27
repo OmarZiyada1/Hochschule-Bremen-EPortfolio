@@ -43,11 +43,23 @@ type EmailChangeCodeValues = z.infer<typeof emailChangeCodeSchema>
 export function EmailChangeNotice({
   pendingEmail,
   onConfirmed,
+  onCancel,
+  cancelPending = false,
 }: {
   /** Wunschadresse aus pendingEmail (§3.1); nie die aktuelle Kennung. */
   pendingEmail: string
   /** Nach erfolgreichem Einloesen: die Seite zieht GET /auth/me nach. */
   onConfirmed: () => void
+  /**
+   * Nimmt den laufenden Wechsel zurueck (KAN-83). Der Contract sieht dafuer
+   * vor, die <em>aktuelle</em> Adresse zu senden (§6.1); das tat bis dahin
+   * jedes gewoehnliche Speichern nebenbei mit, und wer waehrend der
+   * Wartezeit einen Tippfehler im Namen korrigierte, verlor unbemerkt den
+   * Wechsel. Jetzt ist es eine benannte Handlung.
+   */
+  onCancel: () => void
+  /** Laeuft der Abbruch gerade? Sperrt den Knopf gegen den zweiten Klick. */
+  cancelPending?: boolean
 }) {
   const { t } = useTranslation()
   const verify = useVerifyCode()
@@ -183,6 +195,28 @@ export function EmailChangeNotice({
             })}
           </p>
         )}
+
+        {/* Der Weg zurueck steht seit KAN-83 hier und nicht mehr als
+            Nebenwirkung des Speicherns. Er schickt die aktuelle Adresse,
+            genau wie §6.1 es vorsieht, und braucht deshalb kein Passwort. */}
+        <Button
+          type="button"
+          variant="link"
+          className="type-body-sm h-auto p-0 font-semibold text-muted-foreground"
+          /* aria-disabled statt disabled, wie am PrintTrigger: eine
+             Schaltflaeche, die im Augenblick des Klicks disabled wird,
+             verliert den Fokus an den Seitenanfang (SC 2.4.3). Den zweiten
+             Aufruf faengt der Handler ab. */
+          onClick={() => {
+            if (cancelPending) {
+              return
+            }
+            onCancel()
+          }}
+          aria-disabled={cancelPending}
+        >
+          {t("portfolio.profile.emailChange.cancel")}
+        </Button>
       </div>
 
       {/* role=status sagt die Bestaetigung beim Erscheinen an, ohne den

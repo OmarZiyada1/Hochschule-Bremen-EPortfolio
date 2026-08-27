@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   useSyncExternalStore,
@@ -17,6 +18,7 @@ import {
   subscribe,
   updateUser,
 } from "@/api/auth/authStore"
+import { beginSignOut, endSignOut } from "@/api/auth/redirect"
 import { api } from "@/api/client"
 import { apiPaths } from "@/api/endpoints"
 import { isApiError, transportError, type ErrorCode } from "@/api/errors"
@@ -43,8 +45,17 @@ export type AuthContextValue = {
   /** Warum die letzte Sitzung endete; die Login-Seite zeigt und raeumt ihn. */
   sessionNotice: ErrorCode | null
   clearSessionNotice: () => void
-  /** Wirft ApiError (LOGIN_FAILED, ACCOUNT_NOT_ACTIVE, ...); das Formular entscheidet ueber errorCode. */
-  login: (email: string, password: string) => Promise<void>
+  /**
+   * Wirft ApiError (LOGIN_FAILED, ACCOUNT_NOT_ACTIVE, ...); das Formular
+   * entscheidet ueber errorCode.
+   *
+   * <p>Gibt die angemeldete Person zurueck (KAN-83). Die Login-Seite
+   * braucht die Rolle unmittelbar nach dem Aufruf, um das Startziel zu
+   * waehlen; `useAuth` traegt an dieser Stelle noch den Stand des
+   * vorherigen Renders, und `getAuthState` direkt anzuzapfen zoege eine
+   * zweite Wahrheit neben den Kontext.
+   */
+  login: (email: string, password: string) => Promise<UserResponse>
   logout: () => Promise<void>
   /** Frische Nutzerdaten aus GET /auth/me, etwa nach einer Profilaenderung. */
   refreshUser: () => Promise<void>
@@ -64,6 +75,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   })
 
   const state = useSyncExternalStore(subscribe, getAuthState)
+
+  /*
+   * Ende des Abmeldevorgangs: sobald die Anwendung den abgemeldeten
+   * Zustand einmal gerendert hat, ist er vorbei, und die Rueckkehr-Route
+   * wird wieder gemerkt (redirect.ts, endSignOut). Dieser Effekt ist der
+   * Ort dafuer, weil der Provider ueber dem Router steht: React fuehrt ihn
+   * erst aus, wenn RequireAuth und RequireRole ihre Entscheidung fuer
+   * diesen Zustand bereits getroffen haben. Ein Zuruecksetzen direkt nach
+   * endSession() haette dagegen davon abgehangen, wann React den Render
+   * dazwischenlegt.
+   *
+   * Ein gesetzter Merker geht nie verloren: beginSignOut() ruft nur
+   * logout(), und das ist nur mit bestehender Sitzung erreichbar; der
+   * Wechsel auf "abgemeldet" folgt also immer.
+   */
+  const isSignedOut = state.session === null
+  useEffect(() => {
+    if (isSignedOut) {
+      endSignOut()
+    }
+  }, [isSignedOut])
 
   const login = useCallback(async (email: string, password: string) => {
     const response = await api.post<LoginResponse>(apiPaths.auth.login, {
@@ -89,9 +121,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user: response.user,
       passwordChangeRequired: response.passwordChangeRequired,
     })
+    return response.user
   }, [])
 
   const logout = useCallback(async () => {
+    /*
+     * Vor dem Request und nicht erst nach der Antwort: ab hier merkt sich
+     * niemand mehr die aktuelle Route, damit das naechste Anmelden wieder
+     * auf dem Ziel der Rolle landet und nicht dort, wo diese Sitzung
+     * endete (redirect.ts, beginSignOut). Ein Sitzungsablauf ist
+     * ausdruecklich etwas anderes und merkt weiter.
+     */
+    beginSignOut()
     try {
       await api.post<void>(apiPaths.auth.logout)
     } catch (error) {

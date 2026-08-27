@@ -42,6 +42,7 @@ const MECHANIK: ModuleResponse = {
   name: "Technische Mechanik",
   abbreviation: "TME",
   studyProgramId: "sp-1",
+  collective: false,
 }
 
 /**

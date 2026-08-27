@@ -5,6 +5,7 @@ import { Link } from "react-router-dom"
 import type { ProjectDetailResponse } from "@/api/types"
 import { Tag } from "@/components/common/Tag"
 import { fullNameOf, type PersonName } from "@/lib/name"
+import { usePortfolioPath } from "@/features/portfolio/hooks/usePortfolioPath"
 import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
 
 /**
@@ -318,13 +319,16 @@ function PersonLink({
   person: PersonName
 }) {
   const origin = useBreadcrumbOrigin()
+  /* Der eigene Name fuehrt ins eigene Portfolio (KAN-83). */
+  const portfolioPath = usePortfolioPath()
   const name = fullNameOf(person)
   if (id === undefined) {
     return <>{name}</>
   }
+  const href = portfolioPath(id)
   return (
     <Link
-      to={`/portfolios/${id}`}
+      to={href}
       state={origin}
       className="hover:underline focus-visible:underline"
     >

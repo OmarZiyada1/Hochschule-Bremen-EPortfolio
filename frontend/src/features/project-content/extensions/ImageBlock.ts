@@ -1,7 +1,7 @@
 import { mergeAttributes, Node } from "@tiptap/react"
 
 import {
-  imageWidthAttribute,
+  mediaWidthAttribute,
   textAttribute,
 } from "@/features/project-content/extensions/attributes"
 
@@ -28,7 +28,7 @@ export const ImageBlock = Node.create({
       fileId: textAttribute("fileId"),
       alt: textAttribute("alt", ""),
       caption: textAttribute("caption", ""),
-      width: imageWidthAttribute(),
+      width: mediaWidthAttribute(),
     }
   },
 

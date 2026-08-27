@@ -118,7 +118,7 @@ describe("VideoNodeView", () => {
       screen.queryByRole("button", { name: "Video ersetzen" })
     ).not.toBeInTheDocument()
     /* Die Unterschrift ist direkt am Block editierbar. */
-    expect(screen.getByLabelText("Bildunterschrift")).toBeInTheDocument()
+    expect(screen.getByLabelText("Videounterschrift")).toBeInTheDocument()
   }, 60000)
 
   it("zeigt fuer eine Einbettung den Player des Anbieters", async () => {
@@ -162,7 +162,7 @@ describe("VideoNodeView", () => {
     expect(
       screen.queryByRole("button", { name: "Video ersetzen" })
     ).not.toBeInTheDocument()
-    expect(screen.queryByLabelText("Bildunterschrift")).not.toBeInTheDocument()
+    expect(screen.queryByLabelText("Videounterschrift")).not.toBeInTheDocument()
     expect(screen.getByText("Erster Lauf")).toBeInTheDocument()
   }, 60000)
 })

@@ -351,6 +351,83 @@ class ProjectReadIntegrationTest {
 	}
 
 	// ==================================================================
+	// GET /api/projects: „Mein Portfolio" (§6.1, Filter participant seit v84)
+	// ==================================================================
+
+	@Nested
+	@DisplayName("Liste: participant=me")
+	class MyParticipations {
+
+		@Test
+		@DisplayName("Enthaelt Eigenes und Mitwirkung, nicht die fremden Projekte")
+		void ownAndMemberships() throws Exception {
+			/*
+			 * Der Kern von KAN-83: member ist an foreignDraftWithMember nur
+			 * Mitglied und findet es trotzdem. publishedProject bleibt draussen,
+			 * obwohl member es sehen darf: sehen und beteiligt sein sind zwei
+			 * verschiedene Fragen, und genau das trennt participant von der
+			 * Sichtbarkeitsschranke.
+			 */
+			assertThat(listIds(member, "participant", "me"))
+					.containsExactly(foreignDraftWithMember.getId());
+		}
+
+		@Test
+		@DisplayName("Die Autor:in findet ihre eigenen Projekte, wie mit author")
+		void authorSeesOwn() throws Exception {
+			assertThat(listIds(author, "participant", "me")).containsExactlyInAnyOrder(
+					publishedProject.getId(),
+					draftOfAuthor.getId());
+		}
+
+		@Test
+		@DisplayName("author bleibt die reine Autorenuebersicht und nimmt Mitgliedschaft "
+				+ "nicht mit auf (§6.1)")
+		void authorFilterUnchanged() throws Exception {
+			// Die Zusage aus §6.1, die den neuen Parameter ueberhaupt noetig macht:
+			// author waere sonst still umgedeutet worden.
+			assertThat(listIds(admin, "author", member.getId().toString())).isEmpty();
+			assertThat(listIds(admin, "participant", member.getId().toString()))
+					.containsExactly(foreignDraftWithMember.getId());
+		}
+
+		@Test
+		@DisplayName("Die Sichtbarkeitsschranke steht weiterhin mit UND davor")
+		void visibilityStillApplies() throws Exception {
+			/*
+			 * otherEditor ist diesem Entwurf nicht zugewiesen und darf ihn deshalb
+			 * nicht sehen (§5 Fussnote 11). Der Filter oeffnet daran nichts:
+			 * participant sagt, wessen Beteiligung gemeint ist, nicht, wer sie
+			 * sehen darf. Nicht otherStudent, denn der ist die Autor:in genau
+			 * dieses Entwurfs und sieht ihn zu Recht.
+			 */
+			assertThat(listIds(otherEditor, "participant", member.getId().toString()))
+					.isEmpty();
+
+			// Gegenprobe: der Admin sieht alles und findet denselben Entwurf.
+			assertThat(listIds(admin, "participant", member.getId().toString()))
+					.containsExactly(foreignDraftWithMember.getId());
+		}
+
+		@Test
+		@DisplayName("Ohne Anmeldung ergibt \"me\" 401 und keine leere Liste")
+		void withoutLogin() throws Exception {
+			mockMvc.perform(get("/api/projects").param("participant", "me"))
+					.andExpect(status().isUnauthorized())
+					.andExpect(jsonPath("$.errorCode").value(ErrorCodes.NOT_AUTHENTICATED));
+		}
+
+		@Test
+		@DisplayName("Weder \"me\" noch UUID: 400 im Envelope, ohne den eingeschickten Wert")
+		void unusableValue() throws Exception {
+			mockMvc.perform(asUser(get("/api/projects").param("participant", "unsinn"), admin))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.errorCode").value(ErrorCodes.VALIDATION_FAILED))
+					.andExpect(jsonPath("$.message", not(containsString("unsinn"))));
+		}
+	}
+
+	// ==================================================================
 	// GET /api/projects: Filter (§6.1)
 	// ==================================================================
 
@@ -925,6 +1002,36 @@ class ProjectReadIntegrationTest {
 			mockMvc.perform(asUser(listRequest("sort", "title,asc"), admin))
 					.andExpect(jsonPath("$.content[0].reactionCount").value(0))
 					.andExpect(jsonPath("$.content[1].reactionCount").value(2));
+		}
+
+		@Test
+		@DisplayName("hasReacted sagt, ob die lesende Person selbst reagiert hat "
+				+ "(§3.10, seit Contract v84)")
+		void hasReacted() throws Exception {
+			reactionRepository.saveAndFlush(
+					TestReaction.withoutId(publishedProject, member));
+
+			// Wer reagiert hat, sieht true; wer nicht, false; ohne Token immer
+			// false, weil es ohne Identitaet nichts nachzusehen gibt. Ohne dieses
+			// Feld liesse sich der gedrueckte Zustand nur bis zum Neuladen halten.
+			String path = "/api/projects/" + publishedProject.getId();
+
+			mockMvc.perform(asUser(get(path), member))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.hasReacted").value(true));
+
+			mockMvc.perform(asUser(get(path), otherStudent))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.hasReacted").value(false));
+
+			mockMvc.perform(get(path))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.hasReacted").value(false));
+
+			// Die Kachel fuehrt das Feld bewusst nicht (§3.10): sie zeigt eine Zahl
+			// und kein Bedienelement.
+			mockMvc.perform(asUser(listRequest(), member))
+					.andExpect(jsonPath("$.content[*].hasReacted").doesNotExist());
 		}
 
 		@Test

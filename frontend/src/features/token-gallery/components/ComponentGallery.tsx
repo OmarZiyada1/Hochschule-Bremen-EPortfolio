@@ -692,6 +692,14 @@ function DataDemos() {
   const { t } = useTranslation()
   return (
     <>
+      {/* Ohne TruncatedText, anders als in den Listen der Anwendung
+          (KAN-83): Dieser Block zeigt die Registry-Primitive selbst und
+          keinen Datensatz einer Liste. Die Hausregel „jeder Eintrag hoechstens
+          zwanzig Zeichen breit" steht weiter unten an den Bloecken
+          ProjectTableRow und UserTableRow, die sie von sich aus mitbringen;
+          sie hier zusaetzlich von Hand anzuwenden verwischte genau die
+          Grenze zwischen Primitive und Domaenenhuelle, die die Schau
+          zeigen soll. */}
       <DemoBlock name="table">
         <Table>
           <TableCaption>

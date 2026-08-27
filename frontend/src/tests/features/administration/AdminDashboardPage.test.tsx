@@ -134,10 +134,66 @@ describe("AdminDashboardPage", () => {
     expect(total).not.toBeNull()
     expect(within(total!).getByText("9")).toBeInTheDocument()
 
+    /*
+     * Ziffer und Beschriftung liegen in einem einzigen Link, und sein Name
+     * traegt die Zahl im richtigen Numerus: sichtbar steht „5" ueber
+     * „Offene Top-10-Vorschläge", vorgelesen wird ein ganzer Satz.
+     */
     const nominations = screen.getByRole("link", {
-      name: "Offene Top-10-Vorschläge",
+      name: "5 offene Top-10-Vorschläge",
     })
     expect(nominations).toHaveAttribute("href", "/administration/top10")
+
+    /* Solange etwas offen ist, steht ein Punkt vor der Ziffer, und beide
+       tragen die Signalfarbe. */
+    const value = within(nominations).getByText("5")
+    expect(value).toHaveClass("text-primary")
+    expect(value.querySelector("span")).not.toBeNull()
+
+    /*
+     * KAN-83: die Zahl steht im Seitenkopf neben der Ueberschrift und nicht
+     * mehr in der Karte „Nutzerstatistik". Sie ist der einzige
+     * Handlungsbedarf, den diese Seite zeigt, und zwischen Ring, Kuchen und
+     * Tabelle sah sie niemand, ohne zu scrollen. Geprueft wird die
+     * Nachbarschaft zur Ueberschrift und nicht eine Bildschirmposition: die
+     * traegt der Test nicht.
+     */
+    const title = screen.getByRole("heading", { level: 1, name: "Dashboard" })
+    const pageHeader = title.closest("header")
+    expect(pageHeader).not.toBeNull()
+    expect(pageHeader!.contains(nominations)).toBe(true)
+    expect(within(pageHeader!).getByText("5")).toBeInTheDocument()
+
+    const heading = screen.getByRole("heading", {
+      level: 2,
+      name: "Nutzerstatistik",
+    })
+    const card = heading.closest("[data-slot=card]")
+    expect(card).not.toBeNull()
+    expect(card!.contains(nominations)).toBe(false)
+  })
+
+  /*
+   * Bei null offenen Vorschlaegen wird nichts ausgeblendet: „nichts offen"
+   * ist selbst eine Auskunft, und eine Zeile, die kommt und geht, laesst den
+   * Seitenkopf springen. Sie verliert nur die Signalfarbe und den Punkt.
+   */
+  it("zeigt keine offenen Vorschlaege im ruhigen Ton und ohne Signalpunkt", async () => {
+    server.use(...baseHandlers(dashboard({ openNominations: 0 })))
+
+    renderWithProviders(<AdminDashboardPage />, "/administration")
+
+    const nominations = await screen.findByRole("link", {
+      name: "0 offene Top-10-Vorschläge",
+    })
+    expect(nominations).toHaveAttribute("href", "/administration/top10")
+
+    const value = within(nominations).getByText("0")
+    expect(value).toHaveClass("text-muted-foreground")
+    expect(value).not.toHaveClass("text-primary")
+    /* Der Punkt ist ein eigenes, leeres Element vor der Ziffer; ohne Anlass
+       entsteht er gar nicht erst. */
+    expect(value.querySelector("span")).toBeNull()
   })
 
   /*

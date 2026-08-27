@@ -66,11 +66,17 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, JpaSpec
 	 * Die Projektliste des oeffentlichen Profils aus
 	 * {@code GET /api/portfolios/{userId}} (§3.2, KAN-22).
 	 *
-	 * <p><strong>Nur die eigenen Projekte</strong>, also {@code authorId = user}:
-	 * §3.2 nennt genau diese Abfrage. Projekte, an denen die Person nur als
-	 * Mitglied mitgewirkt hat, gehoeren nicht dazu; dafuer gaebe es
-	 * {@link #findByParticipationAndStatus}, das dieses Modul bewusst nicht
-	 * benutzt.
+	 * <p><strong>Seit Contract v84 zaehlt die Beteiligung und nicht mehr allein
+	 * die Autorschaft</strong> (KAN-83): enthalten ist ein Projekt, wenn die
+	 * Person seine Autor:in <em>oder</em> ein Projektmitglied (§3.13) ist. Bis
+	 * v83 nannte §3.2 nur {@code authorId = user}; eine Gruppenarbeit erschien
+	 * damit im Profil einer einzigen Person, obwohl die Kachel seit v78 alle
+	 * Mitwirkenden namentlich nennt.
+	 *
+	 * <p><strong>{@code exists} statt Join:</strong> ein Join auf die Mitglieder
+	 * lieferte ein Projekt so oft, wie es Mitglieder hat, und ein {@code distinct}
+	 * daneben vertruege sich schlecht mit dem {@code @EntityGraph}. Dieselbe
+	 * Ueberlegung steht an {@code ProjectSpecifications.isMember}.
 	 *
 	 * <p>Der {@code @EntityGraph} hat denselben Grund wie bei
 	 * {@link #findAll(Specification, Pageable)}: ohne ihn laedt Hibernate Autor,
@@ -85,32 +91,18 @@ public interface ProjectRepository extends JpaRepository<Project, UUID>, JpaSpec
 	 */
 	@EntityGraph(attributePaths = {"author", "category", "faculty", "studyProgram", "module",
 			"semester"})
-	List<Project> findByAuthorIdAndStatusOrderByPublishedAtDescIdAsc(UUID authorId,
-			ProjectStatus status);
+	@Query("select p from Project p where p.status = :status and (p.author.id = :userId "
+			+ "or exists (select 1 from ProjectMember m where m.project = p "
+			+ "and m.user.id = :userId)) "
+			+ "order by p.publishedAt desc, p.id asc")
+	List<Project> findByParticipationAndStatus(@Param("userId") UUID userId,
+			@Param("status") ProjectStatus status);
 
 	List<Project> findByStatus(ProjectStatus status);
 
 	List<Project> findByAuthorId(UUID authorId);
 
 	List<Project> findByEditorsId(UUID editorId);
-
-	/**
-	 * Projekte fuer die Portfolio-Ansicht: ein Projekt zaehlt dazu, wenn die
-	 * Person Autor:in oder Projektmitglied ist.
-	 */
-	@Query("select distinct p from Project p left join p.members m "
-			+ "where p.author.id = :userId or m.user.id = :userId")
-	List<Project> findByParticipation(@Param("userId") UUID userId);
-
-	/**
-	 * Wie {@link #findByParticipation(UUID)}, zusaetzlich auf einen Status
-	 * eingegrenzt.
-	 */
-	@Query("select distinct p from Project p left join p.members m "
-			+ "where (p.author.id = :userId or m.user.id = :userId) "
-			+ "and p.status = :status")
-	List<Project> findByParticipationAndStatus(@Param("userId") UUID userId,
-			@Param("status") ProjectStatus status);
 
 	/**
 	 * Kennzahl {@code projectsByStatus} des Admin-Dashboards (§6.1), ueber alle

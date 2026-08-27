@@ -67,6 +67,28 @@ describe("AdminSemesterListPage", () => {
     ).not.toBeChecked()
   })
 
+  /*
+   * KAN-83: Auch der Semestername ist ein Tabelleneintrag und wird auf
+   * zwanzig Zeichen Breite geklemmt. Der Schalter daneben verweist ueber
+   * aria-labelledby auf diese Zelle und darf dadurch keinen verstuemmelten
+   * Namen bekommen.
+   */
+  it("klemmt einen langen Semesternamen, ohne dem Schalter den Namen zu nehmen", async () => {
+    const long = "Wintersemester 2025/2026 (verlaengert)"
+    server.use(...baseHandlers([{ ...WISE, name: long }]))
+
+    renderWithProviders(<AdminSemesterListPage />, "/administration/semesters")
+
+    /* Der Name steht ungekuerzt im Dokument und wird nur schmaler
+       dargestellt. Genau deshalb bleibt er vollstaendig, wenn der Schalter
+       ihn ueber aria-labelledby aus der Zelle liest; zuvor hing das an einem
+       aria-hidden und einem sr-only-Zwilling. */
+    expect(await screen.findByText(long)).toHaveClass("max-w-[20ch]")
+    expect(
+      screen.getByRole("switch", { name: `${long} Aktiv` })
+    ).toBeInTheDocument()
+  })
+
   it("schaltet ueber PATCH mit active und nicht ueber einen eigenen Endpoint", async () => {
     const bodies: unknown[] = []
     server.use(

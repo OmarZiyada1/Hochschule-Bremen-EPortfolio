@@ -67,7 +67,8 @@ public class BlockValidationService {
 			Map.entry(BlockType.VIDEO, Set.of("videoBlock")),
 			Map.entry(BlockType.AUDIO, Set.of("audioBlock")),
 			Map.entry(BlockType.DOCUMENT, Set.of("documentBlock")),
-			Map.entry(BlockType.EMBED, Set.of("embedBlock")));
+			Map.entry(BlockType.EMBED, Set.of("embedBlock")),
+			Map.entry(BlockType.TABLE_OF_CONTENTS, Set.of("tableOfContents")));
 
 	/**
 	 * Erlaubte Embed-Hosts je Provider; nur https. Seit Contract v52 auch in
@@ -182,8 +183,21 @@ public class BlockValidationService {
 	 */
 	private static final Set<String> HEADING_TEXT_ALIGNMENTS = Set.of("left", "center", "right");
 
-	/** Zulaessige Bildbreiten in Prozent der Textspalte (§2.5). */
-	private static final Set<Integer> IMAGE_WIDTHS = Set.of(100, 75, 50);
+	/**
+	 * Zulaessige Medienbreiten in Prozent der Textspalte (§2.5).
+	 *
+	 * <p>Seit Contract v84 gilt dieselbe Stufung fuer IMAGE und VIDEO. Eine
+	 * zweite Konstante mit denselben drei Zahlen daneben waere die Einladung,
+	 * dass die beiden Listen mit der Zeit auseinanderlaufen; deshalb heisst sie
+	 * nicht mehr nach dem Bild.
+	 */
+	private static final Set<Integer> MEDIA_WIDTHS = Set.of(100, 75, 50);
+
+	/** Obergrenze der Eintraege eines Inhaltsverzeichnisses (§2.5, seit v84). */
+	private static final int MAX_TOC_ENTRIES = 200;
+
+	/** Obergrenze der Zeichen je Verzeichniseintrag (§2.5, seit v84). */
+	private static final int MAX_TOC_TEXT = 300;
 
 	/** Zulaessige Spaltenzahlen der Galerie (§2.5). */
 	private static final Set<Integer> GALLERY_COLUMNS = Set.of(2, 3);
@@ -197,14 +211,38 @@ public class BlockValidationService {
 	 */
 	private static final int MAX_NODE_DEPTH = 20;
 
-	public void validate(List<Block> blocks) {
-		for (int i = 0; i < blocks.size(); i++) {
-			validateBlock(blocks.get(i), i);
+	/**
+	 * Hoechstens ein Inhaltsverzeichnis je Projekt (§2.5, seit Contract v84).
+	 *
+	 * <p><strong>Warum das nicht am einzelnen Block haengt.</strong> Alle
+	 * uebrigen Regeln in dieser Klasse betreffen genau einen Block und kommen
+	 * deshalb ohne seine Nachbarn aus. Diese hier ist eine Aussage ueber die
+	 * ganze Liste und braucht sie; sie steht trotzdem hier und nicht im
+	 * {@code BlockService}, damit §2.5 an einer Stelle beantwortet wird.
+	 *
+	 * <p>Zwei Verzeichnisse waeren kein Fehler, den die Anzeige heilen koennte:
+	 * beide zeigten dieselbe Gliederung, mit womoeglich verschiedenen
+	 * Momentaufnahmen, und im Ausdruck stuenden sie untereinander.
+	 *
+	 * <p><strong>Der Fehlercode ist hier ausdruecklich
+	 * {@code BLOCK_CONTENT_INVALID}</strong>, anders als bei
+	 * {@code BlockService.requireGaplessOrder}, das fuer eine listenweite
+	 * Regel bewusst {@code VALIDATION_FAILED} fuehrt. §2.5 legt ihn fuer
+	 * diesen Fall fest („ein zweiter ergibt 400 BLOCK_CONTENT_INVALID"), und
+	 * das ist kein Versehen, das jemand spaeter angleichen sollte.
+	 */
+	public void requireAtMostOneTableOfContents(List<BlockType> types) {
+		int first = -1;
+		for (int i = 0; i < types.size(); i++) {
+			if (types.get(i) != BlockType.TABLE_OF_CONTENTS) {
+				continue;
+			}
+			if (first >= 0) {
+				throw error(i, "TABLE_OF_CONTENTS gibt es hoechstens einmal je Projekt "
+						+ "(§2.5); eines steht bereits an Position " + first);
+			}
+			first = i;
 		}
-	}
-
-	public void validateBlock(Block block, int index) {
-		validate(block.getType(), block.getContent(), index);
 	}
 
 	/**
@@ -257,7 +295,7 @@ public class BlockValidationService {
 			case FORMULA -> requireText(index, type, attrs, "latex");
 			case IMAGE -> {
 				requireFileId(index, type, attrs, "fileId");
-				requireOptionalIntFrom(index, attrs, "width", IMAGE_WIDTHS,
+				requireOptionalIntFrom(index, attrs, "width", MEDIA_WIDTHS,
 						"IMAGE: attrs.width kennt genau 100, 75 und 50 (§2.5)");
 			}
 			case GALLERY -> {
@@ -269,6 +307,7 @@ public class BlockValidationService {
 						"GALLERY: attrs.columns kennt genau 2 und 3 (§2.5)");
 			}
 			case VIDEO -> validateVideo(index, attrs);
+			case TABLE_OF_CONTENTS -> validateTableOfContents(index, attrs);
 			case EMBED -> checkEmbed(index, type, attrs, ALLOWED_EMBED_HOSTS.keySet());
 			case AUDIO -> {
 				forbidAttribute(index, attrs, "src",
@@ -344,6 +383,13 @@ public class BlockValidationService {
 		forbidAttribute(index, attrs, "src",
 				"VIDEO speichert keine URL (§2.5): die hochgeladene Datei steht in fileId");
 
+		// Die Breite gilt fuer beide Quellen und steht deshalb vor der
+		// Verzweigung: ein eingebettetes Video steht in derselben Textspalte wie
+		// ein hochgeladenes, und eine Stufung nur fuer die Datei waere eine
+		// Unterscheidung ohne Grund (§2.5 seit v84).
+		requireOptionalIntFrom(index, attrs, "width", MEDIA_WIDTHS,
+				"VIDEO: attrs.width kennt genau 100, 75 und 50 (§2.5)");
+
 		boolean hasFile = attrs.hasNonNull("fileId");
 		boolean hasEmbed = attrs.hasNonNull("provider") || attrs.hasNonNull("videoId");
 		if (hasFile && hasEmbed) {
@@ -384,6 +430,64 @@ public class BlockValidationService {
 			String hash = attrs.path("hash").asText("");
 			if (!VIDEO_HASH_PATTERN.matcher(hash).matches()) {
 				throw error(index, "VIDEO: hash hat ein ungueltiges Format");
+			}
+		}
+	}
+
+	// ------------------------------------------------------------------
+	// TABLE_OF_CONTENTS (§2.5, seit Contract v84)
+	// ------------------------------------------------------------------
+
+	/**
+	 * Prueft die gespeicherte Momentaufnahme der Gliederung (§2.5).
+	 *
+	 * <p><strong>Warum der Server sie ueberhaupt prueft, obwohl er sie nicht
+	 * erzeugt.</strong> {@code entries} kommt wie jeder Blockinhalt vom Client
+	 * und wird unveraendert gespeichert; ohne Pruefung landete eine beliebig
+	 * grosse oder falsch geformte Liste in der Datenbank und von dort in jede
+	 * Anzeige, den PDF-Export eingeschlossen. Die Grenzen sind bewusst weit: sie
+	 * sollen ein von Hand gebautes JSON abfangen und keinen langen Beitrag.
+	 *
+	 * <p><strong>Der Server prueft nicht, ob die Momentaufnahme zu den
+	 * Ueberschriften des Beitrags passt.</strong> Sie darf veralten, genau das
+	 * ist die Festlegung aus §2.5: aktualisiert wird im Editor von Hand. Eine
+	 * serverseitige Abgleichpruefung machte aus der Momentaufnahme wieder eine
+	 * Ableitung und liesse ein gueltiges Dokument beim Speichern scheitern, nur
+	 * weil jemand eine Ueberschrift ergaenzt hat.
+	 */
+	private void validateTableOfContents(int index, JsonNode attrs) {
+		JsonNode entries = attrs.path("entries");
+		if (!entries.isArray()) {
+			throw error(index, "TABLE_OF_CONTENTS braucht attrs.entries als Array (§2.5); "
+					+ "ein Beitrag ohne Ueberschriften traegt eine leere Liste");
+		}
+		if (entries.size() > MAX_TOC_ENTRIES) {
+			throw error(index, "TABLE_OF_CONTENTS: attrs.entries fuehrt hoechstens "
+					+ MAX_TOC_ENTRIES + " Eintraege (§2.5)");
+		}
+		for (int i = 0; i < entries.size(); i++) {
+			JsonNode entry = entries.get(i);
+			if (!entry.isObject()) {
+				throw error(index, "TABLE_OF_CONTENTS: Eintrag " + i + " ist kein Objekt "
+						+ "{ level, text, index } (§2.5)");
+			}
+			int level = entry.path("level").asInt(0);
+			if (!HEADING_LEVELS.contains(level)) {
+				throw error(index, "TABLE_OF_CONTENTS: Eintrag " + i + " braucht level 1 bis 6, "
+						+ "wie der HEADING-Block, auf den er zeigt (§2.5)");
+			}
+			if (!entry.path("text").isTextual()) {
+				throw error(index, "TABLE_OF_CONTENTS: Eintrag " + i + " braucht text "
+						+ "als Zeichenkette (§2.5)");
+			}
+			if (entry.path("text").asText().length() > MAX_TOC_TEXT) {
+				throw error(index, "TABLE_OF_CONTENTS: Eintrag " + i + " hat mehr als "
+						+ MAX_TOC_TEXT + " Zeichen im Feld text (§2.5)");
+			}
+			JsonNode target = entry.path("index");
+			if (!target.isIntegralNumber() || target.asInt() < 0) {
+				throw error(index, "TABLE_OF_CONTENTS: Eintrag " + i + " braucht index als "
+						+ "Nummer der Ueberschrift in Dokumentreihenfolge, ab 0 (§2.5)");
 			}
 		}
 	}

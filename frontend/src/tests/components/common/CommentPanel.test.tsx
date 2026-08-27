@@ -111,7 +111,7 @@ describe("CommentPanel", () => {
     })
   })
 
-  it("sendet mit Strg+Enter und laesst Enter den Zeilenumbruch", async () => {
+  it("sendet mit Enter, Umschalt+Enter macht den Zeilenumbruch", async () => {
     signInAs("EDITOR")
     const sent: unknown[] = []
     server.use(
@@ -125,20 +125,44 @@ describe("CommentPanel", () => {
     renderWithProviders(<CommentPanel project={project()} />)
 
     const field = await screen.findByLabelText(i18n.t("comment.form.textLabel"))
-    await userEvent.type(field, "Erste Zeile")
 
-    /* Enter allein bleibt der Zeilenumbruch: ein Kommentar ist oft
-       mehrzeilig, und ein Feld, das beim ersten Absatzende absendet,
-       verliert den Rest. */
-    await userEvent.type(field, "{Enter}Zweite Zeile")
+    /* Umgedreht mit KAN-83: Umschalt+Enter bleibt im Feld, Enter sendet.
+       Der eingeuebte Griff aus jedem Chatfenster ist Enter, und ein
+       Kommentar ist in der Praxis meist einzeilig. */
+    await userEvent.type(field, "Erste Zeile")
+    await userEvent.type(field, "{Shift>}{Enter}{/Shift}Zweite Zeile")
     expect(sent).toHaveLength(0)
 
-    await userEvent.type(field, "{Control>}{Enter}{/Control}")
+    await userEvent.type(field, "{Enter}")
     await waitFor(() => expect(sent).toHaveLength(1))
     expect(sent[0]).toEqual({
       type: "REPLY",
       text: "Erste Zeile\nZweite Zeile",
     })
+  })
+
+  it("sendet weiterhin auch mit Strg+Enter", async () => {
+    /* Die eingeuebte Belegung aus KAN-20 geht nicht verloren: Strg+Enter
+       erfuellt dieselbe Bedingung und braucht deshalb keinen zweiten Zweig
+       im Code. */
+    signInAs("EDITOR")
+    const sent: unknown[] = []
+    server.use(
+      commentsHandler([]),
+      http.post("*/api/projects/:projectId/comments", async ({ request }) => {
+        sent.push(await request.json())
+        return HttpResponse.json(comment(), { status: 201 })
+      })
+    )
+
+    renderWithProviders(<CommentPanel project={project()} />)
+
+    const field = await screen.findByLabelText(i18n.t("comment.form.textLabel"))
+    await userEvent.type(field, "Kurz und knapp")
+    await userEvent.type(field, "{Control>}{Enter}{/Control}")
+
+    await waitFor(() => expect(sent).toHaveLength(1))
+    expect(sent[0]).toEqual({ type: "REPLY", text: "Kurz und knapp" })
   })
 
   it("legt ein 400 VALIDATION_FAILED an das Textfeld", async () => {

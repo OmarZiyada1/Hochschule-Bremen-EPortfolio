@@ -2,7 +2,10 @@ import {
   toGalleryColumns,
   toImageWidth,
 } from "@/features/project-content/blockSanitize"
-import type { GalleryItem } from "@/features/project-content/blockTypes"
+import type {
+  GalleryItem,
+  TocEntry,
+} from "@/features/project-content/blockTypes"
 
 /**
  * Die gemeinsame Form der Attribute der sieben eigenen Nodes.
@@ -87,8 +90,16 @@ export function numberAttribute(
   }
 }
 
-/** Bildbreite und Spaltenzahl laufen ueber dieselben Funktionen wie die Whitelist. */
-export function imageWidthAttribute(): NodeAttribute {
+/**
+ * Medienbreite und Spaltenzahl laufen ueber dieselben Funktionen wie die
+ * Whitelist.
+ *
+ * <p>Seit Contract v84 fuehren Bild <em>und</em> Video dieselbe Stufung
+ * (100, 75, 50), deshalb heisst die Fabrik nicht mehr nach dem Bild. Zwei
+ * Fabriken mit denselben drei Zahlen waeren die Einladung, dass sie mit der
+ * Zeit auseinanderlaufen.
+ */
+export function mediaWidthAttribute(): NodeAttribute {
   return numberAttribute("width", 100, (value) => toImageWidth(value))
 }
 
@@ -124,6 +135,71 @@ export function galleryItemsAttribute(): NodeAttribute {
         : {}
     },
   }
+}
+
+/**
+ * Die Verzeichniseintraege als JSON-kodiertes {@code data-entries} (2.5 seit
+ * v84), nach demselben Muster wie die Galerieeintraege.
+ *
+ * <p>Ein unlesbarer Wert ergibt die leere Liste. Das ist hier kein
+ * Datenverlust, sondern der richtige Ausgang: ein Verzeichnis ohne Eintraege
+ * bleibt ein gueltiger Block, und die Aktion in der Toolbar fuellt es mit
+ * einem Griff wieder.
+ */
+export function tocEntriesAttribute(): NodeAttribute {
+  const attribute = dataAttributeName("entries")
+  return {
+    default: [],
+    parseHTML: (element) => {
+      const raw = element.getAttribute(attribute)
+      if (raw === null) {
+        return []
+      }
+      try {
+        return toTocEntries(JSON.parse(raw))
+      } catch {
+        return []
+      }
+    },
+    renderHTML: (attributes) => {
+      const value = attributes.entries
+      return Array.isArray(value)
+        ? { [attribute]: JSON.stringify(toTocEntries(value)) }
+        : {}
+    },
+  }
+}
+
+function toTocEntries(value: unknown): TocEntry[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  const entries: TocEntry[] = []
+  for (const candidate of value) {
+    if (typeof candidate !== "object" || candidate === null) {
+      continue
+    }
+    const entry = candidate as Record<string, unknown>
+    const level = entry.level
+    const index = entry.index
+    if (
+      typeof level !== "number" ||
+      level < 1 ||
+      level > 6 ||
+      !Number.isInteger(level) ||
+      typeof index !== "number" ||
+      !Number.isInteger(index) ||
+      index < 0
+    ) {
+      continue
+    }
+    entries.push({
+      level: level as TocEntry["level"],
+      text: typeof entry.text === "string" ? entry.text : "",
+      index,
+    })
+  }
+  return entries
 }
 
 function toGalleryItems(value: unknown): GalleryItem[] {

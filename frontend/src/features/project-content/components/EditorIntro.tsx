@@ -323,16 +323,16 @@ export function EditorIntro({
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid || undefined}>
                 {/*
-                 * Sichtbar und in Ueberschriftengroesse, und zugleich das
-                 * Label des Feldes: der Abstract braucht einen zugaenglichen
-                 * Namen, und eine Ueberschrift daneben waere ein zweites
-                 * Element fuer dieselbe Aufgabe.
+                 * Unsichtbar, aber im Baum (KAN-83): die Beschriftung
+                 * „Abstract" stand sichtbar in Ueberschriftengroesse ueber
+                 * dem Feld und wurde fuer eine Gliederungsebene gehalten.
+                 * Verschwinden darf sie trotzdem nicht, sonst verliert das
+                 * Feld seinen zugaenglichen Namen (WCAG 2.2, SC 4.1.2).
+                 * Sichtbar fuehrt jetzt der Platzhalter. Dasselbe Muster
+                 * haelt diese Datei schon fuer den Titel.
                  */}
-                <FieldLabel
-                  htmlFor={`${fieldId}-summary`}
-                  className={ABSTRACT_LABEL}
-                >
-                  {t("projectContent.intro.abstract")}
+                <FieldLabel htmlFor={`${fieldId}-summary`} className="sr-only">
+                  {t("project.metadata.summary.label")}
                 </FieldLabel>
                 <Textarea
                   {...field}
@@ -384,15 +384,13 @@ export function EditorIntro({
       ) : (
         <>
           <h1 className={`min-w-0 ${TITLE_ROLE}`}>{project.title}</h1>
+          {/* Ohne Beschriftung (KAN-83): der graue Absatz steht bereits
+              richtig da, die Zeile darueber war die Ueberschrift
+              „Abstract". */}
           {project.summary != null && project.summary !== "" && (
-            <>
-              <p className="type-content-h1">
-                {t("projectContent.intro.abstract")}
-              </p>
-              <p className="type-body-lg text-muted-foreground">
-                {project.summary}
-              </p>
-            </>
+            <p className="type-body-lg text-muted-foreground">
+              {project.summary}
+            </p>
           )}
         </>
       )}
@@ -447,24 +445,6 @@ function oneLine(value: string): string {
  * ({@code type-title min-w-0 text-primary}).
  */
 const TITLE_ROLE = "type-title text-primary"
-
-/**
- * Die Beschriftung des Abstracts sieht aus wie eine Ueberschrift der Ebene
- * 1 <em>im Editor</em>, also wie ein {@code Heading 1}-Block der
- * Schreibflaeche: Inhaltsskala {@code type-content-h1}, und die Farbe ist
- * die des Fliesstextes und nicht das Blau der Marke. Sie steht ueber einem
- * Feld des Beitrags und soll sich lesen wie eine Zwischenueberschrift
- * darin, nicht wie eine Formularbeschriftung und nicht wie der Titel.
- *
- * <p>Die drei Ersatzklassen sind noetig, weil die Registry-Primitive
- * {@code Label} {@code text-sm} und {@code font-medium} traegt und
- * {@code FieldLabel} zusaetzlich {@code leading-snug}; Utilities gewinnen
- * gegen die Komponentenschicht, in der die Rollen-Klassen stehen. Sie
- * zeigen auf dieselben Tokens wie die Rolle, ein zweiter Wert entsteht
- * nicht.
- */
-const ABSTRACT_LABEL =
-  "type-content-h1 text-[length:var(--fs-content-h1)] font-semibold leading-[var(--lh-h1)]"
 
 /**
  * Der Rahmen der beiden Felder: keiner, auch nicht im Fokus.

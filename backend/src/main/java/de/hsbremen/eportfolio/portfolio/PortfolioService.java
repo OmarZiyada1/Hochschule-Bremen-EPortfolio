@@ -136,7 +136,7 @@ public class PortfolioService {
 		return PortfolioResponse.from(
 				user,
 				portfolioRepository.findByUserId(userId).orElse(null),
-				projectReadService.publishedCardsOfAuthor(userId));
+				projectReadService.publishedCardsOfParticipant(userId));
 	}
 
 	// ------------------------------------------------------------------

@@ -204,6 +204,9 @@ function projectResponse(
     tags: ["IoT", "Machine Learning"],
     blocks: blocksOf(ALL_BLOCK_NODES),
     reactionCount: 142,
+    /* Seit Contract v84 (§3.10): der Standardfall ist "noch nicht geklatscht";
+       die Tests zum gefuellten Symbol setzen ihn ausdruecklich auf true. */
+    hasReacted: false,
     /*
      * Ausdruecklich null und nicht weggelassen: Jackson steht auf
      * Include.ALWAYS, der Server schickt "statusHistory": null. Ein Mock, der
@@ -297,10 +300,19 @@ describe("Inhalt und Gliederung", () => {
 
     /* Kein Typ faellt durch die Whitelist: der Renderer setzt an die Stelle
        eines verworfenen Blocks eine sichtbare Notiz (role="note"). Die
-       Formel wird nachgeladen, deshalb erst warten. */
-    await waitFor(() => {
-      expect(container.querySelector("math")).not.toBeNull()
-    })
+       Formel wird nachgeladen, deshalb erst warten.
+
+       Fuenf Sekunden statt der voreingestellten einen: geladen wird hier
+       KaTeX als eigenes Buendel, und im vollen Lauf teilen sich alle
+       Testdateien dieselben Kerne. Der Fall ist einzeln stets gruen und im
+       Gesamtlauf gelegentlich rot gewesen, also eine Frage der Last und
+       nicht des Verhaltens. */
+    await waitFor(
+      () => {
+        expect(container.querySelector("math")).not.toBeNull()
+      },
+      { timeout: 5000 }
+    )
     expect(screen.queryAllByRole("note")).toHaveLength(0)
 
     expect(container.querySelector("ul")).not.toBeNull()
@@ -336,6 +348,48 @@ describe("Inhalt und Gliederung", () => {
     ).toBeInTheDocument()
   })
 
+  it("fuehrt den Beitrag ohne sichtbare Rubrik und ohne Trennlinie", async () => {
+    renderPage()
+
+    const title = await screen.findByRole("heading", { level: 1 })
+
+    /*
+     * „Projektbeschreibung" bleibt im Dokument, aber nur fuer Hilfsmittel
+     * (KAN-83): sichtbar sollen Titel, Kurzbeschreibung und Beitrag
+     * ineinander uebergehen, in der Ueberschriftenliste eines Screenreaders
+     * dagegen braucht der Hauptteil der Seite eine Sprungmarke zwischen der
+     * h1 und der ersten Blockueberschrift (SC 1.3.1).
+     *
+     * Geprueft wird die Klasse und nicht toBeVisible: sr-only versteckt
+     * ueber clip, und jsdom laedt kein Tailwind.
+     */
+    const rubric = screen.getByRole("heading", {
+      level: 2,
+      name: i18n.t("project.detail.content"),
+    })
+    expect(rubric).toHaveClass("sr-only")
+    expect(rubric).not.toHaveClass("type-h2")
+
+    /* Sie benennt zugleich den Abschnitt. Eine Ueberschrift <em>in</em>
+       einem section benennt ihn naemlich nicht, und ohne Namen faellt er
+       aus der Landmark-Liste. */
+    const region = screen.getByRole("region", {
+      name: i18n.t("project.detail.content"),
+    })
+    expect(region).toContainElement(rubric)
+
+    /* Zwischen Kurzbeschreibung und Beitrag steht nichts mehr: kein
+       Trennstrich und keine sichtbare Rubrik. Geprueft werden nur die
+       unmittelbaren Kinder des Beitrags, denn der Beitrag selbst fuehrt
+       einen horizontalRule-Block und damit eine eigene hr. */
+    const summary = screen.getByText(
+      "Ein verteiltes Sensornetzwerk mit Edge-Inferenz."
+    )
+    expect(summary.nextElementSibling).toBe(region)
+    const article = title.closest("article") as HTMLElement
+    expect(article.querySelector(":scope > hr")).toBeNull()
+  })
+
   it("oeffnet die Projektdaten schmal als Schublade von rechts", async () => {
     const user = userEvent.setup()
     renderPage()
@@ -349,6 +403,13 @@ describe("Inhalt und Gliederung", () => {
      * deshalb die Mechanik, nicht der Umbruch. Dass die Karte ab lg steht
      * und der Knopf darunter, entscheidet CSS und keine Bedingung im Code.
      */
+    /* Der Aufklapper der Karte, festgehalten vor dem Oeffnen: sobald die
+       Schublade modal aufgeht, liegt der Rest des Dokuments unter
+       aria-hidden und ist ueber die Rolle nicht mehr auffindbar. */
+    const cardInfo = screen.getByRole("button", {
+      name: i18n.t("projectContent.sidebar.projectInfo"),
+    })
+
     await user.click(
       screen.getByRole("button", { name: "Projektdaten anzeigen" })
     )
@@ -356,13 +417,38 @@ describe("Inhalt und Gliederung", () => {
     /* Derselbe Baustein wie in der Karte: die Schublade fuehrt keine zweite
        Fassung der Projektdaten, sondern ProjectInfoPanel. */
     const drawer = await screen.findByRole("dialog")
+    /* Der Titel der Schublade, nicht der Aufklapper darin: „Projektdaten"
+       benennt die Flaeche, „Projektinformationen" den Kasten. */
     expect(within(drawer).getByText("Projektdaten")).toBeInTheDocument()
+
+    /*
+     * Auch hier ein Aufklapper und nicht die nackte Liste (KAN-83): die
+     * beiden Orte der Projektinformationen muessen gleich funktionieren,
+     * sonst haengt die Bedienbarkeit an der Fensterbreite.
+     */
+    const drawerInfo = within(drawer).getByRole("button", {
+      name: i18n.t("projectContent.sidebar.projectInfo"),
+    })
+    expect(drawerInfo).toHaveAttribute("aria-expanded", "true")
+
     expect(within(drawer).getByText("Digitalisierung")).toBeInTheDocument()
     expect(within(drawer).getByText("WiSe 2025/26")).toBeInTheDocument()
     expect(within(drawer).getByText(publishedMonth())).toBeInTheDocument()
     /* Nicht nur die Metadaten: die Reaktionen sind Teil desselben Panels
        und waeren schmal sonst gar nicht erreichbar. */
     expect(within(drawer).getByText("Reaktionen")).toBeInTheDocument()
+
+    /*
+     * Die beiden Orte fuehren je einen eigenen Zustand und kommen sich
+     * nicht in die Quere: sichtbar ist immer nur einer von beiden, und ein
+     * geteilter Zustand verknuepfte zwei Flaechen, die einander nie
+     * begegnen. Geprueft in jsdom, wo lg:hidden nicht greift und deshalb
+     * beide im Dokument stehen.
+     */
+    expect(drawer).not.toContainElement(cardInfo)
+    await user.click(drawerInfo)
+    expect(drawerInfo).toHaveAttribute("aria-expanded", "false")
+    expect(cardInfo).toHaveAttribute("aria-expanded", "true")
   })
 
   it("zeigt die Metadaten der Seitenleiste mit der Autor:in vor den Mitgliedern", async () => {
@@ -413,6 +499,39 @@ describe("Titelbild", () => {
 })
 
 describe("Reaktionen", () => {
+  it("zeigt das gefuellte Symbol, wenn die Person schon reagiert hat", async () => {
+    /*
+     * §3.10 seit Contract v84 (KAN-83): hasReacted kommt vom Server, der
+     * gedrueckte Zustand ueberlebt damit ein Neuladen. Vorher merkte die
+     * Schaltflaeche sich nur die eigene Aktion innerhalb der geoeffneten
+     * Seite; mit zwei verschiedenen Symbolen waere das eine falsche
+     * Auskunft gewesen.
+     */
+    signInAs("STUDENT")
+    server.use(detailHandler(projectResponse({ hasReacted: true })))
+
+    renderPage()
+    await screen.findByRole("heading", { level: 1 })
+
+    /* Der Name der Schaltflaeche sagt, was ein Klick tut: zuruecknehmen,
+       nicht reagieren. */
+    expect(
+      screen.getByRole("button", { name: /zurücknehmen/i })
+    ).toBeInTheDocument()
+  })
+
+  it("zeigt ohne eigene Reaktion die Handlung an", async () => {
+    signInAs("STUDENT")
+    server.use(detailHandler(projectResponse({ hasReacted: false })))
+
+    renderPage()
+    await screen.findByRole("heading", { level: 1 })
+
+    expect(
+      screen.getByRole("button", { name: /Reagieren/ })
+    ).toBeInTheDocument()
+  })
+
   it("aktualisiert den Zaehler aus der Antwort, ohne Reload, und vertraegt zwei Klicks", async () => {
     signInAs("STUDENT")
     const user = userEvent.setup()
@@ -564,10 +683,21 @@ describe("Sichtbarkeitsunterschiede", () => {
 
     await screen.findByRole("heading", { level: 1 })
     expect(screen.queryByText("Redakteur:innen")).toBeNull()
-    /* Der Redaktionshinweis steht trotzdem, nur ohne den Redaktionsteil. */
-    expect(
-      screen.getByText(/im Rahmen des Studiengangs Informatik/)
-    ).toBeInTheDocument()
+  })
+
+  it('zeigt den Satz "im Rahmen des Studiengangs" nirgends mehr (KAN-83)', async () => {
+    server.use(detailHandler(projectResponse()))
+    renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+    /*
+     * Der Redaktionshinweis ist ersatzlos entfallen. Er wiederholte, was
+     * die Metadatenspalte daneben ohnehin als eigene Rubriken fuehrt
+     * (Studiengang, Semester, Redaktion), und las sich als Aussage des
+     * Beitrags, obwohl ihn niemand geschrieben hatte.
+     */
+    expect(screen.queryByText(/im Rahmen des Studiengangs/)).toBeNull()
+    expect(screen.queryByText(/durchgeführt/)).toBeNull()
     expect(screen.queryByText(/redigiert/)).toBeNull()
   })
 
@@ -584,11 +714,10 @@ describe("Sichtbarkeitsunterschiede", () => {
     renderPage()
 
     await screen.findByRole("heading", { level: 1 })
+    /* Nur noch die Rubrik in der Metadatenspalte; den Redaktionshinweis
+       im Beitrag gibt es seit KAN-83 nicht mehr. */
     expect(screen.getByText("Redakteur:innen")).toBeInTheDocument()
-    /* Beide Stellen des Templates: die Rubrik und der Redaktionshinweis. */
-    expect(
-      screen.getByText(/durchgeführt und von Jo Schmidt redigiert/)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/Jo Schmidt/)).toBeInTheDocument()
   })
 })
 
@@ -871,5 +1000,110 @@ describe("Die Aktion PDF", () => {
     await waitFor(() => {
       expect(print).toHaveBeenCalledTimes(1)
     })
+  })
+})
+
+/**
+ * Die Projektinformationen als Aufklapper (KAN-83).
+ *
+ * <p>Bis dahin stand hier die nackte {@code ProjectMetaSidebar}: die lange
+ * Liste liess sich nicht wegklappen, obwohl der Kommentarkasten unmittelbar
+ * darunter es konnte und obwohl der Review-Modus dasselbe Paar laengst
+ * aufklappbar zeigte. Kein Test deckte diese Seite darauf ab, deshalb wurde
+ * die Luecke nie rot.
+ */
+describe("Die Projektinformationen", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("de")
+  })
+
+  /** Der Aufklapper der Karte; die Schublade ist dabei geschlossen. */
+  function infoTrigger(): HTMLElement {
+    return screen.getByRole("button", {
+      name: i18n.t("projectContent.sidebar.projectInfo"),
+    })
+  }
+
+  it("liegt in einer Ueberschrift und steht aufgeklappt da", async () => {
+    server.use(detailHandler(projectResponse()))
+    renderPage()
+
+    await screen.findByRole("heading", { level: 1 })
+
+    /* Der Ausloeser liegt <em>in</em> der Ueberschrift (APG-Muster
+       Disclosure), sonst haette die Spalte keinen Sprungpunkt. */
+    const heading = screen.getByRole("heading", {
+      name: i18n.t("projectContent.sidebar.projectInfo"),
+    })
+    expect(heading).toContainElement(infoTrigger())
+
+    /* Aufgeklappt als Vorgabe: auf dieser Seite gehoeren die Angaben zur
+       Auskunft ueber das Projekt und sind kein Nachschlagefall wie im
+       Review-Modus. Der Anblick bleibt damit derselbe wie zuvor. */
+    expect(infoTrigger()).toHaveAttribute("aria-expanded", "true")
+    expect(screen.getByText("Digitalisierung")).toBeInTheDocument()
+  })
+
+  it("laesst sie als Studierende auch bei SUBMITTED zu- und wieder aufklappen", async () => {
+    /*
+     * Der gemeldete Fall. Bei SUBMITTED erreicht die Autor:in weder den
+     * Editor (kein Stift auf der Kachel, kein Umschalter) noch den
+     * Review-Modus (rollengesperrt); diese Seite ist der Ort, an den sie
+     * gefuehrt wird, und dort blieb die Liste stehen.
+     */
+    const user = userEvent.setup()
+    signInAs("STUDENT")
+    server.use(
+      http.get("*/api/projects/:projectId/comments", () =>
+        HttpResponse.json([])
+      ),
+      detailHandler(projectResponse({ status: "SUBMITTED" }))
+    )
+
+    renderPage()
+    await screen.findByRole("heading", { level: 1 })
+
+    expect(infoTrigger()).toHaveAttribute("aria-expanded", "true")
+
+    await user.click(infoTrigger())
+    expect(infoTrigger()).toHaveAttribute("aria-expanded", "false")
+    await waitFor(() => {
+      expect(screen.queryByText("Digitalisierung")).toBeNull()
+    })
+
+    await user.click(infoTrigger())
+    expect(infoTrigger()).toHaveAttribute("aria-expanded", "true")
+    expect(await screen.findByText("Digitalisierung")).toBeInTheDocument()
+  })
+
+  it("laesst den Kommentarkasten dabei offen", async () => {
+    /*
+     * Kein Akkordeon wie in Editor und Review-Modus: diese Seite ist fuer
+     * die Autor:in eines eingereichten Projekts der einzige Ort mit ihren
+     * Aenderungswuenschen, und die sollen nicht zugehen, weil jemand die
+     * Angaben einklappt. Zwischen beiden stehen ausserdem der Umschalter
+     * und die Reaktionen, sie sind also gar kein Paar.
+     */
+    const user = userEvent.setup()
+    signInAs("STUDENT")
+    server.use(
+      http.get("*/api/projects/:projectId/comments", () =>
+        HttpResponse.json([])
+      ),
+      detailHandler(projectResponse({ status: "SUBMITTED" }))
+    )
+
+    renderPage()
+    await screen.findByRole("heading", { level: 1 })
+
+    const comments = screen.getByRole("button", {
+      name: new RegExp(i18n.t("comment.panel.title")),
+    })
+    expect(comments).toHaveAttribute("aria-expanded", "true")
+
+    await user.click(infoTrigger())
+
+    expect(infoTrigger()).toHaveAttribute("aria-expanded", "false")
+    expect(comments).toHaveAttribute("aria-expanded", "true")
   })
 })

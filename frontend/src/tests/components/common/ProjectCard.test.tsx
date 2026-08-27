@@ -66,31 +66,43 @@ describe("ProjectCard", () => {
   })
 
   /*
-   * Punkt 1 aus KAN-80: das Fakultaetsbadge ist weg. Fakultaet und
-   * Studiengang standen nebeneinander und sagten dieselbe Einordnung zweimal,
-   * nur unterschiedlich grob; die genauere Angabe bleibt.
+   * KAN-83 kehrt die Entscheidung aus KAN-80 um: oben links steht wieder
+   * die Fakultaet, jetzt aber allein. Die Doppelung, die KAN-80 aufgeloest
+   * hat, bleibt aufgeloest; nur ist es beim Ueberfliegen einer Liste die
+   * grobe Einordnung, die traegt. Der Studiengang steht auf der
+   * Detailseite.
    */
-  it("zeigt kein Fakultaetskuerzel mehr auf dem Cover", () => {
-    renderWithProviders(<ProjectCard project={projectCard({ faculty })} />)
-
-    expect(screen.queryByText("FK4")).not.toBeInTheDocument()
-    expect(screen.queryByText("Fakultät 4")).not.toBeInTheDocument()
-  })
-
-  it("faellt ohne Kuerzel auf den ausgeschriebenen Studiengang zurueck", () => {
+  it("zeigt kein Studiengangskuerzel mehr auf dem Cover", () => {
     renderWithProviders(
       <ProjectCard
         project={projectCard({
           studyProgram: reference({
             id: "sp-1",
             name: "Medieninformatik",
+            abbreviation: "MIN",
+          }),
+        })}
+      />
+    )
+
+    expect(screen.queryByText("MIN")).not.toBeInTheDocument()
+    expect(screen.queryByText("Medieninformatik")).not.toBeInTheDocument()
+  })
+
+  it("faellt ohne Kuerzel auf die ausgeschriebene Fakultaet zurueck", () => {
+    renderWithProviders(
+      <ProjectCard
+        project={projectCard({
+          faculty: reference({
+            id: "f-4",
+            name: "Fakultät 4",
             abbreviation: null,
           }),
         })}
       />
     )
 
-    expect(screen.getByText("Medieninformatik")).toBeVisible()
+    expect(screen.getByText("Fakultät 4")).toBeVisible()
   })
 
   it("zeigt ohne Coverbild den Platzhalter statt eines leeren Bildes", () => {
@@ -161,14 +173,13 @@ describe("ProjectCard", () => {
   })
 
   /*
-   * Punkt 1 aus KAN-80: das Studiengangskuerzel steht oben links auf der
-   * Coverflaeche, dort wo bis dahin die Fakultaet stand. Es laeuft
-   * zweispurig: sichtbar die Kurzform, vorgelesen der volle Name. Beides
-   * ueber die Erreichbarkeit geprueft und nicht ueber ein title-Attribut:
-   * das erreicht weder Tastatur noch Touch und wird an einem span meist gar
-   * nicht vorgelesen.
+   * KAN-83: das Fakultaetskuerzel steht oben links auf der Coverflaeche. Es
+   * laeuft zweispurig: sichtbar die Kurzform, vorgelesen der volle Name.
+   * Beides ueber die Erreichbarkeit geprueft und nicht ueber ein
+   * title-Attribut: das erreicht weder Tastatur noch Touch und wird an
+   * einem span meist gar nicht vorgelesen.
    */
-  it("zeigt das Studiengangskuerzel auf dem Cover", () => {
+  it("zeigt das Fakultaetskuerzel auf dem Cover", () => {
     renderWithProviders(
       <ProjectCard
         project={projectCard({
@@ -182,9 +193,9 @@ describe("ProjectCard", () => {
       />
     )
 
-    expect(screen.getByText("MIN")).toHaveAttribute("aria-hidden", "true")
+    expect(screen.getByText("FK4")).toHaveAttribute("aria-hidden", "true")
 
-    const full = screen.getByText("Medieninformatik")
+    const full = screen.getByText("Fakultät 4")
     expect(full).toHaveClass("sr-only")
     expect(full.closest("[aria-hidden]")).toBeNull()
   })

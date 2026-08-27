@@ -497,6 +497,88 @@ describe("ProfileEditPage", () => {
       purpose: "EMAIL_CHANGE",
       code: "042317",
     })
+
+    /*
+     * Der gemeldete Fehler aus KAN-83: nach dem Einloesen blieb das Feld
+     * „Aktuelles Passwort" stehen, und „Änderungen speichern" tat nichts
+     * mehr. Ursache war der Cache-Eintrag von GET /auth/me, den niemand
+     * invalidierte: das Formular hielt die alte Adresse weiter fuer die
+     * aktuelle, verlangte deshalb erneut ein Passwort und scheiterte an
+     * einem Feld, das gar nicht mehr sichtbar war.
+     */
+    await waitFor(() =>
+      expect(
+        screen.queryByLabelText("Aktuelles Passwort", {
+          selector: "#currentPassword",
+        })
+      ).toBeNull()
+    )
+    expect(screen.queryByText(/Bestätigung ausstehend/)).not.toBeInTheDocument()
+  })
+
+  it("nimmt einen laufenden Wechsel nicht mehr nebenbei zurueck", async () => {
+    /*
+     * Bis KAN-83 schickte jedes gewoehnliche Speichern die aktuelle Adresse
+     * mit, und das ist laut §6.1 der Weg zurueck: wer waehrend der
+     * Wartezeit einen Tippfehler im Vornamen korrigierte, verlor unbemerkt
+     * den Wechsel und den bereits verschickten Code. Der Weg zurueck steht
+     * seither als eigene Schaltflaeche im Hinweis.
+     */
+    let sentBody: Record<string, unknown> | null = null
+    server.use(
+      ownPortfolioHandler(),
+      http.get("*/api/auth/me", () =>
+        HttpResponse.json(userResponse(NEW_EMAIL))
+      ),
+      http.put("*/api/auth/me", async ({ request }) => {
+        sentBody = (await request.json()) as Record<string, unknown>
+        return HttpResponse.json(userResponse(NEW_EMAIL))
+      }),
+      http.put("*/api/portfolio/me", () =>
+        HttpResponse.json({ biography: null, avatarUrl: null })
+      )
+    )
+    await renderProfile()
+
+    /* Nur der Vorname aendert sich; die Adresse bleibt unberuehrt. */
+    await userEvent.clear(screen.getByLabelText("Vorname"))
+    await userEvent.type(screen.getByLabelText("Vorname"), "Mirjam")
+    await userEvent.click(
+      screen.getByRole("button", { name: "Änderungen speichern" })
+    )
+
+    await waitFor(() => expect(sentBody).not.toBeNull())
+    expect(sentBody).not.toHaveProperty("email")
+    expect(sentBody).toMatchObject({ firstName: "Mirjam" })
+  })
+
+  it("bietet den Weg zurueck als eigene Schaltflaeche an", async () => {
+    let sentBody: Record<string, unknown> | null = null
+    server.use(
+      ownPortfolioHandler(),
+      http.get("*/api/auth/me", () =>
+        HttpResponse.json(userResponse(NEW_EMAIL))
+      ),
+      http.put("*/api/auth/me", async ({ request }) => {
+        sentBody = (await request.json()) as Record<string, unknown>
+        return HttpResponse.json(userResponse(null))
+      }),
+      http.put("*/api/portfolio/me", () =>
+        HttpResponse.json({ biography: null, avatarUrl: null })
+      )
+    )
+    await renderProfile()
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Wechsel abbrechen" })
+    )
+
+    /* §6.1: die aktuelle Adresse zu senden nimmt den Wechsel zurueck. Ein
+       Passwort braucht es dafuer nicht, die Adresse aendert sich ja
+       nicht. */
+    await waitFor(() => expect(sentBody).not.toBeNull())
+    expect(sentBody).toMatchObject({ email: CURRENT_EMAIL })
+    expect(sentBody).not.toHaveProperty("currentPassword")
   })
 
   it(

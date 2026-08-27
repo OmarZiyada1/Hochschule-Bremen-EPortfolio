@@ -1,6 +1,9 @@
 import { mergeAttributes, Node } from "@tiptap/react"
 
-import { textAttribute } from "@/features/project-content/extensions/attributes"
+import {
+  mediaWidthAttribute,
+  textAttribute,
+} from "@/features/project-content/extensions/attributes"
 
 /**
  * VIDEO (Contract 2.5, seit v51 mit zwei Quellen).
@@ -17,6 +20,11 @@ import { textAttribute } from "@/features/project-content/extensions/attributes"
  * Eingabetext. Eine vom Client gelieferte Fremd-URL in der Datenbank waere
  * ein unnoetiger Angriffspunkt, weil sie beim Rendern in ein iframe
  * gelangt. Deshalb gibt es hier weder {@code embedUrl} noch {@code src}.
+ *
+ * <p><strong>{@code width} gilt fuer beide Quellen</strong> (2.5 seit v84):
+ * ein eingebettetes Video steht in derselben Textspalte wie ein
+ * hochgeladenes, und eine Stufung nur fuer die Datei waere eine
+ * Unterscheidung ohne Grund.
  *
  * <p>Dass Tiptap bei {@code toJSON} auch die unbelegten Attribute
  * mitschreibt ({@code fileId: null} neben einer Einbettung), ist
@@ -38,6 +46,11 @@ export const VideoBlock = Node.create({
          v64). */
       hash: textAttribute("hash"),
       caption: textAttribute("caption", ""),
+      /* Dieselben drei Stufen wie am Bild (2.5 seit v84). Ein Video steht
+         in derselben Textspalte, und ohne Stufung nahm es immer die volle
+         Breite ein. Fehlt das Attribut, gilt 100: ein bereits
+         veroeffentlichter Beitrag soll nicht von selbst anders aussehen. */
+      width: mediaWidthAttribute(),
     }
   },
 

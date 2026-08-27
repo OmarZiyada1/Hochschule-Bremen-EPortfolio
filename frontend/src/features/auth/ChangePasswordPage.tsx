@@ -33,6 +33,7 @@ import {
 import { AuthCardHeader } from "@/features/auth/components/AuthCardHeader"
 import { AuthPageShell } from "@/features/auth/components/AuthPageShell"
 import { useChangePassword } from "@/features/auth/hooks/useAuthMutations"
+import { landingPathFor } from "@/routes/landingPath"
 
 /**
  * Passwort aendern (KAN-33, §6.7): PUT /auth/password mit aktuellem und
@@ -55,7 +56,7 @@ import { useChangePassword } from "@/features/auth/hooks/useAuthMutations"
 export default function ChangePasswordPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { isAuthenticated, passwordChangeRequired } = useAuth()
+  const { isAuthenticated, passwordChangeRequired, role } = useAuth()
   const changeMutation = useChangePassword()
 
   const form = useForm<ChangePasswordFormValues>({
@@ -85,7 +86,10 @@ export default function ChangePasswordPage() {
         newPassword: values.newPassword,
       })
       setPasswordChangeRequired(false)
-      navigate(consumeRequestedRoute() ?? "/projects")
+      /* Dasselbe Ersatzziel wie am Login (KAN-83): der erzwungene Wechsel
+         ist die Fortsetzung der Anmeldung, und zwei Wege duerfen nicht
+         verschieden enden. */
+      navigate(consumeRequestedRoute() ?? landingPathFor(role))
     } catch (error) {
       if (!isApiError(error)) {
         throw error

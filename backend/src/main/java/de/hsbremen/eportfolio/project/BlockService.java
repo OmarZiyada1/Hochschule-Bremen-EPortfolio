@@ -196,6 +196,8 @@ public class BlockService {
 	 * {@code BLOCK_TYPE_UNKNOWN}), Inhalt passend zum Typ (400
 	 * {@code BLOCK_CONTENT_INVALID} bzw. {@code EMBED_PROVIDER_NOT_ALLOWED}),
 	 * IDs eindeutig und zu diesem Projekt gehoerig, Reihenfolge lueckenlos ab 0.
+	 * Dazwischen die eine Regel, die die ganze Liste betrifft: hoechstens ein
+	 * TABLE_OF_CONTENTS (§2.5 seit Contract v84).
 	 * Erst danach faellt die erste Schreiboperation an.
 	 */
 	private List<ResolvedBlock> resolve(Project project, List<BlockRequest> requested) {
@@ -208,6 +210,8 @@ public class BlockService {
 					entry.schemaVersionOrDefault()));
 		}
 
+		validation.requireAtMostOneTableOfContents(
+				resolved.stream().map(ResolvedBlock::type).toList());
 		requireKnownIds(project, resolved);
 		requireGaplessOrder(resolved);
 		return resolved;

@@ -422,12 +422,77 @@ public class ProjectWorkflowService {
 		// Nicht ueber readService.detail: der Aufruf hat der anfragenden Person
 		// gerade die Leseberechtigung genommen, mit der sie ihn ausgeloest hat.
 		// Begruendung an der Methode.
-		return readService.detailAfterOwnResignation(project);
+		return readService.detailAfterOwnResignation(project, actor.getId());
+	}
+
+	// ------------------------------------------------------------------
+	// DELETE /api/projects/{projectId}/members/me
+	// ------------------------------------------------------------------
+
+	/**
+	 * Die eigene Projektmitgliedschaft beenden (§6.1 und §3.13.1, seit Contract
+	 * v84).
+	 *
+	 * <p><strong>In jedem Status.</strong> Es gibt hier bewusst keine
+	 * Statuspruefung und damit auch kein 409: §3.13.1 hebt die Schranke der
+	 * Mitgliederpflege fuer das Austragen der eigenen Person auf. Die
+	 * Begruendung steht an {@link ProjectPermissionService#mayLeaveProject}.
+	 *
+	 * <p><strong>Kein Statusuebergang und kein Eintrag in die
+	 * {@code ProjectStatusHistory}</strong>, anders als beim Abgeben der
+	 * Redaktionszuweisung. Dort faellt das Projekt zurueck, wenn die letzte
+	 * Zuweisung geht, weil ein eingereichtes Projekt ohne Redaktion niemanden
+	 * mehr haette. Hier bleibt die Autor:in in jedem Fall, das Projekt ist also
+	 * nie verwaist.
+	 *
+	 * <p><strong>Ohne Antwortkoerper (204).</strong> Eine Momentaufnahme wie bei
+	 * {@link #resignAsEditor} waere hier keine Auskunft ueber die eigene
+	 * Handlung, sondern ein Blick auf einen fremden Beitrag: ausserhalb von
+	 * {@code PUBLISHED} hat die Person unmittelbar danach kein Leserecht mehr.
+	 * {@code Project.version} bleibt unveraendert, weil die Metadaten
+	 * unberuehrt sind und kein Client hier gegen einen Stand schreibt.
+	 *
+	 * @throws ResourceNotFoundException wenn es die Projekt-ID nicht gibt (404)
+	 * @throws AccessDeniedException     wenn die Person nicht Mitglied ist (403)
+	 */
+	public void leaveProject(AuthenticatedUser user, UUID projectId) {
+		Project project = load(projectId);
+
+		requireMember(user, project);
+
+		UUID actorId = user.getId();
+		project.getMembers().removeIf(member -> member.getUser() != null
+				&& actorId.equals(member.getUser().getId()));
+		projectRepository.saveAndFlush(project);
 	}
 
 	// ------------------------------------------------------------------
 	// Pruefungen
 	// ------------------------------------------------------------------
+
+	/**
+	 * Austragen darf allein, wer selbst Mitglied ist (§5, Zeile
+	 * „Projektmitgliedschaft beenden").
+	 *
+	 * <p>Aufgebaut wie {@link #requireAssignedEditor}: die Ressourcenebene
+	 * beantwortet {@link ProjectPermissionService#mayLeaveProject}, hier bleibt
+	 * allein die Uebersetzung des {@code false} in die richtige Antwort, und die
+	 * beiden Gruende bleiben auseinandergehalten (ohne Anmeldung 401, sonst 403).
+	 */
+	private void requireMember(AuthenticatedUser user, Project project) {
+		if (permissions.mayLeaveProject(user, project)) {
+			return;
+		}
+		if (user == null || user.getStatus() != UserStatus.ACTIVE) {
+			throw new AuthenticationCredentialsNotFoundException(
+					"Fuer das Beenden einer Projektmitgliedschaft ist eine Anmeldung "
+							+ "erforderlich (§5).");
+		}
+		throw new AccessDeniedException(
+				"Beenden kann eine Projektmitgliedschaft nur, wer selbst Mitglied ist; "
+						+ "fremde Zeilen aendert die Projektseite ueber "
+						+ "PUT /api/projects/{id} (§3.13.1).");
+	}
 
 	/**
 	 * Abgeben darf allein, wer selbst zugewiesen ist (§5, Zeile „Eigene

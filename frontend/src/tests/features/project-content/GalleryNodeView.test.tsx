@@ -132,7 +132,7 @@ describe("GalleryNodeView", () => {
     renderEditor(ownDraft(), [galleryBlock()])
 
     const caption = await screen.findByLabelText(
-      "Bildunterschrift der Galerie",
+      "Galerieunterschrift",
       undefined,
       WAIT
     )
@@ -161,7 +161,7 @@ describe("GalleryNodeView", () => {
       screen.queryByRole("toolbar", { name: "Spalten" })
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByLabelText("Bildunterschrift der Galerie")
+      screen.queryByLabelText("Galerieunterschrift")
     ).not.toBeInTheDocument()
     expect(
       screen.queryByText("Bild zur Galerie hinzufügen")

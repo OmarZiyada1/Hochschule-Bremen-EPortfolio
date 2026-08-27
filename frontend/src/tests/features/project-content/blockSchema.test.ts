@@ -24,9 +24,12 @@ describe("Schema-Vollstaendigkeit (Contract 2.5)", () => {
     expect(blockNodeNames).toEqual(Object.keys(NODE_TYPE_TO_BLOCK_TYPE).sort())
   })
 
-  it("bildet fuenfzehn Knotennamen auf vierzehn Blocktypen ab", () => {
-    expect(Object.keys(NODE_TYPE_TO_BLOCK_TYPE)).toHaveLength(15)
-    expect(new Set(Object.values(NODE_TYPE_TO_BLOCK_TYPE)).size).toBe(14)
+  it("bildet sechzehn Knotennamen auf fuenfzehn Blocktypen ab", () => {
+    /* TABLE_OF_CONTENTS kam mit Contract v84 dazu (KAN-83). Ein Blocktyp
+       weniger als Knotennamen, weil bulletList und orderedList beide auf
+       LIST abbilden. */
+    expect(Object.keys(NODE_TYPE_TO_BLOCK_TYPE)).toHaveLength(16)
+    expect(new Set(Object.values(NODE_TYPE_TO_BLOCK_TYPE)).size).toBe(15)
   })
 
   it("fuehrt genau die zehn Marks aus 2.5", () => {
@@ -133,6 +136,8 @@ describe("Attribut-Serialisierung der sieben eigenen Nodes", () => {
           videoId: null,
           hash: null,
           caption: "Aufnahme",
+          /* Seit Contract v84 fuehrt auch das Video eine Breite. */
+          width: 100,
         },
       ],
       [
@@ -143,6 +148,7 @@ describe("Attribut-Serialisierung der sieben eigenen Nodes", () => {
           videoId: "dQw4w9WgXcQ",
           hash: null,
           caption: "",
+          width: 75,
         },
       ],
       ["audioBlock", { fileId: FILE_B, caption: "Interview" }],

@@ -3,8 +3,7 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import type { ProjectDetailResponse } from "@/api/types"
-import { CommentPanel } from "@/components/common/CommentPanel"
-import { ProjectInfoSection } from "@/components/common/ProjectInfoSection"
+import { ProjectSidePanels } from "@/components/common/ProjectSidePanels"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { HistoryDialog } from "@/features/project-content/components/HistoryDialog"
@@ -82,11 +81,24 @@ export function EditorSidebar({
           </Button>
         </div>
 
-        <ProjectInfoSection
+        {/*
+         * Eine Karte statt zweier (KAN-83): Statuszeile,
+         * Projektinformationen und Kommentare stehen zusammen, wie in der
+         * Reviewansicht. Zwei getrennte Karten waren der gemeldete
+         * Unterschied zwischen den beiden Ansichten; die Vorlage zeichnet
+         * die rechte Spalte als einen Block (Frame 109:2).
+         *
+         * Vorgabe sind beim Schreiben die Angaben: der haeufige Fall ist
+         * nachzusehen, was noch fehlt. In REVISION jedoch die Kommentare,
+         * denn dort sind die offenen Aenderungswuensche der Arbeitsauftrag
+         * (dieselbe Regel wie zuvor am CommentPanel selbst).
+         */}
+        <ProjectSidePanels
           project={project}
-          defaultOpen
+          context="editor"
+          defaultPanel={project.status === "REVISION" ? "comments" : "info"}
           showEmptyFields
-          action={
+          infoAction={
             <Button
               type="button"
               variant="outline"
@@ -100,23 +112,6 @@ export function EditorSidebar({
           }
         />
       </div>
-
-      {/*
-       * Die Kommentarspalte steht unmittelbar unter den
-       * Projektinformationen, in einer eigenen Karte derselben Form: so
-       * zeichnet die Vorlage die rechte Spalte (Frame 109:2, drei Karten
-       * untereinander).
-       *
-       * Nicht bei PUBLISHED (Nutzerentscheidung zur Nacharbeit an KAN-37):
-       * dort ist die redaktionelle Arbeit vorbei und der Beitrag
-       * oeffentlich; die Spalte zeigte nur noch einen Verlauf, an dem
-       * nichts mehr haengt.
-       */}
-      {project.status !== "PUBLISHED" && (
-        <div className="flex flex-col rounded-card border border-border bg-card p-5">
-          <CommentPanel project={project} context="editor" />
-        </div>
-      )}
 
       <HistoryDialog
         open={historyOpen}

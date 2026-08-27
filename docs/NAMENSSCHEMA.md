@@ -98,6 +98,7 @@ qualifiziert Jacksons Klasse voll aus.
 | `CommentStatus` | `OFFEN` · `ERLEDIGT` | `OPEN` · `RESOLVED` |
 | `BlockType` | `UEBERSCHRIFT` · `TEXT` · `LISTE` · `ZITAT` · `CODE` · `FORMEL` · `TABELLE` · `TRENNLINIE` | `HEADING` · `TEXT` · `LIST` · `QUOTE` · `CODE` · `FORMULA` · `TABLE` · `DIVIDER` |
 | `BlockType` | `BILD` · `GALERIE` · `VIDEO` · `AUDIO` · `DOKUMENT` · `EINBETTUNG` | `IMAGE` · `GALLERY` · `VIDEO` · `AUDIO` · `DOCUMENT` · `EMBED` |
+| `BlockType` | `INHALTSVERZEICHNIS` | `TABLE_OF_CONTENTS` (sechzehnter Wert seit Contract v84) |
 | `ProjectType` | `REGULAR` · `PAPER` · `THESIS` | unverändert |
 | `Degree` | `BACHELOR` · `MASTER` · `MBA` | unverändert |
 | `NominationStatus` | `OFFEN` · `ANGENOMMEN` · `ABGELEHNT` · `ZURUECKGEZOGEN` | `PENDING` · `ACCEPTED` · `REJECTED` · `WITHDRAWN` (vierter Wert seit Contract v70, KAN-37) |
@@ -198,6 +199,10 @@ Entity, sondern eine Aggregation über `project_tag`, und steht deshalb nur in
 | `positionVorher` · `positionNachher` | `previousPosition` · `newPosition` |
 | `zweck` · `codeHash` · `verbraucht` | `purpose` · `codeHash` · `consumed` |
 | `name` · `kuerzel` | `name` · `abbreviation` |
+| `sammelmodul` | `collective` (Merkmal am `Module`, seit Contract v84) |
+| `beteiligt` | `participant` (Listenfilter, seit Contract v84) |
+| `hatReagiert` | `hasReacted` (Feld der Detailantwort, seit Contract v84) |
+| `verzeichnisEintrag` | `TocEntry` mit `level` · `text` · `index` |
 
 ## 5. Fehler-Envelope und Seitenformat
 
@@ -335,6 +340,7 @@ Sortierbare Felder bei `GET /projects`: `title`, `semester`, `status`,
 | `ProjektSammelStatusAnfrage` · `…Antwort` · `…Ergebnis` | `ProjectBulkStatusRequest` · `ProjectBulkStatusResponse` · `ProjectBulkStatusResultResponse` |
 | `ProjektAdminService` · `ProjektAdminController` | `ProjectAdminService` · `ProjectAdminController` |
 | `darfMitgliederPflegen` | `mayManageMembers` |
+| `darfProjektVerlassen` | `mayLeaveProject` |
 | `RegistrierungService` | `RegistrationService` |
 | `VerifizierungsCodeService` | `VerificationCodeService` |
 | `VerifizierungsversuchService` | `VerificationAttemptService` |

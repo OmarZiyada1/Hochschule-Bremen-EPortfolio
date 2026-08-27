@@ -128,6 +128,27 @@ public final class ProjectSpecifications {
 		return (root, query, cb) -> cb.equal(root.get("author").get("id"), authorId);
 	}
 
+	/**
+	 * Filter {@code participant} (&sect;6.1, seit Contract v84): Projekte, an denen
+	 * diese Person beteiligt ist, also als Autor:in <em>oder</em> als
+	 * Projektmitglied (&sect;3.13).
+	 *
+	 * <p>Bewusst ein eigener Filter neben {@link #author(UUID)} und keine
+	 * Bedeutungserweiterung von {@code author}: &sect;6.1 sichert {@code ?author=}
+	 * ausdruecklich als oeffentliche Autorenuebersicht zu, und diese Zusage still
+	 * zu aendern waere eine Contract-Abweichung an einer oeffentlich genutzten
+	 * Stelle.
+	 *
+	 * <p>Die Mitgliedsbedingung ist dieselbe Unterabfrage, die schon die
+	 * Sichtbarkeitsschranke benutzt ({@link #isMember}), also {@code exists} und
+	 * kein Join; die Begruendung steht dort.
+	 */
+	public static Specification<Project> participant(UUID userId) {
+		return (root, query, cb) -> cb.or(
+				cb.equal(root.get("author").get("id"), userId),
+				isMember(root, query, cb, userId));
+	}
+
 	/** Filter {@code degree} (§2.7). */
 	public static Specification<Project> degree(List<Degree> degrees) {
 		return (root, query, cb) -> root.get("degree").in(degrees);

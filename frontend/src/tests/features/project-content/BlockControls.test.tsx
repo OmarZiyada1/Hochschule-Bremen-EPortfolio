@@ -109,12 +109,28 @@ describe("BlockControls", () => {
        Rueckgaengig stellt den Block wieder her, und genau das sagt die
        Ansage. */
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
-    await waitFor(() => expect(captured?.state.doc.childCount).toBe(1), WAIT)
+
+    /*
+     * Uebrig bleiben zwei Knoten und nicht einer: der zweite Absatz und der
+     * leere Schlussblock, den TrailingBlock seit KAN-83 hinter den letzten
+     * Block haengt. Gespeichert wird er nicht, docToBlocks schneidet ihn ab.
+     */
+    await waitFor(() => {
+      expect(captured?.state.doc.childCount).toBe(2)
+      expect(captured?.state.doc.child(0).textContent).toBe("Zweiter Absatz")
+      expect(captured?.state.doc.child(1).textContent).toBe("")
+    }, WAIT)
     expect(onAnnounce).toHaveBeenCalledWith(
       "Absatz gelöscht. Rückgängig stellt ihn wieder her."
     )
 
+    /*
+     * Rueckgaengig holt den geloeschten Absatz zurueck; der Schlussblock
+     * bleibt, weil seine Transaktion mit addToHistory: false laeuft. Genau
+     * das ist der Zweck: sonst naehme der erste Druck auf Rueckgaengig ihn
+     * weg statt den letzten Handgriff der Autor:in.
+     */
     captured?.commands.undo()
-    await waitFor(() => expect(captured?.state.doc.childCount).toBe(2), WAIT)
+    await waitFor(() => expect(captured?.state.doc.childCount).toBe(3), WAIT)
   })
 })

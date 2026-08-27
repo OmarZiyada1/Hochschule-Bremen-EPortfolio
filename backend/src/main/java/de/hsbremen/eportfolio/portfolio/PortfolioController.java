@@ -65,8 +65,9 @@ public class PortfolioController {
 					+ "Person (§6.1). Frei zugaenglich, weil §5 veroeffentlichte Inhalte fuer alle "
 					+ "lesbar macht. Die Antwort enthaelt die private E-Mail als Kontaktweg (§3.2), "
 					+ "niemals die HSB-Adresse (§3.1). Aufgefuehrt werden ausschliesslich Projekte "
-					+ "im Status PUBLISHED, deren Autor:in diese Person ist; eine blosse "
-					+ "Mitgliedschaft am Projekt genuegt nicht.")
+					+ "im Status PUBLISHED, an denen diese Person beteiligt ist: als Autor:in oder "
+					+ "als Projektmitglied (§3.13). Seit Contract v84 zaehlt die Mitgliedschaft "
+					+ "mit; bis v83 tat sie es nicht.")
 	@ApiResponse(responseCode = "200", description = "Das Profil. Biografie und Avatar koennen leer "
 			+ "sein, die Projektliste kann leer sein.")
 	@ApiResponse(responseCode = "404", description = "RESOURCE_NOT_FOUND: unter dieser ID gibt es "

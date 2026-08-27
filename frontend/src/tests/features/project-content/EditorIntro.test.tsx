@@ -75,7 +75,7 @@ describe("EditorIntro", () => {
     await user.clear(title)
     await user.type(title, "Neuer Titel")
 
-    const summary = screen.getByLabelText("Abstract")
+    const summary = screen.getByLabelText("Kurzbeschreibung")
     await user.type(summary, "Kurz gesagt")
 
     expect(onChange).toHaveBeenCalled()
@@ -210,11 +210,11 @@ describe("EditorIntro", () => {
     await user.click(screen.getByLabelText("Projekttitel"))
     expect(counter()).not.toHaveClass("sr-only")
 
-    /* Der Abstract hat gar keinen: er ist Fliesstext ohne Zeichengrenze
-       ausser der des Servers. */
-    await user.click(screen.getByLabelText("Abstract"))
+    /* Die Kurzbeschreibung hat gar keinen: sie ist Fliesstext ohne
+       Zeichengrenze ausser der des Servers. */
+    await user.click(screen.getByLabelText("Kurzbeschreibung"))
     expect(counter()).toHaveClass("sr-only")
-    expect(screen.getByLabelText("Abstract")).not.toHaveAttribute(
+    expect(screen.getByLabelText("Kurzbeschreibung")).not.toHaveAttribute(
       "aria-describedby"
     )
   })
@@ -256,7 +256,7 @@ describe("EditorIntro", () => {
   it("laesst die beiden Felder ohne Rahmen und ohne dunkle Flaeche", () => {
     setUp()
 
-    for (const label of ["Projekttitel", "Abstract"]) {
+    for (const label of ["Projekttitel", "Kurzbeschreibung"]) {
       const field = screen.getByLabelText(label)
       expect(field.className).toContain("border-0")
       expect(field.className).toContain("dark:bg-transparent")
@@ -309,32 +309,41 @@ describe("EditorIntro", () => {
     )
     expect(screen.getByText("Kurzfassung")).toBeInTheDocument()
     expect(screen.queryByLabelText("Projekttitel")).toBeNull()
-    expect(screen.queryByLabelText("Abstract")).toBeNull()
+    expect(screen.queryByLabelText("Kurzbeschreibung")).toBeNull()
     /* Ohne Schreibrecht und ohne Bild bleibt auch die Bildflaeche fort. */
     expect(view.container.querySelector(".aspect-video")).toBeNull()
   })
 
-  /* Wunsch aus der Sitzung: feste Ueberschrift ueber dem Abstract-Feld. */
-  it("beschriftet den Abstract sichtbar und in Ueberschriftengroesse", () => {
+  /*
+   * Umgedreht mit KAN-83: die Beschriftung „Abstract" stand sichtbar in
+   * Ueberschriftengroesse ueber dem Feld und wurde fuer eine
+   * Gliederungsebene des Beitrags gehalten. „Abstract" ist etwas anderes,
+   * den schreibt die Autor:in selbst als Inhaltsblock. Verschwinden darf
+   * die Beschriftung trotzdem nicht: ohne sie verlore das Feld seinen
+   * zugaenglichen Namen (SC 4.1.2).
+   */
+  it("beschriftet die Kurzbeschreibung unsichtbar, aber zugaenglich", () => {
     setUp()
 
-    const label = screen.getByText("Abstract")
-    expect(label).toBeVisible()
-    /* Wie ein Heading-1-Block der Schreibflaeche, also die Inhaltsskala,
-       und in der Farbe des Fliesstextes statt im Markenblau. */
-    expect(label.className).toContain("type-content-h1")
-    expect(label.className).toContain("text-[length:var(--fs-content-h1)]")
-    expect(label.className).not.toContain("text-primary")
-    /* Und es ist zugleich das Label des Feldes, keine Ueberschrift daneben:
-       ein Feld ohne zugaenglichen Namen waere ein Befund (SC 4.1.2). */
+    /* Sichtbar steht nichts mehr ueber dem Feld, gefuehrt wird es vom
+       Platzhalter. */
+    expect(screen.queryByText("Abstract")).toBeNull()
+
+    const label = screen.getByText("Kurzbeschreibung")
     expect(label.tagName).toBe("LABEL")
-    expect(screen.getByLabelText("Abstract")).toBeInTheDocument()
+    expect(label.className).toContain("sr-only")
+    expect(screen.getByLabelText("Kurzbeschreibung")).toHaveAttribute(
+      "placeholder",
+      "Kurz, was das Projekt ausmacht"
+    )
   })
 
-  it("setzt dem Abstract keine Zeichengrenze im Feld", () => {
+  it("setzt der Kurzbeschreibung keine Zeichengrenze im Feld", () => {
     setUp()
 
-    expect(screen.getByLabelText("Abstract")).not.toHaveAttribute("maxlength")
+    expect(screen.getByLabelText("Kurzbeschreibung")).not.toHaveAttribute(
+      "maxlength"
+    )
   })
 
   /*

@@ -834,6 +834,35 @@ public class ProjectPermissionService {
 	}
 
 	/**
+	 * Zeile „Projektmitgliedschaft beenden" aus §5 (seit Contract v84, KAN-83):
+	 * PUBLIC ✗, STUDENT (✓)¹³, EDITOR (✓)¹³, ADMIN (✓)¹³
+	 * ({@code DELETE /api/projects/{id}/members/me}).
+	 *
+	 * <p><strong>Nur die eigene Zeile.</strong> Der Klammerhaken der Matrix meint
+	 * genau das: gepruft wird die Mitgliedschaft und nicht die Systemrolle. Auch
+	 * ein Admin geht auf diesem Weg nur selbst; fremde Zeilen entfernt weiterhin
+	 * allein die eingebettete Pflege ueber {@code PUT /projects/{id}}
+	 * ({@link #mayManageMembers}), und dort bleibt die Statusschranke.
+	 *
+	 * <p><strong>Die Autor:in kann diesen Weg nicht gehen</strong> und bekommt
+	 * 403. Sie ist keine {@code ProjectMember}-Zeile (§3.13.1, Ruecknahme mit
+	 * v66), es gaebe also nichts auszutragen; wer sein eigenes Projekt loswerden
+	 * will, loescht es (§5, Zeile „Projekt loeschen").
+	 *
+	 * <p><strong>Ohne Statuspruefung, und zwar absichtlich.</strong> Anders als
+	 * bei {@link #mayManageMembers} gibt es hier keine Schranke im
+	 * Workflow-Dienst, die noch folgte: §3.13.1 hebt sie fuer das Austragen der
+	 * eigenen Person ausdruecklich auf. Die Statusschranke schuetzt den Inhalt
+	 * eines eingereichten Projekts; wer nicht laenger als Mitwirkende:r genannt
+	 * werden will, muss aber auch nach dem Einreichen und nach dem
+	 * Veroeffentlichen gehen koennen, sonst stuende eine Person dauerhaft und
+	 * ohne eigenes Zutun in einem fremden Beitrag.
+	 */
+	public boolean mayLeaveProject(AuthenticatedUser user, Project project) {
+		return isMember(user, project);
+	}
+
+	/**
 	 * Zeile „Eigene Top-10-Nominierungen lesen" aus §5 (seit Contract v68):
 	 * EDITOR (✓), ADMIN (✓), jeweils auf die eigenen Vorschlaege beschraenkt
 	 * ({@code GET /api/top10-nominations?nominatedBy=me}).

@@ -12,6 +12,8 @@ import java.util.UUID;
  * @param abbreviation   Kurzform; seit Contract v81 Pflicht und damit nie
  *                       {@code null}
  * @param studyProgramId Studiengang, zu dem das Modul gehoert
+ * @param collective     ob dies das Sammelmodul des Studiengangs ist (§3.9,
+ *                       seit Contract v84)
  */
 public record ModuleResponse(
 		UUID id,
@@ -23,13 +25,19 @@ public record ModuleResponse(
 
 		@Schema(description = "Studiengang, zu dem das Modul gehoert. Derselbe Wert "
 				+ "dient als Filter: GET /api/modules?studyProgram={id}.")
-		UUID studyProgramId) {
+		UUID studyProgramId,
+
+		@Schema(description = "Das Sammelmodul des Studiengangs: waehlbar, wenn kein "
+				+ "Fachmodul passt (§3.9). Je Studiengang gibt es genau eines. Die "
+				+ "Oberflaeche stellt es ans Listenende.", example = "false")
+		boolean collective) {
 
 	public static ModuleResponse from(Module module) {
 		return new ModuleResponse(
 				module.getId(),
 				module.getName(),
 				module.getAbbreviation(),
-				module.getStudyProgram().getId());
+				module.getStudyProgram().getId(),
+				module.isCollective());
 	}
 }

@@ -196,7 +196,37 @@ export type GalleryBlockNode = {
 
 export type VideoBlockNode = {
   type: "videoBlock"
-  attrs: VideoSource & { caption: string }
+  /* width seit Contract v84, dieselben drei Stufen wie am Bild. */
+  attrs: VideoSource & { caption: string; width: ImageWidth }
+}
+
+/**
+ * Ein Eintrag des Inhaltsverzeichnisses (§2.5, seit Contract v84).
+ *
+ * <p>{@code index} ist die laufende Nummer der Ueberschrift in
+ * Dokumentreihenfolge, ab 0. Aus ihr entsteht die Sprungmarke
+ * ({@code heading-<index>}); gespeichert wird sie nicht am HEADING, sondern
+ * von Anzeige und Druck einheitlich vergeben.
+ */
+export type TocEntry = {
+  level: HeadingLevel
+  text: string
+  index: number
+}
+
+/**
+ * TABLE_OF_CONTENTS (§2.5, seit Contract v84).
+ *
+ * <p><strong>Eine Momentaufnahme und keine Ableitung.</strong> Die Eintraege
+ * stehen im Dokument und werden im Editor ausdruecklich aktualisiert. Der
+ * Grund liegt im Lesepfad: Detailansicht, Redaktionsansicht und PDF-Export
+ * rendern gespeicherte Bloecke ohne laufenden Editor, und eine Gliederung,
+ * die erst bei der Anzeige entstuende, waere in diesen drei Wegen dreimal
+ * getrennt zu bauen.
+ */
+export type TableOfContentsBlockNode = {
+  type: "tableOfContents"
+  attrs: { entries: TocEntry[] }
 }
 
 export type AudioBlockNode = {
@@ -237,6 +267,7 @@ export type BlockNode =
   | GalleryBlockNode
   | VideoBlockNode
   | AudioBlockNode
+  | TableOfContentsBlockNode
   | DocumentBlockNode
   | EmbedBlockNode
   | MathBlockNode
@@ -268,6 +299,7 @@ export const NODE_TYPE_TO_BLOCK_TYPE: Record<BlockNodeName, BlockType> = {
   documentBlock: "DOCUMENT",
   embedBlock: "EMBED",
   mathBlock: "FORMULA",
+  tableOfContents: "TABLE_OF_CONTENTS",
 }
 
 const BLOCK_NODE_NAMES = Object.keys(NODE_TYPE_TO_BLOCK_TYPE) as BlockNodeName[]
@@ -280,7 +312,7 @@ export function isBlockNodeName(value: unknown): value is BlockNodeName {
 }
 
 /**
- * Typwaechter an der Lesegrenze: ein Objekt mit einem der fuenfzehn
+ * Typwaechter an der Lesegrenze: ein Objekt mit einem der sechzehn
  * bekannten Knotennamen. Bewusst flach. Was innerhalb des Knotens steht,
  * prueft die Whitelist ({@code blockSanitize.ts}) Knoten fuer Knoten; ein
  * Typwaechter, der den ganzen Baum durchliefe, waere dieselbe Pruefung ein

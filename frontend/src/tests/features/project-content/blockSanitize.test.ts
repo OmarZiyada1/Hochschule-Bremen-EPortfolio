@@ -567,6 +567,97 @@ describe("Medienknoten", () => {
   })
 })
 
+describe("Videobreite und Inhaltsverzeichnis (Contract v84)", () => {
+  it("ergaenzt eine fehlende Videobreite mit 100, ohne es zu vermerken", () => {
+    /* Fehlt das Attribut, gilt 100: ein bereits veroeffentlichter Beitrag
+       soll nicht von selbst anders aussehen. Das ist die Vorgabe und keine
+       Korrektur, deshalb ohne Vermerk. */
+    const video = sanitized({
+      type: "videoBlock",
+      attrs: { fileId: FILE_ID, caption: "" },
+    })
+
+    expect(video.node.type === "videoBlock" && video.node.attrs.width).toBe(100)
+    expect(video.normalizations).not.toContain("MEDIA_WIDTH_DEFAULTED")
+  })
+
+  it("holt eine unzulaessige Videobreite auf 100 zurueck und vermerkt es", () => {
+    /* Derselbe Grund wie am Bild: eine freie Prozentzahl loeste das
+       Erscheinungsbild der Beitraege untereinander auf (2.5). Der Server
+       weist sie ab, der Lesepfad repariert sie. */
+    const video = sanitized({
+      type: "videoBlock",
+      attrs: { fileId: FILE_ID, caption: "", width: 80 },
+    })
+
+    expect(video.node.type === "videoBlock" && video.node.attrs.width).toBe(100)
+    expect(video.normalizations).toContain("MEDIA_WIDTH_DEFAULTED")
+  })
+
+  it("gilt auch fuer die Einbettung und nicht nur fuer die Datei", () => {
+    const video = sanitized({
+      type: "videoBlock",
+      attrs: { provider: "youtube", videoId: "dQw4w9WgXcQ", width: 50 },
+    })
+
+    expect(video.node.type === "videoBlock" && video.node.attrs.width).toBe(50)
+  })
+
+  it("nimmt ein leeres Inhaltsverzeichnis an", () => {
+    /* Ein Beitrag ohne Ueberschriften hat keine Gliederung; der Block
+       bleibt trotzdem gueltig (2.5). */
+    const toc = sanitized({
+      type: "tableOfContents",
+      attrs: { entries: [] },
+    })
+
+    expect(
+      toc.node.type === "tableOfContents" && toc.node.attrs.entries
+    ).toEqual([])
+  })
+
+  it("verwirft unbrauchbare Eintraege, statt den ganzen Block zu verlieren", () => {
+    /*
+     * Ein Verzeichnis mit einer Luecke ist besser als gar keines, und der
+     * Beitrag darunter steht ohnehin vollstaendig da. Verworfen wird nicht
+     * still, sondern vermerkt.
+     */
+    const toc = sanitized({
+      type: "tableOfContents",
+      attrs: {
+        entries: [
+          { level: 1, text: "Einleitung", index: 0 },
+          { level: 9, text: "Zu tief", index: 1 },
+          { level: 2, text: "Negativ", index: -1 },
+          "gar kein Objekt",
+        ],
+      },
+    })
+
+    expect(
+      toc.node.type === "tableOfContents" && toc.node.attrs.entries
+    ).toEqual([{ level: 1, text: "Einleitung", index: 0 }])
+    expect(toc.normalizations).toContain("TOC_ENTRIES_DROPPED")
+  })
+
+  it("nimmt eine veraltete Momentaufnahme unveraendert an", () => {
+    /* Sie darf veralten, genau das ist die Festlegung aus 2.5:
+       aktualisiert wird im Editor von Hand. Ein Abgleich hier machte aus
+       der Momentaufnahme wieder eine Ableitung. */
+    const toc = sanitized({
+      type: "tableOfContents",
+      attrs: {
+        entries: [{ level: 3, text: "Laengst geloescht", index: 99 }],
+      },
+    })
+
+    expect(
+      toc.node.type === "tableOfContents" && toc.node.attrs.entries
+    ).toHaveLength(1)
+    expect(toc.normalizations).not.toContain("TOC_ENTRIES_DROPPED")
+  })
+})
+
 /*
  * Contract v64 aendert, was eine gueltige Einbettung ist: Host und Pfad
  * statt nur Host, embed.figma.com statt www.figma.com, und gist entfaellt

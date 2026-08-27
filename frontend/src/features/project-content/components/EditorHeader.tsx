@@ -3,6 +3,7 @@ import {
   ArrowLeftIcon,
   EyeIcon,
   InfoIcon,
+  ListTreeIcon,
   MenuIcon,
   PrinterIcon,
   Redo2Icon,
@@ -13,6 +14,10 @@ import type { RefObject } from "react"
 import { useTranslation } from "react-i18next"
 
 import type { ProjectStatus } from "@/api/types"
+import {
+  applyTableOfContents,
+  findTableOfContents,
+} from "@/features/project-content/tableOfContents"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -133,6 +138,7 @@ export function EditorHeader({
   onPrint,
   printing,
   onShowInfo,
+  onAnnounce,
   backButtonRef,
   menuButtonRef,
 }: {
@@ -157,6 +163,16 @@ export function EditorHeader({
   onPrint: () => void
   /** Solange der Ausdruck vorbereitet wird, ist die Schaltflaeche gesperrt. */
   printing: boolean
+  /**
+   * Sagt eine rein visuelle Aenderung ueber die Live-Region der Seite an
+   * (SC 4.1.3), hier das Einfuegen oder Nachziehen des Inhaltsverzeichnisses.
+   *
+   * <p>Als Eigenschaft und nicht ueber {@code useEditorContext}, obwohl die
+   * Kopfzeile innerhalb des Providers liegt: dieselbe Bauform fuehrt
+   * {@code BlockControls}, und die Komponente bleibt damit ohne Kontext
+   * pruefbar.
+   */
+  onAnnounce?: (message: string) => void
   /**
    * Oeffnet die Projektinformationen als Schublade.
    *
@@ -200,11 +216,29 @@ export function EditorHeader({
     editor,
     selector: ({ editor: current }) =>
       current === null || current.isDestroyed
-        ? { canUndo: false, canRedo: false }
-        : { canUndo: current.can().undo(), canRedo: current.can().redo() },
+        ? { canUndo: false, canRedo: false, hasToc: false }
+        : {
+            canUndo: current.can().undo(),
+            canRedo: current.can().redo(),
+            /* Aus demselben Grund hier und nicht beim Rendern: sonst sagte
+               der Knopf nach dem Einfuegen weiter „Inhaltsverzeichnis
+               einfuegen", bis irgendetwas anderes ein Rendern ausloest
+               (Befund des frontend-reviewers). */
+            hasToc: findTableOfContents(current.state.doc) !== null,
+          },
   })
   const canUndo = history?.canUndo ?? false
   const canRedo = history?.canRedo ?? false
+
+  /*
+   * Ein Knopf, zwei Beschriftungen: gibt es noch kein Verzeichnis, fuegt er
+   * eines ein, sonst zieht er es nach. Welche gilt, entscheidet das
+   * Dokument.
+   */
+  const tocLabel =
+    history?.hasToc === true
+      ? t("projectContent.toc.refresh")
+      : t("projectContent.toc.insert")
 
   const canSubmit = status === "DRAFT" || status === "REVISION"
   const canWithdraw = status === "SUBMITTED"
@@ -299,6 +333,58 @@ export function EditorHeader({
               disabled={!mayWrite}
               className="flex-nowrap rounded-none border-0 bg-transparent p-0 shadow-none *:shrink-0 lg:flex-wrap"
             />
+          </>
+        )}
+
+        {/*
+         * Das Inhaltsverzeichnis, hinter der Formatierung und durch einen
+         * Trenner davon abgesetzt (KAN-83). Es steht wie der Ausdruck
+         * ausserhalb der Formatierungsleiste: die ist ein Tabstopp mit
+         * Roving-Tabindex ueber ihre Werkzeuge, und ein Eintrag, der nichts
+         * formatiert, gehoerte dort nicht hinein.
+         *
+         * Ein Knopf und zwei Bedeutungen: gibt es noch keinen Block, fuegt
+         * er einen ein, sonst zieht er ihn nach. Das ist keine versteckte
+         * zweite Funktion, sondern dieselbe Absicht („ich will ein
+         * aktuelles Verzeichnis"); die Beschriftung sagt jeweils, was
+         * geschieht. Eingefuegt wird am Anfang des Beitrags, dort steht ein
+         * Inhaltsverzeichnis.
+         */}
+        {mayWrite && (
+          <>
+            <Separator
+              orientation="vertical"
+              className="h-5 self-center"
+              aria-hidden="true"
+            />
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={editor === null}
+                    onClick={() => {
+                      if (editor === null) {
+                        return
+                      }
+                      /* Die Aenderung ist rein visuell, deshalb sagt die
+                         Live-Region sie an, wie an der Schaltflaeche im
+                         Block selbst (SC 4.1.3). */
+                      onAnnounce?.(
+                        applyTableOfContents(editor)
+                          ? t("projectContent.toc.inserted")
+                          : t("projectContent.toc.refreshed")
+                      )
+                    }}
+                  />
+                }
+              >
+                <ListTreeIcon aria-hidden="true" />
+                <span className="sr-only">{tocLabel}</span>
+              </TooltipTrigger>
+              <TooltipContent>{tocLabel}</TooltipContent>
+            </Tooltip>
           </>
         )}
 

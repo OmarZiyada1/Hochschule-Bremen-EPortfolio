@@ -1,5 +1,5 @@
 import type { ErrorCode } from "@/api/errors"
-import { LOGIN_PATH, navigateForAuth } from "@/api/auth/redirect"
+import { endSignOut, LOGIN_PATH, navigateForAuth } from "@/api/auth/redirect"
 import type { UserResponse } from "@/api/types"
 
 /**
@@ -203,9 +203,17 @@ export function restoreSession(): void {
   emit({ session: parsed, sessionNotice: null })
 }
 
-/** Nur fuer Tests: zurueck auf den Ausgangszustand, ohne Hinweis. */
+/**
+ * Nur fuer Tests: zurueck auf den Ausgangszustand, ohne Hinweis.
+ *
+ * <p>Dazu gehoert auch ein etwaig laufendes Abmelden: der Merker dafuer
+ * liegt im Modulspeicher von redirect.ts, und ein Test, der sich abmeldet
+ * und vor dem Effekt des AuthProvider endet, vererbte ihn sonst an den
+ * naechsten.
+ */
 export function resetAuthStoreForTests(): void {
   clearExpiryTimer()
   persist(null)
+  endSignOut()
   emit({ session: null, sessionNotice: null })
 }

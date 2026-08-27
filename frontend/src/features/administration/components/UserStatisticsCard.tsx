@@ -1,5 +1,4 @@
 import { useTranslation } from "react-i18next"
-import { Link } from "react-router-dom"
 import { Label, Pie, PieChart } from "recharts"
 
 import type { DashboardResponse, Role, UserStatus } from "@/api/types"
@@ -12,7 +11,6 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { chartColor } from "@/lib/chartColors"
 
@@ -75,10 +73,10 @@ const STATUS_COLORS: Record<UserStatus, string> = {
  * abgeschalteten Farben nichts (SC 1.1.1, SC 1.4.1). Dieselbe Aufteilung wie
  * in {@code FacultyDistributionCard}.
  *
- * <p><strong>Die offenen Vorschlaege bleiben eine Zeile.</strong> Sie sind
- * kein Anteil an den Konten, sondern der einzige Handlungsbedarf auf dieser
- * Seite, und deshalb die einzige verlinkte Stelle: sie fuehrt in die
- * Top-10-Verwaltung, wo darueber entschieden wird (KAN-40).
+ * <p><strong>Die offenen Top-10-Vorschlaege stehen seit KAN-83 nicht mehr
+ * hier</strong>, sondern im Seitenkopf des Dashboards. Sie sind kein Anteil an
+ * den Konten, sondern der einzige Handlungsbedarf der Seite, und in der
+ * Kopfzeile dieser Karte gingen sie zwischen Ring, Kuchen und Tabelle unter.
  */
 export function UserStatisticsCard({
   data,
@@ -195,28 +193,6 @@ export function UserStatisticsCard({
                 ))}
               </tbody>
             </table>
-
-            <Separator />
-
-            {/* Der Begriff traegt den Link, nicht die ganze Zeile: ein
-                Linkziel, das die Zahl einschliesst, laese sich mit
-                Screenreader als „Offene Vorschlaege 5" vor, und die 5 waere
-                Teil des Linktextes. */}
-            <div className="flex items-baseline justify-between gap-4">
-              <span className="type-body-sm">
-                <Link
-                  to="/administration/top10"
-                  className="text-primary hover:text-primary-hover hover:underline"
-                >
-                  {t("administration.dashboard.openNominations")}
-                </Link>
-              </span>
-              <span className="type-body-sm font-semibold tabular-nums">
-                {data === undefined
-                  ? ""
-                  : numberFormat.format(data.openNominations)}
-              </span>
-            </div>
           </>
         )}
       </CardContent>

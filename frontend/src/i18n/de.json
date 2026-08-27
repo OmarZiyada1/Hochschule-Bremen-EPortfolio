@@ -547,16 +547,7 @@
     },
     "detail": {
       "breadcrumb": "Projekt",
-      "abstract": "Abstract",
       "content": "Projektbeschreibung",
-      "editorial": {
-        "setting": "im Rahmen des Studiengangs {{studyProgram}} an der Hochschule Bremen im {{semester}}",
-        "settingStudyProgram": "im Rahmen des Studiengangs {{studyProgram}} an der Hochschule Bremen",
-        "settingSemester": "an der Hochschule Bremen im {{semester}}",
-        "plain": "Dieses Projekt wurde {{setting}} durchgeführt.",
-        "withEditors_one": "Dieses Projekt wurde {{setting}} durchgeführt und von {{editors}} redigiert.",
-        "withEditors_other": "Dieses Projekt wurde {{setting}} durchgeführt und von {{editors}} redigiert."
-      },
       "reactions": {
         "heading": "Reaktionen",
         "add_one": "Reagieren, bisher {{count}} Reaktion",
@@ -764,6 +755,14 @@
           "title": "Projekt löschen?",
           "description": "„{{title}}“ wird endgültig gelöscht, samt Inhalt und Dateien. Das lässt sich nicht rückgängig machen.",
           "confirm": "Endgültig löschen"
+        },
+        "leave": "Projekt verlassen",
+        "leaveFor": "Das Projekt „{{title}}“ verlassen",
+        "leaveDone": "Projekt verlassen.",
+        "leaveDialog": {
+          "title": "Projekt verlassen?",
+          "description": "„{{title}}“ führt Sie danach nicht mehr als Mitwirkende:n. Solange das Projekt nicht veröffentlicht ist, sehen Sie es dann nicht mehr. Die Autor:in kann Sie wieder aufnehmen.",
+          "confirm": "Verlassen"
         }
       }
     },
@@ -812,11 +811,10 @@
         "confirmPending": "Wird geprüft …",
         "resend": "Code erneut senden",
         "resendCountdown": "Code erneut senden in {{seconds}}s",
-        "resendConfirmed": "Ein neuer Code wurde angefordert. Bitte prüfen Sie Ihr Postfach."
+        "resendConfirmed": "Ein neuer Code wurde angefordert. Bitte prüfen Sie Ihr Postfach.",
+        "cancel": "Wechsel abbrechen"
       },
       "passwordChange": {
-        "title": "Passwort ändern",
-        "description": "Sie ändern Ihr Passwort mit dem aktuellen Passwort, ohne Code.",
         "open": "Passwort ändern",
         "dialogTitle": "Neues Passwort vergeben",
         "dialogDescription": "Geben Sie Ihr aktuelles Passwort ein und vergeben Sie ein neues.",
@@ -871,7 +869,6 @@
   },
   "projectContent": {
     "intro": {
-      "abstract": "Abstract",
       "regionLabel": "Titelbild, Titel und Kurzbeschreibung",
       "notSaved": "Die Kopfangaben werden nicht gespeichert, solange die markierten Felder nicht stimmen."
     },
@@ -927,8 +924,8 @@
       "label": "Video aus diesem Beitrag",
       "embedTitle": "Eingebettetes Video von {{provider}}",
       "incomplete": "Noch kein Video gewählt. Der Block wird gespeichert, sobald eines hinterlegt ist.",
-      "caption": "Bildunterschrift",
-      "captionPlaceholder": "Bildunterschrift …",
+      "caption": "Videounterschrift",
+      "captionPlaceholder": "Videounterschrift …",
       "loadFailed": "Das Video konnte nicht geladen werden.",
       "dropzone": "Video hochladen oder hierher ziehen",
       "dropzoneHint": "MP4 oder WebM bis {{max}} MB",
@@ -936,13 +933,17 @@
       "urlPlaceholder": "Adresse, Teilen-Link oder Einbettungscode",
       "urlHint": "Adresszeile, Teilen-Link oder Einbettungscode. Gespeichert werden Anbieter und Video-Kennung, nie die Adresse selbst.",
       "urlInvalid": "Daraus lässt sich kein YouTube- oder Vimeo-Video ablesen.",
-      "embedAction": "Einbetten"
+      "embedAction": "Einbetten",
+      "widthToolbar": "Breite des Videos",
+      "widthOption": "Videobreite {{width}} Prozent",
+      "widthValue": "{{width}} %",
+      "widthChanged": "Videobreite auf {{width}} Prozent gesetzt."
     },
     "audio": {
       "label": "Audioaufnahme aus diesem Beitrag",
       "incomplete": "Noch keine Aufnahme gewählt. Der Block wird gespeichert, sobald eine darin liegt.",
-      "caption": "Beschriftung",
-      "captionPlaceholder": "Beschriftung …",
+      "caption": "Audiounterschrift",
+      "captionPlaceholder": "Audiounterschrift …",
       "loadFailed": "Die Aufnahme konnte nicht geladen werden.",
       "dropzone": "Audio hochladen oder hierher ziehen",
       "dropzoneHint": "MP3, WAV oder OGG bis {{max}} MB"
@@ -1092,7 +1093,8 @@
     "gallery": {
       "incomplete": "Noch kein Bild in der Galerie. Der Block wird gespeichert, sobald eines darin liegt.",
       "altFor": "Bild {{position}}",
-      "caption": "Bildunterschrift der Galerie",
+      "caption": "Galerieunterschrift",
+      "captionPlaceholder": "Galerieunterschrift …",
       "columns": "Spalten",
       "columnsOption": "{{columns}} Spalten",
       "columnsChanged": "Galerie auf {{columns}} Spalten gestellt.",
@@ -1123,7 +1125,6 @@
       "semester": "Semester",
       "status": "Status",
       "printedAt": "Ausdruck vom",
-      "abstract": "Abstract",
       "video": "Video, auf Papier nicht abspielbar.",
       "videoEmbed": "Eingebettetes Video von {{provider}}, auf Papier nicht abspielbar.",
       "audio": "Tonaufnahme, auf Papier nicht abspielbar.",
@@ -1186,6 +1187,16 @@
     "load": {
       "errorTitle": "Der Beitrag konnte nicht geladen werden",
       "errorDescription": "Bitte die Seite neu laden."
+    },
+    "toc": {
+      "title": "Inhaltsverzeichnis",
+      "insert": "Inhaltsverzeichnis einfügen",
+      "refresh": "Aktualisieren",
+      "refreshed": "Inhaltsverzeichnis aktualisiert.",
+      "inserted": "Inhaltsverzeichnis eingefügt.",
+      "stale": "Das Verzeichnis passt nicht mehr zu den Überschriften.",
+      "empty": "Dieser Beitrag hat noch keine Überschriften.",
+      "incomplete": "Noch keine Überschriften: das Verzeichnis bleibt leer, bis der Beitrag welche hat."
     }
   },
   "apiError": {
@@ -1270,7 +1281,7 @@
         "NOTE": "Interne Notiz schreiben …",
         "CHANGE_REQUEST": "Änderungswunsch beschreiben …"
       },
-      "shortcut": "⌘/Strg + Enter",
+      "shortcut": "Enter sendet, Umschalt + Enter macht einen Zeilenumbruch",
       "hint": "{{name}} · {{shortcut}}"
     },
     "changeRequest": {
@@ -1464,6 +1475,8 @@
         "columnCount": "Konten"
       },
       "openNominations": "Offene Top-10-Vorschläge",
+      "openNominationsCount_one": "{{count}} offener Top-10-Vorschlag",
+      "openNominationsCount_other": "{{count}} offene Top-10-Vorschläge",
       "faculties": {
         "title": "Projekt je Fakultäten",
         "subtitle": "Verteilung aller Projekte nach Fakultät. Projekte ohne Fakultät sind nicht enthalten.",

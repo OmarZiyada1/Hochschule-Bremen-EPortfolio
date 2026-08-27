@@ -150,3 +150,77 @@
     }
   }
 }
+
+/*
+ * Das Klatschsymbol der Reaktionszahl (KAN-83). Die beiden Grafiken sind
+ * Rasterbilder (frontend/src/assets/clap-*.png), reines Schwarz auf
+ * durchsichtigem Grund; die Form steckt allein im Alphakanal. Als <img>
+ * traegt eine solche Grafik ihre Farbe im Bild: im Dunkelmodus stuende ein
+ * schwarzes Symbol auf dunklem Grund, und der aktive Zustand koennte nicht
+ * text-primary annehmen. Deshalb wird sie maskiert und nicht angezeigt:
+ * mask-image liefert die Form, background-color die Farbe, und die kommt
+ * ueber currentColor aus der Textfarbe des Elternelements und damit aus der
+ * Tokenschicht (Frontend-Regel 5).
+ *
+ * Die Quelle selbst steht nicht hier, sondern als Inline-Stil an
+ * ClapIcon.tsx: welche der beiden Grafiken gilt, entscheidet die Prop
+ * filled, und der Dateiname entsteht ohnehin erst beim Bauen (Vite haengt
+ * einen Hash an). Alles Uebrige gehoert an eine Stelle, und das ist diese.
+ *
+ * Hier und nicht in project-content.css: jene Datei gilt der Darstellung
+ * der Inhaltsblocke eines Beitrags, das Symbol steht in Kacheln und in der
+ * Seitenleiste.
+ *
+ * In @layer components wie die Rollenklassen der Tokendateien, damit eine
+ * Utility-Klasse am Aufruf (size-*, ein anderes shrink) weiterhin schlaegt.
+ * Die Groesse steht bewusst nicht hier: sie kommt als Tailwind-Vorgabe
+ * size-4 aus ClapIcon.tsx und laesst sich damit von aussen ersetzen.
+ *
+ * Die -webkit-Schreibweisen stehen daneben, damit aeltere WebKit-Fassungen
+ * die Maske ebenfalls anwenden; ohne sie bliebe dort eine volle Flaeche in
+ * der Textfarbe stehen, also ein farbiges Rechteck statt des Symbols.
+ */
+@layer components {
+  .clap-icon {
+    /* Ein span ist von Haus aus inline; ohne dies traefe size-* weder
+       Breite noch Hoehe, sobald das Symbol einmal ausserhalb einer
+       Flex-Zeile steht. */
+    display: inline-block;
+    /* Das svg davor bekam sein shrink-0 von button.tsx. Die Regel dort
+       greift auf ein span nicht mehr, und in der schmalen Seitenleiste
+       darf das Symbol nicht schmaler gedrueckt werden als die Zahl. */
+    flex-shrink: 0;
+    background-color: currentColor;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    /*
+     * 85 Prozent und nicht contain: die beiden PNG fuellen ihre Flaeche
+     * randlos aus (Inhaltskasten 0..511 von 512), waehrend ein
+     * lucide-Symbol in derselben size-* rund 85 Prozent seiner Kante
+     * nutzt. Ohne diesen Ausgleich stuende das Klatschsymbol neben jedem
+     * anderen Symbol sichtbar zu gross. Der Wert steht hier und nicht als
+     * kleinere size-* an den zwei Verwendungsstellen, damit es eine
+     * Stelle bleibt (Befund des frontend-reviewers).
+     */
+    -webkit-mask-size: 85%;
+    mask-size: 85%;
+  }
+
+  /*
+   * Im Modus mit erzwungenen Farben (Windows-Kontrastmodus) zieht der
+   * Browser jede background-color auf die Systemflaeche. Das Symbol
+   * stuende dann Hintergrund auf Hintergrund und waere weg, und auf der
+   * Projektkachel bliebe neben der Zahl nichts, was sie erklaert. Das
+   * fill="currentColor" der Vorgaengerfassung war davon nicht betroffen,
+   * es wurde auf CanvasText umgefaerbt; diese Regel holt das nach.
+   * Gefuellt und Kontur bleiben unterscheidbar, weil das die Maske traegt
+   * und nicht die Farbe (Befund des frontend-reviewers).
+   */
+  @media (forced-colors: active) {
+    .clap-icon {
+      background-color: CanvasText;
+    }
+  }
+}

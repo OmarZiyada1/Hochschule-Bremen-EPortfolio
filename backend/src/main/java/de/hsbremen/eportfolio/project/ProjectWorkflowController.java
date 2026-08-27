@@ -9,12 +9,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -56,7 +58,10 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Workflow", description = "Statusuebergaenge eines Projekts nach dem "
 		+ "Zustandsautomaten aus §4: einreichen, genehmigen, veroeffentlichen, zur Ueberarbeitung "
 		+ "zurueckgeben. Jeder Uebergang wird in der Statushistorie protokolliert (§3.12); ein "
-		+ "Uebergang, der nicht in der Tabelle aus §4.1 steht, ergibt 409.")
+		+ "Uebergang, der nicht in der Tabelle aus §4.1 steht, ergibt 409. Dazu die beiden "
+		+ "Austritte aus §6.1: die Redaktionszuweisung abgeben kann einen Rueckfall nach DRAFT "
+		+ "ausloesen, die Projektmitgliedschaft beenden loest gar keinen Uebergang aus und steht "
+		+ "hier, weil beide dieselbe Bauform haben.")
 public class ProjectWorkflowController {
 
 	private final ProjectWorkflowService workflowService;
@@ -250,5 +255,38 @@ public class ProjectWorkflowController {
 			@PathVariable("projectId") UUID projectId) {
 
 		return workflowService.resignAsEditor(user, projectId);
+	}
+
+	// ------------------------------------------------------------------
+	// DELETE /api/projects/{projectId}/members/me
+	// ------------------------------------------------------------------
+
+	@Operation(summary = "Eigene Projektmitgliedschaft beenden",
+			description = "Traegt die anfragende Person aus den Projektmitgliedern aus "
+					+ "(§6.1, §3.13.1, seit Contract v84). Moeglich nur fuer die betroffene "
+					+ "Person selbst und in JEDEM Status: die Statusschranke der "
+					+ "Mitgliederpflege schuetzt den Inhalt, wer aber nicht laenger als "
+					+ "Mitwirkende:r genannt werden will, muss auch aus einem eingereichten "
+					+ "oder veroeffentlichten Projekt gehen koennen. Das Projekt selbst "
+					+ "bleibt unveraendert: kein Statusuebergang, keine neue version, "
+					+ "Kommentare und Inhalt unberuehrt. Danach erscheint das Projekt nicht "
+					+ "mehr im Portfolio dieser Person und sie nicht mehr in seiner "
+					+ "Beteiligtenliste.")
+	@ApiResponse(responseCode = "204", description = "Die Mitgliedschaft ist beendet.")
+	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
+	@ApiResponse(responseCode = "403", description = "NO_PERMISSION: die anfragende Person ist "
+			+ "nicht Mitglied dieses Projekts. Das gilt auch fuer die Autor:in, die keine "
+			+ "Mitgliedszeile ist (§3.13.1). Fremde Zeilen aendert die Projektseite ueber "
+			+ "PUT /api/projects/{id}.")
+	@ApiResponse(responseCode = "404", description = "Unter dieser ID gibt es kein Projekt.")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@DeleteMapping("/members/me")
+	public void leaveProject(
+			@AuthenticationPrincipal AuthenticatedUser user,
+
+			@Parameter(description = "ID des Projekts.")
+			@PathVariable("projectId") UUID projectId) {
+
+		workflowService.leaveProject(user, projectId);
 	}
 }

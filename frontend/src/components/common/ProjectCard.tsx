@@ -109,26 +109,25 @@ export function ProjectCard({
         </div>
 
         <div className="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
-          {/* Links das Studiengangskuerzel, rechts die Projektart
-              (Vorgabe zu KAN-80). Das Fakultaetsbadge ist weg: Fakultaet und
-              Studiengang standen nebeneinander und sagten dieselbe Einordnung
-              zweimal, nur unterschiedlich grob. Der Studiengang ist die
-              genauere Angabe und traegt seine Fakultaet implizit; wer die
-              Fakultaet ausgeschrieben braucht, findet sie in den
-              Projektdetails.
+          {/* Links das Fakultaetskuerzel, rechts die Projektart (KAN-83).
+              KAN-80 hatte hier den Studiengang gesetzt und das Fakultaetsbadge
+              entfernt, weil beide nebeneinander dieselbe Einordnung zweimal
+              sagten. Die Doppelung bleibt aufgeloest, nur andersherum: auf der
+              Kachel steht jetzt die grobe Einordnung, weil sie beim
+              Ueberfliegen einer Liste die nuetzlichere ist. Vier Fakultaeten
+              lassen sich im Kopf behalten, elf Studiengaenge nicht. Der
+              Studiengang steht ausgeschrieben in den Projektdetails.
 
               Das Kuerzel laeuft zweispurig: sichtbar die Kurzform, vorgelesen
               der volle Name. Ueber title allein geht das nicht, den erreicht
               weder Tastatur noch Touch, und die meisten Screenreader lesen ihn
               an einem span gar nicht vor. */}
-          {project.studyProgram ? (
+          {project.faculty ? (
             <span className="type-label-xs rounded-pill bg-cover-badge px-2.5 py-1 font-bold text-cover-muted">
-              {project.studyProgram.abbreviation ? (
+              {project.faculty.abbreviation ? (
                 <>
-                  <span className="sr-only">{project.studyProgram.name}</span>
-                  <span aria-hidden="true">
-                    {project.studyProgram.abbreviation}
-                  </span>
+                  <span className="sr-only">{project.faculty.name}</span>
+                  <span aria-hidden="true">{project.faculty.abbreviation}</span>
                 </>
               ) : (
                 /* Seit Contract v81 kann das nicht mehr eintreten; die
@@ -136,12 +135,12 @@ export function ProjectCard({
                    Kategorie und Semester keines haben. Den Namen dann zweimal
                    einzusetzen, sichtbar und sr-only, waere derselbe Text an
                    zwei Stellen. */
-                project.studyProgram.name
+                project.faculty.name
               )}
             </span>
           ) : (
             /* Platzhalter, damit die Projektart rechts bleibt: ohne
-               Studiengang zoege justify-between sie sonst nach links. */
+               Fakultaet zoege justify-between sie sonst nach links. */
             <span />
           )}
           {project.projectType && (

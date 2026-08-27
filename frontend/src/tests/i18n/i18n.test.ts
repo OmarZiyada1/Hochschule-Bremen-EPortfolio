@@ -86,4 +86,41 @@ describe("i18n-Ressourcen", () => {
       "codepen",
     ])
   })
+
+  it("benennt jedes Unterschriftfeld nach seiner Medienart", () => {
+    /*
+     * Vier Blockarten fuehren eine Unterschrift, und jede nennt sie nach
+     * sich selbst (KAN-83, Nutzeransage): am Video stand vorher
+     * "Bildunterschrift", an der Galerie "Bildunterschrift der Galerie",
+     * an der Tonaufnahme "Beschriftung". Wer im Editor drei Felder
+     * gleichen Namens untereinander sieht, weiss nicht, welches zu
+     * welchem Block gehoert; ein Screenreader liest sie ebenso als
+     * dieselbe Beschriftung vor (SC 2.4.6).
+     *
+     * Geprueft wird die Verschiedenheit und nicht der Wortlaut: die Namen
+     * duerfen sich aendern, doppeln duerfen sie sich nicht.
+     */
+    for (const [sprache, texte] of [
+      ["de", de],
+      ["en", en],
+    ] as const) {
+      const beschriftungen = [
+        texte.projectContent.image.caption,
+        texte.projectContent.video.caption,
+        texte.projectContent.gallery.caption,
+        texte.projectContent.audio.caption,
+      ]
+      expect(new Set(beschriftungen).size, sprache).toBe(beschriftungen.length)
+
+      /* Und je Art ein eigener Platzhalter, damit keiner den einer
+         fremden Art borgt (die Galerie tat das bis KAN-83). */
+      const platzhalter = [
+        texte.projectContent.image.captionPlaceholder,
+        texte.projectContent.video.captionPlaceholder,
+        texte.projectContent.gallery.captionPlaceholder,
+        texte.projectContent.audio.captionPlaceholder,
+      ]
+      expect(new Set(platzhalter).size, sprache).toBe(platzhalter.length)
+    }
+  })
 })
