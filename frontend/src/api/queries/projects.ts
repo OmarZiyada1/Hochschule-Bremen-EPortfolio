@@ -55,8 +55,15 @@ export interface ProjectListParams {
  * Weggelassener status heisst "Alle".
  */
 export interface OwnProjectListParams {
-  /** ID der Autor:in; bei "My Portfolio" die eigene aus dem Auth-Kontext. */
-  authorId: string
+  /**
+   * ID der beteiligten Person; bei „Mein Portfolio" die eigene aus dem
+   * Auth-Kontext.
+   *
+   * <p>Seit Contract v84 zaehlt die Beteiligung und nicht mehr allein die
+   * Autorschaft (§3.2, KAN-83): enthalten ist auch, woran die Person als
+   * Projektmitglied mitwirkt (§3.13).
+   */
+  participantId: string
   /** Projektstatus (§2.2), oder undefined fuer den Filterwert "Alle". */
   status?: ProjectStatus
 }
@@ -158,12 +165,18 @@ export const projectQueries = {
     }),
 
   /**
-   * Die eigenen Projekte fuer "My Portfolio" (KAN-34), gefiltert ueber
-   * author (§6.1).
+   * Die eigenen Projekte fuer „Mein Portfolio" (KAN-34), gefiltert ueber
+   * participant (§6.1, seit Contract v84).
    *
-   * <p><strong>author nimmt eine UUID, keinen Sonderwert.</strong> Nur
-   * editor kennt "me"; author verlangt die ID, die der Auth-Kontext ohnehin
-   * fuehrt. Der Aufrufer reicht sie durch, statt dass diese Fabrik den
+   * <p><strong>Beteiligung und nicht Autorschaft</strong> (KAN-83): der
+   * Filter trifft Projekte, deren Autor:in ODER Mitglied (§3.13) die Person
+   * ist. Bis v83 lief die Abfrage ueber author, und eine Gruppenarbeit
+   * erschien damit nur im Portfolio einer einzigen Person. author behaelt
+   * daneben unveraendert seine Bedeutung als oeffentliche Autorenuebersicht.
+   *
+   * <p><strong>Uebergeben wird die ausgeschriebene ID, nicht der Sonderwert
+   * "me".</strong> Beides waere zulaessig; die ID fuehrt der Auth-Kontext
+   * ohnehin, und der Aufrufer reicht sie durch, statt dass diese Fabrik den
    * Sitzungszustand kennt.
    *
    * <p>Ohne status kommen alle Status, die §5 fuer die anfragende Person
@@ -182,7 +195,14 @@ export const projectQueries = {
       queryFn: () =>
         api.get<PageResponse<ProjectCardResponse>>(apiPaths.projects.list, {
           query: {
-            author: params.authorId,
+            /*
+             * participant und nicht author (§6.1, seit Contract v84):
+             * „Mein Portfolio" zeigt, woran die Person beteiligt ist, also
+             * auch die Gruppenarbeiten, in denen sie nur Mitglied ist.
+             * author bleibt unveraendert die oeffentliche
+             * Autorenuebersicht und wird hier bewusst nicht mehr benutzt.
+             */
+            participant: params.participantId,
             status: params.status,
             size: OWN_PROJECTS_PAGE_SIZE,
           },
@@ -446,6 +466,22 @@ export function resignAsEditor(
   return api.delete<ProjectDetailResponse>(
     apiPaths.projects.editorSelf(projectId)
   )
+}
+
+/**
+ * DELETE /projects/{id}/members/me (§3.13.1, §6.1, seit Contract v84): die
+ * eigene Projektmitgliedschaft beenden, 204 ohne Koerper.
+ *
+ * <p><strong>In jedem Status.</strong> Anders als die uebrige
+ * Mitgliederpflege kennt dieser Weg keine Statusschranke: wer nicht laenger
+ * als Mitwirkende:r genannt werden will, muss auch aus einem eingereichten
+ * oder veroeffentlichten Projekt gehen koennen.
+ *
+ * <p>Danach ist das Projekt fuer die Person nicht mehr sichtbar, sofern es
+ * nicht veroeffentlicht ist; die Oberflaeche nennt das vor der Bestaetigung.
+ */
+export function leaveProject(projectId: string): Promise<void> {
+  return api.delete<void>(apiPaths.projects.memberSelf(projectId))
 }
 
 /**

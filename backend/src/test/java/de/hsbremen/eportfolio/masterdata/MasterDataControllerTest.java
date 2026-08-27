@@ -130,7 +130,7 @@ class MasterDataControllerTest {
 		UUID id = UUID.randomUUID();
 		UUID studyProgramId = UUID.randomUUID();
 		when(masterDataService.modules(null))
-				.thenReturn(List.of(new ModuleResponse(id, "Softwaretechnik", "SWT", studyProgramId)));
+				.thenReturn(List.of(new ModuleResponse(id, "Softwaretechnik", "SWT", studyProgramId, false)));
 
 		mockMvc.perform(get("/api/modules"))
 				.andExpect(status().isOk())

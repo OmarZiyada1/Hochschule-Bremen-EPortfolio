@@ -1,11 +1,11 @@
 import type { MouseEvent, ReactNode } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 
 import type { ProjectReference, ProjectStatus } from "@/api/types"
 import { StatusBadge } from "@/components/common/StatusBadge"
+import { TruncatedLink, TruncatedText } from "@/components/common/TruncatedText"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { fullNameOf, type PersonName } from "@/lib/name"
-import { isTruncated, truncate } from "@/lib/text"
 import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
 
 /**
@@ -43,10 +43,18 @@ import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
  * Klick, und der Titel bleibt der echte Link fuer Tastatur, Mittelklick und
  * „in neuem Tab oeffnen".
  *
- * <p><strong>Der Titel wird auf {@link truncate} Zeichen gekuerzt</strong>
- * (KAN-80). Sieben Spalten und ein ausgeschriebener Projekttitel ergaben eine
- * Tabelle, die breiter war als das Fenster; sichtbar bleibt der Anfang,
- * vorgelesen und im {@code title} steht der ganze Titel.
+ * <p><strong>Jede Textspalte ist auf zwanzig Zeichen Breite geklemmt</strong>
+ * (KAN-83): Titel, Autor:in, Studiengang, Semester und Fach laufen ueber
+ * {@link TruncatedText} bzw. {@link TruncatedLink}, die Begruendung und die
+ * Ausnahmen stehen dort. Deshalb tragen diese Zellen selbst keine
+ * Hoechstbreite und kein {@code whitespace-normal} mehr: Ein
+ * {@code max-width} an einer Zelle ist ohne {@code table-layout: fixed}
+ * wirkungslos, der Deckel sitzt darum am Inhalt der Zelle und nicht an ihr.
+ * Geklemmt und nicht geschnitten: Der volle Text bleibt im Dokument,
+ * markierbar, kopierbar und fuer die Browsersuche auffindbar.
+ *
+ * <p>Status und Aktionen bleiben unangetastet: Dort steht kein Datensatz,
+ * sondern eine Marke aus fester Auswahl bzw. ein Menue.
  */
 export function ProjectTableRow({
   title,
@@ -108,8 +116,6 @@ export function ProjectTableRow({
     void navigate(href, { state: origin })
   }
 
-  const shortTitle = truncate(title)
-
   return (
     <TableRow
       onClick={openRow}
@@ -120,49 +126,45 @@ export function ProjectTableRow({
       )}
       <TableCell className="font-semibold">
         {/*
-         * Router-Link statt rohem Anker: ein roher href laedt die ganze
-         * Anwendung neu und wirft Query-Cache und Scrollposition weg
-         * (Befund aus KAN-80, dieselbe Begruendung wie an der Kachel).
+         * TruncatedLink statt Link: Router-Link statt rohem Anker, weil ein
+         * roher href die ganze Anwendung neu laedt und Query-Cache samt
+         * Scrollposition wegwirft (Befund aus KAN-80, dieselbe Begruendung
+         * wie an der Kachel), und geklemmt, weil der Titel der laengste
+         * Eintrag der Zeile ist.
          */}
         {href ? (
-          <Link
+          <TruncatedLink
+            text={title}
             to={href}
             state={origin}
-            /* Der volle Titel bleibt der zugaengliche Name und der
-               Mauszeigertext; sichtbar steht die Kuerzung. Ein zweiter,
-               versteckter Textknoten daneben waere derselbe Titel zweimal im
-               DOM. */
-            aria-label={isTruncated(title) ? title : undefined}
-            title={isTruncated(title) ? title : undefined}
             className="hover:underline focus-visible:underline"
-          >
-            {shortTitle}
-          </Link>
+          />
         ) : (
-          <span title={isTruncated(title) ? title : undefined}>
-            {shortTitle}
-          </span>
+          <TruncatedText text={title} />
         )}
       </TableCell>
       <TableCell>
         {author &&
           (author.id === undefined ? (
-            fullNameOf(author)
+            <TruncatedText text={fullNameOf(author)} />
           ) : (
-            <Link
+            <TruncatedLink
+              text={fullNameOf(author)}
               to={`/portfolios/${author.id}`}
               state={origin}
               className="hover:underline focus-visible:underline"
-            >
-              {fullNameOf(author)}
-            </Link>
+            />
           ))}
       </TableCell>
       <TableCell className="text-muted-foreground">
-        {studyProgram?.name}
+        <TruncatedText text={studyProgram?.name} />
       </TableCell>
-      <TableCell className="text-muted-foreground">{semester}</TableCell>
-      <TableCell className="text-muted-foreground">{module?.name}</TableCell>
+      <TableCell className="text-muted-foreground">
+        <TruncatedText text={semester} />
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        <TruncatedText text={module?.name} />
+      </TableCell>
       <TableCell>{status && <StatusBadge status={status} />}</TableCell>
       <TableCell className="text-right">{actions}</TableCell>
     </TableRow>

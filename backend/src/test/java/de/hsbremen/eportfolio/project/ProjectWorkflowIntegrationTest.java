@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -1339,6 +1340,145 @@ class ProjectWorkflowIntegrationTest {
 		return projectRepository.saveAndFlush(project);
 	}
 
+	// ==================================================================
+	// DELETE /api/projects/{projectId}/members/me (§6.1, seit Contract v84)
+	// ==================================================================
+
+	@Nested
+	@DisplayName("DELETE /api/projects/{projectId}/members/me")
+	class LeavingProject {
+
+		@Test
+		@DisplayName("Ein Mitglied verlaesst den Entwurf: 204, die Zeile ist weg, das "
+				+ "Projekt sonst unveraendert")
+		void memberLeavesDraft() throws Exception {
+			Long versionBefore = reload(draft).getVersion();
+
+			mockMvc.perform(as(member, leave(draft)))
+					.andExpect(status().isNoContent())
+					.andExpect(content().string(""));
+
+			assertThat(reload(draft).getMembers()).isEmpty();
+			assertThat(reload(draft).getStatus()).isEqualTo(ProjectStatus.DRAFT);
+			/* Kein Statusuebergang und keine neue version: die Autor:in bleibt,
+			   das Projekt ist nie verwaist, und die Metadaten sind unberuehrt.
+			   Anders als beim Abgeben der Redaktionszuweisung. */
+			assertThat(history(draft)).isEmpty();
+			assertThat(reload(draft).getVersion()).isEqualTo(versionBefore);
+		}
+
+		@Test
+		@DisplayName("Auch aus einem eingereichten Projekt heraus: es gibt keine "
+				+ "Statusschranke (§3.13.1)")
+		void leavingWorksWhileSubmitted() throws Exception {
+			Project project = withMember(submitted(), member);
+
+			mockMvc.perform(as(member, leave(project)))
+					.andExpect(status().isNoContent());
+
+			assertThat(reload(project).getMembers()).isEmpty();
+			assertThat(reload(project).getStatus()).isEqualTo(ProjectStatus.SUBMITTED);
+		}
+
+		@Test
+		@DisplayName("Und aus einem veroeffentlichten: genau dafuer faellt die Schranke")
+		void leavingWorksWhilePublished() throws Exception {
+			Project project = submitted();
+			ok(assignedEditor, project, "approve");
+			ok(assignedEditor, project, "publish");
+			project = withMember(reload(project), member);
+
+			/* Der Kern der Entscheidung zu KAN-83: waere hier 409, stuende eine
+			   Person dauerhaft und ohne eigenes Zutun in einem fremden Beitrag. */
+			mockMvc.perform(as(member, leave(project)))
+					.andExpect(status().isNoContent());
+
+			assertThat(reload(project).getMembers()).isEmpty();
+			assertThat(reload(project).getStatus()).isEqualTo(ProjectStatus.PUBLISHED);
+		}
+
+		@Test
+		@DisplayName("Die Autor:in bekommt 403: sie ist keine Mitgliedszeile (§3.13.1)")
+		void authorForbidden() throws Exception {
+			mockMvc.perform(as(author, leave(draft)))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+
+			assertThat(reload(draft).getMembers()).hasSize(1);
+		}
+
+		@Test
+		@DisplayName("Wer gar nicht Mitglied ist, bekommt 403 und nicht 404 (§6.3.1)")
+		void strangerForbidden() throws Exception {
+			mockMvc.perform(as(otherEditor, leave(draft)))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+		}
+
+		@Test
+		@DisplayName("Auch ein Admin geht nur selbst: ohne eigene Zeile 403")
+		void adminWithoutMembershipForbidden() throws Exception {
+			/* Fremde Zeilen entfernt die Projektseite ueber
+			   PUT /api/projects/{id}, nicht dieser Weg. */
+			mockMvc.perform(as(admin, leave(draft)))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+		}
+
+		@Test
+		@DisplayName("Ohne Token 401")
+		void unauthenticated() throws Exception {
+			mockMvc.perform(leave(draft))
+					.andExpect(status().isUnauthorized())
+					.andExpect(jsonPath("$.errorCode").value("NOT_AUTHENTICATED"));
+		}
+
+		@Test
+		@DisplayName("Eine unbekannte Projekt-ID ergibt 404 und nicht 403 (§6.3.1)")
+		void unknownProject() throws Exception {
+			mockMvc.perform(as(member,
+							delete("/api/projects/" + UUID.randomUUID() + "/members/me")))
+					.andExpect(status().isNotFound())
+					.andExpect(jsonPath("$.errorCode").value("PROJECT_NOT_FOUND"));
+		}
+
+		@Test
+		@DisplayName("Mit dem Austritt endet die Sperre des Vier-Augen-Prinzips "
+				+ "(§5 Fussnote ¹, festgehalten mit Contract v84)")
+		void leavingEndsTheFourEyesLock() throws Exception {
+			/*
+			 * Die bewusst getragene Folge der Entscheidung zu KAN-83: die Sperre
+			 * haengt an der Zugehoerigkeit und nicht an der Vergangenheit, also
+			 * endet sie mit dem Austritt. Wer geht, kann danach genehmigen, wird
+			 * aber auch nicht mehr als Mitwirkende:r genannt. Der Contract haelt
+			 * das ausdruecklich fest; ohne diesen Test bliebe es dem Zufall
+			 * ueberlassen, ob es so bleibt.
+			 */
+			Project project = withMemberAsEditor(ProjectStatus.SUBMITTED);
+
+			mockMvc.perform(as(otherEditor, action(project, "approve")))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+
+			mockMvc.perform(as(otherEditor, leave(project)))
+					.andExpect(status().isNoContent());
+
+			assertThat(ok(otherEditor, reload(project), "approve").get("status").asText())
+					.isEqualTo("APPROVED");
+		}
+
+		@Test
+		@DisplayName("Zweimal verlassen: der zweite Aufruf ergibt 403, weil die Zeile weg ist")
+		void secondCallForbidden() throws Exception {
+			mockMvc.perform(as(member, leave(draft)))
+					.andExpect(status().isNoContent());
+
+			mockMvc.perform(as(member, leave(draft)))
+					.andExpect(status().isForbidden())
+					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
+		}
+	}
+
 	/**
 	 * Ein Projekt, an dem {@code otherEditor} zugleich mitgeschrieben hat und dem
 	 * er als Redaktion zugewiesen ist.
@@ -1394,6 +1534,19 @@ class ProjectWorkflowIntegrationTest {
 	/** {@code DELETE /api/projects/{id}/editors/me} (§6.1, seit Contract v68). */
 	private MockHttpServletRequestBuilder resign(Project project) {
 		return delete("/api/projects/" + project.getId() + "/editors/me");
+	}
+
+	/** {@code DELETE /api/projects/{id}/members/me} (§6.1, seit Contract v84). */
+	private MockHttpServletRequestBuilder leave(Project project) {
+		return delete("/api/projects/" + project.getId() + "/members/me");
+	}
+
+	/** Haengt eine Person als Projektmitglied an ein Projekt (§3.13). */
+	private Project withMember(Project project, User user) {
+		Project stored = projectRepository.saveAndFlush(project);
+		stored.getMembers().add(projectMemberRepository.saveAndFlush(
+				TestProject.memberWithoutId(stored, user, "Frontend")));
+		return stored;
 	}
 
 	private MockHttpServletRequestBuilder action(Project project, String action) {

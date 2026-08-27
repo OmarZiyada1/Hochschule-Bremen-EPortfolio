@@ -1,44 +1,71 @@
 import type { Ref } from "react"
 
+import clapFilled from "@/assets/clap-filled.png"
+import clapOutline from "@/assets/clap-outline.png"
+import { cn } from "@/lib/utils"
+
 /**
- * Zwei klatschende Haende, das Symbol der Reaktionszahl (Figma "Project
- * Card", Ebene "icon"). Die Reaktion auf ein Projekt ist ein Applaus wie auf
- * der Referenzplattform der HfG Schwaebisch Gmuend, kein Gefaellt-mir; das
- * Herz an dieser Stelle war der Befund.
+ * Zwei klatschende Haende, das Symbol der Reaktionszahl. Die Reaktion auf ein
+ * Projekt ist ein Applaus wie auf der Referenzplattform der HfG Schwaebisch
+ * Gmuend, kein Gefaellt-mir; das Herz an dieser Stelle war der Befund.
  *
  * <p>Es ist die zweite Ausnahme von der Regel, dass Symbole aus lucide-react
  * kommen, und die Ausnahme ist geprueft und nicht bequem: die Symbolnamen
- * beider verfuegbaren Fassungen wurden durchsucht (1.30.0 mit 2022, 1.31.0
- * mit 2025 Symbolen), und ein Klatsch-Symbol gibt es in keiner. Zu "clap",
+ * beider verfuegbaren Fassungen wurden durchsucht (1.30.0 mit 2022, 1.31.0 mit
+ * 2025 Symbolen), und ein Klatsch-Symbol gibt es in keiner. Zu "clap",
  * "applause" oder "hands" finden sich allein clapperboard, handshake und
- * heart-handshake. Ein Aktualisieren des Pakets loest das Problem also
- * nicht, und ein danebenliegendes lucide-Symbol (thumbs-up, party-popper)
- * waere eine stille Abweichung von der Vorlage.
+ * heart-handshake.
  *
- * <p><strong>Zwei Haende, eine Geometrie.</strong> Beide Haende sind
- * dieselbe Hand: die Pfade stehen unveraendert wie in Figma, nur vom
- * dortigen 14er-Raster auf die 24er-viewBox von lucide umgerechnet (Faktor
- * 24/14). Platziert werden sie ueber Transformationen, die linke gespiegelt.
- * Frei gezeichnete Zweithand-Formen waeren zwei Quellen fuer dieselbe
- * Silhouette und liefen beim naechsten Feinschliff auseinander.
+ * <p><strong>Herkunft: zwei Rastergrafiken von Flaticon</strong> (Symbolsatz
+ * „Clapping" von Smashicons, kostenloser Download mit Namensnennung),
+ * abgelegt als {@code assets/clap-filled.png} und
+ * {@code assets/clap-outline.png}. Beide sind reines Schwarz auf
+ * durchsichtigem Grund, die Form steckt allein im Alphakanal. Welche der
+ * beiden die gefuellte ist, ist gemessen und nicht geraten: die eine deckt
+ * 42,2 Prozent ihrer Flaeche mit Tinte, die andere 20,3 Prozent. Die
+ * Namensnennung, die die kostenlose Flaticon-Lizenz verlangt, fuehrt
+ * {@code NOTICE.md} im Wurzelverzeichnis; dort steht auch, warum sie nicht in
+ * dieser Datei stehen kann und wo sie hingehoert.
  *
- * <p><strong>Zwei Fassungen, nicht eine mit CSS-Fuellung.</strong> Die
- * Konturfassung besteht aus offenen Pfaden; sie ueber {@code fill-current}
- * zu fuellen ergibt keine Silhouette, sondern legt Flaechen zwischen die
- * Strichenden und laesst die 2er-Kontur darum stehen. Das sah nach einem
- * dicker gewordenen Rand aus und war der Befund. Die gefuellte Fassung
- * fuehrt deshalb eigene, geschlossene Formen ohne Kontur.
+ * <p><strong>Eingebunden als CSS-Maske und nicht als {@code img}.</strong> Ein
+ * {@code img} traegt seine Farbe im Bild. Die Grafiken sind reines Schwarz;
+ * im Dunkelmodus stuende ein schwarzes Symbol auf dunklem Grund, und der
+ * aktive Zustand koennte nicht {@code text-primary} annehmen. Frontend-Regel 5
+ * verlangt ausserdem, dass Farbe aus der Tokenschicht kommt. Die Maske loest
+ * beides ohne Verlust: {@code mask-image} nimmt den Alphakanal der PNG als
+ * Form, {@code background-color: currentColor} gibt die Farbe. Gefaerbt wird
+ * damit weiter ueber die Textfarbe des Elternelements, genau wie zuvor ueber
+ * {@code fill="currentColor"}; die Aufrufe brauchen keine andere Klasse.
  *
- * <p><strong>Die data-clap-Marken sind Angriffspunkte fuer die
- * Animation</strong> und keine Gestaltung: {@code ReactionPanel} sucht ueber
- * sie die beiden Haende und den Funkenkranz und bewegt sie beim Klatschen
- * (GSAP). Sie stehen hier, damit die Animation nicht von der Reihenfolge der
- * Gruppen abhaengt, die sich beim naechsten Feinschliff aendern kann. Ohne
- * Animation ergeben sie nichts und stoeren nichts.
+ * <p><strong>Kein nachgezeichneter Vektor.</strong> Eine automatische
+ * Nachzeichnung einer kantengeglaetteten Rastergrafik weicht sichtbar vom
+ * Original ab, und von Hand nachzuzeichnen hiesse, fremde Grafik nachzubauen.
+ * Als Maske bleibt die Zeichnung pixelgenau die gelieferte.
  *
- * <p>Ohne Titel und mit aria-hidden: die Zahl daneben traegt ihren Sinn
- * schon als vorgelesener Satz ("128 Reaktionen"), ein zweiter Name hier
- * wuerde doppelt vorgelesen.
+ * <p><strong>Am Element steht nur die Quelle als Inline-Stil.</strong> Der
+ * Dateiname entsteht erst beim Bauen, weil Vite beide Grafiken mit einem Hash
+ * ausliefert; er ist also keine Konstante, die in eine Klasse passt. Eine URL
+ * ist keine Farbe, Frontend-Regel 5 ist davon nicht beruehrt. Alles Uebrige
+ * (Anzeigeart, Wiederholung, Position, Groessenanpassung der Maske und die
+ * Faerbung) steht genau einmal als {@code .clap-icon} in {@code index.css},
+ * dort auch in der {@code -webkit-}-Schreibweise fuer aeltere WebKit-Fassungen.
+ *
+ * <p><strong>Die Groesse bleibt von aussen bestimmbar.</strong> Die Vorgabe
+ * {@code size-4} laeuft ueber {@code cn} und faellt weg, sobald der Aufruf
+ * eine eigene {@code size-*}-Klasse mitbringt. Sie ist noetig, seit das
+ * Element ein {@code span} ist: die Regel
+ * {@code [&_svg:not([class*='size-'])]:size-4} aus {@code button.tsx} traf
+ * bisher jedes Symbol im Knopf, greift auf ein {@code span} aber nicht mehr.
+ *
+ * <p><strong>Die Marke {@code data-clap} ist ein Angriffspunkt fuer die
+ * Animation</strong> und keine Gestaltung: sie benennt im DOM das Element, das
+ * {@link ReactionPanel} beim Klatschen aufpoppen laesst (GSAP). Seit die
+ * Grafik eine Maske ist, gibt es kein Innenleben mehr, an dem eine Bewegung
+ * ansetzen koennte; bewegt wird das Symbol als Ganzes.
+ *
+ * <p>Ohne Titel und mit aria-hidden: die Zahl daneben traegt ihren Sinn schon
+ * als vorgelesener Satz ("128 Reaktionen"), ein zweiter Name hier wuerde
+ * doppelt vorgelesen.
  */
 export function ClapIcon({
   className,
@@ -48,68 +75,17 @@ export function ClapIcon({
   className?: string
   /** Gefuellte Silhouette statt Kontur, fuer den aktiven Zustand. */
   filled?: boolean
-  ref?: Ref<SVGSVGElement>
+  ref?: Ref<HTMLSpanElement>
 }) {
-  /*
-   * Die Hand im Ausgangsraster, Mittelpunkt (13.5, 12). Beide Fassungen
-   * teilen ihn, damit dieselbe Platzierung fuer beide gilt.
-   */
-  const hand = filled ? (
-    <>
-      <path d="M11 8V3a1.5 1.5 0 0 1 3 0v5Z" />
-      <path d="M14 9V2.5a1.5 1.5 0 0 1 3 0V9Z" />
-      <path d="M17 8V7.5a1.5 1.5 0 0 1 3 0v7a6.5 6.5 0 0 1-13 0V8a1.5 1.5 0 0 1 3 0Z" />
-    </>
-  ) : (
-    <>
-      <path d="M11 5.5V3a1.5 1.5 0 0 1 3 0v5" />
-      <path d="M14 6.5V2.5a1.5 1.5 0 0 1 3 0V9" />
-      <path d="M17 7.5a1.5 1.5 0 0 1 3 0v7a6.5 6.5 0 0 1-13 0V8a1.5 1.5 0 0 1 3 0v3" />
-    </>
-  )
+  const mask = `url(${filled ? clapFilled : clapOutline})`
 
   return (
-    <svg
+    <span
       ref={ref}
-      className={className}
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill={filled ? "currentColor" : "none"}
-      stroke={filled ? "none" : "currentColor"}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      data-clap="icon"
       aria-hidden="true"
-      focusable="false"
-    >
-      {/* Linke Hand: gespiegelt und zur Mitte geneigt. Die aeussere Gruppe
-          bleibt leer, damit die Animation sie bewegen kann, ohne die
-          Platzierung darin zu ueberschreiben. */}
-      <g data-clap="left">
-        <g transform="translate(7.3 13.5) rotate(22) scale(-0.6 0.6) translate(-13.5 -12)">
-          {hand}
-        </g>
-      </g>
-      <g data-clap="right">
-        <g transform="translate(16.7 13.5) rotate(-22) scale(0.6 0.6) translate(-13.5 -12)">
-          {hand}
-        </g>
-      </g>
-
-      {/* Der Funkenkranz macht aus zwei Haenden erst das Klatschen. Er bleibt
-          in beiden Fassungen ein Strich: gefuellt ergaeben die offenen Pfade
-          Dreiecke. */}
-      <g
-        data-clap="burst"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={filled ? 1.6 : 2}
-      >
-        <path d="M12 3.6V2" />
-        <path d="m6.9 5.1-1-1.3" />
-        <path d="m17.1 5.1 1-1.3" />
-      </g>
-    </svg>
+      className={cn("clap-icon size-4", className)}
+      style={{ maskImage: mask, WebkitMaskImage: mask }}
+    />
   )
 }

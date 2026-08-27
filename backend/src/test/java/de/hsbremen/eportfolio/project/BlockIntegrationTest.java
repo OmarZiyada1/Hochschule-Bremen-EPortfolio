@@ -194,7 +194,7 @@ class BlockIntegrationTest {
 	class Saving {
 
 		@Test
-		@DisplayName("Round-Trip ueber alle vierzehn Blocktypen: gespeichert und unveraendert "
+		@DisplayName("Round-Trip ueber alle fuenfzehn Blocktypen: gespeichert und unveraendert "
 				+ "wieder gelesen")
 		void roundTripOverEveryBlockType() throws Exception {
 			List<Map<String, Object>> requested = new ArrayList<>();
@@ -219,6 +219,29 @@ class BlockIntegrationTest {
 			// Und dasselbe noch einmal ueber den Lesepfad.
 			JsonNode reread = readBlocks(draft, author);
 			assertThat(reread.get("blocks")).isEqualTo(saved.get("blocks"));
+		}
+
+		@Test
+		@DisplayName("Ein zweites Inhaltsverzeichnis ergibt 400 BLOCK_CONTENT_INVALID "
+				+ "(§2.5, seit Contract v84)")
+		void secondTableOfContentsRejected() throws Exception {
+			/*
+			 * Die einzige Regel dieses Dienstes, die die ganze Liste betrifft und
+			 * nicht einen Block. Geprueft wird sie hier am Endpoint und nicht nur
+			 * am Helfer: dazwischen liegt der Weg ueber BlockService.resolve, und
+			 * genau dort muss sie greifen, bevor die erste Zeile geschrieben wird.
+			 */
+			List<Map<String, Object>> requested = List.of(
+					blockEntry(null, BlockType.TABLE_OF_CONTENTS, 0),
+					blockEntry(null, BlockType.TEXT, 1),
+					blockEntry(null, BlockType.TABLE_OF_CONTENTS, 2));
+
+			mockMvc.perform(asUser(saveRequest(draft, 0L, requested), author))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.errorCode").value("BLOCK_CONTENT_INVALID"));
+
+			// Nichts geschrieben: die Pruefung laeuft vor der ersten Zeile.
+			assertThat(readBlocks(draft, author).get("blocks")).isEmpty();
 		}
 
 		/**

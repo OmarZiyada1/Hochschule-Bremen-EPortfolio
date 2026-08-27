@@ -1,21 +1,24 @@
 import { HttpResponse, http } from "msw"
-import { screen, within } from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { act } from "react"
+import { Link } from "react-router-dom"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { endSession, getAuthState } from "@/api/auth/authStore"
+import type { Role } from "@/api/types"
 import LoginPage from "@/features/auth/LoginPage"
 import { readRegistrationFlow } from "@/features/auth/registrationFlow"
 import i18n from "@/i18n"
 import {
   apiErrorResponse,
+  dashboardHandler,
   emptyProjectsHandler,
   ownPortfolioHandler,
 } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
-import { AppUnderTest, LocationProbe } from "@/tests/routes/helpers"
-import { projectCard } from "@/tests/fixtures"
+import { AppUnderTest, LocationProbe, signInAs } from "@/tests/routes/helpers"
 
 /**
  * Login-Flow des Durchstichs (Ticket KAN-8): zod-Validierung vor dem
@@ -44,6 +47,29 @@ describe("LoginPage", () => {
       await user.type(screen.getByLabelText("Passwort"), password)
     }
     await user.click(screen.getByRole("button", { name: "Anmelden" }))
+  }
+
+  /**
+   * Die Antwort von POST /auth/login fuer die Wege, die ueber den ganzen
+   * Routenbaum laufen: dieselbe Person, verschiedene Rollen. Nur so
+   * unterscheiden sich gemerkte Route und Rollenziel voneinander.
+   */
+  function loginHandler(role: Role) {
+    return http.post("*/api/auth/login", () =>
+      HttpResponse.json({
+        token: "test-token",
+        expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+        passwordChangeRequired: false,
+        user: {
+          id: "00000000-0000-0000-0000-000000000001",
+          email: "mira.beispiel@example.org",
+          firstName: "Mira",
+          lastName: "Beispiel",
+          role,
+          status: "ACTIVE",
+        },
+      })
+    )
   }
 
   /*
@@ -120,64 +146,59 @@ describe("LoginPage", () => {
     ).toBeInTheDocument()
   })
 
-  it("fuehrt nach erfolgreicher Anmeldung zur Projektliste mit echten Daten", async () => {
-    server.use(
-      http.post("*/api/auth/login", () =>
-        HttpResponse.json({
-          token: "test-token",
-          expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
-          passwordChangeRequired: false,
-          user: {
-            id: "00000000-0000-0000-0000-000000000001",
-            email: "mira.beispiel@example.org",
-            firstName: "Mira",
-            lastName: "Beispiel",
-            role: "STUDENT",
-            status: "ACTIVE",
-          },
-        })
-      ),
-      http.get("*/api/projects", () =>
-        HttpResponse.json({
-          content: [
-            projectCard({
-              id: "10000000-0000-0000-0000-000000000001",
-              title: "Campus-Garten an der Werderstraße",
-            }),
-          ],
-          page: 0,
-          size: 20,
-          totalElements: 1,
-          totalPages: 1,
-        })
+  it.each([
+    ["STUDENT", "/my-portfolio"],
+    ["EDITOR", "/reviews"],
+    ["ADMIN", "/administration"],
+  ])(
+    "fuehrt %s nach der Anmeldung nach %s (KAN-83)",
+    async (role, expectedPath) => {
+      /*
+       * Bis KAN-83 landete jede Rolle auf der oeffentlichen
+       * Projektbibliothek, dem Pauschalziel des Durchstichs aus KAN-8. Das
+       * war fuer niemanden der Ort, an dem die eigene Arbeit beginnt.
+       */
+      server.use(
+        http.post("*/api/auth/login", () =>
+          HttpResponse.json({
+            token: "test-token",
+            expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+            passwordChangeRequired: false,
+            user: {
+              id: "00000000-0000-0000-0000-000000000001",
+              email: "mira.beispiel@example.org",
+              firstName: "Mira",
+              lastName: "Beispiel",
+              role,
+              status: "ACTIVE",
+            },
+          })
+        ),
+        ownPortfolioHandler(),
+        emptyProjectsHandler()
       )
-    )
-    renderWithProviders(
-      <>
-        <AppUnderTest />
-        <LocationProbe />
-      </>,
-      "/login"
-    )
+      renderWithProviders(
+        <>
+          <AppUnderTest />
+          <LocationProbe />
+        </>,
+        "/login"
+      )
 
-    await fillAndSubmit("mira.beispiel@example.org", "test1234")
+      await fillAndSubmit("mira.beispiel@example.org", "test1234")
 
-    expect(
-      await screen.findByRole("heading", {
-        level: 1,
-        name: "Studentische Projekte",
-      })
-    ).toBeInTheDocument()
-    expect(screen.getByTestId("pathname")).toHaveTextContent("/projects")
-    expect(
-      await screen.findByText("Campus-Garten an der Werderstraße")
-    ).toBeInTheDocument()
-  })
+      await waitFor(() =>
+        expect(screen.getByTestId("pathname")).toHaveTextContent(expectedPath)
+      )
+    }
+  )
 
   it("kehrt nach der Anmeldung zur urspruenglich angefragten Route zurueck", async () => {
     /* Klaerungsrunde KAN-33: wer von einer geschuetzten Route zum Login
-       umgeleitet wurde, landet nach dem Erfolg wieder dort, nicht auf der
-       Projektliste. */
+       umgeleitet wurde, landet nach dem Erfolg wieder dort. Die gemerkte
+       Route behaelt seit KAN-83 auch gegenueber dem neuen Rollenziel den
+       Vorrang; ein geteilter Link fuehrt also weiterhin dorthin, wohin er
+       zeigt. */
     server.use(
       http.post("*/api/auth/login", () =>
         HttpResponse.json({
@@ -215,6 +236,153 @@ describe("LoginPage", () => {
       await screen.findByRole("heading", { level: 1, name: "My Portfolio" })
     ).toBeInTheDocument()
     expect(screen.getByTestId("pathname")).toHaveTextContent("/my-portfolio")
+  })
+
+  it("laesst nach dem Abmelden wieder das Rollenziel gewinnen", async () => {
+    /*
+     * Der gemeldete Fall, und er zeigt sich erst in der Kombination:
+     * Abmelden fuer sich war gruen, Anmelden fuer sich auch. Beim
+     * Abmelden rendern die Routen-Wrapper noch einmal, sehen eine
+     * geschuetzte Route ohne Anmeldung und schrieben sie in den
+     * Merkzettel aus KAN-33; beim naechsten Anmelden gewann er dann gegen
+     * das Rollenziel aus KAN-83, und man landete wieder dort, wo die
+     * vorige Sitzung endete.
+     *
+     * Abgemeldet wird aus "/my-portfolio" mit der Rolle ADMIN: nur wenn
+     * gemerkte Route und Rollenziel auseinanderfallen, sagt der Ausgang
+     * etwas aus.
+     */
+    const user = userEvent.setup()
+    server.use(
+      http.post(
+        "*/api/auth/logout",
+        () => new HttpResponse(null, { status: 204 })
+      ),
+      loginHandler("ADMIN"),
+      ownPortfolioHandler(),
+      emptyProjectsHandler(),
+      dashboardHandler()
+    )
+    signInAs("ADMIN")
+    renderWithProviders(
+      <>
+        <AppUnderTest />
+        <LocationProbe />
+      </>,
+      "/my-portfolio"
+    )
+
+    await user.click(screen.getByRole("button", { name: /Mira Beispiel/ }))
+    await user.click(await screen.findByText("Abmelden"))
+    /* Genau die Startseite, nicht irgendein Pfad, der einen Schraegstrich
+       enthaelt: toHaveTextContent prueft sonst nur auf Teilzeichenkette. */
+    await waitFor(() =>
+      expect(screen.getByTestId("pathname")).toHaveTextContent(/^\/$/)
+    )
+
+    await user.click(screen.getByRole("link", { name: "Anmelden" }))
+    await fillAndSubmit("mira.beispiel@example.org", "test1234")
+
+    await waitFor(() =>
+      expect(screen.getByTestId("pathname")).toHaveTextContent(
+        "/administration"
+      )
+    )
+  })
+
+  it("merkt nach dem Abmelden wieder, wohin ein Link fuehrt", async () => {
+    /*
+     * Die zweite Haelfte derselben Regel: der Merker gilt fuer das
+     * Abmelden und nicht fuer die Zeit danach. Wer sich abmeldet und
+     * gleich darauf einem Link auf eine geschuetzte Route folgt, wird
+     * nach dem Anmelden dorthin gefuehrt und nicht auf sein Rollenziel
+     * (Klaerungsrunde KAN-33). Bliebe der Merker liegen, waere genau
+     * dieser Weg zerstoert.
+     *
+     * Der Link steht im Test, weil die Kopfleiste abgemeldet keinen
+     * fuehrt; er steht fuer die geteilte Adresse, um die es in KAN-33
+     * geht. Er zeigt bewusst auf dieselbe Route, aus der abgemeldet
+     * wurde: der Merker darf keine Route dauerhaft sperren.
+     */
+    const user = userEvent.setup()
+    server.use(
+      http.post(
+        "*/api/auth/logout",
+        () => new HttpResponse(null, { status: 204 })
+      ),
+      loginHandler("ADMIN"),
+      ownPortfolioHandler(),
+      emptyProjectsHandler(),
+      dashboardHandler()
+    )
+    signInAs("ADMIN")
+    renderWithProviders(
+      <>
+        <AppUnderTest />
+        <LocationProbe />
+        <Link to="/my-portfolio">Geteilter Link</Link>
+      </>,
+      "/my-portfolio"
+    )
+
+    await user.click(screen.getByRole("button", { name: /Mira Beispiel/ }))
+    await user.click(await screen.findByText("Abmelden"))
+    await waitFor(() =>
+      expect(screen.getByTestId("pathname")).toHaveTextContent(/^\/$/)
+    )
+
+    await user.click(screen.getByRole("link", { name: "Geteilter Link" }))
+    /* RequireAuth hat die Route gemerkt und zum Login umgeleitet. */
+    await waitFor(() =>
+      expect(screen.getByTestId("pathname")).toHaveTextContent("/login")
+    )
+
+    await fillAndSubmit("mira.beispiel@example.org", "test1234")
+
+    await waitFor(() =>
+      expect(screen.getByTestId("pathname")).toHaveTextContent("/my-portfolio")
+    )
+  })
+
+  it("merkt die Route bei einem Sitzungsablauf weiterhin", async () => {
+    /*
+     * Gegenprobe zum Abmelden: ein Ablauf ist kein Abmelden. Wer
+     * herausgeworfen wird, soll nach dem erneuten Anmelden dort
+     * weiterarbeiten, wo er war (Klaerungsrunde KAN-33); nur das gewollte
+     * Abmelden hinterlaesst nichts.
+     */
+    server.use(
+      loginHandler("ADMIN"),
+      ownPortfolioHandler(),
+      emptyProjectsHandler()
+    )
+    signInAs("ADMIN")
+    renderWithProviders(
+      <>
+        <AppUnderTest />
+        <LocationProbe />
+      </>,
+      "/my-portfolio"
+    )
+    expect(screen.getByTestId("pathname")).toHaveTextContent("/my-portfolio")
+
+    /* So endet die Sitzung, wenn das Token ablaeuft (authStore,
+       scheduleExpiry) und wenn die zentrale 401-Reaktion greift. */
+    act(() => {
+      endSession("TOKEN_EXPIRED")
+    })
+
+    await waitFor(() =>
+      expect(screen.getByTestId("pathname")).toHaveTextContent("/login")
+    )
+
+    await fillAndSubmit("mira.beispiel@example.org", "test1234")
+
+    /* Zurueck an die Arbeit und nicht auf "/administration": die gemerkte
+       Route behaelt hier den Vorrang. */
+    await waitFor(() =>
+      expect(screen.getByTestId("pathname")).toHaveTextContent("/my-portfolio")
+    )
   })
 
   it("zeigt 401 LOGIN_FAILED als Meldung am Formular", async () => {

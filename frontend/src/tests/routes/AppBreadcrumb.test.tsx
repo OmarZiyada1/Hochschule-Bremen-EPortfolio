@@ -69,14 +69,30 @@ describe("Brotkrumenband im Anwendungsrahmen", () => {
 
   /*
    * Punkt 2 aus KAN-80: ein langer Titel zwang das Band in die zweite Zeile.
-   * Sichtbar bleiben zwanzig Zeichen, vorgelesen wird der ganze Titel.
+   * Seit KAN-83 wird dafuer geklemmt statt gekuerzt: Der Titel steht voll im
+   * Band und ist damit sichtbarer Text und zugaenglicher Name zugleich
+   * (SC 2.5.3), nur schmaler dargestellt.
    */
-  it("kuerzt einen langen Titel und behaelt ihn als zugaenglichen Namen", () => {
+  it("klemmt einen langen Titel, ohne ihn aus dem Band zu nehmen", () => {
     const long = "Nachhaltige Mobilitaetskonzepte fuer die Innenstadt"
     renderAt("/projects/p-1", long)
 
-    expect(within(path()).getByText("Nachhaltige Mobilita…")).toBeVisible()
-    expect(within(path()).getByLabelText(long)).toBeInTheDocument()
+    const entry = within(path()).getByText(long)
+    expect(entry).toBeVisible()
+    expect(entry).toHaveClass("max-w-[20ch]", "truncate")
+    expect(within(path()).queryByLabelText(long)).not.toBeInTheDocument()
+  })
+
+  /*
+   * Geklemmt werden nur die Namen von Sachen. Die festen Beschriftungen aus
+   * dem Navigationsbaum sind kurz und bekannt und stehen ganz da.
+   */
+  it("laesst die Beschriftungen des Navigationsbaums ungeklemmt", () => {
+    renderAt("/projects/p-1", "Campus-Garten")
+
+    expect(
+      within(path()).getByRole("link", { name: "Projekte" })
+    ).not.toHaveClass("truncate")
   })
 
   /*

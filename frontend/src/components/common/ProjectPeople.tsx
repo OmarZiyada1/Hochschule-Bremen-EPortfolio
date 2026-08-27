@@ -17,6 +17,7 @@ import {
 } from "@/lib/avatarSize"
 import { fullNameOf, type PersonName } from "@/lib/name"
 import { cn } from "@/lib/utils"
+import { usePortfolioPath } from "@/features/portfolio/hooks/usePortfolioPath"
 import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
 
 /**
@@ -128,6 +129,9 @@ export function ProjectPeople({
 }) {
   const { t } = useTranslation()
   const origin = useBreadcrumbOrigin()
+  /* Der eigene Name fuehrt ins eigene Portfolio und nicht in die
+     oeffentliche Fremdsicht (KAN-83); die Regel steht im Hook. */
+  const portfolioPath = usePortfolioPath()
 
   if (people.length === 0) {
     return null
@@ -145,7 +149,7 @@ export function ProjectPeople({
         {/* z-20: die Kachel ist als Ganzes anklickbar (KAN-80), und ohne
             eigene Ebene laege dieser Link unter der Klickflaeche. */}
         <Link
-          to={portfolioPath(person)}
+          to={portfolioPath(person.id)}
           state={origin}
           className="flex items-center gap-2 rounded-selection hover:underline focus-visible:underline"
         >
@@ -187,7 +191,7 @@ export function ProjectPeople({
               <TooltipTrigger
                 render={
                   <Link
-                    to={portfolioPath(person)}
+                    to={portfolioPath(person.id)}
                     state={origin}
                     className={cn(
                       "rounded-pill transition-opacity",
@@ -237,11 +241,6 @@ export function ProjectPeople({
       </span>
     </TooltipProvider>
   )
-}
-
-/** Das oeffentliche Portfolio einer Person (§6.1, Route aus KAN-7). */
-function portfolioPath(person: DisplayPerson): string {
-  return `/portfolios/${person.id}`
 }
 
 /**

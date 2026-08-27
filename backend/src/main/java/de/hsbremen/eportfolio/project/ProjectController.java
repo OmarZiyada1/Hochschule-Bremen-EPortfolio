@@ -98,8 +98,8 @@ public class ProjectController {
 	@ApiResponse(responseCode = "200", description = "Eine Seite der Projektliste.")
 	@ApiResponse(responseCode = "400", description = "Ein Parameter hat nicht das erwartete Format "
 			+ "oder es wurde nach einem nicht erlaubten Feld sortiert.")
-	@ApiResponse(responseCode = "401", description = "\"editor=me\" ohne Anmeldung, oder das "
-			+ "mitgeschickte Token ist ungueltig bzw. abgelaufen.")
+	@ApiResponse(responseCode = "401", description = "\"editor=me\" oder \"participant=me\" "
+			+ "ohne Anmeldung, oder das mitgeschickte Token ist ungueltig bzw. abgelaufen.")
 	@GetMapping
 	public PageResponse<ProjectCardResponse> list(
 			@AuthenticationPrincipal AuthenticatedUser user,
@@ -151,13 +151,21 @@ public class ProjectController {
 					example = "me")
 			@RequestParam(name = "editor", required = false) String editor,
 
+			@Parameter(description = "Filter: ID einer beteiligten Person, oder \"me\" fuer "
+					+ "\"Mein Portfolio\" (seit Contract v84). Trifft Projekte, deren Autor:in "
+					+ "ODER Mitglied (§3.13) diese Person ist. \"me\" setzt eine Anmeldung "
+					+ "voraus. Der Filter author bleibt davon unberuehrt und nennt weiterhin "
+					+ "nur die Autorschaft.",
+					example = "me")
+			@RequestParam(name = "participant", required = false) String participant,
+
 			@ParameterObject
 			@PageableDefault(size = 20, sort = "updatedAt", direction = Sort.Direction.DESC)
 			Pageable pageable) {
 
 		ProjectFilterRequest filter = new ProjectFilterRequest(
 				category, faculty, studyProgram, module, degree, type, semester, q, status, author,
-				editor);
+				editor, participant);
 
 		return projectReadService.list(user, filter, pageable);
 	}

@@ -210,12 +210,16 @@ public class SecurityConfig {
 					// anyRequest().authenticated(), weil /api/projects/* nur als
 					// GET freigegeben ist; ohne Token ergibt es damit 401, wie §5
 					// es fuer die Zeile „Eigene Redaktionszuweisung abgeben"
-					// verlangt. GET /api/top10-nominations ist ebenfalls nicht
+					// verlangt. Dasselbe gilt seit KAN-83 fuer DELETE
+					// /api/projects/*/members/me (§5, Zeile
+					// „Projektmitgliedschaft beenden"): auch dieser Pfad ist
+					// laenger als das freigegebene Muster und braucht deshalb
+					// keine eigene Zeile. GET /api/top10-nominations ist ebenfalls nicht
 					// erfasst: /api/top10 steht als exaktes Muster und nicht als
 					// /api/top10/**, greift also nicht auf den laengeren Pfad. Eine
-					// Rollenregel bekaeme keiner der beiden: sie kaeme vor dem
-					// Laden, und ein fehlender Parameter ergaebe dann 403 statt des
-					// 400, das §6.1 vorsieht.
+					// Rollenregel bekaeme keiner davon: sie kaeme vor dem Laden, und
+					// ein fehlender Parameter ergaebe dann 403 statt des 400, das
+					// §6.1 vorsieht.
 					.requestMatchers(HttpMethod.GET,
 							"/api/projects", "/api/projects/*",
 							"/api/projects/*/blocks",

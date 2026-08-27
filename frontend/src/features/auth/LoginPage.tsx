@@ -11,6 +11,7 @@ import { Link, useNavigate } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
 import { consumeRequestedRoute } from "@/api/auth/redirect"
+import { landingPathFor } from "@/routes/landingPath"
 import {
   apiErrorMessageKey,
   applyValidationErrors,
@@ -138,16 +139,18 @@ export default function LoginPage() {
   const onSubmit = form.handleSubmit(async (values) => {
     setPendingRegistrationEmail(null)
     try {
-      await login(values.email, values.password)
+      const user = await login(values.email, values.password)
       /*
        * Zurueck zu der Route, die vor der Umleitung zum Login angefragt
-       * war, ersatzweise zur Projektliste (Klaerungsrunde KAN-33; bis
-       * dahin galt das Pauschalziel des Durchstichs KAN-8). Haengt am
-       * Konto ein Passwortzwang, greift auf der Zielroute der Wrapper
-       * beziehungsweise die zentrale 403-Reaktion aus KAN-30 und leitet
-       * zur Passwortseite um (Contract 6.7).
+       * war (Klaerungsrunde KAN-33): ein geteilter Link auf ein Projekt
+       * fuehrt nach dem Anmelden weiterhin dorthin. Neu ist allein das
+       * Ersatzziel (KAN-83): statt der oeffentlichen Projektbibliothek der
+       * Ort, an dem die jeweilige Rolle arbeitet. Haengt am Konto ein
+       * Passwortzwang, greift auf der Zielroute der Wrapper beziehungsweise
+       * die zentrale 403-Reaktion aus KAN-30 und leitet zur Passwortseite
+       * um (Contract 6.7).
        */
-      navigate(consumeRequestedRoute() ?? "/projects")
+      navigate(consumeRequestedRoute() ?? landingPathFor(user.role))
     } catch (error) {
       if (!isApiError(error)) {
         throw error

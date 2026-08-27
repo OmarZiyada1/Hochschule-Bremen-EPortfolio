@@ -66,14 +66,19 @@ export default function MyPortfolioPage() {
   }
 
   const status = readStatusFilter(searchParams)
-  const authorId = user?.id ?? ""
+  const participantId = user?.id ?? ""
 
   const portfolio = useOwnPortfolio()
-  /* Die Abfrage wartet allein auf die eigene ID; eine Rollenbedingung stand
-    hier bis KAN-82 daneben und ist mit der Sperre entfallen. */
+  /*
+   * Die Abfrage wartet allein auf die eigene ID; eine Rollenbedingung stand
+   * hier bis KAN-82 daneben und ist mit der Sperre entfallen. Seit KAN-83
+   * fragt sie nach der Beteiligung und nicht mehr nach der Autorschaft: eine
+   * Gruppenarbeit gehoert auch ins Portfolio ihrer Mitglieder (§3.2, seit
+   * Contract v84).
+   */
   const projects = useOwnProjects(
-    { authorId, status: statusQueryValue(status) },
-    authorId !== ""
+    { participantId, status: statusQueryValue(status) },
+    participantId !== ""
   )
 
   function applyStatus(next: StatusFilterValue) {
@@ -211,20 +216,26 @@ export default function MyPortfolioPage() {
                         Einreichungen nebeneinander (§5, v42). Die
                         Kacheln liegen unter dem Seiten-h1, also
                         Ebene 2 (SC 1.3.1). */}
-                      {/* Die Handlung haengt am Status (KAN-69): DRAFT
-                        und REVISION bearbeiten, SUBMITTED zurueckziehen,
-                        DRAFT zusaetzlich loeschen. APPROVED und
-                        PUBLISHED bekommen bewusst keine, damit die
-                        veroeffentlichte Karte ihre Reaktionszahl
-                        behaelt (action-Slot der ProjectCard). */}
+                      {/* Als Autor:in haengt die Handlung am Status
+                        (KAN-69): DRAFT und REVISION bearbeiten, SUBMITTED
+                        zurueckziehen, DRAFT zusaetzlich loeschen. APPROVED
+                        und PUBLISHED bekommen bewusst keine, damit die
+                        veroeffentlichte Karte ihre Reaktionszahl behaelt
+                        (action-Slot der ProjectCard). Als blosses Mitglied
+                        gibt es eine einzige Handlung, und zwar in jedem
+                        Status: das Verlassen (KAN-83). */}
                       <ProjectCard
                         project={project}
                         showStatus
                         headingLevel={2}
                         action={
-                          hasOwnCardAction(project.status) ? (
+                          hasOwnCardAction(
+                            project.status,
+                            project.author?.id === user.id
+                          ) ? (
                             <OwnProjectCardActions
                               project={project}
+                              isAuthor={project.author?.id === user.id}
                               onDone={announce}
                             />
                           ) : undefined

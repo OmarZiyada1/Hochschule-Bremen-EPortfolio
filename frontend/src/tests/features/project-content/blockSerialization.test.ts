@@ -30,7 +30,7 @@ function paragraph(text: string): ParagraphNode {
   }
 }
 
-/** Je ein Knoten aller fuenfzehn Namen, dazu die zweite Videoquelle. */
+/** Je ein Knoten aller sechzehn Namen, dazu die zweite Videoquelle. */
 function everyNode(): BlockNode[] {
   return [
     {
@@ -104,7 +104,10 @@ function everyNode(): BlockNode[] {
         caption: "Drei Ansichten",
       },
     },
-    { type: "videoBlock", attrs: { fileId: FILE_A, caption: "Aufnahme" } },
+    {
+      type: "videoBlock",
+      attrs: { fileId: FILE_A, caption: "Aufnahme", width: 100 },
+    },
     {
       type: "videoBlock",
       attrs: {
@@ -112,6 +115,8 @@ function everyNode(): BlockNode[] {
         videoId: "dQw4w9WgXcQ",
         hash: null,
         caption: "",
+        /* width seit Contract v84, dieselben drei Stufen wie am Bild. */
+        width: 75,
       },
     },
     { type: "audioBlock", attrs: { fileId: FILE_B, caption: "Interview" } },
@@ -129,6 +134,15 @@ function everyNode(): BlockNode[] {
       },
     },
     { type: "mathBlock", attrs: { latex: "E = mc^2" } },
+    {
+      /* TABLE_OF_CONTENTS seit Contract v84: die Momentaufnahme der
+         Gliederung geht unveraendert durch den Round-Trip, wie jeder
+         andere Blockinhalt. */
+      type: "tableOfContents",
+      attrs: {
+        entries: [{ level: 1, text: "Zwischenueberschrift", index: 0 }],
+      },
+    },
   ]
 }
 
@@ -301,7 +315,10 @@ describe("Round-Trip ueber alle Blocktypen", () => {
 
   it("uebersteht beide Videoquellen mit allen Attributen", () => {
     const nodes: BlockNode[] = [
-      { type: "videoBlock", attrs: { fileId: FILE_A, caption: "Aufnahme" } },
+      {
+        type: "videoBlock",
+        attrs: { fileId: FILE_A, caption: "Aufnahme", width: 100 },
+      },
       {
         type: "videoBlock",
         /* Nicht gelistet: ohne den Freigabe-Hash ist das Video im Rahmen
@@ -311,6 +328,7 @@ describe("Round-Trip ueber alle Blocktypen", () => {
           videoId: "123456789",
           hash: "3ace684330",
           caption: "Vortrag",
+          width: 50,
         },
       },
     ]

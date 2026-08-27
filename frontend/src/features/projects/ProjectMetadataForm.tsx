@@ -232,6 +232,22 @@ export function ProjectMetadataForm({
     (entries ?? []).map((entry) => ({ value: entry.id, label: entry.name }))
 
   /*
+   * Die Module eines Studiengangs, das Sammelmodul am Ende (§3.9, seit
+   * Contract v84, KAN-83). Der Server sortiert nach Name und macht dabei
+   * keine Ausnahme; das waere auch die falsche Stelle, denn seine Zusage
+   * lautet „nach Name sortiert" und soll keine stille Ausnahme bekommen.
+   * Ans Ende gehoert es trotzdem: es ist die Auffangoption fuer den Fall,
+   * dass kein Fachmodul passt, und stuende mitten in der Liste wie ein
+   * Fachmodul da.
+   */
+  const moduleOptions = useMemo(() => {
+    const entries = modules.data ?? []
+    const specific = entries.filter((entry) => !entry.collective)
+    const collective = entries.filter((entry) => entry.collective)
+    return referenceOptions([...specific, ...collective])
+  }, [modules.data])
+
+  /*
    * Ein deaktiviertes Semester bleibt am Projekt stehen und wird weiter
    * angezeigt (§3.18); die Auswahl bietet es nur nicht mehr an. Ohne diese
    * Ergaenzung stuende das Feld nach dem Laden leer da, und das erste
@@ -740,7 +756,7 @@ export function ProjectMetadataForm({
                         ? t("project.metadata.module.needsStudyProgram")
                         : t("project.metadata.select.empty")
                     }
-                    options={referenceOptions(modules.data)}
+                    options={moduleOptions}
                     value={field.value}
                     disabled={disabled || studyProgramId === null}
                     error={messageOf(fieldState.error)}

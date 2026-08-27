@@ -90,6 +90,7 @@ export const apiPaths = {
      * gar nicht erst.
      */
     editorSelf: (projectId: string) => `/api/projects/${projectId}/editors/me`,
+    memberSelf: (projectId: string) => `/api/projects/${projectId}/members/me`,
     /*
      * Die Redaktionszuweisung eines fremden Projekts umverteilen (§6.1,
      * KAN-38). Ausschliesslich ADMIN, dafuer jederzeit und unabhaengig vom

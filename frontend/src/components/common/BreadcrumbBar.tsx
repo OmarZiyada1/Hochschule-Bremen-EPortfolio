@@ -1,6 +1,7 @@
 import { Fragment } from "react"
 import { Link } from "react-router-dom"
 
+import { TruncatedText } from "@/components/common/TruncatedText"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -15,22 +16,23 @@ export type Crumb = {
   /** Bereits uebersetzte Beschriftung; diese Huelle uebersetzt nichts. */
   label: string
   /**
-   * Der ungekuerzte Text, wenn {@code label} eine Kuerzung ist (KAN-80).
+   * Darf diese Station geklemmt werden, wenn sie zu lang ist (KAN-80, seit
+   * KAN-83 per CSS)?
    *
-   * <p>Gekuerzt wird ausserhalb, weil die Regel dieselbe ist wie in den
-   * Tabellen ({@code lib/text.ts}). Diese Huelle setzt nur die Folge daraus:
-   * Sichtbar bleibt die Kuerzung, vorgelesen wird der volle Text
-   * ({@code aria-label}), und der Mauszeiger zeigt ihn ebenfalls
-   * ({@code title}). Ohne das waere „Nachhaltige Mobilit…" fuer einen
-   * Screenreader alles, was von dem Titel uebrig bleibt.
+   * <p>Betroffen sind allein die Namen von Sachen, also ein Projekttitel oder
+   * ein Personenname, nicht die festen Beschriftungen aus dem
+   * Navigationsbaum: Die sind kurz und bekannt und sollen ganz dastehen.
    *
-   * <p>Ueber {@code aria-label} und nicht ueber einen zweiten, versteckten
-   * Textknoten daneben: Beide Ebenen tragen eine Rolle, an der es wirkt
-   * ({@code BreadcrumbLink} ist ein Anker, {@code BreadcrumbPage} ein
-   * {@code role="link"}), und ein doppelter Text im DOM waere an jeder
-   * Fundstelle zweimal zu finden.
+   * <p>Ein {@code fullLabel} braucht es dafuer nicht mehr. Bis KAN-83 kam die
+   * Beschriftung hier bereits hart gekuerzt an, und der volle Text lief
+   * daneben ueber {@code aria-label} und {@code title}. Sichtbares Label und
+   * zugaenglicher Name waren damit verschiedene Zeichenketten, und das ist
+   * genau die Verletzung von SC 2.5.3 „Label in Name" (Stufe A), die
+   * {@link TruncatedText} fuer die Tabellen aufgeloest hat. Der
+   * Brotkrumenpfad hatte denselben Mangel aus demselben Grund und ist deshalb
+   * mitgezogen: Er bekommt den vollen Text und klemmt ihn in der Darstellung.
    */
-  fullLabel?: string
+  truncatable?: boolean
   to?: string
 }
 
@@ -77,27 +79,32 @@ export function BreadcrumbBar({ items }: { items: readonly Crumb[] }) {
           <BreadcrumbList className="type-label-xs">
             {items.map((crumb, index) => {
               const last = index === items.length - 1
+              /* Der volle Text steht in beiden Faellen da; geklemmt wird
+                 allein in der Darstellung, und nur bei den Namen von Sachen.
+                 TruncatedText statt eigener Klassen hier: Die Regel gehoert
+                 an genau eine Stelle, und der Mauszeigertext beim Zeigen
+                 kommt so von selbst mit. */
+              const text =
+                crumb.truncatable === true ? (
+                  <TruncatedText text={crumb.label} />
+                ) : (
+                  crumb.label
+                )
               return (
                 /* Der Trenner steht neben dem Eintrag, nicht darin: beide
                    sind ein li, und ein li im li waere ungueltig. */
                 <Fragment key={crumb.to ?? crumb.label}>
                   <BreadcrumbItem>
                     {last || crumb.to === undefined ? (
-                      <BreadcrumbPage
-                        aria-label={crumb.fullLabel}
-                        title={crumb.fullLabel}
-                        className="text-muted-foreground"
-                      >
-                        {crumb.label}
+                      <BreadcrumbPage className="text-muted-foreground">
+                        {text}
                       </BreadcrumbPage>
                     ) : (
                       <BreadcrumbLink
                         render={<Link to={crumb.to} />}
-                        aria-label={crumb.fullLabel}
-                        title={crumb.fullLabel}
                         className="text-primary hover:text-primary-hover"
                       >
-                        {crumb.label}
+                        {text}
                       </BreadcrumbLink>
                     )}
                   </BreadcrumbItem>

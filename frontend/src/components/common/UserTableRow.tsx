@@ -1,10 +1,10 @@
 import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
-import { Link } from "react-router-dom"
 
 import type { Role, UserStatus } from "@/api/types"
 import { Pill } from "@/components/common/Pill"
 import { RoleBadge } from "@/components/common/RoleBadge"
+import { TruncatedLink, TruncatedText } from "@/components/common/TruncatedText"
 import { UserAvatar } from "@/components/common/UserAvatar"
 import { UserStatusBadge } from "@/components/common/UserStatusBadge"
 import { TableCell, TableRow } from "@/components/ui/table"
@@ -38,6 +38,15 @@ import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
  * die Projektzeile wird die Nutzerzeile <strong>nicht</strong> als Ganzes
  * anklickbar: Sie traegt Auswahl und Menue, und ein Klick daneben oeffnete
  * eine fremde Seite mitten in der Verwaltung.
+ *
+ * <p><strong>Jeder Texteintrag ist auf zwanzig Zeichen Breite
+ * geklemmt</strong> (KAN-83): Name, Anmeldeadresse, HSB-Adresse und
+ * Anlegezeitpunkt laufen ueber {@link TruncatedText} bzw.
+ * {@link TruncatedLink}, die Begruendung und die Ausnahmen stehen dort.
+ * Geklemmt und nicht geschnitten: Der volle Text steht im Dokument, ist also
+ * markierbar, kopierbar und auffindbar, und der Name des Links ist genau das,
+ * was auch zu sehen ist. Rolle und Status bleiben unangetastet, weil dort eine
+ * Marke aus fester Auswahl steht und kein Datensatz.
  */
 export function UserTableRow({
   person,
@@ -80,26 +89,38 @@ export function UserTableRow({
       <TableCell>
         <div className="flex items-center gap-3">
           <UserAvatar person={person} imageUrl={avatarUrl} size="lg" />
-          <div className="flex flex-col">
+          {/* min-w-0 als Absicherung, nicht als Voraussetzung: Die Klemmung
+              haengt am max-width des Blocks darin und greift auch ohne sie.
+              Ein Flex-Element hat aber von Haus aus seinen eigenen Inhalt als
+              Mindestbreite, und sollte diese Spalte einmal gedrueckt werden,
+              gaebe erst min-w-0 sie frei (KAN-83, Befund des
+              frontend-reviewers). */}
+          <div className="flex min-w-0 flex-col">
             <span className="font-semibold">
               {userId === undefined ? (
-                fullNameOf(person)
+                <TruncatedText text={fullNameOf(person)} />
               ) : (
-                <Link
+                <TruncatedLink
+                  text={fullNameOf(person)}
                   to={`/portfolios/${userId}`}
                   state={origin}
                   className="hover:underline focus-visible:underline"
-                >
-                  {fullNameOf(person)}
-                </Link>
+                />
               )}
             </span>
-            <span className="type-caption text-muted-foreground">{email}</span>
+            <span className="type-caption text-muted-foreground">
+              <TruncatedText text={email} />
+            </span>
           </div>
         </div>
       </TableCell>
+      {/* Ohne break-all: Die Adresse ist auf zwanzig Zeichen geklemmt und
+          zieht die Spalte nicht mehr auf, und ein Umbruch mitten im Wort
+          machte aus der einen Zeile wieder zwei. */}
       {hsbEmail !== undefined && (
-        <TableCell className="break-all">{hsbEmail}</TableCell>
+        <TableCell>
+          <TruncatedText text={hsbEmail} />
+        </TableCell>
       )}
       <TableCell>
         <RoleBadge role={role} />
@@ -114,8 +135,17 @@ export function UserTableRow({
           </div>
         </TableCell>
       )}
+      {/* whitespace-nowrap bleibt an der Zelle: Ein Datum gehoert in eine
+          Zeile. Die Klemmung greift hier nie, weil beide Sprachen weit unter
+          zwanzig Zeichen bleiben (dateStyle "medium" ergibt „27.08.2026"
+          bzw. „Aug 27, 2026", siehe AdminUserListPage). Der Eintrag laeuft
+          trotzdem durch TruncatedText, damit jede Textzelle dieselbe Huelle
+          traegt und ein spaeter geaendertes Format nicht als einzige Spalte
+          ausbricht. */}
       {createdAt !== undefined && (
-        <TableCell className="whitespace-nowrap">{createdAt}</TableCell>
+        <TableCell className="whitespace-nowrap">
+          <TruncatedText text={createdAt} />
+        </TableCell>
       )}
       <TableCell className="text-right">{actions}</TableCell>
     </TableRow>

@@ -104,6 +104,7 @@ export function ProjectPrintView({
             blocks={blocks}
             resolveFileUrl={resolveFileUrl}
             fileState={fileState}
+            forPrint
           />
         </>
       )}

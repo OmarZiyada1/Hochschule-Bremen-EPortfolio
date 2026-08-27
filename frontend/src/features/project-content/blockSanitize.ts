@@ -13,6 +13,7 @@ import {
   type ParagraphNode,
   type TableCellNode,
   type TableRowNode,
+  type TocEntry,
   type ContentMark,
 } from "@/features/project-content/blockTypes"
 import { isContentColorRole } from "@/features/project-content/contentColors"
@@ -95,7 +96,8 @@ export type DropReason =
 export type NormalizationReason =
   | "HEADING_LEVEL_CLAMPED"
   | "HEADING_JUSTIFY_REMOVED"
-  | "IMAGE_WIDTH_DEFAULTED"
+  | "MEDIA_WIDTH_DEFAULTED"
+  | "TOC_ENTRIES_DROPPED"
   | "GALLERY_COLUMNS_DEFAULTED"
   | "GALLERY_ITEM_DROPPED"
   | "GALLERY_ITEM_ALT_DEFAULTED"
@@ -357,6 +359,8 @@ function sanitizeRoot(raw: RawNode, context: SanitizeContext): RootResult {
       return sanitizeEmbed(attrs, context)
     case "mathBlock":
       return sanitizeMath(attrs)
+    case "tableOfContents":
+      return sanitizeTableOfContents(attrs, context)
   }
 }
 
@@ -584,7 +588,7 @@ function sanitizeImage(
     attrs.width !== null &&
     attrs.width !== width
   ) {
-    context.normalizations.push("IMAGE_WIDTH_DEFAULTED")
+    context.normalizations.push("MEDIA_WIDTH_DEFAULTED")
   }
   return {
     node: {
@@ -678,6 +682,16 @@ function sanitizeVideo(
     return { reason: "VIDEO_SOURCE_MISSING" }
   }
   const caption = toText(attrs.caption)
+  /* Die Breite gilt fuer beide Quellen (2.5 seit v84), deshalb vor der
+     Verzweigung. Derselbe Griff wie in sanitizeImage. */
+  const width = toImageWidth(attrs.width)
+  if (
+    attrs.width !== undefined &&
+    attrs.width !== null &&
+    attrs.width !== width
+  ) {
+    context.normalizations.push("MEDIA_WIDTH_DEFAULTED")
+  }
   if (hasFile) {
     if (!isUuid(attrs.fileId)) {
       return { reason: "VIDEO_FILE_ID_INVALID" }
@@ -685,7 +699,7 @@ function sanitizeVideo(
     return {
       node: {
         type: "videoBlock",
-        attrs: { fileId: attrs.fileId.trim(), caption },
+        attrs: { fileId: attrs.fileId.trim(), caption, width },
       },
     }
   }
@@ -712,9 +726,63 @@ function sanitizeVideo(
   return {
     node: {
       type: "videoBlock",
-      attrs: { provider, videoId: attrs.videoId, hash, caption },
+      attrs: { provider, videoId: attrs.videoId, hash, caption, width },
     },
   }
+}
+
+/** Ebene eines Verzeichniseintrags: ausserhalb 1 bis 6 faellt der Eintrag. */
+function toEntryLevel(value: unknown): HeadingLevel | null {
+  return value === 1 ||
+    value === 2 ||
+    value === 3 ||
+    value === 4 ||
+    value === 5 ||
+    value === 6
+    ? value
+    : null
+}
+
+/**
+ * TABLE_OF_CONTENTS (§2.5, seit Contract v84).
+ *
+ * <p>Ein unbrauchbarer Eintrag wird verworfen und macht den Block nicht
+ * ungueltig: ein Verzeichnis mit einer Luecke ist besser als gar keines,
+ * und der Beitrag darunter steht ohnehin vollstaendig da. Verworfen wird
+ * nicht still, sondern vermerkt.
+ *
+ * <p><strong>Abgeglichen wird hier nichts.</strong> Ob die Momentaufnahme
+ * noch zu den Ueberschriften des Beitrags passt, prueft weder diese
+ * Funktion noch der Server: sie darf veralten, genau das ist die
+ * Festlegung aus §2.5. Der Editor weist darauf hin, die Leseansicht nicht.
+ */
+function sanitizeTableOfContents(
+  attrs: Record<string, unknown>,
+  context: SanitizeContext
+): RootResult {
+  const raw = Array.isArray(attrs.entries) ? attrs.entries : []
+  const entries: TocEntry[] = []
+  for (const candidate of raw) {
+    if (typeof candidate !== "object" || candidate === null) {
+      continue
+    }
+    const entry = candidate as Record<string, unknown>
+    const level = toEntryLevel(entry.level)
+    const index = entry.index
+    if (
+      level === null ||
+      typeof index !== "number" ||
+      !Number.isInteger(index) ||
+      index < 0
+    ) {
+      continue
+    }
+    entries.push({ level, text: toText(entry.text), index })
+  }
+  if (entries.length !== raw.length) {
+    context.normalizations.push("TOC_ENTRIES_DROPPED")
+  }
+  return { node: { type: "tableOfContents", attrs: { entries } } }
 }
 
 function sanitizeAudio(

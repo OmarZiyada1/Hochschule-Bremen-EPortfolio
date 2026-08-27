@@ -58,6 +58,7 @@ const MODULES: ModuleResponse[] = [
     name: "Softwaretechnik",
     abbreviation: "SWT",
     studyProgramId: "sp-1",
+    collective: false,
   },
 ]
 

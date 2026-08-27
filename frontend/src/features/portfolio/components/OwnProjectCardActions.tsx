@@ -1,4 +1,4 @@
-import { PencilIcon, Trash2Icon, Undo2Icon } from "lucide-react"
+import { LogOutIcon, PencilIcon, Trash2Icon, Undo2Icon } from "lucide-react"
 import type { ReactNode } from "react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/tooltip"
 import {
   useDeleteProject,
+  useLeaveProject,
   useWithdrawProject,
 } from "@/features/portfolio/hooks/useProjectActions"
 
@@ -43,6 +44,13 @@ import {
  * Komponente dort gar nicht erst ein, damit die veroeffentlichte Karte
  * ihre Reaktionszahl behaelt (action-Slot der ProjectCard).</li>
  * </ul>
+ *
+ * <p><strong>Ist die Person nicht die Autor:in, sondern nur Mitglied</strong>
+ * (§3.13, seit Contract v84, KAN-83), gibt es genau eine Handlung, und zwar
+ * in jedem Status: „Projekt verlassen". Die drei oben gehoeren der
+ * Autor:in: Loeschen, Einreichen und Zurueckziehen haengen an der
+ * Autorschaft (§5), und Bearbeiten fuehrt in den Editor, den ein Mitglied
+ * ohnehin ueber die Detailseite erreicht.
  *
  * <p><strong>Symbole statt beschrifteter Knoepfe</strong> (Sichtpruefung zu
  * KAN-69): die Fusszeile der Kachel ist schmal, drei Textknoepfe drueckten
@@ -66,9 +74,15 @@ import {
  */
 export function OwnProjectCardActions({
   project,
+  isAuthor,
   onDone,
 }: {
   project: ProjectCardResponse
+  /**
+   * Ist die angemeldete Person die Autor:in? Sonst ist sie Mitglied, und
+   * die Kachel bietet allein das Verlassen an (§5, §3.13.1).
+   */
+  isAuthor: boolean
   /**
    * Meldet den gelungenen Ausgang nach oben. Die Ansage gehoert in die
    * Liste und nicht in die Kachel: beim Loeschen verschwindet die Kachel
@@ -80,10 +94,11 @@ export function OwnProjectCardActions({
   const { t } = useTranslation()
   const withdraw = useWithdrawProject()
   const remove = useDeleteProject()
+  const leave = useLeaveProject()
   const [serverError, setServerError] = useState<string | null>(null)
-  const [openDialog, setOpenDialog] = useState<"withdraw" | "delete" | null>(
-    null
-  )
+  const [openDialog, setOpenDialog] = useState<
+    "withdraw" | "delete" | "leave" | null
+  >(null)
 
   const projectId = project.id
   if (projectId === undefined) {
@@ -121,7 +136,7 @@ export function OwnProjectCardActions({
    * Text), Abbrechen zuerst, die Handlung mit ihrem eigenen Verb.
    */
   const confirmation = (
-    kind: "withdraw" | "delete",
+    kind: "withdraw" | "delete" | "leave",
     trigger: ReactNode,
     options: { destructive?: boolean; pending: boolean }
   ) => (
@@ -169,15 +184,24 @@ export function OwnProjectCardActions({
             variant={options.destructive === true ? "destructive" : "default"}
             disabled={options.pending}
             onClick={() => {
-              void (kind === "delete"
-                ? run(
+              const actions = {
+                delete: () =>
+                  run(
                     () => remove.mutateAsync(projectId),
                     t("portfolio.myPortfolio.card.deleteDone")
-                  )
-                : run(
+                  ),
+                withdraw: () =>
+                  run(
                     () => withdraw.mutateAsync(projectId),
                     t("portfolio.myPortfolio.card.withdrawDone")
-                  ))
+                  ),
+                leave: () =>
+                  run(
+                    () => leave.mutateAsync(projectId),
+                    t("portfolio.myPortfolio.card.leaveDone")
+                  ),
+              }
+              void actions[kind]()
             }}
           >
             {t(`portfolio.myPortfolio.card.${kind}Dialog.confirm`)}
@@ -193,37 +217,56 @@ export function OwnProjectCardActions({
           von einem zum naechsten faehrt, wartet nicht erneut. */}
       <TooltipProvider delay={400}>
         <div className="flex items-center gap-1">
-          {(project.status === "DRAFT" || project.status === "REVISION") && (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    nativeButton={false}
-                    render={<Link to={`/projects/${projectId}/editor`} />}
-                  />
-                }
-              >
-                <PencilIcon aria-hidden="true" />
-                {/* Der Name nennt das Projekt: in einer Liste stuenden sonst
+          {/* Mitglied und nicht Autor:in: eine Handlung, in jedem Status. */}
+          {!isAuthor &&
+            confirmation(
+              "leave",
+              <>
+                <LogOutIcon aria-hidden="true" />
+                <span className="sr-only">
+                  {t("portfolio.myPortfolio.card.leaveFor", { title })}
+                </span>
+              </>,
+              /* Nicht destruktiv: der eigene Dialogtext sagt, dass die
+                 Autor:in einen wieder aufnehmen kann. Rot traegt allein,
+                 was wirklich zerstoert (Befund des frontend-reviewers);
+                 „Zurueckziehen" daneben steht aus demselben Grund ohne. */
+              { pending: leave.isPending }
+            )}
+
+          {isAuthor &&
+            (project.status === "DRAFT" || project.status === "REVISION") && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
+                      nativeButton={false}
+                      render={<Link to={`/projects/${projectId}/editor`} />}
+                    />
+                  }
+                >
+                  <PencilIcon aria-hidden="true" />
+                  {/* Der Name nennt das Projekt: in einer Liste stuenden sonst
                     mehrere gleichnamige "Bearbeiten" nebeneinander, und die
                     Elementliste eines Screenreaders koennte sie nicht
                     auseinanderhalten (SC 2.4.6, Befund aus dem Review). Der
                     Tooltip daneben ist die sichtbare Ergaenzung fuer die
                     Maus, nicht der Name: er erscheint weder per Tastatur
                     zuverlaessig noch auf Touch. */}
-                <span className="sr-only">
-                  {t("portfolio.myPortfolio.card.editFor", { title })}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                {t("portfolio.myPortfolio.card.edit")}
-              </TooltipContent>
-            </Tooltip>
-          )}
+                  <span className="sr-only">
+                    {t("portfolio.myPortfolio.card.editFor", { title })}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t("portfolio.myPortfolio.card.edit")}
+                </TooltipContent>
+              </Tooltip>
+            )}
 
-          {project.status === "SUBMITTED" &&
+          {isAuthor &&
+            project.status === "SUBMITTED" &&
             confirmation(
               "withdraw",
               <>
@@ -235,7 +278,8 @@ export function OwnProjectCardActions({
               { pending: withdraw.isPending }
             )}
 
-          {project.status === "DRAFT" &&
+          {isAuthor &&
+            project.status === "DRAFT" &&
             confirmation(
               "delete",
               <>

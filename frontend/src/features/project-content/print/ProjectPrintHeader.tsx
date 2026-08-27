@@ -108,11 +108,12 @@ export function ProjectPrintHeader({
         </div>
       </dl>
 
+      {/* Auf dem Blatt dasselbe Bild wie am Schirm (KAN-83): die
+          Kurzbeschreibung ist ein unbeschrifteter Vorspann und keine eigene
+          Rubrik. Eine Zeile „Abstract" haette dort eine Gliederungsebene
+          behauptet, die der Beitrag nicht fuehrt. */}
       {summary !== undefined && summary !== "" && (
-        <section>
-          <h2 className="type-h2">{t("projectContent.print.abstract")}</h2>
-          <p>{summary}</p>
-        </section>
+        <p className="print-summary">{summary}</p>
       )}
     </header>
   )

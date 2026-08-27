@@ -7,7 +7,7 @@ import {
   HistoryIcon,
   LockIcon,
 } from "lucide-react"
-import { useRef, useState, type RefObject } from "react"
+import { useId, useRef, useState, type RefObject } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, useNavigate, useParams } from "react-router-dom"
 
@@ -21,9 +21,8 @@ import type {
   ProjectStatus,
 } from "@/api/types"
 import { useBreadcrumbTitle } from "@/routes/useBreadcrumb"
-import { CommentPanel } from "@/components/common/CommentPanel"
 import { EmptyState } from "@/components/common/EmptyState"
-import { ProjectInfoSection } from "@/components/common/ProjectInfoSection"
+import { ProjectSidePanels } from "@/components/common/ProjectSidePanels"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { Alert, AlertTitle } from "@/components/ui/alert"
 import {
@@ -48,6 +47,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { HistoryDialog } from "@/features/project-content/components/HistoryDialog"
 import { ViewModeSwitch } from "@/features/project-content/components/ViewModeSwitch"
 import { useProjectFileUrls } from "@/features/project-content/hooks/useProjectFileUrls"
+import { PrintTrigger } from "@/features/project-content/print/PrintTrigger"
+import { ProjectPrintView } from "@/features/project-content/print/ProjectPrintView"
+import { usePrintProject } from "@/features/project-content/print/usePrintProject"
 import { ProjectContent } from "@/features/project-content/renderer/ProjectContent"
 import { useProjectDetail } from "@/features/projects/hooks/useProjectDetail"
 import { RevisionDialog } from "@/features/reviews/components/RevisionDialog"
@@ -84,6 +86,23 @@ const EMPTY_BLOCKS: readonly BlockResponse[] = []
  * <p><strong>Kein Nominierungsknopf.</strong> Nominiert wird aus der
  * Reviewliste. Hier steht ein Projekt in aller Regel auf {@code SUBMITTED},
  * wo jede Nominierung nur 409 {@code PROJECT_NOT_PUBLISHED} ergaebe.
+ *
+ * <p><strong>Die Aktion „PDF" steht am Titelbild oben rechts</strong>, wie
+ * auf der Detailseite (KAN-41, Nutzerentscheidung; hierher gezogen mit
+ * KAN-83). Von den beiden Ansichten ohne Werkzeugleiste war diese die
+ * Ausnahme: der Ausdruck stand als beschrifteter Knopf in der Aktionskarte
+ * der rechten Spalte und damit an einem anderen Ort als ueberall sonst.
+ * Ohne Titelbild gibt es die Flaeche nicht, dann steht er in der Zeile
+ * ueber dem Titel. Gedruckt wird der Bereich aus {@code ProjectPrintView}:
+ * Kopfbereich und Beitrag, keine redaktionellen Interna.
+ *
+ * <p><strong>Die Ueberschrift ueber dem Beitrag steht nur fuer
+ * Hilfsmittel</strong>, aus denselben Gruenden wie auf der Detailseite
+ * (KAN-83): sichtbar geht der Beitrag ohne Rubrik und ohne Trennlinie aus
+ * der Kurzbeschreibung hervor, im Dokument bleibt die Ueberschrift als
+ * einzige Sprungmarke zwischen der h1 und der ersten Blockueberschrift
+ * stehen (SC 1.3.1) und benennt ueber {@code aria-labelledby} zugleich den
+ * Abschnitt.
  */
 export default function ProjectReviewPage() {
   const { t } = useTranslation()
@@ -105,6 +124,12 @@ export default function ProjectReviewPage() {
   )
   const cover = useFileUrl(data?.coverImageUrl, needsToken)
 
+  /* Derselbe Ausdruck wie auf der Detailseite (KAN-41), seit KAN-83 auch
+     hier: die Redaktion soll das Blatt lesen koennen, das die Autor:in
+     abgibt. Gedruckt wird derselbe Umfang, Kopfbereich und Beitrag; die
+     redaktionellen Interna bleiben am Schirm. */
+  const { print, printing } = usePrintProject()
+
   const forbidden =
     error !== null && isApiError(error) && error.errorCode === "NO_PERMISSION"
   const notFound =
@@ -114,6 +139,10 @@ export default function ProjectReviewPage() {
 
   /* Titel als letzte Ebene des Pfades; das Band zeichnet der Rahmen (KAN-80). */
   useBreadcrumbTitle(data?.title)
+
+  /* Der Name des Beitragsabschnitts: er zeigt auf die sr-only-Ueberschrift
+     darin (Javadoc oben). */
+  const contentHeadingId = useId()
 
   return (
     <>
@@ -190,7 +219,9 @@ export default function ProjectReviewPage() {
 
         {data !== undefined && (
           <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[1fr_21.25rem] lg:items-start lg:gap-12">
-            <Card className="min-w-0 [--card-spacing:--spacing(10)]">
+            {/* relative wie auf der Detailseite: der schwebende Druckknopf
+                haengt am naechsten positionierten Vorfahren. */}
+            <Card className="relative min-w-0 [--card-spacing:--spacing(10)]">
               {cover.url !== null && (
                 <img
                   src={cover.url}
@@ -206,25 +237,64 @@ export default function ProjectReviewPage() {
                         {t("project.list.label")}
                       </p>
                       <StatusBadge status={data.status} />
+                      {/*
+                       * Der Ausdruck oben rechts, an derselben Stelle wie
+                       * auf der Detailseite. Er steht hier allein und nicht
+                       * wie dort einem Info-Knopf gegenueber: die
+                       * Reviewansicht fuehrt keine Schublade fuer die
+                       * Projektdaten, die stehen schmal ohnehin als eigene
+                       * Karte unter dem Beitrag. Ein zweiter Knopf entstuende
+                       * allein der Symmetrie wegen und oeffnete nichts.
+                       *
+                       * <strong>Genau ein Knopf, nur seine Lage wechselt.</strong>
+                       * Mit Titelbild schwebt er darauf (die Karte ist
+                       * relative), ohne steht er in dieser Zeile. Zwei
+                       * getrennte Zweige waeren zwei Stellen im Baum: sobald
+                       * die angemeldet nachgeladene Bildadresse eintrifft,
+                       * baute React den einen ab und den anderen auf, und ein
+                       * Knopf, der unter dem Fokus verschwindet, gibt ihn an
+                       * body zurueck (SC 2.4.3; Befund des
+                       * frontend-reviewers). So bleibt es derselbe Knoten.
+                       *
+                       * Die Huelle traegt ms-auto und schiebt ihn in dieser
+                       * Zeile nach rechts; schwebt er, ist sie leer und ohne
+                       * Wirkung, weil sie das letzte Kind der Zeile ist.
+                       */}
+                      <div className="ms-auto">
+                        <PrintTrigger
+                          onPrint={() => void print()}
+                          busy={printing}
+                          floating={cover.url !== null}
+                        />
+                      </div>
                     </div>
                     <h1 className="type-title min-w-0 text-primary">
                       {data.title}
                     </h1>
                   </div>
 
-                  <hr />
-
+                  {/* Wie auf der Detailseite: grauer Vorspann ohne
+                      Ueberschrift, damit beide Lesepfade gleich aussehen
+                      (KAN-83). */}
                   {data.summary !== null && (
-                    <section className="flex flex-col gap-3">
-                      <h2 className="type-h2">
-                        {t("project.detail.abstract")}
-                      </h2>
-                      <p className="type-body-lg">{data.summary}</p>
-                    </section>
+                    <p className="type-body-lg text-muted-foreground">
+                      {data.summary}
+                    </p>
                   )}
 
-                  <section className="flex flex-col gap-3">
-                    <h2 className="type-h2">{t("project.detail.content")}</h2>
+                  {/* Kein Trennstrich und keine sichtbare Rubrik: der
+                      Beitrag schliesst unmittelbar an die Kurzbeschreibung
+                      an, und die Redaktion liest damit dasselbe Bild wie
+                      die Oeffentlichkeit (KAN-83). Die Ueberschrift bleibt
+                      sr-only und benennt den Abschnitt; Begruendung im
+                      Javadoc oben. */}
+                  <section
+                    aria-labelledby={contentHeadingId}
+                    className="flex flex-col gap-3"
+                  >
+                    <h2 id={contentHeadingId} className="sr-only">
+                      {t("project.detail.content")}
+                    </h2>
                     {(data.blocks ?? []).length === 0 ? (
                       <EmptyState
                         headingLevel={3}
@@ -268,6 +338,22 @@ export default function ProjectReviewPage() {
               <ReviewActionsCard project={data} />
             </div>
           </div>
+        )}
+
+        {/* Der Druckbereich liegt ausserhalb der Spalten und ist am
+            Bildschirm verborgen; im Ausdruck bleibt allein er stehen. Je
+            Seite gibt es genau einen, deshalb erst mit geladenem Projekt.
+            resolveFileUrl und fileState gehen mit: ein Projekt im Review
+            steht selten auf PUBLISHED, und ohne den angemeldeten Weg blieben
+            seine Medien auf dem Papier leer. */}
+        {data !== undefined && (
+          <ProjectPrintView
+            project={data}
+            blocks={data.blocks ?? EMPTY_BLOCKS}
+            coverUrl={cover.url}
+            resolveFileUrl={resolveFileUrl}
+            fileState={fileState}
+          />
         )}
       </div>
     </>
@@ -467,13 +553,6 @@ function ReviewActionsCard({ project }: { project: ProjectDetailResponse }) {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [revisionOpen, setRevisionOpen] = useState(false)
   /*
-   * Welcher der beiden Aufklapper offen ist, oder keiner. Vorgabe sind die
-   * Kommentare: im Review-Modus sind sie die Arbeitsflaeche, die
-   * Projektinformationen der Nachschlagefall.
-   */
-  const [panel, setPanel] = useState<"info" | "comments" | null>("comments")
-
-  /*
    * Die kuratierte Liste, allein fuer die Frage, ob dieses Projekt darin
    * steht (§4.1 seit v72). Der Endpoint ist oeffentlich, liefert hoechstens
    * zehn Eintraege und teilt sich den Cache mit „Meine Reviews"; ein
@@ -592,6 +671,9 @@ function ReviewActionsCard({ project }: { project: ProjectDetailResponse }) {
             <HistoryIcon aria-hidden="true" />
             {t("review.detail.history")}
           </Button>
+          {/* Der Ausdruck steht seit KAN-83 nicht mehr hier, sondern am
+              Titelbild oben rechts, wo ihn jede Ansicht ohne Werkzeugleiste
+              fuehrt (Begruendung im Javadoc der Seite). */}
         </div>
 
         {/*
@@ -626,35 +708,19 @@ function ReviewActionsCard({ project }: { project: ProjectDetailResponse }) {
 
         {/*
          * Statuszeile, Projektinformationen und Kommentare in einer Karte
-         * (Frame 109:2). Die beiden Aufklapper bilden ein Akkordeon: wer den
-         * einen oeffnet, schliesst den anderen. Zwei offene Kaesten
-         * untereinander schoben die Kommentare sonst unter die Falz, und
-         * genau die sollen im Review-Modus greifbar sein.
+         * (Frame 109:2). Das Paar und sein Akkordeon stecken seit KAN-83 in
+         * ProjectSidePanels, weil die Seitenleiste des Editors dieselbe Form
+         * bekommen hat und der gemeinsame Zustand sonst zweimal gefuehrt
+         * wuerde.
          *
-         * Der Zustand liegt deshalb hier und nicht in den beiden Bausteinen:
-         * ein Akkordeon ist eine Aussage ueber das Paar, nicht ueber ein
-         * Glied. Beide nehmen dafuer open und onOpenChange entgegen.
+         * Vorgabe hier sind die Kommentare: im Review-Modus sind sie die
+         * Arbeitsflaeche, die Angaben der Nachschlagefall.
          */}
-        <hr />
-        <ProjectInfoSection
+        <ProjectSidePanels
           project={project}
-          open={panel === "info"}
-          onOpenChange={(next) => setPanel(next ? "info" : null)}
+          context="review"
+          defaultPanel="comments"
         />
-
-        {/*
-         * Nicht bei PUBLISHED (Nutzerentscheidung zur Nacharbeit an
-         * KAN-37): dort ist die redaktionelle Arbeit vorbei, und die Spalte
-         * zeigte nur noch einen Verlauf, an dem nichts mehr haengt.
-         */}
-        {project.status !== "PUBLISHED" && (
-          <CommentPanel
-            project={project}
-            context="review"
-            open={panel === "comments"}
-            onOpenChange={(next) => setPanel(next ? "comments" : null)}
-          />
-        )}
 
         <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
           <AlertDialogContent

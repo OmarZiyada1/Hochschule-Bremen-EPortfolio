@@ -547,16 +547,7 @@
     },
     "detail": {
       "breadcrumb": "Project",
-      "abstract": "Abstract",
       "content": "Project description",
-      "editorial": {
-        "setting": "as part of the {{studyProgram}} degree programme at Hochschule Bremen in {{semester}}",
-        "settingStudyProgram": "as part of the {{studyProgram}} degree programme at Hochschule Bremen",
-        "settingSemester": "at Hochschule Bremen in {{semester}}",
-        "plain": "This project was carried out {{setting}}.",
-        "withEditors_one": "This project was carried out {{setting}} and edited by {{editors}}.",
-        "withEditors_other": "This project was carried out {{setting}} and edited by {{editors}}."
-      },
       "reactions": {
         "heading": "Reactions",
         "add_one": "React, {{count}} reaction so far",
@@ -764,6 +755,14 @@
           "title": "Delete project?",
           "description": "“{{title}}” will be deleted permanently, including its content and files. This cannot be undone.",
           "confirm": "Delete permanently"
+        },
+        "leave": "Leave the project",
+        "leaveFor": "Leave the project “{{title}}”",
+        "leaveDone": "You left the project.",
+        "leaveDialog": {
+          "title": "Leave this project?",
+          "description": "“{{title}}” will no longer list you as a contributor. Unless the project is published, you will not see it afterwards. The author can add you again.",
+          "confirm": "Leave"
         }
       }
     },
@@ -812,11 +811,10 @@
         "confirmPending": "Checking …",
         "resend": "Resend code",
         "resendCountdown": "Resend code in {{seconds}}s",
-        "resendConfirmed": "A new code has been requested. Please check your inbox."
+        "resendConfirmed": "A new code has been requested. Please check your inbox.",
+        "cancel": "Cancel the change"
       },
       "passwordChange": {
-        "title": "Change password",
-        "description": "You change your password with your current password, no code required.",
         "open": "Change password",
         "dialogTitle": "Choose a new password",
         "dialogDescription": "Enter your current password and choose a new one.",
@@ -871,7 +869,6 @@
   },
   "projectContent": {
     "intro": {
-      "abstract": "Abstract",
       "regionLabel": "Cover image, title and summary",
       "notSaved": "The header details are not saved while the marked fields are invalid."
     },
@@ -927,8 +924,8 @@
       "label": "Video from this contribution",
       "embedTitle": "Embedded video from {{provider}}",
       "incomplete": "No video chosen yet. The block is saved as soon as one is set.",
-      "caption": "Caption",
-      "captionPlaceholder": "Caption …",
+      "caption": "Video caption",
+      "captionPlaceholder": "Video caption …",
       "loadFailed": "The video could not be loaded.",
       "dropzone": "Upload a video or drop it here",
       "dropzoneHint": "MP4 or WebM up to {{max}} MB",
@@ -936,13 +933,17 @@
       "urlPlaceholder": "Address, share link or embed snippet",
       "urlHint": "Browser address, share link or embed snippet. Only the provider and the video id are stored, never the address itself.",
       "urlInvalid": "No YouTube or Vimeo video can be read from this.",
-      "embedAction": "Embed"
+      "embedAction": "Embed",
+      "widthToolbar": "Video width",
+      "widthOption": "Video width {{width}} percent",
+      "widthValue": "{{width}}%",
+      "widthChanged": "Video width set to {{width}} percent."
     },
     "audio": {
       "label": "Audio recording from this contribution",
       "incomplete": "No recording chosen yet. The block is saved as soon as it holds one.",
-      "caption": "Caption",
-      "captionPlaceholder": "Caption …",
+      "caption": "Audio caption",
+      "captionPlaceholder": "Audio caption …",
       "loadFailed": "The recording could not be loaded.",
       "dropzone": "Upload audio or drop it here",
       "dropzoneHint": "MP3, WAV or OGG up to {{max}} MB"
@@ -1080,8 +1081,8 @@
       "alt": "Alternative text",
       "altDescription": "Describes the image for people who cannot see it. Leave empty if it is purely decorative.",
       "altPlaceholder": "Alternative text …",
-      "caption": "Caption",
-      "captionPlaceholder": "Caption …",
+      "caption": "Image caption",
+      "captionPlaceholder": "Image caption …",
       "widthToolbar": "Image width",
       "widthOption": "Image width {{width}} per cent",
       "widthValue": "{{width}} %",
@@ -1093,6 +1094,7 @@
       "incomplete": "No image in the gallery yet. The block is saved as soon as it holds one.",
       "altFor": "Image {{position}}",
       "caption": "Gallery caption",
+      "captionPlaceholder": "Gallery caption …",
       "columns": "Columns",
       "columnsOption": "{{columns}} columns",
       "columnsChanged": "Gallery set to {{columns}} columns.",
@@ -1123,7 +1125,6 @@
       "semester": "Semester",
       "status": "Status",
       "printedAt": "Printed on",
-      "abstract": "Abstract",
       "video": "Video, cannot be played on paper.",
       "videoEmbed": "Embedded video from {{provider}}, cannot be played on paper.",
       "audio": "Audio recording, cannot be played on paper.",
@@ -1186,6 +1187,16 @@
     "load": {
       "errorTitle": "The contribution could not be loaded",
       "errorDescription": "Please reload the page."
+    },
+    "toc": {
+      "title": "Table of contents",
+      "insert": "Insert a table of contents",
+      "refresh": "Refresh",
+      "refreshed": "Table of contents refreshed.",
+      "inserted": "Table of contents inserted.",
+      "stale": "This table of contents no longer matches the headings.",
+      "empty": "This project has no headings yet.",
+      "incomplete": "No headings yet: the table of contents stays empty until the project has some."
     }
   },
   "apiError": {
@@ -1270,7 +1281,7 @@
         "NOTE": "Write an internal note …",
         "CHANGE_REQUEST": "Describe the change request …"
       },
-      "shortcut": "⌘/Ctrl + Enter",
+      "shortcut": "Enter to send, Shift + Enter for a new line",
       "hint": "{{name}} · {{shortcut}}"
     },
     "changeRequest": {
@@ -1464,6 +1475,8 @@
         "columnCount": "Accounts"
       },
       "openNominations": "Open top 10 proposals",
+      "openNominationsCount_one": "{{count}} open top 10 proposal",
+      "openNominationsCount_other": "{{count}} open top 10 proposals",
       "faculties": {
         "title": "Projects per faculty",
         "subtitle": "Distribution of all projects by faculty. Projects without a faculty are not included.",

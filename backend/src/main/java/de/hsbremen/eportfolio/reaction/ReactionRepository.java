@@ -19,6 +19,16 @@ public interface ReactionRepository extends JpaRepository<Reaction, UUID> {
 	long countByProjectId(UUID projectId);
 
 	/**
+	 * Hat diese Person an diesem Projekt bereits reagiert? Fuellt
+	 * {@code ProjectDetailResponse.hasReacted} (§3.10, seit Contract v84).
+	 *
+	 * <p>Ein {@code exists} und kein {@code findBy…}: gebraucht wird die
+	 * Ja-Nein-Auskunft, und die Zeile selbst traegt nichts bei, was die
+	 * Detailantwort zeigt.
+	 */
+	boolean existsByProjectIdAndUserId(UUID projectId, UUID userId);
+
+	/**
 	 * Stellt sicher, dass die Reaktion dieser Person an diesem Projekt existiert,
 	 * fuer {@code POST /api/projects/{id}/reaction} (§6.1, „idempotent").
 	 *

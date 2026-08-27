@@ -6,7 +6,7 @@ import { act } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { endSession, getAuthState, startSession } from "@/api/auth/authStore"
-import { setAuthNavigate } from "@/api/auth/redirect"
+import { consumeRequestedRoute, setAuthNavigate } from "@/api/auth/redirect"
 import { api } from "@/api/client"
 import { isApiError } from "@/api/errors"
 import { createQueryClient } from "@/api/queryClient"
@@ -51,6 +51,37 @@ describe("zentrale Fehlerreaktion", () => {
     expect(getAuthState().session).toBeNull()
     expect(getAuthState().sessionNotice).toBe("TOKEN_EXPIRED")
     expect(navigate).toHaveBeenCalledWith("/login")
+  })
+
+  it("laesst einen 401 ohne Sitzung liegen: kein Merkzettel, kein Hinweis, keine Umleitung", async () => {
+    /*
+     * Der Nachhall eines Abmeldens: der Store leert bei jedem
+     * Sitzungswechsel den Query-Cache, noch montierte Abfragen laden
+     * daraufhin ohne Token nach, und ihr 401 trifft ein, wenn die Sitzung
+     * laengst verworfen ist. Frueher schrieb er dabei die aktuelle Route
+     * in den Merkzettel aus KAN-33, und das naechste Anmelden landete
+     * wieder dort statt auf dem Rollenziel aus KAN-83. Zu beenden ist an
+     * dieser Stelle nichts mehr.
+     */
+    const navigate = vi.fn()
+    setAuthNavigate(navigate)
+    server.use(
+      http.get("*/api/projects", () =>
+        apiErrorResponse(401, "NOT_AUTHENTICATED", "/api/projects")
+      )
+    )
+
+    const queryClient = createQueryClient()
+    await expect(
+      queryClient.fetchQuery({
+        queryKey: ["projects"],
+        queryFn: () => api.get("/api/projects"),
+      })
+    ).rejects.toMatchObject({ errorCode: "NOT_AUTHENTICATED" })
+
+    expect(consumeRequestedRoute()).toBeNull()
+    expect(getAuthState().sessionNotice).toBeNull()
+    expect(navigate).not.toHaveBeenCalled()
   })
 
   it("zeigt 403 NO_PERMISSION der aufrufenden Stelle und leitet nicht um", async () => {

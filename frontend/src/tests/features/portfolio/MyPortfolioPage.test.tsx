@@ -9,7 +9,7 @@ import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
 import { AppUnderTest, LocationProbe, signInAs } from "@/tests/routes/helpers"
 
-/** Die ID, die signInAs der Sitzung gibt; zugleich der erwartete author. */
+/** Die ID, die signInAs der Sitzung gibt; zugleich der erwartete participant. */
 const OWN_USER_ID = "00000000-0000-0000-0000-000000000001"
 
 function projectsPage(content: unknown[]) {
@@ -27,7 +27,7 @@ const DRAFT_PROJECT = {
   title: "EdgeML Toolkit",
   summary: "Erste Konzeption eines TypeScript-Toolkits.",
   status: "DRAFT",
-  author: { firstName: "Mira", lastName: "Beispiel" },
+  author: { id: OWN_USER_ID, firstName: "Mira", lastName: "Beispiel" },
   semester: {
     id: "5e000000-0000-4000-8000-000000000001",
     name: "WiSe 2025/26",
@@ -39,7 +39,7 @@ const PUBLISHED_PROJECT = {
   title: "Voice2Text HSB",
   summary: "Whisper-basierte Vorlesungstranskription.",
   status: "PUBLISHED",
-  author: { firstName: "Mira", lastName: "Beispiel" },
+  author: { id: OWN_USER_ID, firstName: "Mira", lastName: "Beispiel" },
   semester: { id: "5e000000-0000-4000-8000-000000000002", name: "SoSe 2025" },
   reactionCount: 58,
 }
@@ -49,7 +49,7 @@ const SUBMITTED_PROJECT = {
   title: "GreenLab",
   summary: "Sensor-Plattform fuer HSB-Labore.",
   status: "SUBMITTED",
-  author: { firstName: "Mira", lastName: "Beispiel" },
+  author: { id: OWN_USER_ID, firstName: "Mira", lastName: "Beispiel" },
   semester: {
     id: "5e000000-0000-4000-8000-000000000001",
     name: "WiSe 2025/26",
@@ -61,7 +61,7 @@ const REVISION_PROJECT = {
   title: "OpenSchedule",
   summary: "Open-Source-Stundenplaner.",
   status: "REVISION",
-  author: { firstName: "Mira", lastName: "Beispiel" },
+  author: { id: OWN_USER_ID, firstName: "Mira", lastName: "Beispiel" },
   semester: { id: "5e000000-0000-4000-8000-000000000002", name: "SoSe 2025" },
 }
 
@@ -70,8 +70,27 @@ const APPROVED_PROJECT = {
   title: "FlowNet",
   summary: "Stream-Processing-Framework.",
   status: "APPROVED",
-  author: { firstName: "Mira", lastName: "Beispiel" },
+  author: { id: OWN_USER_ID, firstName: "Mira", lastName: "Beispiel" },
   semester: { id: "5e000000-0000-4000-8000-000000000002", name: "SoSe 2025" },
+}
+
+/*
+ * Eine Gruppenarbeit einer anderen Person, an der die angemeldete nur
+ * Mitglied ist (§3.13). Seit Contract v84 steht sie mit im eigenen
+ * Portfolio; die Kachel bietet dort allein das Verlassen an (KAN-83).
+ */
+const FOREIGN_GROUP_PROJECT = {
+  id: "11111111-0000-4000-8000-000000000006",
+  title: "Campus-Garten",
+  summary: "Gemeinschaftsbeet hinter dem Neubau.",
+  status: "PUBLISHED",
+  author: {
+    id: "00000000-0000-0000-0000-0000000000ff",
+    firstName: "Jo",
+    lastName: "Schmidt",
+  },
+  semester: { id: "5e000000-0000-4000-8000-000000000002", name: "SoSe 2025" },
+  reactionCount: 3,
 }
 
 /**
@@ -85,9 +104,14 @@ describe("MyPortfolioPage", () => {
     await i18n.changeLanguage("de")
   })
 
-  it("fragt die eigenen Projekte ueber die eigene ID ab, nicht ueber author=me", async () => {
-    /* §6.1: den Sonderwert "me" kennt nur editor; author verlangt die UUID.
-       Die ID kommt aus dem Auth-Kontext. */
+  it("fragt ueber participant ab und nicht mehr ueber author (v84)", async () => {
+    /*
+     * Seit Contract v84 zaehlt die Beteiligung: participant trifft Projekte,
+     * deren Autor:in ODER Mitglied die Person ist. author bleibt daneben die
+     * oeffentliche Autorenuebersicht und wird hier bewusst nicht mehr
+     * benutzt. Der Sonderwert "me" waere zulaessig; die ausgeschriebene ID
+     * aus dem Auth-Kontext ist der eingespielte Weg dieser Seite.
+     */
     let requestUrl: URL | null = null
     server.use(
       ownPortfolioHandler(),
@@ -100,8 +124,44 @@ describe("MyPortfolioPage", () => {
     renderWithProviders(<AppUnderTest />, "/my-portfolio")
 
     await screen.findByRole("heading", { level: 2, name: "EdgeML Toolkit" })
-    expect(requestUrl!.searchParams.get("author")).toBe(OWN_USER_ID)
+    expect(requestUrl!.searchParams.get("participant")).toBe(OWN_USER_ID)
+    expect(requestUrl!.searchParams.has("author")).toBe(false)
     expect(requestUrl!.searchParams.has("status")).toBe(false)
+  })
+
+  it("bietet an einer fremden Gruppenarbeit allein das Verlassen an", async () => {
+    /*
+     * Der Kern von KAN-83 an der Oberflaeche: das Projekt steht im eigenen
+     * Portfolio, aber Loeschen, Einreichen und Zurueckziehen gehoeren der
+     * Autor:in (§5). Und das Verlassen gilt in jedem Status, auch bei
+     * PUBLISHED, wo eine eigene Kachel gar keine Handlung traegt.
+     */
+    const left: string[] = []
+    server.use(
+      ownPortfolioHandler(),
+      http.get("*/api/projects", () =>
+        HttpResponse.json(projectsPage([FOREIGN_GROUP_PROJECT]))
+      ),
+      http.delete("*/api/projects/:projectId/members/me", ({ params }) => {
+        left.push(String(params.projectId))
+        return new HttpResponse(null, { status: 204 })
+      })
+    )
+    signInAs("STUDENT")
+    renderWithProviders(<AppUnderTest />, "/my-portfolio")
+
+    await screen.findByRole("heading", { level: 2, name: "Campus-Garten" })
+    expect(
+      screen.queryByRole("button", { name: /Löschen/ })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("link", { name: /Bearbeiten/ })
+    ).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole("button", { name: /verlassen/i }))
+    await userEvent.click(screen.getByRole("button", { name: "Verlassen" }))
+
+    await waitFor(() => expect(left).toEqual([FOREIGN_GROUP_PROJECT.id]))
   })
 
   it("zeigt zu jedem eigenen Projekt seinen Status", async () => {

@@ -152,10 +152,18 @@
     margin-block-start: 0.25rem;
   }
 
+  /* Der Strich traegt das Markenblau aus der Tokenschicht und nicht
+     --content-text-blue: das ist die Rolle fuer eine vom Autor gewaehlte
+     Textfarbe und hat mit der Blockgestaltung nichts zu tun. --primary ist
+     fuer hell, dunkel und den Druck belegt. Die Textfarbe bleibt
+     --muted-foreground: der Wunsch nennt Strich und Schnitt, nicht die
+     Farbe, und blauer Zitattext muesste auf dunklem Grund neu gegen 4,5:1
+     geprueft werden (KAN-83). */
   .project-content blockquote {
-    border-inline-start: 0.25rem solid var(--border);
+    border-inline-start: 0.25rem solid var(--primary);
     padding-inline-start: 1rem;
     color: var(--muted-foreground);
+    font-style: italic;
   }
 
   .project-content hr {
@@ -348,10 +356,34 @@
     margin-block-start: 0.5rem;
   }
 
-  .project-content figure > img,
-  .project-content figure > video {
+  .project-content figure > img {
     inline-size: 100%;
     block-size: auto;
+    border-radius: var(--radius-card);
+  }
+
+  /* Das hochgeladene Video: Breite wie das Bild, aber mit Hoehenkappung
+     (KAN-83). Die Breitenstufe allein genuegt nicht: ein hochformatiges
+     Video im Verhaeltnis 9:16 waere bei voller Spaltenbreite ueber tausend
+     Pixel hoch und schoebe den ganzen Beitrag auseinander.
+
+     inline-size: auto statt 100 Prozent, damit die Kappung greifen kann:
+     mit fester Breite blieben die Seitenverhaeltnisse erhalten, indem der
+     Player links und rechts schwarze Balken zeigte. So schrumpft stattdessen
+     die Breite mit. Ein gewoehnliches Querformat fuellt seine Spalte
+     weiterhin, weil eine hochgeladene Datei breiter ist als der Satzspiegel
+     und max-inline-size sie darauf zurueckholt.
+
+     svh und nicht vh: auf Telefonen mit ein- und ausfahrender Adresszeile
+     ist vh die groessere der beiden Hoehen, und das Video ragte dann doch
+     ueber den sichtbaren Bereich hinaus. */
+  .project-content figure > video {
+    display: block;
+    inline-size: auto;
+    max-inline-size: 100%;
+    block-size: auto;
+    max-block-size: 70svh;
+    margin-inline: auto;
     border-radius: var(--radius-card);
   }
 
@@ -391,6 +423,33 @@
 
   .project-content figure[data-width="50"] {
     inline-size: 50%;
+  }
+
+  /* ------------------------------------------------------------
+   * Inhaltsverzeichnis (Contract 2.5 seit v84).
+   *
+   * Die Einrueckung folgt der Ueberschriftenebene und ist reine
+   * Darstellung: die Liste bleibt flach, damit eine uebersprungene Ebene
+   * keine leeren Zwischenebenen erzeugt.
+   * ------------------------------------------------------------ */
+  .project-content [data-toc-level="2"] {
+    padding-inline-start: 1rem;
+  }
+
+  .project-content [data-toc-level="3"] {
+    padding-inline-start: 2rem;
+  }
+
+  .project-content [data-toc-level="4"] {
+    padding-inline-start: 3rem;
+  }
+
+  .project-content [data-toc-level="5"] {
+    padding-inline-start: 4rem;
+  }
+
+  .project-content [data-toc-level="6"] {
+    padding-inline-start: 5rem;
   }
 
   /* ------------------------------------------------------------
@@ -889,12 +948,11 @@
     margin: 0;
   }
 
-  [data-print="header"] section {
+  /* Die Kurzbeschreibung als grauer Vorspann, ohne Rubrik (KAN-83). */
+  [data-print="header"] .print-summary {
     margin-block-start: 1rem;
-  }
-
-  [data-print="header"] section p {
-    margin-block-start: 0.25rem;
+    color: var(--muted-foreground);
+    font-size: var(--fs-body-lg);
   }
 
   /* Eine Linie zwischen Kopf und Beitrag, damit der Ausdruck seine beiden
@@ -927,6 +985,24 @@
   .project-content video,
   .project-content audio,
   .project-content iframe {
+    display: none;
+  }
+
+  /* Das Inhaltsverzeichnis ist auf Papier immer aufgeschlagen (KAN-83):
+     ein Blatt kann nichts aufklappen. Der Aufklappwinkel des summary
+     entfaellt, er zeigte auf dem Papier eine Bedienung an, die es dort
+     nicht gibt. Die Verweise bleiben Anker und damit im PDF anklickbar. */
+  .project-content details[data-block="toc"] {
+    display: block;
+    break-inside: avoid;
+  }
+
+  .project-content details[data-block="toc"] > summary {
+    list-style: none;
+    cursor: auto;
+  }
+
+  .project-content details[data-block="toc"] > summary::-webkit-details-marker {
     display: none;
   }
 

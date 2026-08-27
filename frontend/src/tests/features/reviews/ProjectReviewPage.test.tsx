@@ -126,6 +126,138 @@ describe("ProjectReviewPage", () => {
     expect(document.querySelector("[contenteditable]")).toBeNull()
   })
 
+  it("haengt den Druckbereich ein und bietet den Ausdruck an (KAN-83)", async () => {
+    /*
+     * Reiner Wiedereinbau des Druckwegs aus KAN-41: derselbe Umfang wie auf
+     * der Detailseite, Kopfbereich und Beitrag, ohne Redaktionelles. Je
+     * Seite gibt es genau einen Druckbereich, deshalb wird auch das
+     * geprueft.
+     */
+    const blocks: BlockResponse[] = [
+      {
+        id: "b-1",
+        type: "TEXT",
+        orderIndex: 0,
+        schemaVersion: 3,
+        content: {
+          type: "paragraph",
+          content: [{ type: "text", text: "Gerenderter Absatz." }],
+        } as unknown as BlockResponse["content"],
+      },
+    ]
+    server.use(...handlers(review({ blocks })))
+
+    renderPage()
+
+    await screen.findByRole("heading", { level: 1, name: "RoboNav" })
+    const trigger = screen.getByRole("button", { name: "Als PDF drucken" })
+    expect(trigger).toBeInTheDocument()
+    expect(document.querySelectorAll('[data-print="area"]')).toHaveLength(1)
+
+    /*
+     * Die Lage gehoert zur Zusicherung (KAN-83). Ohne Titelbild steht der
+     * Knopf in der Zeile ueber dem Titel, also in derselben Karte wie der
+     * Beitrag und vor der h1, und nicht mehr in der Aktionskarte der
+     * rechten Spalte. Rein rollenbasiert gesucht bliebe ein Umzug
+     * unbemerkt.
+     */
+    const title = screen.getByRole("heading", { level: 1, name: "RoboNav" })
+    const card = trigger.closest('[data-slot="card"]')
+    expect(card).not.toBeNull()
+    expect(card).toContainElement(title)
+    expect(
+      trigger.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+    /* Nicht mehr bei den redaktionellen Handlungen: dort steht das
+       Statusmenue, und der Ausdruck ist keine redaktionelle Handlung. */
+    const statusMenu = await screen.findByRole("button", {
+      name: new RegExp(i18n.t("review.detail.statusMenu.label")),
+    })
+    expect(card).not.toContainElement(statusMenu)
+    /* Reiner Symbolknopf wie ueberall sonst: der Name kommt aus
+       aria-label, sichtbarer Text steht nicht daran. */
+    expect(trigger).toHaveAttribute("aria-label", "Als PDF drucken")
+    expect(trigger.textContent).toBe("")
+
+    /* Ohne Titelbild steht er in der Zeile ueber dem Titel, nach rechts
+       geschoben, und schwebt nicht. Dieselbe Huelle wie mit Titelbild. */
+    expect(trigger).not.toHaveClass("absolute")
+    expect(trigger.parentElement).toHaveClass("ms-auto")
+  })
+
+  it("legt den Ausdruck bei vorhandenem Titelbild schwebend darauf", async () => {
+    /* Dasselbe Muster wie auf der Detailseite: oben rechts auf dem Bild.
+       Er steht dort allein, denn die Reviewansicht fuehrt keine Schublade
+       fuer die Projektdaten und damit keinen zweiten Knopf. */
+    server.use(
+      ...handlers(
+        review({
+          /* PUBLISHED, damit die Bildadresse ohne Token aufloest und der
+             Test nicht am Blob-Abruf haengt (§3.15). */
+          status: "PUBLISHED",
+          coverImageUrl: "/api/files/11111111-2222-4333-8444-555555555555",
+        })
+      )
+    )
+
+    const { container } = renderPage()
+
+    await screen.findByRole("heading", { level: 1, name: "RoboNav" })
+    const trigger = screen.getByRole("button", { name: "Als PDF drucken" })
+
+    /* Absolut gesetzt, der Anker ist die Karte mit relative; damit liegt er
+       oben rechts auf dem Bild. Geprueft wird die Lage ueber die Klassen und
+       ueber die gemeinsame Karte, nicht ueber die Geschwisterfolge: der
+       Knopf steht bewusst in derselben Zeile des Baums wie ohne Bild und
+       wechselt nur seine Lage, damit er beim Nachladen der Bildadresse nicht
+       ab- und wieder aufgebaut wird und dabei den Fokus verliert
+       (SC 2.4.3). */
+    expect(trigger).toHaveClass("absolute", "top-4", "right-4")
+    const image = container.querySelector("img")
+    expect(image).not.toBeNull()
+    expect(trigger.closest("[data-slot=card]")).toBe(
+      image?.closest("[data-slot=card]")
+    )
+
+    /* Und zwar aus derselben Huelle heraus wie ohne Titelbild: der Knopf
+       steht an genau einer Stelle des Baums und wechselt nur seine Lage.
+       Zwei getrennte Zweige baute React beim Nachladen der angemeldeten
+       Bildadresse um, und ein Knopf, der unter dem Fokus verschwindet, gibt
+       ihn an body zurueck (SC 2.4.3). */
+    expect(trigger.parentElement).toHaveClass("ms-auto")
+  })
+
+  it("fuehrt den Beitrag ohne sichtbare Rubrik und ohne Trennlinie", async () => {
+    /* Wie auf der Detailseite (KAN-83): die Ueberschrift bleibt sr-only
+       stehen, damit die Gliederung zwischen h1 und erster Blockueberschrift
+       eine Sprungmarke behaelt, und benennt zugleich den Abschnitt. */
+    server.use(...handlers(review()))
+
+    renderPage()
+
+    const title = await screen.findByRole("heading", {
+      level: 1,
+      name: "RoboNav",
+    })
+
+    const rubric = screen.getByRole("heading", {
+      level: 2,
+      name: i18n.t("project.detail.content"),
+    })
+    expect(rubric).toHaveClass("sr-only")
+    const region = screen.getByRole("region", {
+      name: i18n.t("project.detail.content"),
+    })
+    expect(region).toContainElement(rubric)
+
+    const summary = screen.getByText(
+      "Ein mobiler Roboter navigiert durch das HSB-Gebaeude."
+    )
+    expect(summary.nextElementSibling).toBe(region)
+    const article = title.closest("article") as HTMLElement
+    expect(article.querySelector(":scope > hr")).toBeNull()
+  })
+
   it("stellt einen unbekannten Blocktyp als Platzhalter dar, ohne Absturz", async () => {
     const blocks: BlockResponse[] = [
       {

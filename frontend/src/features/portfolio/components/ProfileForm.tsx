@@ -96,6 +96,9 @@ export function ProfileForm({
 
   const [result, setResult] = useState<SaveResult | null>(null)
   const [avatarError, setAvatarError] = useState<string | null>(null)
+  /* Der Fehlerzweig des Abbruchs steht neben dem Hinweis und nicht in der
+     Gesamtmeldung des Speicherns: er gehoert zu einer eigenen Handlung. */
+  const [cancelError, setCancelError] = useState<string | null>(null)
 
   /* Die Login-Kennung. Waehrend eines laufenden Wechsels bleibt sie die
      alte; die Wunschadresse steht allein in pendingEmail (§3.1). */
@@ -179,12 +182,16 @@ export function ProfileForm({
     setAvatarError(null)
 
     /*
-     * email geht nur mit, wenn die Adresse geaendert wurde oder ein Wechsel
-     * laeuft: im zweiten Fall bricht die aktuelle Adresse ihn ab, und genau
-     * das ist der im Contract vorgesehene Weg zurueck (§6.1). Ohne
-     * laufenden Wechsel bleibt eine reine Namensaenderung passwortfrei.
+     * email geht nur mit, wenn die Adresse tatsaechlich geaendert wurde
+     * (KAN-83). Bis dahin ging sie auch bei laufendem Wechsel mit, damit
+     * die aktuelle Adresse ihn abbricht; das ist zwar der im Contract
+     * vorgesehene Weg zurueck (§6.1), er lag hier aber als Falle: wer
+     * waehrend der Wartezeit einen Tippfehler im Vornamen korrigierte,
+     * verlor unbemerkt den Wechsel und den bereits verschickten Code. Der
+     * Weg zurueck steht seither als eigene Schaltflaeche im Hinweis unten,
+     * wo er als Handlung erkennbar ist.
      */
-    const sendEmail = emailChanged || pendingEmail !== null
+    const sendEmail = emailChanged
 
     let profileSaved = false
     let portfolioSaved = false
@@ -463,6 +470,44 @@ export function ProfileForm({
           {pendingEmail !== null && (
             <EmailChangeNotice
               pendingEmail={pendingEmail}
+              cancelPending={updateProfile.isPending}
+              onCancel={() => {
+                /*
+                 * §6.1: die aktuelle Adresse zu senden nimmt den Wechsel
+                 * zurueck. Name und Adresse gehen unveraendert mit, weil
+                 * PUT /auth/me alles oder nichts uebernimmt (§6.1, v40);
+                 * ein Passwort braucht es nicht, denn die Adresse aendert
+                 * sich dabei nicht.
+                 */
+                void (async () => {
+                  setCancelError(null)
+                  try {
+                    await updateProfile.mutateAsync({
+                      firstName: user.firstName,
+                      lastName: user.lastName,
+                      email: currentEmail,
+                    })
+                  } catch (error) {
+                    /* Ohne diesen Zweig verschluckte der Abbruch jeden
+                       Serverfehler: die Person saehe nichts, der Hinweis
+                       bliebe stehen, und es entstuende eine unbehandelte
+                       Ablehnung (Befund des frontend-reviewers). */
+                    if (!isApiError(error)) {
+                      throw error
+                    }
+                    setCancelError(
+                      t(apiErrorMessageKey(error), {
+                        defaultValue: error.message,
+                      })
+                    )
+                    return
+                  }
+                  await refreshUser()
+                  form.setValue("email", currentEmail)
+                  form.setValue("currentPassword", "")
+                  setResult(null)
+                })()
+              }}
               onConfirmed={() => {
                 /*
                  * Das Einloesen macht die Wunschadresse zur Login-Kennung
@@ -475,9 +520,18 @@ export function ProfileForm({
                 void refreshUser().then(() => {
                   form.setValue("email", pendingEmail)
                   setResult(null)
+                  setCancelError(null)
                 })
               }}
             />
+          )}
+
+          {cancelError !== null && (
+            /* role=alert: der Abbruch ist eine ausdrueckliche Handlung, ihr
+               Fehlschlag wird angesagt und nicht nur angezeigt. */
+            <Alert role="alert" variant="destructive">
+              <AlertTitle>{cancelError}</AlertTitle>
+            </Alert>
           )}
 
           <Field className="gap-1.5">

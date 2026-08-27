@@ -13,12 +13,14 @@ import { createBlockExtensions } from "@/features/project-content/blockSchema"
 import { BlockDropCursor } from "@/features/project-content/extensions/BlockDropCursor"
 import { HeadingNodeView } from "@/features/project-content/extensions/HeadingNodeView"
 import { SlashCommand } from "@/features/project-content/extensions/SlashCommand"
+import { TrailingBlock } from "@/features/project-content/extensions/TrailingBlock"
 import { AudioNodeView } from "@/features/project-content/components/nodeviews/AudioNodeView"
 import { DocumentNodeView } from "@/features/project-content/components/nodeviews/DocumentNodeView"
 import { EmbedNodeView } from "@/features/project-content/components/nodeviews/EmbedNodeView"
 import { GalleryNodeView } from "@/features/project-content/components/nodeviews/GalleryNodeView"
 import { ImageNodeView } from "@/features/project-content/components/nodeviews/ImageNodeView"
 import { MathNodeView } from "@/features/project-content/components/nodeviews/MathNodeView"
+import { TableOfContentsNodeView } from "@/features/project-content/components/nodeviews/TableOfContentsNodeView"
 import { VideoNodeView } from "@/features/project-content/components/nodeviews/VideoNodeView"
 
 /**
@@ -55,6 +57,7 @@ const NODE_VIEWS: Record<string, ComponentType<ReactNodeViewProps>> = {
   documentBlock: DocumentNodeView,
   embedBlock: EmbedNodeView,
   mathBlock: MathNodeView,
+  tableOfContents: TableOfContentsNodeView,
 }
 
 /**
@@ -100,6 +103,7 @@ function createEditorOnlyExtensions(): Extensions {
     }),
     SlashCommand,
     BlockDropCursor,
+    TrailingBlock,
   ]
 }
 

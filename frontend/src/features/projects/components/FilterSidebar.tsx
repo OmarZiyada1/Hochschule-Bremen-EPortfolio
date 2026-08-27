@@ -343,8 +343,17 @@ function FilterGroup({
                aus einer Polsterung links und rechts eine liegende Form zu
                machen. Ab zwei Ziffern wird daraus eine Pille, und das ist
                richtig so: eine Zwoelf in einem Kreis von 20px waere nicht
-               mehr lesbar. */
-            className="type-label-xs ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-pill bg-surface-brand px-1 font-bold text-surface-brand-foreground normal-case"
+               mehr lesbar.
+
+               primary statt surface-brand (KAN-83): im dunklen Modus faellt
+               surface-brand mit der Kartenflaeche zusammen, auf der die
+               Filterleiste liegt, und zwar auf denselben Rohwert; auch die
+               Schriftrolle faellt zusammen. Uebrig blieb eine fette Ziffer
+               ohne jeden Kreis. Derselbe Fehler und dieselbe Loesung wie am
+               Fortschrittsbalken der Registrierung (Review zu KAN-33).
+               primary ist die einzige Markenrolle, die in beiden Modi zur
+               Kartenflaeche Abstand haelt. */
+            className="type-label-xs ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-pill bg-primary px-1 font-bold text-primary-foreground normal-case"
           >
             <span className="sr-only">
               {t("project.list.filter.groupCount", { count })}

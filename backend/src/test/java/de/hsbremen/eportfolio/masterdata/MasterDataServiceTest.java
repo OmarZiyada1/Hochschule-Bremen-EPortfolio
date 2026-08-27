@@ -149,7 +149,7 @@ class MasterDataServiceTest {
 		when(moduleRepository.findAllByOrderByNameAsc()).thenReturn(List.of(swt));
 
 		assertThat(service.modules(null)).containsExactly(
-				new ModuleResponse(swt.getId(), "Softwaretechnik", "SWT", informatik.getId()));
+				new ModuleResponse(swt.getId(), "Softwaretechnik", "SWT", informatik.getId(), false));
 		verify(moduleRepository).findAllByOrderByNameAsc();
 		verifyNoMoreInteractions(moduleRepository);
 	}

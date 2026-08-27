@@ -70,17 +70,56 @@ describe("ProjectTableRow", () => {
   })
 
   /*
-   * Punkt 2 aus KAN-80: sieben Spalten und ein ausgeschriebener Titel
-   * ergaben eine Tabelle breiter als das Fenster. Sichtbar bleibt der
-   * Anfang, der zugaengliche Name bleibt vollstaendig.
+   * KAN-83: Jeder Texteintrag ist auf zwanzig Zeichen Breite geklemmt, aber
+   * nicht mehr geschnitten. Sichtbarer Text und Name des Links sind wieder
+   * dieselbe Zeichenkette (SC 2.5.3).
    */
-  it("kuerzt einen langen Titel und behaelt ihn als zugaenglichen Namen", () => {
+  it("klemmt einen langen Titel, ohne ihn aus dem Link zu nehmen", () => {
     const long = "Nachhaltige Mobilitaetskonzepte fuer die Innenstadt"
     renderRow(<ProjectTableRow title={long} href="/projects/1" />)
 
     const link = screen.getByRole("link", { name: long })
-    expect(link).toHaveTextContent("Nachhaltige Mobilita…")
-    expect(link).toHaveAttribute("title", long)
+    expect(link.textContent).toBe(long)
+    expect(link).toHaveClass("max-w-[20ch]", "truncate")
+  })
+
+  /*
+   * Die Klemmung gilt in jeder Spalte und nicht nur im Titel. Autor:in,
+   * Studiengang, Semester und Fach koennen die Tabelle genauso aufziehen.
+   */
+  it("klemmt auch Autor:in, Studiengang, Semester und Fach", () => {
+    renderRow(
+      <ProjectTableRow
+        title="Campus-Garten"
+        author={{
+          firstName: "Maximiliane",
+          lastName: "Beispielhausen-Wolter",
+        }}
+        studyProgram={reference({
+          name: "Internationaler Studiengang Medieninformatik",
+          abbreviation: null,
+        })}
+        semester="Wintersemester 2025/2026"
+        module={reference({
+          name: "Interaktive Systeme und Schnittstellen",
+          abbreviation: null,
+        })}
+      />
+    )
+
+    for (const full of [
+      "Maximiliane Beispielhausen-Wolter",
+      "Internationaler Studiengang Medieninformatik",
+      "Wintersemester 2025/2026",
+      "Interaktive Systeme und Schnittstellen",
+    ]) {
+      /* Genau einmal im Dokument und in voller Laenge: Es gibt keinen
+         sr-only-Zwilling mehr neben einer gekappten Anzeige, sondern nur noch
+         den einen Text, der schmaler dargestellt wird. */
+      const entry = screen.getByText(full)
+      expect(entry).toHaveClass("max-w-[20ch]", "truncate")
+      expect(entry).not.toHaveClass("sr-only")
+    }
   })
 
   /*

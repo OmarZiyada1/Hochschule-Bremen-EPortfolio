@@ -109,7 +109,7 @@ public class Top10Service {
 	 * Die oeffentliche Top-10, geordnet nach Platz (§6.1).
 	 *
 	 * <p><strong>Ohne Rechtepruefung und ohne angemeldete Person</strong>, wie
-	 * {@code ProjectReadService.publishedCardsOfAuthor}: die Abfrage liefert
+	 * {@code ProjectReadService.publishedCardsOfParticipant}: die Abfrage liefert
 	 * ausschliesslich Eintraege zu veroeffentlichten Projekten, und die darf nach
 	 * §5 jede:r lesen. Eine Sichtbarkeitsschranke haette hier nichts zu
 	 * entscheiden.

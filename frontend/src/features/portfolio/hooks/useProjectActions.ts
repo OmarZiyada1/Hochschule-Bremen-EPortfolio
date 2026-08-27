@@ -1,11 +1,17 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
-import { deleteProject, withdrawProject } from "@/api/queries/projects"
+import {
+  deleteProject,
+  leaveProject,
+  withdrawProject,
+} from "@/api/queries/projects"
 
 /**
- * Die beiden Kartenaktionen unter "My Portfolio" (KAN-69): Zurueckziehen
- * (§4.1, seit Contract v50) und Loeschen im Entwurf (§6.1). Die
- * Mutationsfunktionen kommen aus der Fabrik api/queries/projects.ts.
+ * Die Kartenaktionen unter „Mein Portfolio": Zurueckziehen (§4.1, seit
+ * Contract v50), Loeschen im Entwurf (§6.1) und seit KAN-83 das Verlassen
+ * eines fremden Projekts, an dem man nur Mitglied ist (§3.13.1, seit
+ * Contract v84). Die Mutationsfunktionen kommen aus der Fabrik
+ * api/queries/projects.ts.
  *
  * Beide Aktionen aendern den Bestand der eigenen Projektliste, deshalb wird
  * der gesamte "projects"-Ast invalidiert: das trifft die Liste jeder
@@ -31,6 +37,21 @@ export function useDeleteProject() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: deleteProject,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["projects"] }),
+  })
+}
+
+/**
+ * Die eigene Projektmitgliedschaft beenden (§3.13.1, seit Contract v84).
+ *
+ * <p>Derselbe Ast wird invalidiert wie bei den anderen beiden: das Projekt
+ * faellt aus „Mein Portfolio" heraus, und aus der Bibliothek verschwindet es
+ * ebenfalls, sofern es nicht veroeffentlicht ist.
+ */
+export function useLeaveProject() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: leaveProject,
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["projects"] }),
   })
 }

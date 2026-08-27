@@ -16,6 +16,7 @@ import { GalleryBlock } from "@/features/project-content/extensions/GalleryBlock
 import { HeadingAlignGuard } from "@/features/project-content/extensions/HeadingAlignGuard"
 import { ImageBlock } from "@/features/project-content/extensions/ImageBlock"
 import { MathBlock } from "@/features/project-content/extensions/MathBlock"
+import { TableOfContentsBlock } from "@/features/project-content/extensions/TableOfContentsBlock"
 import { VideoBlock } from "@/features/project-content/extensions/VideoBlock"
 
 /**
@@ -140,6 +141,16 @@ export function createBlockExtensions(): Extensions {
        * Editor-Schema, weil es ihn nur beim Schreiben gibt.
        */
       dropcursor: false,
+      /*
+       * Der Schlussblock kommt aus TrailingBlock und nicht aus der Fassung
+       * des StarterKits: deren Sperrliste enthaelt den Absatz fest
+       * (notAfter.concat(defaultNode)), sodass ein Beitrag, der auf einen
+       * gefuellten Absatz endet, keinen bekommt. Die Begruendung im
+       * Einzelnen steht im Kopf von extensions/TrailingBlock.ts; angemeldet
+       * wird der Ersatz im Editor-Schema, weil es ihn nur beim Schreiben
+       * gibt (KAN-83).
+       */
+      trailingNode: false,
     }),
     /*
      * TableKit meldet table, tableRow, tableHeader und tableCell gemeinsam
@@ -169,5 +180,6 @@ export function createBlockExtensions(): Extensions {
     DocumentBlock,
     EmbedBlock,
     MathBlock,
+    TableOfContentsBlock,
   ]
 }

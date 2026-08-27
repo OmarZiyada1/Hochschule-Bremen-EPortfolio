@@ -87,9 +87,10 @@ describe("AudioNodeView", () => {
     /* Nichts laedt und nichts startet von allein (SC 1.4.2). */
     expect(audio).toHaveAttribute("preload", "metadata")
 
-    /* "Beschriftung" und nicht "Bildunterschrift": an einer Tonaufnahme
-       gibt es kein Bild (Review-Hinweis). */
-    expect(screen.getByLabelText("Beschriftung")).toBeInTheDocument()
+    /* "Audiounterschrift" und nicht "Bildunterschrift": jeder Medienblock
+       benennt sein Unterschriftfeld nach seiner eigenen Art (KAN-83,
+       Nutzeransage), und an einer Tonaufnahme gibt es kein Bild. */
+    expect(screen.getByLabelText("Audiounterschrift")).toBeInTheDocument()
     expect(screen.queryByText("Hochgeladene Datei")).not.toBeInTheDocument()
     expect(
       screen.queryByRole("button", { name: "Aufnahme ersetzen" })

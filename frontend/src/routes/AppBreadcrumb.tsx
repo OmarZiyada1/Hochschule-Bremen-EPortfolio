@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next"
 import { useLocation } from "react-router-dom"
 
 import { BreadcrumbBar } from "@/components/common/BreadcrumbBar"
-import { isTruncated, truncate } from "@/lib/text"
 import { breadcrumbTrail } from "@/routes/breadcrumbs"
 import {
   BreadcrumbTitleContext,
@@ -14,8 +13,8 @@ import {
  * Rahmen um Band und Seiteninhalt (KAN-80).
  *
  * <p>Haelt den Namen der aktuellen Seite und zeichnet das Band darueber. Der
- * Pfad selbst kommt aus {@code breadcrumbTrail}; hier wird nur uebersetzt,
- * gekuerzt und dargestellt.
+ * Pfad selbst kommt aus {@code breadcrumbTrail}; hier wird nur uebersetzt und
+ * dargestellt.
  */
 export function BreadcrumbProvider({ children }: { children: ReactNode }) {
   const [title, setTitle] = useState<string | null>(null)
@@ -35,12 +34,20 @@ export function BreadcrumbProvider({ children }: { children: ReactNode }) {
 /**
  * Das Brotkrumenband der aktuellen Route.
  *
- * <p><strong>Lange Namen werden gekuerzt</strong> (KAN-80): Ein Projekttitel
+ * <p><strong>Lange Namen werden geklemmt</strong> (KAN-80): Ein Projekttitel
  * mit sechzig Zeichen zwang das Band sonst in die zweite Zeile und schob auf
- * schmalen Fenstern die Seite waagerecht. Sichtbar stehen zwanzig Zeichen und
- * ein Auslassungszeichen, vorgelesen und im {@code title} der volle Text.
- * Betroffen sind allein die Namen von Sachen ({@code truncatable}), nicht die
- * Beschriftungen aus dem Navigationsbaum.
+ * schmalen Fenstern die Seite waagerecht. Betroffen sind allein die Namen von
+ * Sachen ({@code truncatable}), nicht die Beschriftungen aus dem
+ * Navigationsbaum.
+ *
+ * <p><strong>Geklemmt wird nicht mehr hier, sondern in der
+ * Darstellung</strong> (KAN-83). Bis dahin kuerzte diese Stelle den Text hart
+ * und reichte den vollen ueber {@code fullLabel} nach; sichtbares Label und
+ * zugaenglicher Name waren dadurch verschiedene Zeichenketten (SC 2.5.3
+ * „Label in Name", Stufe A), und der volle Titel liess sich weder markieren
+ * noch mit der Browsersuche finden. Das Band bekommt den vollen Text und
+ * klemmt ihn per CSS, mit derselben Regel wie die Tabellen
+ * ({@code components/common/TruncatedText.tsx}).
  *
  * <p>Kein Band auf der Startseite: ein Pfad mit einer einzigen Ebene sagt
  * nichts, was die markierte Hauptnavigation nicht schon sagt. Ebenso auf einer
@@ -58,15 +65,11 @@ function AppBreadcrumb({ title }: { title: string | null }) {
 
   return (
     <BreadcrumbBar
-      items={trail.map((crumb) => {
-        const label = crumb.label ?? t(crumb.labelKey ?? "")
-        const cut = crumb.truncatable === true && isTruncated(label)
-        return {
-          label: cut ? truncate(label) : label,
-          fullLabel: cut ? label : undefined,
-          to: crumb.to,
-        }
-      })}
+      items={trail.map((crumb) => ({
+        label: crumb.label ?? t(crumb.labelKey ?? ""),
+        truncatable: crumb.truncatable,
+        to: crumb.to,
+      }))}
     />
   )
 }

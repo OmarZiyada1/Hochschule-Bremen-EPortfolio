@@ -136,15 +136,28 @@ class MasterDataIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("Module eines Studiengangs kommen nach name sortiert")
+	@DisplayName("Module eines Studiengangs kommen nach name sortiert, samt Sammelmodul")
 	void modulesAreSorted() throws Exception {
 		UUID informatik = studyProgramId("FK4", "Informatik");
 
 		List<ModuleResponse> response = fetch(
 				get("/api/modules").param("studyProgram", informatik.toString()), ModuleResponse.class);
 
+		/*
+		 * Das Sammelmodul steht seit Contract v84 in jeder Modulliste (§3.9) und
+		 * sortiert sich als gewoehnliche Zeile nach Name ein. Ans Listenende
+		 * stellt es die Oberflaeche, dafuer traegt die Antwort das Merkmal
+		 * collective; der Server sortiert es bewusst nicht um, sonst haette die
+		 * Zusage „nach name sortiert“ eine stille Ausnahme.
+		 */
 		assertThat(response).extracting(ModuleResponse::name)
-				.containsExactly("Grundlagen der Programmierung", "Softwaretechnik");
+				.containsExactly("Grundlagen der Programmierung",
+						"Module aus dem Studiengang Informatik",
+						"Softwaretechnik");
+
+		assertThat(response).filteredOn(ModuleResponse::collective)
+				.extracting(ModuleResponse::name)
+				.containsExactly("Module aus dem Studiengang Informatik");
 	}
 
 	// --- Filter ------------------------------------------------------------

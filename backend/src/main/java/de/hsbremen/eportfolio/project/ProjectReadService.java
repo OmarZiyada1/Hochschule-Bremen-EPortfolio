@@ -220,7 +220,10 @@ public class ProjectReadService {
 		add(parts, filter.author(), ProjectSpecifications::author);
 		addAll(parts, filter.semester(), ProjectSpecifications::semester);
 		add(parts, emptyAsNull(filter.q()), ProjectSpecifications::searchText);
-		add(parts, editorId(user, filter.editor()), ProjectSpecifications::editor);
+		add(parts, userRef(user, filter.editor(), "editor", ProjectFilterRequest.EDITOR_ME),
+				ProjectSpecifications::editor);
+		add(parts, userRef(user, filter.participant(), "participant",
+				ProjectFilterRequest.PARTICIPANT_ME), ProjectSpecifications::participant);
 
 		return parts.stream().reduce(Specification::and).orElseThrow();
 	}
@@ -254,8 +257,10 @@ public class ProjectReadService {
 	}
 
 	/**
-	 * Loest den Parameter {@code editor} auf: entweder das Wort {@code me} oder
-	 * eine UUID (§6.1).
+	 * Loest einen Personenfilter auf: entweder das Wort {@code me} oder eine UUID
+	 * (§6.1). Benutzt von {@code editor} und, seit Contract v84, von
+	 * {@code participant}. Beide tragen dieselbe Doppelform, und zwei getrennte
+	 * Aufloesungen liefen mit der Zeit auseinander.
 	 *
 	 * <p>{@code me} ohne Anmeldung ergibt <strong>401</strong> und keine leere
 	 * Liste: „meine Reviews" ist ohne Identitaet nicht beantwortbar, und eine
@@ -268,18 +273,21 @@ public class ProjectReadService {
 	 * unter „angemeldet zusaetzlich", was hier als Hinweis auf seinen
 	 * Verwendungszweck gelesen wird und nicht als Verbot: ihn fuer PUBLIC zu
 	 * sperren, wuerde eine oeffentliche Betreuungsuebersicht unmoeglich machen,
-	 * ohne irgendetwas zu schuetzen. Dasselbe gilt fuer {@code status} und
-	 * {@code author}.
+	 * ohne irgendetwas zu schuetzen. Dasselbe gilt fuer {@code status},
+	 * {@code author} und {@code participant}: eine konkrete ID darf auch PUBLIC
+	 * angeben und sieht davon nur, was veroeffentlicht ist.
 	 */
-	private UUID editorId(AuthenticatedUser user, String editor) {
-		String value = emptyAsNull(editor);
+	private UUID userRef(AuthenticatedUser user, String raw, String parameterName,
+			String selfKeyword) {
+		String value = emptyAsNull(raw);
 		if (value == null) {
 			return null;
 		}
-		if (ProjectFilterRequest.EDITOR_ME.equalsIgnoreCase(value)) {
+		if (selfKeyword.equalsIgnoreCase(value)) {
 			if (!isLoggedIn(user)) {
-				throw new AuthenticationCredentialsNotFoundException(
-						"Der Filter \"editor=me\" setzt eine Anmeldung voraus.");
+				throw new AuthenticationCredentialsNotFoundException("Der Filter \""
+						+ parameterName + "=" + selfKeyword
+						+ "\" setzt eine Anmeldung voraus.");
 			}
 			return user.getId();
 		}
@@ -288,8 +296,9 @@ public class ProjectReadService {
 		} catch (IllegalArgumentException ex) {
 			// Bewusst ohne den eingeschickten Wert in der Meldung: was
 			// ungeprueft hereinkommt, geht nicht ungeprueft wieder hinaus.
-			throw new ValidationException(ErrorCodes.VALIDATION_FAILED,
-					"Der Parameter \"editor\" erwartet eine UUID oder das Wort \"me\".");
+			throw new ValidationException(ErrorCodes.VALIDATION_FAILED, "Der Parameter \""
+					+ parameterName + "\" erwartet eine UUID oder das Wort \"" + selfKeyword
+					+ "\".");
 		}
 	}
 
@@ -343,7 +352,7 @@ public class ProjectReadService {
 	 * zeigen dieselbe Projektkachel wie die Liste. Baute das Top-10-Modul sie
 	 * selbst, entstuende die Sammelabfrage fuer Tags und Reaktionen ein zweites
 	 * Mal oder, was wahrscheinlicher ist, gar nicht. Dieselbe Ueberlegung wie bei
-	 * {@link #publishedCardsOfAuthor}.
+	 * {@link #publishedCardsOfParticipant}.
 	 *
 	 * <p><strong>Ohne Rechtepruefung.</strong> Diese Methode bildet ab, was ihr
 	 * gegeben wird; welche Projekte das sein duerfen, entscheidet der Aufrufer.
@@ -509,6 +518,7 @@ public class ProjectReadService {
 				project,
 				sortedTags(project),
 				reactionRepository.countByProjectId(projectId),
+				hasReacted(projectId, isLoggedIn(user) ? user.getId() : null),
 				members(projectId),
 				blocks(projectId),
 				editorsVisible ? editors(project) : null,
@@ -545,17 +555,20 @@ public class ProjectReadService {
 	 * zweite Abfrage. Ohne {@code AuthenticatedUser}, damit sie sich nicht
 	 * versehentlich als allgemeiner Lesepfad benutzen laesst.
 	 *
-	 * @param project das Projekt, dessen Zuweisung gerade abgegeben wurde,
-	 *                bereits geladen und vom Aufrufer geprueft
+	 * @param project  das Projekt, dessen Zuweisung gerade abgegeben wurde,
+	 *                 bereits geladen und vom Aufrufer geprueft
+	 * @param viewerId ID der abgebenden Person, allein fuer {@code hasReacted}
+	 *                 (§3.10); {@code null} ergibt {@code false}
 	 */
 	@Transactional(readOnly = true)
-	ProjectDetailResponse detailAfterOwnResignation(Project project) {
+	ProjectDetailResponse detailAfterOwnResignation(Project project, UUID viewerId) {
 		UUID projectId = project.getId();
 
 		return ProjectDetailResponse.from(
 				project,
 				sortedTags(project),
 				reactionRepository.countByProjectId(projectId),
+				hasReacted(projectId, viewerId),
 				members(projectId),
 				blocks(projectId),
 				editors(project),
@@ -611,8 +624,30 @@ public class ProjectReadService {
 	// ------------------------------------------------------------------
 
 	/**
+	 * Ob die lesende Person an diesem Projekt bereits reagiert hat (§3.10, seit
+	 * Contract v84).
+	 *
+	 * <p>Ohne Anmeldung ist die Antwort {@code false} und es faellt keine Abfrage
+	 * an: PUBLIC hat keine Identitaet, zu der es eine Reaktion geben koennte.
+	 *
+	 * <p>Die Kachelliste bekommt das Feld bewusst nicht ({@code ProjectCardResponse}):
+	 * sie zeigt eine Zahl und kein Bedienelement, und eine Mengenabfrage je Seite
+	 * belastete den Abfragehaushalt der Liste, ohne dass jemand etwas druecken
+	 * koennte.
+	 */
+	private boolean hasReacted(UUID projectId, UUID viewerId) {
+		return viewerId != null
+				&& reactionRepository.existsByProjectIdAndUserId(projectId, viewerId);
+	}
+
+	/**
 	 * Die veroeffentlichten Projekte einer Person als Kacheln, fuer
 	 * {@code GET /api/portfolios/{userId}} (§3.2).
+	 *
+	 * <p><strong>Beteiligung, nicht nur Autorschaft</strong> (Contract v84,
+	 * KAN-83): enthalten ist auch, woran die Person als Projektmitglied
+	 * mitgewirkt hat. Bis v83 war das ausgeschlossen, siehe die Begruendung an
+	 * {@code ProjectRepository.findByParticipationAndStatus}.
 	 *
 	 * <p><strong>Warum diese Methode hier steht und nicht im Portfolio-Modul:</strong>
 	 * die Abbildung auf {@link ProjectCardResponse} holt Tags und Reaktionszahlen
@@ -629,11 +664,11 @@ public class ProjectReadService {
 	 * <p><strong>Ohne Paginierung</strong>, weil §6.1 fuer das Profil eine
 	 * schlichte Liste fuehrt und kein Seitenformat nach §6.6.
 	 *
-	 * @param authorId ID der Person, deren Profil abgerufen wird
+	 * @param userId ID der Person, deren Profil abgerufen wird
 	 */
-	public List<ProjectCardResponse> publishedCardsOfAuthor(UUID authorId) {
-		return cards(projectRepository.findByAuthorIdAndStatusOrderByPublishedAtDescIdAsc(
-				authorId, ProjectStatus.PUBLISHED));
+	public List<ProjectCardResponse> publishedCardsOfParticipant(UUID userId) {
+		return cards(projectRepository.findByParticipationAndStatus(
+				userId, ProjectStatus.PUBLISHED));
 	}
 
 	// ------------------------------------------------------------------

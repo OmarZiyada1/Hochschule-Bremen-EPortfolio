@@ -2,6 +2,7 @@ package de.hsbremen.eportfolio.masterdata;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -459,6 +460,131 @@ class MasterDataAdminIntegrationTest {
 
 			assertThat(moduleRepository.findById(moduleId)).isEmpty();
 			assertThat(studyProgramRepository.findById(programId)).isEmpty();
+		}
+
+		@Test
+		@DisplayName("Ein neuer Studiengang bekommt sein Sammelmodul mit (§3.9, v84)")
+		void createBringsCollectiveModule() throws Exception {
+			UUID facultyId = createdId(FACULTIES,
+					Map.of("name", "Fakultaet " + marker, "abbreviation", "FC" + marker));
+			UUID programId = createdId(STUDY_PROGRAMS, Map.of("name", "Bionik " + marker,
+					"abbreviation", "BNX", "facultyId", facultyId.toString()));
+
+			/*
+			 * Es entsteht als Nebenwirkung und nicht von Hand: ein Studiengang
+			 * ohne Auffangzeile liesse genau das Loch zurueck, das der Punkt
+			 * schliessen soll, und gemerkt haette es niemand.
+			 */
+			Module collective = moduleRepository
+					.findByStudyProgramIdAndCollectiveTrue(programId)
+					.orElseThrow();
+			assertThat(collective.getName())
+					.isEqualTo("Module aus dem Studiengang Bionik " + marker);
+			assertThat(collective.getAbbreviation()).isEqualTo("BNX-ALLG");
+
+			// Und die oeffentliche Modulliste weist es aus, damit die Oberflaeche
+			// es ans Listenende stellen kann.
+			mockMvc.perform(get("/api/modules")
+							.param("studyProgram", programId.toString()))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.length()").value(1))
+					.andExpect(jsonPath("$[0].collective").value(true));
+		}
+
+		@Test
+		@DisplayName("Das Sammelmodul allein sperrt das Loeschen nicht und faellt mit "
+				+ "dem Studiengang (§3.9, v84)")
+		void collectiveModuleDoesNotBlockDeletion() throws Exception {
+			UUID facultyId = createdId(FACULTIES,
+					Map.of("name", "Fakultaet " + marker, "abbreviation", "FD" + marker));
+			UUID programId = createdId(STUDY_PROGRAMS, Map.of("name", "Kurzlebig " + marker,
+					"abbreviation", "KLX", "facultyId", facultyId.toString()));
+			UUID collectiveId = moduleRepository
+					.findByStudyProgramIdAndCollectiveTrue(programId)
+					.orElseThrow()
+					.getId();
+
+			/*
+			 * Ohne diese Ausnahme waere vom Tag der Einfuehrung an kein
+			 * Studiengang mehr loeschbar, weil jeder ein Modul traegt.
+			 */
+			mockMvc.perform(as(admin, delete(STUDY_PROGRAMS + "/" + programId)))
+					.andExpect(status().isNoContent());
+
+			assertThat(moduleRepository.findById(collectiveId)).isEmpty();
+			assertThat(studyProgramRepository.findById(programId)).isEmpty();
+		}
+
+		@Test
+		@DisplayName("Das Sammelmodul laesst sich nicht einzeln loeschen (409)")
+		void collectiveModuleCannotBeDeletedAlone() throws Exception {
+			UUID facultyId = createdId(FACULTIES,
+					Map.of("name", "Fakultaet " + marker, "abbreviation", "FE" + marker));
+			UUID programId = createdId(STUDY_PROGRAMS, Map.of("name", "Bestaendig " + marker,
+					"abbreviation", "BSX", "facultyId", facultyId.toString()));
+			UUID collectiveId = moduleRepository
+					.findByStudyProgramIdAndCollectiveTrue(programId)
+					.orElseThrow()
+					.getId();
+
+			mockMvc.perform(as(admin, delete(MODULES + "/" + collectiveId)))
+					.andExpect(status().isConflict())
+					.andExpect(jsonPath("$.errorCode").value("RESOURCE_IN_USE"));
+
+			assertThat(moduleRepository.findById(collectiveId)).isPresent();
+		}
+
+		@Test
+		@DisplayName("Das Sammelmodul laesst sich umbenennen, aber nicht umhaengen (400)")
+		void collectiveModuleStaysWithItsProgram() throws Exception {
+			UUID facultyId = createdId(FACULTIES,
+					Map.of("name", "Fakultaet " + marker, "abbreviation", "FF" + marker));
+			UUID programId = createdId(STUDY_PROGRAMS, Map.of("name", "Erster " + marker,
+					"abbreviation", "ER1", "facultyId", facultyId.toString()));
+			UUID otherProgramId = createdId(STUDY_PROGRAMS, Map.of("name", "Zweiter " + marker,
+					"abbreviation", "ZW1", "facultyId", facultyId.toString()));
+			UUID collectiveId = moduleRepository
+					.findByStudyProgramIdAndCollectiveTrue(programId)
+					.orElseThrow()
+					.getId();
+
+			// Der Name ist freier Text und bleibt aenderbar.
+			mockMvc.perform(as(admin, patch(MODULES + "/" + collectiveId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(json(Map.of("name", "Sonstige Module " + marker)))))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.collective").value(true));
+
+			/*
+			 * Und ebenso, wenn der eigene Studiengang mitgeschickt wird: genau das
+			 * tut die Administrationsseite, sie sendet beim Aendern eines Moduls
+			 * immer alle drei Felder. Eine Sperre auf das blosse Vorhandensein des
+			 * Feldes liess jedes Umbenennen mit 400 scheitern, obwohl §3.9 es
+			 * erlaubt (Befund des code-reviewers).
+			 */
+			mockMvc.perform(as(admin, patch(MODULES + "/" + collectiveId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(json(Map.of(
+									"name", "Auffangmodul " + marker,
+									"studyProgramId", programId.toString())))))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.name").value("Auffangmodul " + marker))
+					.andExpect(jsonPath("$.collective").value(true));
+
+			/*
+			 * Umhaengen dagegen liesse den einen Studiengang ohne Auffangzeile
+			 * zurueck und braechte dem anderen eine zweite; der partielle Index
+			 * uq_module_collective wuerde das mit einem Datenbankfehler
+			 * beantworten statt mit einer Meldung.
+			 */
+			mockMvc.perform(as(admin, patch(MODULES + "/" + collectiveId)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(json(Map.of("studyProgramId", otherProgramId.toString())))))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
+
+			assertThat(moduleRepository.findById(collectiveId).orElseThrow()
+					.getStudyProgram().getId()).isEqualTo(programId);
 		}
 
 		@Test

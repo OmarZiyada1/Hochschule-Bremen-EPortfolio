@@ -159,7 +159,7 @@ export function GalleryNodeView({
                   <Input
                     id={`${fieldId}-caption`}
                     value={attrs.caption ?? ""}
-                    placeholder={t("projectContent.image.captionPlaceholder")}
+                    placeholder={t("projectContent.gallery.captionPlaceholder")}
                     title={t("projectContent.gallery.caption")}
                     className="-mx-1 h-7 w-[calc(100%+0.5rem)] border-transparent px-1 py-0 shadow-none dark:bg-transparent"
                     onChange={(event) =>

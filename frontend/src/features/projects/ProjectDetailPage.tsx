@@ -3,9 +3,8 @@ import {
   FileTextIcon,
   InfoIcon,
   LockIcon,
-  PrinterIcon,
 } from "lucide-react"
-import { useState } from "react"
+import { useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 
@@ -27,14 +26,14 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ViewModeSwitch } from "@/features/project-content/components/ViewModeSwitch"
 import { useProjectFileUrls } from "@/features/project-content/hooks/useProjectFileUrls"
 import { useFileUrl } from "@/api/useFileUrl"
+import { PrintTrigger } from "@/features/project-content/print/PrintTrigger"
 import { ProjectPrintView } from "@/features/project-content/print/ProjectPrintView"
 import { usePrintProject } from "@/features/project-content/print/usePrintProject"
 import { ProjectContent } from "@/features/project-content/renderer/ProjectContent"
 import { CommentPanel } from "@/components/common/CommentPanel"
-import { ProjectMetaSidebar } from "@/features/projects/components/ProjectMetaSidebar"
+import { ProjectInfoSection } from "@/components/common/ProjectInfoSection"
 import { ReactionPanel } from "@/features/projects/components/ReactionPanel"
 import { useProjectDetail } from "@/features/projects/hooks/useProjectDetail"
-import { fullNameOf } from "@/lib/name"
 import { useBreadcrumbTitle } from "@/routes/useBreadcrumb"
 import { cn } from "@/lib/utils"
 
@@ -60,6 +59,23 @@ import { cn } from "@/lib/utils"
  * <p><strong>Genau eine h1</strong>, der Projekttitel. Der Renderer gibt nie
  * eine h1 aus, Blockueberschriften stehen auf Ebene 2 und 3 (§2.5); ohne
  * diese Wurzel begaenne die Gliederung bei h2 (SC 1.3.1).
+ *
+ * <p><strong>Die Ueberschrift ueber dem Beitrag steht nur fuer
+ * Hilfsmittel</strong> (KAN-83, Nutzerentscheidung). Sichtbar gehen
+ * Projekttitel, Kurzbeschreibung und Beitrag ohne Rubrik und ohne
+ * Trennlinie ineinander ueber. Im Dokument bleibt die Ueberschrift
+ * trotzdem stehen: der Beitrag ist der Hauptteil der Seite, und ohne sie
+ * faende die Ueberschriftenliste eines Screenreaders zwischen der h1 und
+ * der ersten Blockueberschrift keine Sprungmarke (SC 1.3.1, SC 2.4.6).
+ * Dasselbe Mittel benutzt die Kurzbeschreibung im Editor
+ * ({@code EditorIntro}, sr-only-Label).
+ *
+ * <p>Sie benennt zugleich das {@code section} darum ueber
+ * {@code aria-labelledby}. Eine Ueberschrift <em>in</em> einem Abschnitt
+ * benennt ihn naemlich nicht: ohne {@code aria-label} oder
+ * {@code aria-labelledby} war das {@code section} auch vorher schon kein
+ * Landmark und fiel aus der Landmark-Liste. Der Name kostet nichts und
+ * macht den Sprungpunkt echt.
  *
  * <p><strong>Die Statusanzeige haengt an statusHistory.</strong>
  * Seit Contract v55 liefert der Server {@code editors} bei einem
@@ -111,6 +127,10 @@ export default function ProjectDetailPage() {
   /* Nur schmal gebraucht: ab lg steht das Panel dauerhaft daneben, und die
      Schublade wird dann gar nicht erst geoeffnet. */
   const [infoOpen, setInfoOpen] = useState(false)
+
+  /* Der Name des Beitragsabschnitts. Er zeigt auf die sr-only-Ueberschrift
+     darin, damit der Abschnitt ein benanntes Landmark bleibt (Javadoc oben). */
+  const contentHeadingId = useId()
 
   /* Der Ausdruck (KAN-41): clientseitig aus dem Read-Only-Renderer, ohne
      Endpoint und ohne zusaetzliches Paket. */
@@ -317,28 +337,30 @@ export default function ProjectDetailPage() {
                     </h1>
                   </div>
 
-                  <hr />
-
+                  {/* Die Kurzbeschreibung steht als grauer Vorspann direkt
+                      unter dem Titel, ohne Ueberschrift (KAN-83). „Abstract"
+                      ist etwas anderes: den schreibt die Autor:in selbst als
+                      Inhaltsblock. */}
                   {data.summary && (
-                    <section className="flex flex-col gap-3">
-                      <h2 className="type-h2">
-                        {t("project.detail.abstract")}
-                      </h2>
-                      <p className="type-body-lg text-foreground">
-                        {data.summary}
-                      </p>
-                    </section>
+                    <p className="type-body-lg text-muted-foreground">
+                      {data.summary}
+                    </p>
                   )}
 
-                  {/* Redaktionshinweis nach dem Template. Er nennt Studiengang und
-                  Semester und, sobald der Server die Redaktion mitliefert,
-                  auch sie (§3.3, seit Contract v55). Fehlt eine der Angaben,
-                  entfaellt der jeweilige Satzteil, statt eine Luecke zu
-                  behaupten; ohne jede Angabe entfaellt der Hinweis ganz. */}
-                  <EditorialNote project={data} />
-
-                  <section className="flex flex-col gap-3">
-                    <h2 className="type-h2">{t("project.detail.content")}</h2>
+                  {/* Kein Trennstrich und keine sichtbare Rubrik mehr
+                      (KAN-83): der Beitrag schliesst unmittelbar an die
+                      Kurzbeschreibung an. Die Ueberschrift bleibt sr-only
+                      stehen und benennt den Abschnitt; warum, steht im
+                      Javadoc oben. Auf dem Papier bleibt die Trennung
+                      dagegen erhalten, dort trennt sie Kopfbereich und
+                      Beitrag (project-content.css). */}
+                  <section
+                    aria-labelledby={contentHeadingId}
+                    className="flex flex-col gap-3"
+                  >
+                    <h2 id={contentHeadingId} className="sr-only">
+                      {t("project.detail.content")}
+                    </h2>
                     {/* Ein frischer DRAFT hat keine Bloecke (§3.3). Beteiligte
                     sehen solche Projekte hier, und eine Ueberschrift ueber
                     nichts ist eine leere Flaeche, kein Zustand. */}
@@ -381,6 +403,14 @@ export default function ProjectDetailPage() {
               die Schublade. */}
             <Card className="hidden [--card-spacing:--spacing(10)] lg:block">
               <CardContent>
+                {/* „Projektdaten" benennt die ganze Nebenspalte und nicht
+                    den Aufklapper darin. Beide Namen stehen nebeneinander,
+                    ohne sich zu widersprechen: das aside ist die
+                    ergaenzende Landmarke, „Projektinformationen" die
+                    Ueberschrift eines Kastens darin, und beide erscheinen
+                    in getrennten Listen der Hilfsmittel. Dieselbe Form
+                    haben in dieser Spalte laengst die Reaktionen und die
+                    Kommentare (section mit eigenem Namen). */}
                 <aside
                   aria-label={t("project.detail.meta.label")}
                   className="flex flex-col gap-6"
@@ -495,15 +525,52 @@ function ProjectInfoPanel({ project }: { project: ProjectDetailResponse }) {
       )}
       {project.id !== undefined && (
         <>
+          {/* key an der Projekt-ID: die Route rendert bei einem Wechsel
+              dieselbe Instanz weiter, und der Ausgangswert hasReacted wird
+              nur beim ersten Rendern gelesen. Ohne den key behauptete das
+              Symbol fuer das neue Projekt, was fuer das alte galt (Befund
+              des frontend-reviewers). */}
           <ReactionPanel
+            key={project.id}
             projectId={project.id}
             reactionCount={project.reactionCount}
+            hasReacted={project.hasReacted}
             status={project.status}
           />
           <hr />
         </>
       )}
-      <ProjectMetaSidebar project={project} />
+      {/*
+       * Die Projektinformationen sind zu- und aufklappbar wie im Editor und
+       * im Review-Modus (KAN-83, gemeldet aus der Sicht Studierender): wer
+       * ein eingereichtes Projekt oeffnet, landet auf dieser Seite und nicht
+       * im Editor, denn Stift und Umschalter gibt es nur in DRAFT und
+       * REVISION und die Review-Seite ist rollengesperrt. Bis dahin stand
+       * hier die nackte ProjectMetaSidebar, und die lange Liste liess sich
+       * nicht wegklappen, obwohl der Kommentarkasten unmittelbar darunter
+       * es konnte.
+       *
+       * <p>Aufgeklappt als Vorgabe: auf dieser Seite sind die Angaben Teil
+       * der Auskunft ueber das Projekt und keine Nachschlagesache wie im
+       * Review-Modus. Der Anblick bleibt damit derselbe wie zuvor, nur laesst
+       * er sich jetzt einklappen.
+       *
+       * <p><strong>ProjectInfoSection allein und nicht ProjectSidePanels.</strong>
+       * Das Akkordeon dort ist eine Aussage ueber ein <em>Paar</em>: hoechstens
+       * einer der beiden Kaesten steht offen. Hier stehen zwischen den beiden
+       * der Umschalter und die Reaktionen, und der Kommentarkasten bleibt
+       * bewusst offen (siehe unten), weil diese Seite fuer die Autor:in eines
+       * eingereichten Projekts der einzige Ort mit ihren Aenderungswuenschen
+       * ist. Ausserdem haengt er hier zusaetzlich an der Anmeldung; diese
+       * Bedingung in ProjectSidePanels hineinzureichen hiesse, eine Regel zu
+       * fuehren, die nur einer von drei Verwendungsstellen gehoert.
+       *
+       * <p>Zwei Instanzen, zwei Zustaende: die Karte ab lg und die Schublade
+       * darunter fuehren je einen eigenen Aufklapper. Das ist gewollt, denn
+       * sichtbar ist immer nur eine von beiden, und ein geteilter Zustand
+       * verknuepfte zwei Flaechen, die einander nie begegnen.
+       */}
+      <ProjectInfoSection project={project} defaultOpen />
 
       {/*
        * Die Kommentarspalte gehoert auch hierher (Nacharbeit an KAN-37).
@@ -573,110 +640,5 @@ function InfoTrigger({
     >
       <InfoIcon aria-hidden="true" />
     </Button>
-  )
-}
-
-/**
- * Der Knopf, der das Projekt ausdruckt (KAN-41).
- *
- * <p>Rund und mit Symbol, wie im Prototyp verabredet, und in jeder Breite
- * sichtbar: der Ausdruck ist keine Beigabe der schmalen Ansicht. Auf dem
- * Titelbild traegt er dieselbe gedeckte Flaeche wie der Knopf gegenueber,
- * damit er auf jedem Foto sichtbar bleibt (SC 1.4.11); mit 2rem liegt er
- * ueber dem Mindestmass aus SC 2.5.8.
- *
- * <p>Der zugaengliche Name sagt, was geschieht, und nicht nur „PDF": ein
- * Symbol ohne Text braucht ihn, und „PDF" allein waere fuer sich genommen
- * keine Handlung (SC 2.4.6).
- *
- * <p><strong>Waehrend der Vorbereitung meldet er {@code aria-disabled} und
- * nicht {@code disabled}</strong>, wie die Ausrichtung im
- * {@code AlignMenu}: eine Schaltflaeche, die im Augenblick des Klicks
- * {@code disabled} wird, verliert den Fokus an den Seitenanfang
- * (SC 2.4.3). Ein zweites Ausloesen faengt der Handler ab, damit kein
- * zweiter Druckdialog aufgeht.
- */
-function PrintTrigger({
-  onPrint,
-  busy,
-  floating = false,
-}: {
-  onPrint: () => void
-  busy: boolean
-  floating?: boolean
-}) {
-  const { t } = useTranslation()
-
-  return (
-    <Button
-      type="button"
-      variant="secondary"
-      size="icon"
-      onClick={(event) => {
-        if (busy) {
-          event.preventDefault()
-          return
-        }
-        onPrint()
-      }}
-      aria-disabled={busy}
-      aria-label={t("projectContent.print.actionLabel")}
-      className={cn(
-        "rounded-full",
-        busy && "opacity-50",
-        floating ? "absolute top-4 right-4 z-10 shadow-md" : undefined
-      )}
-    >
-      <PrinterIcon aria-hidden="true" />
-    </Button>
-  )
-}
-
-/**
- * Der Redaktionshinweis unter dem Abstract (Figma-Knoten "Quote").
- *
- * <p>Er entsteht aus drei Angaben, von denen jede fehlen darf: Studiengang,
- * Semester und Redaktion. Der Text wird deshalb nicht aus Bruchstuecken
- * zusammengesetzt, sondern je Fall als ganzer Satz uebersetzt; nur so bleibt
- * er in beiden Sprachen grammatisch richtig.
- */
-function EditorialNote({ project }: { project: ProjectDetailResponse }) {
-  const { t } = useTranslation()
-
-  const studyProgram = project.studyProgram?.name
-  const semester = project.semester?.name
-  const editors = (project.editors ?? [])
-    .map((editor) =>
-      fullNameOf({
-        firstName: editor.firstName,
-        lastName: editor.lastName,
-      })
-    )
-    .filter((name) => name !== "")
-
-  if (studyProgram === undefined && semester === undefined) {
-    return null
-  }
-
-  const setting =
-    studyProgram !== undefined && semester !== undefined
-      ? t("project.detail.editorial.setting", { studyProgram, semester })
-      : studyProgram !== undefined
-        ? t("project.detail.editorial.settingStudyProgram", { studyProgram })
-        : t("project.detail.editorial.settingSemester", { semester })
-
-  const note =
-    editors.length > 0
-      ? t("project.detail.editorial.withEditors", {
-          setting,
-          editors: editors.join(", "),
-          count: editors.length,
-        })
-      : t("project.detail.editorial.plain", { setting })
-
-  return (
-    <blockquote className="border-l-2 border-primary pl-4">
-      <p className="type-body-sm text-muted-foreground italic">{note}</p>
-    </blockquote>
   )
 }

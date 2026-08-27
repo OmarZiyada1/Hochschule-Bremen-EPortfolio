@@ -864,7 +864,7 @@ export interface paths {
     post?: never
     /**
      * Studiengang loeschen
-     * @description Gesperrt, solange noch Module oder Projekte darauf verweisen (409).
+     * @description Gesperrt, solange noch Fachmodule oder Projekte darauf verweisen (409). Das Sammelmodul des Studiengangs zaehlt dabei nicht mit und wird mitgeloescht (§3.9, seit Contract v84); verweist ein Projekt darauf, bleibt es bei 409.
      */
     delete: operations["deleteStudyProgram"]
     options?: never
@@ -912,14 +912,14 @@ export interface paths {
     post?: never
     /**
      * Modul loeschen
-     * @description Gesperrt, solange noch Projekte darauf verweisen (409).
+     * @description Gesperrt, solange noch Projekte darauf verweisen (409). Das Sammelmodul eines Studiengangs laesst sich gar nicht einzeln loeschen und faellt mit seinem Studiengang (§3.9, seit Contract v84).
      */
     delete: operations["deleteModule"]
     options?: never
     head?: never
     /**
      * Modul aendern
-     * @description Alle drei Felder sind optional; was fehlt, bleibt stehen. Eine leere Zeichenkette in "abbreviation" loescht die Kurzform.
+     * @description Alle drei Felder sind optional; was fehlt, bleibt stehen. Eine leere Zeichenkette in "abbreviation" loescht die Kurzform. Das Sammelmodul (collective) laesst sich umbenennen, aber nicht umhaengen (§3.9).
      */
     patch: operations["updateModule"]
     trace?: never
@@ -1129,7 +1129,7 @@ export interface paths {
     }
     /**
      * Oeffentliches Profil lesen
-     * @description Person, Biografie, Avatar und die veroeffentlichten Projekte dieser Person (§6.1). Frei zugaenglich, weil §5 veroeffentlichte Inhalte fuer alle lesbar macht. Die Antwort enthaelt die private E-Mail als Kontaktweg (§3.2), niemals die HSB-Adresse (§3.1). Aufgefuehrt werden ausschliesslich Projekte im Status PUBLISHED, deren Autor:in diese Person ist; eine blosse Mitgliedschaft am Projekt genuegt nicht.
+     * @description Person, Biografie, Avatar und die veroeffentlichten Projekte dieser Person (§6.1). Frei zugaenglich, weil §5 veroeffentlichte Inhalte fuer alle lesbar macht. Die Antwort enthaelt die private E-Mail als Kontaktweg (§3.2), niemals die HSB-Adresse (§3.1). Aufgefuehrt werden ausschliesslich Projekte im Status PUBLISHED, an denen diese Person beteiligt ist: als Autor:in oder als Projektmitglied (§3.13). Seit Contract v84 zaehlt die Mitgliedschaft mit; bis v83 tat sie es nicht.
      */
     get: operations["publicProfile"]
     put?: never
@@ -1260,6 +1260,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/projects/{projectId}/members/me": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Eigene Projektmitgliedschaft beenden
+     * @description Traegt die anfragende Person aus den Projektmitgliedern aus (§6.1, §3.13.1, seit Contract v84). Moeglich nur fuer die betroffene Person selbst und in JEDEM Status: die Statusschranke der Mitgliederpflege schuetzt den Inhalt, wer aber nicht laenger als Mitwirkende:r genannt werden will, muss auch aus einem eingereichten oder veroeffentlichten Projekt gehen koennen. Das Projekt selbst bleibt unveraendert: kein Statusuebergang, keine neue version, Kommentare und Inhalt unberuehrt. Danach erscheint das Projekt nicht mehr im Portfolio dieser Person und sie nicht mehr in seiner Beteiligtenliste.
+     */
+    delete: operations["leaveProject"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/projects/{projectId}/editors/me": {
     parameters: {
       query?: never
@@ -1342,6 +1362,7 @@ export interface components {
         | "AUDIO"
         | "DOCUMENT"
         | "EMBED"
+        | "TABLE_OF_CONTENTS"
       /** Format: int32 */
       orderIndex: number
       content: components["schemas"]["JsonNode"]
@@ -1505,6 +1526,11 @@ export interface components {
        * @example 12
        */
       reactionCount: number
+      /**
+       * @description Ob die lesende Person selbst bereits reagiert hat (§3.10, seit Contract v84). Ohne Token immer false. Die Oberflaeche zeigt daran das gefuellte statt des offenen Symbols; ohne dieses Feld liesse sich der gedrueckte Zustand nur bis zum naechsten Neuladen halten.
+       * @example false
+       */
+      hasReacted: boolean
       /** @description Zugewiesene Redakteur:innen (§3.3). Bei einem PUBLISHED-Projekt fuer alle sichtbar, auch ohne Anmeldung (seit Contract v55); in jedem anderen Status nur fuer die Projektseite, die zugewiesene Redaktion und Admins. In der Praxis damit immer gefuellt: wer ein nicht veroeffentlichtes Projekt ueberhaupt lesen darf, gehoert genau zu diesem Kreis. Eine leere Liste bedeutet, dass keine Redaktion zugewiesen ist. */
       editors: components["schemas"]["PersonResponse"][] | null
       /** @description Aktivitaetsverlauf, aufsteigend nach Zeitpunkt (§3.12). Ausdruecklich null, wenn die anfragende Person ihn nicht sehen darf (§5, Fussnote 7); das Feld fehlt nicht, es steht auf null. Damit zugleich das Kennzeichen, an dem ein Client erkennt, dass die lesende Person die Interna sehen darf, also Projektseite, zugewiesene Redaktion oder Admin ist, ohne aus der Rolle zu raten. */
@@ -2116,6 +2142,11 @@ export interface components {
        * @description Studiengang, zu dem das Modul gehoert. Derselbe Wert dient als Filter: GET /api/modules?studyProgram={id}.
        */
       studyProgramId: string
+      /**
+       * @description Das Sammelmodul des Studiengangs: waehlbar, wenn kein Fachmodul passt (§3.9). Je Studiengang gibt es genau eines. Die Oberflaeche stellt es ans Listenende.
+       * @example false
+       */
+      collective: boolean
     }
     FacultyCreateRequest: {
       /**
@@ -3141,6 +3172,11 @@ export interface operations {
          * @example me
          */
         editor?: string
+        /**
+         * @description Filter: ID einer beteiligten Person, oder "me" fuer "Mein Portfolio" (seit Contract v84). Trifft Projekte, deren Autor:in ODER Mitglied (§3.13) diese Person ist. "me" setzt eine Anmeldung voraus. Der Filter author bleibt davon unberuehrt und nennt weiterhin nur die Autorschaft.
+         * @example me
+         */
+        participant?: string
         /** @description Zero-based page index (0..N) */
         page?: number
         /** @description The size of the page to be returned */
@@ -3172,7 +3208,7 @@ export interface operations {
           "*/*": components["schemas"]["PageResponse"]
         }
       }
-      /** @description "editor=me" ohne Anmeldung, oder das mitgeschickte Token ist ungueltig bzw. abgelaufen. */
+      /** @description "editor=me" oder "participant=me" ohne Anmeldung, oder das mitgeschickte Token ist ungueltig bzw. abgelaufen. */
       401: {
         headers: {
           [name: string]: unknown
@@ -5562,7 +5598,7 @@ export interface operations {
           "*/*": components["schemas"]["ModuleResponse"]
         }
       }
-      /** @description VALIDATION_FAILED: uebermittelter Name ist leer, oder unter der studyProgramId gibt es keinen Studiengang. */
+      /** @description VALIDATION_FAILED: uebermittelter Name ist leer, unter der studyProgramId gibt es keinen Studiengang, oder es soll das Sammelmodul an einen anderen Studiengang gehaengt werden. */
       400: {
         headers: {
           [name: string]: unknown
@@ -6475,6 +6511,48 @@ export interface operations {
         content: {
           "*/*": components["schemas"]["DashboardResponse"]
         }
+      }
+    }
+  }
+  leaveProject: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description ID des Projekts. */
+        projectId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Die Mitgliedschaft ist beendet. */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Kein gueltiges Token mitgeschickt. */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description NO_PERMISSION: die anfragende Person ist nicht Mitglied dieses Projekts. Das gilt auch fuer die Autor:in, die keine Mitgliedszeile ist (§3.13.1). Fremde Zeilen aendert die Projektseite ueber PUT /api/projects/{id}. */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unter dieser ID gibt es kein Projekt. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
     }
   }

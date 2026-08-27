@@ -58,6 +58,8 @@ import java.util.UUID;
  * @param tags          freie Schlagwoerter, hoechstens fuenf
  * @param blocks        Inhalt, nach {@code orderIndex} geordnet (§3.4)
  * @param reactionCount {@code COUNT} der Reaktionen (§3.10)
+ * @param hasReacted    ob die lesende Person selbst reagiert hat (§3.10, seit
+ *                      Contract v84)
  * @param editors       zugewiesene Redaktion; {@code null}, wenn die anfragende
  *                      Person sie nicht sehen darf
  * @param statusHistory Aktivitaetsverlauf; {@code null}, wenn die anfragende
@@ -134,6 +136,13 @@ public record ProjectDetailResponse(
 		@Schema(description = "Zahl der Reaktionen auf dieses Projekt (§3.10).", example = "12")
 		long reactionCount,
 
+		@Schema(description = "Ob die lesende Person selbst bereits reagiert hat (§3.10, seit "
+				+ "Contract v84). Ohne Token immer false. Die Oberflaeche zeigt daran das "
+				+ "gefuellte statt des offenen Symbols; ohne dieses Feld liesse sich der "
+				+ "gedrueckte Zustand nur bis zum naechsten Neuladen halten.",
+				example = "false")
+		boolean hasReacted,
+
 		@Schema(description = "Zugewiesene Redakteur:innen (§3.3). Bei einem PUBLISHED-Projekt "
 				+ "fuer alle sichtbar, auch ohne Anmeldung (seit Contract v55); in jedem "
 				+ "anderen Status nur fuer die Projektseite, die zugewiesene Redaktion und "
@@ -177,6 +186,7 @@ public record ProjectDetailResponse(
 	 * @param project       Projekt mit geladenen Bezuegen
 	 * @param tags          Schlagwoerter, sortiert
 	 * @param reactionCount Zahl der Reaktionen
+	 * @param hasReacted    ob die lesende Person selbst reagiert hat (§3.10)
 	 * @param members       Projektmitglieder (§3.13)
 	 * @param blocks        Inhalt, nach {@code orderIndex} geordnet
 	 * @param editors       zugewiesene Redaktion oder {@code null}, wenn sie
@@ -187,6 +197,7 @@ public record ProjectDetailResponse(
 			Project project,
 			List<String> tags,
 			long reactionCount,
+			boolean hasReacted,
 			List<MemberResponse> members,
 			List<BlockResponse> blocks,
 			List<PersonResponse> editors,
@@ -211,6 +222,7 @@ public record ProjectDetailResponse(
 				tags,
 				blocks,
 				reactionCount,
+				hasReacted,
 				editors,
 				statusHistory,
 				project.getVersion(),

@@ -19,7 +19,8 @@ import java.util.UUID;
  * der Parameter darf wiederholt werden ({@code ?faculty=a&faculty=b}), die
  * Werte desselben Parameters sind ODER-verknuepft, verschiedene Parameter
  * bleiben untereinander UND-verknuepft. {@code q}, {@code status},
- * {@code author} und {@code editor} bleiben einwertig (KAN-64).
+ * {@code author}, {@code editor} und {@code participant} bleiben einwertig
+ * (KAN-64; {@code participant} seit Contract v84).
  *
  * <p>Jedes Feld ist optional; {@code null} (bei den Listen auch eine leere
  * Liste) heisst „dieser Filter ist nicht gesetzt".
@@ -40,6 +41,10 @@ import java.util.UUID;
  * @param editor       ID einer Redakteur:in oder das Wort {@code me} fuer „Meine
  *                     Reviews"; bleibt als Zeichenkette stehen, weil er beide
  *                     Formen annimmt und erst der Service ihn aufloest
+ * @param participant  ID einer beteiligten Person oder das Wort {@code me} fuer
+ *                     „Mein Portfolio" (seit Contract v84): trifft Projekte, deren
+ *                     Autor:in <em>oder</em> Mitglied (§3.13) diese Person ist.
+ *                     Aus demselben Grund wie {@code editor} eine Zeichenkette
  */
 public record ProjectFilterRequest(
 		List<UUID> category,
@@ -52,8 +57,12 @@ public record ProjectFilterRequest(
 		String q,
 		ProjectStatus status,
 		UUID author,
-		String editor) {
+		String editor,
+		String participant) {
 
 	/** Der Sonderwert des Parameters {@code editor} aus §6.1. */
 	public static final String EDITOR_ME = "me";
+
+	/** Der Sonderwert des Parameters {@code participant} aus §6.1 (seit v84). */
+	public static final String PARTICIPANT_ME = "me";
 }
