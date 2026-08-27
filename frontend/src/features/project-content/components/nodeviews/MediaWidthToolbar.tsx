@@ -45,7 +45,7 @@ export function MediaWidthToolbar({
   /**
    * Um welches Medium es geht. Der Namensraum entscheidet ueber jede
    * Beschriftung dieser Leiste, nicht nur ueber ihren eigenen Namen: sonst
-   * hoerte ein Screenreader am Video eine Leiste „Breite des Videos" mit
+   * hoerte ein Screenreader am Video eine Leiste „Videobreite" mit
    * Schaltflaechen „Bildbreite 75 Prozent" und danach die Ansage
    * „Bildbreite auf 75 Prozent gesetzt" (SC 4.1.2, SC 2.4.6; Befund des
    * frontend-reviewers).

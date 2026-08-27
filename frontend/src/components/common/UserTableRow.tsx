@@ -89,10 +89,12 @@ export function UserTableRow({
       <TableCell>
         <div className="flex items-center gap-3">
           <UserAvatar person={person} imageUrl={avatarUrl} size="lg" />
-          {/* min-w-0: Diese Spalte ist ein Flex-Element neben dem Avatar und
-              haette sonst als Mindestbreite ihren eigenen Inhalt. Erst ohne
-              diese Untergrenze darf der Deckel von zwanzig Zeichen darin
-              ueberhaupt greifen (KAN-83). */}
+          {/* min-w-0 als Absicherung, nicht als Voraussetzung: Die Klemmung
+              haengt am max-width des Blocks darin und greift auch ohne sie.
+              Ein Flex-Element hat aber von Haus aus seinen eigenen Inhalt als
+              Mindestbreite, und sollte diese Spalte einmal gedrueckt werden,
+              gaebe erst min-w-0 sie frei (KAN-83, Befund des
+              frontend-reviewers). */}
           <div className="flex min-w-0 flex-col">
             <span className="font-semibold">
               {userId === undefined ? (
@@ -134,9 +136,12 @@ export function UserTableRow({
         </TableCell>
       )}
       {/* whitespace-nowrap bleibt an der Zelle: Ein Datum gehoert in eine
-          Zeile. Die Klemmung greift hier ohnehin nie, weil das laengste
-          Format der beiden Sprachen („27. Aug. 2026") deutlich unter zwanzig
-          Zeichen bleibt. */}
+          Zeile. Die Klemmung greift hier nie, weil beide Sprachen weit unter
+          zwanzig Zeichen bleiben (dateStyle "medium" ergibt „27.08.2026"
+          bzw. „Aug 27, 2026", siehe AdminUserListPage). Der Eintrag laeuft
+          trotzdem durch TruncatedText, damit jede Textzelle dieselbe Huelle
+          traegt und ein spaeter geaendertes Format nicht als einzige Spalte
+          ausbricht. */}
       {createdAt !== undefined && (
         <TableCell className="whitespace-nowrap">
           <TruncatedText text={createdAt} />

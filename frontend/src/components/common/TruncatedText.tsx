@@ -59,6 +59,28 @@ function showFullTextOnHover(event: PointerEvent<HTMLElement>) {
 }
 
 /**
+ * Raeumt den Mauszeigertext wieder weg, sobald der Zeiger die Zelle
+ * verlaesst.
+ *
+ * <p>Ohne dies bliebe das Attribut nach dem ersten Zeigen dauerhaft stehen,
+ * und React fuehrt es nicht: Aendert sich der Text der Zelle spaeter, ohne
+ * dass ihr Knoten neu entsteht (die Listen halten ihre Zeilen ueber
+ * {@code key}, und eine Abfrage laedt beim Fensterwechsel von selbst nach),
+ * taeuscht der Tooltip einen Wert vor, der dort nicht mehr steht. Beim
+ * Verlassen zu raeumen schliesst das Fenster auf die Dauer eines einzelnen
+ * Zeigens und laesst die Messung dort, wo sie hingehoert: beim Betreten
+ * (Befund des frontend-reviewers).
+ *
+ * <p>Ein Effekt auf den Text waere der vollstaendigere Weg, ginge hier aber
+ * nicht ohne Umbau: {@link TruncatedText} kehrt bei leerem Text vor jedem
+ * Hook zurueck, ein {@code useEffect} danach waere ein bedingter
+ * Hook-Aufruf.
+ */
+function hideFullTextOnLeave(event: PointerEvent<HTMLElement>) {
+  event.currentTarget.removeAttribute("title")
+}
+
+/**
  * Ein Tabelleneintrag, sichtbar auf die Breite von zwanzig Zeichen geklemmt,
  * ohne dass der Text dabei verloren geht (KAN-83).
  *
@@ -166,7 +188,11 @@ export function TruncatedText({ text }: { text?: string | null }) {
   }
 
   return (
-    <span className={CLAMPED} onPointerEnter={showFullTextOnHover}>
+    <span
+      className={CLAMPED}
+      onPointerEnter={showFullTextOnHover}
+      onPointerLeave={hideFullTextOnLeave}
+    >
       {text}
     </span>
   )
@@ -208,6 +234,7 @@ export function TruncatedLink({
       state={state}
       className={cn(CLAMPED, className)}
       onPointerEnter={showFullTextOnHover}
+      onPointerLeave={hideFullTextOnLeave}
     >
       {text}
     </Link>

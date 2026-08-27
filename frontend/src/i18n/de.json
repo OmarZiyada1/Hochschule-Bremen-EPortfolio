@@ -934,7 +934,7 @@
       "urlHint": "Adresszeile, Teilen-Link oder Einbettungscode. Gespeichert werden Anbieter und Video-Kennung, nie die Adresse selbst.",
       "urlInvalid": "Daraus lässt sich kein YouTube- oder Vimeo-Video ablesen.",
       "embedAction": "Einbetten",
-      "widthToolbar": "Breite des Videos",
+      "widthToolbar": "Videobreite",
       "widthOption": "Videobreite {{width}} Prozent",
       "widthValue": "{{width}} %",
       "widthChanged": "Videobreite auf {{width}} Prozent gesetzt."
