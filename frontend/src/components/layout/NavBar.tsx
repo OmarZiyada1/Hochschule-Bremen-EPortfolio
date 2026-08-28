@@ -122,7 +122,7 @@ const navGhost =
  * die Primitiven nehmen den Link ueber ihre render-Prop auf.
  *
  * Zwei Breiten, zwei Anordnungen, und die schmale kennt genau ein Menue:
- * unterhalb von md verschwinden Nutzermenue und Anmeldung aus der Leiste,
+ * unterhalb von lg verschwinden Nutzermenue und Anmeldung aus der Leiste,
  * das Sheet fuehrt dann alles, also Navigationseintraege, Nutzermenuepunkte,
  * die angemeldete Person und Abmelden. Zwei aufklappbare Ebenen
  * nebeneinander waren der Befund; welcher der beiden Knoepfe welchen Teil
@@ -193,7 +193,7 @@ export function NavBar({
 
         <NavigationMenu
           aria-label={t("common.nav.label")}
-          className="max-md:hidden"
+          className="max-lg:hidden"
         >
           <NavigationMenuList className="gap-6">
             {links.map((link) => {
@@ -271,8 +271,17 @@ export function NavBar({
 
           {/* Auf schmalen Bildschirmen fuehrt genau ein Menue: das Sheet.
               Das Nutzermenue und die Anmeldung liegen deshalb dort und
-              nicht zusaetzlich als zweite Ebene in der Leiste. */}
-          <div className="max-md:hidden">
+              nicht zusaetzlich als zweite Ebene in der Leiste.
+
+              Die Grenze liegt seit der Nacharbeit bei lg und nicht mehr bei
+              md: auf einem Tablet standen fuenf Navigationsziele, das
+              Nutzermenue, der Sprachumschalter und der Moduswechsel
+              nebeneinander in einer Leiste von 4rem Hoehe, und die Ziele
+              rueckten so dicht, dass die Trefferflaechen aneinander
+              stiessen. Ein Symbol statt fuenf Beschriftungen ist dort die
+              ruhigere Loesung; ab lg ist wieder Platz fuer die Zeile aus
+              dem Template. */}
+          <div className="max-lg:hidden">
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger
@@ -355,7 +364,7 @@ export function NavBar({
                   variant="ghost"
                   size="icon"
                   aria-label={t("common.nav.openMenu")}
-                  className={cn(navGhost, "md:hidden", navFocus)}
+                  className={cn(navGhost, "lg:hidden", navFocus)}
                 />
               }
             >

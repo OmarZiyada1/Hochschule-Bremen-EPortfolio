@@ -123,18 +123,26 @@ describe("AdministrationLayout", () => {
     /*
      * Welche der beiden Anordnungen zu sehen ist, entscheidet allein CSS,
      * und die Klassen laufen durch tailwind-merge: „hidden" und „flex"
-     * gehoeren derselben Gruppe an, „lg:flex" einer anderen. Faellt eine der
+     * gehoeren derselben Gruppe an, „xl:flex" einer anderen. Faellt eine der
      * beiden beim Zusammenfuehren weg, ist die Spalte auf dem Schreibtisch
      * verschwunden oder die Zeile steht doppelt, und weder Typecheck noch
      * Lint noch ein anderer Test meldet es.
+     *
+     * Die Marke ist xl und nicht lg: ein Tablet im Querformat misst rund
+     * 1024 bis 1180 Pixel und soll die Schublade bekommen, nicht die
+     * 240px-Spalte neben den breiten Tabellen der Verwaltung.
      */
     it("blendet Spalte und Zeile gegeneinander aus", () => {
       renderLayout(0)
 
       expect(column().className).toContain("hidden")
-      expect(column().className).toContain("lg:flex")
+      expect(column().className).toContain("xl:flex")
       expect(column().className).not.toMatch(/(^| )flex( |$)/)
-      expect(bar().className).toContain("lg:hidden")
+      expect(bar().className).toContain("xl:hidden")
+      /* Und nicht versehentlich beides: eine stehengebliebene lg-Marke
+         zeigte auf dem Tablet Spalte und Zeile zugleich. */
+      expect(column().className).not.toContain("lg:flex")
+      expect(bar().className).not.toContain("lg:hidden")
     })
 
     it("nennt in der Zeile, wo man gerade ist", () => {

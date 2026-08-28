@@ -33,10 +33,18 @@ import { useOpenSupportRequestCount } from "@/features/administration/hooks/useA
  * prueft die Filterkette des Servers, und ein trotzdem eintreffendes 403
  * behandelt jede Seite sichtbar (§5).
  *
- * <p><strong>Zwei Breiten, zwei Anordnungen.</strong> Ab {@code lg} steht die
+ * <p><strong>Zwei Breiten, zwei Anordnungen.</strong> Ab {@code xl} steht die
  * Leiste als Spalte neben dem Inhalt, wie im Template. Darunter steht an
  * ihrer Stelle eine schmale Zeile mit dem Namen der aktuellen Seite, und die
  * Eintraege liegen in einer Schublade dahinter.
+ *
+ * <p><strong>Die Grenze liegt bei {@code xl} und nicht bei {@code lg}</strong>
+ * (Vorgabe zur Nacharbeit). Ein Tablet im Querformat misst rund 1024 bis
+ * 1180 Pixel und faellt damit genau zwischen die beiden Marken. Bei
+ * {@code lg} bekam es die Spalte, und die zog vom ohnehin knappen Platz
+ * weitere 240 Pixel ab, obwohl rechts daneben die breiten Tabellen der
+ * Verwaltung stehen. Die Schublade kostet dort einen Klick und gibt die
+ * ganze Breite zurueck.
  *
  * <p>Bis zur Nacharbeit lief die Leiste im schmalen Fenster stattdessen
  * <em>waagerecht scrollbar</em> ueber dem Inhalt. Das war die schlechtere
@@ -126,11 +134,11 @@ export function AdministrationLayout() {
     })
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 lg:flex-row lg:items-start">
-      {/* Schmales Fenster: die Zeile mit dem Ausloeser. Sie traegt dieselbe
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 xl:flex-row xl:items-start">
+      {/* Schmales Fenster und Tablet: die Zeile mit dem Ausloeser. Sie traegt dieselbe
           Flaeche wie die Spalte darueber hinaus, damit beide Anordnungen als
           dasselbe Bedienelement erkennbar bleiben. */}
-      <div className="flex items-center gap-3 rounded-modal border border-sidebar-border bg-sidebar p-3 text-sidebar-foreground lg:hidden">
+      <div className="flex items-center gap-3 rounded-modal border border-sidebar-border bg-sidebar p-3 text-sidebar-foreground xl:hidden">
         <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
           <SheetTrigger
             render={
@@ -153,7 +161,7 @@ export function AdministrationLayout() {
               </SheetTitle>
             </SheetHeader>
             {/* Eigene nav-Landmarke, wie in der Spalte: die beiden bestehen
-                nie gleichzeitig, weil die Spalte unterhalb von lg auf
+                nie gleichzeitig, weil die Spalte unterhalb von xl auf
                 display:none steht und damit aus dem Baum faellt. */}
             <nav
               aria-label={t("administration.nav.label")}
@@ -191,7 +199,7 @@ export function AdministrationLayout() {
           umbrechen. */}
       <Sidebar
         label={t("administration.nav.label")}
-        className="hidden lg:sticky lg:top-6 lg:flex lg:w-60 lg:shrink-0"
+        className="hidden xl:sticky xl:top-6 xl:flex xl:w-60 xl:shrink-0"
       >
         {navItems()}
       </Sidebar>
