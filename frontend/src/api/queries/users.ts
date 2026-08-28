@@ -22,13 +22,17 @@ import type { Role, UserLookupResponse } from "@/api/types"
  */
 export const userQueries = {
   /**
-   * @param params.role Nur Konten dieser Rolle, etwa {@code EDITOR} fuer die
-   *   Redaktionszuweisung. Ohne Angabe kommen alle Rollen; das ist der Fall
-   *   der Projektmitglieder, die keine Systemrolle voraussetzen (§3.13).
+   * @param params.role Nur Konten dieser Rollen. Der Parameter ist seit
+   *   Contract v89 mehrwertig (KAN-87): mehrere Werte sind ODER-verknuepft
+   *   und werden als wiederholtes {@code ?role=} geschickt, was der Client
+   *   von sich aus tut. Die Redaktionszuweisung fragt
+   *   {@code ["EDITOR", "ADMIN"]} ab, weil beide Rollen zuweisbar sind
+   *   (§5, Fussnoten 3 und 5). Ohne Angabe kommen alle Rollen; das ist der
+   *   Fall der Projektmitglieder, die keine Systemrolle voraussetzen (§3.13).
    * @param params.q Suchbegriff ueber Vor- und Nachname. Leer laesst ihn weg
    *   und liefert die ersten Treffer der Sortierung.
    */
-  lookup: (params: { role?: Role; q?: string } = {}) =>
+  lookup: (params: { role?: readonly Role[]; q?: string } = {}) =>
     queryOptions({
       queryKey: [
         "users",

@@ -3,8 +3,9 @@ import {
   FileTextIcon,
   InfoIcon,
   LockIcon,
+  TrophyIcon,
 } from "lucide-react"
-import { useId, useState } from "react"
+import { useId, useRef, useState, type RefObject } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 
@@ -32,8 +33,19 @@ import { usePrintProject } from "@/features/project-content/print/usePrintProjec
 import { ProjectContent } from "@/features/project-content/renderer/ProjectContent"
 import { CommentPanel } from "@/components/common/CommentPanel"
 import { ProjectInfoSection } from "@/components/common/ProjectInfoSection"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { ReactionPanel } from "@/features/projects/components/ReactionPanel"
 import { useProjectDetail } from "@/features/projects/hooks/useProjectDetail"
+import { NominationDialog } from "@/features/reviews/components/NominationDialog"
+import {
+  useNominateProject,
+  useTop10ProjectIds,
+} from "@/features/reviews/hooks/useReviews"
+import { nominationBlockReason } from "@/features/reviews/nominationBlock"
 import { useBreadcrumbTitle } from "@/routes/useBreadcrumb"
 import { cn } from "@/lib/utils"
 
@@ -87,6 +99,21 @@ import { cn } from "@/lib/utils"
  * uebrigen Feldern nicht tut. Den Aktivitaetsverlauf zeigt sie nicht: er
  * gehoert in den Editor (KAN-36), nicht in die Leseansicht.
  *
+ * <p><strong>„Fuer Top-10 nominieren" steht seit KAN-87 in derselben
+ * Knopfreihe</strong> und nur fuer EDITOR und ADMIN (§5, Zeile „Projekt fuer
+ * Top-10 nominieren"). Bis dahin fuehrte der Weg allein ueber „Meine
+ * Reviews", also nur ueber zugewiesene Projekte; wer jedes Projekt
+ * vorschlagen darf, hatte dafuer kein Bedienelement. Das Template zeichnet
+ * die Aktion auf dieser Seite nicht, so wenig wie den Ausdruck; sie sitzt
+ * deshalb dort, wo die beiden vorhandenen Aktionen schon stehen
+ * (Entscheidung der Klaerungsrunde zu KAN-87).
+ *
+ * <p>Sie erscheint nur bei {@code PUBLISHED} (§3.11.1, Regel 1) und ist dort,
+ * wo sie nicht greift, gesperrt <em>und begruendet</em>: das Projekt steht
+ * bereits in der Liste oder es liegt schon ein eigener Vorschlag vor
+ * (SC 3.3.2). Verbindlich bleibt der Server, der dieselben Faelle mit 409
+ * beantwortet.
+ *
  * <p><strong>Die Aktion „PDF" steht am Titelbild oben rechts</strong>
  * (KAN-41, Nutzerentscheidung). Das Template zeichnet sie auf dieser Seite
  * nicht, anders als in der Editor-Kopfzeile; sie sitzt deshalb dort, wo sie
@@ -127,6 +154,33 @@ export default function ProjectDetailPage() {
   /* Nur schmal gebraucht: ab lg steht das Panel dauerhaft daneben, und die
      Schublade wird dann gar nicht erst geoeffnet. */
   const [infoOpen, setInfoOpen] = useState(false)
+
+  /*
+   * Die Nominierung (KAN-87). Die Rolle entscheidet, ob es die Aktion
+   * ueberhaupt gibt; ohne sie bleibt die Seite genau die, die sie vorher war,
+   * und es laeuft auch keine Abfrage. Das ist hier kein Feinschliff: die
+   * Liste der eigenen Vorschlaege setzt EDITOR oder ADMIN voraus (§5) und
+   * ergaebe fuer alle anderen ein 403 auf einer oeffentlichen Seite.
+   */
+  const { role } = useAuth()
+  const mayNominate = role === "EDITOR" || role === "ADMIN"
+  const inTop10 = useTop10ProjectIds(mayNominate)
+  const nominate = useNominateProject()
+  const [nominationOpen, setNominationOpen] = useState(false)
+  /* Fokusziel beim Schliessen: der Ausloeser ist ein Knopf dieser Seite und
+     bleibt stehen, aber der Dialog braucht ihn ausdruecklich (SC 2.4.3). */
+  const nominationTrigger = useRef<HTMLButtonElement | null>(null)
+  const [nominationNotice, setNominationNotice] = useState("")
+
+  const nominationBlocked =
+    data === undefined
+      ? null
+      : nominationBlockReason(data, inTop10.has(data.id))
+  /* Nur bei PUBLISHED (§3.11.1, Regel 1): in jedem anderen Status waere die
+     Aktion kein Fall, den man erklaeren muesste, sondern schlicht keiner.
+     Die uebrigen beiden Sperrgruende erklaeren sich dagegen im Kurzhinweis. */
+  const showNominate =
+    mayNominate && data !== undefined && data.status === "PUBLISHED"
 
   /* Der Name des Beitragsabschnitts. Er zeigt auf die sr-only-Ueberschrift
      darin, damit der Abschnitt ein benanntes Landmark bleibt (Javadoc oben). */
@@ -290,15 +344,28 @@ export default function ProjectDetailPage() {
                     Rahmen um das Bild: ein Rahmen naehme dem Bild die
                     randlose Ausrichtung, die an "erstes Kind" haengt. */}
                   <InfoTrigger onOpen={() => setInfoOpen(true)} floating />
-                  {/* Und gegenueber, oben rechts, der Ausdruck. Anders als
-                    der Info-Knopf bleibt er in jeder Breite stehen: die
-                    Projektdaten stehen breit ohnehin daneben, ein Ausdruck
-                    nicht. */}
-                  <PrintTrigger
-                    onPrint={() => void print()}
-                    busy={printing}
-                    floating
-                  />
+                  {/* Und gegenueber, oben rechts, der Ausdruck und seit
+                    KAN-87 die Nominierung. Anders als der Info-Knopf bleiben
+                    beide in jeder Breite stehen: die Projektdaten stehen
+                    breit ohnehin daneben, diese Aktionen nicht.
+
+                    Die Reihe traegt die Positionierung und den Schatten,
+                    nicht die einzelnen Knoepfe: mit zwei absolut gesetzten
+                    Knoepfen nebeneinander muesste der zweite die Breite des
+                    ersten als Zahl kennen, und die Reihe waere beim
+                    naechsten Knopf falsch. PrintTrigger laeuft deshalb hier
+                    ohne floating; auf der Reviewseite, wo er allein steht,
+                    unveraendert damit. */}
+                  <div className="absolute top-4 right-4 z-10 flex items-center gap-2 [&>*]:shadow-md">
+                    {showNominate && (
+                      <NominateTrigger
+                        blocked={nominationBlocked}
+                        triggerRef={nominationTrigger}
+                        onNominate={() => setNominationOpen(true)}
+                      />
+                    )}
+                    <PrintTrigger onPrint={() => void print()} busy={printing} />
+                  </div>
                 </>
               )}
               <CardContent>
@@ -323,6 +390,13 @@ export default function ProjectDetailPage() {
                         den Projektdaten. */}
                       {cover.url === null && (
                         <div className="ms-auto flex items-center gap-2">
+                          {showNominate && (
+                            <NominateTrigger
+                              blocked={nominationBlocked}
+                              triggerRef={nominationTrigger}
+                              onNominate={() => setNominationOpen(true)}
+                            />
+                          )}
                           <PrintTrigger
                             onPrint={() => void print()}
                             busy={printing}
@@ -443,6 +517,40 @@ export default function ProjectDetailPage() {
             fileState={fileState}
           />
         )}
+
+        {showNominate && (
+          <NominationDialog
+            open={nominationOpen}
+            onOpenChange={(next) => {
+              setNominationOpen(next)
+              if (!next) {
+                nominate.reset()
+              }
+            }}
+            projectTitle={data.title}
+            finalFocus={nominationTrigger}
+            pending={nominate.isPending}
+            error={nominate.error}
+            onSubmit={(proposedTier) => {
+              nominate.mutate(
+                { projectId: data.id, proposedTier },
+                {
+                  onSuccess: () => {
+                    setNominationOpen(false)
+                    setNominationNotice(t("review.nomination.done"))
+                  },
+                }
+              )
+            }}
+          />
+        )}
+
+        {/* Nach dem Vorschlag aendert sich nur die Beschriftung des Knopfes
+            weiter oben; ohne Ansage bliebe der Vorgang fuer Screenreader
+            unbemerkt (SC 4.1.3). Dieselbe Region wie in „Meine Reviews". */}
+        <span className="sr-only" role="status">
+          {nominationNotice}
+        </span>
 
         {data !== undefined && (
           <Sheet open={infoOpen} onOpenChange={setInfoOpen}>
@@ -617,6 +725,64 @@ function ProjectInfoPanel({ project }: { project: ProjectDetailResponse }) {
  * Symbolknoepfe auf demselben Titelbild mit verschiedenem Radius fallen
  * sofort auf.
  */
+function NominateTrigger({
+  blocked,
+  triggerRef,
+  onNominate,
+}: {
+  blocked: ReturnType<typeof nominationBlockReason>
+  triggerRef: RefObject<HTMLButtonElement | null>
+  onNominate: () => void
+}) {
+  const { t } = useTranslation()
+
+  const button = (
+    <Button
+      ref={triggerRef}
+      type="button"
+      variant="secondary"
+      size="icon"
+      /*
+       * Gesperrt heisst aria-disabled und nicht disabled, wie beim
+       * Nominierungseintrag im Zeilenmenue und beim Ausdruck waehrend der
+       * Vorbereitung: ein wirklich gesperrter Knopf ist nicht mehr
+       * fokussierbar, und damit waere die Begruendung fuer die Tastatur
+       * unerreichbar (SC 3.3.2). Der Klick laeuft ins Leere statt in ein
+       * absehbares 409.
+       */
+      aria-disabled={blocked !== null}
+      onClick={() => {
+        if (blocked === null) {
+          onNominate()
+        }
+      }}
+      aria-label={
+        blocked === "nominated"
+          ? t("review.list.row.nominateBlocked.nominated")
+          : t("review.list.row.nominate")
+      }
+      className={cn("rounded-full", blocked !== null && "text-text-disabled")}
+    >
+      <TrophyIcon aria-hidden="true" />
+    </Button>
+  )
+
+  /* „Bereits nominiert" steht schon im zugaenglichen Namen; ein Hinweis
+     daneben sagte dasselbe ein zweites Mal. */
+  if (blocked === null || blocked === "nominated") {
+    return button
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={button} />
+      <TooltipContent side="bottom">
+        {t(`review.list.row.nominateBlocked.${blocked}`)}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
 function InfoTrigger({
   onOpen,
   floating = false,

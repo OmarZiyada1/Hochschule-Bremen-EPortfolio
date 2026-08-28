@@ -7,10 +7,17 @@ import type {
   BlockResponse,
   ProjectDetailResponse,
   StatusHistoryResponse,
+  Top10EntryResponse,
 } from "@/api/types"
 import ProjectDetailPage from "@/features/projects/ProjectDetailPage"
 import i18n from "@/i18n"
-import { person, reference } from "@/tests/fixtures"
+import {
+  nomination,
+  person,
+  projectCard,
+  reference,
+  top10Entry,
+} from "@/tests/fixtures"
 import {
   apiErrorResponse,
   currentUserHandler,
@@ -217,6 +224,9 @@ function projectResponse(
     editors: null,
     statusHistory: null,
     version: 3,
+    /* Seit Contract v90 (§3.11). false und nicht null: der Regelfall dieser
+       Tests ist ein veroeffentlichtes Projekt ohne offenen Vorschlag. */
+    hasOpenNomination: false,
     publishedAt: "2025-10-15T08:00:00Z",
     createdAt: "2025-09-01T08:00:00Z",
     updatedAt: "2025-10-15T08:00:00Z",
@@ -1105,5 +1115,170 @@ describe("Die Projektinformationen", () => {
 
     expect(infoTrigger()).toHaveAttribute("aria-expanded", "false")
     expect(comments).toHaveAttribute("aria-expanded", "true")
+  })
+})
+
+
+/*
+ * Die Nominierung von der Detailseite aus (§3.11.1; KAN-87). Bis dahin
+ * fuehrte der Weg allein ueber „Meine Reviews", also nur ueber zugewiesene
+ * Projekte, obwohl EDITOR und ADMIN jedes veroeffentlichte Projekt
+ * vorschlagen duerfen (§5).
+ */
+describe("Nominierung", () => {
+  /**
+   * Die beiden Abfragen hinter den Sperrgruenden. Sie laufen nur fuer EDITOR
+   * und ADMIN; fuer alle anderen darf gar kein Request entstehen, deshalb
+   * meldet sie nicht jeder Test an.
+   */
+  function nominationHandlers(
+    options: {
+      top10?: Top10EntryResponse[]
+      onNominate?: (body: unknown) => void
+    } = {}
+  ) {
+    return [
+      /* Ob das Projekt einen Platz belegt, sagt diese Liste; ob ein Vorschlag
+         offen ist, steht seit Contract v90 an der Antwort selbst (§3.11). */
+      http.get("*/api/top10", () => HttpResponse.json(options.top10 ?? [])),
+      http.post(
+        `*/api/projects/${PROJECT_ID}/top10-nomination`,
+        async ({ request }) => {
+          options.onNominate?.(await request.json())
+          return HttpResponse.json(nomination({ id: "n-9" }), { status: 201 })
+        }
+      ),
+    ]
+  }
+
+  function nominateButton(): HTMLElement | null {
+    return screen.queryByRole("button", {
+      name: i18n.t("review.list.row.nominate"),
+    })
+  }
+
+  it("nominiert ein veroeffentlichtes Projekt aus der Kopfzeile heraus", async () => {
+    const bodies: unknown[] = []
+    signInAs("EDITOR")
+    server.use(
+      currentUserHandler({ role: "EDITOR" }),
+      detailHandler(projectResponse()),
+      ...nominationHandlers({ onNominate: (body) => bodies.push(body) })
+    )
+
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByRole("heading", { level: 1 })
+
+    await user.click((await screen.findByRole("button", {
+      name: i18n.t("review.list.row.nominate"),
+    })) as HTMLElement)
+
+    const dialog = await screen.findByRole("dialog")
+    await user.click(within(dialog).getByRole("radio", { name: /Top 5/ }))
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: i18n.t("review.nomination.dialog.submit"),
+      })
+    )
+
+    /* Eine Stufe und kein Platz (§3.11.1, Regel 4). */
+    await waitFor(() => expect(bodies).toEqual([{ proposedTier: "TOP_5" }]))
+  })
+
+  it("zeigt den Knopf einer Studentin nicht und fragt fuer sie nichts ab", async () => {
+    /*
+     * Nicht nur unsichtbar, sondern gar keine Abfrage: GET
+     * /top10-nominations setzt EDITOR oder ADMIN voraus (§5) und ergaebe
+     * fuer jede andere Person ein 403 auf einer oeffentlichen Seite. Ein
+     * trotzdem abgesetzter Request liefe hier in onUnhandledRequest, weil
+     * dieser Test die beiden Handler bewusst nicht anmeldet.
+     */
+    signInAs("STUDENT")
+    server.use(
+      currentUserHandler({ role: "STUDENT" }),
+      detailHandler(projectResponse())
+    )
+
+    renderPage()
+    await screen.findByRole("heading", { level: 1 })
+
+    expect(nominateButton()).toBeNull()
+  })
+
+  it("zeigt den Knopf ohne Anmeldung nicht", async () => {
+    server.use(detailHandler(projectResponse()))
+
+    renderPage()
+    await screen.findByRole("heading", { level: 1 })
+
+    expect(nominateButton()).toBeNull()
+  })
+
+  it("blendet ihn aus, solange das Projekt nicht veroeffentlicht ist", async () => {
+    /* §3.11.1 Regel 1. In den uebrigen Staenden waere die Aktion kein Fall,
+       den man erklaeren muesste, sondern schlicht keiner. */
+    signInAs("ADMIN")
+    server.use(
+      currentUserHandler({ role: "ADMIN" }),
+      detailHandler(projectResponse({ status: "SUBMITTED" })),
+      ...nominationHandlers()
+    )
+
+    renderPage()
+    await screen.findByRole("heading", { level: 1 })
+
+    expect(nominateButton()).toBeNull()
+  })
+
+  it("sperrt ihn mit Begruendung, wenn das Projekt bereits in der Top 10 steht", async () => {
+    signInAs("ADMIN")
+    server.use(
+      currentUserHandler({ role: "ADMIN" }),
+      detailHandler(projectResponse()),
+      ...nominationHandlers({
+        top10: [top10Entry({ position: 1, project: projectCard({ id: PROJECT_ID }) })],
+      })
+    )
+
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByRole("heading", { level: 1 })
+
+    /* Gesperrt heisst aria-disabled und nicht disabled: sonst waere der
+       Knopf nicht mehr fokussierbar und die Begruendung fuer die Tastatur
+       unerreichbar (SC 3.3.2). */
+    const button = await waitFor(() => {
+      const found = nominateButton()
+      expect(found).toHaveAttribute("aria-disabled", "true")
+      return found as HTMLElement
+    })
+
+    await user.hover(button)
+    expect(
+      await screen.findByText(i18n.t("review.list.row.nominateBlocked.inTop10"))
+    ).toBeInTheDocument()
+  })
+
+  it("benennt einen bereits vorliegenden Vorschlag im Namen des Knopfes", async () => {
+    /* Jeder offene Vorschlag sperrt und nicht nur der eigene: §3.11.1 Regel 2
+       gilt je Projekt, und seit Contract v90 sagt die Antwort das selbst. */
+    signInAs("ADMIN")
+    server.use(
+      currentUserHandler({ role: "ADMIN" }),
+      detailHandler(projectResponse({ hasOpenNomination: true })),
+      ...nominationHandlers()
+    )
+
+    renderPage()
+    await screen.findByRole("heading", { level: 1 })
+
+    /* Die Beschriftung sagt bereits alles; ein Hinweis daneben waere
+       dasselbe ein zweites Mal. */
+    const blocked = await screen.findByRole("button", {
+      name: i18n.t("review.list.row.nominateBlocked.nominated"),
+    })
+    expect(blocked).toHaveAttribute("aria-disabled", "true")
+    expect(nominateButton()).toBeNull()
   })
 })

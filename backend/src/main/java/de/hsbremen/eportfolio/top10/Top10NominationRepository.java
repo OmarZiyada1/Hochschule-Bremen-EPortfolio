@@ -94,4 +94,23 @@ public interface Top10NominationRepository extends JpaRepository<Top10Nomination
 	 */
 	List<Top10Nomination> findByStatusAndProjectIdIn(NominationStatus status,
 			List<UUID> projectIds);
+
+	/**
+	 * Nur die Projekt-IDs zu einem Stand, fuer {@code hasOpenNomination} an der
+	 * Projektantwort (§3.11, seit Contract v90).
+	 *
+	 * <p><strong>Eine Projektion und nicht die Entitaeten.</strong> Der
+	 * Lesedienst braucht hier eine Ja-Nein-Auskunft je Kachel und sonst nichts;
+	 * {@link #findByStatusAndProjectIdIn} laedt dafuer zu viel, und mit dem
+	 * {@code @EntityGraph} der Listenmethoden waere es ein Vielfaches davon.
+	 *
+	 * <p>{@code distinct}, weil ein Projekt im Lauf seines Lebens mehrfach
+	 * nominiert worden sein kann (§2.8); offen ist davon nach Regel 2 aus
+	 * §3.11.1 zwar hoechstens einer, aber die Zusage der Abfrage soll nicht an
+	 * einer Invariante haengen, die anderswo durchgesetzt wird.
+	 */
+	@Query("select distinct n.project.id from Top10Nomination n "
+			+ "where n.status = :status and n.project.id in :projectIds")
+	List<UUID> findProjectIdsByStatusAndProjectIdIn(@Param("status") NominationStatus status,
+			@Param("projectIds") List<UUID> projectIds);
 }

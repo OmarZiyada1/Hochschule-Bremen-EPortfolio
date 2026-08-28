@@ -171,7 +171,16 @@ public record ProjectDetailResponse(
 
 		Instant createdAt,
 
-		Instant updatedAt) {
+		Instant updatedAt,
+
+		@Schema(description = "Ob zu diesem Projekt bereits eine Nominierung im Stand PENDING "
+				+ "vorliegt (§3.11, seit Contract v90), gleich von wem. Nur fuer EDITOR und "
+				+ "ADMIN gefuellt, fuer alle anderen null; null heisst \"darf ich nicht "
+				+ "sehen\" und nicht \"kein Vorschlag\". Wer vorgeschlagen hat, sagt das "
+				+ "Feld nicht. Die Detailseite sperrt die Nominierung damit begruendet, "
+				+ "statt sie in ein 409 RESOURCE_IN_USE laufen zu lassen (§3.11.1, Regel 2).",
+				nullable = true, example = "false")
+		Boolean hasOpenNomination) {
 
 	/**
 	 * Baut die Detailantwort.
@@ -192,6 +201,10 @@ public record ProjectDetailResponse(
 	 * @param editors       zugewiesene Redaktion oder {@code null}, wenn sie
 	 *                      nicht sichtbar ist
 	 * @param statusHistory Verlauf oder {@code null}, wenn er nicht sichtbar ist
+	 * @param hasOpenNomination ob ein offener Vorschlag vorliegt (§3.11), oder
+	 *                      {@code null}, wenn die anfragende Rolle das nicht
+	 *                      sehen darf; wie bei {@code editors} faellt die
+	 *                      Entscheidung darueber vor dem Bauen der Antwort
 	 */
 	public static ProjectDetailResponse from(
 			Project project,
@@ -201,7 +214,8 @@ public record ProjectDetailResponse(
 			List<MemberResponse> members,
 			List<BlockResponse> blocks,
 			List<PersonResponse> editors,
-			List<StatusHistoryResponse> statusHistory) {
+			List<StatusHistoryResponse> statusHistory,
+			Boolean hasOpenNomination) {
 
 		return new ProjectDetailResponse(
 				project.getId(),
@@ -228,6 +242,7 @@ public record ProjectDetailResponse(
 				project.getVersion(),
 				project.getPublishedAt(),
 				project.getCreatedAt(),
-				project.getUpdatedAt());
+				project.getUpdatedAt(),
+				hasOpenNomination);
 	}
 }

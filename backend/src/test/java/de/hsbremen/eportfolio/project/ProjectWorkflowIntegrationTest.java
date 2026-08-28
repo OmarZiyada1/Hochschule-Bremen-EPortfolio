@@ -1244,7 +1244,8 @@ class ProjectWorkflowIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Ein Admin ist nie zugewiesen und bekommt deshalb 403")
+		@DisplayName("Ein nicht zugewiesener Admin bekommt 403: er hat hier nichts abzugeben "
+				+ "(DoD KAN-87)")
 		void adminForbidden() throws Exception {
 			Project project = submitted();
 
@@ -1254,14 +1255,17 @@ class ProjectWorkflowIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Ein technisch zugewiesener Admin darf abgeben: die Zuweisung zaehlt, "
-				+ "nicht die Rolle")
+		@DisplayName("Ein zugewiesener Admin darf abgeben: die Zuweisung zaehlt, "
+				+ "nicht die Rolle (DoD KAN-87)")
 		void assignedAdminMayResign() throws Exception {
 			Project project = submitted();
-			/* §5 Fussnote 11 nennt eine solche Zuweisung moeglich und
-			   wirkungslos; das Kreuz bei ADMIN in §5 beschreibt den Regelfall,
-			   dass ein Admin gar nicht erst zugewiesen wird (Contract v69,
-			   Klaerungsrunde zu KAN-37). Steht er doch drin, wird er sie los. */
+			/* Seit Contract v89 (KAN-87) ist die Zuweisung eines Admin-Kontos
+			   der vorgesehene Weg in seine Liste „Meine Reviews" und kein
+			   Sonderfall mehr (§5 Fussnote 5); die Matrixzeile traegt fuer
+			   ADMIN seither einen Klammerhaken statt eines Kreuzes. Am
+			   Verhalten aendert das nichts, denn geprueft wurde hier seit
+			   jeher die Zuweisung und nie die Rolle (Contract v69,
+			   Klaerungsrunde zu KAN-37). */
 			project.getEditors().add(admin);
 			projectRepository.saveAndFlush(project);
 

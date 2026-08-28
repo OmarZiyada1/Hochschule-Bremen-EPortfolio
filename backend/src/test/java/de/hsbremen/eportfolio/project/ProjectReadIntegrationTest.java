@@ -13,6 +13,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.hsbremen.eportfolio.auth.AuthenticatedUser;
 import de.hsbremen.eportfolio.auth.JwtService;
 import de.hsbremen.eportfolio.common.enums.BlockType;
+import de.hsbremen.eportfolio.common.enums.NominationStatus;
+import de.hsbremen.eportfolio.common.enums.NominationTier;
 import de.hsbremen.eportfolio.common.enums.Degree;
 import de.hsbremen.eportfolio.common.enums.ProjectStatus;
 import de.hsbremen.eportfolio.common.enums.ProjectType;
@@ -35,6 +37,8 @@ import de.hsbremen.eportfolio.portfolio.PortfolioRepository;
 import de.hsbremen.eportfolio.portfolio.PortfolioService;
 import de.hsbremen.eportfolio.reaction.ReactionRepository;
 import de.hsbremen.eportfolio.reaction.TestReaction;
+import de.hsbremen.eportfolio.top10.TestTop10;
+import de.hsbremen.eportfolio.top10.Top10NominationRepository;
 import de.hsbremen.eportfolio.user.TestUser;
 import de.hsbremen.eportfolio.user.User;
 import de.hsbremen.eportfolio.user.UserRepository;
@@ -116,6 +120,10 @@ class ProjectReadIntegrationTest {
 
 	@Autowired
 	private BlockRepository blockRepository;
+
+	/** Fuer hasOpenNomination (§3.11, seit Contract v90). */
+	@Autowired
+	private Top10NominationRepository nominationRepository;
 
 	@Autowired
 	private ReactionRepository reactionRepository;
@@ -318,6 +326,22 @@ class ProjectReadIntegrationTest {
 		@DisplayName("Eine Redakteur:in ohne Zuweisung bekommt eine leere Liste")
 		void withoutAssignmentEmpty() throws Exception {
 			assertThat(listIds(otherEditor, "editor", "me")).isEmpty();
+		}
+
+		@Test
+		@DisplayName("Ein zugewiesenes Admin-Konto findet sein Projekt hier, ein nicht "
+				+ "zugewiesenes nicht (DoD KAN-87)")
+		void assignedAdminSeesTheProject() throws Exception {
+			// Ohne Zuweisung ist die Liste leer, obwohl der Admin jedes
+			// Projekt lesen darf: editor=me schneidet auf die Zuweisung zu und
+			// nicht auf die Sicht (§5, Fussnote 5 seit Contract v89).
+			assertThat(listIds(admin, "editor", "me")).isEmpty();
+
+			submittedForeignProject.getEditors().add(admin);
+			projectRepository.saveAndFlush(submittedForeignProject);
+
+			assertThat(listIds(admin, "editor", "me"))
+					.containsExactly(submittedForeignProject.getId());
 		}
 
 		@Test
@@ -1159,6 +1183,95 @@ class ProjectReadIntegrationTest {
 					.andExpect(status().isOk())
 					.andExpect(jsonPath("$.editors.length()").value(1))
 					.andExpect(jsonPath("$.statusHistory.length()").value(1));
+		}
+	}
+
+	// ==================================================================
+	// hasOpenNomination (§3.11, seit Contract v90)
+	// ==================================================================
+
+	@Nested
+	@DisplayName("hasOpenNomination an Kachel und Detail")
+	class OpenNomination {
+
+		/**
+		 * Ein offener Vorschlag der zugewiesenen Redaktion zum veroeffentlichten
+		 * Projekt. Bewusst von <em>ihr</em> und nicht vom Admin: das Feld sagt
+		 * „es liegt einer vor" und nicht „ich habe einen gemacht", und genau
+		 * dieser Unterschied ist der Grund, aus dem es das Feld gibt
+		 * (§3.11.1 Regel 2 gilt je Projekt).
+		 */
+		@BeforeEach
+		void nominate() {
+			nominationRepository.saveAndFlush(TestTop10.pending(
+					publishedProject, assignedEditor, NominationTier.TOP_10));
+		}
+
+		@Test
+		@DisplayName("Die Kachel sagt der Redaktion und dem Admin, dass ein Vorschlag offen ist")
+		void cardTellsEditorAndAdmin() throws Exception {
+			for (User user : List.of(assignedEditor, otherEditor, admin)) {
+				String response = body(asUser(listRequest("q", "Beta"), user));
+				JsonNode card = objectMapper.readTree(response).get("content").get(0);
+
+				assertThat(card.get("title").asText()).isEqualTo("Beta Portfolio");
+				assertThat(card.get("hasOpenNomination").asBoolean()).isTrue();
+			}
+		}
+
+		@Test
+		@DisplayName("Ein Projekt ohne Vorschlag steht auf false und nicht auf null")
+		void cardFalseWithoutNomination() throws Exception {
+			String response = body(asUser(listRequest("q", "Gamma"), admin));
+			JsonNode card = objectMapper.readTree(response).get("content").get(0);
+
+			assertThat(card.get("title").asText()).isEqualTo("Gamma Review");
+			assertThat(card.get("hasOpenNomination").isNull()).isFalse();
+			assertThat(card.get("hasOpenNomination").asBoolean()).isFalse();
+		}
+
+		@Test
+		@DisplayName("Fuer Studierende und ohne Token bleibt das Feld null: nicht sehen "
+				+ "duerfen ist etwas anderes als kein Vorschlag")
+		void hiddenFromOthers() throws Exception {
+			String asStudent = body(asUser(listRequest("q", "Beta"), author));
+			assertThat(objectMapper.readTree(asStudent).get("content").get(0)
+					.get("hasOpenNomination").isNull()).isTrue();
+
+			String anonymous = body(listRequest("q", "Beta"));
+			assertThat(objectMapper.readTree(anonymous).get("content").get(0)
+					.get("hasOpenNomination").isNull()).isTrue();
+		}
+
+		@Test
+		@DisplayName("Dieselbe Auskunft an der Detailantwort")
+		void detailCarriesTheSameField() throws Exception {
+			mockMvc.perform(asUser(get("/api/projects/" + publishedProject.getId()), admin))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.hasOpenNomination").value(true));
+
+			mockMvc.perform(asUser(get("/api/projects/" + publishedProject.getId()), author))
+					.andExpect(status().isOk())
+					// Ausdruecklich null und nicht false, wie bei statusHistory.
+					.andExpect(jsonPath("$.hasOpenNomination").doesNotExist());
+
+			mockMvc.perform(get("/api/projects/" + publishedProject.getId()))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.hasOpenNomination").doesNotExist());
+		}
+
+		@Test
+		@DisplayName("Ein zurueckgezogener Vorschlag sperrt nicht mehr (§3.11.1)")
+		void withdrawnDoesNotBlock() throws Exception {
+			nominationRepository.findByProjectId(publishedProject.getId())
+					.forEach(nomination -> {
+						nomination.setStatus(NominationStatus.WITHDRAWN);
+						nominationRepository.saveAndFlush(nomination);
+					});
+
+			mockMvc.perform(asUser(get("/api/projects/" + publishedProject.getId()), admin))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.hasOpenNomination").value(false));
 		}
 	}
 

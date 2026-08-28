@@ -81,12 +81,40 @@ export function useReviewCounts() {
  * <p>Beides zusammen, weil die Karte beides braucht: die Nominierungen als
  * Inhalt und die Liste fuer die Angabe „n von zehn Plaetzen aktiv" sowie
  * fuer die Sperre „Bereits in Top 10" im Zeilenmenue.
+ *
+ * <p><strong>{@code enabled} ist Pflicht auf Seiten, die auch anderen
+ * offenstehen</strong> (seit KAN-87). {@code GET /top10-nominations} setzt
+ * EDITOR oder ADMIN voraus (§5, Zeile „Eigene Top-10-Nominierungen lesen");
+ * ungefragt abgesetzt liefe die Abfrage auf der oeffentlichen Projektseite
+ * fuer jede Studentin in ein 403. „Meine Reviews" und die Projektverwaltung
+ * sind rollengesperrt und brauchen den Schalter nicht, deshalb steht er auf
+ * {@code true}.
  */
-export function useOwnNominations() {
+export function useOwnNominations(enabled = true) {
   return {
-    nominations: useQuery(top10Queries.nominations()),
-    top10: useQuery(top10Queries.list()),
+    nominations: useQuery({ ...top10Queries.nominations(), enabled }),
+    top10: useQuery({ ...top10Queries.list(), enabled }),
   }
+}
+
+/**
+ * Die Projekte, die bereits einen Platz der Top-10 belegen (§3.11.1, Regel 2).
+ *
+ * <p><strong>Der zweite Sperrgrund steht seit Contract v90 an der Antwort
+ * selbst</strong> ({@code hasOpenNomination}, §3.11) und braucht deshalb
+ * keine eigene Abfrage mehr. Ein kurzer Zwischenstand von KAN-87 las dafuer
+ * den Admin-Spiegel; das half nur der Administration, denn die Redaktion darf
+ * ihn nicht lesen (§5). Mit dem Feld sehen beide Rollen dasselbe.
+ *
+ * <p>Die kuratierte Liste bleibt eine eigene Abfrage: sie ist oeffentlich,
+ * hoechstens zehn Eintraege lang und steht auf den betroffenen Seiten ohnehin
+ * im Cache.
+ *
+ * @param enabled {@code false} auf Seiten, die auch anderen offenstehen
+ */
+export function useTop10ProjectIds(enabled = true) {
+	const top10 = useQuery({ ...top10Queries.list(), enabled })
+	return new Set((top10.data ?? []).map((entry) => entry.project.id))
 }
 
 /** Die Optionen der drei Auswahlfelder (§3.7, §3.18, §3.9). */

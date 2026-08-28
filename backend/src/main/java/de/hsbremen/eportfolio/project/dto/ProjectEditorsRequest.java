@@ -31,7 +31,9 @@ import java.util.UUID;
  */
 public record ProjectEditorsRequest(
 		@Schema(description = "IDs der zustaendigen Redakteur:innen aus "
-				+ "GET /api/users/lookup?role=EDITOR. Die Liste ersetzt die bisherige "
+				+ "GET /api/users/lookup?role=EDITOR&role=ADMIN; beide Rollen sind "
+				+ "zuweisbar (§5, Fussnote 5 seit Contract v89). "
+				+ "Die Liste ersetzt die bisherige "
 				+ "vollstaendig; [] hebt die Zuweisung auf. Anders als bei "
 				+ "PUT /api/projects/{id} ist das Feld hier Pflicht, weil dieser Endpoint "
 				+ "nichts anderes tut. Auch hier gilt der Ausschluss aus §5 Fussnote 3 "

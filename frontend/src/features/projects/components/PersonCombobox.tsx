@@ -82,8 +82,12 @@ export function PersonCombobox({
   value: UserLookupResponse | null
   onChange: (person: UserLookupResponse | null) => void
   id?: string
-  /** Rollenfilter, etwa {@code EDITOR} fuer die Redaktion. Ohne ihn alle Rollen. */
-  role?: Role
+  /**
+   * Rollenfilter, etwa {@code ["EDITOR", "ADMIN"]} fuer die Redaktion. Eine
+   * Liste, weil {@code role} seit Contract v89 mehrwertig ist (KAN-87) und
+   * die Werte ODER-verknuepft sind. Ohne ihn alle Rollen.
+   */
+  role?: readonly Role[]
   /**
    * Konten, die nicht zur Auswahl stehen: die bereits Gewaehlten, die
    * eigene Person, die Autor:in. Ausgeblendet statt gesperrt, denn ein

@@ -50,6 +50,11 @@ import {
 import { AdminProjectRowMenu } from "@/features/administration/components/AdminProjectRowMenu"
 import { BulkStatusDialog } from "@/features/administration/components/BulkStatusDialog"
 import { EditorAssignmentDialog } from "@/features/administration/components/EditorAssignmentDialog"
+import { Top10PlacementDialog } from "@/features/administration/components/Top10PlacementDialog"
+import {
+  useSaveTop10Order,
+  useTop10Entries,
+} from "@/features/administration/hooks/useAdminTop10"
 import {
   useAdminFilterOptions,
   useAdminProjectList,
@@ -57,6 +62,13 @@ import {
   useDeleteProject,
   useReassignEditors,
 } from "@/features/administration/hooks/useAdministration"
+import {
+  buildSlots,
+  containsProject,
+  freePositions,
+  isFull,
+  placeProjectAt,
+} from "@/features/administration/top10Slots"
 import {
   ALL_STATUSES,
   statusQueryValue,
@@ -180,6 +192,9 @@ export default function AdminProjectListPage() {
     projects: ProjectCardResponse[]
   } | null>(null)
   const [editorsFor, setEditorsFor] = useState<ProjectCardResponse | null>(null)
+  const [placementFor, setPlacementFor] = useState<ProjectCardResponse | null>(
+    null
+  )
   const dialogTrigger = useRef<HTMLElement | null>(null)
   /*
    * Fokusziel, wenn das auslesende Element unter dem Fokus verschwindet: nach
@@ -195,6 +210,22 @@ export default function AdminProjectListPage() {
   >(undefined)
   const [rowError, setRowError] = useState<string | null>(null)
   const [notice, setNotice] = useState("")
+
+  /*
+   * Die Belegung der zehn Plaetze (§3.11, §3.11.1). Sie beantwortet beide
+   * Sperrgruende des Aufnahme-Eintrags: ob dieses Projekt schon einen Platz
+   * belegt und ob ueberhaupt noch einer frei ist. Ein offener Vorschlag
+   * sperrt hier nicht, er wird mit dem Speichern eingeloest (§3.11.1 Regel 5).
+   *
+   * Dieselbe Abfrage wie in der Top-10-Verwaltung und unter demselben
+   * Cache-Schluessel: die Liste ist oeffentlich, hoechstens zehn Eintraege
+   * lang und steht auf den betroffenen Seiten ohnehin im Cache.
+   */
+  const top10 = useTop10Entries()
+  const slots = buildSlots(top10.data ?? [])
+  const free = freePositions(slots)
+  const listFull = isFull(slots)
+  const placeInTop10 = useSaveTop10Order()
 
   function openStatusDialog(
     action: BulkStatusAction,
@@ -505,6 +536,8 @@ export default function AdminProjectListPage() {
                     actions={
                       <AdminProjectRowMenu
                         project={project}
+                        inTop10={containsProject(slots, project.id)}
+                        listFull={listFull}
                         deletePending={remove.isPending}
                         onChangeStatus={(action, trigger) =>
                           openStatusDialog(action, [project], trigger)
@@ -513,6 +546,11 @@ export default function AdminProjectListPage() {
                           dialogTrigger.current = trigger.current
                           reassign.reset()
                           setEditorsFor(project)
+                        }}
+                        onPlaceInTop10={(trigger) => {
+                          dialogTrigger.current = trigger.current
+                          placeInTop10.reset()
+                          setPlacementFor(project)
                         }}
                         onDelete={() => {
                           setRowError(null)
@@ -675,9 +713,37 @@ export default function AdminProjectListPage() {
         />
       )}
 
-      {/* Eine Ansage je Vorgang: Loeschen, Statuswechsel und Zuweisung
-          aendern die Liste weiter oben, und ohne Live-Region bliebe das fuer
-          Screenreader unbemerkt (SC 4.1.3). */}
+      {placementFor !== null && (
+        <Top10PlacementDialog
+          project={placementFor}
+          freePositions={free}
+          onOpenChange={(next) => {
+            if (!next) {
+              setPlacementFor(null)
+              placeInTop10.reset()
+            }
+          }}
+          finalFocus={dialogTrigger}
+          pending={placeInTop10.isPending}
+          /* Wirft weiter: der Dialog zeigt den ApiError an seiner Spitze und
+             bleibt offen, damit die Wahl nicht verloren geht. */
+          onSubmit={async (position) => {
+            await placeInTop10.mutateAsync(
+              placeProjectAt(slots, placementFor, position)
+            )
+            setNotice(
+              t("administration.top10.place.done", {
+                title: placementFor.title,
+                position,
+              })
+            )
+          }}
+        />
+      )}
+
+      {/* Eine Ansage je Vorgang: Loeschen, Statuswechsel, Zuweisung und
+          Aufnahme in die Top 10 aendern die Liste weiter oben, und ohne
+          Live-Region bliebe das fuer Screenreader unbemerkt (SC 4.1.3). */}
       <span className="sr-only" role="status">
         {notice}
       </span>

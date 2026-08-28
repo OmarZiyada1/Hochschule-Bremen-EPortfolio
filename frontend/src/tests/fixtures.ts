@@ -96,6 +96,10 @@ export function projectCard(
     tags: [],
     reactionCount: 0,
     publishedAt: null,
+    /* Seit Contract v90 an der Kachel (§3.11). false und nicht null: die
+       meisten Tests sehen die Liste als EDITOR oder ADMIN, und null hiesse
+       "darf ich nicht sehen". */
+    hasOpenNomination: false,
     ...overrides,
   }
 }

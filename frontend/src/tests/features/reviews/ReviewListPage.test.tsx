@@ -280,8 +280,16 @@ describe("ReviewListPage", () => {
     ).toBeInTheDocument()
   })
 
-  it("sperrt die Nominierung begruendet bei eigener offener Nominierung", async () => {
-    const published = projectCard({ ...ASSIGNED, status: "PUBLISHED" })
+  it("sperrt die Nominierung begruendet bei einer offenen Nominierung", async () => {
+    /* Der Sperrgrund steht seit Contract v90 an der Kachel (§3.11) und nicht
+       mehr in der Liste der eigenen Vorschlaege: Regel 2 aus §3.11.1 gilt je
+       Projekt und nicht je Person. Die Karte darunter zeigt weiterhin die
+       eigenen Vorschlaege, deshalb bleibt der Handler stehen. */
+    const published = projectCard({
+      ...ASSIGNED,
+      status: "PUBLISHED",
+      hasOpenNomination: true,
+    })
     server.use(
       http.get("*/api/top10-nominations", () =>
         HttpResponse.json([

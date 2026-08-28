@@ -13,20 +13,33 @@ import {
  * Handlung nicht dort anbietet, wo sie in einem 409 endete.
  */
 describe("nominationWithdrawable", () => {
-  it("laesst einen offenen Vorschlag in beiden Rollen zurueckziehen", () => {
-    expect(nominationWithdrawable("PENDING", false)).toBe(true)
-    expect(nominationWithdrawable("PENDING", true)).toBe(true)
+  it("laesst einen eigenen offenen Vorschlag in beiden Rollen zurueckziehen", () => {
+    expect(nominationWithdrawable("PENDING", false, true)).toBe(true)
+    expect(nominationWithdrawable("PENDING", true, true)).toBe(true)
   })
 
-  it("laesst einen angenommenen Vorschlag allein der Administration", () => {
-    expect(nominationWithdrawable("ACCEPTED", false)).toBe(false)
-    expect(nominationWithdrawable("ACCEPTED", true)).toBe(true)
+  it("laesst einen eigenen angenommenen Vorschlag allein der Administration", () => {
+    expect(nominationWithdrawable("ACCEPTED", false, true)).toBe(false)
+    expect(nominationWithdrawable("ACCEPTED", true, true)).toBe(true)
   })
 
   it("sperrt abgelehnte und bereits zurueckgezogene Vorschlaege ganz", () => {
     for (const status of ["REJECTED", "WITHDRAWN"] as NominationStatus[]) {
-      expect(nominationWithdrawable(status, false)).toBe(false)
-      expect(nominationWithdrawable(status, true)).toBe(false)
+      expect(nominationWithdrawable(status, false, true)).toBe(false)
+      expect(nominationWithdrawable(status, true, true)).toBe(false)
+    }
+  })
+
+  /*
+   * Nacharbeit an KAN-87: Die Top-10-Verwaltung zeigt alle Vorschlaege
+   * nebeneinander, nicht nur eigene. Der Server liesse die Administration
+   * jeden zurueckziehen (§3.11.1); die Oberflaeche bietet es bewusst nicht
+   * an, weil ein fremder Vorschlag abgelehnt und nicht zurueckgezogen wird.
+   */
+  it("sperrt fremde Vorschlaege in jedem Stand und jeder Rolle", () => {
+    for (const status of NOMINATION_STATUSES) {
+      expect(nominationWithdrawable(status, false, false)).toBe(false)
+      expect(nominationWithdrawable(status, true, false)).toBe(false)
     }
   })
 

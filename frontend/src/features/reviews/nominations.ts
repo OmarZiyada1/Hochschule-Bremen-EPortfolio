@@ -81,23 +81,45 @@ export type NominationFilterValue =
   NominationStatus | typeof ALL_NOMINATION_STATUSES
 
 /**
- * Laesst sich dieser Vorschlag zurueckziehen (§3.11.1, seit Contract v70)?
+ * Laesst sich dieser Vorschlag ueber die Oberflaeche zurueckziehen (§3.11.1,
+ * seit Contract v70)?
  *
  * <p>Die nominierende Person zieht ihren eigenen Vorschlag zurueck, solange
- * er offen ist; die Administration zusaetzlich einen bereits angenommenen.
- * Ein abgelehnter oder schon zurueckgezogener Vorschlag ist in keinem Fall
- * mehr zurueckziehbar.
+ * er offen ist; ist sie zugleich Administration, auch einen bereits
+ * angenommenen. Ein abgelehnter oder schon zurueckgezogener Vorschlag ist in
+ * keinem Fall mehr zurueckziehbar.
  *
- * <p>Die Liste zeigt ausschliesslich eigene Vorschlaege
- * ({@code nominatedBy=me}), die Frage nach fremden stellt sich hier also
- * nicht. Sie bildet §3.11.1 ab und ersetzt es nicht: verbindlich bleibt der
- * Server, der dieselben Faelle mit 409 {@code NOMINATION_ALREADY_DECIDED}
- * beantwortet. Die Oberflaeche kennt nur den Stand des letzten Ladevorgangs.
+ * <p><strong>Ein fremder Vorschlag wird hier nie zurueckgezogen</strong>
+ * (Entscheidung zur Nacharbeit an KAN-87). Der Server erlaubt der
+ * Administration mehr: §3.11.1 laesst sie jeden Vorschlag zurueckziehen. Die
+ * Oberflaeche bietet das bewusst nicht an, weil Zurueckziehen und Ablehnen
+ * zwei verschiedene Vorgaenge sind und im Protokoll auch verschieden gelesen
+ * werden. „Zurueckgezogen" heisst „die vorschlagende Person hat es sich
+ * anders ueberlegt"; die Administration entscheidet dagegen ueber einen
+ * fremden Vorschlag, und dafuer gibt es <em>Ablehnen</em>. Soll ein bereits
+ * aufgenommenes Projekt die Liste verlassen, ist der Weg
+ * „Vom Platz nehmen" in der Platzliste, nicht der Rueckzug eines fremden
+ * Vorschlags.
+ *
+ * <p>In „Meine Reviews" ist {@code isOwn} immer wahr: die Liste steht auf
+ * {@code nominatedBy=me}. In der Top-10-Verwaltung stehen alle Vorschlaege
+ * nebeneinander, und dort traegt dieser Parameter die Unterscheidung.
+ *
+ * <p>Die Funktion bildet §3.11.1 ab und ersetzt es nicht: verbindlich bleibt
+ * der Server, der dieselben Faelle mit 409
+ * {@code NOMINATION_ALREADY_DECIDED} beantwortet. Die Oberflaeche kennt nur
+ * den Stand des letzten Ladevorgangs.
+ *
+ * @param isOwn stammt der Vorschlag von der angemeldeten Person?
  */
 export function nominationWithdrawable(
   status: NominationStatus,
-  isAdmin: boolean
+  isAdmin: boolean,
+  isOwn: boolean
 ): boolean {
+  if (!isOwn) {
+    return false
+  }
   if (status === "PENDING") {
     return true
   }

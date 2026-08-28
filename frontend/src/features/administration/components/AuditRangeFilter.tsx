@@ -5,7 +5,7 @@ import { Controller, useForm } from "react-hook-form"
 import { useTranslation } from "react-i18next"
 
 import { adminUserQueries } from "@/api/queries/admin"
-import type { UserLookupResponse } from "@/api/types"
+import type { Role, UserLookupResponse } from "@/api/types"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
@@ -15,6 +15,16 @@ import {
   type AuditRangeFormValues,
 } from "@/features/administration/components/AuditRangeFilter.schema"
 import { PersonCombobox } from "@/features/projects/components/PersonCombobox"
+
+/**
+ * Das Protokoll fuehrt nur Handlungen der Administration (§3.17), die
+ * Personensuche daneben also auch nur Admin-Konten.
+ *
+ * <p>Modulweit, weil {@code role} seit Contract v89 eine Liste ist
+ * (KAN-87) und im Query-Key der Auswahlliste steht: ein frisches Array je
+ * Render waere dort jedes Mal ein anderer Schluessel.
+ */
+const ADMIN_ONLY: readonly Role[] = ["ADMIN"]
 
 /**
  * Der Filter des Top-10-Protokolls (§6.1, KAN-40): Zeitraum und Person.
@@ -179,7 +189,7 @@ export function AuditRangeFilter({
       <PersonCombobox
         className="sm:w-64"
         label={t("administration.top10.audit.person")}
-        role="ADMIN"
+        role={ADMIN_ONLY}
         value={person}
         onChange={(next) => {
           setPicked(next)

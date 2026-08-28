@@ -41,18 +41,30 @@ export function Top10NominationList({
   nominations,
   freePositions,
   isAdmin,
+  currentUserId,
   onNotice,
 }: {
   nominations: readonly Top10NominationResponse[]
   /** Die noch unbesetzten Plaetze, fuer die Auswahl im Annahme-Dialog. */
   freePositions: readonly number[]
   /**
-   * Darf die anfragende Person auch angenommene Vorschlaege zurueckziehen
-   * (§3.11.1)? Auf dieser Seite immer wahr, weil sie ADMIN vorbehalten ist;
-   * die Angabe steht trotzdem als Prop, damit die Zeile ihre Regel nicht
-   * aus ihrem Ort ableitet.
+   * Darf die anfragende Person auch einen eigenen, bereits angenommenen
+   * Vorschlag zurueckziehen (§3.11.1)? Auf dieser Seite immer wahr, weil sie
+   * ADMIN vorbehalten ist; die Angabe steht trotzdem als Prop, damit die
+   * Zeile ihre Regel nicht aus ihrem Ort ableitet.
    */
   isAdmin: boolean
+  /**
+   * Die angemeldete Person, oder {@code null}, solange sie nicht geladen ist.
+   *
+   * <p>Sie entscheidet, ob eine Zeile den Rueckzug anbietet: <strong>nur
+   * eigene Vorschlaege werden zurueckgezogen</strong>, fremde werden
+   * abgelehnt (Nacharbeit an KAN-87, Begruendung in
+   * {@code nominationWithdrawable}). Ohne geladene Person bietet keine Zeile
+   * den Rueckzug an; das ist die vorsichtige Richtung, denn ein Rueckzug
+   * laesst sich nicht rueckgaengig machen.
+   */
+  currentUserId: string | null
   /** Ansage nach jeder Entscheidung, fuer die Live-Region der Seite. */
   onNotice: (message: string) => void
 }) {
@@ -64,6 +76,7 @@ export function Top10NominationList({
             nomination={nomination}
             freePositions={freePositions}
             isAdmin={isAdmin}
+            currentUserId={currentUserId}
             onNotice={onNotice}
           />
         </li>
@@ -84,11 +97,13 @@ function NominationRow({
   nomination,
   freePositions,
   isAdmin,
+  currentUserId,
   onNotice,
 }: {
   nomination: Top10NominationResponse
   freePositions: readonly number[]
   isAdmin: boolean
+  currentUserId: string | null
   onNotice: (message: string) => void
 }) {
   const { t, i18n } = useTranslation()
@@ -104,7 +119,11 @@ function NominationRow({
 
   const TierIcon = tierIcons[nomination.proposedTier]
   const open = nomination.status === "PENDING"
-  const withdrawable = nominationWithdrawable(nomination.status, isAdmin)
+  /* Fremde Vorschlaege werden abgelehnt und nicht zurueckgezogen: die beiden
+     Vorgaenge lesen sich im Protokoll verschieden (§3.17). */
+  const isOwn =
+    currentUserId !== null && nomination.nominatedBy.id === currentUserId
+  const withdrawable = nominationWithdrawable(nomination.status, isAdmin, isOwn)
   const created = new Intl.DateTimeFormat(i18n.language, {
     dateStyle: "medium",
     timeStyle: "short",

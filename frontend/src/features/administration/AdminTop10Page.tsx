@@ -110,7 +110,10 @@ export default function AdminTop10Page() {
         className="flex flex-col gap-4"
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="top10-nominations" className="type-h2 flex items-center gap-2">
+          <h2
+            id="top10-nominations"
+            className="type-h2 flex items-center gap-2"
+          >
             <MailIcon aria-hidden="true" className="size-5 text-primary" />
             {t("administration.top10.nominations.title")}
             {nominations.data !== undefined && (
@@ -163,6 +166,7 @@ export default function AdminTop10Page() {
             nominations={nominations.data}
             freePositions={free}
             isAdmin={user?.role === "ADMIN"}
+            currentUserId={user?.id ?? null}
             onNotice={setNotice}
           />
         )}

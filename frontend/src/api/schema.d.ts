@@ -1638,6 +1638,11 @@ export interface components {
       createdAt: string
       /** Format: date-time */
       updatedAt: string
+      /**
+       * @description Ob zu diesem Projekt bereits eine Nominierung im Stand PENDING vorliegt (§3.11, seit Contract v90), gleich von wem. Nur fuer EDITOR und ADMIN gefuellt, fuer alle anderen null; null heisst "darf ich nicht sehen" und nicht "kein Vorschlag". Wer vorgeschlagen hat, sagt das Feld nicht. Die Detailseite sperrt die Nominierung damit begruendet, statt sie in ein 409 RESOURCE_IN_USE laufen zu lassen (§3.11.1, Regel 2).
+       * @example false
+       */
+      hasOpenNomination: boolean | null
     }
     /** @description Fach oder Modul (§3.9). Dauerhaft freiwillig: anders als die uebrigen Bezuege steht es nicht unter den Pflichtfeldern des Einreichens (§3.3). */
     ReferenceResponse: {
@@ -1662,7 +1667,7 @@ export interface components {
       timestamp: string
     }
     ProjectEditorsRequest: {
-      /** @description IDs der zustaendigen Redakteur:innen aus GET /api/users/lookup?role=EDITOR. Die Liste ersetzt die bisherige vollstaendig; [] hebt die Zuweisung auf. Anders als bei PUT /api/projects/{id} ist das Feld hier Pflicht, weil dieser Endpoint nichts anderes tut. Auch hier gilt der Ausschluss aus §5 Fussnote 3 (seit Contract v61): eine Person, die zur Projektseite gehoert, also Autor:in oder Projektmitglied, wird nicht neu als Redaktion eingetragen, sonst 400 VALIDATION_FAILED. Eine bereits bestehende Ueberschneidung laesst sich weiterhin aufloesen. */
+      /** @description IDs der zustaendigen Redakteur:innen aus GET /api/users/lookup?role=EDITOR&role=ADMIN; beide Rollen sind zuweisbar (§5, Fussnote 5 seit Contract v89). Die Liste ersetzt die bisherige vollstaendig; [] hebt die Zuweisung auf. Anders als bei PUT /api/projects/{id} ist das Feld hier Pflicht, weil dieser Endpoint nichts anderes tut. Auch hier gilt der Ausschluss aus §5 Fussnote 3 (seit Contract v61): eine Person, die zur Projektseite gehoert, also Autor:in oder Projektmitglied, wird nicht neu als Redaktion eingetragen, sonst 400 VALIDATION_FAILED. Eine bereits bestehende Ueberschneidung laesst sich weiterhin aufloesen. */
       editorIds: string[]
     }
     PortfolioUpdateRequest: {
@@ -1765,6 +1770,11 @@ export interface components {
        * @description Zeitpunkt der Veroeffentlichung. Null, solange das Projekt nicht veroeffentlicht ist.
        */
       publishedAt: string | null
+      /**
+       * @description Ob zu diesem Projekt bereits eine Nominierung im Stand PENDING vorliegt (§3.11, seit Contract v90), gleich von wem. Nur fuer EDITOR und ADMIN gefuellt, fuer alle anderen null; null heisst "darf ich nicht sehen" und nicht "kein Vorschlag". Wer vorgeschlagen hat, sagt das Feld nicht. Das Zeilenmenue sperrt die Nominierung damit begruendet, statt sie in ein 409 RESOURCE_IN_USE laufen zu lassen (§3.11.1, Regel 2).
+       * @example false
+       */
+      hasOpenNomination: boolean | null
     }
     Top10EntryResponse: {
       /**
@@ -1897,7 +1907,7 @@ export interface components {
       moduleId?: string | null
       /** @description Freie Schlagwoerter, hoechstens fuenf (§3.3). Doppelte Eintraege werden still zusammengefasst. */
       tags?: string[]
-      /** @description IDs der zustaendigen Redakteur:innen aus GET /api/users/lookup?role=EDITOR. Die Autor:in legt sie bei der Anlage fest und kann sie aendern, solange das Projekt in DRAFT oder REVISION steht (seit Contract v62), unabhaengig von ihrer eigenen Systemrolle (§5, Fussnote 3). Nicht eintragen laesst sich, wer zur Projektseite gehoert: weder die anfragende Person selbst noch die Autor:in noch jemand aus members, sonst 400 VALIDATION_FAILED. */
+      /** @description IDs der zustaendigen Redakteur:innen aus GET /api/users/lookup?role=EDITOR&role=ADMIN; beide Rollen sind zuweisbar (§5, Fussnote 5 seit Contract v89). Die Autor:in legt sie bei der Anlage fest und kann sie aendern, solange das Projekt in DRAFT oder REVISION steht (seit Contract v62), unabhaengig von ihrer eigenen Systemrolle (§5, Fussnote 3). Nicht eintragen laesst sich, wer zur Projektseite gehoert: weder die anfragende Person selbst noch die Autor:in noch jemand aus members, sonst 400 VALIDATION_FAILED. */
       editorIds?: string[]
       /** @description Co-Autor:innen und Mitwirkende (§3.13). Nicht zu verwechseln mit der zugewiesenen Redaktion. Die Autor:in selbst gehoert nicht in diese Liste, und wer in editorIds steht, ebenso wenig (§5, Fussnote 3). */
       members?: components["schemas"]["MemberRequest"][]
@@ -6497,8 +6507,8 @@ export interface operations {
   lookup: {
     parameters: {
       query?: {
-        /** @description Nur Konten dieser Rolle, z. B. EDITOR fuer die Redaktionszuweisung. */
-        role?: "STUDENT" | "EDITOR" | "ADMIN"
+        /** @description Filter: nur Konten dieser Rollen (§2.1). Wiederholbar, mehrere Werte ODER-verknuepft, z. B. role=EDITOR&role=ADMIN fuer die Redaktionszuweisung (§5, Fussnote 3). Ohne Angabe alle Rollen. */
+        role?: ("STUDENT" | "EDITOR" | "ADMIN")[]
         /** @description Suchbegriff ueber Vor- und Nachname. */
         q?: string
       }

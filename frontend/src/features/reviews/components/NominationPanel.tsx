@@ -404,7 +404,10 @@ function NominationWithdrawAction({
   const [confirm, setConfirm] = useState(false)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
 
-  if (!nominationWithdrawable(nomination.status, isAdmin)) {
+  /* Diese Karte fuehrt ausschliesslich eigene Vorschlaege: die Abfrage steht
+     auf nominatedBy=me (§6.1). Die Frage nach fremden stellt sich hier nicht,
+     anders als in der Top-10-Verwaltung. */
+  if (!nominationWithdrawable(nomination.status, isAdmin, true)) {
     return null
   }
 

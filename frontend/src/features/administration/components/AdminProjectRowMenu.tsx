@@ -29,6 +29,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Top10PlacementMenuItem } from "@/features/administration/components/Top10PlacementMenuItem"
+import { top10PlacementBlockReason } from "@/features/administration/top10Placement"
 import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
 
 /**
@@ -60,15 +62,45 @@ import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
  * ist es in jedem Status erlaubt (§6.1), und Bloecke wie Dateien fallen per
  * Cascade mit; das steht in der Rueckfrage, weil es sich nicht rueckgaengig
  * machen laesst.
+ *
+ * <p><strong>„In die Top 10 aufnehmen" nimmt unmittelbar auf und schlaegt
+ * nicht vor</strong> (§3.11.1, §5 Zeile „Top-10 kuratieren"; Nacharbeit an
+ * KAN-87). KAN-87 hatte hier zunaechst „Fuer Top-10 nominieren" eingesetzt,
+ * damit ein Admin auch ohne Zuweisung vorschlagen kann. Das beschreibt seine
+ * Rolle in dieser Ansicht falsch herum: In der Administration entscheidet er,
+ * er schlaegt nicht vor, und ein Vorschlag, den dieselbe Person danach selbst
+ * annimmt, ist ein Umweg mit zwei Protokollzeilen fuer einen Vorgang. Der
+ * Nominierungsweg bleibt ihm unveraendert dort, wo er als Redaktion
+ * arbeitet: in „Meine Reviews" und auf der Projektdetailseite. §5 aendert
+ * sich dadurch nicht, der Admin behaelt beide Rechte.
+ *
+ * <p><strong>Der Eintrag erscheint nur bei {@code PUBLISHED}</strong> und
+ * folgt damit den beiden Statuswechseln darueber. In dieser Liste stehen alle
+ * Projekte jedes Status nebeneinander, meist unveroeffentlichte; ein dauerhaft
+ * gesperrter Eintrag in fast jeder Zeile erklaerte nichts, er verstellte nur
+ * den Blick. Steht das Projekt dagegen in {@code PUBLISHED} und ist trotzdem
+ * gesperrt, weil es bereits in der Liste steht oder alle zehn Plaetze vergeben
+ * sind, dann ist das ein Fall, den man erklaeren muss: dort bleibt der Eintrag
+ * sichtbar und begruendet sich (SC 3.3.2).
  */
 export function AdminProjectRowMenu({
   project,
+  inTop10,
+  listFull,
   deletePending,
   onChangeStatus,
   onAssignEditors,
+  onPlaceInTop10,
   onDelete,
 }: {
   project: ProjectCardResponse
+  /** Das Projekt belegt bereits einen Platz der Top-10 (§3.11.1, Regel 2). */
+  inTop10: boolean
+  /**
+   * Alle zehn Plaetze sind vergeben (§3.11). Dann raeumt auch die
+   * unmittelbare Aufnahme keinen Platz; zuerst muss einer frei werden.
+   */
+  listFull: boolean
   deletePending: boolean
   /**
    * Oeffnet den Statusdialog fuer genau dieses Projekt und bekommt den
@@ -81,6 +113,8 @@ export function AdminProjectRowMenu({
     trigger: RefObject<HTMLElement | null>
   ) => void
   onAssignEditors: (trigger: RefObject<HTMLElement | null>) => void
+  /** Oeffnet den Aufnahme-Dialog, mit dem Ausloeser fuer die Fokusrueckgabe. */
+  onPlaceInTop10: (trigger: RefObject<HTMLElement | null>) => void
   onDelete: () => void
 }) {
   const { t } = useTranslation()
@@ -89,6 +123,8 @@ export function AdminProjectRowMenu({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
 
+  const mayPlaceInTop10 = project.status === "PUBLISHED"
+  const placementBlocked = top10PlacementBlockReason(project, inTop10, listFull)
   const mayPublish = project.status === "APPROVED"
   const mayRequestRevision =
     project.status === "SUBMITTED" ||
@@ -131,6 +167,13 @@ export function AdminProjectRowMenu({
             <UserCogIcon aria-hidden="true" />
             {t("administration.projects.row.assignEditors")}
           </DropdownMenuItem>
+
+          {mayPlaceInTop10 && (
+            <Top10PlacementMenuItem
+              blocked={placementBlocked}
+              onPlace={() => onPlaceInTop10(triggerRef)}
+            />
+          )}
 
           {(mayPublish || mayRequestRevision) && <DropdownMenuSeparator />}
 
