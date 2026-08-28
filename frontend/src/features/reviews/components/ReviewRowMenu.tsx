@@ -1,7 +1,6 @@
 import {
   MessageSquareIcon,
   MoreVerticalIcon,
-  TrophyIcon,
   UserMinusIcon,
 } from "lucide-react"
 import { useRef, useState, type RefObject } from "react"
@@ -27,11 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { NominateMenuItem } from "@/features/reviews/components/NominateMenuItem"
 import { nominationBlockReason } from "@/features/reviews/nominationBlock"
 import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
 
@@ -39,30 +34,12 @@ import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
  * Das Zeilenmenue der Reviewliste (Template „Meine Reviews", KAN-37):
  * Anzeigen, Review, Nominieren, Zuweisung abgeben.
  *
- * <p><strong>Der Nominierungseintrag ist immer sichtbar</strong> und dort,
- * wo er nicht greift, gesperrt <em>und begruendet</em>. Ein blosses
- * Ausgrauen sagt nicht, warum (SC 3.3.2).
- *
- * <p><strong>Der Grund steht seit der Nacharbeit an KAN-37 in einem
- * Kurzhinweis und nicht mehr als zweite Zeile im Eintrag.</strong> Zwei
- * Zeilen machten aus einem Menueeintrag einen Absatz und liessen das Menue
- * je nach Zeile unterschiedlich hoch werden. Der haeufigste Fall bekommt
- * stattdessen die Beschriftung selbst: liegt bereits ein Vorschlag vor,
- * heisst der Eintrag „Bereits nominiert" und braucht keine Erklaerung
- * daneben.
- *
- * <p><strong>Gesperrt heisst {@code aria-disabled} und nicht
- * {@code disabled}.</strong> Ein wirklich gesperrter Eintrag ist nicht mehr
- * fokussierbar, und damit waere der Hinweis fuer die Tastatur unerreichbar:
- * genau die Erklaerung, die SC 3.3.2 verlangt, saehe dann nur, wer mit der
- * Maus darueberfaehrt. Base UIs {@code MenuItem} schliesst das Menue
- * allerdings auch bei {@code aria-disabled} ({@code closeOnClick} steht auf
- * true), und ein Menue, das sich ohne Wirkung und ohne Meldung schliesst,
- * laesst den Hinweis nie zu Ende lesen; gesperrte Eintraege setzen deshalb
- * {@code closeOnClick={false}}. Gedaempft wird ueber die Rolle
- * {@code text-disabled} und nicht ueber {@code opacity}, sonst faellt die
- * Beschriftung unter den Kontrastwert (SC 1.4.3). Dasselbe Muster wie beim
- * Standwechsel in der Kommentarspalte.
+ * <p><strong>Der Nominierungseintrag ist hier immer sichtbar</strong> und
+ * dort, wo er nicht greift, gesperrt <em>und begruendet</em>. Ein blosses
+ * Ausgrauen sagt nicht, warum (SC 3.3.2). Der Eintrag selbst steht seit
+ * KAN-87 in {@code NominateMenuItem}, weil ihn die Projektverwaltung
+ * ebenfalls zeigt; dort erscheint er allerdings nur bei
+ * {@code PUBLISHED}, siehe die Begruendung an {@code AdminProjectRowMenu}.
  *
  * <p><strong>„Zuweisung abgeben" erscheint nur in SUBMITTED und
  * REVISION</strong> (§4.1): im Entwurf pflegt die Autor:in die Zuweisung
@@ -81,14 +58,12 @@ import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
 export function ReviewRowMenu({
   project,
   inTop10,
-  alreadyNominated,
   resignPending,
   onNominate,
   onResign,
 }: {
   project: ProjectCardResponse
   inTop10: boolean
-  alreadyNominated: boolean
   resignPending: boolean
   /**
    * Oeffnet den Nominierungsdialog und bekommt den Ausloeser mit: der
@@ -104,7 +79,7 @@ export function ReviewRowMenu({
   const [confirmResign, setConfirmResign] = useState(false)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
 
-  const blocked = nominationBlockReason(project, inTop10, alreadyNominated)
+  const blocked = nominationBlockReason(project, inTop10)
   const mayResign =
     project.status === "SUBMITTED" || project.status === "REVISION"
 
@@ -140,7 +115,7 @@ export function ReviewRowMenu({
 
           <DropdownMenuSeparator />
 
-          <NominateItem
+          <NominateMenuItem
             blocked={blocked}
             onNominate={() => onNominate(triggerRef)}
           />
@@ -181,58 +156,5 @@ export function ReviewRowMenu({
         </AlertDialogContent>
       </AlertDialog>
     </>
-  )
-}
-
-/**
- * Der Nominierungseintrag mit seinen vier Zustaenden.
- *
- * <p>Eigene Komponente, weil der Kurzhinweis den Eintrag umschliessen muss:
- * {@code TooltipTrigger} rendert sein Kind, und ein Menueeintrag, der
- * zwischen zwei Formen wechselt, waere im Menue selbst schlecht zu lesen.
- *
- * <p><strong>„Bereits nominiert" traegt keinen Hinweis</strong>, die
- * Beschriftung sagt bereits alles. Die beiden uebrigen Sperren behalten die
- * gewohnte Beschriftung und erklaeren sich im Hinweis; ein Eintrag, dessen
- * Text je nach Grund wechselt, waere schwerer wiederzufinden.
- */
-function NominateItem({
-  blocked,
-  onNominate,
-}: {
-  blocked: ReturnType<typeof nominationBlockReason>
-  onNominate: () => void
-}) {
-  const { t } = useTranslation()
-
-  const item = (
-    <DropdownMenuItem
-      aria-disabled={blocked !== null}
-      className={blocked !== null ? "text-text-disabled" : undefined}
-      closeOnClick={blocked === null}
-      onClick={() => {
-        if (blocked === null) {
-          onNominate()
-        }
-      }}
-    >
-      <TrophyIcon aria-hidden="true" />
-      {blocked === "nominated"
-        ? t("review.list.row.nominateBlocked.nominated")
-        : t("review.list.row.nominate")}
-    </DropdownMenuItem>
-  )
-
-  if (blocked === null || blocked === "nominated") {
-    return item
-  }
-
-  return (
-    <Tooltip>
-      <TooltipTrigger render={item} />
-      <TooltipContent side="left">
-        {t(`review.list.row.nominateBlocked.${blocked}`)}
-      </TooltipContent>
-    </Tooltip>
   )
 }

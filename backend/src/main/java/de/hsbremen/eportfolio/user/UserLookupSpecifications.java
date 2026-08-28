@@ -2,6 +2,7 @@ package de.hsbremen.eportfolio.user;
 
 import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
+import java.util.List;
 import java.util.Locale;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -31,9 +32,23 @@ public final class UserLookupSpecifications {
 		return (root, query, cb) -> cb.equal(root.get("status"), UserStatus.ACTIVE);
 	}
 
-	/** Filter {@code role}: Konten einer Rolle (§2.1). */
-	public static Specification<User> role(Role role) {
-		return (root, query, cb) -> cb.equal(root.get("role"), role);
+	/**
+	 * Filter {@code role}: Konten einer der genannten Rollen (§2.1).
+	 *
+	 * <p><strong>Ein {@code in} statt eines {@code equal}</strong>, seit
+	 * Contract v89 (KAN-87): der Parameter nimmt mehrere Werte, und sie sind
+	 * ODER-verknuepft. Ein einzelner Wert verhaelt sich exakt wie zuvor, denn
+	 * ein {@code in} mit einem Element ist die Gleichheit. Dieselbe Bauform wie
+	 * bei den Sachfiltern der Projektliste seit v43
+	 * ({@code ProjectSpecifications.degree}).
+	 *
+	 * <p>Leere Listen kommen hier nie an; das stellt der
+	 * {@link UserLookupService} sicher, denn ein {@code in} ohne Werte waere in
+	 * JPA ein Praedikat, das nie zutrifft, und meinte damit das Gegenteil von
+	 * „Filter nicht gesetzt".
+	 */
+	public static Specification<User> role(List<Role> roles) {
+		return (root, query, cb) -> root.get("role").in(roles);
 	}
 
 	/**

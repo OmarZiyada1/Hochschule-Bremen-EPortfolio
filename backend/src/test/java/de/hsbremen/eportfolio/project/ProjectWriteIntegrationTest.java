@@ -118,6 +118,9 @@ class ProjectWriteIntegrationTest {
 
 	private User admin;
 
+	/** Zweites Admin-Konto: seit KAN-87 ebenfalls zuweisbare Redaktion. */
+	private User otherAdmin;
+
 	private Category category;
 
 	private Semester semester;
@@ -135,6 +138,7 @@ class ProjectWriteIntegrationTest {
 		assignedEditor = save(Role.EDITOR);
 		otherEditor = save(Role.EDITOR);
 		admin = save(Role.ADMIN);
+		otherAdmin = save(Role.ADMIN);
 
 		category = categoryRepository.findAllByOrderByNameAsc().getFirst();
 		semester = semesterRepository.findAllByOrderBySortOrderAsc().getFirst();
@@ -698,6 +702,20 @@ class ProjectWriteIntegrationTest {
 		}
 
 		@Test
+		@DisplayName("Die Autor:in darf auch ein Admin-Konto eintragen: die Auswahlliste bietet "
+				+ "es seit Contract v89 an (§5, Fussnote 3; DoD KAN-87)")
+		void authorMayAssignAdminAccount() throws Exception {
+			JsonNode updated = updated(author, draft, json(
+					"version", draft.getVersion(),
+					"title", draft.getTitle(),
+					"editorIds", List.of(admin.getId().toString())));
+
+			assertThat(updated.get("editors")).hasSize(1);
+			assertThat(updated.get("editors").get(0).get("id").asText())
+					.isEqualTo(admin.getId().toString());
+		}
+
+		@Test
 		@DisplayName("Ein Entwurf ohne Redaktion laesst sich weiterhin speichern: die Schranke "
 				+ "aus §3.3 gilt dem Einreichen, nicht dem Speichern")
 		void draftWithoutEditorsStillSaves() throws Exception {
@@ -944,6 +962,56 @@ class ProjectWriteIntegrationTest {
 			assertThat(updated.get("editors")).hasSize(1);
 			assertThat(updated.get("editors").get(0).get("id").asText())
 					.isEqualTo(assignedEditor.getId().toString());
+		}
+
+		/*
+		 * Ein Admin-Konto als zugewiesene Redaktion (§5 Fussnoten 3 und 5 in
+		 * der Fassung von Contract v89, KAN-87). Der Server nahm es schon
+		 * vorher an; neu ist, dass der Contract es traegt und die
+		 * Auswahlliste es anbietet.
+		 */
+
+		@Test
+		@DisplayName("Ein anderes Admin-Konto laesst sich als Redaktion eintragen und wieder "
+				+ "entfernen (DoD KAN-87)")
+		void adminAccountMayBeAssigned() throws Exception {
+			JsonNode updated = objectMapper.readTree(body(asUser(
+					editorsRequest(draft, List.of(otherAdmin.getId().toString())), admin)));
+
+			assertThat(updated.get("editors")).hasSize(1);
+			assertThat(updated.get("editors").get(0).get("id").asText())
+					.isEqualTo(otherAdmin.getId().toString());
+
+			JsonNode cleared = objectMapper.readTree(
+					body(asUser(editorsRequest(draft, List.of()), admin)));
+			assertThat(cleared.get("editors")).isEmpty();
+		}
+
+		@Test
+		@DisplayName("Auch das eigene Admin-Konto: hier verteilt die Administration "
+				+ "Zustaendigkeiten, und ohne diesen Weg haette eine allein administrierende "
+				+ "Person keine Reviewliste (§5, Fussnote 3 seit v77)")
+		void adminMayAssignThemselves() throws Exception {
+			JsonNode updated = objectMapper.readTree(body(asUser(
+					editorsRequest(draft, List.of(admin.getId().toString())), admin)));
+
+			assertThat(updated.get("editors")).hasSize(1);
+			assertThat(updated.get("editors").get(0).get("id").asText())
+					.isEqualTo(admin.getId().toString());
+		}
+
+		@Test
+		@DisplayName("Am eigenen Projekt bleibt es bei 400: die Trennung prueft die "
+				+ "Ueberschneidung und nicht die Rolle (§5, Fussnote 3 seit v83)")
+		void adminMayNotBeAssignedToOwnProject() throws Exception {
+			Project adminDraft = projectRepository.saveAndFlush(
+					newProject(admin, ProjectStatus.DRAFT, "Projekt der Administration"));
+
+			mockMvc.perform(asUser(
+							editorsRequest(adminDraft, List.of(admin.getId().toString())), admin))
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
+					.andExpect(jsonPath("$.message").value(startsWith("editorIds: ")));
 		}
 
 		@Test

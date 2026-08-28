@@ -387,7 +387,7 @@ class ProjectControllerTest {
 				id, "Titel", "Teaser", "/api/files/1", ProjectStatus.PUBLISHED,
 				ProjectType.THESIS, Degree.BACHELOR, semester,
 				null, null, null, module, null, List.of(member),
-				List.of("react", "ux"), 3, null);
+				List.of("react", "ux"), 3, null, false);
 		when(projectReadService.list(any(), any(), any()))
 				.thenReturn(new PageResponse<>(List.of(card), 0, 20, 1, 1));
 
@@ -417,7 +417,8 @@ class ProjectControllerTest {
 	void cardWithoutModule() throws Exception {
 		ProjectCardResponse card = new ProjectCardResponse(
 				UUID.randomUUID(), "Ohne Fach", null, null, ProjectStatus.DRAFT,
-				null, null, null, null, null, null, null, null, List.of(), List.of(), 0, null);
+				null, null, null, null, null, null, null, null, List.of(), List.of(), 0, null,
+				null);
 		when(projectReadService.list(any(), any(), any()))
 				.thenReturn(new PageResponse<>(List.of(card), 0, 20, 1, 1));
 

@@ -305,13 +305,19 @@ describe("ProjectMetadataPage", () => {
       ).toBeVisible()
     )
 
-    /* GET /api/users/lookup filtert auf EDITOR und sucht nur ueber die
-       Namen (§6.1); Adressen liefert der Endpoint gar nicht erst. */
+    /* GET /api/users/lookup filtert auf beide zuweisbaren Rollen und sucht
+       nur ueber die Namen (§6.1); Adressen liefert der Endpoint gar nicht
+       erst. Der Parameter ist seit Contract v89 mehrwertig (KAN-87), ein
+       Admin-Konto steht also zur Wahl; getAll und nicht get, sonst bliebe
+       ein weggefallenes ADMIN unbemerkt. */
     const lookups = requests.filter((entry) =>
       entry.url.pathname.endsWith("/lookup")
     )
     expect(lookups.length).toBeGreaterThan(0)
-    expect(lookups[0]?.url.searchParams.get("role")).toBe("EDITOR")
+    expect(lookups[0]?.url.searchParams.getAll("role")).toEqual([
+      "EDITOR",
+      "ADMIN",
+    ])
     expect(document.body.textContent).not.toMatch(/@/)
   })
 

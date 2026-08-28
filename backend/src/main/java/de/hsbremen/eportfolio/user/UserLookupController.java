@@ -43,8 +43,10 @@ public class UserLookupController {
 	@ApiResponse(responseCode = "401", description = "Kein, abgelaufenes oder ungueltiges Token.")
 	@GetMapping("/lookup")
 	public List<UserLookupResponse> lookup(
-			@Parameter(description = "Nur Konten dieser Rolle, z. B. EDITOR fuer die Redaktionszuweisung.")
-			@RequestParam(name = "role", required = false) Role role,
+			@Parameter(description = "Filter: nur Konten dieser Rollen (§2.1). Wiederholbar, "
+					+ "mehrere Werte ODER-verknuepft, z. B. role=EDITOR&role=ADMIN fuer die "
+					+ "Redaktionszuweisung (§5, Fussnote 3). Ohne Angabe alle Rollen.")
+			@RequestParam(name = "role", required = false) List<Role> role,
 			@Parameter(description = "Suchbegriff ueber Vor- und Nachname.")
 			@RequestParam(name = "q", required = false) String q) {
 		return userLookupService.lookup(role, q);

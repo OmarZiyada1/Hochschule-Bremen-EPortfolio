@@ -29,6 +29,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { NominateMenuItem } from "@/features/reviews/components/NominateMenuItem"
+import { nominationBlockReason } from "@/features/reviews/nominationBlock"
 import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
 
 /**
@@ -60,15 +62,42 @@ import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
  * ist es in jedem Status erlaubt (§6.1), und Bloecke wie Dateien fallen per
  * Cascade mit; das steht in der Rueckfrage, weil es sich nicht rueckgaengig
  * machen laesst.
+ *
+ * <p><strong>„Fuer Top-10 nominieren" steht seit KAN-87 auch hier</strong>
+ * (§3.11.1, §5 Zeile „Projekt fuer Top-10 nominieren"). Bis dahin fuehrte der
+ * Weg zur Nominierung allein ueber „Meine Reviews", also nur ueber
+ * zugewiesene Projekte; ein Admin darf jedes veroeffentlichte Projekt
+ * vorschlagen und hatte dafuer kein Bedienelement. Der zweite Weg in die
+ * Top-10, die unmittelbare Aufnahme ueber den {@code Top10ProjectPicker},
+ * bleibt daneben bestehen: er ist die Entscheidung, dies ist der Vorschlag
+ * mit Stufe und Protokoll.
+ *
+ * <p><strong>Der Eintrag erscheint nur bei {@code PUBLISHED}</strong> und
+ * folgt damit den beiden Statuswechseln darueber, nicht dem Verhalten in
+ * „Meine Reviews". In dieser Liste stehen alle Projekte jedes Status
+ * nebeneinander, meist unveroeffentlichte; ein dauerhaft gesperrter Eintrag
+ * in fast jeder Zeile erklaerte nichts, er verstellte nur den Blick. Steht
+ * das Projekt dagegen in {@code PUBLISHED} und ist trotzdem gesperrt, weil
+ * es bereits in der Liste steht oder schon vorgeschlagen wurde, dann ist das
+ * ein Fall, den man erklaeren muss: dort bleibt der Eintrag sichtbar und
+ * begruendet sich (SC 3.3.2, Entscheidung der Klaerungsrunde zu KAN-87).
  */
 export function AdminProjectRowMenu({
   project,
+  inTop10,
   deletePending,
   onChangeStatus,
   onAssignEditors,
+  onNominate,
   onDelete,
 }: {
   project: ProjectCardResponse
+  /**
+   * Das Projekt belegt bereits einen Platz der Top-10 (§3.11.1, Regel 2). Der
+   * zweite Sperrgrund steht seit Contract v90 an der Kachel selbst
+   * ({@code hasOpenNomination}, §3.11).
+   */
+  inTop10: boolean
   deletePending: boolean
   /**
    * Oeffnet den Statusdialog fuer genau dieses Projekt und bekommt den
@@ -81,6 +110,8 @@ export function AdminProjectRowMenu({
     trigger: RefObject<HTMLElement | null>
   ) => void
   onAssignEditors: (trigger: RefObject<HTMLElement | null>) => void
+  /** Oeffnet den Nominierungsdialog, mit dem Ausloeser fuer die Fokusrueckgabe. */
+  onNominate: (trigger: RefObject<HTMLElement | null>) => void
   onDelete: () => void
 }) {
   const { t } = useTranslation()
@@ -89,6 +120,8 @@ export function AdminProjectRowMenu({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
 
+  const mayNominate = project.status === "PUBLISHED"
+  const nominationBlocked = nominationBlockReason(project, inTop10)
   const mayPublish = project.status === "APPROVED"
   const mayRequestRevision =
     project.status === "SUBMITTED" ||
@@ -131,6 +164,13 @@ export function AdminProjectRowMenu({
             <UserCogIcon aria-hidden="true" />
             {t("administration.projects.row.assignEditors")}
           </DropdownMenuItem>
+
+          {mayNominate && (
+            <NominateMenuItem
+              blocked={nominationBlocked}
+              onNominate={() => onNominate(triggerRef)}
+            />
+          )}
 
           {(mayPublish || mayRequestRevision) && <DropdownMenuSeparator />}
 

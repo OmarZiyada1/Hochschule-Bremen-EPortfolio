@@ -3,10 +3,21 @@ import userEvent from "@testing-library/user-event"
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
-import type { ProjectCardResponse } from "@/api/types"
+import type {
+  ProjectCardResponse,
+  Top10EntryResponse,
+  UserLookupResponse,
+} from "@/api/types"
 import AdminProjectListPage from "@/features/administration/AdminProjectListPage"
 import i18n from "@/i18n"
-import { person, projectCard, projectDetail, reference } from "@/tests/fixtures"
+import {
+  nomination,
+  person,
+  projectCard,
+  projectDetail,
+  reference,
+  top10Entry,
+} from "@/tests/fixtures"
 import { apiErrorResponse, currentUserHandler } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
@@ -42,6 +53,13 @@ const APPROVED = projectCard({
   author: person({ id: "u-8", firstName: "Maria", lastName: "Braun" }),
 })
 
+const PUBLISHED = projectCard({
+  id: "pr-3",
+  title: "SmartCampus",
+  status: "PUBLISHED",
+  author: person({ id: "u-7", firstName: "Jonas", lastName: "Roth" }),
+})
+
 /**
  * Die Anfragen, die die Seite beim Betreten stellt: die Liste und die drei
  * Optionslisten. Sie stehen als eine Funktion beisammen, damit jeder Test nur
@@ -51,6 +69,11 @@ function baseHandlers(
   options: {
     projects?: ProjectCardResponse[]
     onProjectsRequest?: (url: URL) => void
+    /** Besetzte Plaetze der Top-10, fuer die Sperre „Bereits in Top 10". */
+    top10?: Top10EntryResponse[]
+    /** Treffer der Personensuche im Zuweisungsdialog. */
+    people?: UserLookupResponse[]
+    onLookupRequest?: (url: URL) => void
   } = {}
 ) {
   const projects = options.projects ?? []
@@ -63,6 +86,17 @@ function baseHandlers(
     http.get("*/api/study-programs", () => HttpResponse.json([])),
     http.get("*/api/semesters", () => HttpResponse.json([])),
     http.get("*/api/modules", () => HttpResponse.json([])),
+    /* Seit KAN-87 traegt das Zeilenmenue den Nominierungseintrag. Ob das
+       Projekt einen Platz belegt, sagt diese Liste; ob ein Vorschlag offen
+       ist, steht seit Contract v90 an der Kachel selbst (§3.11). */
+    http.get("*/api/top10", () => HttpResponse.json(options.top10 ?? [])),
+    /* Der Zuweisungsdialog fragt die Personensuche ab, sobald er aufgeht
+       (§6.1, KAN-44). Ohne Handler liefe der Aufruf in
+       onUnhandledRequest. */
+    http.get("*/api/users/lookup", ({ request }) => {
+      options.onLookupRequest?.(new URL(request.url))
+      return HttpResponse.json(options.people ?? [])
+    }),
   ]
 }
 
@@ -425,4 +459,184 @@ describe("AdminProjectListPage", () => {
     await waitFor(() => expect(bodies).toHaveLength(1))
     expect(bodies[0]).toEqual({ editorIds: [] })
   })
+
+  it("bietet im Zuweisungsdialog auch Admin-Konten an und traegt sie ein", async () => {
+    /*
+     * §5 Fussnoten 3 und 5 seit Contract v89 (KAN-87): zugewiesen wird ein
+     * Konto mit EDITOR oder ADMIN. Bis v88 fragte das Feld fest mit
+     * role=EDITOR ab, ein Admin-Konto liess sich ueber die Oberflaeche also
+     * nicht eintragen, obwohl der Server es annahm.
+     */
+    const lookups: URL[] = []
+    const bodies: unknown[] = []
+    server.use(
+      ...baseHandlers({
+        projects: [DRAFT],
+        onLookupRequest: (url) => lookups.push(url),
+        people: [{ id: "ad-1", firstName: "Nina", lastName: "Ehlers" }],
+      }),
+      http.get("*/api/projects/pr-1", () =>
+        HttpResponse.json(
+          projectDetail({
+            id: "pr-1",
+            title: "AITutor",
+            author: person({ id: "u-9" }),
+            editors: [],
+          })
+        )
+      ),
+      http.put("*/api/projects/pr-1/editors", async ({ request }) => {
+        bodies.push(await request.json())
+        return HttpResponse.json(projectDetail({ id: "pr-1" }))
+      })
+    )
+
+    const user = userEvent.setup()
+    renderWithProviders(<AdminProjectListPage />, "/administration/projects")
+
+    await screen.findByText("AITutor")
+    await user.click(
+      screen.getByRole("button", { name: "Aktionen für AITutor" })
+    )
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Redaktion zuweisen" })
+    )
+
+    const dialog = await screen.findByRole("dialog")
+    await user.click(within(dialog).getByLabelText(/Redakteur:in/))
+    /* Die Vorschlagsliste haengt als Portal am body und nicht im Dialog. */
+    await user.click(await screen.findByRole("option", { name: "Nina Ehlers" }))
+    await user.click(within(dialog).getByRole("button", { name: "Speichern" }))
+
+    await waitFor(() => expect(bodies).toEqual([{ editorIds: ["ad-1"] }]))
+
+    /* Beide Rollen in einer Abfrage: getAll und nicht get, sonst bliebe ein
+       weggefallenes ADMIN unbemerkt (§6.1, mehrwertig seit v89). */
+    expect(lookups.length).toBeGreaterThan(0)
+    expect(lookups[0]?.searchParams.getAll("role")).toEqual([
+      "EDITOR",
+      "ADMIN",
+    ])
+  })
+
+  /*
+   * Der Nominierungseintrag im Zeilenmenue (§3.11.1; KAN-87). Bis dahin
+   * fuehrte der Weg zur Nominierung allein ueber „Meine Reviews", also nur
+   * ueber zugewiesene Projekte.
+   */
+
+  it("nominiert ein veroeffentlichtes Projekt aus der Zeile heraus", async () => {
+    const bodies: unknown[] = []
+    server.use(
+      ...baseHandlers({ projects: [PUBLISHED] }),
+      http.post("*/api/projects/pr-3/top10-nomination", async ({ request }) => {
+        bodies.push(await request.json())
+        return HttpResponse.json(nomination({ id: "n-9" }), { status: 201 })
+      })
+    )
+
+    const user = userEvent.setup()
+    renderWithProviders(<AdminProjectListPage />, "/administration/projects")
+
+    await screen.findByText("SmartCampus")
+    await user.click(
+      screen.getByRole("button", { name: "Aktionen für SmartCampus" })
+    )
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Top 10 nominieren" })
+    )
+
+    const dialog = await screen.findByRole("dialog")
+    await user.click(within(dialog).getByRole("radio", { name: /Top 5/ }))
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: i18n.t("review.nomination.dialog.submit"),
+      })
+    )
+
+    /* Eine Stufe und kein Platz (§3.11.1, Regel 4). */
+    await waitFor(() => expect(bodies).toHaveLength(1))
+    expect(bodies[0]).toEqual({ proposedTier: "TOP_5" })
+  })
+
+  it("blendet den Nominierungseintrag aus, solange das Projekt nicht veroeffentlicht ist", async () => {
+    server.use(...baseHandlers({ projects: [APPROVED] }))
+
+    const user = userEvent.setup()
+    renderWithProviders(<AdminProjectListPage />, "/administration/projects")
+
+    await screen.findByText("EcoHaus")
+    await user.click(
+      screen.getByRole("button", { name: "Aktionen für EcoHaus" })
+    )
+
+    /* Kein gesperrter Eintrag: in dieser Liste stehen ueberwiegend
+       unveroeffentlichte Projekte, und eine dauerhaft gesperrte Zeile
+       erklaerte nichts (Klaerungsrunde zu KAN-87). Die Statuswechsel
+       daneben stehen aber, sonst pruefte der Test ein leeres Menue. */
+    expect(
+      await screen.findByRole("menuitem", { name: "Redaktion zuweisen" })
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("menuitem", { name: "Top 10 nominieren" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("sperrt den Eintrag mit Begruendung, wenn das Projekt bereits in der Top 10 steht", async () => {
+    server.use(
+      ...baseHandlers({
+        projects: [PUBLISHED],
+        top10: [top10Entry({ position: 1, project: PUBLISHED })],
+      })
+    )
+
+    const user = userEvent.setup()
+    renderWithProviders(<AdminProjectListPage />, "/administration/projects")
+
+    await screen.findByText("SmartCampus")
+    await user.click(
+      screen.getByRole("button", { name: "Aktionen für SmartCampus" })
+    )
+
+    /* Sichtbar und begruendet statt ausgeblendet: hier ist es ein Fall, den
+       man erklaeren muss (SC 3.3.2). Gesperrt heisst aria-disabled, damit
+       der Hinweis auch mit der Tastatur erreichbar bleibt. */
+    const item = await screen.findByRole("menuitem", {
+      name: "Top 10 nominieren",
+    })
+    expect(item).toHaveAttribute("aria-disabled", "true")
+
+    await user.hover(item)
+    expect(
+      await screen.findByText("Das Projekt steht bereits in der Top 10.")
+    ).toBeInTheDocument()
+  })
+
+  it("sperrt den Eintrag bei jedem offenen Vorschlag, auch einem fremden", async () => {
+    /*
+     * §3.11.1 Regel 2 laesst je Projekt hoechstens einen offenen Vorschlag
+     * zu, gleich von wem. Bis Contract v89 fragte die Seite nur die eigenen
+     * Vorschlaege ab (nominatedBy=me); ein fremder blieb unsichtbar und der
+     * Klick lief in 409 RESOURCE_IN_USE. Seit v90 sagt es die Kachel selbst.
+     */
+    server.use(
+      ...baseHandlers({
+        projects: [projectCard({ ...PUBLISHED, hasOpenNomination: true })],
+      })
+    )
+
+    const user = userEvent.setup()
+    renderWithProviders(<AdminProjectListPage />, "/administration/projects")
+
+    await screen.findByText("SmartCampus")
+    await user.click(
+      screen.getByRole("button", { name: "Aktionen für SmartCampus" })
+    )
+
+    const item = await screen.findByRole("menuitem", {
+      name: "Bereits nominiert",
+    })
+    expect(item).toHaveAttribute("aria-disabled", "true")
+  })
+
 })

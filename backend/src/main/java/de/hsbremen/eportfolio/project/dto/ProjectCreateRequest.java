@@ -93,7 +93,9 @@ public record ProjectCreateRequest(
 				String> tags,
 
 		@Schema(description = "IDs der zustaendigen Redakteur:innen aus "
-				+ "GET /api/users/lookup?role=EDITOR. Die Autor:in legt sie bei der Anlage fest "
+				+ "GET /api/users/lookup?role=EDITOR&role=ADMIN; beide Rollen sind "
+				+ "zuweisbar (§5, Fussnote 5 seit Contract v89). "
+				+ "Die Autor:in legt sie bei der Anlage fest "
 				+ "und kann sie aendern, solange das Projekt in DRAFT oder REVISION steht "
 				+ "(seit Contract v62), unabhaengig von "
 				+ "ihrer eigenen Systemrolle (§5, Fussnote 3). Nicht eintragen laesst sich, wer "

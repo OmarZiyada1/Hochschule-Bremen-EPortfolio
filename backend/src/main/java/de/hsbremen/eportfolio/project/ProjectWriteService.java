@@ -975,14 +975,22 @@ public class ProjectWriteService {
 	 *
 	 * <p><strong>Die Rolle wird geprueft</strong>, anders als beim Mitglied. Das
 	 * Feld heisst in §3.3 „Zugewiesene Redakteur:innen" und speist „Meine
-	 * Reviews"; die Auswahlliste dazu ist {@code GET /users/lookup?role=EDITOR}
-	 * (§6.1). Eine Studierende dort einzutragen ergaebe eine Review-Liste, in
-	 * der sie nichts tun kann, und wuerde ihr ueber
+	 * Reviews"; die Auswahlliste dazu ist
+	 * {@code GET /users/lookup?role=EDITOR&role=ADMIN} (§6.1, mehrwertig seit
+	 * Contract v89). Eine Studierende dort einzutragen ergaebe eine
+	 * Review-Liste, in der sie nichts tun kann, und wuerde ihr ueber
 	 * {@code ProjectPermissionService.isAssignedEditor} zugleich die Interna des
 	 * Projekts oeffnen (§5, Fussnote ⁷). ADMIN ist mit aufgenommen, weil §4.1
 	 * die Administration bei jeder redaktionellen Entscheidung neben der
 	 * Redaktion fuehrt; eine unbekannte oder unpassende ID ergibt
 	 * <strong>400</strong>.
+	 *
+	 * <p><strong>Seit Contract v89 (KAN-87) ist die Zuweisung eines
+	 * Admin-Kontos kein Sonderfall mehr</strong>, sondern der vorgesehene Weg,
+	 * ein Projekt in seine Liste „Meine Reviews" zu holen (§5, Fussnote 5). Bis
+	 * v88 las §5 sich so, als werde ein Admin nie zugewiesen; der Code nahm ihn
+	 * seit jeher an, und v89 zieht den Text nach. An der Pruefung hier aendert
+	 * sich dadurch nichts: sie stand schon vorher richtig da.
 	 */
 	private User loadEditorAccount(UUID userId) {
 		User user = userRepository.findById(userId).orElseThrow(() -> new ValidationException(

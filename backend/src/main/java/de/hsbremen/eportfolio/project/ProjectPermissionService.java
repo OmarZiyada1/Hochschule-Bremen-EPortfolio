@@ -477,8 +477,8 @@ public class ProjectPermissionService {
 			// Fussnote ¹. Das Vier-Augen-Prinzip greift also nicht, und das ist
 			// plausibel: eine Ruecknahme ist keine Freigabe, niemand verschafft
 			// sich damit einen Vorteil. Seit v42 entscheidet auch hier nur die
-			// zugewiesene Redaktion; Admins werden nicht zugewiesen und
-			// entscheiden immer.
+			// zugewiesene Redaktion; ein Admin entscheidet auch ohne Zuweisung
+			// (§5, Fussnote 5 in der Fassung von v89).
 			case REQUEST_REVISION -> user.hasRole(Role.ADMIN)
 					|| (user.hasRole(Role.EDITOR) && isAssignedEditor(user, project));
 		};
@@ -542,9 +542,8 @@ public class ProjectPermissionService {
 	 *
 	 * <p><strong>Nur die zugewiesene Redaktion entscheidet</strong> (Fussnote
 	 * ¹¹, seit Contract v42): wer ein Projekt weder in Liste noch Detail sehen
-	 * darf, soll auch nicht ueber seine Freigabe entscheiden koennen. Admins
-	 * werden nicht zugewiesen und entscheiden deshalb unabhaengig von der
-	 * Join-Tabelle.
+	 * darf, soll auch nicht ueber seine Freigabe entscheiden koennen. Ein Admin
+	 * entscheidet unabhaengig von der Join-Tabelle.
 	 *
 	 * <p><strong>Die Sperre gilt fuer beide Rollen</strong> (KAN-82, zuvor §7,
 	 * offener Punkt 7). Bis dahin kehrte {@code ADMIN} hier bedingungslos mit
@@ -555,12 +554,21 @@ public class ProjectPermissionService {
 	 * das ist eine Aussage ueber die Person und nicht ueber die Rolle.
 	 *
 	 * <p><strong>Was fuer {@code ADMIN} weiterhin nicht gilt</strong>, ist
-	 * Fussnote ¹¹: Ein Admin steht nie in {@code project_editor} und entscheidet
-	 * trotzdem. Nur diese eine Pruefung ueberspringt er, nicht die auf die
-	 * eigene Beteiligung. Wo dadurch niemand mehr freigeben koennte, etwa bei
-	 * einer einzigen Admin-Person ohne zugewiesene Redaktion, hilft dieselbe
-	 * Property, die schon fuer EDITOR den Ausweg bildet; ein Sonderweg im Code
-	 * entsteht dafuer nicht.
+	 * Fussnote ¹¹: Ein Admin entscheidet <em>auch ohne</em> Eintrag in
+	 * {@code project_editor}. Nur diese eine Pruefung ueberspringt er, nicht die
+	 * auf die eigene Beteiligung. Wo dadurch niemand mehr freigeben koennte,
+	 * etwa bei einer einzigen Admin-Person ohne zugewiesene Redaktion, hilft
+	 * dieselbe Property, die schon fuer EDITOR den Ausweg bildet; ein Sonderweg
+	 * im Code entsteht dafuer nicht.
+	 *
+	 * <p><strong>Bis Contract v88 stand hier „ein Admin steht nie in
+	 * {@code project_editor}".</strong> Das war schon damals eine Aussage ueber
+	 * den Regelfall und nicht ueber die Technik; seit v89 (KAN-87) ist die
+	 * Zuweisung eines Admin-Kontos der vorgesehene Weg in seine Liste „Meine
+	 * Reviews" (§5, Fussnote 5). An dieser Methode aendert das nichts: die
+	 * Zuweisung ist Arbeitsorganisation und keine Rechtequelle, ein
+	 * zugewiesener Admin entscheidet genau wie zuvor, und ein nicht
+	 * zugewiesener ebenso.
 	 *
 	 * <p><strong>Geprueft wird die gesamte Projektseite</strong> (Fussnote ¹ in
 	 * der Fassung von Contract v61, KAN-77), also {@link #isProjectSide} und
@@ -833,7 +841,7 @@ public class ProjectPermissionService {
 
 	/**
 	 * Zeile „Eigene Redaktionszuweisung abgeben" aus §5 (seit Contract v68):
-	 * PUBLIC ✗, STUDENT ✗, EDITOR (✓)¹¹, ADMIN ✗
+	 * PUBLIC ✗, STUDENT ✗, EDITOR (✓)¹¹, ADMIN (✓)¹¹
 	 * ({@code DELETE /api/projects/{id}/editors/me}).
 	 *
 	 * <p><strong>Geprueft wird die Zuweisung und nicht die Systemrolle.</strong>
@@ -843,6 +851,14 @@ public class ProjectPermissionService {
 	 * <strong>403</strong>. Fremde Zuweisungen aendert allein die
 	 * Administration ueber {@code PUT /projects/{id}/editors}
 	 * ({@link #mayReassignEditors}).
+	 *
+	 * <p><strong>Die ADMIN-Zelle traegt seit Contract v89 (KAN-87) denselben
+	 * Klammerhaken.</strong> Bis v88 stand dort ein Kreuz, weil ein Admin als
+	 * nicht zuweisbar galt und deshalb nichts abzugeben hatte; §4.1 beschrieb
+	 * den anderen Fall schon damals, und diese Methode verhielt sich seit jeher
+	 * danach. Die Matrix ist damit an den Code angeglichen und nicht umgekehrt:
+	 * ein zugewiesener Admin traegt sich selbst aus, ein nicht zugewiesener
+	 * bekommt <strong>403</strong>.
 	 *
 	 * <p><strong>Ohne Statuspruefung.</strong> Ob der aktuelle Status das
 	 * Abgeben zulaesst, ist eine Frage des Zustandsautomaten (§4.1) und keine

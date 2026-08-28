@@ -57,11 +57,14 @@ class UserLookupIntegrationTest {
 
 	private User editorZobel;
 
+	private User adminBerg;
+
 	/**
-	 * Fuenf Konten: die aufrufende Studentin, zwei aktive Redakteur:innen,
-	 * ein deaktiviertes und ein unfertiges Redaktionskonto. Die Nachnamen der
-	 * beiden aktiven beginnen nach dem Zusatz einmal klein und einmal gross,
-	 * damit die Sortierung nur mit Gross-Klein-Ignoranz stimmt.
+	 * Sechs Konten: die aufrufende Studentin, zwei aktive Redakteur:innen, ein
+	 * aktives Admin-Konto (seit KAN-87 zuweisbare Redaktion, §5 Fussnote 5)
+	 * sowie ein deaktiviertes und ein unfertiges Redaktionskonto. Die Nachnamen
+	 * der aktiven beginnen nach dem Zusatz teils klein und teils gross, damit
+	 * die Sortierung nur mit Gross-Klein-Ignoranz stimmt.
 	 */
 	@BeforeEach
 	void createAccounts() {
@@ -70,6 +73,7 @@ class UserLookupIntegrationTest {
 		caller = saved(Role.STUDENT, UserStatus.ACTIVE, "Mia", marker + "Meier");
 		editorAbel = saved(Role.EDITOR, UserStatus.ACTIVE, "Anna", marker + "abel");
 		editorZobel = saved(Role.EDITOR, UserStatus.ACTIVE, "Zoe", marker + "Zobel");
+		adminBerg = saved(Role.ADMIN, UserStatus.ACTIVE, "Ben", marker + "Berg");
 		saved(Role.EDITOR, UserStatus.DEACTIVATED, "Weg", marker + "Deaktiviert");
 		saved(Role.EDITOR, UserStatus.REGISTRATION_PENDING, "Noch", marker + "Unfertig");
 	}
@@ -109,14 +113,73 @@ class UserLookupIntegrationTest {
 	}
 
 	@Test
-	@DisplayName("Ohne role: alle aktiven Konten zum Suchbegriff, auch Studierende")
+	@DisplayName("Ohne role: alle aktiven Konten zum Suchbegriff, auch Studierende und Admins")
 	void withoutRoleReturnsAllActiveMatches() throws Exception {
 		mockMvc.perform(asCaller(get(LOOKUP_PATH).param("q", marker)))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$", hasSize(3)))
+				.andExpect(jsonPath("$", hasSize(4)))
 				.andExpect(jsonPath("$[0].lastName").value(marker + "abel"))
-				.andExpect(jsonPath("$[1].lastName").value(marker + "Meier"))
-				.andExpect(jsonPath("$[2].lastName").value(marker + "Zobel"));
+				.andExpect(jsonPath("$[1].lastName").value(marker + "Berg"))
+				.andExpect(jsonPath("$[2].lastName").value(marker + "Meier"))
+				.andExpect(jsonPath("$[3].lastName").value(marker + "Zobel"));
+	}
+
+	/*
+	 * Die drei folgenden Tests decken den mehrwertigen Filter aus Contract v89
+	 * ab (KAN-87). Gebraucht wird er von der Redaktionszuweisung, die seither
+	 * beide entscheidungsberechtigten Rollen in einer Liste braucht.
+	 */
+
+	@Test
+	@DisplayName("role=EDITOR&role=ADMIN: beide Rollen in einer nach Nachname sortierten Liste "
+			+ "(DoD KAN-87)")
+	void multipleRolesAreOrJoined() throws Exception {
+		mockMvc.perform(asCaller(get(LOOKUP_PATH)
+						.param("role", "EDITOR", "ADMIN")
+						.param("q", marker)))
+				.andExpect(status().isOk())
+				// Die Studentin fehlt, das deaktivierte und das unfertige
+				// Redaktionskonto ebenso: die ACTIVE-Schranke steht mit UND
+				// vor dem Filter.
+				.andExpect(jsonPath("$", hasSize(3)))
+				.andExpect(jsonPath("$[0].id").value(editorAbel.getId().toString()))
+				.andExpect(jsonPath("$[1].id").value(adminBerg.getId().toString()))
+				.andExpect(jsonPath("$[2].id").value(editorZobel.getId().toString()))
+				// Auch der mehrwertige Weg gibt keine Adressen aus (§3.1).
+				.andExpect(jsonPath("$[1].hsbEmail").doesNotExist());
+	}
+
+	@Test
+	@DisplayName("Ein einzelner Wert verhaelt sich unveraendert: role=ADMIN liefert nur Admins")
+	void singleRoleStillNarrows() throws Exception {
+		mockMvc.perform(asCaller(get(LOOKUP_PATH).param("role", "ADMIN").param("q", marker)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$", hasSize(1)))
+				.andExpect(jsonPath("$[0].id").value(adminBerg.getId().toString()));
+	}
+
+	@Test
+	@DisplayName("Ein unbekannter Wert unter mehreren: 400 VALIDATION_FAILED, kein stilles "
+			+ "Ueberlesen")
+	void rejectsUnknownValueAmongSeveral() throws Exception {
+		mockMvc.perform(asCaller(get(LOOKUP_PATH).param("role", "EDITOR", "HAUSMEISTER")))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
+	}
+
+	@Test
+	@DisplayName("Ein leerer Einzelwert zaehlt als fehlend: role=EDITOR&role= grenzt weiter ein")
+	void emptyValueIsTreatedAsAbsent() throws Exception {
+		// Springs Konvertierung macht aus dem leeren Wert ein null im
+		// Listenelement. Bliebe es stehen, vergliche das in gegen nichts und
+		// die Liste faende ploetzlich gar keine Redaktion mehr.
+		mockMvc.perform(asCaller(get(LOOKUP_PATH)
+						.param("role", "EDITOR", "")
+						.param("q", marker)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$", hasSize(2)))
+				.andExpect(jsonPath("$[0].id").value(editorAbel.getId().toString()))
+				.andExpect(jsonPath("$[1].id").value(editorZobel.getId().toString()));
 	}
 
 	@Test

@@ -17,8 +17,10 @@ import de.hsbremen.eportfolio.project.dto.ProjectCardResponse;
 import de.hsbremen.eportfolio.project.dto.ProjectDetailResponse;
 import de.hsbremen.eportfolio.project.dto.ProjectFilterRequest;
 import de.hsbremen.eportfolio.project.dto.StatusHistoryResponse;
+import de.hsbremen.eportfolio.common.enums.NominationStatus;
 import de.hsbremen.eportfolio.reaction.ReactionCount;
 import de.hsbremen.eportfolio.reaction.ReactionRepository;
+import de.hsbremen.eportfolio.top10.Top10NominationRepository;
 import de.hsbremen.eportfolio.user.User;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -143,13 +145,27 @@ public class ProjectReadService {
 
 	private final ProjectPermissionService permissions;
 
+	/**
+	 * Fuer {@code hasOpenNomination} (§3.11, seit Contract v90): eine
+	 * Sammelabfrage je Seite, wie bei Reaktionen und Profilbildern.
+	 *
+	 * <p><strong>Das Repository und nicht der {@code Top10Service}.</strong> Der
+	 * Dienst dort baut seine Antworten ueber {@link #cards(List)}; ihn hier
+	 * einzuhaengen ergaebe einen Zyklus zwischen zwei Beans, den Spring
+	 * zurueckweist. Fremde Repositories liegen an dieser Klasse ohnehin schon,
+	 * naemlich das der Reaktionen und das der Portfolios, und aus demselben
+	 * Grund: die Kachel traegt Felder, die nicht am Projekt haengen.
+	 */
+	private final Top10NominationRepository nominationRepository;
+
 	public ProjectReadService(ProjectRepository projectRepository,
 			ProjectMemberRepository projectMemberRepository,
 			BlockRepository blockRepository,
 			ProjectStatusHistoryRepository statusHistoryRepository,
 			ReactionRepository reactionRepository,
 			PortfolioRepository portfolioRepository,
-			ProjectPermissionService permissions) {
+			ProjectPermissionService permissions,
+			Top10NominationRepository nominationRepository) {
 		this.projectRepository = projectRepository;
 		this.projectMemberRepository = projectMemberRepository;
 		this.blockRepository = blockRepository;
@@ -157,6 +173,7 @@ public class ProjectReadService {
 		this.reactionRepository = reactionRepository;
 		this.portfolioRepository = portfolioRepository;
 		this.permissions = permissions;
+		this.nominationRepository = nominationRepository;
 	}
 
 	// ------------------------------------------------------------------
@@ -191,7 +208,7 @@ public class ProjectReadService {
 				conditions(user, filter),
 				completeSort(pageable));
 
-		return PageResponse.from(page, this::cards);
+		return PageResponse.from(page, projects -> cards(projects, user));
 	}
 
 	/**
@@ -364,9 +381,37 @@ public class ProjectReadService {
 	 *                 einen {@code @EntityGraph}
 	 */
 	public List<ProjectCardResponse> cards(List<Project> projects) {
+		return cards(projects, null);
+	}
+
+	/**
+	 * Dieselben Kacheln, aber mit {@code hasOpenNomination} (§3.11, seit
+	 * Contract v90).
+	 *
+	 * <p>Das Feld ist die einzige Angabe der Kachel, die an der anfragenden
+	 * Person haengt, und deshalb gibt es diese zweite Form. Wer keine
+	 * Nominierung vorschlagen darf, bekommt {@code null}, und das heisst
+	 * ausdruecklich „darf ich nicht sehen" und nicht „kein Vorschlag". Die
+	 * Grenze ist dieselbe wie in der Zeile „Projekt fuer Top-10 nominieren" aus
+	 * §5, gezogen ueber {@code ProjectPermissionService.mayNominate}: wer
+	 * vorschlagen darf, darf auch erfahren, ob es noch geht.
+	 *
+	 * <p>Die alte Form bleibt fuer die Aufrufer, deren Antwort keine
+	 * Nominierungsaktion traegt: {@code GET /api/top10} ist oeffentlich, und der
+	 * Spiegel der Nominierungen zeigt ohnehin, was vorliegt.
+	 *
+	 * <p>Eine Abfrage je Seite, nicht je Kachel, wie bei Reaktionen, Tags,
+	 * Mitgliedern und Profilbildern. Sie entfaellt ganz, wenn niemand das Feld
+	 * sehen darf.
+	 *
+	 * @param user anfragende Person oder {@code null} fuer „unbekannt"
+	 */
+	public List<ProjectCardResponse> cards(List<Project> projects, AuthenticatedUser user) {
 		Map<UUID, Long> reactions = reactionsPerProject(projects);
 		Map<UUID, List<ProjectMember>> members = membersPerProject(projects);
 		Map<UUID, String> avatars = avatarsPerPerson(projects, members);
+		Set<UUID> openNominations = openNominationsPerProject(projects, user);
+		boolean nominationsVisible = permissions.mayNominate(user);
 
 		return projects.stream()
 				.map(project -> ProjectCardResponse.from(
@@ -374,8 +419,29 @@ public class ProjectReadService {
 						sortedTags(project),
 						reactions.getOrDefault(project.getId(), 0L),
 						avatarOf(project.getAuthor(), avatars),
-						memberCards(members.getOrDefault(project.getId(), List.of()), avatars)))
+						memberCards(members.getOrDefault(project.getId(), List.of()), avatars),
+						nominationsVisible ? openNominations.contains(project.getId()) : null))
 				.toList();
+	}
+
+	/**
+	 * Die Projekte einer Seite, zu denen ein offener Vorschlag vorliegt (§3.11.1,
+	 * Regel 2).
+	 *
+	 * <p>Leer, sobald die anfragende Person das Feld nicht sehen darf: dann
+	 * laeuft die Abfrage gar nicht erst, und die Kachel bekommt {@code null}.
+	 */
+	private Set<UUID> openNominationsPerProject(List<Project> projects, AuthenticatedUser user) {
+		if (!permissions.mayNominate(user)) {
+			return Set.of();
+		}
+		List<UUID> ids = projects.stream().map(Project::getId).toList();
+		if (ids.isEmpty()) {
+			// Ein "in ()" mit leerer Liste ist in SQL nicht ueberall gueltig.
+			return Set.of();
+		}
+		return Set.copyOf(nominationRepository.findProjectIdsByStatusAndProjectIdIn(
+				NominationStatus.PENDING, ids));
 	}
 
 	private Map<UUID, Long> reactionsPerProject(List<Project> projects) {
@@ -522,7 +588,30 @@ public class ProjectReadService {
 				members(projectId),
 				blocks(projectId),
 				editorsVisible ? editors(project) : null,
-				internalsVisible ? statusHistory(projectId) : null);
+				internalsVisible ? statusHistory(projectId) : null,
+				hasOpenNomination(projectId, user));
+	}
+
+	/**
+	 * {@code hasOpenNomination} der Detailantwort (§3.11, seit Contract v90):
+	 * ob zu diesem Projekt ein Vorschlag im Stand {@code PENDING} vorliegt,
+	 * gleich von wem.
+	 *
+	 * <p>{@code null} fuer jede Rolle, die nicht nominieren darf (§5). Das ist
+	 * dieselbe Bauform wie bei {@code editors} und {@code statusHistory}: das
+	 * Feld fehlt nicht, es steht auf {@code null}, und der Unterschied zu
+	 * {@code false} ist die Auskunft „darf ich nicht sehen".
+	 *
+	 * <p>Eine Existenzabfrage und keine geladene Zeile: gebraucht wird hier eine
+	 * Ja-Nein-Auskunft, und wer den Vorschlag selbst sehen darf, holt ihn ueber
+	 * die Endpoints aus §6.1.
+	 */
+	private Boolean hasOpenNomination(UUID projectId, AuthenticatedUser user) {
+		if (!permissions.mayNominate(user)) {
+			return null;
+		}
+		return nominationRepository.existsByProjectIdAndStatus(projectId,
+				NominationStatus.PENDING);
 	}
 
 	/**
@@ -572,7 +661,12 @@ public class ProjectReadService {
 				members(projectId),
 				blocks(projectId),
 				editors(project),
-				statusHistory(projectId));
+				statusHistory(projectId),
+				/* Wer sich gerade als Redaktion ausgetragen hat, war zugewiesen
+				   und traegt damit EDITOR oder ADMIN (§5, Fussnote 11): das Feld
+				   steht ihm zu. */
+				nominationRepository.existsByProjectIdAndStatus(projectId,
+						NominationStatus.PENDING));
 	}
 
 	/**

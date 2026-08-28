@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 import { useId, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
+import type { Role } from "@/api/types"
 import { Tag } from "@/components/common/Tag"
 import { Button } from "@/components/ui/button"
 import { FieldDescription } from "@/components/ui/field"
@@ -15,9 +16,29 @@ import { fullNameOf } from "@/lib/name"
 const NO_IDS: readonly string[] = []
 
 /**
+ * Die zuweisbaren Rollen (§3.3, §5 Fussnoten 3 und 5 seit Contract v89,
+ * KAN-87). Ein Admin-Konto steht zur Wahl, weil es dieselben redaktionellen
+ * Entscheidungen trifft; die Zuweisung gibt ihm dabei kein Recht, sie holt
+ * das Projekt allein in seine Liste „Meine Reviews".
+ *
+ * <p>Modulweit aus demselben Grund wie {@link NO_IDS}: die Liste steht im
+ * Query-Key der Auswahlliste.
+ */
+const ASSIGNABLE_ROLES: readonly Role[] = ["EDITOR", "ADMIN"]
+
+/**
  * Die Redaktionszuweisung des Metadatenformulars (§3.3, §5 Fussnote 3,
- * KAN-35): ein Suchfeld ueber {@code GET /api/users/lookup?role=EDITOR},
- * darunter die gewaehlten Personen als Pillen.
+ * KAN-35): ein Suchfeld ueber
+ * {@code GET /api/users/lookup?role=EDITOR&role=ADMIN}, darunter die
+ * gewaehlten Personen als Pillen.
+ *
+ * <p><strong>Zur Wahl stehen beide entscheidungsberechtigten Rollen</strong>
+ * (§5 Fussnoten 3 und 5 seit Contract v89, KAN-87). Bis v88 fragte das Feld
+ * fest mit {@code role=EDITOR} ab, und ein Admin-Konto liess sich deshalb
+ * ueber die Oberflaeche nicht zuweisen, obwohl der Server es annahm. Damit
+ * blieb „Meine Reviews" fuer eine allein administrierende Person dauerhaft
+ * leer. Die Zuweisung aendert an den Rechten eines Admins nichts, sie holt
+ * das Projekt in seine Arbeitsliste.
  *
  * <p><strong>Mehrfachauswahl, obwohl das Template ein Feld zeigt.</strong>
  * §3.3 fuehrt {@code editors} als N:M, §6.1 {@code editorIds} als Liste;
@@ -126,7 +147,7 @@ export function ProjectEditorsField({
           id={inputId}
           label={t("project.metadata.editors.label")}
           labelSuffix={labelSuffix}
-          role="EDITOR"
+          role={ASSIGNABLE_ROLES}
           excludedIds={excludedIds}
           invalid={invalid}
           describedBy={describedBy}

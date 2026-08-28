@@ -58,6 +58,7 @@ import {
   useReviewCounts,
   useReviewFilterOptions,
   useReviewList,
+  useTop10ProjectIds,
 } from "@/features/reviews/hooks/useReviews"
 import { useReviewWorkflow } from "@/features/reviews/hooks/useReviews"
 import {
@@ -141,7 +142,12 @@ export default function ReviewListPage() {
     isPending: countsPending,
     isError: countsFailed,
   } = useReviewCounts()
+  /* Der Inhalt der Nominierungskarte: die eigenen Vorschlaege in allen
+     Staenden. */
   const { nominations, top10 } = useOwnNominations()
+  /* Ob ein Projekt einen Platz belegt; der offene Vorschlag steht seit
+     Contract v90 an der Kachel selbst (§3.11). */
+  const inTop10 = useTop10ProjectIds()
   const options = useReviewFilterOptions()
   const nominate = useNominateProject()
 
@@ -188,12 +194,6 @@ export default function ReviewListPage() {
    */
   const [rowError, setRowError] = useState<string | null>(null)
 
-  const openNominationIds = new Set(
-    (nominations.data ?? [])
-      .filter((nomination) => nomination.status === "PENDING")
-      .map((nomination) => nomination.project.id)
-  )
-  const top10Ids = new Set((top10.data ?? []).map((entry) => entry.project.id))
 
   const rows = list.data?.content ?? []
   const totalPages = list.data?.totalPages ?? 0
@@ -403,8 +403,7 @@ export default function ReviewListPage() {
                   <ReviewRow
                     key={project.id}
                     project={project}
-                    inTop10={top10Ids.has(project.id)}
-                    alreadyNominated={openNominationIds.has(project.id)}
+                    inTop10={inTop10.has(project.id)}
                     onNominate={(trigger) => {
                       nominationTrigger.current = trigger.current
                       setNominationFor(project)
@@ -533,14 +532,12 @@ export default function ReviewListPage() {
 function ReviewRow({
   project,
   inTop10,
-  alreadyNominated,
   onNominate,
   onNotice,
   onError,
 }: {
   project: ProjectCardResponse
   inTop10: boolean
-  alreadyNominated: boolean
   onNominate: (trigger: RefObject<HTMLElement | null>) => void
   onNotice: (message: string) => void
   /** Sichtbare Meldung ueber der Tabelle; die Live-Region genuegt nicht. */
@@ -562,7 +559,6 @@ function ReviewRow({
         <ReviewRowMenu
           project={project}
           inTop10={inTop10}
-          alreadyNominated={alreadyNominated}
           resignPending={resign.isPending}
           onNominate={onNominate}
           onResign={() => {

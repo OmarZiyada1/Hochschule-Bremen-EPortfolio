@@ -1031,6 +1031,8 @@ function ProjectCardDemos() {
     tags: [],
     reactionCount: 142,
     publishedAt: null,
+    /* Seit Contract v90 (§3.11); die Galerie zeigt eine Kachel ohne Menue. */
+    hasOpenNomination: null,
     ...overrides,
   })
 

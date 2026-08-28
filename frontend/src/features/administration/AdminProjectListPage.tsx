@@ -62,6 +62,11 @@ import {
   statusQueryValue,
 } from "@/features/portfolio/ownProjectStatus"
 import { paginationItems } from "@/features/projects/paginationItems"
+import { NominationDialog } from "@/features/reviews/components/NominationDialog"
+import {
+  useNominateProject,
+  useTop10ProjectIds,
+} from "@/features/reviews/hooks/useReviews"
 
 /* Entprellzeit der Suche: kein Request je Tastenanschlag (Skill frontend-api). */
 const SEARCH_DEBOUNCE_MS = 300
@@ -180,6 +185,8 @@ export default function AdminProjectListPage() {
     projects: ProjectCardResponse[]
   } | null>(null)
   const [editorsFor, setEditorsFor] = useState<ProjectCardResponse | null>(null)
+  const [nominationFor, setNominationFor] =
+    useState<ProjectCardResponse | null>(null)
   const dialogTrigger = useRef<HTMLElement | null>(null)
   /*
    * Fokusziel, wenn das auslesende Element unter dem Fokus verschwindet: nach
@@ -195,6 +202,12 @@ export default function AdminProjectListPage() {
   >(undefined)
   const [rowError, setRowError] = useState<string | null>(null)
   const [notice, setNotice] = useState("")
+
+  /* Der eine Sperrgrund, der nicht an der Kachel steht (§3.11.1, Regel 2):
+     ob das Projekt bereits einen Platz belegt. Den offenen Vorschlag traegt
+     die Kachel seit Contract v90 selbst. */
+  const inTop10 = useTop10ProjectIds()
+  const nominate = useNominateProject()
 
   function openStatusDialog(
     action: BulkStatusAction,
@@ -505,6 +518,7 @@ export default function AdminProjectListPage() {
                     actions={
                       <AdminProjectRowMenu
                         project={project}
+                        inTop10={inTop10.has(project.id)}
                         deletePending={remove.isPending}
                         onChangeStatus={(action, trigger) =>
                           openStatusDialog(action, [project], trigger)
@@ -513,6 +527,11 @@ export default function AdminProjectListPage() {
                           dialogTrigger.current = trigger.current
                           reassign.reset()
                           setEditorsFor(project)
+                        }}
+                        onNominate={(trigger) => {
+                          dialogTrigger.current = trigger.current
+                          nominate.reset()
+                          setNominationFor(project)
                         }}
                         onDelete={() => {
                           setRowError(null)
@@ -675,9 +694,36 @@ export default function AdminProjectListPage() {
         />
       )}
 
-      {/* Eine Ansage je Vorgang: Loeschen, Statuswechsel und Zuweisung
-          aendern die Liste weiter oben, und ohne Live-Region bliebe das fuer
-          Screenreader unbemerkt (SC 4.1.3). */}
+      {nominationFor !== null && (
+        <NominationDialog
+          open
+          onOpenChange={(next) => {
+            if (!next) {
+              setNominationFor(null)
+              nominate.reset()
+            }
+          }}
+          projectTitle={nominationFor.title}
+          finalFocus={dialogTrigger}
+          pending={nominate.isPending}
+          error={nominate.error}
+          onSubmit={(proposedTier) => {
+            nominate.mutate(
+              { projectId: nominationFor.id, proposedTier },
+              {
+                onSuccess: () => {
+                  setNominationFor(null)
+                  setNotice(t("review.nomination.done"))
+                },
+              }
+            )
+          }}
+        />
+      )}
+
+      {/* Eine Ansage je Vorgang: Loeschen, Statuswechsel, Zuweisung und
+          Nominierung aendern die Liste weiter oben, und ohne Live-Region
+          bliebe das fuer Screenreader unbemerkt (SC 4.1.3). */}
       <span className="sr-only" role="status">
         {notice}
       </span>

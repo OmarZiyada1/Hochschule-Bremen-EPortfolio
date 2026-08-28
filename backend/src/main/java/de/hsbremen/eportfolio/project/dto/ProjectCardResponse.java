@@ -55,6 +55,9 @@ import java.util.UUID;
  * @param tags            freie Schlagwoerter, hoechstens fuenf
  * @param reactionCount   {@code COUNT} der Reaktionen (§3.10)
  * @param publishedAt     gesetzt beim Uebergang nach {@code PUBLISHED}
+ * @param hasOpenNomination ob bereits ein offener Top-10-Vorschlag vorliegt
+ *                        (§3.11), oder {@code null} fuer Rollen, die das nicht
+ *                        sehen duerfen
  */
 public record ProjectCardResponse(
 		UUID id,
@@ -117,7 +120,16 @@ public record ProjectCardResponse(
 
 		@Schema(description = "Zeitpunkt der Veroeffentlichung. Null, solange das Projekt "
 				+ "nicht veroeffentlicht ist.", nullable = true)
-		Instant publishedAt) {
+		Instant publishedAt,
+
+		@Schema(description = "Ob zu diesem Projekt bereits eine Nominierung im Stand PENDING "
+				+ "vorliegt (§3.11, seit Contract v90), gleich von wem. Nur fuer EDITOR und "
+				+ "ADMIN gefuellt, fuer alle anderen null; null heisst \"darf ich nicht "
+				+ "sehen\" und nicht \"kein Vorschlag\". Wer vorgeschlagen hat, sagt das "
+				+ "Feld nicht. Das Zeilenmenue sperrt die Nominierung damit begruendet, "
+				+ "statt sie in ein 409 RESOURCE_IN_USE laufen zu lassen (§3.11.1, Regel 2).",
+				nullable = true, example = "false")
+		Boolean hasOpenNomination) {
 
 	/**
 	 * Baut die Kachel.
@@ -141,9 +153,15 @@ public record ProjectCardResponse(
 	 * @param members           Mitglieder dieses Projekts (§3.13), bereits
 	 *                          geordnet und mit ihren Profilbildern versehen;
 	 *                          leer bei einer Einzelarbeit
+	 * @param hasOpenNomination ob ein offener Vorschlag vorliegt, oder
+	 *                          {@code null}, wenn die anfragende Rolle das nicht
+	 *                          sehen darf. Kommt aus demselben Grund von aussen
+	 *                          wie Tags und Reaktionen: der Lesedienst holt den
+	 *                          Stand fuer die ganze Seite in einer Abfrage und
+	 *                          faellt zuvor die Berechtigungsentscheidung
 	 */
 	public static ProjectCardResponse from(Project project, List<String> tags, long reactionCount,
-			String authorAvatarUrl, List<MemberResponse> members) {
+			String authorAvatarUrl, List<MemberResponse> members, Boolean hasOpenNomination) {
 
 		return new ProjectCardResponse(
 				project.getId(),
@@ -162,6 +180,7 @@ public record ProjectCardResponse(
 				members,
 				tags,
 				reactionCount,
-				project.getPublishedAt());
+				project.getPublishedAt(),
+				hasOpenNomination);
 	}
 }
