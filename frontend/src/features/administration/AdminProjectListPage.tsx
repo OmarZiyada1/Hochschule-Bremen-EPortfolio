@@ -50,6 +50,11 @@ import {
 import { AdminProjectRowMenu } from "@/features/administration/components/AdminProjectRowMenu"
 import { BulkStatusDialog } from "@/features/administration/components/BulkStatusDialog"
 import { EditorAssignmentDialog } from "@/features/administration/components/EditorAssignmentDialog"
+import { Top10PlacementDialog } from "@/features/administration/components/Top10PlacementDialog"
+import {
+  useSaveTop10Order,
+  useTop10Entries,
+} from "@/features/administration/hooks/useAdminTop10"
 import {
   useAdminFilterOptions,
   useAdminProjectList,
@@ -58,15 +63,17 @@ import {
   useReassignEditors,
 } from "@/features/administration/hooks/useAdministration"
 import {
+  buildSlots,
+  containsProject,
+  freePositions,
+  isFull,
+  placeProjectAt,
+} from "@/features/administration/top10Slots"
+import {
   ALL_STATUSES,
   statusQueryValue,
 } from "@/features/portfolio/ownProjectStatus"
 import { paginationItems } from "@/features/projects/paginationItems"
-import { NominationDialog } from "@/features/reviews/components/NominationDialog"
-import {
-  useNominateProject,
-  useTop10ProjectIds,
-} from "@/features/reviews/hooks/useReviews"
 
 /* Entprellzeit der Suche: kein Request je Tastenanschlag (Skill frontend-api). */
 const SEARCH_DEBOUNCE_MS = 300
@@ -185,8 +192,9 @@ export default function AdminProjectListPage() {
     projects: ProjectCardResponse[]
   } | null>(null)
   const [editorsFor, setEditorsFor] = useState<ProjectCardResponse | null>(null)
-  const [nominationFor, setNominationFor] =
-    useState<ProjectCardResponse | null>(null)
+  const [placementFor, setPlacementFor] = useState<ProjectCardResponse | null>(
+    null
+  )
   const dialogTrigger = useRef<HTMLElement | null>(null)
   /*
    * Fokusziel, wenn das auslesende Element unter dem Fokus verschwindet: nach
@@ -203,11 +211,21 @@ export default function AdminProjectListPage() {
   const [rowError, setRowError] = useState<string | null>(null)
   const [notice, setNotice] = useState("")
 
-  /* Der eine Sperrgrund, der nicht an der Kachel steht (§3.11.1, Regel 2):
-     ob das Projekt bereits einen Platz belegt. Den offenen Vorschlag traegt
-     die Kachel seit Contract v90 selbst. */
-  const inTop10 = useTop10ProjectIds()
-  const nominate = useNominateProject()
+  /*
+   * Die Belegung der zehn Plaetze (§3.11, §3.11.1). Sie beantwortet beide
+   * Sperrgruende des Aufnahme-Eintrags: ob dieses Projekt schon einen Platz
+   * belegt und ob ueberhaupt noch einer frei ist. Ein offener Vorschlag
+   * sperrt hier nicht, er wird mit dem Speichern eingeloest (§3.11.1 Regel 5).
+   *
+   * Dieselbe Abfrage wie in der Top-10-Verwaltung und unter demselben
+   * Cache-Schluessel: die Liste ist oeffentlich, hoechstens zehn Eintraege
+   * lang und steht auf den betroffenen Seiten ohnehin im Cache.
+   */
+  const top10 = useTop10Entries()
+  const slots = buildSlots(top10.data ?? [])
+  const free = freePositions(slots)
+  const listFull = isFull(slots)
+  const placeInTop10 = useSaveTop10Order()
 
   function openStatusDialog(
     action: BulkStatusAction,
@@ -518,7 +536,8 @@ export default function AdminProjectListPage() {
                     actions={
                       <AdminProjectRowMenu
                         project={project}
-                        inTop10={inTop10.has(project.id)}
+                        inTop10={containsProject(slots, project.id)}
+                        listFull={listFull}
                         deletePending={remove.isPending}
                         onChangeStatus={(action, trigger) =>
                           openStatusDialog(action, [project], trigger)
@@ -528,10 +547,10 @@ export default function AdminProjectListPage() {
                           reassign.reset()
                           setEditorsFor(project)
                         }}
-                        onNominate={(trigger) => {
+                        onPlaceInTop10={(trigger) => {
                           dialogTrigger.current = trigger.current
-                          nominate.reset()
-                          setNominationFor(project)
+                          placeInTop10.reset()
+                          setPlacementFor(project)
                         }}
                         onDelete={() => {
                           setRowError(null)
@@ -694,36 +713,37 @@ export default function AdminProjectListPage() {
         />
       )}
 
-      {nominationFor !== null && (
-        <NominationDialog
-          open
+      {placementFor !== null && (
+        <Top10PlacementDialog
+          project={placementFor}
+          freePositions={free}
           onOpenChange={(next) => {
             if (!next) {
-              setNominationFor(null)
-              nominate.reset()
+              setPlacementFor(null)
+              placeInTop10.reset()
             }
           }}
-          projectTitle={nominationFor.title}
           finalFocus={dialogTrigger}
-          pending={nominate.isPending}
-          error={nominate.error}
-          onSubmit={(proposedTier) => {
-            nominate.mutate(
-              { projectId: nominationFor.id, proposedTier },
-              {
-                onSuccess: () => {
-                  setNominationFor(null)
-                  setNotice(t("review.nomination.done"))
-                },
-              }
+          pending={placeInTop10.isPending}
+          /* Wirft weiter: der Dialog zeigt den ApiError an seiner Spitze und
+             bleibt offen, damit die Wahl nicht verloren geht. */
+          onSubmit={async (position) => {
+            await placeInTop10.mutateAsync(
+              placeProjectAt(slots, placementFor, position)
+            )
+            setNotice(
+              t("administration.top10.place.done", {
+                title: placementFor.title,
+                position,
+              })
             )
           }}
         />
       )}
 
       {/* Eine Ansage je Vorgang: Loeschen, Statuswechsel, Zuweisung und
-          Nominierung aendern die Liste weiter oben, und ohne Live-Region
-          bliebe das fuer Screenreader unbemerkt (SC 4.1.3). */}
+          Aufnahme in die Top 10 aendern die Liste weiter oben, und ohne
+          Live-Region bliebe das fuer Screenreader unbemerkt (SC 4.1.3). */}
       <span className="sr-only" role="status">
         {notice}
       </span>

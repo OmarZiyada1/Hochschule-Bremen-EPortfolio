@@ -1926,6 +1926,19 @@
         "confirm": "Reject",
         "done": "The proposal for {{title}} has been rejected."
       },
+      "place": {
+        "action": "Add to the Top 10",
+        "title": "Add to the Top 10",
+        "description": "“{{title}}” takes a place and will then appear on the public home page.",
+        "positionHint": "Only free places can be chosen. The first free one is preselected; the list can be reordered afterwards in the Top 10 administration.",
+        "confirm": "Add",
+        "done": "{{title}} is now in place {{position}}.",
+        "blocked": {
+          "notPublished": "Only published projects can be added.",
+          "inTop10Short": "Already in the Top 10",
+          "listFull": "All ten places are taken. Free a place first, then another project can go in."
+        }
+      },
       "slots": {
         "title": "Current Top 10",
         "count": "{{filled}} of {{total}} places taken"

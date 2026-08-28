@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest"
 
 import AdminTop10Page from "@/features/administration/AdminTop10Page"
 import i18n from "@/i18n"
-import { nomination, projectCard, top10Entry } from "@/tests/fixtures"
+import { nomination, person, projectCard, top10Entry } from "@/tests/fixtures"
 import {
   apiErrorResponse,
   currentUserHandler,
@@ -14,6 +14,13 @@ import {
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
 import { signInAs } from "@/tests/routes/helpers"
+
+/*
+ * Dieselbe Kennung, die currentUserHandler vergibt. Sie wird gebraucht, seit
+ * der Rueckzug nur noch am eigenen Vorschlag angeboten wird (Nacharbeit an
+ * KAN-87): ohne uebereinstimmende ID gilt jeder Vorschlag als fremd.
+ */
+const ADMIN_ID = "00000000-0000-0000-0000-000000000001"
 
 const SMART = projectCard({ id: "p-1", title: "SmartCampus" })
 const BREMEN = projectCard({ id: "p-2", title: "BremenConnect" })
@@ -88,9 +95,7 @@ describe("AdminTop10Page", () => {
        hier Platz 2 (§2.13). Sie bindet die Entscheidung nicht. */
     expect(within(dialog).getByRole("combobox")).toHaveTextContent("Platz 2")
 
-    await user.click(
-      within(dialog).getByRole("button", { name: "Annehmen" })
-    )
+    await user.click(within(dialog).getByRole("button", { name: "Annehmen" }))
 
     await waitFor(() => expect(body).toEqual({ position: 2 }))
     /* Ohne Reload: die Liste wird ueber den Query-Cache neu geladen. */
@@ -209,7 +214,10 @@ describe("AdminTop10Page", () => {
         Array.from({ length: 10 }, (_, index) =>
           top10Entry({
             position: index + 1,
-            project: projectCard({ id: `p${index}`, title: `Projekt ${index}` }),
+            project: projectCard({
+              id: `p${index}`,
+              title: `Projekt ${index}`,
+            }),
           })
         )
       )
@@ -305,7 +313,10 @@ describe("AdminTop10Page", () => {
         Array.from({ length: 10 }, (_, index) =>
           top10Entry({
             position: index + 1,
-            project: projectCard({ id: `p${index}`, title: `Projekt ${index}` }),
+            project: projectCard({
+              id: `p${index}`,
+              title: `Projekt ${index}`,
+            }),
           })
         )
       )
@@ -313,7 +324,9 @@ describe("AdminTop10Page", () => {
 
     render()
 
-    expect(await screen.findByText(/Alle zehn Plätze sind belegt/)).toBeVisible()
+    expect(
+      await screen.findByText(/Alle zehn Plätze sind belegt/)
+    ).toBeVisible()
     expect(screen.queryByText("Platz frei")).not.toBeInTheDocument()
     /* Auch das Annehmen faellt aus: accept raeumt keinen belegten Platz,
        sondern antwortete mit 409 RESOURCE_IN_USE (§3.11.1). */
@@ -391,7 +404,9 @@ describe("AdminTop10Page", () => {
     await user.click(within(dialog).getByRole("button", { name: "Annehmen" }))
 
     expect(
-      await within(dialog).findByText("Der Platz muss zwischen 1 und 10 liegen.")
+      await within(dialog).findByText(
+        "Der Platz muss zwischen 1 und 10 liegen."
+      )
     ).toBeInTheDocument()
   })
 
@@ -431,19 +446,25 @@ describe("AdminTop10Page", () => {
     expect(called).toBe(false)
   })
 
-  /* Ticket KAN-40, Test 10. */
-  it("zieht eine angenommene Nominierung nach einer Rueckfrage zurueck", async () => {
+  /*
+   * Ticket KAN-40, Test 10, verengt mit der Nacharbeit an KAN-87:
+   * zurueckgezogen wird nur der eigene Vorschlag.
+   */
+  it("zieht einen eigenen angenommenen Vorschlag nach einer Rueckfrage zurueck", async () => {
     const user = userEvent.setup()
     let withdrawn = false
     const accepted = nomination({
       id: "n-2",
       project: projectCard({ id: "p-1", title: "SmartCampus" }),
+      /* Die angemeldete Person hat selbst vorgeschlagen: derselbe Fall wie
+         in „Meine Reviews", nur an einem anderen Ort. */
+      nominatedBy: person({ id: ADMIN_ID }),
       status: "ACCEPTED",
       proposedPosition: 1,
     })
 
     server.use(
-      currentUserHandler({ role: "ADMIN" }),
+      currentUserHandler({ role: "ADMIN", id: ADMIN_ID }),
       ...top10AdminHandlers({
         entries: [top10Entry({ position: 1, project: SMART })],
         nominations: [accepted],
@@ -468,6 +489,58 @@ describe("AdminTop10Page", () => {
       within(dialog).getByRole("button", { name: "Zurückziehen" })
     )
     await waitFor(() => expect(withdrawn).toBe(true))
+  })
+
+  /*
+   * Nacharbeit an KAN-87. Der Server liesse die Administration jeden
+   * Vorschlag zurueckziehen (§3.11.1), die Oberflaeche bietet es bewusst
+   * nicht an: ein fremder Vorschlag wird abgelehnt, nicht zurueckgezogen,
+   * sonst stuende im Protokoll „zurueckgezogen" fuer eine Entscheidung, die
+   * die vorschlagende Person nie getroffen hat (§3.17). Ein bereits
+   * aufgenommenes Projekt verlaesst die Liste ueber „Vom Platz nehmen".
+   */
+  it("bietet an einem fremden Vorschlag kein Zurueckziehen an", async () => {
+    server.use(
+      currentUserHandler({ role: "ADMIN", id: ADMIN_ID }),
+      ...top10AdminHandlers({
+        entries: [top10Entry({ position: 1, project: SMART })],
+        nominations: [
+          nomination({
+            id: "n-4",
+            project: projectCard({ id: "p-1", title: "SmartCampus" }),
+            nominatedBy: person({ id: "p-fremd" }),
+            status: "ACCEPTED",
+            proposedPosition: 1,
+          }),
+        ],
+      })
+    )
+
+    render("/administration/top10?status=ACCEPTED")
+
+    expect(await screen.findByText("Angenommen")).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /zurückziehen/i })
+    ).not.toBeInTheDocument()
+  })
+
+  it("bietet an einem fremden offenen Vorschlag nur Annehmen und Ablehnen an", async () => {
+    server.use(
+      currentUserHandler({ role: "ADMIN", id: ADMIN_ID }),
+      ...top10AdminHandlers({
+        nominations: [nomination({ id: "n-5", nominatedBy: person() })],
+      })
+    )
+
+    render("/administration/top10?status=PENDING")
+
+    expect(
+      await screen.findByRole("button", { name: "Annehmen" })
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Ablehnen" })).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /zurückziehen/i })
+    ).not.toBeInTheDocument()
   })
 
   /* §3.11.1: an einem abgelehnten Vorschlag gibt es die Handlung nicht. */

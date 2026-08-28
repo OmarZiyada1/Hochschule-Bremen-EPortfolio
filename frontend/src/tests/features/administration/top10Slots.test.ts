@@ -14,6 +14,7 @@ import {
   moveSlot,
   orderedProjectIds,
   placementPayload,
+  placeProjectAt,
   suggestedPositionFor,
   TOP10_SLOT_COUNT,
 } from "@/features/administration/top10Slots"
@@ -150,8 +151,9 @@ describe("top10Slots", () => {
 
       expect(isFull(full)).toBe(true)
       expect(addProject(full, projectCard({ id: "elf" }))).toBe(full)
-      expect(orderedProjectIds(addProject(full, projectCard({ id: "elf" }))))
-        .toHaveLength(TOP10_SLOT_COUNT)
+      expect(
+        orderedProjectIds(addProject(full, projectCard({ id: "elf" })))
+      ).toHaveLength(TOP10_SLOT_COUNT)
     })
 
     /* Ein doppelter Eintrag ergaebe serverseitig 400 VALIDATION_FAILED. */
@@ -169,6 +171,51 @@ describe("top10Slots", () => {
       expect(next[1]).toBeNull()
       expect(next[2]?.project.id).toBe("c")
       expect(orderedProjectIds(next)).toEqual(["a", "c"])
+    })
+
+    /*
+     * Nacharbeit an KAN-87: Der Aufnahme-Dialog der Projektverwaltung sieht
+     * die Liste nicht und laesst den Platz deshalb waehlen. addProject nimmt
+     * dagegen immer den ersten freien; beide Wege stehen nebeneinander.
+     */
+    it("setzt ein Projekt auf den gewaehlten Platz und laesst die Luecken davor", () => {
+      const slots = buildSlots([entry(1, "a")])
+      const next = placeProjectAt(slots, projectCard({ id: "neu" }), 4)
+
+      expect(next[3]?.project.id).toBe("neu")
+      expect(next[1]).toBeNull()
+      expect(next[2]).toBeNull()
+      /* Der Index ist der Platz, auch ueber die Luecke hinweg (§3.11.1
+         Regel 3, seit Contract v78). */
+      expect(placementPayload(next)).toEqual(["a", null, null, "neu"])
+    })
+
+    it("setzt nichts auf einen belegten Platz", () => {
+      const slots = buildSlots([entry(1, "a"), entry(2, "b")])
+
+      expect(placeProjectAt(slots, projectCard({ id: "neu" }), 2)).toBe(slots)
+    })
+
+    it("nimmt ein bereits gesetztes Projekt auch hier nicht doppelt auf", () => {
+      const slots = buildSlots([entry(1, "a")])
+
+      expect(placeProjectAt(slots, projectCard({ id: "a" }), 5)).toBe(slots)
+    })
+
+    it("laesst einen Platz ausserhalb von 1 bis 10 unbeachtet", () => {
+      const slots = buildSlots([])
+
+      expect(placeProjectAt(slots, projectCard({ id: "neu" }), 0)).toBe(slots)
+      expect(placeProjectAt(slots, projectCard({ id: "neu" }), 11)).toBe(slots)
+    })
+
+    /* Ein frisch gesetztes Projekt ist noch nicht aufgenommen: einen
+       Zeitpunkt zu erfinden hiesse, eine Angabe zu behaupten, die erst der
+       Server vergibt (§3.11). */
+    it("laesst addedAt am neuen Eintrag leer", () => {
+      const next = placeProjectAt(buildSlots([]), projectCard({ id: "neu" }), 3)
+
+      expect(next[2]?.addedAt).toBeNull()
     })
   })
 

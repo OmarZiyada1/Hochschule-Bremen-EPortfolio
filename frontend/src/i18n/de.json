@@ -1926,6 +1926,19 @@
         "confirm": "Ablehnen",
         "done": "Der Vorschlag zu {{title}} ist abgelehnt."
       },
+      "place": {
+        "action": "In die Top 10 aufnehmen",
+        "title": "In die Top 10 aufnehmen",
+        "description": "„{{title}}“ bekommt einen Platz und erscheint danach auf der öffentlichen Startseite.",
+        "positionHint": "Zur Auswahl stehen nur freie Plätze. Vorbelegt ist der erste freie; umsortieren lässt sich die Liste danach in der Top-10-Verwaltung.",
+        "confirm": "Aufnehmen",
+        "done": "{{title}} steht jetzt auf Platz {{position}}.",
+        "blocked": {
+          "notPublished": "Nur veröffentlichte Projekte lassen sich aufnehmen.",
+          "inTop10Short": "Steht bereits in der Top 10",
+          "listFull": "Alle zehn Plätze sind belegt. Erst einen Platz räumen, dann kommt ein weiteres Projekt hinein."
+        }
+      },
       "slots": {
         "title": "Aktuelle Top 10",
         "count": "{{filled}} von {{total}} Plätzen belegt"

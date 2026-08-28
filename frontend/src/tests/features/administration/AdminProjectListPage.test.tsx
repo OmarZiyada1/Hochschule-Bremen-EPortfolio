@@ -11,7 +11,6 @@ import type {
 import AdminProjectListPage from "@/features/administration/AdminProjectListPage"
 import i18n from "@/i18n"
 import {
-  nomination,
   person,
   projectCard,
   projectDetail,
@@ -58,6 +57,16 @@ const PUBLISHED = projectCard({
   title: "SmartCampus",
   status: "PUBLISHED",
   author: person({ id: "u-7", firstName: "Jonas", lastName: "Roth" }),
+})
+
+/* Ein zweites veroeffentlichtes Projekt, das einen Platz der Top-10 belegt:
+   damit laesst sich pruefen, dass der Aufnahme-Dialog nur die freien Plaetze
+   anbietet, ohne dass SmartCampus selbst schon in der Liste stuende. */
+const OTHER_PUBLISHED = projectCard({
+  id: "pr-4",
+  title: "BremenConnect",
+  status: "PUBLISHED",
+  author: person({ id: "u-9", firstName: "Lena", lastName: "Vogt" }),
 })
 
 /**
@@ -513,25 +522,27 @@ describe("AdminProjectListPage", () => {
     /* Beide Rollen in einer Abfrage: getAll und nicht get, sonst bliebe ein
        weggefallenes ADMIN unbemerkt (§6.1, mehrwertig seit v89). */
     expect(lookups.length).toBeGreaterThan(0)
-    expect(lookups[0]?.searchParams.getAll("role")).toEqual([
-      "EDITOR",
-      "ADMIN",
-    ])
+    expect(lookups[0]?.searchParams.getAll("role")).toEqual(["EDITOR", "ADMIN"])
   })
 
   /*
-   * Der Nominierungseintrag im Zeilenmenue (§3.11.1; KAN-87). Bis dahin
-   * fuehrte der Weg zur Nominierung allein ueber „Meine Reviews", also nur
-   * ueber zugewiesene Projekte.
+   * Der Aufnahme-Eintrag im Zeilenmenue (§3.11, §3.11.1; Nacharbeit an
+   * KAN-87). KAN-87 hatte hier zunächst den Nominierungseintrag gesetzt,
+   * damit ein Admin auch ohne Zuweisung vorschlagen kann. In der
+   * Administration entscheidet er aber, statt vorzuschlagen: der Eintrag
+   * nimmt unmittelbar auf. Der Nominierungsweg bleibt ihm in „Meine
+   * Reviews" und auf der Projektdetailseite.
    */
 
-  it("nominiert ein veroeffentlichtes Projekt aus der Zeile heraus", async () => {
-    const bodies: unknown[] = []
+  it("nimmt ein veroeffentlichtes Projekt aus der Zeile heraus in die Top 10 auf", async () => {
+    let body: unknown = null
     server.use(
       ...baseHandlers({ projects: [PUBLISHED] }),
-      http.post("*/api/projects/pr-3/top10-nomination", async ({ request }) => {
-        bodies.push(await request.json())
-        return HttpResponse.json(nomination({ id: "n-9" }), { status: 201 })
+      http.put("*/api/admin/top10", async ({ request }) => {
+        body = await request.json()
+        return HttpResponse.json([
+          top10Entry({ position: 1, project: PUBLISHED }),
+        ])
       })
     )
 
@@ -543,23 +554,49 @@ describe("AdminProjectListPage", () => {
       screen.getByRole("button", { name: "Aktionen für SmartCampus" })
     )
     await user.click(
-      await screen.findByRole("menuitem", { name: "Top 10 nominieren" })
+      await screen.findByRole("menuitem", { name: "In die Top 10 aufnehmen" })
     )
 
     const dialog = await screen.findByRole("dialog")
-    await user.click(within(dialog).getByRole("radio", { name: /Top 5/ }))
-    await user.click(
-      within(dialog).getByRole("button", {
-        name: i18n.t("review.nomination.dialog.submit"),
+    /* Vorbelegt ist der erste freie Platz, hier Platz 1: die Liste ist leer.
+       Eine vorgeschlagene Stufe gibt es nicht, aus der sich ein Bereich
+       ableiten liesse (§2.13) — niemand hat etwas vorgeschlagen. */
+    expect(within(dialog).getByRole("combobox")).toHaveTextContent("Platz 1")
+
+    await user.click(within(dialog).getByRole("button", { name: "Aufnehmen" }))
+
+    /* Die ganze Belegung und keine Stufe: aufgenommen wird unmittelbar
+       (§3.11.1 Regel 3), nicht vorgeschlagen. */
+    await waitFor(() => expect(body).toEqual({ projectIds: ["pr-3"] }))
+  })
+
+  it("bietet nur die freien Plaetze an", async () => {
+    server.use(
+      ...baseHandlers({
+        projects: [PUBLISHED],
+        top10: [top10Entry({ position: 1, project: OTHER_PUBLISHED })],
       })
     )
 
-    /* Eine Stufe und kein Platz (§3.11.1, Regel 4). */
-    await waitFor(() => expect(bodies).toHaveLength(1))
-    expect(bodies[0]).toEqual({ proposedTier: "TOP_5" })
+    const user = userEvent.setup()
+    renderWithProviders(<AdminProjectListPage />, "/administration/projects")
+
+    await screen.findByText("SmartCampus")
+    await user.click(
+      screen.getByRole("button", { name: "Aktionen für SmartCampus" })
+    )
+    await user.click(
+      await screen.findByRole("menuitem", { name: "In die Top 10 aufnehmen" })
+    )
+
+    /* Platz 1 ist belegt, also ist Platz 2 der erste freie. PUT /admin/top10
+       raeumt keinen belegten Platz; wer umsortieren will, tut das in der
+       Top-10-Verwaltung. */
+    const dialog = await screen.findByRole("dialog")
+    expect(within(dialog).getByRole("combobox")).toHaveTextContent("Platz 2")
   })
 
-  it("blendet den Nominierungseintrag aus, solange das Projekt nicht veroeffentlicht ist", async () => {
+  it("blendet den Eintrag aus, solange das Projekt nicht veroeffentlicht ist", async () => {
     server.use(...baseHandlers({ projects: [APPROVED] }))
 
     const user = userEvent.setup()
@@ -572,17 +609,17 @@ describe("AdminProjectListPage", () => {
 
     /* Kein gesperrter Eintrag: in dieser Liste stehen ueberwiegend
        unveroeffentlichte Projekte, und eine dauerhaft gesperrte Zeile
-       erklaerte nichts (Klaerungsrunde zu KAN-87). Die Statuswechsel
-       daneben stehen aber, sonst pruefte der Test ein leeres Menue. */
+       erklaerte nichts. Die Statuswechsel daneben stehen aber, sonst
+       pruefte der Test ein leeres Menue. */
     expect(
       await screen.findByRole("menuitem", { name: "Redaktion zuweisen" })
     ).toBeInTheDocument()
     expect(
-      screen.queryByRole("menuitem", { name: "Top 10 nominieren" })
+      screen.queryByRole("menuitem", { name: "In die Top 10 aufnehmen" })
     ).not.toBeInTheDocument()
   })
 
-  it("sperrt den Eintrag mit Begruendung, wenn das Projekt bereits in der Top 10 steht", async () => {
+  it("sperrt den Eintrag, wenn das Projekt bereits in der Top 10 steht", async () => {
     server.use(
       ...baseHandlers({
         projects: [PUBLISHED],
@@ -598,26 +635,61 @@ describe("AdminProjectListPage", () => {
       screen.getByRole("button", { name: "Aktionen für SmartCampus" })
     )
 
-    /* Sichtbar und begruendet statt ausgeblendet: hier ist es ein Fall, den
-       man erklaeren muss (SC 3.3.2). Gesperrt heisst aria-disabled, damit
-       der Hinweis auch mit der Tastatur erreichbar bleibt. */
+    /* Sichtbar und begruendet statt ausgeblendet (SC 3.3.2). Die
+       Beschriftung sagt den Grund bereits, deshalb traegt dieser Fall
+       keinen Kurzhinweis. Gesperrt heisst aria-disabled, damit der Eintrag
+       mit der Tastatur erreichbar bleibt. */
     const item = await screen.findByRole("menuitem", {
-      name: "Top 10 nominieren",
+      name: "Steht bereits in der Top 10",
+    })
+    expect(item).toHaveAttribute("aria-disabled", "true")
+  })
+
+  it("sperrt den Eintrag mit Begruendung, wenn alle zehn Plaetze belegt sind", async () => {
+    server.use(
+      ...baseHandlers({
+        projects: [PUBLISHED],
+        top10: Array.from({ length: 10 }, (_unused, index) =>
+          top10Entry({
+            position: index + 1,
+            project: projectCard({
+              id: `pr-full-${index}`,
+              title: `Platzhalter ${index}`,
+              status: "PUBLISHED",
+            }),
+          })
+        ),
+      })
+    )
+
+    const user = userEvent.setup()
+    renderWithProviders(<AdminProjectListPage />, "/administration/projects")
+
+    await screen.findByText("SmartCampus")
+    await user.click(
+      screen.getByRole("button", { name: "Aktionen für SmartCampus" })
+    )
+
+    const item = await screen.findByRole("menuitem", {
+      name: "In die Top 10 aufnehmen",
     })
     expect(item).toHaveAttribute("aria-disabled", "true")
 
     await user.hover(item)
     expect(
-      await screen.findByText("Das Projekt steht bereits in der Top 10.")
+      await screen.findByText(
+        "Alle zehn Plätze sind belegt. Erst einen Platz räumen, dann kommt ein weiteres Projekt hinein."
+      )
     ).toBeInTheDocument()
   })
 
-  it("sperrt den Eintrag bei jedem offenen Vorschlag, auch einem fremden", async () => {
+  it("nimmt ein Projekt mit offenem Vorschlag trotzdem auf", async () => {
     /*
-     * §3.11.1 Regel 2 laesst je Projekt hoechstens einen offenen Vorschlag
-     * zu, gleich von wem. Bis Contract v89 fragte die Seite nur die eigenen
-     * Vorschlaege ab (nominatedBy=me); ein fremder blieb unsichtbar und der
-     * Klick lief in 409 RESOURCE_IN_USE. Seit v90 sagt es die Kachel selbst.
+     * §3.11.1 Regel 2 verbietet den zweiten Vorschlag zu einem
+     * Projekt, nicht die Aufnahme. Nimmt die Administration ein
+     * vorgeschlagenes Projekt unmittelbar auf, gilt der offene Vorschlag
+     * damit als angenommen (Regel 5); er verfällt also nicht, er wird
+     * eingelöst. Beim Nominierungseintrag war derselbe Fall eine Sperre.
      */
     server.use(
       ...baseHandlers({
@@ -634,9 +706,8 @@ describe("AdminProjectListPage", () => {
     )
 
     const item = await screen.findByRole("menuitem", {
-      name: "Bereits nominiert",
+      name: "In die Top 10 aufnehmen",
     })
-    expect(item).toHaveAttribute("aria-disabled", "true")
+    expect(item).toHaveAttribute("aria-disabled", "false")
   })
-
 })

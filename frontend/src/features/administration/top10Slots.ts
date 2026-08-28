@@ -172,6 +172,43 @@ export function addProject(
 }
 
 /**
+ * Setzt ein Projekt auf einen <em>bestimmten</em> Platz und liefert ein neues
+ * Feld (Nacharbeit an KAN-87).
+ *
+ * <p><strong>Der Unterschied zu {@link addProject}.</strong> Jene Funktion
+ * traegt das Projekt auf den ersten freien Platz ein, weil der Projekt-Picker
+ * der Top-10-Verwaltung neben der Liste steht: wer dort etwas aufnimmt, sieht
+ * die Belegung und sortiert danach um. Der Aufnahme-Dialog der
+ * Projektverwaltung hat diese Sicht nicht und laesst den Platz deshalb
+ * waehlen; ohne diese Funktion muesste er den Platz nachtraeglich
+ * zurechtschieben, und jeder Zwischenschritt waere eine eigene Protokollzeile
+ * (§3.17).
+ *
+ * <p>Unveraendert bleibt das Feld, wenn der Platz ausserhalb von 1 bis 10
+ * liegt, dort bereits ein Projekt steht oder dieses Projekt schon dabei ist.
+ * Alle drei Faelle beantwortet der Server ohnehin ablehnend; hier stehen sie
+ * noch einmal, damit die Zusage ohne Rendern pruefbar ist.
+ *
+ * @param position der Platz, nicht der Index: 1 ist der erste
+ */
+export function placeProjectAt(
+  slots: Top10Slots,
+  project: ProjectCardResponse,
+  position: number
+): Top10Slots {
+  const index = position - 1
+  if (index < 0 || index >= slots.length) {
+    return slots
+  }
+  if (slots[index] !== null || containsProject(slots, project.id)) {
+    return slots
+  }
+  const next = [...slots]
+  next[index] = { project, addedAt: null }
+  return next
+}
+
+/**
  * Die Projekte der Liste in ihrer Reihenfolge, ohne die freien Plaetze.
  *
  * <p>Nicht die Nutzlast des Endpoints, dafuer gibt es
