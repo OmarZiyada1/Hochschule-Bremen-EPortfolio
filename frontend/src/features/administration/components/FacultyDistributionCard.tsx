@@ -40,8 +40,11 @@ import { CHART_MUTED_COLOR, chartColor } from "@/lib/chartColors"
  * <ul>
  * <li><strong>In der Top 10</strong>: belegt gerade einen Platz
  *     ({@code inTop10}, §3.11).</li>
- * <li><strong>Angenommen, ohne Platz</strong>: hat eine angenommene
- *     Nominierung, steht aber nicht (mehr) auf der Liste.</li>
+ * <li><strong>Ehemals Top 10</strong>: hat eine angenommene Nominierung,
+ *     steht aber nicht (mehr) auf der Liste. Die Beschriftung hiess bis zur
+ *     Nacharbeit „Angenommen, ohne Platz"; sie beschrieb den Vorgang und
+ *     nicht das, was man vor sich hat, naemlich ein Projekt, das einmal in
+ *     der Top 10 stand.</li>
  * <li><strong>Uebrige</strong>: der Rest des Bestands.</li>
  * </ul>
  *

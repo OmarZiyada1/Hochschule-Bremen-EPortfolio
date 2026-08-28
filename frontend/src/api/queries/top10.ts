@@ -60,9 +60,14 @@ export const top10Queries = {
  * <p><strong>Zwei Reichweiten, ein Aufruf.</strong> Die nominierende Person
  * zieht ihren eigenen Vorschlag zurueck, solange er PENDING ist; die
  * Administration jeden, auch einen bereits angenommenen. Welcher Fall
- * vorliegt, entscheidet der Server; die Oberflaeche blendet die Handlung nur
- * dort ein, wo sie nach demselben Massstab greifen kann (siehe
- * nominationWithdrawable).
+ * vorliegt, entscheidet der Server.
+ *
+ * <p><strong>Die Oberflaeche ist enger und legt nur den ersten Fall an.</strong>
+ * Sie bietet die Handlung ausschliesslich fuer den eigenen, offenen Vorschlag
+ * an, und nur in „Meine Reviews"; die zweite Reichweite bleibt unbenutzt.
+ * Begruendung und Regel stehen an {@code nominationWithdrawable}
+ * (features/reviews/nominations.ts). Bis zur Nacharbeit stand hier „nach
+ * demselben Massstab", und das trifft seither nicht mehr zu.
  *
  * <p>Sichtbar zu behandeln ist ein 409 NOMINATION_ALREADY_DECIDED: der Stand
  * hat sich seit dem letzten Laden geaendert. Kein zweiter Versuch, er

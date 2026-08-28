@@ -1,10 +1,4 @@
-import {
-  CheckCircle2Icon,
-  ClockIcon,
-  EyeIcon,
-  FolderOpenIcon,
-  RotateCcwIcon,
-} from "lucide-react"
+import { FolderOpenIcon } from "lucide-react"
 import {
   useEffect,
   useRef,
@@ -15,10 +9,9 @@ import {
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 
-import { useAuth } from "@/api/auth/AuthContext"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import type { ReviewListParams } from "@/api/queries/projects"
-import type { ProjectCardResponse, ProjectStatus } from "@/api/types"
+import type { ProjectCardResponse } from "@/api/types"
 import { EmptyState } from "@/components/common/EmptyState"
 import { FilterSelect } from "@/components/common/FilterSelect"
 import { KpiTile } from "@/components/common/KpiTile"
@@ -46,6 +39,7 @@ import {
 } from "@/components/ui/table"
 import {
   ALL_STATUSES,
+  PROJECT_STATUS_ICONS,
   statusQueryValue,
 } from "@/features/portfolio/ownProjectStatus"
 import { paginationItems } from "@/features/projects/paginationItems"
@@ -71,19 +65,6 @@ import {
 const SEARCH_DEBOUNCE_MS = 300
 
 /**
- * Symbol je Kennzahl, in der Reihenfolge des Templates. Record ueber den
- * Enum-Typ, damit ein sechster Contract-Status den Typecheck bricht statt
- * still ohne Symbol zu erscheinen.
- */
-const countIcons: Record<ProjectStatus, typeof ClockIcon> = {
-  DRAFT: FolderOpenIcon,
-  SUBMITTED: ClockIcon,
-  APPROVED: CheckCircle2Icon,
-  PUBLISHED: EyeIcon,
-  REVISION: RotateCcwIcon,
-}
-
-/**
  * „Meine Reviews" nach Template (Ticket KAN-37): Kennzahlen, Filterkarte,
  * Statusleiste, Tabelle der zugewiesenen Projekte und die beiden
  * Nominierungskarten.
@@ -104,10 +85,15 @@ const countIcons: Record<ProjectStatus, typeof ClockIcon> = {
  * beschreiben die Arbeitslast und nicht die aktuelle Trefferliste, und
  * kommen deshalb aus vier eigenen Abfragen statt aus der geladenen Seite
  * (Begruendung an {@code useReviewCounts}).
+ *
+ * <p><strong>Sie sehen aus wie die Kacheln des Dashboards</strong> (Vorgabe
+ * zur Nacharbeit): Symbol oben rechts, Zahl links, Wort daneben. Aufbau und
+ * Symbolzuordnung stehen deshalb nicht mehr hier, sondern in {@code KpiTile}
+ * und in {@code PROJECT_STATUS_ICONS}; sonst saehe derselbe Status auf zwei
+ * Seiten verschieden aus.
  */
 export default function ReviewListPage() {
   const { t, i18n } = useTranslation()
-  const { role } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   /* Zahlen formatiert die Bibliothek, nicht der Code: dreistellige Werte
      bekommen sonst je nach Sprache einen anderen Trenner als auf der
@@ -194,7 +180,6 @@ export default function ReviewListPage() {
    */
   const [rowError, setRowError] = useState<string | null>(null)
 
-
   const rows = list.data?.content ?? []
   const totalPages = list.data?.totalPages ?? 0
 
@@ -235,10 +220,10 @@ export default function ReviewListPage() {
                 Startseite. */}
             {countsPending
               ? REVIEW_STATUSES.map((entry) => (
-                  <Skeleton key={entry} className="h-28 rounded-modal" />
+                  <Skeleton key={entry} className="h-17 rounded-modal" />
                 ))
               : REVIEW_STATUSES.map((entry) => {
-                  const Icon = countIcons[entry]
+                  const Icon = PROJECT_STATUS_ICONS[entry]
                   return (
                     <KpiTile
                       key={entry}
@@ -484,7 +469,6 @@ export default function ReviewListPage() {
         top10={top10.data}
         isPending={nominations.isPending}
         error={nominations.error ?? top10.error ?? undefined}
-        isAdmin={role === "ADMIN"}
       />
 
       {nominationFor !== null && (

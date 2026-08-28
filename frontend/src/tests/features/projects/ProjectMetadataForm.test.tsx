@@ -12,6 +12,7 @@ import type {
 } from "@/api/types"
 import { ApiError } from "@/api/errors"
 import { ProjectMetadataForm } from "@/features/projects/ProjectMetadataForm"
+import i18n from "@/i18n"
 import { projectDetail } from "@/tests/fixtures"
 import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
@@ -296,22 +297,33 @@ describe("ProjectMetadataForm", () => {
     /*
      * Gegenprobe zum Test darueber: dort sind Autor:in und angemeldete Person
      * dieselbe, die Ausblendung koennte also allein an currentUserId haengen.
-     * Ein Admin-Konto sieht das Feld unabhaengig vom Autorschaftsverhaeltnis
-     * bedienbar, damit bleibt authorId die einzige moegliche Ursache.
+     * Hier ist die Autor:in eine andere und die angemeldete Person
+     * Projektmitglied; damit bleibt authorId die einzige moegliche Ursache.
+     *
+     * Mitglied und nicht Admin: seit der Nacharbeit spiegelt das Formular die
+     * Endpoint-Zeile aus §6.1 („Autor:in und Mitglieder") und steht fuer alle
+     * anderen schreibgeschuetzt da, ein Admin-Konto eingeschlossen. Das
+     * Redaktionsfeld haette dann gar kein Suchfeld mehr, und der Test pruefte
+     * nichts.
      */
     const user = userEvent.setup()
-    renderForm(
-      {
-        author: {
-          id: "a-fremd",
-          firstName: "Lea",
-          lastName: "Fremd",
-          avatarUrl: null,
-        },
+    renderForm({
+      author: {
+        id: "a-fremd",
+        firstName: "Lea",
+        lastName: "Fremd",
+        avatarUrl: null,
       },
-      undefined,
-      "ADMIN"
-    )
+      members: [
+        {
+          userId: SIGNED_IN_ID,
+          firstName: "Mira",
+          lastName: "Beispiel",
+          avatarUrl: null,
+          projectRole: "Frontend",
+        },
+      ],
+    })
     server.use(
       http.get("*/api/users/lookup", () =>
         HttpResponse.json([
@@ -449,5 +461,106 @@ describe("ProjectMetadataForm", () => {
     expect(search).toHaveAccessibleDescription(
       message.slice("editorIds: ".length)
     )
+  })
+
+  /*
+   * Der Riegel, der bis zur Nacharbeit fehlte: §6.1 laesst an
+   * {@code PUT /projects/{id}} allein „Autor:in und Mitglieder, in DRAFT und
+   * REVISION" ({@code ProjectPermissionService.mayEditMetadata}). Eine
+   * zugewiesene Redaktion darf ein Projekt in REVISION lesen (§5, Fussnote
+   * 11) und bekam deshalb hier ein voll beschreibbares Formular, dessen
+   * Speichern der Server mit 403 NO_PERMISSION beantwortete: „Dafuer fehlt
+   * Ihnen die Berechtigung", und zwar erst nach dem Ausfuellen. Der Editor
+   * traegt denselben Riegel seit KAN-86.
+   */
+  describe("nur die Projektseite schreibt", () => {
+    it("sperrt das Formular fuer eine zugewiesene Redaktion und nennt den Grund", async () => {
+      renderForm(
+        {
+          status: "REVISION",
+          author: {
+            id: "a-fremd",
+            firstName: "Lea",
+            lastName: "Fremd",
+            avatarUrl: null,
+          },
+          members: [],
+          editors: [
+            {
+              id: SIGNED_IN_ID,
+              firstName: "Mira",
+              lastName: "Beispiel",
+              avatarUrl: null,
+            },
+          ],
+        },
+        undefined,
+        "EDITOR"
+      )
+
+      expect(await screen.findByLabelText("Projekttitel")).toBeDisabled()
+      expect(
+        screen.getByText(i18n.t("project.metadata.readOnlyForeign"))
+      ).toBeVisible()
+      /* Der Status ist bearbeitbar; die andere Meldung waere also falsch. */
+      expect(
+        screen.queryByText(
+          i18n.t("project.metadata.readOnly", {
+            status: i18n.t("project.status.REVISION"),
+          })
+        )
+      ).toBeNull()
+    })
+
+    it("sperrt es auch fuer ein Admin-Konto ausserhalb des Projekts", async () => {
+      /* §6.1 nennt an der Zeile PUT /projects/{id} allein „Autor:in und
+         Mitglieder", und die ADMIN-Zelle in §5 traegt fuer das Bearbeiten
+         einen Klammerhaken, also nur eigene Ressourcen. Sein PUT endet
+         deshalb ebenso mit 403. §7 fuehrt dazu keinen offenen Punkt: Punkt 2
+         dort betrifft den Inhalt fremder Projekte, nicht die Metadaten. */
+      renderForm(
+        {
+          author: {
+            id: "a-fremd",
+            firstName: "Lea",
+            lastName: "Fremd",
+            avatarUrl: null,
+          },
+          members: [],
+        },
+        undefined,
+        "ADMIN"
+      )
+
+      expect(await screen.findByLabelText("Projekttitel")).toBeDisabled()
+      expect(
+        screen.getByText(i18n.t("project.metadata.readOnlyForeign"))
+      ).toBeVisible()
+    })
+
+    it("laesst ein Projektmitglied schreiben, nicht nur die Autor:in", async () => {
+      renderForm({
+        author: {
+          id: "a-fremd",
+          firstName: "Lea",
+          lastName: "Fremd",
+          avatarUrl: null,
+        },
+        members: [
+          {
+            userId: SIGNED_IN_ID,
+            firstName: "Mira",
+            lastName: "Beispiel",
+            avatarUrl: null,
+            projectRole: "Frontend",
+          },
+        ],
+      })
+
+      expect(await screen.findByLabelText("Projekttitel")).toBeEnabled()
+      expect(
+        screen.queryByText(i18n.t("project.metadata.readOnlyForeign"))
+      ).toBeNull()
+    })
   })
 })

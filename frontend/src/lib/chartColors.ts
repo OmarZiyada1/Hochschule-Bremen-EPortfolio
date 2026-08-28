@@ -52,8 +52,8 @@ export const CHART_COLOR_COUNT = 4
  * <p>Nach dem letzten Eintrag beginnt die Palette von vorn. Das ist kein
  * Versehen, sondern die Reissleine: zwei gleiche Farben sind das kleinere
  * Uebel gegenueber einer Reihe ganz ohne, und benannt ist jede Reihe
- * ohnehin in der Legende. Die Kennzahlenreihe des Dashboards macht davon
- * Gebrauch: sechs Kacheln laufen durch vier Familien.
+ * ohnehin in der Legende. Die Nutzerstatistik macht davon Gebrauch: Rollen
+ * und Kontostaende nehmen ihre Toene nach Position.
  */
 export function chartColor(index: number): string {
   const step =
@@ -69,6 +69,17 @@ export function chartColor(index: number): string {
  * keine Schriftfarbe): auf Weiss liegen die Fuellstufen bei 1,6 bis 2,5:1
  * und waeren unlesbar, die dunklen bei 4,6 bis 5,4:1. Im dunklen Modus
  * tauschen beide die Rolle, dort traegt die Fuellstufe die Schrift.
+ *
+ * <p><strong>Sie hat derzeit keinen Aufrufer</strong>, seit die
+ * Kennzahlenreihe des Dashboards einen einheitlichen Textton traegt (Vorgabe
+ * zur Nacharbeit). Das ist ein benannter offener Punkt und keine
+ * Behauptung, sie werde noch gebraucht: mit ihr stehen auch
+ * {@code --chart-text-1} bis {@code --chart-text-4} ohne Verwendung da
+ * ({@code tokens.css}), und ihre Entfernung zieht die drei nur ueber sie
+ * gebundenen Primitive der Palette sowie drei Zaehlzusicherungen in
+ * {@code tokens.test.ts} nach sich. Das ist eine Aenderung an der
+ * Tokenschicht und gehoert in ein eigenes Ticket, nicht in eine
+ * Oberflaechen-Nacharbeit.
  */
 export function chartTextColor(index: number): string {
   const step =

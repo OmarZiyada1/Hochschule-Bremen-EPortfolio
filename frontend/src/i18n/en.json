@@ -643,6 +643,7 @@
       "submitCreate": "Create project",
       "submitPending": "Saving …",
       "readOnly": "This project cannot be edited in status {{status}}. Changes are only possible in draft and revision.",
+      "readOnlyForeign": "This project is not yours: only the author and the project members can change its metadata. As assigned editorial staff, use the review mode to give feedback.",
       "preview": {
         "heading": "Preview",
         "hint": "These entries determine how the project appears in lists and on cards, not the project content itself."
@@ -1418,12 +1419,9 @@
         "action": "Withdraw nomination",
         "title": "Withdraw nomination?",
         "description": "The top 10 nomination for “{{title}}” will be withdrawn.",
-        "accepted": "The project also leaves the top 10 on the start page. The place becomes free and the remaining entries do not move up.",
         "confirm": "Withdraw",
         "done": "Nomination for {{title}} withdrawn.",
-        "actionFor": "Withdraw nomination: {{title}}",
-        "actionAccepted": "Withdraw and remove from the top 10",
-        "actionAcceptedFor": "Withdraw nomination and remove project from the top 10: {{title}}"
+        "actionFor": "Withdraw nomination: {{title}}"
       }
     },
     "detail": {
@@ -1494,7 +1492,10 @@
       "categories": "Categories",
       "semesters": "Semesters",
       "studyStructure": "Study structure",
-      "support": "Support"
+      "support": "Support",
+      "open": "Open the administration navigation",
+      "openSupportCount_one": "{{count}} open support request",
+      "openSupportCount_other": "{{count}} open support requests"
     },
     "dashboard": {
       "title": "Dashboard",
@@ -1521,7 +1522,7 @@
         "subtitle": "Distribution of all projects by faculty. Projects without a faculty are not included.",
         "bar": "Projects",
         "inTop10": "In the top 10",
-        "accepted": "Accepted, no slot",
+        "accepted": "Formerly top 10",
         "rest": "Other projects",
         "empty": "No faculties have been set up.",
         "tableCaption": "Projects per faculty",
@@ -1531,8 +1532,8 @@
     },
     "projects": {
       "title": "Projects",
-      "subtitle_one": "{{count}} project, all statuses included",
-      "subtitle_other": "{{count}} projects, all statuses included",
+      "subtitle_one": "{{count}} project",
+      "subtitle_other": "{{count}} projects",
       "subtitleLoading": "Loading projects …",
       "statusFilter": "Filter by status",
       "search": {

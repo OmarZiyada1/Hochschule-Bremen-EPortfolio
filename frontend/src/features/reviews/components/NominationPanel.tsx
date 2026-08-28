@@ -79,7 +79,6 @@ export function NominationPanel({
   top10,
   isPending,
   error,
-  isAdmin,
 }: {
   nominations: Top10NominationResponse[]
   /**
@@ -95,12 +94,6 @@ export function NominationPanel({
    * des frontend-reviewers).
    */
   error?: unknown
-  /**
-   * Ob die angemeldete Person kuratieren darf (§5). Entscheidet allein
-   * darueber, ob ein angenommener Vorschlag noch zurueckziehbar ist;
-   * verbindlich bleibt der Server.
-   */
-  isAdmin: boolean
 }) {
   const { t } = useTranslation()
   const [filter, setFilter] = useState<NominationFilterValue>(
@@ -217,7 +210,6 @@ export function NominationPanel({
                 <NominationRow
                   nomination={nomination}
                   place={placeOf.get(nomination.project.id)}
-                  isAdmin={isAdmin}
                   onNotice={(message) => {
                     setNotice(message)
                     list.current?.focus()
@@ -244,13 +236,11 @@ export function NominationPanel({
 function NominationRow({
   nomination,
   place,
-  isAdmin,
   onNotice,
 }: {
   nomination: Top10NominationResponse
   /** Platz, auf dem das Projekt <em>jetzt</em> steht, sonst undefined. */
   place: number | undefined
-  isAdmin: boolean
   onNotice: (message: string) => void
 }) {
   const { t } = useTranslation()
@@ -285,11 +275,7 @@ function NominationRow({
       <ItemActions className="gap-2">
         <NominationPlace nomination={nomination} place={place} />
         <NominationStatusBadge status={nomination.status} />
-        <NominationWithdrawAction
-          nomination={nomination}
-          isAdmin={isAdmin}
-          onNotice={onNotice}
-        />
+        <NominationWithdrawAction nomination={nomination} onNotice={onNotice} />
       </ItemActions>
     </Item>
   )
@@ -378,26 +364,21 @@ function NominationStatusBadge({ status }: { status: NominationStatus }) {
  * Symbolknopf sind beide {@code size="icon-sm"}, also 28px und damit ueber
  * der Mindestgroesse von 24px (SC 2.5.8).
  *
- * <p><strong>Der Knopf erscheint nur, wo er greift.</strong> Ein
- * abgelehnter oder bereits zurueckgezogener Vorschlag traegt keine
- * Handlung; ein gesperrter Knopf an jeder zweiten Zeile waere Ruhe ohne
- * Auskunft.
+ * <p><strong>Der Knopf erscheint nur, wo er greift</strong>, also am offenen
+ * Vorschlag. Ein entschiedener traegt keine Handlung mehr; ein gesperrter
+ * Knopf an jeder zweiten Zeile waere Ruhe ohne Auskunft. Was aus einem
+ * entschiedenen Vorschlag geworden ist, sagt die Marke daneben.
  *
  * <p><strong>Kurzhinweis und zugaenglicher Name sagen Verschiedenes.</strong>
  * Der Hinweis ist die knappe Beschriftung, der Name nennt zusaetzlich das
  * Projekt: in einer Liste stuenden sonst mehrere gleichnamige Knoepfe
  * untereinander, die eine Elementliste nicht auseinanderhaelt (SC 2.4.6).
- * Beide wechseln bei einem angenommenen Vorschlag den Text, denn dort nimmt
- * der Klick das Projekt zugleich von der Startseite, und vor dem Klick hat
- * ein Symbolknopf nur diese beiden Texte.
  */
 function NominationWithdrawAction({
   nomination,
-  isAdmin,
   onNotice,
 }: {
   nomination: Top10NominationResponse
-  isAdmin: boolean
   onNotice: (message: string) => void
 }) {
   const { t } = useTranslation()
@@ -406,12 +387,10 @@ function NominationWithdrawAction({
 
   /* Diese Karte fuehrt ausschliesslich eigene Vorschlaege: die Abfrage steht
      auf nominatedBy=me (§6.1). Die Frage nach fremden stellt sich hier nicht,
-     anders als in der Top-10-Verwaltung. */
-  if (!nominationWithdrawable(nomination.status, isAdmin, true)) {
+     und anderswo wird ueberhaupt nicht mehr zurueckgezogen. */
+  if (!nominationWithdrawable(nomination.status, true)) {
     return null
   }
-
-  const accepted = nomination.status === "ACCEPTED"
 
   return (
     <>
@@ -429,20 +408,13 @@ function NominationWithdrawAction({
         >
           <Undo2Icon aria-hidden="true" />
           <span className="sr-only">
-            {t(
-              accepted
-                ? "review.nomination.withdraw.actionAcceptedFor"
-                : "review.nomination.withdraw.actionFor",
-              { title: nomination.project.title }
-            )}
+            {t("review.nomination.withdraw.actionFor", {
+              title: nomination.project.title,
+            })}
           </span>
         </TooltipTrigger>
         <TooltipContent>
-          {t(
-            accepted
-              ? "review.nomination.withdraw.actionAccepted"
-              : "review.nomination.withdraw.action"
-          )}
+          {t("review.nomination.withdraw.action")}
         </TooltipContent>
       </Tooltip>
 

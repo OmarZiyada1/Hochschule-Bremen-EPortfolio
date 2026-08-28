@@ -84,44 +84,45 @@ export type NominationFilterValue =
  * Laesst sich dieser Vorschlag ueber die Oberflaeche zurueckziehen (§3.11.1,
  * seit Contract v70)?
  *
- * <p>Die nominierende Person zieht ihren eigenen Vorschlag zurueck, solange
- * er offen ist; ist sie zugleich Administration, auch einen bereits
- * angenommenen. Ein abgelehnter oder schon zurueckgezogener Vorschlag ist in
- * keinem Fall mehr zurueckziehbar.
+ * <p><strong>Zwei Bedingungen, und die Rolle gehoert nicht dazu</strong>
+ * (Vorgabe zur Nacharbeit an KAN-87): der Vorschlag stammt von der
+ * angemeldeten Person, und er ist noch offen. Wer nominiert hat, nimmt seinen
+ * Vorschlag zurueck, solange niemand entschieden hat; danach ist die
+ * Entscheidung getroffen, und sie wird nicht ueber den Rueckzug rueckgaengig
+ * gemacht.
  *
- * <p><strong>Ein fremder Vorschlag wird hier nie zurueckgezogen</strong>
- * (Entscheidung zur Nacharbeit an KAN-87). Der Server erlaubt der
- * Administration mehr: §3.11.1 laesst sie jeden Vorschlag zurueckziehen. Die
- * Oberflaeche bietet das bewusst nicht an, weil Zurueckziehen und Ablehnen
- * zwei verschiedene Vorgaenge sind und im Protokoll auch verschieden gelesen
- * werden. „Zurueckgezogen" heisst „die vorschlagende Person hat es sich
- * anders ueberlegt"; die Administration entscheidet dagegen ueber einen
- * fremden Vorschlag, und dafuer gibt es <em>Ablehnen</em>. Soll ein bereits
- * aufgenommenes Projekt die Liste verlassen, ist der Weg
- * „Vom Platz nehmen" in der Platzliste, nicht der Rueckzug eines fremden
- * Vorschlags.
+ * <p><strong>Ein fremder Vorschlag wird nie zurueckgezogen.</strong>
+ * „Zurueckgezogen" heisst „die vorschlagende Person hat es sich anders
+ * ueberlegt"; ueber einen fremden Vorschlag entscheidet die Administration,
+ * und dafuer gibt es <em>Annehmen</em> und <em>Ablehnen</em> in der
+ * Top-10-Verwaltung. Soll ein bereits aufgenommenes Projekt die Liste
+ * verlassen, ist der Weg „Vom Platz nehmen" in der Platzliste.
  *
- * <p>In „Meine Reviews" ist {@code isOwn} immer wahr: die Liste steht auf
- * {@code nominatedBy=me}. In der Top-10-Verwaltung stehen alle Vorschlaege
- * nebeneinander, und dort traegt dieser Parameter die Unterscheidung.
+ * <p><strong>Ein angenommener Vorschlag auch dann nicht, wenn er der eigene
+ * ist.</strong> Bis zur Nacharbeit durfte die Administration ihn
+ * zurueckziehen, und das Projekt verliess damit als Nebenwirkung die
+ * oeffentliche Startseite. Zwei Wege zu demselben Ergebnis sind einer zu
+ * viel, und der zweite lag ausserdem an der falschen Stelle: eine
+ * Entscheidung ueber die kuratierte Liste faellt in der Platzliste und nicht
+ * in „Meine Reviews".
  *
- * <p>Die Funktion bildet §3.11.1 ab und ersetzt es nicht: verbindlich bleibt
- * der Server, der dieselben Faelle mit 409
- * {@code NOMINATION_ALREADY_DECIDED} beantwortet. Die Oberflaeche kennt nur
- * den Stand des letzten Ladevorgangs.
+ * <p><strong>Deshalb steht der Rueckzug nur noch in „Meine Reviews".</strong>
+ * Die Liste dort steht auf {@code nominatedBy=me}, {@code isOwn} ist also
+ * immer wahr; die Top-10-Verwaltung bietet ihn ueberhaupt nicht mehr an.
+ * Der Parameter bleibt trotzdem, weil die Funktion sonst eine Zusage machte,
+ * die sie nicht selbst prueft.
+ *
+ * <p>Die Oberflaeche ist damit enger als der Server, und das ist Absicht:
+ * §3.11.1 laesst die Kuratierung mehr zu, verbindlich bleibt sie mit 409
+ * {@code NOMINATION_ALREADY_DECIDED} beziehungsweise 403 die Grenze nach
+ * unten. Die Oberflaeche kennt ohnehin nur den Stand des letzten
+ * Ladevorgangs.
  *
  * @param isOwn stammt der Vorschlag von der angemeldeten Person?
  */
 export function nominationWithdrawable(
   status: NominationStatus,
-  isAdmin: boolean,
   isOwn: boolean
 ): boolean {
-  if (!isOwn) {
-    return false
-  }
-  if (status === "PENDING") {
-    return true
-  }
-  return isAdmin && status === "ACCEPTED"
+  return isOwn && status === "PENDING"
 }

@@ -3,7 +3,6 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 
-import { useAuth } from "@/api/auth/AuthContext"
 import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import { EmptyState } from "@/components/common/EmptyState"
 import { SegmentedFilter } from "@/components/common/SegmentedFilter"
@@ -53,7 +52,6 @@ import {
  */
 export default function AdminTop10Page() {
   const { t } = useTranslation()
-  const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const filter = readNominationFilter(searchParams)
 
@@ -165,8 +163,6 @@ export default function AdminTop10Page() {
           <Top10NominationList
             nominations={nominations.data}
             freePositions={free}
-            isAdmin={user?.role === "ADMIN"}
-            currentUserId={user?.id ?? null}
             onNotice={setNotice}
           />
         )}

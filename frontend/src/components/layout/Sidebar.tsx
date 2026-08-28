@@ -60,11 +60,19 @@ export function Sidebar({
  * {@code NavigationMenuLink} tut; Klassen und {@code aria-current} legt diese
  * Huelle darauf. {@code href} bleibt fuer Ziele ausserhalb des Routers und
  * fuer die Pruefflaeche aus KAN-29.
+ *
+ * <p><strong>Rechts kann ein Zaehler stehen</strong> ({@code badge}). Er sagt,
+ * dass hinter diesem Eintrag etwas offen ist, ohne dass man ihn oeffnen muss;
+ * die Beschriftung behaelt dabei den freien Platz ({@code flex-1}), damit der
+ * Zaehler buendig am rechten Rand steht und nicht auf halber Strecke. Was
+ * darin steht und ob ueberhaupt etwas darin steht, entscheidet der Aufrufer:
+ * diese Huelle kennt keine Fachlichkeit.
  */
 export function SidebarItem({
   href,
   render,
   icon,
+  badge,
   active = false,
   className,
   children,
@@ -76,6 +84,8 @@ export function SidebarItem({
    */
   render?: ReactElement<{ className?: string; "aria-current"?: string }>
   icon?: ReactNode
+  /** Zaehler am rechten Rand, etwa die Zahl offener Vorgaenge. */
+  badge?: ReactNode
   active?: boolean
   className?: string
   children: ReactNode
@@ -98,7 +108,12 @@ export function SidebarItem({
           {icon}
         </span>
       )}
-      {children}
+      {/* Der freie Platz gehoert der Beschriftung und nicht dem Zaehler:
+          ein ml-auto am Zaehler saehe hier zwar gleich aus, liesse ihn aber
+          ohne Zaehler an anderer Stelle umbrechen. Ohne badge bleibt das
+          flex-1 folgenlos. */}
+      <span className="flex-1">{children}</span>
+      {badge}
     </>
   )
 

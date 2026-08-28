@@ -87,10 +87,15 @@ export default function HomePage() {
         >
           {/* Der Pfeil huepft, damit der Weg nach unten auffaellt (KAN-80).
               animate-bounce ist Tailwinds eigene Kurve; wer weniger Bewegung
-              eingestellt hat, sieht sie nicht (Grundregel in tokens.css). */}
+              eingestellt hat, sieht sie nicht (Grundregel in tokens.css).
+
+              Groesser als die Schrift daneben und nicht auf ihrer Groesse: er
+              ist auf dieser Flaeche das einzige bewegte Element und der
+              einzige Hinweis darauf, dass unterhalb des ersten Bildschirms
+              noch etwas kommt. Auf 16px ging er neben der Zeile unter. */}
           <ArrowDownIcon
             aria-hidden="true"
-            className="size-4 animate-bounce motion-reduce:animate-none"
+            className="size-7 animate-bounce motion-reduce:animate-none"
           />
           {t("home.hero.exploreTop10")}
         </a>

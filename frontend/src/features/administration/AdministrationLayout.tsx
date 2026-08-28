@@ -1,8 +1,20 @@
+import { MenuIcon } from "lucide-react"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, Outlet, useLocation } from "react-router-dom"
 
+import { CountBadge } from "@/components/common/CountBadge"
 import { Sidebar, SidebarItem } from "@/components/layout/Sidebar"
+import { Button } from "@/components/ui/button"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 import { ADMIN_NAV, isAdminNavActive } from "@/features/administration/adminNav"
+import { useOpenSupportRequestCount } from "@/features/administration/hooks/useAdminSupport"
 
 /**
  * Der Rahmen der Administrationsseite (Template „Dashboard" und „Admin
@@ -21,44 +33,167 @@ import { ADMIN_NAV, isAdminNavActive } from "@/features/administration/adminNav"
  * prueft die Filterkette des Servers, und ein trotzdem eintreffendes 403
  * behandelt jede Seite sichtbar (§5).
  *
- * <p><strong>Die Leiste wird ab {@code lg} zur Spalte.</strong> Darunter
- * steht sie ueber dem Inhalt und laeuft waagerecht, statt eine 240px-Spalte
- * von einem 360px-Fenster abzuziehen. Die Templates sind Desktop-Ansichten
- * und sagen dazu nichts; bedienbar bleiben muss es trotzdem (Skill
- * frontend-design, Abschnitt 6).
+ * <p><strong>Zwei Breiten, zwei Anordnungen.</strong> Ab {@code lg} steht die
+ * Leiste als Spalte neben dem Inhalt, wie im Template. Darunter steht an
+ * ihrer Stelle eine schmale Zeile mit dem Namen der aktuellen Seite, und die
+ * Eintraege liegen in einer Schublade dahinter.
+ *
+ * <p>Bis zur Nacharbeit lief die Leiste im schmalen Fenster stattdessen
+ * <em>waagerecht scrollbar</em> ueber dem Inhalt. Das war die schlechtere
+ * Loesung, und zwar aus drei Gruenden: von acht Eintraegen waren drei zu
+ * sehen und die uebrigen nur durch Wischen zu finden, ohne dass etwas darauf
+ * hinwies; die Zeile kostete oben Platz, obwohl man sie fast nie braucht;
+ * und der aktuelle Ort war nur zu erkennen, wenn er zufaellig im sichtbaren
+ * Ausschnitt lag. Die Zeile sagt jetzt, wo man ist, und die Schublade zeigt
+ * alle acht Eintraege untereinander (Skill frontend-design, Abschnitt 6).
+ *
+ * <p><strong>Die Schublade ist kontrolliert</strong> und schliesst beim
+ * Klick auf einen Eintrag: ein Link im SPA laedt die Seite nicht neu, sie
+ * bliebe sonst ueber der neuen Ansicht stehen. Dasselbe Muster wie im
+ * Menue der {@code NavBar}.
+ *
+ * <p><strong>Die Eintraege entstehen einmal</strong> ({@code navItems}) und
+ * werden von beiden Anordnungen gelesen. Zwei Abschriften liefen beim
+ * naechsten Eintrag auseinander, und genau das ist die Art Doppelung, die
+ * hier schon einmal aufgefallen ist.
+ *
+ * <p><strong>„Support" traegt die Zahl der offenen Anfragen</strong> (Vorgabe
+ * zur Nacharbeit). Sie ist der einzige Handlungsbedarf, der von aussen in die
+ * Administrationsseite kommt (§2.15, §6.1); bis dahin stand sie nur auf der
+ * Support-Seite selbst, also genau dort, wo man sie erst sieht, wenn man
+ * ohnehin schon nachgesehen hat. Die Abfrage ist dieselbe wie dort und teilt
+ * sich mit ihr den Cache-Ast; sie kostet die Leiste also keinen zweiten
+ * Aufruf, sobald jemand die Seite oeffnet. Im schmalen Fenster steht sie
+ * zusaetzlich an der Zeile selbst: hinter der geschlossenen Schublade waere
+ * sie sonst unsichtbar, und damit waere die Auskunft genau dort weg, wo man
+ * am wenigsten nachsieht.
  */
 export function AdministrationLayout() {
   const { t } = useTranslation()
   const location = useLocation()
+  const openSupport = useOpenSupportRequestCount()
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  /*
+   * Nur ein Zaehler ueber null: „0 offen" ist keine Auskunft, die eine
+   * dauerhafte Flaeche verdient, und ein Punkt ohne Anlass gewoehnt das Auge
+   * daran, ihn zu uebersehen. Solange die Abfrage laeuft, steht dort
+   * ebenfalls nichts; eine 0, die gleich zu 3 wird, ist schlechter als ein
+   * Moment Leere (dieselbe Entscheidung wie im Kopf der Support-Seite).
+   */
+  const openRequests = openSupport.data ?? 0
+
+  /* Wo man gerade ist, fuer die Zeile im schmalen Fenster. Ohne Treffer
+     bleibt die zweite Zeile leer statt zu raten; erreichbar ist dieser Fall
+     nicht, jede Admin-Route liegt unter einem Eintrag. */
+  const current = ADMIN_NAV.find((entry) =>
+    isAdminNavActive(entry, location.pathname)
+  )
+
+  /**
+   * Die acht Eintraege, einmal gebaut.
+   *
+   * @param onNavigate wird nach dem Klick gerufen; die Schublade schliesst
+   *                   sich damit, die Spalte gibt nichts herein
+   */
+  const navItems = (onNavigate?: () => void) =>
+    ADMIN_NAV.map((entry) => {
+      const Icon = entry.icon
+      const active = isAdminNavActive(entry, location.pathname)
+      const count = entry.badge === "openSupportRequests" ? openRequests : 0
+      return (
+        <SidebarItem
+          key={entry.to}
+          render={<Link to={entry.to} onClick={onNavigate} />}
+          active={active}
+          icon={<Icon aria-hidden="true" className="size-4" />}
+          badge={
+            count > 0 ? (
+              <CountBadge
+                count={count}
+                label={t("administration.nav.openSupportCount", { count })}
+                /* Der aktive Eintrag traegt selbst bg-primary; ein Zaehler
+                   in derselben Rolle verschwaende darauf. */
+                tone={active ? "inverted" : "default"}
+              />
+            ) : undefined
+          }
+          className="shrink-0"
+        >
+          {t(entry.labelKey)}
+        </SidebarItem>
+      )
+    })
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 lg:flex-row lg:items-start">
+      {/* Schmales Fenster: die Zeile mit dem Ausloeser. Sie traegt dieselbe
+          Flaeche wie die Spalte darueber hinaus, damit beide Anordnungen als
+          dasselbe Bedienelement erkennbar bleiben. */}
+      <div className="flex items-center gap-3 rounded-modal border border-sidebar-border bg-sidebar p-3 text-sidebar-foreground lg:hidden">
+        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+          <SheetTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t("administration.nav.open")}
+              />
+            }
+          >
+            <MenuIcon aria-hidden="true" />
+          </SheetTrigger>
+          {/* gap-0 und eigene Innenabstaende: die Primitive setzt zwischen
+              Kopf und Inhalt einen Abstand, der hier eine Luecke zwischen
+              Ueberschrift und erstem Eintrag ergaebe. */}
+          <SheetContent side="left" className="gap-0">
+            <SheetHeader className="pb-2">
+              <SheetTitle className="type-label-xs font-semibold tracking-widest text-muted-foreground uppercase">
+                {t("administration.nav.label")}
+              </SheetTitle>
+            </SheetHeader>
+            {/* Eigene nav-Landmarke, wie in der Spalte: die beiden bestehen
+                nie gleichzeitig, weil die Spalte unterhalb von lg auf
+                display:none steht und damit aus dem Baum faellt. */}
+            <nav
+              aria-label={t("administration.nav.label")}
+              className="flex flex-col gap-0.5 overflow-y-auto px-4 pb-4"
+            >
+              {navItems(() => setMenuOpen(false))}
+            </nav>
+          </SheetContent>
+        </Sheet>
+
+        <span className="flex min-w-0 flex-col">
+          <span className="type-label-xs tracking-widest text-muted-foreground uppercase">
+            {t("administration.label")}
+          </span>
+          {/* truncate und nicht umbrechen: die Zeile soll eine Zeile hoch
+              bleiben, sonst springt der Seitenanfang je nach Eintrag. */}
+          <span className="type-body-sm truncate font-semibold text-primary">
+            {current === undefined ? "" : t(current.labelKey)}
+          </span>
+        </span>
+
+        {openRequests > 0 && (
+          <CountBadge
+            className="ml-auto"
+            count={openRequests}
+            label={t("administration.nav.openSupportCount", {
+              count: openRequests,
+            })}
+          />
+        )}
+      </div>
+
       {/* shrink-0 haelt die Spalte auf ihrer Breite: ohne sie zieht eine
           breite Tabelle rechts die Leiste zusammen, bis die Beschriftungen
           umbrechen. */}
       <Sidebar
         label={t("administration.nav.label")}
-        className="w-full lg:sticky lg:top-6 lg:w-60 lg:shrink-0"
+        className="hidden lg:sticky lg:top-6 lg:flex lg:w-60 lg:shrink-0"
       >
-        {/* Waagerecht scrollbar nur im schmalen Fenster; ab lg ist es
-            wieder die Spalte aus dem Template. */}
-        <div className="flex gap-0.5 overflow-x-auto lg:flex-col lg:overflow-visible">
-          {ADMIN_NAV.map((entry) => {
-            const Icon = entry.icon
-            const active = isAdminNavActive(entry, location.pathname)
-            return (
-              <SidebarItem
-                key={entry.to}
-                render={<Link to={entry.to} />}
-                active={active}
-                icon={<Icon aria-hidden="true" className="size-4" />}
-                className="shrink-0"
-              >
-                {t(entry.labelKey)}
-              </SidebarItem>
-            )
-          })}
-        </div>
+        {navItems()}
       </Sidebar>
 
       {/* min-w-0 ist Pflicht, nicht Kosmetik: ohne sie waechst dieser

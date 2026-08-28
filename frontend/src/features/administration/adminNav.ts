@@ -41,6 +41,18 @@ export interface AdminNavEntry {
   /** Schluessel unter administration.nav.* in de.json und en.json. */
   labelKey: string
   icon: ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" }>
+  /**
+   * Welcher Zaehler rechts im Eintrag steht, oder {@code undefined} fuer
+   * keinen.
+   *
+   * <p><strong>Ein Schluessel und keine Zahl.</strong> Diese Liste ist eine
+   * reine Beschreibung und laedt nichts; welche Abfrage hinter einem
+   * Schluessel steckt, entscheidet der Rahmen. Ohne das muesste entweder die
+   * Liste zu einem Hook werden oder das Layout die Zuordnung ueber einen
+   * Pfadvergleich raten, und dann stuende der fachliche Zusammenhang
+   * nirgends geschrieben.
+   */
+  badge?: "openSupportRequests"
 }
 
 export const ADMIN_NAV: readonly AdminNavEntry[] = [
@@ -83,6 +95,10 @@ export const ADMIN_NAV: readonly AdminNavEntry[] = [
     to: "/administration/support",
     labelKey: "administration.nav.support",
     icon: LifeBuoyIcon,
+    /* Support ist der einzige Bereich, dessen Inhalt von aussen entsteht: die
+       Zeilen legt das oeffentliche Kontaktformular an (§6.1). Wer die
+       Administrationsseite betritt, soll ohne Klick sehen, ob etwas wartet. */
+    badge: "openSupportRequests",
   },
 ]
 

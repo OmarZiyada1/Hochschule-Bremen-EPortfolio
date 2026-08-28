@@ -1,3 +1,12 @@
+import {
+  CheckCircle2Icon,
+  ClockIcon,
+  EyeIcon,
+  FolderOpenIcon,
+  LayersIcon,
+  RotateCcwIcon,
+} from "lucide-react"
+
 import type { ProjectStatus } from "@/api/types"
 
 /**
@@ -28,6 +37,40 @@ const STATUS_ORDER: Record<ProjectStatus, number> = {
 export const OWN_PROJECT_STATUSES: readonly ProjectStatus[] = (
   Object.keys(STATUS_ORDER) as ProjectStatus[]
 ).sort((a, b) => STATUS_ORDER[a] - STATUS_ORDER[b])
+
+/**
+ * Symbol je Projektstatus fuer die Kennzahlkacheln.
+ *
+ * <p><strong>Eine Zuordnung, zwei Seiten.</strong> Die Kacheln stehen auf dem
+ * Dashboard der Administrationsseite und in „Meine Reviews"; bis zur
+ * Vereinheitlichung fuehrte nur die zweite Seite Symbole, und zwar in einer
+ * eigenen Liste in ihrer Komponentendatei. Sie steht jetzt hier, damit
+ * derselbe Status auf beiden Seiten dasselbe Sinnbild traegt und ein
+ * sechster Contract-Status an genau einer Stelle nachzutragen ist.
+ *
+ * <p>Record ueber den Enum-Typ ohne Standardzweig: ein neuer Wert bricht den
+ * Typecheck, statt still ohne Symbol zu erscheinen. Vorbild ist
+ * {@code tierIcons} in {@code features/reviews/nominations.ts}.
+ *
+ * <p>Die Symbole sind Beiwerk und nie die Aussage (SC 1.4.1): den Status
+ * nennt die Beschriftung der Kachel, und fuer Hilfsmittel sind sie
+ * {@code aria-hidden}.
+ */
+export const PROJECT_STATUS_ICONS: Record<ProjectStatus, typeof ClockIcon> = {
+  DRAFT: FolderOpenIcon,
+  SUBMITTED: ClockIcon,
+  APPROVED: CheckCircle2Icon,
+  PUBLISHED: EyeIcon,
+  REVISION: RotateCcwIcon,
+}
+
+/**
+ * Symbol der Kachel, die ueber alle Status summiert („Alle Projekte im
+ * System" auf dem Dashboard). Kein Status und deshalb kein Eintrag in
+ * {@link PROJECT_STATUS_ICONS}; Schichten stehen fuer den Stapel aus allen
+ * fuenf.
+ */
+export const ALL_PROJECTS_ICON = LayersIcon
 
 /**
  * Wert des Knopfes "Alle". Kein Contract-Wert, deshalb bewusst kleinge-

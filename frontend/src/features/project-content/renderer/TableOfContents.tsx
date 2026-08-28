@@ -106,7 +106,18 @@ export function TableOfContents({
                 className="group/toc inline-flex items-baseline gap-2 text-primary hover:underline focus-visible:underline"
               >
                 <span aria-hidden="true" className={tocDotClass(entry.level)} />
-                {entry.text}
+                {/* Eigener span und nicht der blosse Text: ein nackter
+                    Textknoten wird im Flex-Kasten zu einem anonymen Kind mit
+                    min-width auto, und eine Ueberschrift ohne Leerzeichen
+                    (eine lange Kette von Buchstaben, wie sie beim Tippen
+                    entsteht) kann dann nicht schrumpfen und schiebt sich aus
+                    dem Kasten heraus (gemeldet zu KAN-83).
+
+                    wrap-anywhere und nicht break-words: nur ersteres senkt
+                    auch die min-content-Breite und wirkt damit im
+                    Flex-Kind. Gebrochen wird ausserdem erst, wenn es sein
+                    muss, gewoehnliche Woerter bleiben also heil. */}
+                <span className="min-w-0 wrap-anywhere">{entry.text}</span>
               </a>
             </li>
           ))}
