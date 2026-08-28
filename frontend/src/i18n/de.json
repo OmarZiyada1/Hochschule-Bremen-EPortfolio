@@ -643,6 +643,7 @@
       "submitCreate": "Projekt anlegen",
       "submitPending": "Wird gespeichert …",
       "readOnly": "Dieses Projekt ist im Status {{status}} nicht bearbeitbar. Änderungen sind nur im Entwurf und in der Überarbeitung möglich.",
+      "readOnlyForeign": "Dieses Projekt gehört Ihnen nicht: Änderungen an den Metadaten nehmen nur die Autor:in und die Projektmitglieder vor. Als zugewiesene Redaktion geben Sie Ihre Rückmeldung über den Review-Modus.",
       "preview": {
         "heading": "Vorschau",
         "hint": "Diese Angaben bestimmen, wie das Projekt in Listen und auf Karten erscheint, nicht den Projektinhalt selbst."
@@ -1418,12 +1419,9 @@
         "action": "Nominierung zurückziehen",
         "title": "Nominierung zurückziehen?",
         "description": "Die Top-10-Nominierung für „{{title}}“ wird zurückgezogen.",
-        "accepted": "Das Projekt verlässt damit auch die Top-10 der Startseite. Der Platz wird frei und die übrigen Einträge rücken nicht nach.",
         "confirm": "Zurückziehen",
         "done": "Nominierung für {{title}} zurückgezogen.",
-        "actionFor": "Nominierung zurückziehen: {{title}}",
-        "actionAccepted": "Zurückziehen und aus der Top-10 nehmen",
-        "actionAcceptedFor": "Nominierung zurückziehen und Projekt aus der Top-10 nehmen: {{title}}"
+        "actionFor": "Nominierung zurückziehen: {{title}}"
       }
     },
     "detail": {
@@ -1494,7 +1492,10 @@
       "categories": "Kategorien",
       "semesters": "Semester",
       "studyStructure": "Studienstruktur",
-      "support": "Support"
+      "support": "Support",
+      "open": "Navigation der Administrationsseite öffnen",
+      "openSupportCount_one": "{{count}} offene Support-Anfrage",
+      "openSupportCount_other": "{{count}} offene Support-Anfragen"
     },
     "dashboard": {
       "title": "Dashboard",
@@ -1521,7 +1522,7 @@
         "subtitle": "Verteilung aller Projekte nach Fakultät. Projekte ohne Fakultät sind nicht enthalten.",
         "bar": "Projekte",
         "inTop10": "In der Top 10",
-        "accepted": "Angenommen, ohne Platz",
+        "accepted": "Ehemals Top 10",
         "rest": "Übrige Projekte",
         "empty": "Es sind keine Fakultäten hinterlegt.",
         "tableCaption": "Projekte je Fakultät",
@@ -1531,8 +1532,8 @@
     },
     "projects": {
       "title": "Projekte",
-      "subtitle_one": "{{count}} Projekt, alle Status eingeschlossen",
-      "subtitle_other": "{{count}} Projekte, alle Status eingeschlossen",
+      "subtitle_one": "{{count}} Projekt",
+      "subtitle_other": "{{count}} Projekte",
       "subtitleLoading": "Projekte werden geladen …",
       "statusFilter": "Nach Status filtern",
       "search": {

@@ -119,6 +119,38 @@
 }
 
 /*
+ * Langsames Pulsieren eines Signalpunktes: der Punkt vor der Zahl der offenen
+ * Top-10-Vorschlaege im Kopf der Administrationsseite traegt sie.
+ *
+ * Bewusst nicht Tailwinds animate-pulse. Das laeuft in zwei Sekunden und
+ * blendet allein die Deckkraft ab; auf einem 10px grossen Punkt sieht das aus
+ * wie ein Flackern. Diese Kurve ist deutlich langsamer und nimmt die Groesse
+ * mit, damit die Bewegung als Herzschlag lesbar wird und nicht als Fehler in
+ * der Darstellung.
+ *
+ * Die Bewegung ist Zugabe und nie die Aussage (SC 1.4.1): die Zahl daneben
+ * sagt dasselbe, und bei null Vorschlaegen entsteht der Punkt gar nicht erst.
+ * Wer weniger Bewegung eingestellt hat, sieht keine: die Grundregel in
+ * tokens.css setzt animation-duration und iteration-count global herunter
+ * (prefers-reduced-motion).
+ */
+@theme inline {
+  --animate-pulse-slow: pulse-slow 2.6s ease-in-out infinite;
+
+  @keyframes pulse-slow {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.35;
+      transform: scale(0.7);
+    }
+  }
+}
+
+/*
  * Auf- und Zuklappen des Akkordeons (KAN-80). Wie beim Caret der
  * input-otp-Primitive nutzt die erzeugte Datei accordion.tsx die Klassen
  * animate-accordion-down und animate-accordion-up, bringt aber weder die

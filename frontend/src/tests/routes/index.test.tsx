@@ -8,6 +8,7 @@ import {
   dashboardHandler,
   editLockHandler,
   emptyProjectsHandler,
+  openSupportCountHandler,
   ownPortfolioHandler,
   projectBlocksHandler,
   projectDetailHandler,
@@ -263,7 +264,9 @@ describe("Routenbaum", () => {
 
   it("ADMIN erreicht die Administrationsseite und das Top-10-Protokoll", async () => {
     signInAs("ADMIN")
-    server.use(dashboardHandler())
+    /* Die Seitennavigation zaehlt seit der Nacharbeit die offenen
+       Support-Anfragen; ohne Antwort scheiterte der Test daran. */
+    server.use(dashboardHandler(), openSupportCountHandler())
     const { unmount } = renderWithProviders(<AppUnderTest />, "/administration")
     /* Seit KAN-38 ist die Index-Route die echte Startansicht und kein
        Platzhalter mehr. Sie kommt als eigener Chunk (AdministrationRoute),

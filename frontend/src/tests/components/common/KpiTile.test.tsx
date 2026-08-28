@@ -45,4 +45,39 @@ describe("KpiTile", () => {
        auf der Flaeche, nicht als Kachel. */
     expect(container.querySelector('[data-slot="card"]')).toBeNull()
   })
+
+  /*
+   * Vorgabe zur Nacharbeit: Dashboard und „Meine Reviews" tragen dieselbe
+   * Kachel, und sie besteht immer aus Symbol, Zahl und Wort.
+   */
+  it("zeigt die Variante tile gerahmt und ohne eigene Kartenflaeche", () => {
+    const { container } = renderWithProviders(
+      <KpiTile
+        variant="tile"
+        value="12"
+        label="Entwurf"
+        icon={<svg data-testid="tile-icon" />}
+      />
+    )
+
+    expect(screen.getByText("12")).toBeVisible()
+    expect(screen.getByText("Entwurf")).toBeVisible()
+    expect(screen.getByTestId("tile-icon")).toBeInTheDocument()
+    /* Innerhalb einer Karte gibt es keine zweite: die Reihe steht im
+       Dashboard bereits auf einer. */
+    expect(container.querySelector('[data-slot="card"]')).toBeNull()
+  })
+
+  it("gibt jeder Kennzahl denselben Textton", () => {
+    /* Vorgabe zur Nacharbeit: die Dashboard-Kacheln trugen Toene aus der
+       Diagrammpalette und sahen damit anders aus als dieselben Kacheln in
+       „Meine Reviews". Eine Farbe von aussen gibt es nicht mehr. */
+    renderWithProviders(
+      <KpiTile variant="tile" value="7" label="Eingereicht" />
+    )
+
+    const value = screen.getByText("7")
+    expect(value).toHaveClass("text-accent-foreground")
+    expect(value.getAttribute("style")).toBeNull()
+  })
 })

@@ -191,8 +191,16 @@ function OpenNominationsIndicator({
       >
         {/* Reine Dekoration, deshalb ein leeres Element und kein Zeichen im
             Text: bg-current nimmt den Ton der Ziffer, es gibt also nur eine
-            Stelle, an der die Farbe entschieden wird. */}
-        {hasOpen && <span className="size-2.5 rounded-pill bg-current" />}
+            Stelle, an der die Farbe entschieden wird.
+
+            Er pulsiert langsam (--animate-pulse-slow in index.css), damit
+            offener Handlungsbedarf im ruhigen Seitenkopf auffaellt. Die
+            Bewegung ist Zugabe und nie die Aussage (SC 1.4.1): die Zahl
+            daneben sagt dasselbe, und wer weniger Bewegung eingestellt hat,
+            sieht einen ruhenden Punkt. */}
+        {hasOpen && (
+          <span className="size-2.5 animate-pulse-slow rounded-pill bg-current motion-reduce:animate-none" />
+        )}
         {numberFormat.format(count)}
       </span>
       <span

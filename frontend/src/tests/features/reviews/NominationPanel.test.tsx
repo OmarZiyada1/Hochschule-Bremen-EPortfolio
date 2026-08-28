@@ -218,47 +218,32 @@ describe("NominationPanel", () => {
           name: i18n.t("review.nomination.withdraw.actionFor", { title }),
         })
       ).toBeNull()
-      expect(
-        screen.queryByRole("button", {
-          name: i18n.t("review.nomination.withdraw.actionAcceptedFor", {
-            title,
-          }),
-        })
-      ).toBeNull()
     }
   })
 
-  it("laesst die Administration einen angenommenen Vorschlag zurueckziehen", async () => {
+  it("bietet auch der Administration keinen Rueckzug bei entschiedenen Vorschlaegen", async () => {
+    /*
+     * Vorgabe zur Nacharbeit an KAN-87: zurueckgezogen wird nur der eigene
+     * <em>offene</em> Vorschlag, und zwar unabhaengig von der Rolle. Bis
+     * dahin durfte ein Admin-Konto einen eigenen angenommenen Vorschlag
+     * zurueckziehen und nahm das Projekt damit nebenbei von der
+     * oeffentlichen Startseite; dafuer gibt es „Vom Platz nehmen" in der
+     * Platzliste. Der Server liesse es weiterhin zu (§3.11.1), die
+     * Oberflaeche bietet es nicht mehr an.
+     */
     signInAs("ADMIN")
     server.use(...handlers([ACCEPTED, REJECTED], { role: "ADMIN" }))
 
     renderWithProviders(<ReviewListPage />, "/reviews")
     await screen.findByText("Klimadaten")
 
-    /* Eigener Name, weil der Klick hier zugleich die Startseite aendert. */
-    await userEvent.click(
-      screen.getByRole("button", {
-        name: i18n.t("review.nomination.withdraw.actionAcceptedFor", {
-          title: "Klimadaten",
-        }),
-      })
-    )
-
-    /* Der Rueckzug nimmt das Projekt zugleich aus der kuratierten Liste
-       (§3.11.1); die Rueckfrage sagt das, statt es geschehen zu lassen. */
-    expect(
-      await screen.findByText(i18n.t("review.nomination.withdraw.accepted"))
-    ).toBeInTheDocument()
-
-    /* Ein abgelehnter Vorschlag bleibt auch fuer die Administration ohne
-       Handlung. */
-    expect(
-      screen.queryByRole("button", {
-        name: i18n.t("review.nomination.withdraw.actionFor", {
-          title: "Stadtlabor",
-        }),
-      })
-    ).toBeNull()
+    for (const title of ["Klimadaten", "Stadtlabor"]) {
+      expect(
+        screen.queryByRole("button", {
+          name: i18n.t("review.nomination.withdraw.actionFor", { title }),
+        })
+      ).toBeNull()
+    }
   })
 
   it("nennt bei einem angenommenen Vorschlag den Platz aus der kuratierten Liste", async () => {

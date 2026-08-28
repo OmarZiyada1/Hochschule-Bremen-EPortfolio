@@ -9,37 +9,42 @@ import {
 /**
  * §3.11.1 in einer reinen Funktion (Contract v70, KAN-37): wer darf einen
  * Vorschlag in welchem Stand zurueckziehen. Verbindlich bleibt der Server;
- * geprueft wird hier, dass die Oberflaeche dieselbe Grenze zieht und die
- * Handlung nicht dort anbietet, wo sie in einem 409 endete.
+ * geprueft wird hier, dass die Oberflaeche die Handlung nicht dort anbietet,
+ * wo sie in einem 409 oder 403 endete. Sie zieht die Grenze seit der
+ * Nacharbeit an KAN-87 enger als der Server: nur der eigene und nur der
+ * offene Vorschlag.
  */
 describe("nominationWithdrawable", () => {
-  it("laesst einen eigenen offenen Vorschlag in beiden Rollen zurueckziehen", () => {
-    expect(nominationWithdrawable("PENDING", false, true)).toBe(true)
-    expect(nominationWithdrawable("PENDING", true, true)).toBe(true)
+  it("laesst einen eigenen offenen Vorschlag zurueckziehen", () => {
+    expect(nominationWithdrawable("PENDING", true)).toBe(true)
   })
 
-  it("laesst einen eigenen angenommenen Vorschlag allein der Administration", () => {
-    expect(nominationWithdrawable("ACCEPTED", false, true)).toBe(false)
-    expect(nominationWithdrawable("ACCEPTED", true, true)).toBe(true)
-  })
-
-  it("sperrt abgelehnte und bereits zurueckgezogene Vorschlaege ganz", () => {
-    for (const status of ["REJECTED", "WITHDRAWN"] as NominationStatus[]) {
-      expect(nominationWithdrawable(status, false, true)).toBe(false)
-      expect(nominationWithdrawable(status, true, true)).toBe(false)
+  /*
+   * Vorgabe zur Nacharbeit an KAN-87: entschieden ist entschieden. Bis dahin
+   * durfte die Administration einen eigenen angenommenen Vorschlag
+   * zurueckziehen und nahm das Projekt damit nebenbei von der oeffentlichen
+   * Startseite; dafuer gibt es „Vom Platz nehmen" in der Platzliste. Die
+   * Rolle spielt hier deshalb keine Rolle mehr, und der Parameter dafuer ist
+   * weg.
+   */
+  it("sperrt jeden entschiedenen Vorschlag, auch den eigenen angenommenen", () => {
+    for (const status of [
+      "ACCEPTED",
+      "REJECTED",
+      "WITHDRAWN",
+    ] as NominationStatus[]) {
+      expect(nominationWithdrawable(status, true)).toBe(false)
     }
   })
 
   /*
-   * Nacharbeit an KAN-87: Die Top-10-Verwaltung zeigt alle Vorschlaege
-   * nebeneinander, nicht nur eigene. Der Server liesse die Administration
-   * jeden zurueckziehen (§3.11.1); die Oberflaeche bietet es bewusst nicht
-   * an, weil ein fremder Vorschlag abgelehnt und nicht zurueckgezogen wird.
+   * Ein fremder Vorschlag wird abgelehnt und nicht zurueckgezogen; die
+   * Top-10-Verwaltung bietet den Rueckzug seit der Nacharbeit ueberhaupt
+   * nicht mehr an.
    */
-  it("sperrt fremde Vorschlaege in jedem Stand und jeder Rolle", () => {
+  it("sperrt fremde Vorschlaege in jedem Stand", () => {
     for (const status of NOMINATION_STATUSES) {
-      expect(nominationWithdrawable(status, false, false)).toBe(false)
-      expect(nominationWithdrawable(status, true, false)).toBe(false)
+      expect(nominationWithdrawable(status, false)).toBe(false)
     }
   })
 

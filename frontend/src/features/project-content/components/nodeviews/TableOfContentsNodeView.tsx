@@ -94,7 +94,10 @@ export function TableOfContentsNodeView({
                 className="type-body-sm flex items-baseline gap-2 text-muted-foreground"
               >
                 <span aria-hidden="true" className={tocDotClass(entry.level)} />
-                {entry.text}
+                {/* Dieselbe Huelle wie im Lesepfad, aus demselben Grund: eine
+                    Ueberschrift ohne Leerzeichen schoebe sich sonst aus dem
+                    Kasten. Begruendung dort. */}
+                <span className="min-w-0 wrap-anywhere">{entry.text}</span>
               </li>
             ))}
           </ol>

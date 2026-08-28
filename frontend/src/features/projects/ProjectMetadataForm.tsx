@@ -29,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { CoverImageField } from "@/features/projects/components/CoverImageField"
 import { ProjectEditorsField } from "@/features/projects/components/ProjectEditorsField"
 import { ProjectMembersField } from "@/features/projects/components/ProjectMembersField"
+import { isProjectSide } from "@/features/projects/projectPermissions"
 import { missingForSubmit } from "@/features/project-content/submitRequirements"
 import { TagCombobox } from "@/features/projects/components/TagCombobox"
 import {
@@ -162,7 +163,31 @@ export function ProjectMetadataForm({
   const { t } = useTranslation()
   /* Die Rolle kommt aus dem Kontext und nicht aus dem Token (§6.5); der
      Server liest sie bei jedem Request neu aus der Datenbank. */
-  const { user, role } = useAuth()
+  const { user } = useAuth()
+
+  /*
+   * Zwei Sperren, nicht eine (§6.1, Zeile PUT /projects/{id}: „Autor:in und
+   * Mitglieder, in DRAFT und REVISION"; ProjectPermissionService
+   * .mayEditMetadata). Die Frage nach der Zugehoerigkeit beantwortet
+   * features/projects/projectPermissions und nicht diese Datei: sie steht im
+   * Frontend an genau einer Stelle, wie im Backend auch.
+   *
+   * Der Status allein genuegt nicht, und das war eine echte Luecke: eine
+   * zugewiesene Redaktion darf ein Projekt in REVISION lesen (§5, Fussnote
+   * 11) und bekam deshalb hier ein voll beschreibbares Formular, dessen
+   * Speichern der Server mit 403 NO_PERMISSION beantwortete. Sichtbar wurde
+   * daraus „Dafuer fehlt Ihnen die Berechtigung", und zwar erst nach dem
+   * Ausfuellen. Der Editor traegt denselben Riegel seit KAN-86
+   * (EditorPage.mayEditMetadata); hier fehlte er.
+   *
+   * Ein Admin faellt ebenfalls darunter, und das ist richtig: die
+   * Endpoint-Zeile aus §6.1 nennt ihn nicht, sein PUT endet genauso mit 403.
+   *
+   * Die Oberflaeche ersetzt die Serverpruefung nicht, sie nimmt ihr die
+   * Ueberraschung.
+   */
+  const projectSide = isProjectSide(project, user?.id)
+  const locked = disabled || !projectSide
   const Heading = `h${headingLevel}` as "h2" | "h3"
 
   const form = useForm<ProjectMetadataValues>({
@@ -275,9 +300,19 @@ export function ProjectMetadataForm({
    * Warum die Redaktionszuweisung nicht aenderbar ist, oder
    * {@code undefined}, wenn sie es ist.
    *
-   * <p>Gespiegelt wird {@code ProjectPermissionService.mayAssignEditors},
-   * und zwar vollstaendig: ADMIN darf immer, sonst die Projektseite und nur
-   * in {@code DRAFT} und {@code REVISION} (§5 Fussnote 3, §3.13.1).
+   * <p>Gespiegelt wird der Teil von
+   * {@code ProjectPermissionService.mayAssignEditors}, der ueber dieses
+   * Formular ueberhaupt erreichbar ist: die Projektseite, und nur in
+   * {@code DRAFT} und {@code REVISION} (§5 Fussnote 3, §3.13.1).
+   *
+   * <p><strong>Der ADMIN-Zweig ist mit der Nacharbeit entfallen.</strong> Er
+   * gab dem Feld frei, was {@code mayAssignEditors} einem Admin zugesteht,
+   * und war schon vorher wirkungslos, seit das ganze Formular fuer alle
+   * ausserhalb der Projektseite schreibgeschuetzt steht ({@code locked}
+   * weiter oben, §6.1 Zeile {@code PUT /projects/{id}}): der Aufruf endete
+   * ohnehin mit 403. Ein Admin verteilt fremde Zustaendigkeiten ueber
+   * {@code PUT /projects/{id}/editors}, in der Administrationsseite
+   * ({@code EditorAssignmentDialog}), und nicht hier.
    *
    * <p><strong>Projektmitglieder duerfen seit Contract v85 mit</strong>
    * (KAN-86). Bis v84 stand hier ein eigener Zweig fuer sie, der das Feld
@@ -301,18 +336,14 @@ export function ProjectMetadataForm({
    * <p>Die Oberflaeche ersetzt die Serverpruefung damit nicht, sie nimmt
    * ihr nur die Ueberraschung.
    */
-  const editorsReadOnlyReason: string | undefined = (() => {
-    if (role === "ADMIN") {
-      return undefined
-    }
+  const editorsReadOnlyReason: string | undefined =
     /* Seit Contract v62 dieselbe Schranke wie jede andere
        Metadatenaenderung: die beiden Arbeitszustaende des Projekts (§4.1).
        Bis v61 endete das Recht mit dem DRAFT, und ein zurueckgegebenes
        Projekt ohne Redaktion hing an der Administration fest. */
-    return project.status === "DRAFT" || project.status === "REVISION"
+    project.status === "DRAFT" || project.status === "REVISION"
       ? undefined
       : t("project.metadata.editors.lockedAfterSubmit")
-  })()
 
   const messageOf = (
     error: { message?: string; type?: string } | undefined
@@ -479,7 +510,7 @@ export function ProjectMetadataForm({
                 value={field.value}
                 onChange={field.onChange}
                 uploading={uploading}
-                disabled={disabled}
+                disabled={locked}
                 onUpload={async (file) => {
                   setUploading(true)
                   try {
@@ -514,7 +545,7 @@ export function ProjectMetadataForm({
                 <Input
                   {...field}
                   id={field.name}
-                  disabled={disabled}
+                  disabled={locked}
                   className="type-h3 h-auto rounded-none border-0 border-b bg-transparent px-0 py-1 font-semibold shadow-none focus-visible:border-ring focus-visible:ring-0 dark:bg-transparent"
                   placeholder={t("project.metadata.title.placeholder")}
                   aria-invalid={fieldState.invalid}
@@ -546,7 +577,7 @@ export function ProjectMetadataForm({
                   {...field}
                   id={field.name}
                   rows={3}
-                  disabled={disabled}
+                  disabled={locked}
                   className="resize-none rounded-none border-0 border-b bg-transparent px-0 py-1 shadow-none focus-visible:border-ring focus-visible:ring-0 dark:bg-transparent"
                   placeholder={t("project.metadata.summary.placeholder")}
                   aria-invalid={fieldState.invalid}
@@ -597,7 +628,7 @@ export function ProjectMetadataForm({
                     allLabel={t("project.metadata.select.empty")}
                     options={referenceOptions(faculties.data)}
                     value={field.value}
-                    disabled={disabled}
+                    disabled={locked}
                     error={messageOf(fieldState.error)}
                     onValueChange={(next) => {
                       field.onChange(next)
@@ -637,7 +668,7 @@ export function ProjectMetadataForm({
                     }
                     options={referenceOptions(studyPrograms.data)}
                     value={field.value}
-                    disabled={disabled || facultyId === null}
+                    disabled={locked || facultyId === null}
                     error={messageOf(fieldState.error)}
                     onValueChange={(next) => {
                       field.onChange(next)
@@ -663,7 +694,7 @@ export function ProjectMetadataForm({
                     allLabel={t("project.metadata.select.empty")}
                     options={enumOptions(FILTER_DEGREES, "project.degree")}
                     value={field.value}
-                    disabled={disabled}
+                    disabled={locked}
                     error={messageOf(fieldState.error)}
                     onValueChange={(next) => {
                       field.onChange(next)
@@ -686,7 +717,7 @@ export function ProjectMetadataForm({
                     allLabel={t("project.metadata.select.empty")}
                     options={semesterOptions}
                     value={field.value}
-                    disabled={disabled}
+                    disabled={locked}
                     error={messageOf(fieldState.error)}
                     onValueChange={(next) => {
                       field.onChange(next)
@@ -709,7 +740,7 @@ export function ProjectMetadataForm({
                     allLabel={t("project.metadata.select.empty")}
                     options={enumOptions(FILTER_PROJECT_TYPES, "project.type")}
                     value={field.value}
-                    disabled={disabled}
+                    disabled={locked}
                     error={messageOf(fieldState.error)}
                     onValueChange={(next) => {
                       field.onChange(next)
@@ -732,7 +763,7 @@ export function ProjectMetadataForm({
                     allLabel={t("project.metadata.select.empty")}
                     options={referenceOptions(categories.data)}
                     value={field.value}
-                    disabled={disabled}
+                    disabled={locked}
                     error={messageOf(fieldState.error)}
                     onValueChange={(next) => {
                       field.onChange(next)
@@ -761,7 +792,7 @@ export function ProjectMetadataForm({
                     }
                     options={moduleOptions}
                     value={field.value}
-                    disabled={disabled || studyProgramId === null}
+                    disabled={locked || studyProgramId === null}
                     error={messageOf(fieldState.error)}
                     onValueChange={(next) => {
                       field.onChange(next)
@@ -795,7 +826,7 @@ export function ProjectMetadataForm({
                 <TagCombobox
                   value={field.value}
                   onChange={field.onChange}
-                  disabled={disabled}
+                  disabled={locked}
                 />
               )}
             />
@@ -813,7 +844,7 @@ export function ProjectMetadataForm({
                     currentUserId={user?.id}
                     authorId={project.author.id}
                     memberIds={memberIds}
-                    disabled={disabled}
+                    disabled={locked}
                     invalid={fieldState.invalid}
                     describedBy={
                       fieldState.invalid ? EDITORS_ERROR_ID : undefined
@@ -859,7 +890,7 @@ export function ProjectMetadataForm({
                 <Input
                   {...field}
                   id={field.name}
-                  disabled={disabled}
+                  disabled={locked}
                   placeholder={t("project.metadata.authorRole.placeholder")}
                   aria-invalid={fieldState.invalid}
                 />
@@ -883,7 +914,7 @@ export function ProjectMetadataForm({
                     onChange={field.onChange}
                     authorId={project.author.id}
                     editorIds={editorIds}
-                    disabled={disabled}
+                    disabled={locked}
                     invalid={fieldState.invalid}
                     describedBy={
                       fieldState.invalid ? MEMBERS_ERROR_ID : undefined
@@ -906,7 +937,12 @@ export function ProjectMetadataForm({
             />
           </div>
 
-          {disabled && (
+          {/* Zwei Gruende, zwei Saetze. „In diesem Status nicht bearbeitbar"
+              und „nicht Ihr Projekt" sind verschiedene Auskuenfte, und wer
+              die falsche liest, sucht an der falschen Stelle weiter
+              (SC 3.3.1). Der Status kommt zuerst: er gilt fuer alle und ist
+              der haeufigere Fall. */}
+          {disabled ? (
             <Alert>
               <AlertTitle>
                 {t("project.metadata.readOnly", {
@@ -914,6 +950,12 @@ export function ProjectMetadataForm({
                 })}
               </AlertTitle>
             </Alert>
+          ) : (
+            !projectSide && (
+              <Alert>
+                <AlertTitle>{t("project.metadata.readOnlyForeign")}</AlertTitle>
+              </Alert>
+            )
           )}
 
           {/*
@@ -943,7 +985,7 @@ export function ProjectMetadataForm({
               name="intent"
               value="primary"
               onClick={() => setPendingIntent("primary")}
-              disabled={disabled || form.formState.isSubmitting || uploading}
+              disabled={locked || form.formState.isSubmitting || uploading}
             >
               {form.formState.isSubmitting && pendingIntent === "primary"
                 ? (submitPendingLabel ?? t("project.metadata.submitPending"))
@@ -956,7 +998,7 @@ export function ProjectMetadataForm({
                 value="secondary"
                 variant="secondary"
                 onClick={() => setPendingIntent("secondary")}
-                disabled={disabled || form.formState.isSubmitting || uploading}
+                disabled={locked || form.formState.isSubmitting || uploading}
               >
                 {form.formState.isSubmitting && pendingIntent === "secondary"
                   ? (secondarySubmit.pendingLabel ??

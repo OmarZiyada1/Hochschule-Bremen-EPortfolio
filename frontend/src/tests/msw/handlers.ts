@@ -118,6 +118,31 @@ export function dashboardHandler(overrides: Partial<DashboardResponse> = {}) {
 }
 
 /**
+ * GET /api/admin/support?status=OPEN&size=1 (§6.1): die Zaehlung, die der
+ * Rahmen der Administrationsseite an den Eintrag „Support" haengt.
+ *
+ * <p><strong>Warum als Handler fuer jede Admin-Route und nicht nur fuer die
+ * Support-Seite.</strong> Die Abfrage haengt seit der Nacharbeit an der
+ * Seitennavigation und laeuft damit auf <em>jeder</em> Seite der
+ * Administrationsseite; ohne Antwort scheitert der Test an
+ * {@code onUnhandledRequest: "error"}, und zwar an einer Stelle, die mit
+ * seinem Gegenstand nichts zu tun hat.
+ *
+ * @param totalElements Zahl der offenen Anfragen; 0 laesst den Zaehler weg
+ */
+export function openSupportCountHandler(totalElements = 0) {
+  return http.get("*/api/admin/support", () =>
+    HttpResponse.json({
+      content: [],
+      page: 0,
+      size: 1,
+      totalElements,
+      totalPages: totalElements,
+    })
+  )
+}
+
+/**
  * GET /api/projects/{id} (§6.1). Ohne Argument ein Entwurf mit Titel und
  * ohne Bloecke, also der Zustand, in dem der Editor gewoehnlich geoeffnet
  * wird.

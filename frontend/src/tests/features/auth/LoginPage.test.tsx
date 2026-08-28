@@ -14,6 +14,7 @@ import {
   apiErrorResponse,
   dashboardHandler,
   emptyProjectsHandler,
+  openSupportCountHandler,
   ownPortfolioHandler,
 } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
@@ -175,7 +176,13 @@ describe("LoginPage", () => {
           })
         ),
         ownPortfolioHandler(),
-        emptyProjectsHandler()
+        emptyProjectsHandler(),
+        /* Der Rollenweg fuehrt ADMIN auf die Administrationsseite, und deren
+           Seitennavigation zaehlt seit der Nacharbeit die offenen
+           Support-Anfragen. Ohne Antwort scheiterte der Test an einem Aufruf,
+           um den es hier gar nicht geht. */
+        dashboardHandler(),
+        openSupportCountHandler()
       )
       renderWithProviders(
         <>
@@ -261,7 +268,8 @@ describe("LoginPage", () => {
       loginHandler("ADMIN"),
       ownPortfolioHandler(),
       emptyProjectsHandler(),
-      dashboardHandler()
+      dashboardHandler(),
+      openSupportCountHandler()
     )
     signInAs("ADMIN")
     renderWithProviders(
@@ -313,7 +321,8 @@ describe("LoginPage", () => {
       loginHandler("ADMIN"),
       ownPortfolioHandler(),
       emptyProjectsHandler(),
-      dashboardHandler()
+      dashboardHandler(),
+      openSupportCountHandler()
     )
     signInAs("ADMIN")
     renderWithProviders(

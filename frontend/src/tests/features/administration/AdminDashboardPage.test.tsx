@@ -107,8 +107,10 @@ describe("AdminDashboardPage", () => {
     renderWithProviders(<AdminDashboardPage />, "/administration")
 
     const draft = await screen.findByText("Entwurf")
-    /* Die Kachel traegt Zahl und Beschriftung; die 0 gehoert dazu. */
-    expect(draft.closest("div")).toHaveTextContent("0")
+    /* Die Kachel traegt Zahl und Beschriftung; die 0 gehoert dazu. Zwei
+       Ebenen hoch, weil die Beschriftung seit der Vereinheitlichung in
+       einer eigenen Spalte neben der Zahl steht (KpiTile). */
+    expect(draft.closest("div")?.parentElement).toHaveTextContent("0")
   })
 
   it("zeigt Nutzerzahlen, Kontostatus und die offenen Vorschlaege", async () => {
@@ -148,7 +150,15 @@ describe("AdminDashboardPage", () => {
        tragen die Signalfarbe. */
     const value = within(nominations).getByText("5")
     expect(value).toHaveClass("text-primary")
-    expect(value.querySelector("span")).not.toBeNull()
+    const dot = value.querySelector("span")
+    expect(dot).not.toBeNull()
+
+    /* Der Punkt pulsiert langsam (Vorgabe zur Nacharbeit), damit offener
+       Handlungsbedarf im ruhigen Seitenkopf auffaellt. Die Bewegung ist
+       Zugabe und nie die Aussage: die Zahl daneben sagt dasselbe, und wer
+       weniger Bewegung eingestellt hat, sieht einen ruhenden Punkt. */
+    expect(dot).toHaveClass("animate-pulse-slow")
+    expect(dot).toHaveClass("motion-reduce:animate-none")
 
     /*
      * KAN-83: die Zahl steht im Seitenkopf neben der Ueberschrift und nicht
@@ -213,8 +223,15 @@ describe("AdminDashboardPage", () => {
     expect(row).not.toBeNull()
 
     const cells = within(row!).getAllByRole("cell")
-    /* Bestand 6, davon 2 mit Platz und 1 angenommen ohne Platz (3 minus 2). */
+    /* Bestand 6, davon 2 mit Platz und 1 ehemals in der Top 10 (3 minus 2). */
     expect(cells.map((cell) => cell.textContent)).toEqual(["6", "2", "1"])
+
+    /* Vorgabe zur Nacharbeit: die dritte Spalte heisst „Ehemals Top 10" und
+       nicht mehr „Angenommen, ohne Platz". Die alte Beschriftung nannte den
+       Vorgang, die neue das, was man vor sich hat. */
+    expect(
+      within(table).getByRole("columnheader", { name: "Ehemals Top 10" })
+    ).toBeInTheDocument()
   })
 
   it("erzeugt keinen negativen Abschnitt, wenn ein Platz ohne Nominierung entstand", async () => {

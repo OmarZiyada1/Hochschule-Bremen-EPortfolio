@@ -43,6 +43,7 @@ import { EditorIntro } from "@/features/project-content/components/EditorIntro"
 import { EditorSidebar } from "@/features/project-content/components/EditorSidebar"
 import { TableControlsLayer } from "@/features/project-content/components/TableControlsLayer"
 import { blocksToDoc } from "@/features/project-content/blockSerialization"
+import { isProjectSide } from "@/features/projects/projectPermissions"
 import type { ProjectDocument } from "@/features/project-content/blockTypes"
 import { createEditorExtensions } from "@/features/project-content/editorSchema"
 import { useProjectFileUrls } from "@/features/project-content/hooks/useProjectFileUrls"
@@ -185,17 +186,19 @@ export default function EditorPage() {
    *
    * <p><strong>Zweistufig wie am Server</strong> (§6.1, Zeile
    * {@code PUT /projects/{id}}: „Autor:in und Mitglieder, in DRAFT und
-   * REVISION"; {@code ProjectPermissionService.mayEditMetadata}). Der
+   * REVISION"; {@code ProjectPermissionService.mayEditMetadata}). Die Frage
+   * nach der Zugehoerigkeit beantwortet
+   * {@code features/projects/projectPermissions}; sie steht seit der
+   * Nacharbeit an genau einer Stelle, weil dieselbe Bedingung im
+   * Metadatenformular ein zweites Mal gebraucht wird und dort einmal
+   * gefehlt hat. Der
    * Status allein genuegt nicht: eine zugewiesene Redaktion darf ein
    * Projekt in {@code REVISION} lesen und saehe sonst beschreibbare
    * Felder, deren Speicherung mit 403 endet, und zwar bei jedem
    * Entprellungsfenster neu (Befund der Contract-Pruefung).
    */
-  const isProjectSide =
-    user !== null &&
-    (project.data?.author?.id === user.id ||
-      (project.data?.members ?? []).some((member) => member.userId === user.id))
-  const mayEditMetadata = statusEditable && isProjectSide
+  const projectSide = isProjectSide(project.data, user?.id)
+  const mayEditMetadata = statusEditable && projectSide
 
   /*
    * Der Stand, gegen den die Kopfangaben verglichen und geschrieben
@@ -536,7 +539,7 @@ export default function EditorPage() {
            * Pruefung. Bis dahin stand hier isAuthor, und ein Mitglied sah im
            * eigenen Editor keinen Weg nach vorn.
            */
-          mayRunWorkflow={isProjectSide}
+          mayRunWorkflow={projectSide}
           mayWrite={mayWrite}
           /*
            * Einreichen fuehrt auf die Metadatenseite und nicht in ein

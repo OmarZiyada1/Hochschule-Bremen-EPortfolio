@@ -145,6 +145,22 @@ describe("AdminProjectListPage", () => {
     expect(within(row).getByText("Entwurf")).toBeInTheDocument()
   })
 
+  /*
+   * Vorgabe zur Nacharbeit: die Unterzeile nennt die Trefferzahl und sonst
+   * nichts. Der Zusatz „alle Status eingeschlossen" stand darin, weil die
+   * oeffentliche Bibliothek nur veroeffentlichte Projekte zeigt; hier ist
+   * das der Normalfall und keine Meldung wert, und die Statusleiste darunter
+   * sagt ohnehin, worauf gerade eingeschraenkt ist.
+   */
+  it("nennt in der Unterzeile die Trefferzahl ohne Zusatz", async () => {
+    server.use(...baseHandlers({ projects: [DRAFT] }))
+
+    renderWithProviders(<AdminProjectListPage />, "/administration/projects")
+
+    expect(await screen.findByText("1 Projekt")).toBeVisible()
+    expect(screen.queryByText(/alle Status eingeschlossen/)).toBeNull()
+  })
+
   it("zeigt die Spalten des Templates in der Zeile", async () => {
     server.use(...baseHandlers({ projects: [DRAFT] }))
 

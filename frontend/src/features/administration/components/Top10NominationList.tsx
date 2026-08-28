@@ -1,4 +1,3 @@
-import { Undo2Icon } from "lucide-react"
 import { useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
@@ -11,10 +10,8 @@ import { AcceptNominationDialog } from "@/features/administration/components/Acc
 import { RejectNominationDialog } from "@/features/administration/components/RejectNominationDialog"
 import { useAcceptNomination } from "@/features/administration/hooks/useAdminTop10"
 import { suggestedPositionFor } from "@/features/administration/top10Slots"
-import { NominationWithdrawDialog } from "@/features/reviews/components/NominationWithdrawDialog"
 import {
   nominationStatusTones,
-  nominationWithdrawable,
   tierIcons,
   tierTones,
 } from "@/features/reviews/nominations"
@@ -34,37 +31,27 @@ import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
  * es sind dieselben Werte, und zwei Abschriften liefen auseinander.
  *
  * <p><strong>Jede Zeile ist ein Kasten, keine Tabellenzeile.</strong> So
- * zeigt es der Frame, und es traegt auch schmale Fenster: die drei Knoepfe
+ * zeigt es der Frame, und es traegt auch schmale Fenster: die Knoepfe
  * ruecken unter den Text, statt eine Tabelle waagerecht scrollen zu lassen.
+ *
+ * <p><strong>Hier wird angenommen und abgelehnt, nicht zurueckgezogen</strong>
+ * (Vorgabe zur Nacharbeit an KAN-87). Die Verwaltung entscheidet ueber
+ * fremde Vorschlaege, und dafuer stehen genau diese beiden Verben; wer seinen
+ * eigenen Vorschlag zurueckholen will, tut das in „Meine Reviews". Bis dahin
+ * trug diese Liste zusaetzlich einen Rueckzugsknopf am eigenen Vorschlag, und
+ * an einem angenommenen nahm er das Projekt nebenbei von der oeffentlichen
+ * Startseite; dafuer gibt es „Vom Platz nehmen" in der Platzliste, und zwei
+ * Wege zu demselben Ergebnis sind einer zu viel. Die Regel selbst steht in
+ * {@code nominationWithdrawable}.
  */
 export function Top10NominationList({
   nominations,
   freePositions,
-  isAdmin,
-  currentUserId,
   onNotice,
 }: {
   nominations: readonly Top10NominationResponse[]
   /** Die noch unbesetzten Plaetze, fuer die Auswahl im Annahme-Dialog. */
   freePositions: readonly number[]
-  /**
-   * Darf die anfragende Person auch einen eigenen, bereits angenommenen
-   * Vorschlag zurueckziehen (§3.11.1)? Auf dieser Seite immer wahr, weil sie
-   * ADMIN vorbehalten ist; die Angabe steht trotzdem als Prop, damit die
-   * Zeile ihre Regel nicht aus ihrem Ort ableitet.
-   */
-  isAdmin: boolean
-  /**
-   * Die angemeldete Person, oder {@code null}, solange sie nicht geladen ist.
-   *
-   * <p>Sie entscheidet, ob eine Zeile den Rueckzug anbietet: <strong>nur
-   * eigene Vorschlaege werden zurueckgezogen</strong>, fremde werden
-   * abgelehnt (Nacharbeit an KAN-87, Begruendung in
-   * {@code nominationWithdrawable}). Ohne geladene Person bietet keine Zeile
-   * den Rueckzug an; das ist die vorsichtige Richtung, denn ein Rueckzug
-   * laesst sich nicht rueckgaengig machen.
-   */
-  currentUserId: string | null
   /** Ansage nach jeder Entscheidung, fuer die Live-Region der Seite. */
   onNotice: (message: string) => void
 }) {
@@ -75,8 +62,6 @@ export function Top10NominationList({
           <NominationRow
             nomination={nomination}
             freePositions={freePositions}
-            isAdmin={isAdmin}
-            currentUserId={currentUserId}
             onNotice={onNotice}
           />
         </li>
@@ -96,14 +81,10 @@ export function Top10NominationList({
 function NominationRow({
   nomination,
   freePositions,
-  isAdmin,
-  currentUserId,
   onNotice,
 }: {
   nomination: Top10NominationResponse
   freePositions: readonly number[]
-  isAdmin: boolean
-  currentUserId: string | null
   onNotice: (message: string) => void
 }) {
   const { t, i18n } = useTranslation()
@@ -112,18 +93,11 @@ function NominationRow({
   const accept = useAcceptNomination()
   const [accepting, setAccepting] = useState(false)
   const [rejecting, setRejecting] = useState(false)
-  const [withdrawing, setWithdrawing] = useState(false)
   const acceptTrigger = useRef<HTMLButtonElement | null>(null)
   const rejectTrigger = useRef<HTMLButtonElement | null>(null)
-  const withdrawTrigger = useRef<HTMLButtonElement | null>(null)
 
   const TierIcon = tierIcons[nomination.proposedTier]
   const open = nomination.status === "PENDING"
-  /* Fremde Vorschlaege werden abgelehnt und nicht zurueckgezogen: die beiden
-     Vorgaenge lesen sich im Protokoll verschieden (§3.17). */
-  const isOwn =
-    currentUserId !== null && nomination.nominatedBy.id === currentUserId
-  const withdrawable = nominationWithdrawable(nomination.status, isAdmin, isOwn)
   const created = new Intl.DateTimeFormat(i18n.language, {
     dateStyle: "medium",
     timeStyle: "short",
@@ -218,33 +192,6 @@ function NominationRow({
               </Button>
             </>
           )}
-
-          {withdrawable && (
-            <Button
-              ref={withdrawTrigger}
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setWithdrawing(true)}
-            >
-              <Undo2Icon aria-hidden="true" />
-              {/* Der zugaengliche Name nennt das Projekt: in einer Liste
-                  stuenden sonst mehrere gleichnamige Knoepfe
-                  untereinander (SC 2.4.6). */}
-              {/* Dieselben Beschriftungen wie im Nominierungsbereich der
-                  Redaktion (KAN-37): es ist derselbe Vorgang, und eine
-                  zweite Abschrift liefe beim naechsten Feinschliff
-                  auseinander. */}
-              <span className="sr-only">
-                {t(
-                  nomination.status === "ACCEPTED"
-                    ? "review.nomination.withdraw.actionAcceptedFor"
-                    : "review.nomination.withdraw.actionFor",
-                  { title: nomination.project.title }
-                )}
-              </span>
-            </Button>
-          )}
         </div>
       </CardContent>
 
@@ -275,16 +222,6 @@ function NominationRow({
         finalFocus={rejectTrigger}
         onDone={onNotice}
       />
-
-      {withdrawable && (
-        <NominationWithdrawDialog
-          open={withdrawing}
-          onOpenChange={setWithdrawing}
-          nomination={nomination}
-          finalFocus={withdrawTrigger}
-          onDone={onNotice}
-        />
-      )}
     </Card>
   )
 }

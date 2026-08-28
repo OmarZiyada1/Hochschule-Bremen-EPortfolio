@@ -11,6 +11,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { CountBadge } from "@/components/common/CountBadge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -351,36 +352,10 @@ function FilterGroup({
           {t(`project.list.filter.group.${group}`)}
         </span>
         {count > 0 && (
-          <span
-            /* Ein Kreis und keine Ellipse (Vorgabe zu KAN-80): die Zahl steht
-               mittig in einer quadratischen Flaeche (h-4.5 zu min-w-4.5),
-               statt aus einer Polsterung links und rechts eine liegende Form
-               zu machen. Ab zwei Ziffern wird daraus eine Pille, und das ist
-               richtig so: eine Zwoelf in einem Kreis von 18px waere nicht
-               mehr lesbar.
-
-               shrink-0 haelt ihn rund. Ohne das ist der Zaehler ein
-               schrumpfbares Flex-Kind: bei einer langen Gruppenbeschriftung
-               und schmaler Seitenleiste ging seine Breite unter das
-               Mindestmass, waehrend h-4.5 die Hoehe hielt, und aus dem Kreis
-               wurde ein stehendes Oval. Genau das war auf schmalen
-               Bildschirmen zu sehen.
-
-               primary statt surface-brand (KAN-83): im dunklen Modus faellt
-               surface-brand mit der Kartenflaeche zusammen, auf der die
-               Filterleiste liegt, und zwar auf denselben Rohwert; auch die
-               Schriftrolle faellt zusammen. Uebrig blieb eine fette Ziffer
-               ohne jeden Kreis. Derselbe Fehler und dieselbe Loesung wie am
-               Fortschrittsbalken der Registrierung (Review zu KAN-33).
-               primary ist die einzige Markenrolle, die in beiden Modi zur
-               Kartenflaeche Abstand haelt. */
-            className="type-label-xs inline-flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded-pill bg-primary px-1 leading-none font-bold text-primary-foreground normal-case"
-          >
-            <span className="sr-only">
-              {t("project.list.filter.groupCount", { count })}
-            </span>
-            <span aria-hidden="true">{count}</span>
-          </span>
+          <CountBadge
+            count={count}
+            label={t("project.list.filter.groupCount", { count })}
+          />
         )}
       </AccordionTrigger>
       <AccordionContent className="flex flex-col gap-1">

@@ -1260,6 +1260,15 @@ function AdminDemos() {
           value={5}
           label={t("tokens.components.demo.kpiFaculties")}
         />
+        {/* Dieselbe Kachel gerahmt statt auf eigener Flaeche: so stehen die
+            Reihen innerhalb einer Karte, etwa auf dem Dashboard. */}
+        <KpiTile
+          variant="tile"
+          className="w-60"
+          icon={<FolderKanbanIcon aria-hidden="true" />}
+          value={12}
+          label={t("tokens.components.demo.kpiFaculties")}
+        />
       </DemoBlock>
     </>
   )

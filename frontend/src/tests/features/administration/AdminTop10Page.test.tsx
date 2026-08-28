@@ -450,14 +450,19 @@ describe("AdminTop10Page", () => {
    * Ticket KAN-40, Test 10, verengt mit der Nacharbeit an KAN-87:
    * zurueckgezogen wird nur der eigene Vorschlag.
    */
-  it("zieht einen eigenen angenommenen Vorschlag nach einer Rueckfrage zurueck", async () => {
-    const user = userEvent.setup()
-    let withdrawn = false
-    const accepted = nomination({
+  /*
+   * Vorgabe zur Nacharbeit an KAN-87: in der Top-10-Verwaltung wird
+   * angenommen und abgelehnt, nie zurueckgezogen. Bis dahin trug ein eigener
+   * Vorschlag hier einen Rueckzugsknopf, und an einem angenommenen nahm er
+   * das Projekt nebenbei von der oeffentlichen Startseite; dafuer gibt es
+   * „Vom Platz nehmen" in der Platzliste. Wer seinen eigenen Vorschlag
+   * zurueckholen will, tut das in „Meine Reviews", und nur solange er offen
+   * ist.
+   */
+  it("bietet auch am eigenen Vorschlag kein Zurueckziehen an", async () => {
+    const own = nomination({
       id: "n-2",
       project: projectCard({ id: "p-1", title: "SmartCampus" }),
-      /* Die angemeldete Person hat selbst vorgeschlagen: derselbe Fall wie
-         in „Meine Reviews", nur an einem anderen Ort. */
       nominatedBy: person({ id: ADMIN_ID }),
       status: "ACCEPTED",
       proposedPosition: 1,
@@ -467,28 +472,16 @@ describe("AdminTop10Page", () => {
       currentUserHandler({ role: "ADMIN", id: ADMIN_ID }),
       ...top10AdminHandlers({
         entries: [top10Entry({ position: 1, project: SMART })],
-        nominations: [accepted],
-      }),
-      http.post("*/api/top10-nominations/n-2/withdraw", () => {
-        withdrawn = true
-        return HttpResponse.json({ ...accepted, status: "WITHDRAWN" })
+        nominations: [own],
       })
     )
 
     render("/administration/top10?status=ACCEPTED")
 
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Nominierung zurückziehen und Projekt aus der Top-10 nehmen: SmartCampus",
-      })
-    )
-    const dialog = await screen.findByRole("alertdialog")
-    expect(withdrawn).toBe(false)
-
-    await user.click(
-      within(dialog).getByRole("button", { name: "Zurückziehen" })
-    )
-    await waitFor(() => expect(withdrawn).toBe(true))
+    expect(await screen.findByText("Angenommen")).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /zurückziehen/i })
+    ).not.toBeInTheDocument()
   })
 
   /*

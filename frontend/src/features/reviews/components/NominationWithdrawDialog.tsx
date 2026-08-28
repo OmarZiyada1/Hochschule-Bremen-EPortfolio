@@ -22,10 +22,15 @@ import { useWithdrawNomination } from "@/features/reviews/hooks/useReviews"
  *
  * <p><strong>Warum eine Rueckfrage.</strong> Der Aufruf aendert einen Stand
  * und laesst sich nicht rueckgaengig machen: ein zurueckgezogener Vorschlag
- * bleibt zurueckgezogen, ein neuer waere ein neuer Vorschlag. Zieht die
- * Administration einen angenommenen zurueck, verlaesst das Projekt ausserdem
- * die kuratierte Liste, und das steht auf der oeffentlichen Startseite. Die
- * Beschreibung nennt beides.
+ * bleibt zurueckgezogen, ein neuer waere ein neuer Vorschlag.
+ *
+ * <p><strong>Nur noch der offene Vorschlag kommt hier an</strong> (Vorgabe
+ * zur Nacharbeit an KAN-87, Regel in {@code nominationWithdrawable}). Bis
+ * dahin trug der Dialog einen zweiten Absatz fuer den angenommenen Fall, in
+ * dem das Projekt zugleich die kuratierte Liste verliess; diesen Weg gibt es
+ * nicht mehr, und mit ihm faellt der Absatz weg. Ein Projekt von der
+ * Startseite zu nehmen ist jetzt allein „Vom Platz nehmen" in der
+ * Platzliste.
  *
  * <p><strong>Der Dialog fuehrt die Mutation selbst</strong> und nicht die
  * Seite darum herum. Damit bleibt er bei einem Fehler offen und zeigt ihn an
@@ -85,12 +90,6 @@ export function NominationWithdrawDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        {nomination.status === "ACCEPTED" && (
-          <p className="type-body-sm text-muted-foreground">
-            {t("review.nomination.withdraw.accepted")}
-          </p>
-        )}
-
         {failed !== null && (
           <Alert variant="destructive">
             <AlertTitle>
@@ -105,7 +104,8 @@ export function NominationWithdrawDialog({
               und loescht nichts (Skill frontend-design, Abschnitt 5). Rot
               bliebe sonst nicht mehr unterscheidbar von den Stellen, an
               denen wirklich etwas verloren geht. */}
-          <AlertDialogAction disabled={withdraw.isPending}
+          <AlertDialogAction
+            disabled={withdraw.isPending}
             onClick={() => {
               withdraw.mutate(nomination.id, {
                 onSuccess: () => {

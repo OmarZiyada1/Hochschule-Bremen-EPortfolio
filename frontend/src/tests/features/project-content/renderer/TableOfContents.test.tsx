@@ -111,4 +111,31 @@ describe("Inhaltsverzeichnis im Lesepfad", () => {
       screen.getByText("Dieser Beitrag hat noch keine Überschriften.")
     ).toBeInTheDocument()
   })
+
+  /*
+   * Gemeldet zu KAN-83: eine Ueberschrift ohne Leerzeichen (eine lange Kette
+   * von Buchstaben, wie sie beim Tippen entsteht) schob sich aus dem Kasten
+   * des Verzeichnisses heraus. Ursache war der nackte Textknoten im
+   * Flex-Kasten: er wird zu einem anonymen Kind mit min-width auto und kann
+   * deshalb nicht schrumpfen. Geprueft wird die Huelle samt Umbruchregel,
+   * denn die Breite selbst misst jsdom nicht.
+   */
+  it("laesst eine Ueberschrift ohne Leerzeichen umbrechen", () => {
+    const chain = "a".repeat(120)
+    renderWithProviders(
+      <ProjectContent
+        blocks={blocksOf(
+          toc([{ level: 1, text: chain, index: 0 }]),
+          heading(1, chain)
+        )}
+      />
+    )
+
+    const entry = screen
+      .getAllByText(chain)
+      .find((element) => element.tagName === "SPAN")
+    expect(entry).toBeDefined()
+    expect(entry).toHaveClass("wrap-anywhere")
+    expect(entry).toHaveClass("min-w-0")
+  })
 })
