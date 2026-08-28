@@ -184,6 +184,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/support": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Support-Anfrage senden
+     * @description Nimmt eine Anfrage aus dem Kontaktformular entgegen und legt sie im Eingang der Administration ab (§3.20). Ohne Token absendbar; ein mitgeschicktes Token vermerkt das Konto in submittedByUserId. Der Server verschickt keine E-Mail, weder eine Bestaetigung noch eine Benachrichtigung: geantwortet wird ausserhalb der Anwendung.
+     */
+    post: operations["create"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/projects": {
     parameters: {
       query?: never
@@ -201,7 +221,7 @@ export interface paths {
      * Projekt anlegen
      * @description Legt ein Projekt im Status DRAFT an (§4.1). Pflicht ist allein der Titel; die uebrigen Metadaten duerfen im Entwurf fehlen und werden erst beim Einreichen verlangt (§3.3). Autor:in ist die angemeldete Person.
      */
-    post: operations["create"]
+    post: operations["create_1"]
     delete?: never
     options?: never
     head?: never
@@ -373,7 +393,7 @@ export interface paths {
      * Kommentar anlegen
      * @description Legt einen Kommentar an diesem Projekt an. Welcher type zulaessig ist, haengt an der Rolle (§5): REPLY duerfen die Projektseite, Redaktion und Administration, NOTE und CHANGE_REQUEST nur Redaktion und Administration. Ein CHANGE_REQUEST startet immer im Status OPEN (§2.4). Der Projektstatus sperrt das Kommentieren nicht: die Sperre aus §4.1 gilt dem Inhalt, nicht der Rueckmeldung dazu. Seit Contract v71 ist ein CHANGE_REQUEST zugleich ein Statusausloeser (§4.1): steht das Projekt in SUBMITTED, APPROVED oder PUBLISHED und darf die anfragende Person den Uebergang ausloesen, geht es damit nach REVISION, mit Historieneintrag (§3.12). Steht ein veroeffentlichtes Projekt in der kuratierten Top-10, unterbleibt der Uebergang seit Contract v72 (§4.1): erst aus der Liste nehmen, dann zurueckgeben. In den uebrigen Staenden und ohne dieses Recht entsteht ebenfalls nur der Kommentar; keiner dieser Faelle ist ein Fehler. Die Antwort bleibt in jedem Fall der Kommentar und nennt den Status nicht.
      */
-    post: operations["create_1"]
+    post: operations["create_2"]
     delete?: never
     options?: never
     head?: never
@@ -577,7 +597,7 @@ export interface paths {
      * Konto anlegen
      * @description Legt ein sofort nutzbares Konto samt Portfolio an (§3.2.1). Der Server setzt status = ACTIVE, beide Verifizierungsflags auf true und passwordChangeRequired = true: das Initialpasswort kennt eine zweite Person und muss bei der ersten Anmeldung geaendert werden (§6.7). Die Rolle aus dem Body gilt unveraendert, auch ADMIN; die Domain der hsbEmail wird auf Zugehoerigkeit zur Hochschule geprueft (§3.1.1).
      */
-    post: operations["create_2"]
+    post: operations["create_3"]
     delete?: never
     options?: never
     head?: never
@@ -876,6 +896,30 @@ export interface paths {
     patch: operations["update_2"]
     trace?: never
   }
+  "/api/admin/support/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Support-Anfrage loeschen
+     * @description Entfernt die Anfrage endgueltig. Kein Soft-Delete und kein Archivzustand: RESOLVED ist der Abschluss, geloescht wird, was gar nicht bleiben soll (§2.15).
+     */
+    delete: operations["delete_2"]
+    options?: never
+    head?: never
+    /**
+     * Bearbeitungsstand setzen
+     * @description Setzt den Stand einer Anfrage (§2.15). Erlaubt sind OPEN nach IN_PROGRESS, OPEN nach RESOLVED, IN_PROGRESS nach RESOLVED und RESOLVED zurueck nach OPEN. Jeder andere Uebergang ergibt 409, einschliesslich des erneuten Setzens des bereits stehenden Werts. Der Server haelt fest, wer den Stand gesetzt hat (handledBy, handledAt, §3.20); der Wert kommt aus dem Token und nie aus dem Koerper.
+     */
+    patch: operations["updateStatus_1"]
+    trace?: never
+  }
   "/api/admin/study-programs/{id}": {
     parameters: {
       query?: never
@@ -1014,7 +1058,7 @@ export interface paths {
      * Datei loeschen
      * @description Entfernt Datenbankzeile und Objekt im Speicher. Erlaubt sind die Person, die hochgeladen hat (bei Projektdateien nur in DRAFT und REVISION), und die Administration jederzeit (§6.1).
      */
-    delete: operations["delete_2"]
+    delete: operations["delete_3"]
     options?: never
     /**
      * Kopfzeilen einer Datei abrufen
@@ -1256,6 +1300,26 @@ export interface paths {
      * @description Wer wann welches Projekt aufgenommen, entfernt oder umsortiert hat (§3.17), im Seitenformat aus §6.6 und ohne "sort" nach timestamp absteigend. Sortierbar ist ausschliesslich timestamp; jedes andere Feld ergibt 400. Eine Umsortierung schreibt eine Zeile je bewegtem Projekt, ein unveraenderter Platz keine. Protokolliert werden auch die beiden Wege, auf denen ein Platz ohne Entscheidung der Administration frei wird: das Projekt verlaesst PUBLISHED oder es wird geloescht. Das Protokoll ist unveraenderlich, es gibt weder einen Schreib- noch einen Loeschweg.
      */
     get: operations["audit"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/admin/support": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Support-Anfragen lesen
+     * @description Die eingegangenen Anfragen im Seitenformat aus §6.6, neueste zuerst. Der Endpoint kennt keinen "sort"-Parameter: ein Eingangsbuch wird von hinten gelesen, und nach Name oder Adresse zu sortieren verdeckte gerade die zeitliche Naehe, an der eine Serie erkennbar ist (§6.6). Wer einschraenken will, nimmt die beiden Filter. Die Zaehlung "N offen" der Oberflaeche ist derselbe Aufruf mit status=OPEN und size=1.
+     */
+    get: operations["list_5"]
     put?: never
     post?: never
     delete?: never
@@ -1744,6 +1808,42 @@ export interface components {
       decidedAt: string | null
       /** Format: date-time */
       createdAt: string
+    }
+    /** @description Eine Anfrage aus dem oeffentlichen Kontaktformular (§6.1). */
+    SupportRequestCreateRequest: {
+      /**
+       * @description Name der absendenden Person.
+       * @example Lena Brandt
+       */
+      name?: string
+      /**
+       * @description Adresse fuer die Antwort. Der Server verschickt nichts; die Administration antwortet aus dem eigenen Postfach (§3.20).
+       * @example lena.brandt@example.org
+       */
+      email?: string
+      /**
+       * @description Einordnung der Anfrage (§2.14).
+       * @example TECHNICAL_ISSUE
+       * @enum {string}
+       */
+      category:
+        | "TECHNICAL_ISSUE"
+        | "ACCOUNT_ACCESS"
+        | "PROJECT_SUBMISSION"
+        | "ABUSE_REPORT"
+        | "OTHER"
+      /**
+       * @description Betreffzeile.
+       * @example Anmeldung schlaegt fehl
+       */
+      subject?: string
+      /**
+       * @description Der Text der Anfrage.
+       * @example Seit gestern komme ich mit meiner HSB-Kennung nicht mehr hinein.
+       */
+      message?: string
+      /** @description Bleibt leer. Im Formular fuer Menschen unsichtbar. */
+      website?: string
     }
     ProjectCreateRequest: {
       /**
@@ -2270,6 +2370,68 @@ export interface components {
         | "ACTIVE"
         | "DEACTIVATED"
     }
+    /** @description Neuer Bearbeitungsstand einer Support-Anfrage (§2.15). */
+    SupportRequestStatusUpdateRequest: {
+      /**
+       * @description Der neue Stand (§2.15).
+       * @example IN_PROGRESS
+       * @enum {string}
+       */
+      status: "OPEN" | "IN_PROGRESS" | "RESOLVED"
+    }
+    /** @description Eine eingegangene Support-Anfrage (§3.20). Wird ausschliesslich unter /api/admin ausgegeben. */
+    SupportRequestResponse: {
+      /** Format: uuid */
+      id: string
+      /**
+       * @description Name der absendenden Person.
+       * @example Lena Brandt
+       */
+      name: string
+      /**
+       * @description Adresse fuer die Antwort.
+       * @example lena.brandt@example.org
+       */
+      email: string
+      /** @enum {string} */
+      category:
+        | "TECHNICAL_ISSUE"
+        | "ACCOUNT_ACCESS"
+        | "PROJECT_SUBMISSION"
+        | "ABUSE_REPORT"
+        | "OTHER"
+      /**
+       * @description Betreffzeile.
+       * @example Anmeldung schlaegt fehl
+       */
+      subject: string
+      message: string
+      /** @enum {string} */
+      status: "OPEN" | "IN_PROGRESS" | "RESOLVED"
+      /**
+       * Format: uuid
+       * @description Das absendende Konto, sofern angemeldet; sonst null (§3.20).
+       */
+      submittedByUserId: string | null
+      /** @description Das Admin-Konto, das den Stand zuletzt gesetzt hat; sonst null (§3.20). Was der Name bedeutet, sagt das Feld status: bei IN_PROGRESS ist es die zustaendige Person, bei RESOLVED die erledigende, bei einem wieder geoeffneten OPEN die zurueckholende. */
+      handledBy: components["schemas"]["UserLookupResponse"] | null
+      /**
+       * Format: date-time
+       * @description Zeitpunkt des letzten Statuswechsels; sonst null. Immer zusammen mit handledBy gesetzt oder zusammen leer (§3.20).
+       */
+      handledAt: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    /** @description Das Admin-Konto, das den Stand zuletzt gesetzt hat; sonst null (§3.20). Was der Name bedeutet, sagt das Feld status: bei IN_PROGRESS ist es die zustaendige Person, bei RESOLVED die erledigende, bei einem wieder geoeffneten OPEN die zurueckholende. */
+    UserLookupResponse: {
+      /** Format: uuid */
+      id: string
+      firstName: string
+      lastName: string
+    }
     StudyProgramUpdateRequest: {
       /**
        * @description Neuer Name. Fehlt das Feld, bleibt er unveraendert.
@@ -2334,12 +2496,6 @@ export interface components {
        * @example Interaction Design
        */
       name?: string
-    }
-    UserLookupResponse: {
-      /** Format: uuid */
-      id: string
-      firstName: string
-      lastName: string
     }
     TagResponse: {
       /** Format: uuid */
@@ -3184,6 +3340,42 @@ export interface operations {
       }
     }
   }
+  create: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SupportRequestCreateRequest"]
+      }
+    }
+    responses: {
+      /** @description Die Anfrage ist eingegangen. Ohne Body: die absendende Person hat auf ihre eigene Anfrage keinen lesenden Zugriff (§5), eine Kennung waere damit eine Adresse ohne Ressource. */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description VALIDATION_FAILED: ein Pflichtfeld fehlt oder verletzt eine Laengenregel aus §3.20. */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description TOO_MANY_SUPPORT_REQUESTS: zu viele Einsendungen von dieser Adresse oder dieser IP (§6.5). */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
   list_1: {
     parameters: {
       query?: {
@@ -3259,7 +3451,7 @@ export interface operations {
       }
     }
   }
-  create: {
+  create_1: {
     parameters: {
       query?: never
       header?: never
@@ -3898,7 +4090,7 @@ export interface operations {
       }
     }
   }
-  create_1: {
+  create_2: {
     parameters: {
       query?: never
       header?: never
@@ -4409,7 +4601,7 @@ export interface operations {
       }
     }
   }
-  create_2: {
+  create_3: {
     parameters: {
       query?: never
       header?: never
@@ -5439,6 +5631,120 @@ export interface operations {
       }
     }
   }
+  delete_2: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description ID der Anfrage. */
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Die Anfrage ist entfernt. */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Kein gueltiges Token mitgeschickt. */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description NO_PERMISSION: die Rolle ist nicht ADMIN. */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description RESOURCE_NOT_FOUND: unter dieser ID gibt es keine Anfrage. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  updateStatus_1: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description ID der Anfrage. */
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SupportRequestStatusUpdateRequest"]
+      }
+    }
+    responses: {
+      /** @description Die geaenderte Anfrage. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SupportRequestResponse"]
+        }
+      }
+      /** @description VALIDATION_FAILED: "status" fehlt oder ist kein Wert aus §2.15. */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SupportRequestResponse"]
+        }
+      }
+      /** @description Kein gueltiges Token mitgeschickt. */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SupportRequestResponse"]
+        }
+      }
+      /** @description NO_PERMISSION: die Rolle ist nicht ADMIN. */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SupportRequestResponse"]
+        }
+      }
+      /** @description RESOURCE_NOT_FOUND: unter dieser ID gibt es keine Anfrage. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SupportRequestResponse"]
+        }
+      }
+      /** @description SUPPORT_STATUS_TRANSITION_INVALID: der Uebergang steht nicht in §2.15. */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SupportRequestResponse"]
+        }
+      }
+    }
+  }
   deleteStudyProgram: {
     parameters: {
       query?: never
@@ -6097,7 +6403,7 @@ export interface operations {
       }
     }
   }
-  delete_2: {
+  delete_3: {
     parameters: {
       query?: never
       header?: never
@@ -6596,6 +6902,69 @@ export interface operations {
         }
       }
       /** @description VALIDATION_FAILED: unbekanntes Sortierfeld, "from" liegt nach "to", oder ein Parameter hat nicht das erwartete Format (Zeitpunkt bzw. UUID). */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["PageResponse"]
+        }
+      }
+      /** @description Kein gueltiges Token mitgeschickt. */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["PageResponse"]
+        }
+      }
+      /** @description NO_PERMISSION: die Rolle ist nicht ADMIN. */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["PageResponse"]
+        }
+      }
+    }
+  }
+  list_5: {
+    parameters: {
+      query?: {
+        /** @description Filter: Bearbeitungsstand (§2.15). */
+        status?: "OPEN" | "IN_PROGRESS" | "RESOLVED"
+        /** @description Filter: Kategorie (§2.14). */
+        category?:
+          | "TECHNICAL_ISSUE"
+          | "ACCOUNT_ACCESS"
+          | "PROJECT_SUBMISSION"
+          | "ABUSE_REPORT"
+          | "OTHER"
+        /** @description Zero-based page index (0..N) */
+        page?: number
+        /** @description The size of the page to be returned */
+        size?: number
+        /** @description Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported. */
+        sort?: string[]
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Eine Seite der Anfragenliste. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["PageResponse"]
+        }
+      }
+      /** @description VALIDATION_FAILED: "status" oder "category" ist kein Wert aus §2.15 bzw. §2.14. */
       400: {
         headers: {
           [name: string]: unknown

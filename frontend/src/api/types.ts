@@ -353,3 +353,38 @@ export type SemesterUpdateRequest = ApiSchemas["SemesterUpdateRequest"]
  */
 export type SemesterMoveRequest = ApiSchemas["SemesterMoveRequest"]
 export type SemesterMoveDirection = SemesterMoveRequest["direction"]
+
+/**
+ * Support-Anfragen (Contract §2.14, §2.15, §3.20, §6.1; KAN-85).
+ *
+ * <p><strong>Zwei Requests und genau eine Antwort.</strong> Der Create-Request
+ * geht an den oeffentlichen Endpoint und traegt neben den fuenf Formularfeldern
+ * das versteckte {@code website}; der Status-Request traegt ein einziges Feld,
+ * weil eine Anfrage bis auf ihren Bearbeitungsstand unveraenderlich ist
+ * (§3.20). Die Antwort gibt es nur unter {@code /api/admin}: die absendende
+ * Person hat auf ihre eigene Anfrage keinen lesenden Zugriff (§5), und
+ * {@code POST /api/support} antwortet mit 201 ohne Koerper.
+ */
+export type SupportRequestResponse = ApiSchemas["SupportRequestResponse"]
+export type SupportRequestCreateRequest =
+  ApiSchemas["SupportRequestCreateRequest"]
+export type SupportRequestStatusUpdateRequest =
+  ApiSchemas["SupportRequestStatusUpdateRequest"]
+
+/**
+ * Einordnung einer Support-Anfrage nach Contract §2.14: genau fuenf Werte.
+ *
+ * <p>Abgeleitet vom Request und nicht von der Antwort, aus demselben Grund wie
+ * bei {@link CommentStatus}: im Request ist die Kategorie Pflicht, der Alias
+ * meint also die Werteliste ohne Umweg. Angezeigt wird sie ueber
+ * {@code support.category.<WERT>}, der Wert selbst laeuft unveraendert durch
+ * den Code (Frontend-Regel 6).
+ */
+export type SupportRequestCategory = SupportRequestCreateRequest["category"]
+
+/**
+ * Bearbeitungsstand nach Contract §2.15: OPEN, IN_PROGRESS, RESOLVED.
+ * Angezeigt ueber {@code support.status.<WERT>}.
+ */
+export type SupportRequestStatus =
+  SupportRequestStatusUpdateRequest["status"]

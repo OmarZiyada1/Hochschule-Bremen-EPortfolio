@@ -38,6 +38,13 @@ export interface FilterOption {
  * Auswahlhuelle genau die Art Dopplung waere, die der Befund aus KAN-7
  * meint.
  *
+ * <p>Seit KAN-85 traegt sie zusaetzlich das Pflicht-Auswahlfeld des
+ * Kontaktformulars. Dafuer ist {@code includeAllOption} dazugekommen: ein
+ * Feld, das einen Wert haben <em>muss</em> (die Kategorie nach Contract
+ * §3.20), darf keinen Sammeleintrag anbieten, denn „alle" ist dort kein
+ * Zustand und ein null-Wert liefe in ein 400. Erweitert statt daneben gebaut,
+ * aus demselben Grund wie oben.
+ *
  * <p>Gerahmt wird seitdem mit {@code Field} statt einem eigenen div: die
  * Primitive bringt die Gruppenrolle, die Abstufung bei
  * {@code data-invalid} und die Anbindung von Beschreibung und Fehlertext
@@ -51,6 +58,7 @@ export function FilterSelect({
   value,
   onValueChange,
   allLabel,
+  includeAllOption = true,
   className,
   labelSuffix,
   description,
@@ -74,6 +82,17 @@ export function FilterSelect({
   value: string | null
   onValueChange: (value: string | null) => void
   allLabel?: string
+  /**
+   * Steht der Sammeleintrag „alle" zur Wahl? Standard ja, denn dafuer ist
+   * die Komponente entstanden: ein Filter, dessen Wahl sich nicht mehr
+   * aufheben liesse, waere eine Sackgasse.
+   *
+   * <p>{@code false} setzt ein Feld, das einen Wert haben muss. Der
+   * Aufrufer bekommt dann nie {@code null} und muss den Anfangswert selbst
+   * setzen; ohne diesen Schalter stuende in einem Pflichtfeld ein
+   * auswaehlbares „alle", das der Server mit 400 beantwortet.
+   */
+  includeAllOption?: boolean
   className?: string
   /**
    * Zusatz hinter der Beschriftung, etwa die Kennzeichnung "erforderlich
@@ -99,11 +118,11 @@ export function FilterSelect({
   const invalid = error !== undefined
 
   const items = useMemo(
-    () => [
-      { label: allLabel ?? t("common.filter.all"), value: null },
-      ...options,
-    ],
-    [allLabel, options, t]
+    () =>
+      includeAllOption
+        ? [{ label: allLabel ?? t("common.filter.all"), value: null }, ...options]
+        : options,
+    [allLabel, includeAllOption, options, t]
   )
 
   /* Nur anbinden, was auch dasteht: ein aria-describedby auf ein Element,

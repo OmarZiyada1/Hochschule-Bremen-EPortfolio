@@ -3,6 +3,7 @@ import {
   FolderKanbanIcon,
   GraduationCapIcon,
   LayoutDashboardIcon,
+  LifeBuoyIcon,
   TagsIcon,
   TrophyIcon,
   UsersIcon,
@@ -12,6 +13,11 @@ import type { ComponentType } from "react"
 /**
  * Die Eintraege der Seitennavigation, in der Reihenfolge der Figma-Komponente
  * {@code Sidebar} (KAN-38).
+ *
+ * <p><strong>Acht seit KAN-85.</strong> „Support" steht als letzter Eintrag
+ * hinter „Studienstruktur", wie im Frame {@code Admin · Support}. Es ist der
+ * einzige Bereich der Administrationsseite, dessen Inhalt von aussen entsteht:
+ * die Zeilen legt das oeffentliche Kontaktformular an (§6.1).
  *
  * <p><strong>Sieben, nicht sechs.</strong> Der Eintrag „Semester" ist am
  * 17.08.2026 zwischen „Kategorien" und „Studienstruktur" dazugekommen
@@ -72,6 +78,11 @@ export const ADMIN_NAV: readonly AdminNavEntry[] = [
     to: "/administration/study-structure",
     labelKey: "administration.nav.studyStructure",
     icon: GraduationCapIcon,
+  },
+  {
+    to: "/administration/support",
+    labelKey: "administration.nav.support",
+    icon: LifeBuoyIcon,
   },
 ]
 

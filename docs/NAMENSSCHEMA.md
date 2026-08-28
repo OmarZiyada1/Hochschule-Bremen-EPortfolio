@@ -49,6 +49,7 @@ Grundlage ist der Bestand aus Contract v17: 337 Bezeichner, 120 Java-Dateien,
 | `Top10Nominierung` | `Top10Nomination` | `top10_nomination` |
 | `Top10Protokoll` | `Top10AuditEntry` | `top10_audit_entry` |
 | `VerifizierungsCode` | `VerificationCode` | `verification_code` |
+| `SupportAnfrage` | `SupportRequest` | `support_request` (seit Contract v87, KAN-85) |
 
 Join- und Nebentabellen: `projekt_redakteur` wird `project_editor`,
 `projekt_tag` wird `project_tag`. Seit KAN-75 ist das keine Wertetabelle mehr, sondern die Verknüpfungstabelle zwischen `project` und `tag` (Contract v57, §3.19); der Text steht in `tag.name`, die Zuordnung trägt nur noch `tag_id`.
@@ -106,11 +107,16 @@ qualifiziert Jacksons Klasse voll aus.
 | `UserStatus` | `REGISTRIERUNG_OFFEN` · `AKTIV` · `DEAKTIVIERT` | `REGISTRATION_PENDING` · `ACTIVE` · `DEACTIVATED` |
 | `VerificationPurpose` | `PRIVAT` · `HSB` · `PASSWORT_RUECKSETZUNG` | `PRIVATE_EMAIL` · `HSB_EMAIL` · `PASSWORD_RESET` |
 | `Top10Action` | `HINZUGEFUEGT` · `ENTFERNT` · `UMSORTIERT` | `ADDED` · `REMOVED` · `REORDERED` |
+| `SupportRequestCategory` | `TECHNISCHES_PROBLEM` · `KONTO_ANMELDUNG` · `PROJEKT_EINREICHUNG` · `INHALT_MELDEN` · `SONSTIGES` | `TECHNICAL_ISSUE` · `ACCOUNT_ACCESS` · `PROJECT_SUBMISSION` · `ABUSE_REPORT` · `OTHER` (seit Contract v87, KAN-85) |
+| `SupportRequestStatus` | `OFFEN` · `IN_BEARBEITUNG` · `ERLEDIGT` | `OPEN` · `IN_PROGRESS` · `RESOLVED` (seit Contract v87, KAN-85) |
 
 `CommentStatus.OFFEN` wird `OPEN`, `NominationStatus.OFFEN` wird `PENDING`.
 Beide hießen im Deutschen gleich, meinen aber Verschiedenes: ein
 Änderungswunsch ist offen, solange er nicht umgesetzt ist, eine Nominierung
-wartet auf eine Entscheidung.
+wartet auf eine Entscheidung. `SupportRequestStatus.OFFEN` wird seit Contract
+v87 wieder `OPEN`, wie beim Änderungswunsch: eine Support-Anfrage ist offen,
+solange niemand sie erledigt hat, und wartet auf Arbeit und nicht auf eine
+Entscheidung. `RESOLVED` heißt dort dasselbe wie bei `CommentStatus`.
 
 **`REDAKTEUR` wird `EDITOR`.** Der blockbasierte Editor heißt im Code
 deshalb durchgehend `BlockEditor` und der Frontend-Ordner
@@ -203,6 +209,9 @@ Entity, sondern eine Aggregation über `project_tag`, und steht deshalb nur in
 | `beteiligt` | `participant` (Listenfilter, seit Contract v84) |
 | `hatReagiert` | `hasReacted` (Feld der Detailantwort, seit Contract v84) |
 | `verzeichnisEintrag` | `TocEntry` mit `level` · `text` · `index` |
+| `betreff` · `nachricht` · `abgesendetVonNutzerId` | `subject` · `message` · `submittedByUserId` (Felder der `SupportRequest`, seit Contract v87) |
+| `bearbeitetVon` · `bearbeitetAm` | `handledBy` · `handledAt` (wer den Stand der `SupportRequest` zuletzt gesetzt hat, seit Contract v88) |
+| `website` | `website` (das versteckte Formularfeld gegen automatisierte Einsendungen, §6.1; bewusst ein gewöhnlicher Name, ein `honeypot` würde von jedem Programm übersprungen) |
 
 ## 5. Fehler-Envelope und Seitenformat
 
@@ -234,6 +243,7 @@ und wird im Contract gestrichen statt stehen gelassen.
 | `KEINE_BERECHTIGUNG` | `NO_PERMISSION` |
 | `PASSWORTAENDERUNG_ERFORDERLICH` | `PASSWORD_CHANGE_REQUIRED` |
 | `ZU_VIELE_ANMELDEVERSUCHE` | `TOO_MANY_LOGIN_ATTEMPTS` |
+| `ZU_VIELE_SUPPORT_ANFRAGEN` | `TOO_MANY_SUPPORT_REQUESTS` (seit Contract v87, KAN-85) |
 | `VERIFIZIERUNGSCODE_UNGUELTIG` | `VERIFICATION_CODE_INVALID` |
 | `BLOCKTYP_UNBEKANNT` | `BLOCK_TYPE_UNKNOWN` |
 | `BLOCK_INHALT_UNGUELTIG` | `BLOCK_CONTENT_INVALID` |
@@ -250,6 +260,7 @@ und wird im Contract gestrichen statt stehen gelassen.
 | `RESSOURCE_IN_VERWENDUNG` | `RESOURCE_IN_USE` |
 | `PROJEKT_NICHT_VEROEFFENTLICHT` | `PROJECT_NOT_PUBLISHED` |
 | `NOMINIERUNG_BEREITS_ENTSCHIEDEN` | `NOMINATION_ALREADY_DECIDED` |
+| `SUPPORT_STATUS_UEBERGANG_UNGUELTIG` | `SUPPORT_STATUS_TRANSITION_INVALID` (seit Contract v87, KAN-85) |
 | `INTERNER_FEHLER` | `INTERNAL_ERROR` |
 
 `BLOCK_UNGUELTIG` war ein Sonderfall und ist mit KAN-49 verschwunden: der

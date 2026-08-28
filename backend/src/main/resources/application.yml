@@ -127,6 +127,23 @@ app:
     four-eyes-principle: true
     admin-may-edit-foreign-content: false
 
+  support:
+    # Bremse am oeffentlichen Kontaktformular (API-Contract §6.5, §6.1).
+    # Gezaehlt wird getrennt nach Client-IP und angegebener E-Mail-Adresse,
+    # schon einer der beiden Zaehler loest die Sperre aus; wie am Login liegt
+    # der Zaehler nur im Arbeitsspeicher (siehe SupportRateLimitService).
+    #
+    # Eigene Werte statt derer des Logins, und das ist seit v87 der erste
+    # solche Fall: eine Anmeldung wiederholt man nach einem Vertipper sofort,
+    # eine Support-Anfrage schreibt man einmal. Fuenf Versuche je Viertelstunde
+    # waeren fuer den ersten Fall knapp und fuer den zweiten weit.
+    #
+    # window ist zugleich Zeitfenster und Sperrdauer: anders als am Login gibt
+    # es hier kein Zuruecksetzen bei Erfolg, also braucht es keinen zweiten
+    # Wert daneben.
+    max-requests: 3
+    window: PT1H
+
   edit-lock:
     # Frist der Bearbeitungssperre aus API-Contract §6.9. Bleibt der Herzschlag
     # des Editors so lange aus, faellt der Beitrag von selbst frei; ohne das

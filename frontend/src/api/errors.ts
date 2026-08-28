@@ -10,7 +10,7 @@
  */
 
 /*
- * Die Fehlercodes aus Contract 6.2 (v86), deckungsgleich mit
+ * Die Fehlercodes aus Contract 6.2 (v88), deckungsgleich mit
  * common/error/ErrorCodes.java im Backend. Als const-Tupel gefuehrt, damit
  * errorCode eine String-Union traegt: ein Tippfehler in einem Code faellt
  * beim Typecheck auf und nicht erst zur Laufzeit in einer Verzweigung, die
@@ -28,6 +28,7 @@ export const ERROR_CODES = [
   "NO_PERMISSION",
   "PASSWORD_CHANGE_REQUIRED",
   "TOO_MANY_LOGIN_ATTEMPTS",
+  "TOO_MANY_SUPPORT_REQUESTS",
   "VERIFICATION_CODE_INVALID",
   "BLOCK_TYPE_UNKNOWN",
   "BLOCK_CONTENT_INVALID",
@@ -46,6 +47,7 @@ export const ERROR_CODES = [
   "RESOURCE_IN_USE",
   "PROJECT_NOT_PUBLISHED",
   "NOMINATION_ALREADY_DECIDED",
+  "SUPPORT_STATUS_TRANSITION_INVALID",
   "INTERNAL_ERROR",
 ] as const
 

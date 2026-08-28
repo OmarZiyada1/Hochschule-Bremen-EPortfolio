@@ -46,9 +46,16 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * mit 403 {@code PASSWORD_CHANGE_REQUIRED}, auch auf oeffentliche, sofern die
  * Anfrage ein Token traegt. Das Gate sitzt hier und nicht im Frontend, weil
  * eine reine Client-Umleitung ueber direkte API-Aufrufe vollstaendig umgehbar
- * waere. Ausgenommen sind genau die fuenf Endpoints aus §6.7, sonst sperrte
+ * waere. Ausgenommen sind genau die sechs Endpoints aus §6.7, sonst sperrte
  * sich die Person selbst aus; die Pfade der Passwort-Ruecksetzung standen hier
- * schon vor KAN-43 bereit. {@code POST /admin/users/{id}/reset-password}
+ * schon vor KAN-43 bereit. {@code POST /api/support} kam mit KAN-85 dazu
+ * (Contract v87): der Endpoint ist ohnehin PUBLIC, das Gate greift bei ihm
+ * allein deshalb, weil es jede Anfrage <em>mit</em> Token trifft. Ohne die
+ * Ausnahme bekaeme ausgerechnet die im Initialpasswort feststeckende Person
+ * auf ihre Hilfeanfrage ein 403, waehrend dieselbe Anfrage nach dem Abmelden
+ * durchginge, und das waere eine Huerde ohne Schutzwirkung: die Absendung
+ * schreibt eine Zeile in ein Eingangsbuch und stellt nichts an.
+ * {@code POST /admin/users/{id}/reset-password}
  * (KAN-43) steht bewusst nicht in der Liste: ihn ruft ein Admin mit eigenem
  * Token fuer ein fremdes Konto auf, nicht das gesperrte Konto selbst; ein
  * Admin mit eigenem Initialpasswort aendert erst sein Passwort und verwaltet
@@ -60,18 +67,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	private static final String BEARER_PREFIX = "Bearer ";
 
 	/**
-	 * Die fuenf Ausnahmen vom Gate der erzwungenen Passwortaenderung (§6.7),
-	 * als "METHODE Pfad". Jede davon existiert, damit die Person das Flag
-	 * selbst aufloesen kann: Passwort aendern, die eigene Identitaet fuer die
-	 * Passwortseite lesen, sich abmelden oder das vergessene Initialpasswort
-	 * zuruecksetzen (KAN-43).
+	 * Die sechs Ausnahmen vom Gate der erzwungenen Passwortaenderung (§6.7),
+	 * als "METHODE Pfad". Die ersten fuenf existieren, damit die Person das
+	 * Flag selbst aufloesen kann: Passwort aendern, die eigene Identitaet fuer
+	 * die Passwortseite lesen, sich abmelden oder das vergessene
+	 * Initialpasswort zuruecksetzen (KAN-43). Die sechste ist das
+	 * Kontaktformular (KAN-85): wer im Initialpasswort feststeckt, ist genau
+	 * der Fall, fuer den es das Formular gibt.
 	 */
 	private static final Set<String> PASSWORD_CHANGE_EXEMPT = Set.of(
 			"PUT /api/auth/password",
 			"GET /api/auth/me",
 			"POST /api/auth/logout",
 			"POST /api/auth/forgot-password",
-			"POST /api/auth/reset-password");
+			"POST /api/auth/reset-password",
+			"POST /api/support");
 
 	private final JwtService jwtService;
 

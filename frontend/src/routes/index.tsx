@@ -16,6 +16,7 @@ import ProjectDetailPage from "@/features/projects/ProjectDetailPage"
 import ProjectListPage from "@/features/projects/ProjectListPage"
 import NewProjectPage from "@/features/projects/NewProjectPage"
 import ProjectMetadataPage from "@/features/projects/ProjectMetadataPage"
+import SupportPage from "@/features/support/SupportPage"
 import { AdministrationLayout } from "@/features/administration/AdministrationLayout"
 import ProjectReviewPage from "@/features/reviews/ProjectReviewPage"
 import PublicPortfolioPage from "@/features/portfolio/PublicPortfolioPage"
@@ -32,6 +33,7 @@ import {
   AdminProjectListRoute,
   AdminSemesterListRoute,
   AdminStudyStructureRoute,
+  AdminSupportListRoute,
   AdminTop10AuditRoute,
   AdminTop10Route,
   AdminUserListRoute,
@@ -114,6 +116,15 @@ export const routes: RouteObject[] = [
         element: <PublicPortfolioPage />,
       },
       {
+        /* Das Kontaktformular liegt bewusst ausserhalb jeder Schranke
+           (KAN-85). Der haeufigste Support-Fall ist "ich komme nicht
+           hinein", und ein Formular hinter RequireAuth hilft genau dort
+           nicht (§5, Fussnote 16). Fuer angemeldete Konten belegt die Seite
+           Name und Adresse vor; der Endpoint ist derselbe. */
+        path: "/support",
+        element: <SupportPage />,
+      },
+      {
         element: <RequireAuth />,
         children: [
           { path: "/my-portfolio", element: <MyPortfolioPage /> },
@@ -167,6 +178,14 @@ export const routes: RouteObject[] = [
               {
                 path: "study-structure",
                 element: <AdminStudyStructureRoute />,
+              },
+              {
+                /* Der achte Eintrag der Figma-Komponente Sidebar (KAN-85).
+                   Der einzige Bereich der Administrationsseite, dessen
+                   Inhalt von aussen entsteht: die Zeilen legt das
+                   oeffentliche Kontaktformular an (§6.1). */
+                path: "support",
+                element: <AdminSupportListRoute />,
               },
               {
                 /* Das Protokoll liegt unter der Top-10-Verwaltung, weil es

@@ -106,6 +106,22 @@ public class SecurityConfig {
 							"/api/auth/forgot-password",
 							"/api/auth/reset-password").permitAll()
 
+					// Das oeffentliche Kontaktformular (KAN-85, §6.1). Der
+					// einzige schreibende Endpoint, den §5 fuer PUBLIC
+					// freigibt, und zwangslaeufig offen: der haeufigste
+					// Support-Fall ist "ich komme nicht hinein", und ein
+					// Formular hinter der Anmeldung hilft genau dort nicht.
+					// An die Stelle der Anmeldung treten die Bremse aus §6.5
+					// (SupportRateLimitService, eigener Zaehler und eigene
+					// Grenzwerte) und das versteckte Formularfeld aus §6.1.
+					// Bewusst nur POST auf genau diesen Pfad: die drei
+					// lesenden und schreibenden Verwaltungspfade liegen unter
+					// /api/admin/support und fallen damit unter die
+					// hasRole("ADMIN")-Zeile weiter unten. Ein Token darf
+					// mitkommen und wird dann als submittedByUserId vermerkt
+					// (§3.20); noetig ist es nicht.
+					.requestMatchers(HttpMethod.POST, "/api/support").permitAll()
+
 					.requestMatchers("/actuator/health").permitAll()
 
 					// Swagger-UI und das OpenAPI-Dokument (KAN-11).

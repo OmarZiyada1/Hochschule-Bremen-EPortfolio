@@ -47,19 +47,28 @@ export function navLinksFor(role: Role | null): NavBarLink[] {
  * Das ist zugleich der einzige Weg, auf dem ein Konto seinen eigenen Namen
  * und Avatar pflegt (§3.2), und er steht seit KAN-82 auch einem
  * Admin-Konto offen.
+ *
+ * "Kontakt & Support" steht seit KAN-85 als letzter Eintrag in jeder Rolle.
+ * Bewusst am Ende und bewusst ueberall: Hilfe ist kein Arbeitsziel, das man
+ * oben sucht, aber sie darf keiner Rolle fehlen. Der zweite Einstieg liegt
+ * in der Fusszeile und erreicht auch, wer nicht angemeldet ist.
  */
+const SUPPORT_ENTRY: NavBarLink = { key: "support", href: "/support" }
+
 export function userMenuFor(role: Role | null): NavBarLink[] {
   switch (role) {
     case "STUDENT":
       return [
         { key: "myPortfolio", href: "/my-portfolio" },
         { key: "newProject", href: "/projects/new" },
+        SUPPORT_ENTRY,
       ]
     case "EDITOR":
       return [
         { key: "reviews", href: "/reviews" },
         { key: "myPortfolio", href: "/my-portfolio" },
         { key: "newProject", href: "/projects/new" },
+        SUPPORT_ENTRY,
       ]
     case "ADMIN":
       return [
@@ -67,6 +76,7 @@ export function userMenuFor(role: Role | null): NavBarLink[] {
         { key: "myPortfolio", href: "/my-portfolio" },
         { key: "newProject", href: "/projects/new" },
         { key: "administration", href: "/administration" },
+        SUPPORT_ENTRY,
       ]
     default:
       return []

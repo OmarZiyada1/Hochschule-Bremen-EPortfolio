@@ -63,7 +63,8 @@
       "login": "Anmelden",
       "logout": "Abmelden",
       "profile": "Profil",
-      "openMenu": "Menü öffnen"
+      "openMenu": "Menü öffnen",
+      "support": "Kontakt & Support"
     },
     "footer": {
       "imprint": "Impressum",
@@ -76,7 +77,8 @@
       "group": {
         "platform": "Plattform",
         "legal": "Rechtliches"
-      }
+      },
+      "support": "Kontakt & Support"
     },
     "language": {
       "switchTo": {
@@ -311,6 +313,30 @@
       "positionOutOfRange": "Der Platz muss zwischen 1 und 10 liegen.",
       "dateInvalid": "Bitte ein gültiges Datum angeben.",
       "rangeReversed": "Das Ende darf nicht vor dem Anfang liegen."
+    },
+    "support": {
+      "name": {
+        "required": "Bitte geben Sie Ihren Namen ein.",
+        "tooShort": "Der Name muss mindestens 2 Zeichen lang sein.",
+        "tooLong": "Der Name darf höchstens 120 Zeichen lang sein."
+      },
+      "email": {
+        "required": "Bitte geben Sie eine E-Mail-Adresse ein.",
+        "tooLong": "Die E-Mail-Adresse darf höchstens 255 Zeichen lang sein."
+      },
+      "category": {
+        "required": "Bitte wählen Sie eine Kategorie."
+      },
+      "subject": {
+        "required": "Bitte geben Sie einen Betreff ein.",
+        "tooShort": "Der Betreff muss mindestens 3 Zeichen lang sein.",
+        "tooLong": "Der Betreff darf höchstens 160 Zeichen lang sein."
+      },
+      "message": {
+        "required": "Bitte beschreiben Sie Ihr Anliegen.",
+        "tooShort": "Die Beschreibung muss mindestens 10 Zeichen lang sein.",
+        "tooLong": "Die Beschreibung darf höchstens 2000 Zeichen lang sein."
+      }
     }
   },
   "placeholder": {
@@ -1237,7 +1263,9 @@
     "RESOURCE_IN_USE": "Der Eintrag wird noch verwendet und kann so nicht übernommen werden.",
     "PROJECT_NOT_PUBLISHED": "Diese Aktion setzt ein veröffentlichtes Projekt voraus.",
     "NOMINATION_ALREADY_DECIDED": "Über diese Nominierung wurde bereits entschieden.",
-    "INTERNAL_ERROR": "Etwas ist schiefgelaufen. Bitte versuchen Sie es später erneut."
+    "INTERNAL_ERROR": "Etwas ist schiefgelaufen. Bitte versuchen Sie es später erneut.",
+    "TOO_MANY_SUPPORT_REQUESTS": "Es sind zu viele Anfragen in kurzer Zeit eingegangen. Bitte versuchen Sie es später noch einmal.",
+    "SUPPORT_STATUS_TRANSITION_INVALID": "Dieser Bearbeitungsstand lässt sich von hier aus nicht setzen. Bitte laden Sie die Liste neu."
   },
   "versionConflict": {
     "title": "Das Projekt wurde inzwischen geändert",
@@ -1465,7 +1493,8 @@
       "users": "Nutzer:innen",
       "categories": "Kategorien",
       "semesters": "Semester",
-      "studyStructure": "Studienstruktur"
+      "studyStructure": "Studienstruktur",
+      "support": "Support"
     },
     "dashboard": {
       "title": "Dashboard",
@@ -1946,6 +1975,71 @@
         "description": "„{{title}}“ verliert Platz {{position}} und erscheint nicht mehr auf der öffentlichen Startseite. Der Platz bleibt frei, die übrigen Einträge rücken nicht nach. Das Projekt bleibt veröffentlicht und lässt sich über die Suche wieder aufnehmen.",
         "confirm": "Vom Platz nehmen"
       }
+    },
+    "support": {
+      "title": "Support-Anfragen",
+      "subtitle": "Eingegangene Anfragen aus dem Kontaktformular.",
+      "openCount_one": "{{count}} offen",
+      "openCount_other": "{{count}} offen",
+      "filterLabel": "Nach Bearbeitungsstand filtern",
+      "emptyTitle": "Keine Support-Anfragen vorhanden.",
+      "emptyDescription": "Sobald jemand das Kontaktformular ausfüllt, erscheint die Anfrage hier.",
+      "emptyFiltered": "Zu diesem Bearbeitungsstand gibt es keine Anfrage.",
+      "action": {
+        "IN_PROGRESS": "In Bearbeitung",
+        "RESOLVED": "Als erledigt markieren",
+        "OPEN": "Wieder öffnen"
+      },
+      "reply": "Per E-Mail an {{name}} antworten",
+      "replySubject": "Ihre Support-Anfrage: {{subject}}",
+      "delete": "Anfrage „{{subject}}“ löschen",
+      "confirmDelete": {
+        "title": "Anfrage löschen?",
+        "description": "Die Anfrage „{{subject}}“ von {{name}} wird endgültig entfernt. Es gibt keinen Archivzustand und keinen Weg zurück.",
+        "confirm": "Endgültig löschen"
+      },
+      "announce": {
+        "status": "Anfrage „{{subject}}“ steht jetzt auf {{status}}, bearbeitet von Ihnen.",
+        "deleted": "Anfrage „{{subject}}“ wurde gelöscht."
+      },
+      "handled": {
+        "OPEN": "Wieder geöffnet von {{name}} am {{at}}",
+        "IN_PROGRESS": "In Bearbeitung von {{name}} seit {{at}}",
+        "RESOLVED": "Erledigt von {{name}} am {{at}}"
+      }
+    }
+  },
+  "support": {
+    "label": "Hilfe",
+    "title": "Kontakt & Support",
+    "subtitle": "Beschreiben Sie Ihr Problem. Ihre Anfrage geht direkt an das Administrationsteam des E-Portfolios.",
+    "form": {
+      "name": "Name",
+      "email": "E-Mail-Adresse",
+      "category": "Kategorie",
+      "subject": "Betreff",
+      "message": "Beschreibung",
+      "messagePlaceholder": "Was ist passiert? Welche Seite ist betroffen?",
+      "website": "Dieses Feld bitte leer lassen",
+      "submit": "Anfrage senden",
+      "submitting": "Wird gesendet …"
+    },
+    "sent": {
+      "title": "Anfrage gesendet",
+      "description": "Das Administrationsteam hat Ihre Anfrage erhalten und meldet sich per E-Mail.",
+      "again": "Weitere Anfrage stellen"
+    },
+    "category": {
+      "TECHNICAL_ISSUE": "Technisches Problem",
+      "ACCOUNT_ACCESS": "Konto & Anmeldung",
+      "PROJECT_SUBMISSION": "Projekt & Einreichung",
+      "ABUSE_REPORT": "Inhalt melden",
+      "OTHER": "Sonstiges"
+    },
+    "status": {
+      "OPEN": "Offen",
+      "IN_PROGRESS": "In Bearbeitung",
+      "RESOLVED": "Erledigt"
     }
   }
 }
