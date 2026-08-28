@@ -1,6 +1,6 @@
 package de.hsbremen.eportfolio.auth;
 
-import de.hsbremen.eportfolio.config.LoginAttemptProperties;
+import de.hsbremen.eportfolio.config.AttemptLimits;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Locale;
@@ -15,9 +15,21 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>Die Klasse traegt die Mechanik, nicht den Anlass. Wofuer gezaehlt wird,
  * entscheidet die aufrufende Seite: {@link LoginAttemptService} zaehlt
  * fehlgeschlagene Anmeldungen, {@link VerificationAttemptService} den Verkehr
- * auf den Verifizierungs-Endpoints. <strong>Jede Instanz fuehrt ihre eigene
- * Map</strong>, die Zaehler laufen also getrennt; sonst sperrte ein erneut
- * angeforderter Verifizierungscode zugleich die Anmeldung derselben Adresse.
+ * auf den Verifizierungs-Endpoints, und seit KAN-85 zaehlt der
+ * {@code support.SupportRateLimitService} die Einsendungen am oeffentlichen
+ * Kontaktformular. <strong>Jede Instanz fuehrt ihre eigene Map</strong>, die
+ * Zaehler laufen also getrennt; sonst sperrte ein erneut angeforderter
+ * Verifizierungscode zugleich die Anmeldung derselben Adresse.
+ *
+ * <p><strong>Warum die Grenzwerte als {@link AttemptLimits} hereinkommen und
+ * nicht als ein bestimmter Properties-Record.</strong> Bis KAN-85 lasen alle
+ * Anlaesse dieselben Werte, weil §6.5 fuer die Verifizierung ausdruecklich
+ * „denselben Mechanismus" verlangt. Das Kontaktformular bringt mit
+ * {@code SupportProperties} den ersten Anlass mit eigenen Werten mit (§6.5,
+ * Absatz zu v87): eine Anmeldung wiederholt man nach einem Vertipper sofort,
+ * eine Support-Anfrage schreibt man einmal. Die Klasse ist deshalb seit KAN-85
+ * oeffentlich und nimmt die Schnittstelle entgegen; die Mechanik selbst und
+ * jede Begruendung daran sind unveraendert geblieben.
  *
  * <p>Herausgeloest mit KAN-26. Vorher stand diese Logik vollstaendig im
  * {@code LoginAttemptService}; sie ein zweites Mal fuer die Verifizierung zu
@@ -45,9 +57,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * derselben Antwort. Aus dem Sperrverhalten laesst sich damit nicht ablesen,
  * welche Adressen registriert sind.
  */
-class AttemptCounter {
+public class AttemptCounter {
 
-	private final LoginAttemptProperties properties;
+	private final AttemptLimits limits;
 
 	private final Clock clock;
 
@@ -62,8 +74,8 @@ class AttemptCounter {
 
 	private static final int CLEAN_UP_EVERY = 100;
 
-	AttemptCounter(LoginAttemptProperties properties, Clock clock) {
-		this.properties = properties;
+	public AttemptCounter(AttemptLimits limits, Clock clock) {
+		this.limits = limits;
 		this.clock = clock;
 	}
 
@@ -72,12 +84,12 @@ class AttemptCounter {
 	 * eigentlichen Pruefung aufgerufen: ein gesperrter Schluessel bekommt sofort
 	 * die Fehlerantwort, ohne dass ueberhaupt etwas geprueft wird.
 	 */
-	boolean isBlocked(String email, String clientIp) {
+	public boolean isBlocked(String email, String clientIp) {
 		return isKeyBlocked(emailKey(email)) || isKeyBlocked(ipKey(clientIp));
 	}
 
 	/** Zaehlt einen Versuch auf beiden Schluesseln hoch. */
-	void record(String email, String clientIp) {
+	public void record(String email, String clientIp) {
 		cleanUpOccasionally();
 		increment(emailKey(email));
 		increment(ipKey(clientIp));
@@ -87,7 +99,7 @@ class AttemptCounter {
 	 * Setzt beide Zaehler zurueck, damit vereinzelte Vertipper sich ueber die Zeit
 	 * nicht zu einer Sperre summieren.
 	 */
-	void reset(String email, String clientIp) {
+	public void reset(String email, String clientIp) {
 		states.remove(emailKey(email));
 		states.remove(ipKey(clientIp));
 	}
@@ -114,8 +126,8 @@ class AttemptCounter {
 		Instant now = Instant.now(clock);
 		states.compute(key, (unused, previous) -> {
 			int failedAttempts = (previous == null ? 0 : previous.failedAttempts()) + 1;
-			Instant blockedUntil = failedAttempts >= properties.maxFailedAttempts()
-					? now.plus(properties.lockoutDuration())
+			Instant blockedUntil = failedAttempts >= limits.maxAttempts()
+					? now.plus(limits.lockoutDuration())
 					: null;
 			return new State(failedAttempts, blockedUntil, now);
 		});
@@ -131,7 +143,7 @@ class AttemptCounter {
 			return;
 		}
 		callsSinceCleanUp.set(0);
-		Instant threshold = Instant.now(clock).minus(properties.lockoutDuration());
+		Instant threshold = Instant.now(clock).minus(limits.lockoutDuration());
 		states.values().removeIf(state -> state.lastAttempt().isBefore(threshold));
 	}
 

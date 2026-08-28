@@ -14,7 +14,17 @@ import { HsbKeyLogo } from "@/components/common/HsbKeyLogo"
 const footerGroups = [
   {
     key: "platform",
-    links: [{ key: "projects", href: "/projects" }],
+    links: [
+      { key: "projects", href: "/projects" },
+      /*
+       * Der zweite Einstieg ins Kontaktformular (KAN-85). Er steht
+       * ausgerechnet in der Fusszeile, weil sie auch erreicht, wer sich
+       * gerade nicht anmelden kann, und das ist der haeufigste
+       * Support-Fall. Der zweite Einstieg liegt im Nutzermenue
+       * (routes/navLinks.ts), fuer alle, die mitten in der Arbeit sind.
+       */
+      { key: "support", href: "/support" },
+    ],
   },
   {
     key: "legal",

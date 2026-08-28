@@ -224,6 +224,20 @@ export const apiPaths = {
      * sonst nichts: das Protokoll ist unveraenderlich.
      */
     top10Audit: "/api/admin/top10-audit",
+    /*
+     * Die Verwaltung der Support-Anfragen (§6.1, KAN-85). supportRequests
+     * traegt die paginierte Liste (GET, Filter status und category, feste
+     * Reihenfolge nach §6.6); supportRequest traegt den Statuswechsel
+     * (PATCH mit { status }) und das Loeschen (DELETE, 204).
+     *
+     * Einen Pfad zum Anlegen gibt es hier nicht: angelegt wird ueber das
+     * oeffentliche support.submit, und einen einzelnen Lesepfad
+     * /admin/support/{id} fuehrt §6.1 nicht, weil die Liste bereits alle
+     * Felder traegt.
+     */
+    supportRequests: "/api/admin/support",
+    supportRequest: (supportRequestId: string) =>
+      `/api/admin/support/${supportRequestId}`,
   },
   /*
    * Ein einzelner Kommentar (§6.1, §2.4, KAN-37). Bewusst neben projects und
@@ -315,6 +329,20 @@ export const apiPaths = {
    */
   users: {
     lookup: "/api/users/lookup",
+  },
+  /*
+   * Das oeffentliche Kontaktformular (§6.1, Abschnitt „Support", KAN-85).
+   * Der einzige schreibende Pfad, den §5 fuer PUBLIC freigibt; ein Token
+   * darf mitkommen und wird dann als submittedByUserId vermerkt (§3.20),
+   * noetig ist es nicht.
+   *
+   * Bewusst ein eigener Schluessel und nicht unter admin: dort steht, was
+   * ausschliesslich fuer ADMIN erreichbar ist, und das ist genau die
+   * Verwaltung derselben Ressource. Die drei Verwaltungspfade stehen
+   * deshalb dort und dieser hier.
+   */
+  support: {
+    submit: "/api/support",
   },
   /*
    * Schlagwoerter (§6.1, §3.19, KAN-75). Bewusst neben masterData und

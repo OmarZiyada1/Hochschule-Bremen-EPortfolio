@@ -3,7 +3,7 @@ package de.hsbremen.eportfolio.common.error;
 /**
  * Fehlercodes fuer das Envelope aus API-Contract §6.2.
  *
- * <p>Stand Contract v86 steht jede Konstante dieser Klasse auch in §6.2.
+ * <p>Stand Contract v87 steht jede Konstante dieser Klasse auch in §6.2.
  * {@link #VALIDATION_FAILED} war bis v14 nur hier gefuehrt und wurde mit v15
  * nachgetragen (Tabelle „Fehlercodes Anfrageformat", Historieneintrag in §10).
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
@@ -37,6 +37,12 @@ package de.hsbremen.eportfolio.common.error;
  * {@link #NOMINATION_ALREADY_DECIDED}. §3.11.1 verlangte fuer beide Faelle einen
  * 409, ohne einen Code zu nennen, und keiner der bis dahin gefuehrten 409er
  * beschreibt sie.
+ *
+ * <p>Ebenso neu entstanden sind {@link #TOO_MANY_SUPPORT_REQUESTS} und
+ * {@link #SUPPORT_STATUS_TRANSITION_INVALID} mit KAN-85 (Contract v87). Das
+ * oeffentliche Kontaktformular bringt einen eigenen Zaehler und einen eigenen
+ * Zustandsautomaten mit (§6.5, §2.15); keiner der bis dahin gefuehrten Codes
+ * beschreibt sie, siehe die Javadoc der beiden Konstanten.
  *
  * <p>Ebenso neu entstanden ist {@link #INTERNAL_ERROR} mit KAN-55 (Contract
  * v31): bis dahin fuehrte §6.2 ueberhaupt keinen Code fuer den unerwarteten
@@ -116,16 +122,49 @@ public final class ErrorCodes {
 	 */
 	public static final String TOO_MANY_LOGIN_ATTEMPTS = "TOO_MANY_LOGIN_ATTEMPTS";
 
+	/**
+	 * 429: zu viele Einsendungen an {@code POST /api/support} in kurzer Zeit,
+	 * gezaehlt nach Client-IP und angegebener E-Mail-Adresse (§6.5, §6.1).
+	 *
+	 * <p><strong>Eigener Code neben {@link #TOO_MANY_LOGIN_ATTEMPTS}</strong>,
+	 * obwohl beide 429 sind und dieselbe Mechanik benutzen. Die Zaehler laufen
+	 * getrennt (§6.5), und die Meldungen verlangen Verschiedenes: die eine sagt,
+	 * dass eine Anmeldung gesperrt ist, die andere, dass eine Anfrage spaeter
+	 * erneut zu senden ist. Mit einem gemeinsamen Code muesste das Formular aus
+	 * dem Meldungstext raten, welcher der beiden Faelle vorliegt, und genau das
+	 * verbietet §6.2.
+	 *
+	 * <p>Vergeben mit KAN-85, nachgetragen in §6.2 mit Contract v87.
+	 */
+	public static final String TOO_MANY_SUPPORT_REQUESTS = "TOO_MANY_SUPPORT_REQUESTS";
+
+	/**
+	 * 409: der Wechsel des Bearbeitungsstands einer Support-Anfrage steht nicht
+	 * in §2.15. Dazu zaehlt auch das erneute Setzen des bereits stehenden Werts:
+	 * die Oberflaeche bietet ihn nie an, und ein stilles 200 auf einen Aufruf,
+	 * der nichts bewirkt, verdeckte einen Fehler im aufrufenden Client.
+	 *
+	 * <p><strong>Eigener Code neben
+	 * {@link #PROJECT_STATUS_TRANSITION_INVALID}</strong>, weil die beiden
+	 * Zustandsautomaten nichts miteinander zu tun haben. Ein Client, der auf den
+	 * Projektcode reagiert, zeigte hier sonst eine Meldung ueber einen Beitrag,
+	 * wo es um eine Anfrage geht.
+	 *
+	 * <p>Vergeben mit KAN-85, nachgetragen in §6.2 mit Contract v87.
+	 */
+	public static final String SUPPORT_STATUS_TRANSITION_INVALID =
+			"SUPPORT_STATUS_TRANSITION_INVALID";
+
 	/** 403: angemeldet, aber die Rechtematrix (§5) erlaubt die Aktion nicht. */
 	public static final String NO_PERMISSION = "NO_PERMISSION";
 
 	/**
 	 * 403: das Konto traegt ein administrativ gesetztes Initialpasswort und muss
 	 * es zuerst aendern (§6.7). Der {@code JwtAuthenticationFilter} beantwortet
-	 * damit jeden Request mit gesetztem Flag, ausser den fuenf Ausnahmen aus
+	 * damit jeden Request mit gesetztem Flag, ausser den sechs Ausnahmen aus
 	 * §6.7 ({@code PUT /auth/password}, {@code GET /auth/me},
 	 * {@code POST /auth/logout}, {@code POST /auth/forgot-password},
-	 * {@code POST /auth/reset-password}).
+	 * {@code POST /auth/reset-password} und seit v87 {@code POST /support}).
 	 *
 	 * <p><strong>Nicht zu verwechseln mit</strong> {@link #NO_PERMISSION}: beide
 	 * sind 403, aber dieser Zustand ist von der Person selbst aufloesbar. Nur

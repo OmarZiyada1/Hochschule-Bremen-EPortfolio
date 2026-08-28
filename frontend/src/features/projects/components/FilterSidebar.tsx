@@ -335,15 +335,36 @@ function FilterGroup({
   return (
     <AccordionItem value={group} className="last:border-b-0">
       <AccordionTrigger className="type-label-xs gap-2 tracking-wide uppercase hover:no-underline">
-        {t(`project.list.filter.group.${group}`)}
+        {/* Die Beschriftung nimmt den freien Platz, damit der Zaehler
+            unmittelbar vor dem Pfeil steht.
+
+            Vorher trug der Zaehler selbst ein ml-auto. Der Pfeil der
+            Primitive traegt aber ebenfalls eines
+            (**:data-[slot=accordion-trigger-icon]:ml-auto in accordion.tsx),
+            und zwei automatische Aussenabstaende teilen sich den freien
+            Platz zu gleichen Teilen: der Zaehler landete auf halber Strecke
+            zwischen Text und Pfeil. Den freien Platz stattdessen der
+            Beschriftung zu geben loest das, ohne die erzeugte Datei
+            anzufassen (Frontend-Regel 11): fuer den Pfeil bleibt nichts
+            mehr zu verteilen, sein ml-auto wird damit zu null. */}
+        <span className="flex-1 text-left">
+          {t(`project.list.filter.group.${group}`)}
+        </span>
         {count > 0 && (
           <span
             /* Ein Kreis und keine Ellipse (Vorgabe zu KAN-80): die Zahl steht
-               mittig in einer quadratischen Flaeche (h-5 zu min-w-5), statt
-               aus einer Polsterung links und rechts eine liegende Form zu
-               machen. Ab zwei Ziffern wird daraus eine Pille, und das ist
-               richtig so: eine Zwoelf in einem Kreis von 20px waere nicht
+               mittig in einer quadratischen Flaeche (h-4.5 zu min-w-4.5),
+               statt aus einer Polsterung links und rechts eine liegende Form
+               zu machen. Ab zwei Ziffern wird daraus eine Pille, und das ist
+               richtig so: eine Zwoelf in einem Kreis von 18px waere nicht
                mehr lesbar.
+
+               shrink-0 haelt ihn rund. Ohne das ist der Zaehler ein
+               schrumpfbares Flex-Kind: bei einer langen Gruppenbeschriftung
+               und schmaler Seitenleiste ging seine Breite unter das
+               Mindestmass, waehrend h-4.5 die Hoehe hielt, und aus dem Kreis
+               wurde ein stehendes Oval. Genau das war auf schmalen
+               Bildschirmen zu sehen.
 
                primary statt surface-brand (KAN-83): im dunklen Modus faellt
                surface-brand mit der Kartenflaeche zusammen, auf der die
@@ -353,7 +374,7 @@ function FilterGroup({
                Fortschrittsbalken der Registrierung (Review zu KAN-33).
                primary ist die einzige Markenrolle, die in beiden Modi zur
                Kartenflaeche Abstand haelt. */
-            className="type-label-xs ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-pill bg-primary px-1 font-bold text-primary-foreground normal-case"
+            className="type-label-xs inline-flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded-pill bg-primary px-1 leading-none font-bold text-primary-foreground normal-case"
           >
             <span className="sr-only">
               {t("project.list.filter.groupCount", { count })}

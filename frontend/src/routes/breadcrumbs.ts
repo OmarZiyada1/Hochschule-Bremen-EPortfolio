@@ -115,6 +115,14 @@ const ROUTE_TREE: readonly RouteNode[] = [
 
   { path: "/reviews", labelKey: "common.nav.reviews", parent: "/" },
 
+  /*
+   * Das oeffentliche Kontaktformular (KAN-85). Es haengt unter der
+   * Startseite und nicht unter einem Bereich: es ist von ueberall
+   * erreichbar, aus der Fusszeile wie aus dem Nutzermenue, und gehoert
+   * keiner Rolle.
+   */
+  { path: "/support", labelKey: "common.nav.support", parent: "/" },
+
   {
     path: "/administration/projects",
     labelKey: "administration.nav.projects",
@@ -138,6 +146,12 @@ const ROUTE_TREE: readonly RouteNode[] = [
   {
     path: "/administration/study-structure",
     labelKey: "administration.nav.studyStructure",
+    parent: "/administration",
+  },
+
+  {
+    path: "/administration/support",
+    labelKey: "administration.nav.support",
     parent: "/administration",
   },
   {

@@ -2,6 +2,7 @@ import {
   ChartColumnIcon,
   ChevronDownIcon,
   CircleUserIcon,
+  LifeBuoyIcon,
   LogOutIcon,
   MenuIcon,
   PlusIcon,
@@ -68,6 +69,7 @@ const menuIcons: Record<string, LucideIcon> = {
   myPortfolio: CircleUserIcon,
   newProject: PlusIcon,
   administration: ShieldCheckIcon,
+  support: LifeBuoyIcon,
 }
 
 /*

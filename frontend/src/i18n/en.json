@@ -63,7 +63,8 @@
       "login": "Log in",
       "logout": "Log out",
       "profile": "Profile",
-      "openMenu": "Open menu"
+      "openMenu": "Open menu",
+      "support": "Contact & support"
     },
     "footer": {
       "imprint": "Legal notice",
@@ -76,7 +77,8 @@
       "group": {
         "platform": "Platform",
         "legal": "Legal"
-      }
+      },
+      "support": "Contact & support"
     },
     "language": {
       "switchTo": {
@@ -311,6 +313,30 @@
       "positionOutOfRange": "The place must be between 1 and 10.",
       "dateInvalid": "Please enter a valid date.",
       "rangeReversed": "The end must not be before the start."
+    },
+    "support": {
+      "name": {
+        "required": "Please enter your name.",
+        "tooShort": "The name must be at least 2 characters long.",
+        "tooLong": "The name must not exceed 120 characters."
+      },
+      "email": {
+        "required": "Please enter an email address.",
+        "tooLong": "The email address must not exceed 255 characters."
+      },
+      "category": {
+        "required": "Please choose a category."
+      },
+      "subject": {
+        "required": "Please enter a subject.",
+        "tooShort": "The subject must be at least 3 characters long.",
+        "tooLong": "The subject must not exceed 160 characters."
+      },
+      "message": {
+        "required": "Please describe your request.",
+        "tooShort": "The description must be at least 10 characters long.",
+        "tooLong": "The description must not exceed 2000 characters."
+      }
     }
   },
   "placeholder": {
@@ -1237,7 +1263,9 @@
     "RESOURCE_IN_USE": "The entry is still in use and cannot be applied like this.",
     "PROJECT_NOT_PUBLISHED": "This action requires a published project.",
     "NOMINATION_ALREADY_DECIDED": "This nomination has already been decided.",
-    "INTERNAL_ERROR": "Something went wrong. Please try again later."
+    "INTERNAL_ERROR": "Something went wrong. Please try again later.",
+    "TOO_MANY_SUPPORT_REQUESTS": "Too many requests have come in within a short time. Please try again later.",
+    "SUPPORT_STATUS_TRANSITION_INVALID": "This processing status cannot be set from here. Please reload the list."
   },
   "versionConflict": {
     "title": "The project has changed in the meantime",
@@ -1465,7 +1493,8 @@
       "users": "Users",
       "categories": "Categories",
       "semesters": "Semesters",
-      "studyStructure": "Study structure"
+      "studyStructure": "Study structure",
+      "support": "Support"
     },
     "dashboard": {
       "title": "Dashboard",
@@ -1946,6 +1975,66 @@
         "description": "“{{title}}” loses place {{position}} and no longer appears on the public home page. The place stays free, the other entries do not move up. The project stays published and can be added again through the search.",
         "confirm": "Remove from place"
       }
+    },
+    "support": {
+      "title": "Support requests",
+      "subtitle": "Incoming requests from the contact form.",
+      "openCount_one": "{{count}} open",
+      "openCount_other": "{{count}} open",
+      "filterLabel": "Filter by processing status",
+      "emptyTitle": "No support requests yet.",
+      "emptyDescription": "As soon as someone fills in the contact form, the request appears here.",
+      "emptyFiltered": "There is no request with this processing status.",
+      "action": {
+        "IN_PROGRESS": "In progress",
+        "RESOLVED": "Mark as resolved",
+        "OPEN": "Reopen"
+      },
+      "reply": "Reply to {{name}} by email",
+      "replySubject": "Your support request: {{subject}}",
+      "delete": "Delete request “{{subject}}”",
+      "confirmDelete": {
+        "title": "Delete request?",
+        "description": "The request “{{subject}}” from {{name}} will be removed permanently. There is no archive state and no way back.",
+        "confirm": "Delete permanently"
+      },
+      "announce": {
+        "status": "Request “{{subject}}” is now {{status}}.",
+        "deleted": "Request “{{subject}}” was deleted."
+      }
+    }
+  },
+  "support": {
+    "label": "Help",
+    "title": "Contact & support",
+    "subtitle": "Describe your problem. Your request goes straight to the e-portfolio administration team.",
+    "form": {
+      "name": "Name",
+      "email": "Email address",
+      "category": "Category",
+      "subject": "Subject",
+      "message": "Description",
+      "messagePlaceholder": "What happened? Which page is affected?",
+      "website": "Please leave this field empty",
+      "submit": "Send request",
+      "submitting": "Sending …"
+    },
+    "sent": {
+      "title": "Request sent",
+      "description": "The administration team has received your request and will get back to you by email.",
+      "again": "Send another request"
+    },
+    "category": {
+      "TECHNICAL_ISSUE": "Technical problem",
+      "ACCOUNT_ACCESS": "Account & sign-in",
+      "PROJECT_SUBMISSION": "Project & submission",
+      "ABUSE_REPORT": "Report content",
+      "OTHER": "Other"
+    },
+    "status": {
+      "OPEN": "Open",
+      "IN_PROGRESS": "In progress",
+      "RESOLVED": "Resolved"
     }
   }
 }

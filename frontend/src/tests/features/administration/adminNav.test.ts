@@ -8,10 +8,12 @@ import { ADMIN_NAV, isAdminNavActive } from "@/features/administration/adminNav"
  * ist.
  */
 describe("adminNav", () => {
-  it("fuehrt die sieben Eintraege der Figma-Komponente in ihrer Reihenfolge", () => {
+  it("fuehrt die acht Eintraege der Figma-Komponente in ihrer Reihenfolge", () => {
     /* Sieben, nicht sechs: „Semester" ist am 17.08.2026 zwischen Kategorien
        und Studienstruktur dazugekommen. Auch die Position von „Top 10"
-       stammt aus dem Frame und nicht aus der aelteren Ticketfassung. */
+       stammt aus dem Frame und nicht aus der aelteren Ticketfassung.
+       Der achte ist „Support" (KAN-85), am Ende und hinter
+       „Studienstruktur" wie im Frame Admin · Support. */
     expect(ADMIN_NAV.map((entry) => entry.to)).toEqual([
       "/administration",
       "/administration/projects",
@@ -20,6 +22,7 @@ describe("adminNav", () => {
       "/administration/categories",
       "/administration/semesters",
       "/administration/study-structure",
+      "/administration/support",
     ])
   })
 
@@ -41,7 +44,7 @@ describe("adminNav", () => {
     )!
 
     expect(isAdminNavActive(top10, "/administration/top10")).toBe(true)
-    /* Das Aenderungsprotokoll bekommt keinen achten Eintrag, es gehoert zur
+    /* Das Aenderungsprotokoll bekommt keinen eigenen Eintrag, es gehoert zur
        Top-10-Verwaltung (KAN-40). */
     expect(isAdminNavActive(top10, "/administration/top10/audit")).toBe(true)
     expect(isAdminNavActive(top10, "/administration/users")).toBe(false)
