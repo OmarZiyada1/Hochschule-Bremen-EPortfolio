@@ -47,4 +47,17 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
 	@Query("select new de.hsbremen.eportfolio.user.UserStatusCount(u.status, count(u)) "
 			+ "from User u group by u.status")
 	List<UserStatusCount> countPerStatus();
+
+	/**
+	 * Nur der Name eines Kontos, fuer die Anzeige der Bearbeitungssperre
+	 * (§6.9, KAN-86).
+	 *
+	 * <p>Eine Projektion statt {@code findById}: der Herzschlag laeuft je
+	 * offenem Editor alle zehn Sekunden, und er braucht zwei Felder. Das
+	 * ganze Konto zu laden zoege dabei Passwort-Hash und beide Adressen mit,
+	 * die in dieser Antwort ohnehin nichts zu suchen haben (§3.1).
+	 */
+	@Query("select new de.hsbremen.eportfolio.user.UserName(u.firstName, u.lastName) "
+			+ "from User u where u.id = :id")
+	Optional<UserName> findNameById(UUID id);
 }

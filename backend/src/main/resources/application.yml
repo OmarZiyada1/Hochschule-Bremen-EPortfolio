@@ -127,6 +127,17 @@ app:
     four-eyes-principle: true
     admin-may-edit-foreign-content: false
 
+  edit-lock:
+    # Frist der Bearbeitungssperre aus API-Contract §6.9. Bleibt der Herzschlag
+    # des Editors so lange aus, faellt der Beitrag von selbst frei; ohne das
+    # bliebe er nach jedem geschlossenen Tab dauerhaft gesperrt, denn eine
+    # fremde Sperre laesst sich nicht brechen.
+    #
+    # Der Takt des Clients liegt bei zehn Sekunden und damit deutlich darunter,
+    # sodass ein einzelner verlorener Herzschlag die Sperre noch nicht abgibt.
+    # Die Sperre liegt nur im Arbeitsspeicher (siehe EditLockRegistry).
+    ttl: PT30S
+
   # Austauschbare Fremddienste nach API-Contract §6.8. Hier steht nur, was
   # kein Geheimnis ist; Zugangsdaten kommen ausschliesslich aus der Umgebung
   # und ausschliesslich in application-prod.yml zusammen.

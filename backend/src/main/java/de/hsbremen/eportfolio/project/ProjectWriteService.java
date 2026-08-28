@@ -7,6 +7,7 @@ import de.hsbremen.eportfolio.common.error.ConflictException;
 import de.hsbremen.eportfolio.common.error.ErrorCodes;
 import de.hsbremen.eportfolio.common.error.ResourceNotFoundException;
 import de.hsbremen.eportfolio.common.error.ValidationException;
+import de.hsbremen.eportfolio.editlock.EditLockGuard;
 import de.hsbremen.eportfolio.masterdata.CategoryRepository;
 import de.hsbremen.eportfolio.masterdata.FacultyRepository;
 import de.hsbremen.eportfolio.masterdata.ModuleRepository;
@@ -66,9 +67,19 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p><strong>Reihenfolge der Pruefungen</strong> in jeder Methode, nach §6.3.1
  * und dem Ablaufmuster aus dem Skill {@code backend-modul}: laden (fehlt → 404)
- * → Berechtigung (nein → 403) → Statusregel (nein → 409) → Versionsstand (nein →
- * 409) → fachliche Validierung (nein → 400) → schreiben. Die Existenz einer
- * Ressource wird dabei nicht hinter einem 404 verborgen (§6.3.1).
+ * → Berechtigung (nein → 403) → Statusregel (nein → 409) → Versionsstand
+ * (nein → 409) → fachliche Validierung (nein → 400) → schreiben. Die Existenz
+ * einer Ressource wird dabei nicht hinter einem 404 verborgen (§6.3.1).
+ *
+ * <p><strong>Die Bearbeitungssperre (§6.9, seit Contract v85) steht zwischen
+ * Statusregel und Versionsstand, aber nur in {@link #update}.</strong> Dort
+ * wird der Beitrag selbst geaendert, und genau darum geht es ihr.
+ * {@link #create} kann sie nicht betreffen, {@code reassignEditors} ist der
+ * Weg der Administration und laeuft nach §6.1 bewusst an ihr vorbei, und das
+ * Loeschen ebenso: ein Projekt, das verschwindet, braucht keine Reihenfolge
+ * unter seinen Bearbeitenden. Sperre und Versionsstand antworten beide mit
+ * 409, und die Sperre ist der speziellere Grund; ausfuehrlich im
+ * {@link BlockService}.
  */
 @Service
 @Transactional
@@ -103,6 +114,22 @@ public class ProjectWriteService {
 	 */
 	private final Top10Service top10Service;
 
+	/**
+	 * Setzt die Bearbeitungssperre aus §6.9 am Metadatenpfad durch, genauso wie
+	 * im {@code BlockService} am Inhaltspfad. Beide Wege schreiben am Beitrag
+	 * selbst, also muessen beide fragen: waere die Sperre nur am Inhalt
+	 * geprueft, liessen sich Titel, Kurzbeschreibung oder Mitgliederliste
+	 * aendern, waehrend jemand anders im Editor sitzt.
+	 *
+	 * <p><strong>Das eigene Austragen bleibt davon frei.</strong>
+	 * {@code DELETE /projects/{id}/members/me} aendert zwar dieselbe Liste,
+	 * laeuft aber ausdruecklich ohne diese Pruefung: wer nicht laenger als
+	 * Mitwirkende:r genannt werden will, soll nicht warten muessen, bis jemand
+	 * anders den Editor schliesst. §3.13.1 hebt fuer diesen Weg schon die
+	 * Statusschranke auf, und die Sperre folgt derselben Ueberlegung.
+	 */
+	private final EditLockGuard editLockGuard;
+
 	public ProjectWriteService(ProjectRepository projectRepository,
 			ProjectStatusHistoryRepository statusHistoryRepository,
 			UserRepository userRepository,
@@ -114,7 +141,8 @@ public class ProjectWriteService {
 			TagRepository tagRepository,
 			ProjectPermissionService permissions,
 			ProjectReadService readService,
-			Top10Service top10Service) {
+			Top10Service top10Service,
+			EditLockGuard editLockGuard) {
 		this.projectRepository = projectRepository;
 		this.statusHistoryRepository = statusHistoryRepository;
 		this.userRepository = userRepository;
@@ -127,6 +155,7 @@ public class ProjectWriteService {
 		this.permissions = permissions;
 		this.readService = readService;
 		this.top10Service = top10Service;
+		this.editLockGuard = editLockGuard;
 	}
 
 	// ------------------------------------------------------------------
@@ -201,8 +230,10 @@ public class ProjectWriteService {
 	 * @throws ResourceNotFoundException wenn es die ID nicht gibt (404)
 	 * @throws AccessDeniedException     wenn die Person nicht zur Projektseite
 	 *                                   gehoert (403)
-	 * @throws ConflictException         wenn der Status die Bearbeitung sperrt
-	 *                                   oder {@code version} veraltet ist (409)
+	 * @throws ConflictException         wenn der Status die Bearbeitung sperrt,
+	 *                                   jemand anders die Bearbeitungssperre
+	 *                                   haelt (§6.9) oder {@code version}
+	 *                                   veraltet ist (409)
 	 * @throws ValidationException       bei unbekannten IDs im Body (400)
 	 */
 	public ProjectDetailResponse update(AuthenticatedUser user, UUID projectId,
@@ -210,6 +241,7 @@ public class ProjectWriteService {
 
 		Project project = load(projectId);
 		requireEditable(user, project);
+		editLockGuard.requireNotLockedByOther(projectId, user.getId());
 		requireCurrentVersion(project, request.version());
 
 		// Vor jeder Mutation, siehe resolveTags.
@@ -742,11 +774,18 @@ public class ProjectWriteService {
 	 * Gleicht die Redaktionszuweisung ab, soweit sie ueber
 	 * {@code POST /projects} und {@code PUT /projects/{id}} mitkommt.
 	 *
-	 * <p>Anders als bei der Mitgliederliste reicht die Zugehoerigkeit zum
-	 * Projekt hier nicht: nach §3.13.1 duerfen Mitglieder {@code editorIds}
-	 * nicht aendern, das bleibt der Autor:in in {@code DRAFT} und
-	 * {@code REVISION} vorbehalten. Wer die Redaktion bestimmt, entscheidet
-	 * darueber, wer das Ergebnis beurteilt.
+	 * <p>Zustaendig ist wie bei der Mitgliederliste die Projektseite in
+	 * {@code DRAFT} und {@code REVISION} (§3.13.1, seit Contract v85). Bis v84
+	 * war {@code editorIds} allein der Autor:in vorbehalten; zusammen mit dem
+	 * geoeffneten Einreichen ergab das eine Sackgasse, siehe
+	 * {@link ProjectPermissionService#mayAssignEditors}.
+	 *
+	 * <p><strong>Die Pruefung faellt damit heute mit {@link #requireEditable}
+	 * und {@code mayEditMetadata} zusammen</strong> und wirft fuer eine Person
+	 * ohne Rolle ADMIN praktisch nicht mehr. Sie bleibt trotzdem stehen: §3.13.1
+	 * ist eine eigene Contract-Zeile, und faellt sie spaeter wieder enger aus
+	 * als die Metadatenzeile, ist genau diese eine Stelle zu aendern. Dieselbe
+	 * Ueberlegung wie bei {@code mayEditBlocks} neben {@code mayEditMetadata}.
 	 *
 	 * <p>Wie bei den Mitgliedern greift die Pruefung nur bei einer echten
 	 * Aenderung, damit ein durchgereichtes {@code GET}-Ergebnis kein 403 ergibt.
@@ -759,14 +798,14 @@ public class ProjectWriteService {
 			return;
 		}
 		if (!permissions.mayAssignEditors(user, project)) {
-			// Genannt wird der Grund, der hier tatsaechlich greift: die Rolle,
-			// nicht der Status. Wer zur Projektseite gehoert und in einem
-			// gesperrten Status schreibt, ist schon an requireEditable mit 409
-			// gescheitert und kommt gar nicht bis hierher.
+			// Genannt wird der Grund, der hier tatsaechlich greift: die
+			// Zugehoerigkeit, nicht der Status. Wer zur Projektseite gehoert und
+			// in einem gesperrten Status schreibt, ist schon an requireEditable
+			// mit 409 gescheitert und kommt gar nicht bis hierher.
 			throw new AccessDeniedException(
-					"Die Redaktionszuweisung aendert nur die Autor:in, nicht die "
-							+ "Projektmitglieder (§3.13.1). Ab der Einreichung fuehrt der Weg "
-							+ "ueber PUT /api/projects/{id}/editors.");
+					"Die Redaktionszuweisung aendert nur die Projektseite, also Autor:in "
+							+ "und Projektmitglieder (§3.13.1). Ab der Einreichung fuehrt der "
+							+ "Weg ueber PUT /api/projects/{id}/editors.");
 		}
 		requireNotSelfAssigned(user, requested);
 		replaceEditors(project, requested);
@@ -861,7 +900,7 @@ public class ProjectWriteService {
 	 * einmal, fuer alle drei Schreibwege der Zuweisung.
 	 *
 	 * <p><strong>Warum nur neu Entstandenes.</strong> Ab {@code SUBMITTED} ist
-	 * die Redaktionszuweisung fuer die Autor:in gesperrt (§5, Fussnote ³). Eine
+	 * die Redaktionszuweisung fuer die Projektseite gesperrt (§5, Fussnote ³). Eine
 	 * harte Pruefung wuerde ein Projekt mit bestehender Ueberschneidung
 	 * unspeicherbar machen, ohne dass es ausser dem Admin jemand aufloesen
 	 * koennte: dieselbe Sackgasse, die {@code mayAssignEditors} an anderer Stelle

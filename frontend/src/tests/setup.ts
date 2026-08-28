@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll } from "vitest"
 
 import { resetAuthStoreForTests } from "@/api/auth/authStore"
 import { setAuthNavigate } from "@/api/auth/redirect"
+import { resetEditLockReleasesForTests } from "@/features/project-content/hooks/useEditLock"
 import { server } from "@/tests/msw/server"
 
 /*
@@ -121,6 +122,10 @@ afterEach(() => {
   // Anmeldezustand oder einen navigate-Spy des vorigen Tests erbt.
   resetAuthStoreForTests()
   setAuthNavigate(() => {})
+  // Die Freigabe der Bearbeitungssperre (§6.9) laeuft verzoegert ueber einen
+  // modulweiten Zeitgeber. Ohne dieses Aufraeumen feuert sie in den naechsten
+  // Test hinein, wo kein Handler sie erwartet.
+  resetEditLockReleasesForTests()
   document.documentElement.className = ""
   window.localStorage.clear()
   // Registrierungs-Schrittzustand und gemerkte Rueckkehr-Route (KAN-33)

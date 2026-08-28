@@ -168,6 +168,48 @@ export function projectCommentsHandler(comments: CommentResponse[] = []) {
 }
 
 /**
+ * POST und DELETE /api/projects/{id}/edit-lock (§6.9, seit Contract v85).
+ *
+ * <p>Gebraucht ueberall dort, wo eine Schreibansicht eines Projekts
+ * rendert, also im Editor und auf der Metadatenseite: das
+ * {@code EditLockGate} beansprucht die Sperre, bevor es seine Kinder
+ * entstehen laesst. Ohne den Handler bliebe der Ladeumriss stehen.
+ *
+ * <p>Ohne Argument haelt die anfragende Person selbst, der Regelfall. Mit
+ * einem {@code holder} haelt jemand anders, und das Gatter zeigt den
+ * Hinweis statt der Seite.
+ */
+export function editLockHandler(
+  holder: {
+    userId: string
+    firstName: string
+    lastName: string
+  } | null = null
+) {
+  return [
+    http.post("*/api/projects/:projectId/edit-lock", () =>
+      HttpResponse.json({
+        holder: {
+          ...(holder ?? {
+            userId: "00000000-0000-0000-0000-000000000001",
+            firstName: "Mira",
+            lastName: "Beispiel",
+          }),
+          /* Der Beginn, nicht der letzte Herzschlag (§6.9). Fest, damit
+             zwei Antworten sich nicht allein darin unterscheiden. */
+          since: "2026-08-27T10:00:00Z",
+        },
+        heldBySelf: holder === null,
+      })
+    ),
+    http.delete(
+      "*/api/projects/:projectId/edit-lock",
+      () => new HttpResponse(null, { status: 204 })
+    ),
+  ]
+}
+
+/**
  * GET /api/files/{id}: die Bytes einer Datei (§3.15.1).
  *
  * <p>Gebraucht ueberall dort, wo ein Bild eines <strong>nicht

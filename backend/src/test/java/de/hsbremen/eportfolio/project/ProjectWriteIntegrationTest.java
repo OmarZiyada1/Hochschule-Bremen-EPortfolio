@@ -644,12 +644,29 @@ class ProjectWriteIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Ein Mitglied darf editorIds nicht aendern: 403 (§3.13.1)")
-		void memberMayNotChangeEditors() throws Exception {
+		@DisplayName("Ein Mitglied aendert editorIds: 200 (§3.13.1 seit Contract v85, KAN-86)")
+		void memberChangesEditors() throws Exception {
+			// Ohne dieses Recht liefe das mit v85 geoeffnete Einreichen durch
+			// ein Mitglied ins Leere: editorIds ist seit v59 Pflichtfeld des
+			// Einreichens, das Mitglied bekaeme 400 PROJECT_INCOMPLETE und
+			// koennte die Redaktion nicht selbst nachtragen.
+			JsonNode updated = updated(member, draft, json(
+					"version", draft.getVersion(),
+					"title", draft.getTitle(),
+					"editorIds", List.of(otherEditor.getId().toString())));
+
+			assertThat(updated.get("editors")).hasSize(1);
+			assertThat(updated.get("editors").get(0).get("id").asText())
+					.isEqualTo(otherEditor.getId().toString());
+		}
+
+		@Test
+		@DisplayName("Ein fremdes Studierendenkonto aendert editorIds nicht: 403")
+		void strangerMayNotChangeEditors() throws Exception {
 			mockMvc.perform(asUser(putRequest(draft, json(
 							"version", draft.getVersion(),
 							"title", draft.getTitle(),
-							"editorIds", List.of(otherEditor.getId().toString()))), member))
+							"editorIds", List.of(otherEditor.getId().toString()))), otherStudent))
 					.andExpect(status().isForbidden())
 					.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
 		}

@@ -219,7 +219,7 @@ export interface paths {
     put?: never
     /**
      * Projekt zurueckziehen
-     * @description SUBMITTED nach DRAFT, ausgeloest von der Autor:in (§4.1, seit v50). Ohne die Pruefungen des Einreichens: Vollstaendigkeit und offene Aenderungswuensche betreffen nur den Weg zur Redaktion. Danach ist das Projekt wieder bearbeitbar und als Entwurf auch loeschbar (§6.1).
+     * @description SUBMITTED nach DRAFT, ausgeloest von der Projektseite, also der Autor:in oder einem Projektmitglied (§4.1, seit v50; Projektseite seit Contract v85). Ohne die Pruefungen des Einreichens: Vollstaendigkeit und offene Aenderungswuensche betreffen nur den Weg zur Redaktion. Danach ist das Projekt wieder bearbeitbar und als Entwurf auch loeschbar (§6.1).
      */
     post: operations["withdraw_1"]
     delete?: never
@@ -259,7 +259,7 @@ export interface paths {
     put?: never
     /**
      * Projekt einreichen
-     * @description DRAFT oder REVISION nach SUBMITTED, ausgeloest von der Autor:in (§4.1). Geprueft werden dabei die Pflichtfelder aus §3.3: projectType, facultyId, studyProgramId, degree, categoryId, semesterId und editorIds. Ohne zugewiesene Redaktion laesst sich seit Contract v59 nicht einreichen, weil das Projekt sonst bei niemandem zur Begutachtung auftaucht. Ab SUBMITTED sind Inhalt und Metadaten gesperrt.
+     * @description DRAFT oder REVISION nach SUBMITTED, ausgeloest von der Projektseite, also der Autor:in oder einem Projektmitglied (§4.1, seit Contract v85). Geprueft werden dabei die Pflichtfelder aus §3.3: projectType, facultyId, studyProgramId, degree, categoryId, semesterId und editorIds. Ohne zugewiesene Redaktion laesst sich seit Contract v59 nicht einreichen, weil das Projekt sonst bei niemandem zur Begutachtung auftaucht. Ab SUBMITTED sind Inhalt und Metadaten gesperrt.
      */
     post: operations["submit"]
     delete?: never
@@ -327,6 +327,30 @@ export interface paths {
      */
     post: operations["publish"]
     delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/projects/{projectId}/edit-lock": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Sperre beanspruchen und Herzschlag setzen
+     * @description Tut beides in einem Aufruf und lehnt nie ab. Ist der Beitrag frei oder die bestehende Sperre abgelaufen, uebernimmt die aufrufende Person; haelt sie bereits, erneuert sie allein die Frist und behaelt ihren Beginn; haelt jemand anders, kommt dessen Name mit heldBySelf=false zurueck und der Editor bleibt zu. Der Aufruf aendert das Projekt nicht und erhoeht seine version nicht.
+     */
+    post: operations["acquire"]
+    /**
+     * Eigene Sperre freigeben
+     * @description Gibt allein die Sperre der aufrufenden Person frei und bricht keine fremde, auch nicht als Administration (§6.9). Idempotent: ein zweiter Aufruf und ein Aufruf ohne gehaltene Sperre antworten ebenfalls mit 204. Der Aufruf ist eine Beschleunigung und kein Verlass; bleibt er aus, faellt die Sperre nach ihrer Frist von selbst frei.
+     */
+    delete: operations["release"]
     options?: never
     head?: never
     patch?: never
@@ -1450,7 +1474,7 @@ export interface components {
       moduleId?: string | null
       /** @description Freie Schlagwoerter, hoechstens fuenf. Null laesst die vorhandenen unveraendert, [] loescht sie. */
       tags?: string[] | null
-      /** @description IDs der zustaendigen Redakteur:innen. Null laesst die Zuweisung unveraendert, [] hebt sie auf. Eine Aenderung ist nur der Autor:in und nur in DRAFT oder REVISION erlaubt, sonst 403 (§5, Fussnote 3); ihre eigene Systemrolle spielt dabei keine Rolle. Wer zur Projektseite gehoert, laesst sich nicht neu eintragen, also weder die anfragende Person selbst noch die Autor:in noch jemand aus members: 400 VALIDATION_FAILED. */
+      /** @description IDs der zustaendigen Redakteur:innen. Null laesst die Zuweisung unveraendert, [] hebt sie auf. Eine Aenderung ist der Projektseite, also der Autor:in und den Projektmitgliedern, und nur in DRAFT oder REVISION erlaubt, sonst 403 (§5, Fussnote 3, §3.13.1); die eigene Systemrolle spielt dabei keine Rolle. Wer zur Projektseite gehoert, laesst sich nicht neu eintragen, also weder die anfragende Person selbst noch die Autor:in noch jemand aus members: 400 VALIDATION_FAILED. */
       editorIds?: string[] | null
       /** @description Co-Autor:innen und Mitwirkende (§3.13). Null laesst die Liste unveraendert, [] leert sie. Die Autor:in gehoert nicht hinein, und wer dem Projekt als Redaktion zugewiesen ist, laesst sich nicht neu aufnehmen (§5, Fussnote 3). */
       members?: components["schemas"]["MemberRequest"][] | null
@@ -1800,6 +1824,22 @@ export interface components {
        * @example 42
        */
       count: number
+    }
+    EditLockHolderResponse: {
+      /** Format: uuid */
+      userId: string
+      firstName: string
+      lastName: string
+      /**
+       * Format: date-time
+       * @description Beginn der Sperre, nicht der letzte Herzschlag. Bleibt unveraendert, solange dieselbe Person haelt.
+       */
+      since: string
+    }
+    EditLockResponse: {
+      holder: components["schemas"]["EditLockHolderResponse"]
+      /** @description true, wenn die aufrufende Person die Sperre haelt und damit schreiben darf. Bei false gehoert die Sperre der in holder genannten Person, und der Editor bleibt zu. */
+      heldBySelf: boolean
     }
     CommentCreateRequest: {
       /**
@@ -2591,7 +2631,7 @@ export interface operations {
           "*/*": components["schemas"]["BlocksResponse"]
         }
       }
-      /** @description PROJECT_STATUS_NOT_EDITABLE, wenn der Status die Bearbeitung sperrt (§4.1); PROJECT_VERSION_CONFLICT, wenn die mitgeschickte version veraltet ist (§6.4). Bei einem Versionskonflikt wird nicht automatisch wiederholt, sondern neu geladen. */
+      /** @description PROJECT_STATUS_NOT_EDITABLE, wenn der Status die Bearbeitung sperrt (§4.1); PROJECT_LOCKED_BY_OTHER, wenn jemand anders den Beitrag gerade im Editor haelt (§6.9); PROJECT_VERSION_CONFLICT, wenn die mitgeschickte version veraltet ist (§6.4). Bei einem Versionskonflikt wird nicht automatisch wiederholt, sondern neu geladen. */
       409: {
         headers: {
           [name: string]: unknown
@@ -2695,7 +2735,7 @@ export interface operations {
           "*/*": components["schemas"]["ProjectDetailResponse"]
         }
       }
-      /** @description Angemeldet, aber nicht Teil der Projektseite, oder Projektmitglied und nicht Autor:in, waehrend der Body editorIds aendert: die Redaktionszuweisung bleibt der Autor:in vorbehalten (§3.13.1). Die Statusschranke steht dagegen in der 409-Zeile. */
+      /** @description Angemeldet, aber nicht Teil der Projektseite. Die Statusschranke steht dagegen in der 409-Zeile. */
       403: {
         headers: {
           [name: string]: unknown
@@ -2713,7 +2753,7 @@ export interface operations {
           "*/*": components["schemas"]["ProjectDetailResponse"]
         }
       }
-      /** @description PROJECT_STATUS_NOT_EDITABLE, wenn der Status die Bearbeitung sperrt (§4.1); PROJECT_VERSION_CONFLICT, wenn die mitgeschickte version veraltet ist (§6.4). */
+      /** @description PROJECT_STATUS_NOT_EDITABLE, wenn der Status die Bearbeitung sperrt (§4.1); PROJECT_LOCKED_BY_OTHER, wenn jemand anders den Beitrag gerade im Editor haelt (§6.9); PROJECT_VERSION_CONFLICT, wenn die mitgeschickte version veraltet ist (§6.4). */
       409: {
         headers: {
           [name: string]: unknown
@@ -3300,7 +3340,7 @@ export interface operations {
           "*/*": components["schemas"]["ProjectDetailResponse"]
         }
       }
-      /** @description Angemeldet, aber nicht die Autor:in. Projektmitglieder duerfen mitschreiben, aber nicht zurueckziehen (§4.1). */
+      /** @description Angemeldet, aber nicht Teil der Projektseite. Wer einreichen darf, holt die Einreichung auch zurueck (§4.1, §5 Fussnote 14). */
       403: {
         headers: {
           [name: string]: unknown
@@ -3440,7 +3480,7 @@ export interface operations {
           "*/*": components["schemas"]["ProjectDetailResponse"]
         }
       }
-      /** @description Angemeldet, aber weder die Autor:in noch, seit Contract v73 und nur aus REVISION, die zugewiesene Redaktion oder die Administration (§4.1, §5). Aus DRAFT reicht allein die Autor:in ein. */
+      /** @description Angemeldet, aber weder Teil der Projektseite noch, seit Contract v73 und nur aus REVISION, die zugewiesene Redaktion oder die Administration (§4.1, §5). Aus DRAFT reicht allein die Projektseite ein. */
       403: {
         headers: {
           [name: string]: unknown
@@ -3697,6 +3737,114 @@ export interface operations {
         content: {
           "*/*": components["schemas"]["ProjectDetailResponse"]
         }
+      }
+    }
+  }
+  acquire: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description ID des Projekts. */
+        projectId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Wer nach diesem Aufruf haelt. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["EditLockResponse"]
+        }
+      }
+      /** @description Kein gueltiges Token mitgeschickt. */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["EditLockResponse"]
+        }
+      }
+      /** @description Angemeldet, aber nicht Teil der Projektseite. Die Sperre haelt nur, wer auch schreiben darf (§6.9). */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["EditLockResponse"]
+        }
+      }
+      /** @description Unter dieser ID gibt es kein Projekt. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["EditLockResponse"]
+        }
+      }
+      /** @description PROJECT_STATUS_NOT_EDITABLE: das Projekt steht in einem Status, in dem sein Inhalt nicht mehr geaendert wird (§4.1). */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["EditLockResponse"]
+        }
+      }
+    }
+  }
+  release: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description ID des Projekts. */
+        projectId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Freigegeben, oder es gab nichts freizugeben. */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Kein gueltiges Token mitgeschickt. */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Angemeldet, aber nicht Teil der Projektseite. */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unter dieser ID gibt es kein Projekt. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description PROJECT_STATUS_NOT_EDITABLE: das Projekt steht in einem Status, in dem sein Inhalt nicht mehr geaendert wird (§4.1). Die Sperre laeuft dann nach ihrer Frist ab. */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
     }
   }

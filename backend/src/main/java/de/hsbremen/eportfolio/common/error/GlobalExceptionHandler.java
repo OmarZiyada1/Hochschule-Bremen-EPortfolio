@@ -179,8 +179,9 @@ public class GlobalExceptionHandler {
 	/**
 	 * Fachlicher Konflikt mit dem Zustand der Ressource (§6.3, Zeile 409):
 	 * Bearbeitung in einem gesperrten Status, unzulaessiger Statusuebergang,
-	 * Versionskonflikt oder eine noch referenzierte Zeile. Welcher der vier
-	 * Codes aus §6.2 es ist, entscheidet die Ausnahme selbst.
+	 * Versionskonflikt, eine noch referenzierte Zeile oder eine fremde
+	 * Bearbeitungssperre. Welcher der acht Codes aus §6.2 es ist, entscheidet
+	 * die Ausnahme selbst.
 	 */
 	@ExceptionHandler(ConflictException.class)
 	public ResponseEntity<ApiError> handleConflict(ConflictException ex, HttpServletRequest request) {

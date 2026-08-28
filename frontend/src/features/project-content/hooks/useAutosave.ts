@@ -42,6 +42,22 @@ import type { ProjectDocument } from "@/features/project-content/blockTypes"
  * das Locking schuetzt. Der Takt bleibt danach stehen, bis die Seite neu
  * geladen hat; alles Weitere entscheidet die Person am Bildschirm.
  *
+ * <p><strong>Stehen bleibt er nicht dauerhaft.</strong> Der Ruecksetzer auf
+ * {@code version} nimmt die Sperre wieder zurueck, sobald ein neues Lesen
+ * durchgelaufen ist: nach „Serverstand laden" im Konfliktdialog speichert
+ * der Takt also von selbst weiter. Nach „Eigene Fassung behalten" bleibt er
+ * angehalten, und das ist gewollt: die Person hat sich ausdruecklich gegen
+ * den Serverstand entschieden, und jeder weitere Takt traefe denselben
+ * Konflikt.
+ *
+ * <p><strong>Ein Takt ohne gemeldete Aenderung schreibt nichts zurueck</strong>
+ * (KAN-86, §6.4). Bis dahin schickte der erste Takt nach jedem Lesen den
+ * unveraenderten Stand, erhoehte die Version ohne Aenderung und erzeugte in
+ * jeder anderen offenen Sitzung genau den Konflikt, den das Locking
+ * abfedern soll. Seit die Bearbeitungssperre aus §6.9 davor steht, faellt
+ * das doppelt ins Gewicht: eine Sitzung, die nur liest, haette der
+ * schreibenden die Version unter den Fuessen weggezogen.
+ *
  * <p><strong>Ein Fehlschlag ist sichtbar.</strong> Ein stiller ist
  * Datenverlust mit Ansage: wer weiterschreibt, glaubt, es sei gespeichert.
  */
@@ -87,6 +103,7 @@ export function useAutosave({
   enabled,
   version,
   blocks,
+  baseline,
   readDocument,
   readMetadata,
   onMetadataSaved,
@@ -107,6 +124,21 @@ export function useAutosave({
   version: number
   /** Blockliste aus dem letzten Lesen, fuer die stabilen IDs. */
   blocks: readonly PreviousBlock[]
+  /**
+   * Das gelesene Dokument, also der Stand, mit dem die Schreibflaeche
+   * aufgebaut wurde. Er ist der Bezugspunkt des Takts: solange nichts
+   * anderes darin steht, gibt es nichts zu schreiben.
+   *
+   * <p><strong>Warum als Dokument und nicht als Blockliste</strong>, obwohl
+   * {@link blocks} dieselbe Antwort traegt: verglichen wird der Abdruck, den
+   * {@code docToBlocks} erzeugt, und der entsteht nur aus einem Dokument.
+   * Ein aus der Liste nachgebauter Abdruck waere ein zweiter Weg zu
+   * demselben Wert und wiche beim ersten Feld ab, das die Serialisierung
+   * normalisiert.
+   *
+   * <p>{@code null}, solange nichts gelesen ist.
+   */
+  baseline: ProjectDocument | null
   /** Liefert den aktuellen Stand der Schreibflaeche. */
   readDocument: () => ProjectDocument | null
   /**
@@ -155,6 +187,16 @@ export function useAutosave({
   })
 
   /*
+   * Das gelesene Dokument, aus demselben Grund ueber einen Ref wie die
+   * Blockliste darueber: es haengt am Query-Ergebnis und darf den
+   * Ruecksetzer nicht selbst ausloesen.
+   */
+  const baselineRef = useRef(baseline)
+  useEffect(() => {
+    baselineRef.current = baseline
+  })
+
+  /*
    * Der Rueckmelder fuer die gespeicherten Kopfangaben, aus demselben
    * Grund ueber einen Ref wie {@code runRef} weiter unten: er schliesst
    * ueber den QueryClient und die Projekt-ID und ist bei jedem Rendern
@@ -179,7 +221,22 @@ export function useAutosave({
   useEffect(() => {
     versionRef.current = version
     previousRef.current = latestBlocks.current
-    savedRef.current = null
+    /*
+     * Der gelesene Stand ist der bestaetigte, und zwar sofort. Bis KAN-86
+     * stand hier {@code null}, und der erste Takt schickte deshalb den
+     * unveraenderten Inhalt zurueck: jeder Fingerabdruck ist ungleich
+     * {@code null}. Der Beitrag bekam allein vom Ansehen eine neue Version,
+     * und jede andere offene Sitzung lief in genau den 409, den §6.4
+     * abfedern soll. Gebildet wird der Abdruck ueber denselben Weg wie im
+     * Takt ({@code docToBlocks} mit derselben Vorgaengerliste), sonst
+     * unterschieden sich zwei Abdruecke desselben Inhalts.
+     */
+    savedRef.current =
+      baselineRef.current === null
+        ? null
+        : JSON.stringify(
+            docToBlocks(baselineRef.current, latestBlocks.current)
+          )
     stoppedRef.current = false
     pendingSinceRef.current = null
   }, [version])
@@ -195,6 +252,7 @@ export function useAutosave({
     const payload =
       document === null ? null : docToBlocks(document, previousRef.current)
     const fingerprint = payload === null ? null : JSON.stringify(payload)
+
     const blocksToSend =
       payload !== null && fingerprint !== savedRef.current ? payload : null
 
@@ -251,6 +309,16 @@ export function useAutosave({
            folgende traefe denselben Konflikt (§6.4). */
         stoppedRef.current = true
         setState("conflict")
+      } else if (saveError.errorCode === "PROJECT_LOCKED_BY_OTHER") {
+        /*
+         * Die Sperre ist an jemand anders uebergegangen (§6.9), etwa weil
+         * dieser Tab lange im Hintergrund lag und der Herzschlag ausblieb.
+         * Auch hier kein weiterer Takt: er traefe dieselbe Wand, und zwar
+         * bei jedem Tastendruck. Der Zustand bleibt sichtbar, der Text
+         * steht weiter da, und das Gatter legt seinen Hinweis darueber.
+         */
+        stoppedRef.current = true
+        setState("error")
       } else {
         setState("error")
       }

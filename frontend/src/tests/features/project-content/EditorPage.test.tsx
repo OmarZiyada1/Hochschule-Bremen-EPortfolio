@@ -406,6 +406,31 @@ describe("EditorPage", () => {
     )
   })
 
+  it("traegt den Wechsel zwischen hellem und dunklem Modus im Editorkopf", async () => {
+    /*
+     * KAN-86: der Editor liegt ausserhalb des Anwendungsrahmens, NavBar und
+     * Fusszeile entfallen dort. Ohne diesen Knopf gaebe es auf genau dieser
+     * einen Route keinen Weg, die Darstellung zu wechseln.
+     */
+    const user = userEvent.setup()
+    renderEditor(ownDraft(), [textBlock("Ein Absatz.")])
+
+    await user.click(
+      await screen.findByRole(
+        "button",
+        { name: "Dunklen Modus einschalten" },
+        WAIT
+      )
+    )
+
+    expect(document.documentElement).toHaveClass("dark")
+    /* Der Name wechselt mit dem Modus: er ist der zugaengliche Name des
+       Knopfes und nicht nur Schmuck. */
+    expect(
+      screen.getByRole("button", { name: "Hellen Modus einschalten" })
+    ).toBeInTheDocument()
+  })
+
   it("Alt+F10 fuehrt aus dem Text in die Formatierungsleiste im Header", async () => {
     /* Der Sprung sucht dokumentweit nach [data-selection-toolbar]; genau
        dieser Selektor haette beim Umzug der Leiste in die Kopfzeile
@@ -428,9 +453,9 @@ describe("EditorPage", () => {
   })
 
   it("zeigt einem fremden Konto keine Workflow-Aktion", async () => {
-    /* §5 und §4.1: Einreichen und Zurueckziehen fuehrt die Autor:in aus.
-       Ein Projektmitglied darf den Inhalt bearbeiten, aber nicht
-       einreichen; eine Schaltflaeche, die mit 403 endet, waere ein Weg ins
+    /* §5 und §4.1: Einreichen und Zurueckziehen fuehrt die Projektseite aus.
+       Dieses Konto gehoert nicht dazu, es ist weder Autor:in noch in
+       members; eine Schaltflaeche, die mit 403 endet, waere ein Weg ins
        Leere. */
     renderEditor(
       ownDraft({
@@ -443,6 +468,33 @@ describe("EditorPage", () => {
     expect(
       screen.queryByRole("button", { name: "Einreichen" })
     ).not.toBeInTheDocument()
+  })
+
+  it("gibt einem Projektmitglied den Weg zum Einreichen", async () => {
+    /*
+     * §4.1 seit Contract v85 (KAN-86): Einreichen liegt bei der ganzen
+     * Projektseite. Bis v84 sah ein Mitglied im eigenen Editor keinen Weg
+     * nach vorn, obwohl es denselben Text geschrieben hat.
+     */
+    renderEditor(
+      ownDraft({
+        author: person({ id: "99999999-9999-4999-8999-999999999999" }),
+        members: [
+          {
+            userId: USER_ID,
+            firstName: "Mira",
+            lastName: "Beispiel",
+            avatarUrl: null,
+            projectRole: "Frontend",
+          },
+        ],
+      }),
+      [textBlock("Ein Absatz.")]
+    )
+
+    expect(
+      await screen.findByRole("button", { name: "Einreichen" }, WAIT)
+    ).toBeVisible()
   })
 
   /*

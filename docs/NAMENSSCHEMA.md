@@ -240,6 +240,7 @@ und wird im Contract gestrichen statt stehen gelassen.
 | `BLOCK_UNGUELTIG` (nur im Code) | `BLOCK_CONTENT_INVALID` |
 | `EMBED_PROVIDER_NICHT_ERLAUBT` | `EMBED_PROVIDER_NOT_ALLOWED` |
 | `DATEI_TYP_NICHT_ERLAUBT` · `DATEI_ZU_GROSS` | `FILE_TYPE_NOT_ALLOWED` · `FILE_TOO_LARGE` |
+| `PROJEKT_GESPERRT_DURCH_ANDERE` | `PROJECT_LOCKED_BY_OTHER` |
 | `PROJEKT_UNVOLLSTAENDIG` | `PROJECT_INCOMPLETE` |
 | `PROJEKT_NICHT_GEFUNDEN` | `PROJECT_NOT_FOUND` |
 | `RESSOURCE_NICHT_GEFUNDEN` | `RESOURCE_NOT_FOUND` |
@@ -269,6 +270,7 @@ beiden Orten steht" auch für ihn gilt.
 | `/auth/passwort-zuruecksetzen` | `/auth/reset-password` |
 | `/projekte` | `/projects` |
 | `/projekte/{id}/einreichen` | `/projects/{id}/submit` |
+| `/projekte/{id}/bearbeitungssperre` | `/projects/{id}/edit-lock` |
 | `/projekte/{id}/zurueckziehen` | `/projects/{id}/withdraw` |
 | `/projekte/{id}/genehmigen` | `/projects/{id}/approve` |
 | `/projekte/{id}/veroeffentlichen` | `/projects/{id}/publish` |
@@ -340,6 +342,11 @@ Sortierbare Felder bei `GET /projects`: `title`, `semester`, `status`,
 | `ProjektSammelStatusAnfrage` · `…Antwort` · `…Ergebnis` | `ProjectBulkStatusRequest` · `ProjectBulkStatusResponse` · `ProjectBulkStatusResultResponse` |
 | `ProjektAdminService` · `ProjektAdminController` | `ProjectAdminService` · `ProjectAdminController` |
 | `darfMitgliederPflegen` | `mayManageMembers` |
+| `Bearbeitungssperre` | `EditLock` |
+| `SperrenRegister` | `EditLockRegistry` |
+| `SperrenWaechter` | `EditLockGuard` |
+| `haeltSelbst` | `heldBySelf` |
+| `halter` | `holder` |
 | `darfProjektVerlassen` | `mayLeaveProject` |
 | `RegistrierungService` | `RegistrationService` |
 | `VerifizierungsCodeService` | `VerificationCodeService` |

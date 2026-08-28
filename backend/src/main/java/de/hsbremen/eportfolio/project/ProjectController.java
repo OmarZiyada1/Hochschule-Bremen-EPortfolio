@@ -262,14 +262,13 @@ public class ProjectController {
 			+ "und zur zugewiesenen Redaktion (§5, Fussnote 3). Eine bereits bestehende "
 			+ "Ueberschneidung wird nicht beanstandet, nur eine neu entstehende.")
 	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
-	@ApiResponse(responseCode = "403", description = "Angemeldet, aber nicht Teil der Projektseite, "
-			+ "oder Projektmitglied und nicht Autor:in, waehrend der Body editorIds aendert: die "
-			+ "Redaktionszuweisung bleibt der Autor:in vorbehalten (§3.13.1). Die Statusschranke "
-			+ "steht dagegen in der 409-Zeile.")
+	@ApiResponse(responseCode = "403", description = "Angemeldet, aber nicht Teil der "
+			+ "Projektseite. Die Statusschranke steht dagegen in der 409-Zeile.")
 	@ApiResponse(responseCode = "404", description = "Unter dieser ID gibt es kein Projekt.")
 	@ApiResponse(responseCode = "409", description = "PROJECT_STATUS_NOT_EDITABLE, wenn der Status "
-			+ "die Bearbeitung sperrt (§4.1); PROJECT_VERSION_CONFLICT, wenn die mitgeschickte "
-			+ "version veraltet ist (§6.4).")
+			+ "die Bearbeitung sperrt (§4.1); PROJECT_LOCKED_BY_OTHER, wenn jemand anders den "
+			+ "Beitrag gerade im Editor haelt (§6.9); PROJECT_VERSION_CONFLICT, wenn die "
+			+ "mitgeschickte version veraltet ist (§6.4).")
 	@PutMapping("/{id}")
 	public ProjectDetailResponse update(
 			@AuthenticationPrincipal AuthenticatedUser user,

@@ -367,11 +367,13 @@ describe("ProjectMetadataForm", () => {
     expect(screen.queryByRole("option", { name: "Rana Adler" })).toBeNull()
   })
 
-  it("sperrt die Redaktionszuweisung fuer ein Projektmitglied (§5, Fussnote 3)", async () => {
+  it("laesst ein Projektmitglied die Redaktion zuweisen (§3.13.1, seit Contract v85)", async () => {
     /*
-     * Der einzige verbliebene Sperrgrund im DRAFT, seit die Rollensperre mit
-     * v60 entfallen ist: §3.13.1 nimmt Mitgliedern editorIds ausdruecklich
-     * weg. Ein bedienbares Feld verwuerfe hier den gesamten PUT mit 403.
+     * Bis v84 stand das Feld fuer Mitglieder schreibgeschuetzt da, weil
+     * §3.13.1 ihnen editorIds ausdruecklich wegnahm. Mit dem geoeffneten
+     * Einreichen (KAN-86) waere daraus eine Sackgasse geworden: editorIds
+     * ist Pflichtfeld des Einreichens (§3.3), das Mitglied bekaeme 400
+     * PROJECT_INCOMPLETE und koennte die Redaktion nicht nachtragen.
      */
     renderForm({
       author: {
@@ -393,12 +395,14 @@ describe("ProjectMetadataForm", () => {
       ],
     })
 
+    /* Das Suchfeld steht da, und keine Begruendung daneben: gesperrt ist
+       hier nichts mehr. */
+    expect(await screen.findByLabelText(/^Redakteur:in/)).toBeVisible()
     expect(
-      await screen.findByText(
-        "Die zuständige Redaktion wird von der Autor:in des Projekts bestimmt."
+      screen.queryByText(
+        "Die Redaktion lässt sich nur während der Bearbeitung ändern, also im Entwurf und in der Überarbeitung. Ab der Einreichung nimmt die Administration die Zuweisung vor."
       )
-    ).toBeVisible()
-    expect(screen.queryByLabelText(/^Redakteur:in/)).not.toBeInTheDocument()
+    ).not.toBeInTheDocument()
   })
 
   it("zeigt den Fachfehler der Trennung am Feld und nicht am Formularfuss", async () => {

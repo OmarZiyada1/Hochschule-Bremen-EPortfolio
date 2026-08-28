@@ -276,12 +276,18 @@ export function ProjectMetadataForm({
    * {@code undefined}, wenn sie es ist.
    *
    * <p>Gespiegelt wird {@code ProjectPermissionService.mayAssignEditors},
-   * und zwar vollstaendig: ADMIN darf immer, sonst nur die Autor:in und nur
-   * in {@code DRAFT} und {@code REVISION} (§5 Fussnote 3, §3.13.1). Der Fall des Mitglieds fehlte
-   * zunaechst, und das war kein Schoenheitsfehler: es haette ein bedienbares
-   * Feld vorgefunden, dessen Aenderung den <em>gesamten</em> PUT mit 403
-   * verwirft, also auch Titel, Tags und Mitglieder (Befund des
-   * contract-pruefers).
+   * und zwar vollstaendig: ADMIN darf immer, sonst die Projektseite und nur
+   * in {@code DRAFT} und {@code REVISION} (§5 Fussnote 3, §3.13.1).
+   *
+   * <p><strong>Projektmitglieder duerfen seit Contract v85 mit</strong>
+   * (KAN-86). Bis v84 stand hier ein eigener Zweig fuer sie, der das Feld
+   * schreibgeschuetzt zeigte, weil §3.13.1 ihnen {@code editorIds} in jedem
+   * Status verwehrte. Mit dem geoeffneten Einreichen waere daraus eine
+   * Sackgasse geworden: {@code editorIds} ist Pflichtfeld des Einreichens
+   * (§3.3), ein Mitglied bekaeme also 400 {@code PROJECT_INCOMPLETE} und
+   * koennte die Redaktion nicht nachtragen. Wer nicht zur Projektseite
+   * gehoert, sieht dieses Formular ohnehin nicht: der Server gibt einen
+   * Entwurf nicht heraus (§5).
    *
    * <p><strong>Die eigene Systemrolle sperrt nicht mehr</strong> (§5
    * Fussnote 3 in der Fassung von Contract v60, KAN-77). Bis dahin stand hier
@@ -298,9 +304,6 @@ export function ProjectMetadataForm({
   const editorsReadOnlyReason: string | undefined = (() => {
     if (role === "ADMIN") {
       return undefined
-    }
-    if (user !== null && user.id !== project.author.id) {
-      return t("project.metadata.editors.lockedForMembers")
     }
     /* Seit Contract v62 dieselbe Schranke wie jede andere
        Metadatenaenderung: die beiden Arbeitszustaende des Projekts (§4.1).

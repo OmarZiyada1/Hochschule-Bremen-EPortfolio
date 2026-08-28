@@ -5,14 +5,15 @@ package de.hsbremen.eportfolio.common.error;
  * Ressource. Wird vom {@link GlobalExceptionHandler} auf HTTP 409 mit dem
  * Envelope aus API-Contract §6.2 abgebildet.
  *
- * <p>Der Fehlercode ist ein Feld und nicht fest verdrahtet, weil §6.2 sieben
+ * <p>Der Fehlercode ist ein Feld und nicht fest verdrahtet, weil §6.2 acht
  * verschiedene 409er kennt: {@code PROJECT_VERSION_CONFLICT},
  * {@code PROJECT_STATUS_NOT_EDITABLE}, {@code PROJECT_STATUS_TRANSITION_INVALID},
  * {@code RESOURCE_IN_USE}, seit v23 {@code PROJECT_NOT_PUBLISHED} und
- * {@code NOMINATION_ALREADY_DECIDED}, seit v38 {@code CHANGE_REQUESTS_OPEN}.
+ * {@code NOMINATION_ALREADY_DECIDED}, seit v38 {@code CHANGE_REQUESTS_OPEN},
+ * seit v85 {@code PROJECT_LOCKED_BY_OTHER}.
  * Dieselbe Ueberlegung wie bei
  * {@link ResourceNotFoundException}: eine Ausnahmeklasse je Code waere derselbe
- * Ablauf in sieben Klassen.
+ * Ablauf in acht Klassen.
  *
  * <p><strong>Abgrenzung zu 400:</strong> {@link ValidationException} meint „die
  * Anfrage selbst ist unbrauchbar" (fehlendes Pflichtfeld, unbekannte ID im
@@ -58,6 +59,27 @@ public class ConflictException extends RuntimeException {
 		return new ConflictException(ErrorCodes.PROJECT_STATUS_NOT_EDITABLE,
 				"Ein Projekt im Status " + status + " kann nicht mehr bearbeitet werden. "
 						+ "Aenderungen sind nur in DRAFT und REVISION moeglich.");
+	}
+
+	/**
+	 * An diesem Projekt arbeitet gerade jemand anders (§6.9, seit Contract v85).
+	 *
+	 * <p><strong>Die einzige Fehlermeldung im Projekt, die einen Namen
+	 * traegt.</strong> Ohne ihn waere die Auskunft wertlos: wer in einer
+	 * Gruppenarbeit vor einer gesperrten Schreibflaeche sitzt, fragt nicht, ob
+	 * gesperrt ist, sondern auf wen zu warten ist. Vertretbar ist das, weil
+	 * bis hierher nur kommt, wer selbst zur Projektseite gehoert und die
+	 * Beteiligten ohnehin sieht (§3.13); die Rechtepruefung des Schreibpfads
+	 * laeuft vor dieser Ausnahme. Ein Konto ausserhalb des Projekts bekommt
+	 * schon davor 403 und erfaehrt nichts.
+	 *
+	 * @param name Anzeigename der haltenden Person, aus Vor- und Nachnamen
+	 */
+	public static ConflictException lockedByOther(String name) {
+		return new ConflictException(ErrorCodes.PROJECT_LOCKED_BY_OTHER,
+				name + " bearbeitet diesen Beitrag gerade. Es kann immer nur eine Person "
+						+ "gleichzeitig schreiben; die Sperre endet, sobald diese Person den "
+						+ "Editor verlaesst.");
 	}
 
 	/**

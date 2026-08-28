@@ -14,6 +14,7 @@ import type { RefObject } from "react"
 import { useTranslation } from "react-i18next"
 
 import type { ProjectStatus } from "@/api/types"
+import { ThemeToggle } from "@/components/common/ThemeToggle"
 import {
   applyTableOfContents,
   findTableOfContents,
@@ -85,11 +86,13 @@ import type { AutosaveState } from "@/features/project-content/hooks/useAutosave
  * {@code PUBLISHED} steht dort nichts, beide Uebergaenge liegen dann bei der
  * Redaktion.
  *
- * <p><strong>Und nur die Autor:in sieht sie ueberhaupt.</strong> §5 fuehrt
- * beide Aktionen als eigene Ressource, §4.1 nennt in der Spalte
- * „Ausfuehrende Rolle" die Autor:in. Ein Projektmitglied darf den Inhalt
- * bearbeiten, aber nicht einreichen; ihm eine Schaltflaeche zu zeigen, die
- * mit 403 endet, waere ein Weg ins Leere.
+ * <p><strong>Und nur die Projektseite sieht sie ueberhaupt.</strong> §5
+ * fuehrt beide Aktionen als eigene Ressource, §4.1 nennt in der Spalte
+ * „Ausfuehrende Rolle" seit Contract v85 die Projektseite, also Autor:in und
+ * Projektmitglieder (Fussnote 14, KAN-86). Bis v84 stand dort allein die
+ * Autor:in, und ein Mitglied sah im eigenen Editor keinen Weg nach vorn.
+ * Einer Person ausserhalb des Projekts eine Schaltflaeche zu zeigen, die mit
+ * 403 endet, waere dagegen weiterhin ein Weg ins Leere.
  *
  * <p><strong>Einreichen fuehrt zuerst in die Metadaten.</strong> §3.3
  * verlangt sieben Angaben, die im Editor gar nicht sichtbar sind; blind zu
@@ -146,7 +149,11 @@ export function EditorHeader({
   status: ProjectStatus
   autosaveState: AutosaveState
   busy: boolean
-  /** Ob die anfragende Person die Autor:in ist (§5, §4.1). */
+  /**
+   * Ob die anfragende Person zur Projektseite gehoert, also Autor:in oder
+   * Projektmitglied ist (§5, §4.1; seit Contract v85 nicht mehr allein die
+   * Autor:in).
+   */
   mayRunWorkflow: boolean
   /** Ob die Schreibflaeche beschreibbar ist; sonst ist die Leiste gesperrt. */
   mayWrite: boolean
@@ -436,6 +443,29 @@ export function EditorHeader({
             {t("projectContent.print.actionLabel")}
           </TooltipContent>
         </Tooltip>
+
+        {/*
+         * Hell und Dunkel (KAN-86). Der Editor liegt ausserhalb des
+         * Anwendungsrahmens, NavBar und Fusszeile entfallen dort
+         * (routes/EditorLayout); der Umschalter der NavBar ist auf dieser
+         * einen Route also nicht erreichbar, und wer lange schreibt, will
+         * genau hier wechseln koennen.
+         *
+         * <p>In der Werkzeugzeile und nicht bei den Aktionen rechts: die
+         * Werkzeuge stehen genau einmal im DOM, die Aktionen dagegen doppelt
+         * (breit sichtbar, schmal im Menue). Ein Umschalter dort muesste
+         * zweimal stehen oder waere schmal nicht erreichbar.
+         *
+         * <p>Ohne Tooltip, anders als die Nachbarn: die vorhandene
+         * Domaenenkomponente traegt ihren Namen als aria-label und wechselt
+         * ihn mit dem Modus. Ein TooltipTrigger darum herum reichte seine
+         * Props nicht durch und naehme dem Knopf genau diesen Namen.
+         *
+         * <p>Haengt bewusst weder an mayWrite noch an mayRunWorkflow: die
+         * Darstellung ist keine Frage des Schreibrechts, wie beim Drucken
+         * daneben.
+         */}
+        <ThemeToggle size="icon-sm" />
       </div>
 
       <div

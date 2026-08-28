@@ -77,7 +77,8 @@ const APPROVED_PROJECT = {
 /*
  * Eine Gruppenarbeit einer anderen Person, an der die angemeldete nur
  * Mitglied ist (§3.13). Seit Contract v84 steht sie mit im eigenen
- * Portfolio; die Kachel bietet dort allein das Verlassen an (KAN-83).
+ * Portfolio (KAN-83). Veroeffentlicht heisst hier: die einzige Handlung ist
+ * das Verlassen, denn Bearbeiten und Zurueckziehen haengen am Status.
  */
 const FOREIGN_GROUP_PROJECT = {
   id: "11111111-0000-4000-8000-000000000006",
@@ -91,6 +92,31 @@ const FOREIGN_GROUP_PROJECT = {
   },
   semester: { id: "5e000000-0000-4000-8000-000000000002", name: "SoSe 2025" },
   reactionCount: 3,
+}
+
+/*
+ * Dieselbe Gruppenarbeit im Entwurf. Seit Contract v85 (KAN-86) bekommt das
+ * Mitglied dort dieselben Handlungen wie die Autor:in, ausser dem Loeschen:
+ * an dessen Stelle steht das Verlassen.
+ */
+const FOREIGN_DRAFT_PROJECT = {
+  ...FOREIGN_GROUP_PROJECT,
+  id: "11111111-0000-4000-8000-000000000007",
+  title: "Campus-Garten Entwurf",
+  status: "DRAFT",
+  reactionCount: 0,
+}
+
+/*
+ * Und eingereicht: dort ist das Zurueckziehen die Handlung, ebenfalls seit
+ * Contract v85 fuer die ganze Projektseite (§4.1).
+ */
+const FOREIGN_SUBMITTED_PROJECT = {
+  ...FOREIGN_GROUP_PROJECT,
+  id: "11111111-0000-4000-8000-000000000008",
+  title: "Campus-Garten eingereicht",
+  status: "SUBMITTED",
+  reactionCount: 0,
 }
 
 /**
@@ -162,6 +188,78 @@ describe("MyPortfolioPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Verlassen" }))
 
     await waitFor(() => expect(left).toEqual([FOREIGN_GROUP_PROJECT.id]))
+  })
+
+  it("gibt einem Mitglied im Entwurf Bearbeiten und Verlassen, aber kein Loeschen", async () => {
+    /*
+     * Der Kern von KAN-86 an der Kachel: seit Contract v85 kann ein
+     * Projektmitglied alles, was die Autor:in kann, ausser dem Loeschen
+     * (§4.1, §5). An dessen Stelle steht das Verlassen, an derselben
+     * Position, damit dieselbe Handlung nicht springt.
+     */
+    server.use(
+      ownPortfolioHandler(),
+      http.get("*/api/projects", () =>
+        HttpResponse.json(projectsPage([FOREIGN_DRAFT_PROJECT]))
+      )
+    )
+    signInAs("STUDENT")
+    renderWithProviders(<AppUnderTest />, "/my-portfolio")
+
+    await screen.findByRole("heading", {
+      level: 2,
+      name: "Campus-Garten Entwurf",
+    })
+
+    /* Base UI rendert den Weg in den Editor als <a role="button">. */
+    expect(
+      screen.getByRole("button", { name: /^Bearbeiten:/ })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: /verlassen/i })
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /^Löschen/ })
+    ).not.toBeInTheDocument()
+  })
+
+  it("laesst ein Mitglied eine eingereichte Gruppenarbeit zurueckziehen", async () => {
+    /* §4.1 seit Contract v85: wer einreichen darf, holt die Einreichung
+       auch zurueck. Bis v84 war das allein Sache der Autor:in. */
+    const withdrawn: string[] = []
+    server.use(
+      ownPortfolioHandler(),
+      http.get("*/api/projects", () =>
+        HttpResponse.json(projectsPage([FOREIGN_SUBMITTED_PROJECT]))
+      ),
+      http.post("*/api/projects/:projectId/withdraw", ({ params }) => {
+        withdrawn.push(String(params.projectId))
+        return HttpResponse.json({
+          ...FOREIGN_SUBMITTED_PROJECT,
+          status: "DRAFT",
+        })
+      })
+    )
+    signInAs("STUDENT")
+    renderWithProviders(<AppUnderTest />, "/my-portfolio")
+
+    await screen.findByRole("heading", {
+      level: 2,
+      name: "Campus-Garten eingereicht",
+    })
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /^Zurückziehen:/ })
+    )
+    await userEvent.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: "Zurückziehen",
+      })
+    )
+
+    await waitFor(() =>
+      expect(withdrawn).toEqual([FOREIGN_SUBMITTED_PROJECT.id])
+    )
   })
 
   it("zeigt zu jedem eigenen Projekt seinen Status", async () => {

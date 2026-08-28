@@ -5,6 +5,7 @@ import { apiPaths } from "@/api/endpoints"
 import type { PageResponse } from "@/api/page"
 import type {
   Degree,
+  EditLockResponse,
   ProjectCardResponse,
   ProjectCreateRequest,
   ProjectDetailResponse,
@@ -126,6 +127,13 @@ export interface AdminProjectListParams {
   /** ID eines Moduls aus GET /api/modules (§3.9), im Template „Fach". */
   module?: string
 }
+
+/**
+ * Takt des Herzschlags aus §6.9. Deutlich unter {@code app.edit-lock.ttl}
+ * (30 Sekunden), damit ein einzelner ausgefallener Aufruf die Sperre noch
+ * nicht abgibt.
+ */
+export const EDIT_LOCK_HEARTBEAT_MS = 10000
 
 /** Serverseitiges Maximum aus §6.6; darueber kappt der Server still. */
 const OWN_PROJECTS_PAGE_SIZE = 100
@@ -283,6 +291,65 @@ export const projectQueries = {
       queryKey: ["projects", "detail", projectId] as const,
       queryFn: () =>
         api.get<ProjectDetailResponse>(apiPaths.projects.detail(projectId)),
+    }),
+
+  /**
+   * Die Bearbeitungssperre als laufender Herzschlag (§6.9, seit Contract
+   * v85, KAN-86): wer den Beitrag gerade haelt, und ob es die anfragende
+   * Person selbst ist.
+   *
+   * <p><strong>Eine Query, obwohl der Endpoint ein POST ist.</strong> Das
+   * sieht aus wie ein Bruch der Regel „Lesen ueber useQuery, Schreiben ueber
+   * useMutation", und ist doch die passende Bauform. Der Aufruf ist
+   * idempotent, aendert das Projekt nicht und erhoeht seine {@code version}
+   * nicht; er beantwortet eine Frage und setzt dabei ein Lebenszeichen.
+   * Genau das braucht der Editor wiederholt und in festem Takt, und dafuer
+   * ist {@code refetchInterval} da. Als Mutation gebaut, muesste der Takt aus
+   * einem {@code setInterval} im Effekt kommen, samt eigenem Zustand,
+   * eigener Fehlerbehandlung und eigenem Aufraeumen: dreimal nachgebaut, was
+   * hier eine Zeile ist. Ein POST ist es allein deshalb, weil er serverseitig
+   * etwas bewirkt (§6.9).
+   *
+   * <p><strong>Der Takt liegt bei zehn Sekunden</strong> und damit deutlich
+   * unter der Frist von dreissig aus {@code app.edit-lock.ttl}: ein einzelner
+   * verlorener Herzschlag gibt die Sperre noch nicht ab. Er laeuft auch dann
+   * weiter, wenn jemand anders haelt, denn nur so bemerkt die wartende Seite
+   * das Freiwerden.
+   *
+   * <p><strong>Ein eigener Wurzelschluessel, nicht der projects-Ast.</strong>
+   * Zehn Stellen im Code invalidieren {@code ["projects"]} nach jeder
+   * Mutation, unter anderem nach jedem Metadaten-PUT auf genau der Seite,
+   * die die Sperre haelt. Jede dieser Invalidierungen setzte sonst einen
+   * zusaetzlichen Herzschlag ab, obwohl der Takt sich selbst frisch haelt.
+   * Dieselbe Ueberlegung wie bei den Bloecken ({@code blockQueries}).
+   */
+  editLock: (projectId: string) =>
+    queryOptions({
+      queryKey: ["edit-lock", projectId] as const,
+      queryFn: () => acquireEditLock(projectId),
+      /*
+       * Der Takt haelt an, sobald ein Aufruf gescheitert ist. 403, 404 und
+       * 409 bessern sich nicht von selbst: wer nur liest oder gar nicht zur
+       * Projektseite gehoert, schickte sonst alle zehn Sekunden eine
+       * Anfrage, die nie gelingen kann, im Hintergrundtab eingeschlossen.
+       * Wieder aufgenommen wird der Takt ueber den Knopf „Erneut versuchen".
+       */
+      refetchInterval: (query) =>
+        query.state.error === null ? EDIT_LOCK_HEARTBEAT_MS : false,
+      /* Auch im Hintergrundtab: wer den Tab liegen laesst, haelt die Sperre
+         weiter. Sie endet mit dem Verlassen der Seite, nicht mit dem
+         Wegschauen. Verlaesslich ist das nicht, Browser drosseln Zeitgeber
+         in versteckten Tabs; deshalb behandelt das Gatter den Verlust der
+         Sperre als eigenen Fall, statt sich auf den Takt zu verlassen. */
+      refetchIntervalInBackground: true,
+      /*
+       * Kein Zwischenspeicher ueber die Montierung hinaus. Sonst zeigte ein
+       * Wiedereintritt in den Editor die Schreibflaeche sofort, weil die
+       * Antwort von vorhin noch im Speicher liegt, und erst eine Rundreise
+       * spaeter kaeme heraus, dass die Sperre inzwischen jemand anderem
+       * gehoert. Genau in diesem Fenster tippen zwei Personen.
+       */
+      gcTime: 0,
     }),
 }
 
@@ -485,12 +552,42 @@ export function leaveProject(projectId: string): Promise<void> {
 }
 
 /**
+ * POST /projects/{id}/edit-lock (§6.9, seit Contract v85, KAN-86):
+ * beansprucht die Bearbeitungssperre und setzt zugleich den Herzschlag.
+ *
+ * <p><strong>Der Aufruf lehnt nie ab.</strong> Haelt jemand anders, kommt
+ * dessen Name mit {@code heldBySelf = false} zurueck, und das ist kein
+ * Fehler, sondern die Auskunft, auf die der Editor wartet. Ein 409 gibt es
+ * erst beim Schreiben, an {@code PUT /blocks} und {@code PUT /projects/{id}}.
+ *
+ * <p>Idempotent: wer bereits haelt, behaelt {@code since} und erneuert
+ * allein die Frist. Der Aufruf aendert das Projekt nicht und erhoeht seine
+ * {@code version} nicht (§6.4).
+ */
+export function acquireEditLock(projectId: string): Promise<EditLockResponse> {
+  return api.post<EditLockResponse>(apiPaths.projects.editLock(projectId))
+}
+
+/**
+ * DELETE /projects/{id}/edit-lock (§6.9, seit Contract v85): gibt die
+ * <strong>eigene</strong> Sperre frei, 204 ohne Koerper.
+ *
+ * <p>Eine fremde Sperre bricht der Aufruf nicht. Er ist eine Beschleunigung
+ * und kein Verlass: bleibt er aus, weil der Tab geschlossen wurde, faellt
+ * die Sperre nach ihrer Frist von selbst frei. Idempotent, auch ohne
+ * gehaltene Sperre.
+ */
+export function releaseEditLock(projectId: string): Promise<void> {
+  return api.delete<void>(apiPaths.projects.editLock(projectId))
+}
+
+/**
  * PUT /projects/{id}/editors (§6.1, KAN-38): die Administration verteilt die
  * Redaktion eines fremden Projekts neu.
  *
  * <p><strong>Jederzeit und unabhaengig vom Status</strong>, anders als die
- * Zuweisung durch die Autor:in, die nur in DRAFT und REVISION geht (§5
- * Fussnote 3). Der Endpoint traegt deshalb auch keine Version: er aendert
+ * Zuweisung durch die Projektseite, die nur in DRAFT und REVISION geht (§5
+ * Fussnote 3; Mitglieder seit Contract v85, §3.13.1). Der Endpoint traegt deshalb auch keine Version: er aendert
  * keine Metadaten und laeuft nicht gegen das Optimistic Locking aus §6.4.
  *
  * <p><strong>Die Liste ersetzt die bisherige vollstaendig</strong>, ein

@@ -415,6 +415,12 @@ export default function EditorPage() {
     enabled: mayWrite,
     version: blocks.data?.version ?? 0,
     blocks: blocks.data?.blocks ?? [],
+    /* Der gelesene Stand als Bezugspunkt des Takts (KAN-86): dasselbe
+       Dokument, mit dem die Schreibflaeche aufgebaut wird, und nicht der um
+       den leeren Schlussabsatz ergaenzte Inhalt. Ohne ihn schriebe der erste
+       Takt den unveraenderten Beitrag zurueck und erhoehte seine Version
+       (§6.4). */
+    baseline: read?.doc ?? null,
     readDocument,
     readMetadata,
     onMetadataSaved,
@@ -513,7 +519,6 @@ export default function EditorPage() {
   }
 
   const detail: ProjectDetailResponse = project.data
-  const isAuthor = user !== null && detail.author?.id === user.id
 
   return (
     <EditorContextProvider value={{ projectId, editable: mayWrite, announce }}>
@@ -524,7 +529,14 @@ export default function EditorPage() {
           status={detail.status}
           autosaveState={autosave.state}
           busy={withdraw.isPending}
-          mayRunWorkflow={isAuthor}
+          /*
+           * Einreichen und Zurueckziehen liegen seit Contract v85 bei der
+           * ganzen Projektseite und nicht mehr allein bei der Autor:in
+           * (§4.1, §5, KAN-86): wer den Beitrag schreibt, gibt ihn auch zur
+           * Pruefung. Bis dahin stand hier isAuthor, und ein Mitglied sah im
+           * eigenen Editor keinen Weg nach vorn.
+           */
+          mayRunWorkflow={isProjectSide}
           mayWrite={mayWrite}
           /*
            * Einreichen fuehrt auf die Metadatenseite und nicht in ein

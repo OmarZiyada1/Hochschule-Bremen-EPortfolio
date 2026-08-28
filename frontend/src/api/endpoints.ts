@@ -37,6 +37,18 @@ export const apiPaths = {
      */
     blocks: (projectId: string) => `/api/projects/${projectId}/blocks`,
     /*
+     * Die Bearbeitungssperre (§6.9, seit Contract v85, KAN-86). POST
+     * beansprucht sie und setzt zugleich den Herzschlag, DELETE gibt die
+     * eigene frei; beide auf demselben Pfad, weil sie dieselbe Ressource
+     * meinen.
+     *
+     * Ein eigener Pfad neben blocks, obwohl beide den Editor betreffen: die
+     * Sperre sagt, wer schreiben darf, blocks schreibt. Zusammengelegt
+     * traege jeder Herzschlag den Inhalt mit und erhoehte die version, und
+     * genau das darf er nicht (§6.4).
+     */
+    editLock: (projectId: string) => `/api/projects/${projectId}/edit-lock`,
+    /*
      * Einreichen (§4.1, §6.1). Die Gegenrichtung ist withdraw; beide sind
      * Statuswechsel und stehen deshalb hier und nicht unter einem
      * gemeinsamen "workflow"-Schluessel: der Pfad ist die Aktion.

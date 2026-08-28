@@ -73,11 +73,12 @@ public class ProjectWorkflowController {
 	/**
 	 * Einreichen.
 	 *
-	 * <p>Der einzige der vier Uebergaenge, den die Autor:in selbst ausloest, und
-	 * der einzige mit einer Vollstaendigkeitspruefung (§3.3).
+	 * <p>Der einzige der vier Uebergaenge, den die Projektseite selbst ausloest,
+	 * und der einzige mit einer Vollstaendigkeitspruefung (§3.3).
 	 */
 	@Operation(summary = "Projekt einreichen",
-			description = "DRAFT oder REVISION nach SUBMITTED, ausgeloest von der Autor:in (§4.1). "
+			description = "DRAFT oder REVISION nach SUBMITTED, ausgeloest von der Projektseite, "
+					+ "also der Autor:in oder einem Projektmitglied (§4.1, seit Contract v85). "
 					+ "Geprueft werden dabei die Pflichtfelder aus §3.3: projectType, facultyId, "
 					+ "studyProgramId, degree, categoryId, semesterId und editorIds. Ohne "
 					+ "zugewiesene Redaktion laesst sich seit Contract v59 nicht einreichen, weil "
@@ -88,9 +89,10 @@ public class ProjectWorkflowController {
 	@ApiResponse(responseCode = "400", description = "PROJECT_INCOMPLETE: mindestens ein "
 			+ "Pflichtfeld aus §3.3 fehlt. Die Meldung nennt alle fehlenden Felder.")
 	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
-	@ApiResponse(responseCode = "403", description = "Angemeldet, aber weder die Autor:in "
-			+ "noch, seit Contract v73 und nur aus REVISION, die zugewiesene Redaktion oder "
-			+ "die Administration (§4.1, §5). Aus DRAFT reicht allein die Autor:in ein.")
+	@ApiResponse(responseCode = "403", description = "Angemeldet, aber weder Teil der "
+			+ "Projektseite noch, seit Contract v73 und nur aus REVISION, die zugewiesene "
+			+ "Redaktion oder die Administration (§4.1, §5). Aus DRAFT reicht allein die "
+			+ "Projektseite ein.")
 	@ApiResponse(responseCode = "404", description = "Unter dieser ID gibt es kein Projekt.")
 	@ApiResponse(responseCode = "409", description = "PROJECT_STATUS_TRANSITION_INVALID: das "
 			+ "Projekt steht nicht in DRAFT oder REVISION, ist also zum Beispiel schon "
@@ -108,19 +110,23 @@ public class ProjectWorkflowController {
 	/**
 	 * Zurueckziehen.
 	 *
-	 * <p>Das Gegenstueck zum Einreichen (§4.1, seit v50): die Autor:in holt die
-	 * eigene Einreichung zurueck, solange die Redaktion nicht entschieden hat.
+	 * <p>Das Gegenstueck zum Einreichen (§4.1, seit v50): die Projektseite holt
+	 * die eigene Einreichung zurueck, solange die Redaktion nicht entschieden
+	 * hat.
 	 */
 	@Operation(summary = "Projekt zurueckziehen",
-			description = "SUBMITTED nach DRAFT, ausgeloest von der Autor:in (§4.1, seit v50). "
+			description = "SUBMITTED nach DRAFT, ausgeloest von der Projektseite, also der "
+					+ "Autor:in oder einem Projektmitglied (§4.1, seit v50; Projektseite seit "
+					+ "Contract v85). "
 					+ "Ohne die Pruefungen des Einreichens: Vollstaendigkeit und offene "
 					+ "Aenderungswuensche betreffen nur den Weg zur Redaktion. Danach ist das "
 					+ "Projekt wieder bearbeitbar und als Entwurf auch loeschbar (§6.1).")
 	@ApiResponse(responseCode = "200", description = "Das zurueckgezogene Projekt, mit neuem "
 			+ "Status und dem frischen Eintrag in statusHistory.")
 	@ApiResponse(responseCode = "401", description = "Kein gueltiges Token mitgeschickt.")
-	@ApiResponse(responseCode = "403", description = "Angemeldet, aber nicht die Autor:in. "
-			+ "Projektmitglieder duerfen mitschreiben, aber nicht zurueckziehen (§4.1).")
+	@ApiResponse(responseCode = "403", description = "Angemeldet, aber nicht Teil der "
+			+ "Projektseite. Wer einreichen darf, holt die Einreichung auch zurueck (§4.1, "
+			+ "§5 Fussnote 14).")
 	@ApiResponse(responseCode = "404", description = "Unter dieser ID gibt es kein Projekt.")
 	@ApiResponse(responseCode = "409", description = "PROJECT_STATUS_TRANSITION_INVALID: das "
 			+ "Projekt steht nicht in SUBMITTED; nach einer redaktionellen Entscheidung "
