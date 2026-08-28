@@ -4,7 +4,14 @@ import de.hsbremen.eportfolio.user.User;
 import java.util.UUID;
 
 /**
- * Ein Eintrag der Auswahlliste von {@code GET /api/users/lookup} (§6.1, KAN-44).
+ * Die schlanke Personenform des Projekts: ID und Name, sonst nichts.
+ *
+ * <p>Entstanden als Eintrag der Auswahlliste von {@code GET /api/users/lookup}
+ * (§6.1, KAN-44) und seit Contract v88 zusaetzlich das Feld
+ * {@code handledBy} der Support-Anfrage (§3.20). Dort dieselben drei Felder
+ * ein weiteres Mal zu schreiben waere neben {@code project.dto.PersonResponse}
+ * die dritte Abschrift derselben Form gewesen; jene traegt zusaetzlich das
+ * Profilbild und haengt am Portfolio (§3.2), das hier niemand braucht.
  *
  * <p>Bewusst nur diese drei Felder und kein Feld mehr. Die Liste versorgt
  * Personenfelder wie die Redaktionszuweisung bei der Projektanlage (§5,

@@ -915,7 +915,7 @@ export interface paths {
     head?: never
     /**
      * Bearbeitungsstand setzen
-     * @description Setzt den Stand einer Anfrage (§2.15). Erlaubt sind OPEN nach IN_PROGRESS, OPEN nach RESOLVED, IN_PROGRESS nach RESOLVED und RESOLVED zurueck nach OPEN. Jeder andere Uebergang ergibt 409, einschliesslich des erneuten Setzens des bereits stehenden Werts.
+     * @description Setzt den Stand einer Anfrage (§2.15). Erlaubt sind OPEN nach IN_PROGRESS, OPEN nach RESOLVED, IN_PROGRESS nach RESOLVED und RESOLVED zurueck nach OPEN. Jeder andere Uebergang ergibt 409, einschliesslich des erneuten Setzens des bereits stehenden Werts. Der Server haelt fest, wer den Stand gesetzt hat (handledBy, handledAt, §3.20); der Wert kommt aus dem Token und nie aus dem Koerper.
      */
     patch: operations["updateStatus_1"]
     trace?: never
@@ -2413,10 +2413,24 @@ export interface components {
        * @description Das absendende Konto, sofern angemeldet; sonst null (§3.20).
        */
       submittedByUserId: string | null
+      /** @description Das Admin-Konto, das den Stand zuletzt gesetzt hat; sonst null (§3.20). Was der Name bedeutet, sagt das Feld status: bei IN_PROGRESS ist es die zustaendige Person, bei RESOLVED die erledigende, bei einem wieder geoeffneten OPEN die zurueckholende. */
+      handledBy: components["schemas"]["UserLookupResponse"] | null
+      /**
+       * Format: date-time
+       * @description Zeitpunkt des letzten Statuswechsels; sonst null. Immer zusammen mit handledBy gesetzt oder zusammen leer (§3.20).
+       */
+      handledAt: string | null
       /** Format: date-time */
       createdAt: string
       /** Format: date-time */
       updatedAt: string
+    }
+    /** @description Das Admin-Konto, das den Stand zuletzt gesetzt hat; sonst null (§3.20). Was der Name bedeutet, sagt das Feld status: bei IN_PROGRESS ist es die zustaendige Person, bei RESOLVED die erledigende, bei einem wieder geoeffneten OPEN die zurueckholende. */
+    UserLookupResponse: {
+      /** Format: uuid */
+      id: string
+      firstName: string
+      lastName: string
     }
     StudyProgramUpdateRequest: {
       /**
@@ -2482,12 +2496,6 @@ export interface components {
        * @example Interaction Design
        */
       name?: string
-    }
-    UserLookupResponse: {
-      /** Format: uuid */
-      id: string
-      firstName: string
-      lastName: string
     }
     TagResponse: {
       /** Format: uuid */

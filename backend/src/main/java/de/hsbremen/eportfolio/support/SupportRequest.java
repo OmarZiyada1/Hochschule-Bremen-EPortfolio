@@ -11,6 +11,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import java.time.Instant;
 
 /**
  * Eine ueber das oeffentliche Kontaktformular eingegangene Anfrage (§3.20).
@@ -56,6 +57,29 @@ public class SupportRequest extends AuditableEntity {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "submitted_by_user_id")
 	private User submittedBy;
+
+	/**
+	 * Das Admin-Konto, das den {@link #status} zuletzt gesetzt hat (§3.20, seit
+	 * Contract v88). Leer, solange die Anfrage unberuehrt im Eingang liegt.
+	 *
+	 * <p><strong>Ein Feld beantwortet beide Fragen, und der Status sagt
+	 * welche.</strong> Bei {@code IN_PROGRESS} ist es die Person, die sich der
+	 * Anfrage angenommen hat, bei {@code RESOLVED} die, die sie erledigt hat,
+	 * und bei einem wieder geoeffneten {@code OPEN} die, die sie zurueckgeholt
+	 * hat. Zwei getrennte Felder waeren die genauere Auskunft, haetten aber
+	 * eine Aufraeumregel je Uebergang gebraucht.
+	 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "handled_by_user_id")
+	private User handledBy;
+
+	/**
+	 * Zeitpunkt dieses Statuswechsels. Immer zusammen mit {@link #handledBy}
+	 * gesetzt oder zusammen leer; die Datenbank haelt das mit
+	 * {@code ck_support_request_handled} fest.
+	 */
+	@Column(name = "handled_at")
+	private Instant handledAt;
 
 	protected SupportRequest() {
 		// Von JPA benoetigt.
@@ -112,16 +136,38 @@ public class SupportRequest extends AuditableEntity {
 	}
 
 	/**
-	 * Setzt den Bearbeitungsstand. Ob der Uebergang erlaubt ist, entscheidet
+	 * Setzt den Bearbeitungsstand und haelt fest, wer ihn gesetzt hat (§2.15,
+	 * §3.20).
+	 *
+	 * <p>Ob der Uebergang erlaubt ist, entscheidet
 	 * {@link SupportRequestStatus#mayTransitionTo}; geprueft wird das im
 	 * {@link SupportService}, damit die Ausnahme mit dem Fehlercode aus §6.2 an
-	 * der Stelle entsteht, die den Contract kennt.
+	 * der Stelle entsteht, die den Contract kennt. Ein abgewiesener Uebergang
+	 * kommt hier gar nicht an und schreibt deshalb auch nichts.
+	 *
+	 * <p><strong>Stand und Person werden gemeinsam gesetzt und nicht einzeln.</strong>
+	 * Ein Setter je Feld waere die Einladung, den einen ohne den anderen zu
+	 * aendern, und genau das darf nicht sein: ein Stand ohne Namen liesse die
+	 * Liste raten, ein Name ohne Stand gehoerte zu nichts.
+	 *
+	 * @param handledBy das Admin-Konto aus dem Sicherheitskontext, nie ein Wert
+	 *                  aus dem Anfragekoerper (§6.1)
 	 */
-	public void setStatus(SupportRequestStatus status) {
+	public void handle(SupportRequestStatus status, User handledBy, Instant handledAt) {
 		this.status = status;
+		this.handledBy = handledBy;
+		this.handledAt = handledAt;
 	}
 
 	public User getSubmittedBy() {
 		return submittedBy;
+	}
+
+	public User getHandledBy() {
+		return handledBy;
+	}
+
+	public Instant getHandledAt() {
+		return handledAt;
 	}
 }

@@ -1,5 +1,6 @@
 package de.hsbremen.eportfolio.support;
 
+import de.hsbremen.eportfolio.auth.AuthenticatedUser;
 import de.hsbremen.eportfolio.common.dto.PageResponse;
 import de.hsbremen.eportfolio.common.enums.SupportRequestCategory;
 import de.hsbremen.eportfolio.common.enums.SupportRequestStatus;
@@ -15,6 +16,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -97,7 +99,9 @@ public class SupportAdminController {
 			description = "Setzt den Stand einer Anfrage (§2.15). Erlaubt sind OPEN nach "
 					+ "IN_PROGRESS, OPEN nach RESOLVED, IN_PROGRESS nach RESOLVED und RESOLVED "
 					+ "zurueck nach OPEN. Jeder andere Uebergang ergibt 409, einschliesslich des "
-					+ "erneuten Setzens des bereits stehenden Werts.")
+					+ "erneuten Setzens des bereits stehenden Werts. Der Server haelt fest, wer "
+					+ "den Stand gesetzt hat (handledBy, handledAt, §3.20); der Wert kommt aus "
+					+ "dem Token und nie aus dem Koerper.")
 	@ApiResponse(responseCode = "200", description = "Die geaenderte Anfrage.")
 	@ApiResponse(responseCode = "400", description = "VALIDATION_FAILED: \"status\" fehlt oder "
 			+ "ist kein Wert aus §2.15.")
@@ -109,13 +113,14 @@ public class SupportAdminController {
 			+ "Uebergang steht nicht in §2.15.")
 	@PatchMapping("/{id}")
 	public SupportRequestResponse updateStatus(
+			@AuthenticationPrincipal AuthenticatedUser admin,
 
 			@Parameter(description = "ID der Anfrage.")
 			@PathVariable("id") UUID id,
 
 			@Valid @RequestBody SupportRequestStatusUpdateRequest request) {
 
-		return supportService.updateStatus(id, request.status());
+		return supportService.updateStatus(id, request.status(), admin.getId());
 	}
 
 	// ------------------------------------------------------------------

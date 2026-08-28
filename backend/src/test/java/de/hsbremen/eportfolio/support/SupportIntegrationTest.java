@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.hsbremen.eportfolio.auth.AuthenticatedUser;
 import de.hsbremen.eportfolio.auth.JwtService;
@@ -19,6 +20,9 @@ import de.hsbremen.eportfolio.support.dto.SupportRequestCreateRequest;
 import de.hsbremen.eportfolio.user.TestUser;
 import de.hsbremen.eportfolio.user.User;
 import de.hsbremen.eportfolio.user.UserRepository;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +50,14 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>Aufbau wie {@code EditLockIntegrationTest}: echte Postgres, echtes JWT,
  * {@code @Transactional} rollt die Datenbank am Ende zurueck.
+ *
+ * <p><strong>Die Tabelle ist nicht leer, und die Tests rechnen nicht damit.</strong>
+ * {@code ./mvnw test} laeuft gegen dieselbe Postgres, in der auch die
+ * Entwicklungsumgebung schreibt; eine von Hand abgeschickte Anfrage liegt dann
+ * dauerhaft darin. Die Listentests pruefen deshalb die <em>relative</em>
+ * Reihenfolge ihrer eigenen Zeilen und nie eine absolute Position oder eine
+ * Gesamtzahl. Ein Test, der {@code totalElements} auf zwei festnagelt, faellt
+ * beim naechsten Klick in der laufenden Anwendung um.
  *
  * <p><strong>Jeder Test bekommt seine eigene Client-IP und seine eigene
  * Absenderadresse.</strong> Der Zaehler aus §6.5 liegt im Arbeitsspeicher des
@@ -264,34 +276,33 @@ class SupportIntegrationTest {
 		void newestFirst() throws Exception {
 			SupportRequest first = store("Aelter", SupportRequestCategory.OTHER);
 			SupportRequest second = store("Neuer", SupportRequestCategory.OTHER);
-			List<String> expected = expectedOrder(first, second);
 
-			mockMvc.perform(as(admin, get(ADMIN_PATH).param("size", "50")))
-					.andExpect(status().isOk())
-					.andExpect(jsonPath("$.content[0].subject").value(expected.get(0)))
-					.andExpect(jsonPath("$.content[1].subject").value(expected.get(1)))
-					.andExpect(jsonPath("$.page").value(0))
-					.andExpect(jsonPath("$.totalElements").value(2));
+			JsonNode page = list();
+
+			assertThat(page.path("page").asInt()).isZero();
+			assertThat(page.path("totalElements").asLong()).isGreaterThanOrEqualTo(2);
+			assertThat(subjectsOf(page, first, second)).isEqualTo(expectedOrder(first, second));
 		}
 
 		@Test
 		@DisplayName("Filter status und category schraenken ein")
 		void filters() throws Exception {
-			store("Technik", SupportRequestCategory.TECHNICAL_ISSUE);
+			SupportRequest technical = store("Technik", SupportRequestCategory.TECHNICAL_ISSUE);
 			SupportRequest abuse = store("Meldung", SupportRequestCategory.ABUSE_REPORT);
 
-			mockMvc.perform(as(admin, get(ADMIN_PATH)
-							.param("category", "ABUSE_REPORT")
-							.param("size", "50")))
-					.andExpect(status().isOk())
-					.andExpect(jsonPath("$.content[0].subject").value(abuse.getSubject()))
-					.andExpect(jsonPath("$.content[1]").doesNotExist());
+			JsonNode byCategory = list("category", "ABUSE_REPORT");
+			assertThat(allSubjects(byCategory)).contains(abuse.getSubject())
+					.doesNotContain(technical.getSubject());
+			byCategory.path("content").forEach(entry ->
+					assertThat(entry.path("category").asText()).isEqualTo("ABUSE_REPORT"));
 
-			mockMvc.perform(as(admin, get(ADMIN_PATH)
-							.param("status", "RESOLVED")
-							.param("size", "50")))
-					.andExpect(status().isOk())
-					.andExpect(jsonPath("$.content").isEmpty());
+			/* Keine der beiden Zeilen ist erledigt; ob der Bestand daneben eine
+			   erledigte enthaelt, ist fuer diese Zusage gleichgueltig. */
+			JsonNode byStatus = list("status", "RESOLVED");
+			assertThat(allSubjects(byStatus))
+					.doesNotContain(abuse.getSubject(), technical.getSubject());
+			byStatus.path("content").forEach(entry ->
+					assertThat(entry.path("status").asText()).isEqualTo("RESOLVED"));
 		}
 
 		/**
@@ -305,33 +316,34 @@ class SupportIntegrationTest {
 		void ignoresSortParameter() throws Exception {
 			SupportRequest first = store("Aelter", SupportRequestCategory.OTHER);
 			SupportRequest second = store("Neuer", SupportRequestCategory.OTHER);
-			List<String> expected = expectedOrder(first, second);
 
-			mockMvc.perform(as(admin, get(ADMIN_PATH)
-							.param("sort", "subject,asc")
-							.param("size", "50")))
-					.andExpect(status().isOk())
-					.andExpect(jsonPath("$.content[0].subject").value(expected.get(0)))
-					.andExpect(jsonPath("$.content[1].subject").value(expected.get(1)));
+			JsonNode page = list("sort", "subject,asc");
+
+			assertThat(subjectsOf(page, first, second)).isEqualTo(expectedOrder(first, second));
 		}
 
 		/** §3.20: die Adresse steht in der Antwort, das Konto nur als Kennung. */
 		@Test
 		@DisplayName("Die Antwort traegt alle Felder aus §3.20")
 		void carriesContractFields() throws Exception {
-			store("Vollstaendig", SupportRequestCategory.ACCOUNT_ACCESS);
+			SupportRequest stored = store("Vollstaendig", SupportRequestCategory.ACCOUNT_ACCESS);
 
-			mockMvc.perform(as(admin, get(ADMIN_PATH).param("size", "50")))
-					.andExpect(status().isOk())
-					.andExpect(jsonPath("$.content[0].id").exists())
-					.andExpect(jsonPath("$.content[0].name").exists())
-					.andExpect(jsonPath("$.content[0].email").exists())
-					.andExpect(jsonPath("$.content[0].category").value("ACCOUNT_ACCESS"))
-					.andExpect(jsonPath("$.content[0].subject").value("Vollstaendig"))
-					.andExpect(jsonPath("$.content[0].message").exists())
-					.andExpect(jsonPath("$.content[0].status").value("OPEN"))
-					.andExpect(jsonPath("$.content[0].createdAt").exists())
-					.andExpect(jsonPath("$.content[0].updatedAt").exists());
+			JsonNode entry = entryOf(list(), stored);
+
+			assertThat(entry.path("name").asText()).isEqualTo(stored.getName());
+			assertThat(entry.path("email").asText()).isEqualTo(stored.getEmail());
+			assertThat(entry.path("category").asText()).isEqualTo("ACCOUNT_ACCESS");
+			assertThat(entry.path("subject").asText()).isEqualTo("Vollstaendig");
+			assertThat(entry.path("message").asText()).isEqualTo(stored.getMessage());
+			assertThat(entry.path("status").asText()).isEqualTo("OPEN");
+			assertThat(entry.path("createdAt").isMissingNode()).isFalse();
+			assertThat(entry.path("updatedAt").isMissingNode()).isFalse();
+			/* Beide stehen an einer unberuehrten Anfrage auf null und fehlen
+			   nicht: Jackson laeuft auf Include.ALWAYS, das Feld ist also da
+			   und leer. Genau darauf verlaesst sich die Oberflaeche, wenn sie
+			   zwischen "noch niemand" und "nicht geladen" unterscheidet. */
+			assertThat(entry.path("handledBy").isNull()).isTrue();
+			assertThat(entry.path("handledAt").isNull()).isTrue();
 		}
 	}
 
@@ -372,6 +384,92 @@ class SupportIntegrationTest {
 					.andExpect(jsonPath("$.status").value(to.name()));
 
 			assertThat(reload(request.getId()).getStatus()).isEqualTo(to);
+		}
+
+		/**
+		 * §3.20, seit Contract v88: jeder erlaubte Uebergang haelt fest, wer ihn
+		 * gesetzt hat. Der Wert kommt aus dem Token; der Koerper traegt allein
+		 * {@code status}, ihn zu faelschen gibt es also gar keinen Weg.
+		 */
+		@ParameterizedTest(name = "{0} nach {1} traegt den handelnden Admin ein")
+		@CsvSource({
+				"OPEN,IN_PROGRESS",
+				"OPEN,RESOLVED",
+				"IN_PROGRESS,RESOLVED",
+				"RESOLVED,OPEN"
+		})
+		@DisplayName("Jeder Uebergang schreibt handledBy und handledAt (§3.20)")
+		void recordsHandlingAdmin(SupportRequestStatus from, SupportRequestStatus to)
+				throws Exception {
+
+			SupportRequest request = store("Zustaendigkeit", SupportRequestCategory.OTHER);
+			moveTo(request, from);
+			assertThat(reload(request.getId()).getHandledBy()).isNull();
+
+			mockMvc.perform(as(admin, statusPatch(request.getId(), to.name())))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.handledBy.id").value(admin.getId().toString()))
+					.andExpect(jsonPath("$.handledBy.firstName").value(admin.getFirstName()))
+					.andExpect(jsonPath("$.handledBy.lastName").value(admin.getLastName()))
+					.andExpect(jsonPath("$.handledAt").exists())
+					/* Die schlanke Personenform traegt keine Adresse (§3.1). */
+					.andExpect(jsonPath("$.handledBy.email").doesNotExist())
+					.andExpect(jsonPath("$.handledBy.hsbEmail").doesNotExist());
+
+			SupportRequest saved = reload(request.getId());
+			assertThat(saved.getHandledBy()).isNotNull();
+			assertThat(saved.getHandledBy().getId()).isEqualTo(admin.getId());
+			assertThat(saved.getHandledAt()).isNotNull();
+		}
+
+		/**
+		 * Zwei Personen an derselben Anfrage: der Name folgt dem letzten
+		 * Statuswechsel. Genau das ist die Zusage aus §3.20, „was der Name
+		 * bedeutet, sagt der status daneben".
+		 */
+		@Test
+		@DisplayName("Der zweite Statuswechsel ueberschreibt den ersten Namen")
+		void lastHandlerWins() throws Exception {
+			User secondAdmin = save(Role.ADMIN);
+			SupportRequest request = store("Zwei Haende", SupportRequestCategory.OTHER);
+
+			mockMvc.perform(as(admin, statusPatch(request.getId(), "IN_PROGRESS")))
+					.andExpect(status().isOk());
+			assertThat(reload(request.getId()).getHandledBy().getId()).isEqualTo(admin.getId());
+
+			mockMvc.perform(as(secondAdmin, statusPatch(request.getId(), "RESOLVED")))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.handledBy.id").value(secondAdmin.getId().toString()));
+
+			assertThat(reload(request.getId()).getHandledBy().getId())
+					.isEqualTo(secondAdmin.getId());
+		}
+
+		/** §2.15: ein abgewiesener Uebergang (409) schreibt nichts. */
+		@Test
+		@DisplayName("Ein abgewiesener Uebergang laesst handledBy unberuehrt")
+		void rejectedTransitionRecordsNothing() throws Exception {
+			SupportRequest request = store("Erledigt", SupportRequestCategory.OTHER);
+			moveTo(request, SupportRequestStatus.RESOLVED);
+
+			mockMvc.perform(as(admin, statusPatch(request.getId(), "IN_PROGRESS")))
+					.andExpect(status().isConflict());
+
+			SupportRequest saved = reload(request.getId());
+			assertThat(saved.getHandledBy()).isNull();
+			assertThat(saved.getHandledAt()).isNull();
+		}
+
+		/** Eine unberuehrte Anfrage traegt keinen Namen. */
+		@Test
+		@DisplayName("Eine offene Anfrage hat handledBy und handledAt leer")
+		void untouchedRequestHasNoHandler() throws Exception {
+			SupportRequest stored = store("Unberuehrt", SupportRequestCategory.OTHER);
+
+			JsonNode entry = entryOf(list(), stored);
+
+			assertThat(entry.path("handledBy").isNull()).isTrue();
+			assertThat(entry.path("handledAt").isNull()).isTrue();
 		}
 
 		@Test
@@ -539,13 +637,20 @@ class SupportIntegrationTest {
 	 * sein darf: von {@code OPEN} aus ist nach §2.15 jeder andere Stand in einem
 	 * Schritt erreichbar. Kaeme ein vierter Status dazu, der das nicht ist,
 	 * schluege der Aufbau fehl statt still einen unmoeglichen Zustand zu bauen.
+	 *
+	 * <p><strong>Bewusst am Repository und nicht ueber den Endpoint.</strong>
+	 * Der Aufbau soll den Stand setzen und dabei gerade <em>keinen</em>
+	 * Bearbeiter eintragen; sonst waere in den Tests darunter nicht mehr zu
+	 * unterscheiden, was der Aufbau geschrieben hat und was der gepruefte
+	 * Aufruf. {@code handle(status, null, null)} ist deshalb hier richtig und
+	 * im Produktivcode nirgends erreichbar.
 	 */
 	private void moveTo(SupportRequest request, SupportRequestStatus target) {
 		if (request.getStatus() == target) {
 			return;
 		}
 		assertThat(request.getStatus().mayTransitionTo(target)).isTrue();
-		request.setStatus(target);
+		request.handle(target, null, null);
 		requestRepository.saveAndFlush(request);
 	}
 
@@ -558,8 +663,8 @@ class SupportIntegrationTest {
 	 * Gleichstandsbrecher. Genau er ist hier mitgeprueft.
 	 */
 	private List<String> expectedOrder(SupportRequest... requests) {
-		return java.util.Arrays.stream(requests)
-				.sorted(java.util.Comparator
+		return Arrays.stream(requests)
+				.sorted(Comparator
 						.comparing(SupportRequest::getCreatedAt).reversed()
 						.thenComparing(SupportRequest::getId))
 				.map(SupportRequest::getSubject)
@@ -568,6 +673,54 @@ class SupportIntegrationTest {
 
 	private SupportRequest reload(UUID id) {
 		return requestRepository.findById(id).orElseThrow();
+	}
+
+	/**
+	 * Eine Seite der Verwaltungsliste als Baum, mit optionalen Parametern.
+	 *
+	 * <p>{@code size=100} ist die Obergrenze aus §6.6 und hier kein Zufall: die
+	 * Tabelle kann Zeilen aus der Entwicklungsumgebung enthalten, und die eigenen
+	 * sollen trotzdem auf der ersten Seite stehen. Eine Zusage ist das nicht;
+	 * gesucht werden sie ueber ihre Kennung beziehungsweise Betreffzeile.
+	 */
+	private JsonNode list(String... params) throws Exception {
+		MockHttpServletRequestBuilder request = get(ADMIN_PATH).param("size", "100");
+		for (int i = 0; i < params.length; i += 2) {
+			request = request.param(params[i], params[i + 1]);
+		}
+		String body = mockMvc.perform(as(admin, request))
+				.andExpect(status().isOk())
+				.andReturn().getResponse().getContentAsString();
+		return objectMapper.readTree(body);
+	}
+
+	/** Alle Betreffzeilen einer Seite, in ihrer Reihenfolge. */
+	private List<String> allSubjects(JsonNode page) {
+		List<String> subjects = new ArrayList<>();
+		page.path("content").forEach(entry -> subjects.add(entry.path("subject").asText()));
+		return subjects;
+	}
+
+	/**
+	 * Die Betreffzeilen der genannten Anfragen in der Reihenfolge, in der die
+	 * Antwort sie fuehrt. Fremde Zeilen aus dem Bestand fallen heraus; ihre
+	 * Position ist fuer die Zusage aus §6.6 ohne Belang.
+	 */
+	private List<String> subjectsOf(JsonNode page, SupportRequest... wanted) {
+		List<String> subjects = Arrays.stream(wanted)
+				.map(SupportRequest::getSubject)
+				.toList();
+		return allSubjects(page).stream().filter(subjects::contains).toList();
+	}
+
+	/** Der Eintrag zu dieser Anfrage, gefunden ueber die Kennung. */
+	private JsonNode entryOf(JsonNode page, SupportRequest request) {
+		for (JsonNode entry : page.path("content")) {
+			if (entry.path("id").asText().equals(request.getId().toString())) {
+				return entry;
+			}
+		}
+		throw new AssertionError("Anfrage nicht in der Antwort: " + request.getId());
 	}
 
 	/** Die zuletzt eingegangene Anfrage. */

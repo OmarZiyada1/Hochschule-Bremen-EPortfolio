@@ -10,7 +10,10 @@ import de.hsbremen.eportfolio.support.dto.SupportRequestCreateRequest;
 import de.hsbremen.eportfolio.support.dto.SupportRequestResponse;
 import de.hsbremen.eportfolio.user.User;
 import de.hsbremen.eportfolio.user.UserRepository;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -51,12 +54,33 @@ public class SupportService {
 
 	private final SupportRateLimitService rateLimit;
 
+	/**
+	 * Fuer {@code handledAt}. Als Feld und nicht als {@code Instant.now()} an
+	 * der Aufrufstelle, damit ein Test den Zeitpunkt festhalten kann, ohne die
+	 * Systemuhr zu befragen.
+	 */
+	private final Clock clock;
+
+	/**
+	 * {@code @Autowired} ist noetig, weil es zwei Konstruktoren gibt und Spring
+	 * sonst nicht weiss, welchen es nehmen soll. Dasselbe Muster wie in
+	 * {@link SupportRateLimitService} und {@code auth.LoginAttemptService}.
+	 */
+	@Autowired
 	public SupportService(SupportRequestRepository requestRepository, UserRepository userRepository,
 			SupportRateLimitService rateLimit) {
+
+		this(requestRepository, userRepository, rateLimit, Clock.systemUTC());
+	}
+
+	/** Fuer Tests, die den Zeitpunkt des Statuswechsels pruefen. */
+	SupportService(SupportRequestRepository requestRepository, UserRepository userRepository,
+			SupportRateLimitService rateLimit, Clock clock) {
 
 		this.requestRepository = requestRepository;
 		this.userRepository = userRepository;
 		this.rateLimit = rateLimit;
+		this.clock = clock;
 	}
 
 	// ------------------------------------------------------------------
@@ -147,8 +171,21 @@ public class SupportService {
 	// ------------------------------------------------------------------
 
 	/**
-	 * Setzt den Bearbeitungsstand (§6.1, §2.15).
+	 * Setzt den Bearbeitungsstand und haelt fest, wer ihn gesetzt hat (§6.1,
+	 * §2.15, §3.20).
 	 *
+	 * <p><strong>Die Person kommt aus dem Sicherheitskontext und nie aus dem
+	 * Koerper.</strong> {@code SupportRequestStatusUpdateRequest} traegt allein
+	 * {@code status} (§6.1); anders koennte ein Konto eine fremde
+	 * Zustaendigkeit eintragen, und der Name gehoerte zu einem Stand, den diese
+	 * Person nie gesetzt hat.
+	 *
+	 * <p><strong>Ein abgewiesener Uebergang schreibt nichts.</strong> Die
+	 * Pruefung steht vor dem Schreiben, die Ausnahme rollt die Transaktion
+	 * ohnehin zurueck; beides zusammen ist die Zusage aus §2.15.
+	 *
+	 * @param adminId das Konto aus dem Token; es existiert, denn ohne gueltiges
+	 *                Token kommt der Aufruf nicht bis hierher
 	 * @throws ResourceNotFoundException unter dieser Kennung gibt es keine
 	 *                                   Anfrage
 	 * @throws ConflictException         der Uebergang steht nicht in §2.15,
@@ -156,13 +193,21 @@ public class SupportService {
 	 *                                   bereits stehenden Werts
 	 */
 	@Transactional
-	public SupportRequestResponse updateStatus(UUID id, SupportRequestStatus target) {
+	public SupportRequestResponse updateStatus(UUID id, SupportRequestStatus target, UUID adminId) {
 		SupportRequest request = load(id);
 
 		if (!request.getStatus().mayTransitionTo(target)) {
 			throw statusTransitionInvalid(request.getStatus(), target);
 		}
-		request.setStatus(target);
+
+		/*
+		 * getReferenceById statt findById: gebraucht wird allein der
+		 * Fremdschluessel, und die Antwort liest Vor- und Nachnamen ueber
+		 * denselben Persistenzkontext ohnehin nach. Ein voller Ladevorgang
+		 * zoege Passwort-Hash und beide Adressen mit, die in dieser Antwort
+		 * nichts zu suchen haben (§3.1).
+		 */
+		request.handle(target, userRepository.getReferenceById(adminId), Instant.now(clock));
 		return SupportRequestResponse.from(request);
 	}
 

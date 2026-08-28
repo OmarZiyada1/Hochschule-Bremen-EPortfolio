@@ -1999,8 +1999,13 @@
         "confirm": "Delete permanently"
       },
       "announce": {
-        "status": "Request “{{subject}}” is now {{status}}.",
+        "status": "Request “{{subject}}” is now {{status}}, handled by you.",
         "deleted": "Request “{{subject}}” was deleted."
+      },
+      "handled": {
+        "OPEN": "Reopened by {{name}} on {{at}}",
+        "IN_PROGRESS": "Handled by {{name}} since {{at}}",
+        "RESOLVED": "Resolved by {{name}} on {{at}}"
       }
     }
   },

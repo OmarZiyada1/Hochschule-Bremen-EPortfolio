@@ -210,6 +210,7 @@ Entity, sondern eine Aggregation über `project_tag`, und steht deshalb nur in
 | `hatReagiert` | `hasReacted` (Feld der Detailantwort, seit Contract v84) |
 | `verzeichnisEintrag` | `TocEntry` mit `level` · `text` · `index` |
 | `betreff` · `nachricht` · `abgesendetVonNutzerId` | `subject` · `message` · `submittedByUserId` (Felder der `SupportRequest`, seit Contract v87) |
+| `bearbeitetVon` · `bearbeitetAm` | `handledBy` · `handledAt` (wer den Stand der `SupportRequest` zuletzt gesetzt hat, seit Contract v88) |
 | `website` | `website` (das versteckte Formularfeld gegen automatisierte Einsendungen, §6.1; bewusst ein gewöhnlicher Name, ein `honeypot` würde von jedem Programm übersprungen) |
 
 ## 5. Fehler-Envelope und Seitenformat

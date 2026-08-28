@@ -1,4 +1,4 @@
-import { MailIcon, Trash2Icon } from "lucide-react"
+import { MailIcon, Trash2Icon, UserRoundCheckIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import type { SupportRequestResponse, SupportRequestStatus } from "@/api/types"
@@ -61,6 +61,14 @@ const ACTIONS: Record<
  * <p><strong>Der Papierkorb fragt nicht hier nach.</strong> Die Rueckfrage
  * gehoert in den {@code AlertDialog} der Seite; diese Karte meldet nur die
  * Absicht. Sonst truege jede Karte einen eigenen Dialog im Baum.
+ *
+ * <p><strong>Der Name neben dem Stand sagt, wer zuletzt gehandelt hat</strong>
+ * (§3.20, seit Contract v88). Was er bedeutet, haengt am Stand daneben, und
+ * genau deshalb steht er dort und nicht in der Absenderzeile: bei
+ * {@code IN_PROGRESS} ist es die zustaendige Person, bei {@code RESOLVED} die
+ * erledigende, bei einem wieder geoeffneten {@code OPEN} die zurueckholende.
+ * Die Beschriftung wechselt mit; eine gemeinsame Formulierung wie „zuletzt
+ * bearbeitet von" waere an allen drei Staenden gleich blass.
  */
 export function SupportRequestCard({
   request,
@@ -89,6 +97,28 @@ export function SupportRequestCard({
   const mailtoHref = `mailto:${encodeURIComponent(request.email)}?subject=${encodeURIComponent(
     t("administration.support.replySubject", { subject: request.subject })
   )}`
+
+  /*
+   * handledAt ist nach §3.20 immer zusammen mit handledBy gesetzt oder
+   * zusammen leer; der Server haelt das mit einem Check-Constraint fest. Die
+   * Anzeige prueft trotzdem beides, weil sie sonst bei einem kuenftigen
+   * Schreibweg ein "Invalid Date" zeigte statt gar nichts.
+   */
+  const handledAt =
+    request.handledAt === null
+      ? null
+      : new Intl.DateTimeFormat(i18n.language, {
+          dateStyle: "short",
+          timeStyle: "short",
+        }).format(new Date(request.handledAt))
+
+  const handler =
+    request.handledBy === null || handledAt === null
+      ? null
+      : t(`administration.support.handled.${request.status}`, {
+          name: `${request.handledBy.firstName} ${request.handledBy.lastName}`.trim(),
+          at: handledAt,
+        })
 
   return (
     <Card>
@@ -158,6 +188,21 @@ export function SupportRequestCard({
           Ohne Ueberschrift faende die Sprungnavigation eines Screenreaders in
           einer langen Liste keinen Anker (SC 1.3.1).
         */}
+        {/*
+          Der Name steht unter der Kopfzeile und nicht in ihr: bei drei
+          Schaltflaechen daneben braechte er die Zeile auf schmalen
+          Bildschirmen um, und die Beschriftung ist laenger als eine Pille.
+        */}
+        {handler !== null && (
+          <p className="type-caption flex items-center gap-1.5 text-muted-foreground">
+            <UserRoundCheckIcon
+              aria-hidden="true"
+              className="size-3.5 shrink-0"
+            />
+            {handler}
+          </p>
+        )}
+
         <h3 className="type-body font-semibold">{request.subject}</h3>
 
         <p className="type-body-sm text-muted-foreground">

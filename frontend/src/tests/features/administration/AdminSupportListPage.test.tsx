@@ -12,6 +12,9 @@ import { server } from "@/tests/msw/server"
 import { renderWithProviders } from "@/tests/render"
 import { signInAs } from "@/tests/routes/helpers"
 
+/** Das Admin-Konto, das die Staende gesetzt hat (Contract 3.20, seit v88). */
+const HANDLER = { id: "ad-1", firstName: "Mira", lastName: "Beispiel" }
+
 const OPEN_REQUEST: SupportRequestResponse = {
   id: "sr-1",
   name: "Lena Brandt",
@@ -21,6 +24,10 @@ const OPEN_REQUEST: SupportRequestResponse = {
   message: "Seit gestern komme ich nicht mehr in mein Portfolio.",
   status: "OPEN",
   submittedByUserId: null,
+  /* Unberuehrt im Eingang: beide Felder stehen auf null und fehlen nicht
+     (Jackson laeuft auf Include.ALWAYS, Contract 3.20). */
+  handledBy: null,
+  handledAt: null,
   createdAt: "2026-08-27T10:27:00Z",
   updatedAt: "2026-08-27T10:27:00Z",
 }
@@ -33,6 +40,8 @@ const IN_PROGRESS_REQUEST: SupportRequestResponse = {
   category: "PROJECT_SUBMISSION",
   subject: "Projekt laesst sich nicht einreichen",
   status: "IN_PROGRESS",
+  handledBy: HANDLER,
+  handledAt: "2026-08-26T08:30:00Z",
   createdAt: "2026-08-26T07:14:00Z",
 }
 
@@ -44,6 +53,8 @@ const RESOLVED_REQUEST: SupportRequestResponse = {
   category: "ACCOUNT_ACCESS",
   subject: "HSB-Adresse wird nicht bestaetigt",
   status: "RESOLVED",
+  handledBy: HANDLER,
+  handledAt: "2026-08-24T16:20:00Z",
   createdAt: "2026-08-24T14:02:00Z",
 }
 
@@ -173,7 +184,12 @@ describe("AdminSupportListPage", () => {
       ...baseHandlers([OPEN_REQUEST]),
       http.patch("*/api/admin/support/sr-1", async ({ request }) => {
         patched.push(await request.json())
-        return HttpResponse.json({ ...OPEN_REQUEST, status: "IN_PROGRESS" })
+        return HttpResponse.json({
+          ...OPEN_REQUEST,
+          status: "IN_PROGRESS",
+          handledBy: HANDLER,
+          handledAt: "2026-08-27T12:40:00Z",
+        })
       })
     )
 
@@ -191,7 +207,8 @@ describe("AdminSupportListPage", () => {
     expect(patched).toEqual([{ status: "IN_PROGRESS" }])
     expect(
       await screen.findByText(
-        `Anfrage „${OPEN_REQUEST.subject}“ steht jetzt auf In Bearbeitung.`
+        `Anfrage „${OPEN_REQUEST.subject}“ steht jetzt auf In Bearbeitung,` +
+          " bearbeitet von Ihnen."
       )
     ).toBeInTheDocument()
   })
@@ -286,6 +303,39 @@ describe("AdminSupportListPage", () => {
     expect(
       screen.queryByRole("heading", { name: OPEN_REQUEST.subject })
     ).not.toBeInTheDocument()
+  })
+
+  /**
+   * Contract 3.20 seit v88: was der Name bedeutet, sagt der Stand daneben.
+   * Die Karte formuliert deshalb je Stand anders und nicht einmal blass.
+   */
+  it("nennt je Stand, wer gehandelt hat", async () => {
+    server.use(
+      ...baseHandlers([OPEN_REQUEST, IN_PROGRESS_REQUEST, RESOLVED_REQUEST])
+    )
+
+    renderWithProviders(<AdminSupportListPage />, "/administration/support")
+
+    const inProgress = within(await cardOf(IN_PROGRESS_REQUEST))
+    expect(
+      inProgress.getByText(/In Bearbeitung von Mira Beispiel seit/)
+    ).toBeInTheDocument()
+
+    const resolved = within(await cardOf(RESOLVED_REQUEST))
+    expect(
+      resolved.getByText(/Erledigt von Mira Beispiel am/)
+    ).toBeInTheDocument()
+  })
+
+  /** Eine unberuehrte Anfrage zeigt keinen Namen, auch keinen leeren. */
+  it("zeigt an einer offenen Anfrage keine Zustaendigkeit", async () => {
+    server.use(...baseHandlers([OPEN_REQUEST]))
+
+    renderWithProviders(<AdminSupportListPage />, "/administration/support")
+
+    const open = within(await cardOf(OPEN_REQUEST))
+    expect(open.queryByText(/Mira Beispiel/)).not.toBeInTheDocument()
+    expect(open.queryByText(/In Bearbeitung von/)).not.toBeInTheDocument()
   })
 
   it("zeigt einen 409 beim Statuswechsel als Meldung", async () => {

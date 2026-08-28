@@ -1999,8 +1999,13 @@
         "confirm": "Endgültig löschen"
       },
       "announce": {
-        "status": "Anfrage „{{subject}}“ steht jetzt auf {{status}}.",
+        "status": "Anfrage „{{subject}}“ steht jetzt auf {{status}}, bearbeitet von Ihnen.",
         "deleted": "Anfrage „{{subject}}“ wurde gelöscht."
+      },
+      "handled": {
+        "OPEN": "Wieder geöffnet von {{name}} am {{at}}",
+        "IN_PROGRESS": "In Bearbeitung von {{name}} seit {{at}}",
+        "RESOLVED": "Erledigt von {{name}} am {{at}}"
       }
     }
   },

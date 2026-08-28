@@ -3,6 +3,7 @@ package de.hsbremen.eportfolio.support.dto;
 import de.hsbremen.eportfolio.common.enums.SupportRequestCategory;
 import de.hsbremen.eportfolio.common.enums.SupportRequestStatus;
 import de.hsbremen.eportfolio.support.SupportRequest;
+import de.hsbremen.eportfolio.user.dto.UserLookupResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.UUID;
@@ -31,6 +32,9 @@ import java.util.UUID;
  * @param status            Bearbeitungsstand nach §2.15
  * @param submittedByUserId das absendende Konto, sofern angemeldet, sonst
  *                          {@code null}
+ * @param handledBy         das Admin-Konto, das den Stand zuletzt gesetzt hat,
+ *                          sonst {@code null} (§3.20, seit v88)
+ * @param handledAt         Zeitpunkt dieses Statuswechsels, sonst {@code null}
  * @param createdAt         Eingangszeitpunkt, zugleich die Sortierung der Liste
  * @param updatedAt         letzte Aenderung, in der Praxis der letzte
  *                          Statuswechsel
@@ -67,6 +71,29 @@ public record SupportRequestResponse(
 				nullable = true)
 		UUID submittedByUserId,
 
+		/*
+		 * Als Objekt und nicht als blosse Kennung, anders als
+		 * submittedByUserId: die Liste zeigt hier einen Namen, und ein Nachladen
+		 * je Zeile waere genau das N+1-Verhalten, das die uebrigen Lesedienste
+		 * vermeiden. Beim Absender ist es umgekehrt, ihn zeigt keine Ansicht.
+		 *
+		 * UserLookupResponse und kein eigenes Record: dieselben drei Felder ein
+		 * drittes Mal zu schreiben (neben PersonResponse) waere die Art
+		 * Dopplung, die beim naechsten Nachtrag auseinanderlaeuft. Die
+		 * hsbEmail bleibt damit ebenso ausgeschlossen wie dort (§3.1).
+		 */
+		@Schema(description = "Das Admin-Konto, das den Stand zuletzt gesetzt hat; "
+				+ "sonst null (§3.20). Was der Name bedeutet, sagt das Feld status: "
+				+ "bei IN_PROGRESS ist es die zustaendige Person, bei RESOLVED die "
+				+ "erledigende, bei einem wieder geoeffneten OPEN die zurueckholende.",
+				nullable = true)
+		UserLookupResponse handledBy,
+
+		@Schema(description = "Zeitpunkt des letzten Statuswechsels; sonst null. "
+				+ "Immer zusammen mit handledBy gesetzt oder zusammen leer (§3.20).",
+				nullable = true)
+		Instant handledAt,
+
 		Instant createdAt,
 
 		Instant updatedAt) {
@@ -89,6 +116,10 @@ public record SupportRequestResponse(
 				request.getMessage(),
 				request.getStatus(),
 				request.getSubmittedBy() == null ? null : request.getSubmittedBy().getId(),
+				request.getHandledBy() == null
+						? null
+						: UserLookupResponse.from(request.getHandledBy()),
+				request.getHandledAt(),
 				request.getCreatedAt(),
 				request.getUpdatedAt());
 	}
