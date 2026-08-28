@@ -86,10 +86,14 @@ export function statusQueryValue(
  * PUBLISHED bekommen keine, damit die veroeffentlichte Kachel ihre
  * Reaktionszahl behaelt.
  *
- * <p><strong>Als blosses Mitglied</strong> gibt es genau eine Handlung, und
- * zwar in jedem Status: das Verlassen (§3.13.1, seit Contract v84). Die
- * Statusschranke gilt dort ausdruecklich nicht, sonst kaeme niemand je aus
- * einem veroeffentlichten Projekt heraus.
+ * <p><strong>Als Mitglied</strong> stehen dieselben Handlungen zur Verfuegung
+ * wie der Autor:in, ausser dem Loeschen (§4.1 und §5 seit Contract v85,
+ * KAN-86); an dessen Stelle steht das Verlassen (§3.13.1, seit Contract
+ * v84). Das Verlassen gilt in jedem Status, dort greift die Statusschranke
+ * ausdruecklich nicht, sonst kaeme niemand je aus einem veroeffentlichten
+ * Projekt heraus. Eine Kachel eines Mitglieds traegt deshalb in jedem Status
+ * eine Handlung, und die Antwort dieser Funktion bleibt fuer sie unveraendert
+ * {@code true}.
  *
  * <p>Die Antwort steht hier und nicht zusaetzlich in der Seite: sonst
  * muesste ein neuer Status an zwei Stellen nachgezogen werden (Befund aus

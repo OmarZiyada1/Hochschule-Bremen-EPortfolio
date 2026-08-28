@@ -46,6 +46,17 @@ export type ProjectUpdateRequest = ApiSchemas["ProjectUpdateRequest"]
 export type MemberRequest = ApiSchemas["MemberRequest"]
 
 /**
+ * Antwort der Bearbeitungssperre (§6.9, seit Contract v85, KAN-86): wer den
+ * Beitrag gerade haelt und ob es die anfragende Person selbst ist.
+ *
+ * Der Halter bekommt einen eigenen Alias, weil die Oberflaeche ihn einzeln
+ * weiterreicht: der Dialog zeigt den Namen, die Antwort daneben traegt nur
+ * das Ja oder Nein.
+ */
+export type EditLockResponse = ApiSchemas["EditLockResponse"]
+export type EditLockHolderResponse = ApiSchemas["EditLockHolderResponse"]
+
+/**
  * Person aus GET /api/users/lookup (§6.1, KAN-44). Fuehrt ausschliesslich
  * id, firstName und lastName: der Endpoint ist kein Personenverzeichnis,
  * und hsbEmail verlaesst den Server hier nicht (§3.1).

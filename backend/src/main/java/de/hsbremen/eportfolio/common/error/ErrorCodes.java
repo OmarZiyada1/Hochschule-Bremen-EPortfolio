@@ -3,7 +3,7 @@ package de.hsbremen.eportfolio.common.error;
 /**
  * Fehlercodes fuer das Envelope aus API-Contract §6.2.
  *
- * <p>Stand Contract v84 steht jede Konstante dieser Klasse auch in §6.2.
+ * <p>Stand Contract v86 steht jede Konstante dieser Klasse auch in §6.2.
  * {@link #VALIDATION_FAILED} war bis v14 nur hier gefuehrt und wurde mit v15
  * nachgetragen (Tabelle „Fehlercodes Anfrageformat", Historieneintrag in §10).
  * {@link #PROJECT_NOT_FOUND} lag umgekehrt: er stand seit jeher in §6.2 und kam
@@ -48,6 +48,13 @@ package de.hsbremen.eportfolio.common.error;
  * <p>Zuletzt {@link #FILE_RANGE_NOT_SATISFIABLE} mit KAN-72 (Contract v52): §3.15
  * verlangt seit v51, dass die Dateiauslieferung HTTP-Range beantwortet, und
  * fuer den unerfuellbaren Bereich fuehrte §6.2 bis dahin keinen Code.
+ *
+ * <p>Zuletzt neu entstanden ist {@link #PROJECT_LOCKED_BY_OTHER} mit KAN-86
+ * (Contract v85): §6.9 fuehrt seitdem die Bearbeitungssperre im Editor ein, und
+ * keiner der bis dahin gefuehrten 409er beschreibt sie.
+ * {@link #PROJECT_VERSION_CONFLICT} meint eine bereits geschehene fremde
+ * Aenderung, {@link #PROJECT_STATUS_NOT_EDITABLE} einen Status, der die
+ * Bearbeitung dauerhaft verwehrt; hier wartet die Person auf eine andere.
  *
  * <p>KAN-37 hat keinen Code hinzugefuegt. Contract v74 hat allein zwei
  * Ausloesertexte nachgetragen, die §3.11.1 und §4.1 laengst verlangten:
@@ -349,6 +356,37 @@ public final class ErrorCodes {
 	 * Zustand.
 	 */
 	public static final String PROJECT_STATUS_NOT_EDITABLE = "PROJECT_STATUS_NOT_EDITABLE";
+
+	/**
+	 * 409: an diesem Projekt arbeitet gerade jemand anders. Die
+	 * Bearbeitungssperre aus §6.9 laesst zu einer Zeit genau eine schreibende
+	 * Sitzung zu; sie endet mit dem Verlassen des Editors oder von selbst,
+	 * wenn der Herzschlag der anderen Sitzung ausbleibt.
+	 *
+	 * <p><strong>Warum ein eigener Code neben</strong>
+	 * {@link #PROJECT_VERSION_CONFLICT}: beide antworten mit 409, meinen aber
+	 * Verschiedenes und fuehren zu verschiedenen Wegen. Dort ist die Aenderung
+	 * bereits geschehen und der Client laedt nach; hier ist noch nichts
+	 * passiert, und der Client wartet oder geht. Ein gemeinsamer Code
+	 * zwaenge die Oberflaeche, aus dem Meldungstext zu raten, was zu tun ist,
+	 * und genau das verbietet §6.2.
+	 *
+	 * <p><strong>Nicht zu verwechseln mit</strong>
+	 * {@link #PROJECT_STATUS_NOT_EDITABLE}: dort verbietet der Status die
+	 * Bearbeitung dauerhaft, hier verbietet sie eine andere Person fuer die
+	 * naechsten Sekunden.
+	 *
+	 * <p><strong>Die Meldung nennt den Namen der haltenden Person.</strong> Das
+	 * ist die einzige Fehlermeldung im Projekt, die das tut, und sie darf es:
+	 * bis hierher kommt nur, wer selbst zur Projektseite gehoert (§6.9 setzt
+	 * dieselben Rechte wie der Schreibpfad voraus), also jemand, der die
+	 * Beteiligten ohnehin sieht. Ohne den Namen waere die Auskunft wertlos: die
+	 * Frage der Person lautet nicht, ob gesperrt ist, sondern auf wen sie
+	 * wartet.
+	 *
+	 * <p>Vergeben mit KAN-86, nachgetragen in §6.2 mit Contract v85.
+	 */
+	public static final String PROJECT_LOCKED_BY_OTHER = "PROJECT_LOCKED_BY_OTHER";
 
 	/**
 	 * 409: der angeforderte Statusuebergang steht nicht in der Tabelle aus §4.1,

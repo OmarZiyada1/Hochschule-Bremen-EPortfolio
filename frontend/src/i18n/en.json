@@ -680,8 +680,7 @@
         "chosen": "Assigned editors",
         "remove": "Remove {{name}} from the editorial assignment",
         "none": "No editorial assignment.",
-        "lockedAfterSubmit": "The editorial assignment can only be changed while you are working on the project, that is in draft and in revision. From submission onwards, administration takes it over.",
-        "lockedForMembers": "The editorial assignment is set by the author of the project."
+        "lockedAfterSubmit": "The editorial assignment can only be changed while you are working on the project, that is in draft and in revision. From submission onwards, administration takes it over."
       },
       "members": {
         "person": "Member",
@@ -1175,6 +1174,16 @@
       "description": "The contribution returns to draft and is no longer visible to the editorial team. It can be submitted again afterwards.",
       "done": "The submission has been withdrawn."
     },
+    "editLock": {
+      "title": "Currently being edited",
+      "description": "{{name}} has been editing this contribution since {{since}}. Only one person can write at a time. As soon as they stop editing, this page continues on its own.",
+      "leave": "Go to the project",
+      "retry": "Try again",
+      "retrying": "Checking …",
+      "stillHeld": "{{name}} is still editing the contribution.",
+      "lostTitle": "Editing has moved on",
+      "lostDescription": "{{name}} has been editing this contribution since {{since}}. Your text is still here but is no longer being saved. Copy it before you leave the page, or try again."
+    },
     "readOnly": {
       "title": "This contribution cannot be edited right now",
       "description": "Content can only be changed in draft and revision. The contribution is in {{status}}."
@@ -1221,6 +1230,7 @@
     "PROJECT_NOT_FOUND": "This project does not exist or has been removed.",
     "RESOURCE_NOT_FOUND": "The requested entry does not exist or has been removed.",
     "PROJECT_VERSION_CONFLICT": "The project has been changed elsewhere in the meantime. Please reload or review your version.",
+    "PROJECT_LOCKED_BY_OTHER": "Someone else is working on this contribution right now. Only one person can write at a time.",
     "PROJECT_STATUS_NOT_EDITABLE": "The project cannot be edited in its current status.",
     "PROJECT_STATUS_TRANSITION_INVALID": "This status transition is not allowed.",
     "CHANGE_REQUESTS_OPEN": "There are still open change requests. Please resolve them before submitting again.",

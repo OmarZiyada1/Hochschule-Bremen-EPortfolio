@@ -13,8 +13,21 @@ import { useIsDarkMode } from "@/lib/theme"
  * traegt nur die Beschriftung und die Richtung des naechsten Klicks; die
  * className kommt vom Einbauort, weil die NavBar (KAN-7) eigene Farben und
  * einen eigenen Fokusring braucht, wie beim LanguageToggle.
+ *
+ * Aus demselben Grund ist die Groesse waehlbar (KAN-86): in der NavBar steht
+ * der Knopf allein und traegt die Standardgroesse, in der Werkzeugzeile des
+ * Editors steht er neben Rueckgaengig, Wiederholen und Drucken und folgt
+ * deren Mass. Gereicht wird die Variante des Buttons durch, statt sie per
+ * className zu ueberschreiben: eine zweite Groessenangabe daneben gaebe zwei
+ * Quellen fuer dieselbe Entscheidung.
  */
-export function ThemeToggle({ className }: { className?: string }) {
+export function ThemeToggle({
+  className,
+  size = "icon",
+}: {
+  className?: string
+  size?: React.ComponentProps<typeof Button>["size"]
+}) {
   const { t } = useTranslation()
   const { setTheme } = useTheme()
   const isDark = useIsDarkMode()
@@ -22,7 +35,7 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <Button
       variant="ghost"
-      size="icon"
+      size={size}
       className={className}
       aria-label={isDark ? t("common.theme.toLight") : t("common.theme.toDark")}
       onClick={() => setTheme(isDark ? "light" : "dark")}

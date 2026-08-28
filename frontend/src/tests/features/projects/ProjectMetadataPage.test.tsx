@@ -19,6 +19,7 @@ import { projectDetail, reference } from "@/tests/fixtures"
 import {
   apiErrorResponse,
   currentUserHandler,
+  editLockHandler,
   ownPortfolioHandler,
 } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
@@ -156,6 +157,10 @@ function ProbedPage() {
 }
 
 function renderPage(path: string) {
+  /* Die Bearbeitungssperre (§6.9, KAN-86) steht vor jeder Schreibansicht.
+     Ohne den Handler liefe ihr Aufruf in den Fehlerpfad, und die Tests
+     pruefen dann nicht mehr den Regelfall. */
+  server.use(...editLockHandler())
   return renderWithProviders(
     <Routes>
       <Route path="/projects/:projectId/metadata" element={<ProbedPage />} />

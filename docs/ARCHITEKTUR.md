@@ -33,6 +33,8 @@ de.hsbremen.eportfolio
 │   ├── enums/                     von mehreren Features genutzte Aufzählungstypen
 │   └── error/                     zentrale Fehlerbehandlung, Exceptions, globaler Handler
 ├── config/                        anwendungsweite Spring-Konfiguration (Security, JPA, Properties)
+├── editlock/                      Bearbeitungssperre: an einem Beitrag schreibt jeweils eine Person
+│   └── dto/                       Antwort der Sperre (Halter und heldBySelf)
 ├── mail/                          Zustellung der Verifizierungs- und Rücksetzcodes (Port + zwei Adapter)
 ├── masterdata/                    Referenzdaten: Fakultät, Studiengang, Modul, Kategorie, Semester, Tag
 │   └── dto/                       DTOs der sechs Stammdaten-Endpoints
@@ -60,7 +62,8 @@ Was in welchem Paket steckt:
 | `common.dto`    | `PageResponse` (Seitenformat aus Contract §6.6) |
 | `common.enums`  | `BlockType`, `CommentStatus`, `CommentType`, `Degree`, `NominationStatus`, seit KAN-37 `NominationTier`, `ProjectStatus`, `ProjectType`, `Role`, `Top10Action`, `UserStatus`, `VerificationPurpose` |
 | `common.error`  | `ApiError`, `ApiErrorWriter`, `ErrorCodes`, `GlobalExceptionHandler`, `ValidationException`, `ResourceNotFoundException`, `ConflictException`, seit KAN-72 `RangeNotSatisfiableException` |
-| `config`     | `SecurityConfig`, `JpaConfig`, `OpenApiConfig`, `AsyncConfig`, `SchedulingConfig`, `ConfigurationStartupLogger`, `ConfigurationValues` + **alle** Properties-Records (`CorsProperties`, `JwtProperties`, `LoginAttemptProperties`, `PermissionProperties`, `RegistrationProperties`, `StorageProperties`, `MailProperties`) und die Auswahl-Enums `StorageProvider`, `MailProvider` |
+| `config`     | `SecurityConfig`, `JpaConfig`, `OpenApiConfig`, `AsyncConfig`, `SchedulingConfig`, `ConfigurationStartupLogger`, `ConfigurationValues` + **alle** Properties-Records (`CorsProperties`, `JwtProperties`, `LoginAttemptProperties`, `PermissionProperties`, `RegistrationProperties`, `StorageProperties`, `MailProperties`, seit KAN-86 `EditLockProperties`) und die Auswahl-Enums `StorageProvider`, `MailProvider` |
+| `editlock`   | `EditLock` (der Eintrag im Arbeitsspeicher), `EditLockRegistry` (je Projekt eine Sperre, mit Frist), `EditLockGuard` (Durchsetzung an den Schreibpfaden), `EditLockService`, `EditLockController`, `dto/{EditLockResponse, EditLockHolderResponse}`. Seit KAN-86 (Contract §6.9). Ohne Entity und ohne Tabelle: die Sperre lebt Sekunden und ist nach einem Neustart gegenstandslos, Vorbild ist der Anmeldezaehler aus `auth`. `EditLockProperties` liegt wie alle Properties in `config` |
 | `mail`       | `MailSender` (Port), `MailMessage`, `LogMailSender`, `SmtpMailSender`, `MailTemplateService`. Seit KAN-51, siehe Kapitel 10 |
 | `masterdata` | `Category`, `Faculty`, `Module`, `StudyProgram`, seit KAN-65 `Semester`, seit KAN-75 `Tag` + `TagUsageCount` (Zählprojektion) + je ein Repository, `MasterDataController`, `MasterDataService`, `DevMasterDataSeeder`, `dto/{CategoryResponse, FacultyResponse, StudyProgramResponse, ModuleResponse, SemesterResponse, TagResponse}`. Seit KAN-25 zusätzlich das Admin-CRUD: `MasterDataAdminController`, `MasterDataAdminService`, `dto/{Category, Faculty, StudyProgram, Module, Semester}{Create, Update}Request`, dazu `SemesterMoveRequest` für die Reihenfolge |
 | `portfolio`  | `Portfolio`, `PortfolioRepository` |
@@ -274,6 +277,16 @@ das wären zwei verschiedene Vorgänge, die sich gegenseitig blockieren, und die
 betroffene Person könnte den Zustand nicht deuten. Beim erneuten Senden wird
 jeder Aufruf gezählt und nicht nur ein fehlgeschlagener, weil dort der Versand
 selbst die begrenzte Ressource ist.
+
+Seit KAN-86 gibt es einen **dritten** Zustand dieser Bauart: die
+Bearbeitungssperre des Editors (`editlock/EditLockRegistry`, Contract §6.9,
+Frist `app.edit-lock.ttl`). Sie zählt nichts, hält aber je Projekt einen
+Eintrag mit Frist und teilt deshalb dieselbe Grenze: nach einem Neustart ist
+sie leer, und bei mehreren Instanzen hält jede ihre eigene. Anders als bei den
+Zählern ist das nicht folgenlos, denn dann sind kurzzeitig zwei Sitzungen
+schreibberechtigt; aufgefangen wird es vom Optimistic Locking aus §6.4, das
+darunter bestehen bleibt. Ein gemeinsamer Speicher für alle drei gehört in den
+Ausblick der Arbeit.
 
 ---
 

@@ -134,7 +134,7 @@ public class ProjectWorkflowService {
 
 	/**
 	 * Einreichen: {@code DRAFT} oder {@code REVISION} nach {@code SUBMITTED}
-	 * durch die Autor:in (§4.1).
+	 * durch die Projektseite (§4.1; bis Contract v84 allein die Autor:in).
 	 *
 	 * <p>Hier und nur hier greift die Vollstaendigkeitspruefung aus §3.3. Ein
 	 * Entwurf darf unfertig sein; wer ihn zur Begutachtung gibt, gibt ihn mit
@@ -150,8 +150,8 @@ public class ProjectWorkflowService {
 	 *                  die Projektpfade freigibt (401)
 	 * @param projectId ID aus dem Pfad
 	 * @throws ResourceNotFoundException wenn es die ID nicht gibt (404)
-	 * @throws AccessDeniedException     wenn die Person nicht die Autor:in ist
-	 *                                   (403)
+	 * @throws AccessDeniedException     wenn die Person nicht zur Projektseite
+	 *                                   gehoert (403)
 	 * @throws ConflictException         wenn der Status den Uebergang nicht
 	 *                                   zulaesst oder Aenderungswuensche offen
 	 *                                   sind (409)
@@ -171,15 +171,16 @@ public class ProjectWorkflowService {
 	// ------------------------------------------------------------------
 
 	/**
-	 * Zurueckziehen: {@code SUBMITTED} nach {@code DRAFT} durch die Autor:in
-	 * (§4.1, seit v50).
+	 * Zurueckziehen: {@code SUBMITTED} nach {@code DRAFT} durch die Projektseite
+	 * (§4.1, seit v50; Projektseite statt Autor:in seit Contract v85).
 	 *
 	 * <p>Das Gegenstueck zum Einreichen, ohne dessen Pruefungen: die
 	 * Vollstaendigkeit aus §3.3 und die offenen Aenderungswuensche aus §2.4
 	 * betreffen den Weg <em>zur</em> Redaktion, nicht den zurueck. Es entsteht
-	 * auch kein {@code CHANGE_REQUEST}-Kommentar: die Autor:in holt die eigene
-	 * Arbeit zurueck und schuldet sich selbst keine Begruendung. Uebrig bleibt
-	 * der Historieneintrag aus {@link #perform} (§3.12).
+	 * auch kein {@code CHANGE_REQUEST}-Kommentar: die Projektseite holt die
+	 * eigene Arbeit zurueck und schuldet sich selbst keine Begruendung. Uebrig
+	 * bleibt der Historieneintrag aus {@link #perform} (§3.12), und der nennt
+	 * die Person, die tatsaechlich zurueckgezogen hat.
 	 *
 	 * <p>Erst mit diesem Uebergang wird auch das Loeschen wieder moeglich: die
 	 * Rechtematrix erlaubt es der Autor:in nur im {@code DRAFT} (§6.1).

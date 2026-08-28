@@ -6,6 +6,7 @@ import { setPasswordChangeRequired } from "@/api/auth/authStore"
 import i18n from "@/i18n"
 import {
   dashboardHandler,
+  editLockHandler,
   emptyProjectsHandler,
   ownPortfolioHandler,
   projectBlocksHandler,
@@ -122,6 +123,10 @@ describe("Routenbaum", () => {
        den laengeren Pfad zuerst ab. */
     server.use(
       ownPortfolioHandler(),
+      /* Die Bearbeitungssperre (§6.9) steht vor der Seite; ohne Handler
+         liefe sie in den Fehlerpfad, und der Test belegte nicht mehr den
+         Regelweg. */
+      ...editLockHandler(),
       projectBlocksHandler(),
       projectDetailHandler({ title: "Beitrag im Entwurf", status: "DRAFT" })
     )

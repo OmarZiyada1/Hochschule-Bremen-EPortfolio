@@ -30,6 +30,7 @@ import {
   type SubmitIntent,
 } from "@/features/projects/ProjectMetadataForm"
 import { submitProject } from "@/api/queries/projects"
+import { EditLockGate } from "@/features/project-content/components/EditLockGate"
 import { missingForSubmit } from "@/features/project-content/submitRequirements"
 import { useBreadcrumbTitle } from "@/routes/useBreadcrumb"
 
@@ -226,8 +227,28 @@ export default function ProjectMetadataPage() {
     </Link>
   )
 
+  /*
+   * Die Bearbeitungssperre gilt hier genauso wie im Editor (§6.9, KAN-86):
+   * PUT /projects/{id} faellt mit unter sie, und ohne das Gatter fuellte
+   * jemand das ganze Formular aus und liefe beim Speichern in einen 409.
+   *
+   * <p>Anders als beim Editor sitzt es innerhalb der Seite und nicht vor
+   * ihr: hier gibt es nichts Teures aufzubauen, und die Frage nach der
+   * Sperre gehoert dicht an die Stelle, an der geschrieben wird. Der
+   * Ladeumriss ist derselbe wie unten im Formularbereich.
+   */
+  const lockFallback = (
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
+      <Skeleton className="h-10 w-1/2 rounded-control" />
+      <div className="grid gap-8 lg:grid-cols-[3fr_4fr]">
+        <Skeleton className="h-64 rounded-card" />
+        <Skeleton className="h-64 rounded-card" />
+      </div>
+    </div>
+  )
+
   return (
-    <>
+    <EditLockGate projectId={projectId} fallback={lockFallback}>
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
         {notFound ? (
           <EmptyState
@@ -410,6 +431,6 @@ export default function ProjectMetadataPage() {
           void detail.refetch()
         }}
       />
-    </>
+    </EditLockGate>
   )
 }

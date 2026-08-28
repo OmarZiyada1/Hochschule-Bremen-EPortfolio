@@ -105,9 +105,10 @@ public class BlockController {
 			+ "Projektseite.")
 	@ApiResponse(responseCode = "404", description = "Unter dieser ID gibt es kein Projekt.")
 	@ApiResponse(responseCode = "409", description = "PROJECT_STATUS_NOT_EDITABLE, wenn der Status "
-			+ "die Bearbeitung sperrt (§4.1); PROJECT_VERSION_CONFLICT, wenn die mitgeschickte "
-			+ "version veraltet ist (§6.4). Bei einem Versionskonflikt wird nicht automatisch "
-			+ "wiederholt, sondern neu geladen.")
+			+ "die Bearbeitung sperrt (§4.1); PROJECT_LOCKED_BY_OTHER, wenn jemand anders den "
+			+ "Beitrag gerade im Editor haelt (§6.9); PROJECT_VERSION_CONFLICT, wenn die "
+			+ "mitgeschickte version veraltet ist (§6.4). Bei einem Versionskonflikt wird nicht "
+			+ "automatisch wiederholt, sondern neu geladen.")
 	@PutMapping
 	public BlocksResponse replace(
 			@AuthenticationPrincipal AuthenticatedUser user,

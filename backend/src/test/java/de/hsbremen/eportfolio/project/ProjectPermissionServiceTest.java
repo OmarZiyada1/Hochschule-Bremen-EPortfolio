@@ -409,8 +409,21 @@ class ProjectPermissionServiceTest {
 			assertThat(service.maySubmit(otherStudent, p)).isFalse();
 			assertThat(service.maySubmit(PUBLIC, p)).isFalse();
 			// Seit KAN-82 sperrt hier nicht mehr die Rolle, sondern die
-			// fehlende Autorschaft: eingereicht wird das eigene Projekt.
+			// fehlende Zugehoerigkeit: eingereicht wird das eigene Projekt.
 			assertThat(service.maySubmit(admin, p)).isFalse();
+		}
+
+		@Test
+		@DisplayName("Ein Projektmitglied reicht ein, nicht nur die Autor:in (§4.1 nennt seit "
+				+ "Contract v85 die Projektseite)")
+		void memberMaySubmit() {
+			User memberUser = TestUser.active(Role.STUDENT, "hash");
+			Project p = TestProject.withMember(project(ProjectStatus.DRAFT), memberUser);
+
+			assertThat(service.maySubmit(AuthenticatedUser.from(memberUser), p)).isTrue();
+			// Die Zugehoerigkeit entscheidet, nicht die Rolle: ein fremdes
+			// Studierendenkonto bleibt aussen vor.
+			assertThat(service.maySubmit(otherStudent, p)).isFalse();
 		}
 
 		@Test
@@ -449,6 +462,17 @@ class ProjectPermissionServiceTest {
 			assertThat(service.mayWithdraw(PUBLIC, p)).isFalse();
 			// Wie beim Einreichen: ein fremder Admin ist nicht die Autor:in.
 			assertThat(service.mayWithdraw(admin, p)).isFalse();
+		}
+
+		@Test
+		@DisplayName("Ein Projektmitglied zieht zurueck: wer einreichen darf, holt die "
+				+ "Einreichung auch zurueck (seit Contract v85)")
+		void memberMayWithdraw() {
+			User memberUser = TestUser.active(Role.STUDENT, "hash");
+			Project p = TestProject.withMember(project(ProjectStatus.SUBMITTED), memberUser);
+
+			assertThat(service.mayWithdraw(AuthenticatedUser.from(memberUser), p)).isTrue();
+			assertThat(service.mayWithdraw(otherStudent, p)).isFalse();
 		}
 
 		@Test
@@ -873,6 +897,22 @@ class ProjectPermissionServiceTest {
 			assertThat(service.mayAssignEditors(author, project(ProjectStatus.APPROVED))).isFalse();
 			assertThat(service.mayAssignEditors(author, project(ProjectStatus.PUBLISHED))).isFalse();
 			assertThat(service.mayAssignEditors(admin, project(ProjectStatus.SUBMITTED))).isTrue();
+		}
+
+		@Test
+		@DisplayName("Ein Projektmitglied weist die Redaktion zu (§3.13.1 seit Contract v85): "
+				+ "ohne das koennte es einreichen, aber das Pflichtfeld nicht fuellen")
+		void memberAssignsEditors() {
+			User memberUser = TestUser.active(Role.STUDENT, "hash");
+			Project draft = TestProject.withMember(project(ProjectStatus.DRAFT), memberUser);
+			AuthenticatedUser memberPrincipal = AuthenticatedUser.from(memberUser);
+
+			assertThat(service.mayAssignEditors(memberPrincipal, draft)).isTrue();
+			// Dieselbe Statusschranke wie fuer die Autor:in: ab dem Einreichen
+			// verteilt nur noch der Admin um.
+			assertThat(service.mayAssignEditors(memberPrincipal,
+					TestProject.withMember(project(ProjectStatus.SUBMITTED), memberUser)))
+					.isFalse();
 		}
 
 		@Test

@@ -45,12 +45,25 @@ import {
  * ihre Reaktionszahl behaelt (action-Slot der ProjectCard).</li>
  * </ul>
  *
- * <p><strong>Ist die Person nicht die Autor:in, sondern nur Mitglied</strong>
- * (§3.13, seit Contract v84, KAN-83), gibt es genau eine Handlung, und zwar
- * in jedem Status: „Projekt verlassen". Die drei oben gehoeren der
- * Autor:in: Loeschen, Einreichen und Zurueckziehen haengen an der
- * Autorschaft (§5), und Bearbeiten fuehrt in den Editor, den ein Mitglied
- * ohnehin ueber die Detailseite erreicht.
+ * <p><strong>Ein Projektmitglied bekommt dieselben Handlungen wie die
+ * Autor:in, ausser dem Loeschen</strong> (§4.1 und §5 seit Contract v85,
+ * KAN-86): es bearbeitet, es zieht zurueck, und es reicht ein, sobald es im
+ * Editor steht. An der Stelle, an der die Autor:in „Loeschen" hat, steht
+ * fuer das Mitglied „Projekt verlassen" (§3.13.1, seit Contract v84). Die
+ * beiden schliessen einander aus und teilen sich deshalb die Position: aus
+ * Sicht der Person tun sie dasselbe, sie nehmen das Projekt von der eigenen
+ * Seite.
+ *
+ * <p><strong>Warum das Loeschen bei der Autor:in bleibt</strong> (§5,
+ * Fussnote 12): die Mitgliedschaft traegt Sichtbarkeit und Zugehoerigkeit,
+ * nicht die Verfuegung ueber den Beitrag. Einreichen und Zurueckziehen sind
+ * umkehrbar, das Loeschen ist es nicht.
+ *
+ * <p><strong>Die Positionen liegen fest</strong>, und zwar unabhaengig
+ * davon, wer schaut: erste Stelle Bearbeiten, zweite Zurueckziehen, dritte
+ * Loeschen beziehungsweise Verlassen. Wer zwischen einem eigenen und einem
+ * fremden Projekt wechselt, findet dieselbe Handlung an derselben Stelle
+ * und muss die Fusszeile nicht neu lesen.
  *
  * <p><strong>Symbole statt beschrifteter Knoepfe</strong> (Sichtpruefung zu
  * KAN-69): die Fusszeile der Kachel ist schmal, drei Textknoepfe drueckten
@@ -79,8 +92,9 @@ export function OwnProjectCardActions({
 }: {
   project: ProjectCardResponse
   /**
-   * Ist die angemeldete Person die Autor:in? Sonst ist sie Mitglied, und
-   * die Kachel bietet allein das Verlassen an (§5, §3.13.1).
+   * Ist die angemeldete Person die Autor:in? Sonst ist sie Mitglied, und an
+   * der dritten Stelle steht das Verlassen statt des Loeschens (§5,
+   * §3.13.1). Die beiden anderen Handlungen unterscheiden sich nicht.
    */
   isAuthor: boolean
   /**
@@ -217,56 +231,39 @@ export function OwnProjectCardActions({
           von einem zum naechsten faehrt, wartet nicht erneut. */}
       <TooltipProvider delay={400}>
         <div className="flex items-center gap-1">
-          {/* Mitglied und nicht Autor:in: eine Handlung, in jedem Status. */}
-          {!isAuthor &&
-            confirmation(
-              "leave",
-              <>
-                <LogOutIcon aria-hidden="true" />
-                <span className="sr-only">
-                  {t("portfolio.myPortfolio.card.leaveFor", { title })}
-                </span>
-              </>,
-              /* Nicht destruktiv: der eigene Dialogtext sagt, dass die
-                 Autor:in einen wieder aufnehmen kann. Rot traegt allein,
-                 was wirklich zerstoert (Befund des frontend-reviewers);
-                 „Zurueckziehen" daneben steht aus demselben Grund ohne. */
-              { pending: leave.isPending }
-            )}
-
-          {isAuthor &&
-            (project.status === "DRAFT" || project.status === "REVISION") && (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      nativeButton={false}
-                      render={<Link to={`/projects/${projectId}/editor`} />}
-                    />
-                  }
-                >
-                  <PencilIcon aria-hidden="true" />
-                  {/* Der Name nennt das Projekt: in einer Liste stuenden sonst
+          {/* Erste Stelle: Bearbeiten, fuer Autor:in und Mitglied gleich. */}
+          {(project.status === "DRAFT" || project.status === "REVISION") && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    nativeButton={false}
+                    render={<Link to={`/projects/${projectId}/editor`} />}
+                  />
+                }
+              >
+                <PencilIcon aria-hidden="true" />
+                {/* Der Name nennt das Projekt: in einer Liste stuenden sonst
                     mehrere gleichnamige "Bearbeiten" nebeneinander, und die
                     Elementliste eines Screenreaders koennte sie nicht
                     auseinanderhalten (SC 2.4.6, Befund aus dem Review). Der
                     Tooltip daneben ist die sichtbare Ergaenzung fuer die
                     Maus, nicht der Name: er erscheint weder per Tastatur
                     zuverlaessig noch auf Touch. */}
-                  <span className="sr-only">
-                    {t("portfolio.myPortfolio.card.editFor", { title })}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t("portfolio.myPortfolio.card.edit")}
-                </TooltipContent>
-              </Tooltip>
-            )}
+                <span className="sr-only">
+                  {t("portfolio.myPortfolio.card.editFor", { title })}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t("portfolio.myPortfolio.card.edit")}
+              </TooltipContent>
+            </Tooltip>
+          )}
 
-          {isAuthor &&
-            project.status === "SUBMITTED" &&
+          {/* Zweite Stelle: Zurueckziehen, ebenfalls fuer beide. */}
+          {project.status === "SUBMITTED" &&
             confirmation(
               "withdraw",
               <>
@@ -278,18 +275,33 @@ export function OwnProjectCardActions({
               { pending: withdraw.isPending }
             )}
 
-          {isAuthor &&
-            project.status === "DRAFT" &&
-            confirmation(
-              "delete",
-              <>
-                <Trash2Icon aria-hidden="true" />
-                <span className="sr-only">
-                  {t("portfolio.myPortfolio.card.deleteFor", { title })}
-                </span>
-              </>,
-              { destructive: true, pending: remove.isPending }
-            )}
+          {/* Dritte Stelle: Loeschen oder Verlassen, nie beides. */}
+          {isAuthor
+            ? project.status === "DRAFT" &&
+              confirmation(
+                "delete",
+                <>
+                  <Trash2Icon aria-hidden="true" />
+                  <span className="sr-only">
+                    {t("portfolio.myPortfolio.card.deleteFor", { title })}
+                  </span>
+                </>,
+                { destructive: true, pending: remove.isPending }
+              )
+            : confirmation(
+                "leave",
+                <>
+                  <LogOutIcon aria-hidden="true" />
+                  <span className="sr-only">
+                    {t("portfolio.myPortfolio.card.leaveFor", { title })}
+                  </span>
+                </>,
+                /* Nicht destruktiv: der eigene Dialogtext sagt, dass die
+                   Autor:in einen wieder aufnehmen kann. Rot traegt allein,
+                   was wirklich zerstoert (Befund des frontend-reviewers);
+                   „Zurueckziehen" daneben steht aus demselben Grund ohne. */
+                { pending: leave.isPending }
+              )}
         </div>
       </TooltipProvider>
 

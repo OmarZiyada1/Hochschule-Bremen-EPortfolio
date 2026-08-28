@@ -8,6 +8,7 @@ import de.hsbremen.eportfolio.common.error.ConflictException;
 import de.hsbremen.eportfolio.common.error.ErrorCodes;
 import de.hsbremen.eportfolio.common.error.ResourceNotFoundException;
 import de.hsbremen.eportfolio.common.error.ValidationException;
+import de.hsbremen.eportfolio.editlock.EditLockGuard;
 import de.hsbremen.eportfolio.project.dto.BlockRequest;
 import de.hsbremen.eportfolio.project.dto.BlocksResponse;
 import de.hsbremen.eportfolio.project.dto.BlocksUpdateRequest;
@@ -43,7 +44,14 @@ import org.springframework.transaction.annotation.Transactional;
  * <p><strong>Reihenfolge der Pruefungen</strong> wie im
  * {@link ProjectWriteService}, nach §6.3.1: laden (fehlt → 404) → Berechtigung
  * (nein → 401 ohne Anmeldung, sonst 403) → Statusregel (nein → 409) →
- * Versionsstand (nein → 409) → fachliche Validierung (nein → 400) → schreiben.
+ * Bearbeitungssperre (fremd → 409, seit Contract v85) → Versionsstand
+ * (nein → 409) → fachliche Validierung (nein → 400) → schreiben.
+ *
+ * <p><strong>Warum die Sperre vor dem Versionsstand steht:</strong> beide
+ * antworten mit 409, und die Sperre ist der speziellere Grund. Wer gesperrt
+ * ist, hat kein Versionsproblem, sondern gar keinen Schreibzugang; ein
+ * {@code PROJECT_VERSION_CONFLICT} schickte ihn ins Nachladen und danach
+ * erneut gegen dieselbe Wand.
  *
  * <p><strong>Die gesamte eingeschickte Liste wird geprueft, bevor die erste
  * Zeile angefasst wird.</strong> Sonst haette ein ungueltiger Block am Ende der
@@ -62,14 +70,18 @@ public class BlockService {
 
 	private final ProjectPermissionService permissions;
 
+	private final EditLockGuard editLockGuard;
+
 	public BlockService(ProjectRepository projectRepository,
 			BlockRepository blockRepository,
 			BlockValidationService validation,
-			ProjectPermissionService permissions) {
+			ProjectPermissionService permissions,
+			EditLockGuard editLockGuard) {
 		this.projectRepository = projectRepository;
 		this.blockRepository = blockRepository;
 		this.validation = validation;
 		this.permissions = permissions;
+		this.editLockGuard = editLockGuard;
 	}
 
 	// ------------------------------------------------------------------
@@ -122,8 +134,10 @@ public class BlockService {
 	 * @throws ResourceNotFoundException wenn es die ID nicht gibt (404)
 	 * @throws AccessDeniedException     wenn die Person nicht zur Projektseite
 	 *                                   gehoert (403)
-	 * @throws ConflictException         wenn der Status die Bearbeitung sperrt
-	 *                                   oder {@code version} veraltet ist (409)
+	 * @throws ConflictException         wenn der Status die Bearbeitung sperrt,
+	 *                                   jemand anders die Bearbeitungssperre
+	 *                                   haelt (§6.9) oder {@code version}
+	 *                                   veraltet ist (409)
 	 * @throws ValidationException       bei unbekanntem Typ, ungueltigem Inhalt,
 	 *                                   gesperrtem Provider, luecken- oder
 	 *                                   fehlerhafter Reihenfolge oder einer
@@ -135,6 +149,7 @@ public class BlockService {
 
 		Project project = load(projectId);
 		requireEditable(user, project);
+		editLockGuard.requireNotLockedByOther(projectId, user.getId());
 		requireCurrentVersion(project, request.version());
 
 		List<ResolvedBlock> wanted = resolve(project, request.blocks());

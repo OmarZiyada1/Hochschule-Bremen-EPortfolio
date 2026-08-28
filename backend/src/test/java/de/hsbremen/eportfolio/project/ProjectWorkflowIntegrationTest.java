@@ -374,10 +374,22 @@ class ProjectWorkflowIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Mitglieder, fremde Studierende, Redaktion und ein fremder Admin duerfen "
-				+ "nicht einreichen: 403 (§4.1 nennt die Autor:in)")
-		void onlyTheAuthorMaySubmit() throws Exception {
-			for (User user : List.of(member, otherStudent, assignedEditor, otherEditor, admin)) {
+		@DisplayName("Ein Projektmitglied reicht ein: 200 (§4.1 nennt seit Contract v85 die "
+				+ "Projektseite, KAN-86)")
+		void memberSubmits() throws Exception {
+			assertThat(ok(member, draft, "submit").get("status").asText()).isEqualTo("SUBMITTED");
+
+			// Der Eintrag nennt die Person, die tatsaechlich eingereicht hat,
+			// und nicht die Autor:in: sonst stuende im Verlauf ein Vorgang, den
+			// niemand ausgeloest hat (§3.17).
+			assertThat(lastEntry(draft).getChangedBy().getId()).isEqualTo(member.getId());
+		}
+
+		@Test
+		@DisplayName("Fremde Studierende, Redaktion und ein fremder Admin duerfen nicht "
+				+ "einreichen: 403 (§4.1 nennt die Projektseite, nicht jedes Konto)")
+		void othersMayNotSubmit() throws Exception {
+			for (User user : List.of(otherStudent, assignedEditor, otherEditor, admin)) {
 				mockMvc.perform(as(user, action(draft, "submit")))
 						.andExpect(status().isForbidden())
 						.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));
@@ -574,12 +586,26 @@ class ProjectWorkflowIntegrationTest {
 		}
 
 		@Test
-		@DisplayName("Mitglieder, fremde Studierende, Redaktion und Admin duerfen nicht "
-				+ "zurueckziehen: 403, wie beim Einreichen (§4.1)")
-		void onlyTheAuthorMayWithdraw() throws Exception {
+		@DisplayName("Ein Projektmitglied zieht zurueck: 200, dieselbe Spalte wie beim "
+				+ "Einreichen (§4.1, seit Contract v85)")
+		void memberWithdraws() throws Exception {
+			// Nicht ueber submitted(): jenes Projekt hat keine Mitgliedszeile,
+			// und "member" waere dort ein projektfremdes Konto. Der Fall haengt
+			// gerade an der Mitgliedschaft, also wird das Feld draft benutzt,
+			// das eine echte Zeile traegt.
+			ok(author, draft, "submit");
+
+			assertThat(ok(member, draft, "withdraw").get("status").asText()).isEqualTo("DRAFT");
+			assertThat(lastEntry(draft).getChangedBy().getId()).isEqualTo(member.getId());
+		}
+
+		@Test
+		@DisplayName("Fremde Studierende, Redaktion und Admin duerfen nicht zurueckziehen: 403, "
+				+ "wie beim Einreichen (§4.1)")
+		void othersMayNotWithdraw() throws Exception {
 			Project submitted = submitted();
 
-			for (User user : List.of(member, otherStudent, assignedEditor, otherEditor, admin)) {
+			for (User user : List.of(otherStudent, assignedEditor, otherEditor, admin)) {
 				mockMvc.perform(as(user, action(submitted, "withdraw")))
 						.andExpect(status().isForbidden())
 						.andExpect(jsonPath("$.errorCode").value("NO_PERMISSION"));

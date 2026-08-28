@@ -680,8 +680,7 @@
         "chosen": "Zugewiesene Redaktion",
         "remove": "{{name}} aus der Redaktion entfernen",
         "none": "Keine Redaktion zugewiesen.",
-        "lockedAfterSubmit": "Die Redaktion lässt sich nur während der Bearbeitung ändern, also im Entwurf und in der Überarbeitung. Ab der Einreichung nimmt die Administration die Zuweisung vor.",
-        "lockedForMembers": "Die zuständige Redaktion wird von der Autor:in des Projekts bestimmt."
+        "lockedAfterSubmit": "Die Redaktion lässt sich nur während der Bearbeitung ändern, also im Entwurf und in der Überarbeitung. Ab der Einreichung nimmt die Administration die Zuweisung vor."
       },
       "members": {
         "person": "Mitglied",
@@ -1175,6 +1174,16 @@
       "description": "Der Beitrag geht zurück in den Entwurf und ist für die Redaktion nicht mehr sichtbar. Einreichen lässt er sich danach erneut.",
       "done": "Die Einreichung ist zurückgezogen."
     },
+    "editLock": {
+      "title": "Wird gerade bearbeitet",
+      "description": "{{name}} bearbeitet diesen Beitrag seit {{since}} Uhr. Es kann immer nur eine Person gleichzeitig schreiben. Sobald diese Person die Bearbeitung verlässt, geht es hier von selbst weiter.",
+      "leave": "Zum Projekt",
+      "retry": "Erneut versuchen",
+      "retrying": "Wird geprüft …",
+      "stillHeld": "{{name}} bearbeitet den Beitrag weiterhin.",
+      "lostTitle": "Die Bearbeitung ist übergegangen",
+      "lostDescription": "{{name}} bearbeitet diesen Beitrag seit {{since}} Uhr. Ihr Text steht noch hier, wird aber nicht mehr gespeichert. Kopieren Sie ihn, bevor Sie die Seite verlassen, oder versuchen Sie es erneut."
+    },
     "readOnly": {
       "title": "Dieser Beitrag lässt sich gerade nicht bearbeiten",
       "description": "Der Inhalt ist nur im Entwurf und in der Überarbeitung änderbar. Der Beitrag steht auf {{status}}."
@@ -1221,6 +1230,7 @@
     "PROJECT_NOT_FOUND": "Dieses Projekt existiert nicht oder wurde entfernt.",
     "RESOURCE_NOT_FOUND": "Der aufgerufene Eintrag existiert nicht oder wurde entfernt.",
     "PROJECT_VERSION_CONFLICT": "Das Projekt wurde inzwischen an anderer Stelle geändert. Bitte laden Sie neu oder prüfen Sie Ihre Fassung.",
+    "PROJECT_LOCKED_BY_OTHER": "An diesem Beitrag arbeitet gerade jemand anders. Es kann immer nur eine Person gleichzeitig schreiben.",
     "PROJECT_STATUS_NOT_EDITABLE": "Das Projekt kann in seinem aktuellen Status nicht bearbeitet werden.",
     "PROJECT_STATUS_TRANSITION_INVALID": "Dieser Statuswechsel ist nicht zulässig.",
     "CHANGE_REQUESTS_OPEN": "Es sind noch Änderungswünsche offen. Bitte erledigen Sie diese, bevor Sie erneut einreichen.",

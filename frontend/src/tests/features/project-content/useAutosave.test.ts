@@ -58,6 +58,10 @@ function setUp(
       enabled: options.enabled ?? true,
       version: 3,
       blocks: [{ id: BLOCK_ID, type: "TEXT" }],
+      /* Der gelesene Stand: dasselbe Dokument, mit dem die Schreibflaeche
+         aufgebaut wurde. Solange {@code state.text} darauf steht, gibt es
+         nichts zu senden; erst eine Aenderung daran ist eine (KAN-86). */
+      baseline: documentWith(initial),
       readDocument: () => documentWith(state.text),
       readMetadata: options.readMetadata ?? (() => null),
       onMetadataSaved: options.onMetadataSaved ?? (() => undefined),
@@ -325,6 +329,33 @@ describe("useAutosave", () => {
     })
 
     expect(calls).toBe(1)
+  })
+
+  /*
+   * Der Fall, der die Bearbeitungssperre aus §6.9 unterlaufen haette: bis
+   * KAN-86 kannte der Takt nach dem Lesen keinen Bezugspunkt, und der erste
+   * Lauf schickte den unveraenderten Beitrag zurueck. Er bekam damit allein
+   * vom Ansehen eine neue Version, und jede andere offene Sitzung lief in
+   * genau den 409, den §6.4 abfedern soll.
+   */
+  it("schreibt den gelesenen Stand nicht zurueck, solange ihn niemand geaendert hat", async () => {
+    let calls = 0
+    server.use(
+      http.put(PATH, () => {
+        calls = calls + 1
+        return HttpResponse.json({ version: 4, blocks: [] })
+      })
+    )
+
+    const { view } = setUp()
+
+    /* Der Weg aus der Seite heraus, ohne dass jemand getippt hat: leeren
+       laesst sich der Takt trotzdem, gesendet wird nichts. */
+    await act(async () => {
+      expect(await view.result.current.flush()).toBe(true)
+    })
+
+    expect(calls).toBe(0)
   })
 
   /*

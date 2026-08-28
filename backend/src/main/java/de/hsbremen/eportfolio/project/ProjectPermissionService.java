@@ -424,13 +424,18 @@ public class ProjectPermissionService {
 		}
 		return switch (transition) {
 			// „Projekt einreichen": STUDENT (✓), EDITOR (✓), ADMIN (✓). §4.1 und
-			// §6.1 nennen beide ausdruecklich die Autor:in und nicht die
-			// Projektseite: Mitglieder duerfen mitschreiben, aber nicht
-			// einreichen. Das gilt unveraendert; allein der Ausschluss von
-			// ADMIN ist mit KAN-82 gefallen, weil ein Admin jetzt selbst
-			// anlegen darf (mayCreateProject) und sein Entwurf sonst dauerhaft
-			// in DRAFT laege. Eingereicht wird auch hier nur das eigene
-			// Projekt: die Klammer um den Haken bleibt.
+			// §6.1 nennen seit Contract v85 die Projektseite und nicht mehr
+			// allein die Autor:in: wer den Inhalt verantwortet, gibt ihn auch
+			// zur Pruefung. §3.13.1 begruendet die Mitgliederpflege schon
+			// genauso, und bei Abwesenheit der Autor:in kaeme eine
+			// Gruppenarbeit sonst nicht weiter. Bis v84 stand hier isAuthor,
+			// und damit endeten die Rechte eines Mitglieds vor dem
+			// Redaktionsweg, obwohl es denselben Text verantwortet.
+			// Eingereicht wird auch so nur das eigene Projekt: die Klammer um
+			// den Haken bleibt. Der Ausschluss von ADMIN ist mit KAN-82
+			// gefallen, weil ein Admin jetzt selbst anlegen darf
+			// (mayCreateProject) und sein Entwurf sonst dauerhaft in DRAFT
+			// laege.
 			// Seit Contract v73 hat die Zeile ein Gegenstueck: „Projekt zurueck
 			// in die Pruefung geben" (§5), also REVISION nach SUBMITTED durch
 			// die zugewiesene Redaktion oder die Administration. Bis v72 konnte
@@ -439,7 +444,7 @@ public class ProjectPermissionService {
 			// Aenderungswuensche selbst erledigt hatte, steckte fest.
 			//
 			// Ausdruecklich nur aus REVISION. Aus DRAFT reicht weiterhin allein
-			// die Autor:in ein; den Entwurf sieht die Redaktion nach §5
+			// die Projektseite ein; den Entwurf sieht die Redaktion nach §5
 			// Fussnote 11 nicht einmal, und ein Einreichen von dort waere ein
 			// Zugriff auf etwas, das noch niemand zur Pruefung gegeben hat.
 			//
@@ -449,7 +454,7 @@ public class ProjectPermissionService {
 			// heruntergestuft wird (§3.1.1). Ohne hasRole(EDITOR) kaeme diese
 			// Person durch die Rechtepruefung und scheiterte erst beim Lesen
 			// der Antwort, also nach dem geschriebenen Statuswechsel.
-			case SUBMIT -> isAuthor(user, project)
+			case SUBMIT -> isProjectSide(user, project)
 					|| (project.getStatus() == ProjectStatus.REVISION
 							&& (isAdmin(user)
 									|| (user.hasRole(Role.EDITOR)
@@ -458,9 +463,12 @@ public class ProjectPermissionService {
 			// „Projekt zurueckziehen" (§4.1, seit v50): dieselbe Spalte wie beim
 			// Einreichen, denn es ist dessen Gegenstueck. Wer einreichen darf,
 			// darf die eigene Einreichung zurueckholen, solange die Redaktion
-			// nicht entschieden hat; ADMIN geht seit KAN-82 denselben Weg wie
-			// beim SUBMIT.
-			case WITHDRAW -> isAuthor(user, project);
+			// nicht entschieden hat, und das ist seit Contract v85 die ganze
+			// Projektseite. Ein Mitglied, das einreichen kann, die eigene
+			// Einreichung aber nicht zuruecknehmen koennte, stellte einen
+			// Zustand her, aus dem es allein nicht mehr herauskaeme. ADMIN geht
+			// seit KAN-82 denselben Weg wie beim SUBMIT.
+			case WITHDRAW -> isProjectSide(user, project);
 
 			// „Projekt genehmigen" und „veroeffentlichen": EDITOR ✓¹, ADMIN ✓⁵.
 			case APPROVE, PUBLISH -> mayDecideEditorially(user, project);
@@ -491,12 +499,15 @@ public class ProjectPermissionService {
 				&& transition.isAllowedFrom(project.getStatus());
 	}
 
-	/** „Einreichen": DRAFT/REVISION nach SUBMITTED durch die Autor:in. */
+	/** „Einreichen": DRAFT/REVISION nach SUBMITTED durch die Projektseite. */
 	public boolean maySubmit(AuthenticatedUser user, Project project) {
 		return mayPerform(user, project, ProjectTransition.SUBMIT);
 	}
 
-	/** „Zurueckziehen": SUBMITTED nach DRAFT durch die Autor:in (seit v50). */
+	/**
+	 * „Zurueckziehen": SUBMITTED nach DRAFT durch die Projektseite (seit v50,
+	 * Projektseite statt Autor:in seit v85).
+	 */
 	public boolean mayWithdraw(AuthenticatedUser user, Project project) {
 		return mayPerform(user, project, ProjectTransition.WITHDRAW);
 	}
@@ -724,8 +735,8 @@ public class ProjectPermissionService {
 	 * ADMIN ✓.
 	 *
 	 * <p>Fussnote ³ meint die Auswahl der zustaendigen Redaktion durch die
-	 * Autor:in, deshalb hier auf das eigene Projekt und dessen Arbeitszustaende
-	 * beschraenkt. Achtung: §6.1 fuehrt
+	 * Projektseite, deshalb hier auf das eigene Projekt und dessen
+	 * Arbeitszustaende beschraenkt. Achtung: §6.1 fuehrt
 	 * {@code PUT /projects/{id}/editors} als reinen ADMIN-Endpoint. Beides
 	 * passt nur zusammen, wenn die studentische Auswahl ueber
 	 * {@code POST /projects} laeuft und nicht ueber diesen Endpoint. Siehe
@@ -734,10 +745,18 @@ public class ProjectPermissionService {
 	 * <p>Diese Methode gilt deshalb fuer den <em>eingebetteten</em> Weg, also
 	 * das Feld {@code editorIds} in {@code POST /projects} und
 	 * {@code PUT /projects/{id}}. Fuer den dedizierten Endpoint gilt
-	 * {@link #mayReassignEditors}. Mitglieder sind hier bewusst nicht dabei:
-	 * §3.13.1 nimmt ihnen {@code editorIds} ausdruecklich weg, obwohl sie sonst
-	 * dieselben Felder pflegen duerfen. Wer die Redaktion bestimmt, entscheidet
-	 * darueber, wer das Ergebnis beurteilt; das bleibt bei der Autor:in.
+	 * {@link #mayReassignEditors}.
+	 *
+	 * <p><strong>Mitglieder gehoeren seit Contract v85 dazu</strong> (KAN-86).
+	 * Bis v84 nahm §3.13.1 ihnen {@code editorIds} ausdruecklich weg, obwohl
+	 * sie sonst dieselben Felder pflegen durften: wer die Redaktion bestimme,
+	 * entscheide darueber, wer das Ergebnis beurteilt. Zusammen mit dem
+	 * geoeffneten {@code SUBMIT} ergab das eine Sackgasse derselben Bauart wie
+	 * die weiter unten beschriebene: {@code editorIds} ist seit v59
+	 * Pflichtfeld des Einreichens, ein Mitglied bekaeme also beim Einreichen
+	 * 400 {@code PROJECT_INCOMPLETE} und beim Nachtragen der Redaktion 403 und
+	 * kaeme ohne die Autor:in nicht weiter. Wer den Beitrag einreichen darf,
+	 * benennt deshalb auch die Redaktion, die ihn beurteilt.
 	 *
 	 * <p><strong>Die eigene Systemrolle spielt keine Rolle</strong> (Fussnote ³
 	 * in der Fassung von Contract v60, KAN-77). Bis dahin stand hier ein Zweig,
@@ -747,9 +766,10 @@ public class ProjectPermissionService {
 	 * (403) noch ohne sie einreichen (400 {@code PROJECT_INCOMPLETE}), es waere
 	 * dauerhaft im Entwurf liegengeblieben, bis ein Admin
 	 * {@code PUT /projects/{id}/editors} bedient. Das Kreuz der EDITOR-Spalte in
-	 * §5 meint fremde Projekte, und die grenzt {@link #isAuthor} bereits ab.
+	 * §5 meint fremde Projekte, und die grenzt {@link #isProjectSide} bereits
+	 * ab.
 	 *
-	 * <p><strong>Wen die Autor:in eintragen darf, steht nicht hier.</strong>
+	 * <p><strong>Wen die Projektseite eintragen darf, steht nicht hier.</strong>
 	 * Dass niemand sich selbst zuweist und niemand von der Projektseite als
 	 * Redaktion eingetragen wird (Fussnote ³ seit v61), ist keine Rechte-,
 	 * sondern eine Zustandsfrage: sie haengt am Ergebnis des Schreibvorgangs und
@@ -758,13 +778,13 @@ public class ProjectPermissionService {
 	 *
 	 * <p><strong>Der ADMIN-Zweig kennt keine Statusschranke.</strong> Der Satz
 	 * „ab {@code SUBMITTED} nur noch der Admin" beschreibt den Weg der
-	 * Autor:in, nicht den des Admins: dessen Recht haengt an der Rolle und
+	 * Projektseite, nicht den des Admins: dessen Recht haengt an der Rolle und
 	 * nicht am Status, hier wie beim dedizierten Endpoint. Praktisch erreicht
 	 * er den eingebetteten Weg nur, wenn er selbst zur Projektseite gehoert,
 	 * denn sonst scheitert er vorher an {@code mayEditMetadata}.
 	 *
 	 * <p><strong>{@code REVISION} zaehlt seit Contract v62 dazu</strong>
-	 * (KAN-77). Bis v61 endete das Recht der Autor:in mit dem {@code DRAFT}, und
+	 * (KAN-77). Bis v61 endete dieses Recht mit dem {@code DRAFT}, und
 	 * seit {@code editorIds} mit v59 Pflichtfeld des Einreichens ist, hing damit
 	 * ein Bestandsprojekt fest: eines, das vor v59 ohne Redaktion eingereicht und
 	 * spaeter zur Ueberarbeitung zurueckgegeben wurde, liess sich weder
@@ -782,7 +802,7 @@ public class ProjectPermissionService {
 		if (user.hasRole(Role.ADMIN)) {
 			return true;
 		}
-		return isAuthor(user, project) && isContentEditable(project);
+		return isProjectSide(user, project) && isContentEditable(project);
 	}
 
 	/**
