@@ -11,13 +11,9 @@ import { Link, useNavigate } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
 import { consumeRequestedRoute } from "@/api/auth/redirect"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import { landingPathFor } from "@/routes/landingPath"
-import {
-  apiErrorMessageKey,
-  applyValidationErrors,
-  isApiError,
-  type ErrorCode,
-} from "@/api/errors"
+import { applyValidationErrors, isApiError, type ErrorCode } from "@/api/errors"
 import { PasswordInput } from "@/components/common/PasswordInput"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -63,6 +59,7 @@ import { saveRegistrationFlow } from "@/features/auth/registrationFlow"
  */
 export default function LoginPage() {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const navigate = useNavigate()
   const { login, sessionNotice, clearSessionNotice } = useAuth()
 
@@ -172,7 +169,7 @@ export default function LoginPage() {
       }
       form.setError("root.server", {
         type: "server",
-        message: t(apiErrorMessageKey(error), { defaultValue: error.message }),
+        message: apiMessage(error),
       })
     }
   })

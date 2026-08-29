@@ -1,9 +1,8 @@
 import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import type { DashboardResponse } from "@/api/types"
-import { Alert, AlertTitle } from "@/components/ui/alert"
+import { ErrorState } from "@/components/common/ErrorState"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FacultyDistributionCard } from "@/features/administration/components/FacultyDistributionCard"
 import { ProjectStatusCard } from "@/features/administration/components/ProjectStatusCard"
@@ -78,17 +77,7 @@ export default function AdminDashboardPage() {
         <hr className="mt-2" />
       </header>
 
-      {dashboard.error !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>
-            {isApiError(dashboard.error)
-              ? t(apiErrorMessageKey(dashboard.error), {
-                  defaultValue: dashboard.error.message,
-                })
-              : t("apiError.INTERNAL_ERROR")}
-          </AlertTitle>
-        </Alert>
-      )}
+      {dashboard.error !== null && <ErrorState error={dashboard.error} />}
 
       {dashboard.error === null && (
         <>

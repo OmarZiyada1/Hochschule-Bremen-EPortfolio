@@ -3,9 +3,8 @@ import type { MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import { EmptyState } from "@/components/common/EmptyState"
-import { Alert, AlertTitle } from "@/components/ui/alert"
+import { ErrorState } from "@/components/common/ErrorState"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Pagination,
@@ -66,10 +65,9 @@ export default function AdminTop10AuditPage() {
     state.from !== null || state.to !== null || state.admin !== null
 
   function applyChange(change: Partial<AdminTop10AuditState>) {
-    setSearchParams(
-      (previous) => writeAdminTop10AuditState(previous, change),
-      { replace: true }
-    )
+    setSearchParams((previous) => writeAdminTop10AuditState(previous, change), {
+      replace: true,
+    })
   }
 
   function pageSearch(target: number): string {
@@ -114,17 +112,7 @@ export default function AdminTop10AuditPage() {
           Ergebnis: „from" nach „to" beantwortet er mit VALIDATION_FAILED
           (§6.1). Das Formular faengt den Fall vorab ab; eine von Hand
           geschriebene Adresse kommt trotzdem hier an. */}
-      {audit.error !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>
-            {isApiError(audit.error)
-              ? t(apiErrorMessageKey(audit.error), {
-                  defaultValue: audit.error.message,
-                })
-              : t("apiError.INTERNAL_ERROR")}
-          </AlertTitle>
-        </Alert>
-      )}
+      {audit.error !== null && <ErrorState error={audit.error} />}
 
       {audit.isPending && (
         <div className="flex flex-col gap-3">

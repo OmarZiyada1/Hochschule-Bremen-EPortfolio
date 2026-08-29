@@ -3,10 +3,9 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import { EmptyState } from "@/components/common/EmptyState"
+import { ErrorState } from "@/components/common/ErrorState"
 import { SegmentedFilter } from "@/components/common/SegmentedFilter"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   DEFAULT_NOMINATION_FILTER,
@@ -63,12 +62,6 @@ export default function AdminTop10Page() {
 
   const serverEntries = entries.data ?? []
   const free = freePositions(buildSlots(serverEntries))
-
-  function messageOf(error: unknown): string {
-    return isApiError(error)
-      ? t(apiErrorMessageKey(error), { defaultValue: error.message })
-      : t("apiError.INTERNAL_ERROR")
-  }
 
   const statusOptions = [
     ...NOMINATION_STATUSES.map((status) => ({
@@ -134,11 +127,7 @@ export default function AdminTop10Page() {
           />
         </div>
 
-        {nominations.error !== null && (
-          <Alert variant="destructive">
-            <AlertTitle>{messageOf(nominations.error)}</AlertTitle>
-          </Alert>
-        )}
+        {nominations.error !== null && <ErrorState error={nominations.error} />}
 
         {nominations.isPending && (
           <div className="flex flex-col gap-3">
@@ -168,11 +157,7 @@ export default function AdminTop10Page() {
         )}
       </section>
 
-      {entries.error !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>{messageOf(entries.error)}</AlertTitle>
-        </Alert>
-      )}
+      {entries.error !== null && <ErrorState error={entries.error} />}
 
       {entries.isPending ? (
         <div className="flex flex-col gap-3">

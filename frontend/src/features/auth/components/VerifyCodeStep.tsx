@@ -5,8 +5,9 @@ import { Controller, useForm, useWatch } from "react-hook-form"
 import { Trans, useTranslation } from "react-i18next"
 import { Link, useNavigate } from "react-router-dom"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
-import { Alert, AlertTitle } from "@/components/ui/alert"
+import { isApiError } from "@/api/errors"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
+import { ErrorState } from "@/components/common/ErrorState"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError } from "@/components/ui/field"
 import {
@@ -63,6 +64,7 @@ export function VerifyCodeStep({
   flow: RegistrationFlowState
 }) {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const navigate = useNavigate()
   const verify = useVerifyCode()
   const resend = useResendVerificationCode()
@@ -107,9 +109,7 @@ export function VerifyCodeStep({
       if (!isApiError(error)) {
         throw error
       }
-      setServerError(
-        t(apiErrorMessageKey(error), { defaultValue: error.message })
-      )
+      setServerError(apiMessage(error))
     }
   })
 
@@ -128,9 +128,7 @@ export function VerifyCodeStep({
       if (!isApiError(error)) {
         throw error
       }
-      setServerError(
-        t(apiErrorMessageKey(error), { defaultValue: error.message })
-      )
+      setServerError(apiMessage(error))
     }
   }
 
@@ -206,9 +204,7 @@ export function VerifyCodeStep({
           />
 
           {serverError !== null && (
-            <Alert variant="destructive">
-              <AlertTitle>{serverError}</AlertTitle>
-            </Alert>
+            <ErrorState message={serverError} />
           )}
 
           <Button

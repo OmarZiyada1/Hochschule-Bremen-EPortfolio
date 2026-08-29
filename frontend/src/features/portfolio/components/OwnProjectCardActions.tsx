@@ -4,8 +4,9 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
 import type { ProjectCardResponse } from "@/api/types"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -106,6 +107,7 @@ export function OwnProjectCardActions({
   onDone?: (message: string) => void
 }) {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const withdraw = useWithdrawProject()
   const remove = useDeleteProject()
   const leave = useLeaveProject()
@@ -136,9 +138,7 @@ export function OwnProjectCardActions({
       if (!isApiError(error)) {
         throw error
       }
-      setServerError(
-        t(apiErrorMessageKey(error), { defaultValue: error.message })
-      )
+      setServerError(apiMessage(error))
     } finally {
       setOpenDialog(null)
     }

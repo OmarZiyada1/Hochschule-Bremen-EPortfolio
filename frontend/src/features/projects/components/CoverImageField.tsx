@@ -3,8 +3,9 @@ import { ImageIcon } from "lucide-react"
 import { useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
 import { fileQueries } from "@/api/queries/files"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import { Button } from "@/components/ui/button"
 import { FieldError, FieldLabel } from "@/components/ui/field"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -99,6 +100,7 @@ export function CoverImageField({
   aspect?: CoverImageAspect
 }) {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const inputId = useId()
   const errorId = `${inputId}-error`
   const [error, setError] = useState<string | null>(null)
@@ -143,11 +145,7 @@ export function CoverImageField({
       /* Welcher Typ und welche Groesse zulaessig sind, entscheidet der
          Server; die Allowlist wird im Client nicht nachgebaut, sondern nur
          vorweggenommen (Skill frontend-api, Abschnitt 8). */
-      setError(
-        t(apiErrorMessageKey(uploadError), {
-          defaultValue: uploadError.message,
-        })
-      )
+      setError(apiMessage(uploadError))
     }
   }
 
@@ -169,11 +167,7 @@ export function CoverImageField({
           /* Ein fehlgeschlagener Abruf bleibt sichtbar: eine leere Flaeche
              waere der uebersehene Fall (Skill frontend-modul, Abschnitt 5). */
           <span className="type-body-sm px-4 text-center text-surface-brand-foreground">
-            {isApiError(image.error)
-              ? t(apiErrorMessageKey(image.error), {
-                  defaultValue: image.error.message,
-                })
-              : t("apiError.INTERNAL_ERROR")}
+            {apiMessage(image.error)}
           </span>
         ) : objectUrl !== null ? (
           <img

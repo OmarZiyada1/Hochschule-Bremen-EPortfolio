@@ -4,12 +4,13 @@ import { useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
 import { masterDataQueries } from "@/api/queries/masterData"
 import type { CategoryResponse } from "@/api/types"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import { EmptyState } from "@/components/common/EmptyState"
+import { ErrorState } from "@/components/common/ErrorState"
 import { SearchInput } from "@/components/common/SearchInput"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Collapsible,
@@ -63,6 +64,7 @@ import {
  */
 export default function AdminCategoryListPage() {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const categories = useQuery(masterDataQueries.categories())
   const create = useCreateCategory()
   const rename = useUpdateCategory()
@@ -83,12 +85,6 @@ export default function AdminCategoryListPage() {
   const all = categories.data ?? []
   const groups = groupCategories(filterCategories(all, search))
 
-  function messageOf(error: unknown): string {
-    return isApiError(error)
-      ? t(apiErrorMessageKey(error), { defaultValue: error.message })
-      : t("apiError.INTERNAL_ERROR")
-  }
-
   /**
    * Der 409 beim Loeschen meint etwas anderes als derselbe Code am Feld:
    * hier haengen noch Projekte an der Zeile (§6.1). Der allgemeine Text zu
@@ -98,7 +94,7 @@ export default function AdminCategoryListPage() {
   function deleteError(error: unknown, name: string): string {
     return isApiError(error) && error.errorCode === "RESOURCE_IN_USE"
       ? t("administration.categories.deleteBlocked", { name })
-      : messageOf(error)
+      : apiMessage(error)
   }
 
   return (
@@ -154,16 +150,10 @@ export default function AdminCategoryListPage() {
         </CardContent>
       </Card>
 
-      {categories.error !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>{messageOf(categories.error)}</AlertTitle>
-        </Alert>
-      )}
+      {categories.error !== null && <ErrorState error={categories.error} />}
 
       {rowError !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>{rowError}</AlertTitle>
-        </Alert>
+        <ErrorState message={rowError} />
       )}
 
       {categories.isPending && (

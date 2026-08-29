@@ -9,9 +9,10 @@ import {
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
+import { ErrorState } from "@/components/common/ErrorState"
 import { PasswordInput } from "@/components/common/PasswordInput"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -87,6 +88,7 @@ export function PasswordChangeSection({
   unsavedChanges?: boolean
 }) {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const navigate = useNavigate()
   const changeMutation = useChangePassword()
   const requestReset = useRequestPasswordReset()
@@ -146,7 +148,7 @@ export function PasswordChangeSection({
       }
       form.setError("root.server", {
         type: "server",
-        message: t(apiErrorMessageKey(error), { defaultValue: error.message }),
+        message: apiMessage(error),
       })
     }
   })
@@ -189,7 +191,7 @@ export function PasswordChangeSection({
          ankommt, ist das Rate-Limit-429 oder ein Transportfehler. */
       form.setError("root.server", {
         type: "server",
-        message: t(apiErrorMessageKey(error), { defaultValue: error.message }),
+        message: apiMessage(error),
       })
     }
   }
@@ -293,11 +295,7 @@ export function PasswordChangeSection({
               {passwordField("confirmPassword", "new-password")}
 
               {form.formState.errors.root?.server && (
-                <Alert variant="destructive">
-                  <AlertTitle>
-                    {form.formState.errors.root.server.message}
-                  </AlertTitle>
-                </Alert>
+                <ErrorState message={form.formState.errors.root.server.message} />
               )}
             </FieldGroup>
           </form>

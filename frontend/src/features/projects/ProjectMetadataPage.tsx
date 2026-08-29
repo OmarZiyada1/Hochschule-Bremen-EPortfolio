@@ -3,9 +3,10 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
 import type { ProjectDetailResponse, ProjectUpdateRequest } from "@/api/types"
 import { EmptyState } from "@/components/common/EmptyState"
+import { ErrorState } from "@/components/common/ErrorState"
 import { VersionConflictDialog } from "@/components/common/VersionConflictDialog"
 import {
   AlertDialog,
@@ -318,15 +319,7 @@ export default function ProjectMetadataPage() {
               /* Kein Ladezustand, kein bekannter Fehlercode: der Envelope
                  traegt trotzdem einen Text (§6.2), und der erscheint. Eine
                  leere Flaeche waere der uebersehene Fall. */
-              <Alert variant="destructive">
-                <AlertTitle>
-                  {error !== null && isApiError(error)
-                    ? t(apiErrorMessageKey(error), {
-                        defaultValue: error.message,
-                      })
-                    : t("apiError.INTERNAL_ERROR")}
-                </AlertTitle>
-              </Alert>
+              <ErrorState error={error} />
             ) : (
               <>
                 {changeRequestsOpen && (

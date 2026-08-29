@@ -3,13 +3,12 @@ import { useEffect, useState, type MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, useSearchParams } from "react-router-dom"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import type { ProjectListParams } from "@/api/queries/projects"
+import { ErrorState } from "@/components/common/ErrorState"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/common/EmptyState"
 import { ProjectCard } from "@/components/common/ProjectCard"
 import { SearchInput } from "@/components/common/SearchInput"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import {
   Pagination,
   PaginationContent,
@@ -241,17 +240,7 @@ export default function ProjectListPage() {
               </div>
             )}
 
-            {error !== null && (
-              <Alert variant="destructive">
-                <AlertTitle>
-                  {isApiError(error)
-                    ? t(apiErrorMessageKey(error), {
-                        defaultValue: error.message,
-                      })
-                    : t("apiError.INTERNAL_ERROR")}
-                </AlertTitle>
-              </Alert>
-            )}
+            {error !== null && <ErrorState error={error} />}
 
             {data !== undefined &&
               (data.content.length === 0 ? (

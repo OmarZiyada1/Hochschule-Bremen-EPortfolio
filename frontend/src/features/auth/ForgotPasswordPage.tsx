@@ -8,7 +8,9 @@ import {
 import { useTranslation } from "react-i18next"
 import { Link, useNavigate } from "react-router-dom"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
+import { ErrorState } from "@/components/common/ErrorState"
 import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -42,6 +44,7 @@ import {
  */
 export default function ForgotPasswordPage() {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const navigate = useNavigate()
   const requestReset = useRequestPasswordReset()
   const [confirmedEmail, setConfirmedEmail] = useState<string | null>(null)
@@ -73,7 +76,7 @@ export default function ForgotPasswordPage() {
        */
       form.setError("root.server", {
         type: "server",
-        message: t(apiErrorMessageKey(error), { defaultValue: error.message }),
+        message: apiMessage(error),
       })
     }
   })
@@ -143,11 +146,7 @@ export default function ForgotPasswordPage() {
             />
 
             {form.formState.errors.root?.server && (
-              <Alert variant="destructive">
-                <AlertTitle>
-                  {form.formState.errors.root.server.message}
-                </AlertTitle>
-              </Alert>
+              <ErrorState message={form.formState.errors.root.server.message} />
             )}
 
             <Button type="submit" disabled={form.formState.isSubmitting}>

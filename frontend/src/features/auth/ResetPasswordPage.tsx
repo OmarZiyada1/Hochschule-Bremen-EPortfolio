@@ -11,7 +11,9 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
 import { setPasswordChangeRequired } from "@/api/auth/authStore"
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
+import { ErrorState } from "@/components/common/ErrorState"
 import { PasswordInput } from "@/components/common/PasswordInput"
 import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -73,6 +75,7 @@ import {
  */
 export default function ResetPasswordPage() {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const navigate = useNavigate()
   const location = useLocation()
   const { isAuthenticated, logout } = useAuth()
@@ -131,7 +134,7 @@ export default function ResetPasswordPage() {
          ankommt, ist das Rate-Limit-429 oder ein Transportfehler. */
       form.setError("root.server", {
         type: "server",
-        message: t(apiErrorMessageKey(error), { defaultValue: error.message }),
+        message: apiMessage(error),
       })
     }
   }
@@ -168,7 +171,7 @@ export default function ResetPasswordPage() {
       }
       form.setError("root.server", {
         type: "server",
-        message: t(apiErrorMessageKey(error), { defaultValue: error.message }),
+        message: apiMessage(error),
       })
     }
   })
@@ -376,11 +379,7 @@ export default function ResetPasswordPage() {
           />
 
           {form.formState.errors.root?.server && (
-            <Alert variant="destructive">
-              <AlertTitle>
-                {form.formState.errors.root.server.message}
-              </AlertTitle>
-            </Alert>
+            <ErrorState message={form.formState.errors.root.server.message} />
           )}
 
           <Button type="submit" disabled={form.formState.isSubmitting}>

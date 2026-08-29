@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, useNavigate } from "react-router-dom"
 
-import { apiErrorMessageKey, isApiError, type ApiError } from "@/api/errors"
-import { Alert, AlertTitle } from "@/components/ui/alert"
+import { isApiError, type ApiError } from "@/api/errors"
+import { ErrorState } from "@/components/common/ErrorState"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useCreateProject } from "@/features/projects/hooks/useProjectMetadataMutations"
@@ -87,13 +87,7 @@ export default function NewProjectPage() {
           </>
         ) : (
           <>
-            <Alert variant="destructive">
-              <AlertTitle>
-                {t(apiErrorMessageKey(failure), {
-                  defaultValue: failure.message,
-                })}
-              </AlertTitle>
-            </Alert>
+            <ErrorState error={failure} />
             <Link
               to={PORTFOLIO_PATH}
               className={buttonVariants({ variant: "secondary" })}

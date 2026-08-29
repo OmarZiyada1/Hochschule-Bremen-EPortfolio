@@ -1,4 +1,60 @@
 {
+  "accessibility": {
+    "title": "Accessibility",
+    "intro": "This page reports how accessible the E-Portfolio Hochschule Bremen was at the time of the last audit: what was tested, with which tools, and what remains open.",
+    "notFormal": "This is not a formal declaration under the German accessibility regulation (BITV). The application is a prototype from a bachelor thesis; there is no body that could take responsibility for a conformance claim, and no monitoring or arbitration process. What is reported here is an audit result, not a promise.",
+    "status": {
+      "title": "Audit status",
+      "dateLabel": "Tested on:",
+      "date": "29 August 2026",
+      "targetLabel": "Target level:",
+      "target": "WCAG 2.2, level AA",
+      "resultLabel": "Result:",
+      "result": "32 pages with content of their own tested in light mode, 31 of them additionally in dark mode; the page “create project” creates a draft when opened and therefore runs only once per test run. No remaining level A or AA violation outside the limits listed below."
+    },
+    "method": {
+      "title": "Method",
+      "intro": "Testing runs automatically against the built application, not against the development build. Each page goes through five checks, in light and in dark mode:",
+      "items": [
+        "Rule check with axe-core against WCAG 2.0 A and AA, WCAG 2.1 AA and WCAG 2.2 AA.",
+        "Heading structure: exactly one top-level heading per page, no skipped level.",
+        "Keyboard walkthrough: the page is actually tabbed through. The check confirms that focus finds its way out again, that every tab stop is visible, and that every control meant to be a tab stop can be reached.",
+        "Focus visibility: where comparing computed styles is not enough, an image comparison of the same area with and without focus decides.",
+        "Narrow screens: at 320 CSS pixels the page itself must not scroll sideways. Wide content scrolls within its own area."
+      ]
+    },
+    "scope": {
+      "title": "Pages covered",
+      "intro": "The audit covers every page of the application:",
+      "items": [
+        "the public views: home, project library, project details, public portfolios, contact and support, this page, the error page and the no-access notice,",
+        "sign-in, the four-step registration and the password pages,",
+        "the signed-in views: own portfolio, edit profile, create project and project metadata,",
+        "the editorial views: own reviews and review mode,",
+        "the administration area with dashboard, projects, accounts, categories, semesters, study structure, top 10 management including its audit log, and support requests,",
+        "the block-based editor as a whole."
+      ]
+    },
+    "limits": {
+      "title": "Known limits",
+      "intro": "The following points are known and not fixed. They are listed because an unsupported claim would be worse than a stated gap:",
+      "items": [
+        "There is no imprint and no privacy policy yet. Both addresses lead to a placeholder page; the audit covers them, but what is tested there is the placeholder and not any content.",
+        "No walkthrough with screen reader software. Structure, labels, roles and status regions were checked in the code and automatically; a run with an actual screen reader is still outstanding. An automated test finds only part of the problems and does not replace it.",
+        "Videos and audio have no subtitle track and no transcripts (success criteria 1.2.1 and 1.2.2). The data model has no field for them; the existing “caption” attribute is a caption below the media, not a subtitle track.",
+        "The content of embedded third-party media comes from the respective providers (YouTube, Vimeo, Figma, CodePen). It is neither tested nor under our control; the YouTube player brings violations of its own. What is tested is the embed itself, meaning its title and its label.",
+        "In the contributor groups on project cards the pictures overlap. A covered picture therefore offers a smaller area at rest than the required 24 by 24 pixels (success criterion 2.5.8). With a mouse or the keyboard the group fans out before the click and the area is sufficient; on touch screens there is no hover, and the area stays too small.",
+        "An interrupted file upload cannot be resumed, only restarted.",
+        "When printing a project, the browser decides where pages break. Where exactly that happens is therefore not predictable.",
+        "What is tested is the initial state of each page. Anything that appears only behind an opened dialog, a dropdown menu or in the middle of a multi-step flow is covered by the test case of the respective ticket, not by this audit."
+      ]
+    },
+    "feedback": {
+      "title": "Feedback",
+      "text": "Did you run into a barrier that is not listed here? Let us know; every report helps to make the list above shorter.",
+      "link": "Go to the contact form"
+    }
+  },
   "app": {
     "name": "E-Portfolio Hochschule Bremen",
     "institution": "Hochschule Bremen",
@@ -26,6 +82,10 @@
       "previousPage": "Go to previous page",
       "nextPage": "Go to next page",
       "morePages": "More pages"
+    },
+    "combobox": {
+      "toggle": "Show suggestions",
+      "clear": "Clear selection"
     },
     "command": {
       "title": "Search",

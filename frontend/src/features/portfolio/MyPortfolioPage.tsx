@@ -4,11 +4,10 @@ import { useTranslation } from "react-i18next"
 import { Link, useSearchParams } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import { EmptyState } from "@/components/common/EmptyState"
+import { ErrorState } from "@/components/common/ErrorState"
 import { ProjectCard } from "@/components/common/ProjectCard"
 import { ProjectStatusFilter } from "@/components/common/ProjectStatusFilter"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { OwnProjectCardActions } from "@/features/portfolio/components/OwnProjectCardActions"
@@ -159,17 +158,7 @@ export default function MyPortfolioPage() {
               </div>
             )}
 
-            {projects.error !== null && (
-              <Alert variant="destructive">
-                <AlertTitle>
-                  {isApiError(projects.error)
-                    ? t(apiErrorMessageKey(projects.error), {
-                        defaultValue: projects.error.message,
-                      })
-                    : t("apiError.INTERNAL_ERROR")}
-                </AlertTitle>
-              </Alert>
-            )}
+            {projects.error !== null && <ErrorState error={projects.error} />}
 
             {projects.data !== undefined &&
               (projects.data.content.length === 0 ? (

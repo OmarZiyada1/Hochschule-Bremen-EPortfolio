@@ -2,9 +2,10 @@ import { UploadIcon } from "lucide-react"
 import { useId, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
 import { uploadProjectFile } from "@/api/queries/files"
 import type { StoredFileResponse } from "@/api/types"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import { FieldError } from "@/components/ui/field"
 import { Progress } from "@/components/ui/progress"
 import { useEditorContext } from "@/features/project-content/EditorContext"
@@ -51,6 +52,7 @@ export function UploadDropzone({
   className?: string
 }) {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const { projectId, announce, editable } = useEditorContext()
   const inputId = useId()
   const errorId = `${inputId}-error`
@@ -90,11 +92,7 @@ export function UploadDropzone({
       if (!isApiError(uploadError)) {
         throw uploadError
       }
-      setError(
-        t(apiErrorMessageKey(uploadError), {
-          defaultValue: uploadError.message,
-        })
-      )
+      setError(apiMessage(uploadError))
       announce(t("projectContent.upload.failed", { fileName: file.name }))
     } finally {
       setProgress(null)

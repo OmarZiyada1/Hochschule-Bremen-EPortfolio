@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next"
 import { Link, useNavigate, useParams } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
 import { top10Queries } from "@/api/queries/top10"
 import { useFileUrl } from "@/api/useFileUrl"
 import type {
@@ -20,11 +20,11 @@ import type {
   ProjectDetailResponse,
   ProjectStatus,
 } from "@/api/types"
+import { ErrorState } from "@/components/common/ErrorState"
 import { useBreadcrumbTitle } from "@/routes/useBreadcrumb"
 import { EmptyState } from "@/components/common/EmptyState"
 import { ProjectSidePanels } from "@/components/common/ProjectSidePanels"
 import { StatusBadge } from "@/components/common/StatusBadge"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -190,15 +190,7 @@ export default function ProjectReviewPage() {
         {error !== null && !forbidden && !notFound && (
           <>
             <h1 className="type-h2">{t("project.detail.error.title")}</h1>
-            <Alert variant="destructive">
-              <AlertTitle>
-                {isApiError(error)
-                  ? t(apiErrorMessageKey(error), {
-                      defaultValue: error.message,
-                    })
-                  : t("apiError.INTERNAL_ERROR")}
-              </AlertTitle>
-            </Alert>
+            <ErrorState error={error} />
           </>
         )}
 
@@ -698,13 +690,7 @@ function ReviewActionsCard({ project }: { project: ProjectDetailResponse }) {
           )
         )}
 
-        {failed !== null && (
-          <Alert variant="destructive">
-            <AlertTitle>
-              {t(apiErrorMessageKey(failed), { defaultValue: failed.message })}
-            </AlertTitle>
-          </Alert>
-        )}
+        {failed !== null && <ErrorState error={failed} />}
 
         {/*
          * Statuszeile, Projektinformationen und Kommentare in einer Karte

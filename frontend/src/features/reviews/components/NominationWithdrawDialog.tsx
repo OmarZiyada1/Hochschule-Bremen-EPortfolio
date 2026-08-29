@@ -1,8 +1,9 @@
 import type { RefObject } from "react"
 import { useTranslation } from "react-i18next"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
 import type { Top10NominationResponse } from "@/api/types"
+import { ErrorState } from "@/components/common/ErrorState"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,7 +14,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import { useWithdrawNomination } from "@/features/reviews/hooks/useReviews"
 
 /**
@@ -90,13 +90,7 @@ export function NominationWithdrawDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        {failed !== null && (
-          <Alert variant="destructive">
-            <AlertTitle>
-              {t(apiErrorMessageKey(failed), { defaultValue: failed.message })}
-            </AlertTitle>
-          </Alert>
-        )}
+        {failed !== null && <ErrorState error={failed} />}
 
         <AlertDialogFooter>
           <AlertDialogCancel>{t("common.action.cancel")}</AlertDialogCancel>

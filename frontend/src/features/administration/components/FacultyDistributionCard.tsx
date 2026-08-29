@@ -233,40 +233,49 @@ export function FacultyDistributionCard({
 
             {/* Derselbe Inhalt als Tabelle, sichtbar nur fuer Hilfsmittel.
                 Sie traegt zusaetzlich den ausgeschriebenen Namen, den die
-                Achse aus Platzgruenden nicht zeigt. */}
-            <table className="sr-only">
-              <caption>
-                {t("administration.dashboard.faculties.tableCaption")}
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">
-                    {t("administration.dashboard.faculties.columnFaculty")}
-                  </th>
-                  <th scope="col">
-                    {t("administration.dashboard.faculties.columnCount")}
-                  </th>
-                  <th scope="col">
-                    {t("administration.dashboard.faculties.inTop10")}
-                  </th>
-                  <th scope="col">
-                    {t("administration.dashboard.faculties.accepted")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.abbreviation}>
-                    <th scope="row">
-                      {row.abbreviation}, {row.name}
+                Achse aus Platzgruenden nicht zeigt.
+
+                sr-only steht an der Huelle und nicht an der Tabelle: die
+                Klasse setzt width auf 1px und overflow auf hidden, und
+                beides greift bei display:table nicht. Die Tabelle nahm sonst
+                ihre natuerliche Breite an und schob die Seite bei 320
+                CSS-Pixeln quer (SC 1.4.10, Befund des Laufs zu KAN-42),
+                dieselbe Stelle wie in UserStatisticsCard. */}
+            <div className="sr-only">
+              <table>
+                <caption>
+                  {t("administration.dashboard.faculties.tableCaption")}
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">
+                      {t("administration.dashboard.faculties.columnFaculty")}
                     </th>
-                    <td>{numberFormat.format(row.count)}</td>
-                    <td>{numberFormat.format(row.inTop10)}</td>
-                    <td>{numberFormat.format(row.acceptedOnly)}</td>
+                    <th scope="col">
+                      {t("administration.dashboard.faculties.columnCount")}
+                    </th>
+                    <th scope="col">
+                      {t("administration.dashboard.faculties.inTop10")}
+                    </th>
+                    <th scope="col">
+                      {t("administration.dashboard.faculties.accepted")}
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={row.abbreviation}>
+                      <th scope="row">
+                        {row.abbreviation}, {row.name}
+                      </th>
+                      <td>{numberFormat.format(row.count)}</td>
+                      <td>{numberFormat.format(row.inTop10)}</td>
+                      <td>{numberFormat.format(row.acceptedOnly)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             {/* Die sichtbare Liste der Namen unter dem Diagramm: die Achse
                 zeigt nur das Kuerzel, der Frame nennt darunter den vollen

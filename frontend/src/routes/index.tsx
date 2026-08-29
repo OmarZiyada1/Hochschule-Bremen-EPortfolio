@@ -4,6 +4,7 @@ import {
   type RouteObject,
 } from "react-router-dom"
 
+import AccessibilityPage from "@/features/accessibility/AccessibilityPage"
 import ChangePasswordPage from "@/features/auth/ChangePasswordPage"
 import ComponentGalleryPage from "@/features/token-gallery/ComponentGalleryPage"
 import ForgotPasswordPage from "@/features/auth/ForgotPasswordPage"
@@ -213,8 +214,13 @@ export const routes: RouteObject[] = [
         element: <PlaceholderPage titleKey="placeholder.title.privacy" />,
       },
       {
+        /* Seit KAN-42 kein Platzhalter mehr: die Seite traegt den Pruefstand
+           des Barrierefreiheitsdurchgangs, das Verfahren, die geprueften
+           Bereiche, die benannten Grenzen und den Weg zur Rueckmeldung.
+           Impressum und Datenschutz bleiben Platzhalter, sie haben kein
+           Ticket. */
         path: "/accessibility",
-        element: <PlaceholderPage titleKey="placeholder.title.accessibility" />,
+        element: <AccessibilityPage />,
       },
     ],
   },

@@ -2,9 +2,8 @@ import { TrophyIcon } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import type { Top10EntryResponse } from "@/api/types"
-import { Alert, AlertTitle } from "@/components/ui/alert"
+import { ErrorState } from "@/components/common/ErrorState"
 import { Card, CardContent } from "@/components/ui/card"
 import { RemoveFromTop10Dialog } from "@/features/administration/components/RemoveFromTop10Dialog"
 import { Top10ProjectPicker } from "@/features/administration/components/Top10ProjectPicker"
@@ -94,15 +93,7 @@ export function Top10SlotEditor({
           Aufnehmen haben keinen, an dem er stehen koennte. Beim Entfernen
           zeigt ihn zusaetzlich der Dialog, der dann offen bleibt. */}
       {save.error !== null && removing === null && (
-        <Alert variant="destructive">
-          <AlertTitle>
-            {isApiError(save.error)
-              ? t(apiErrorMessageKey(save.error), {
-                  defaultValue: save.error.message,
-                })
-              : t("apiError.INTERNAL_ERROR")}
-          </AlertTitle>
-        </Alert>
+        <ErrorState error={save.error} />
       )}
 
       <Top10SlotList

@@ -283,9 +283,23 @@ export function EditorHeader({
        * Frontend-Reviews). Dasselbe Muster steht in
        * {@code BlockInsertBar}, die ebenso rollt.
        */}
+      {/*
+       * relative ist hier keine Kosmetik, sondern die Bedingung dafuer, dass
+       * overflow-x-auto ueberhaupt greift (Befund des 320-Pixel-Laufs zu
+       * KAN-42). Jede Schaltflaeche der Leiste traegt ihren zugaenglichen
+       * Namen als sr-only-Span, und sr-only ist position:absolute. Ein
+       * absolut positioniertes Element wird nicht von einem Rollbereich
+       * beschnitten, dessen Kasten nicht sein Bezugsrahmen ist: die Spannen
+       * hingen deshalb an einem Vorfahren weiter oben, standen bei 756px und
+       * schoben die ganze Seite auf 757px Breite, obwohl die Leiste selbst
+       * sauber rollte. Sichtbar war nur, dass sich die Seite quer schieben
+       * liess (SC 1.4.10), und keines der sichtbaren Elemente stand dort
+       * draussen. Mit relative wird dieser Kasten der Bezugsrahmen, und die
+       * Spannen rollen mit, statt zu entkommen.
+       */}
       <div
         data-header-area="tools"
-        className="flex items-center gap-1 overflow-x-auto border-t border-border px-4 py-2 *:shrink-0 sm:px-8 lg:gap-3 lg:overflow-x-visible lg:border-t-0 lg:px-0 lg:py-3"
+        className="relative flex items-center gap-1 overflow-x-auto border-t border-border px-4 py-2 *:shrink-0 sm:px-8 lg:gap-3 lg:overflow-x-visible lg:border-t-0 lg:px-0 lg:py-3"
       >
         {/* Die beiden dichter beieinander als die Gruppen untereinander,
             wie vor dem Umbruch in zwei Zeilen. */}

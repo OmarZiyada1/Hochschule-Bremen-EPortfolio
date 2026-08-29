@@ -3,8 +3,8 @@ import { XIcon } from "lucide-react"
 import { useEffect, useId, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import { tagQueries } from "@/api/queries/tags"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import { Tag } from "@/components/common/Tag"
 import { Button } from "@/components/ui/button"
 import {
@@ -116,6 +116,7 @@ export function TagCombobox({
   className?: string
 }) {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const generatedId = useId()
   const inputId = id ?? generatedId
   const hintId = `${inputId}-hint`
@@ -257,13 +258,7 @@ export function TagCombobox({
       </Combobox>
 
       {suggestions.isError && (
-        <FieldError>
-          {isApiError(suggestions.error)
-            ? t(apiErrorMessageKey(suggestions.error), {
-                defaultValue: suggestions.error.message,
-              })
-            : t("apiError.INTERNAL_ERROR")}
-        </FieldError>
+        <FieldError>{apiMessage(suggestions.error)}</FieldError>
       )}
 
       {/*

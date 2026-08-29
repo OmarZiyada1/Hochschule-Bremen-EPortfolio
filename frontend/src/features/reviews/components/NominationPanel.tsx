@@ -3,19 +3,18 @@ import { useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import type {
   NominationStatus,
   Top10EntryResponse,
   Top10NominationResponse,
 } from "@/api/types"
 import { EmptyState } from "@/components/common/EmptyState"
+import { ErrorState } from "@/components/common/ErrorState"
 import { Pill } from "@/components/common/Pill"
 import {
   SegmentedFilter,
   type SegmentedOption,
 } from "@/components/common/SegmentedFilter"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -164,15 +163,7 @@ export function NominationPanel({
 
         {isPending && <Skeleton className="h-16 w-full rounded-control" />}
 
-        {failed && (
-          <Alert variant="destructive">
-            <AlertTitle>
-              {isApiError(error)
-                ? t(apiErrorMessageKey(error), { defaultValue: error.message })
-                : t("apiError.INTERNAL_ERROR")}
-            </AlertTitle>
-          </Alert>
-        )}
+        {failed && <ErrorState error={error} />}
 
         {/* Zwei Leerzustaende, weil sie Verschiedenes sagen: „noch nichts
             vorgeschlagen" ist ein Anfang, „unter diesem Stand nichts" ist

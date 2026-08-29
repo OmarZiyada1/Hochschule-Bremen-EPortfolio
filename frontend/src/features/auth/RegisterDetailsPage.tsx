@@ -8,11 +8,9 @@ import {
 import { useTranslation } from "react-i18next"
 import { Link, useNavigate } from "react-router-dom"
 
-import {
-  apiErrorMessageKey,
-  applyValidationErrors,
-  isApiError,
-} from "@/api/errors"
+import { applyValidationErrors, isApiError } from "@/api/errors"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
+import { ErrorState } from "@/components/common/ErrorState"
 import { PasswordInput } from "@/components/common/PasswordInput"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -68,6 +66,7 @@ type FieldName = keyof RegisterDetailsFormValues
  */
 export default function RegisterDetailsPage() {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const navigate = useNavigate()
   const registerMutation = useRegister()
 
@@ -192,7 +191,7 @@ export default function RegisterDetailsPage() {
       }
       form.setError("root.server", {
         type: "server",
-        message: t(apiErrorMessageKey(error), { defaultValue: error.message }),
+        message: apiMessage(error),
       })
     }
   })
@@ -372,11 +371,7 @@ export default function RegisterDetailsPage() {
           />
 
           {form.formState.errors.root?.server && (
-            <Alert variant="destructive">
-              <AlertTitle>
-                {form.formState.errors.root.server.message}
-              </AlertTitle>
-            </Alert>
+            <ErrorState message={form.formState.errors.root.server.message} />
           )}
 
           {resumeValues !== null && (

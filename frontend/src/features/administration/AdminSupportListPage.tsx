@@ -3,9 +3,9 @@ import { useState, type MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import type { SupportRequestResponse, SupportRequestStatus } from "@/api/types"
 import { EmptyState } from "@/components/common/EmptyState"
+import { ErrorState } from "@/components/common/ErrorState"
 import { SegmentedFilter } from "@/components/common/SegmentedFilter"
 import {
   AlertDialog,
@@ -17,7 +17,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import {
   Pagination,
   PaginationContent,
@@ -193,31 +192,11 @@ export default function AdminSupportListPage() {
 
       {/* Ein Fehler beim Lesen ist etwas anderes als ein leeres Ergebnis und
           steht deshalb ueber der Liste, nicht an ihrer Stelle. */}
-      {requests.error !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>
-            {isApiError(requests.error)
-              ? t(apiErrorMessageKey(requests.error), {
-                  defaultValue: requests.error.message,
-                })
-              : t("apiError.INTERNAL_ERROR")}
-          </AlertTitle>
-        </Alert>
-      )}
+      {requests.error !== null && <ErrorState error={requests.error} />}
 
       {/* Der Fehler eines Schreibvorgangs, etwa 409 nach einem zweiten Klick
           oder nach der Aenderung durch eine zweite Person. */}
-      {writeError !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>
-            {isApiError(writeError)
-              ? t(apiErrorMessageKey(writeError), {
-                  defaultValue: writeError.message,
-                })
-              : t("apiError.INTERNAL_ERROR")}
-          </AlertTitle>
-        </Alert>
-      )}
+      {writeError !== null && <ErrorState error={writeError} />}
 
       {requests.isPending && (
         <div className="flex flex-col gap-3">

@@ -4,14 +4,11 @@ import { Controller, useForm } from "react-hook-form"
 import { useTranslation } from "react-i18next"
 import { z } from "zod"
 
-import {
-  apiErrorMessageKey,
-  applyValidationErrors,
-  isApiError,
-} from "@/api/errors"
+import { applyValidationErrors, isApiError } from "@/api/errors"
 import type { CategoryResponse } from "@/api/types"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
+import { ErrorState } from "@/components/common/ErrorState"
 import { FilterSelect } from "@/components/common/FilterSelect"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -82,6 +79,7 @@ export function CategoryMergeDialog({
   finalFocus?: RefObject<HTMLElement | null>
 }) {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
 
   const form = useForm<MergeFormValues>({
     resolver: zodResolver(mergeSchema),
@@ -115,7 +113,7 @@ export function CategoryMergeDialog({
       }
       form.setError("root.server", {
         type: "server",
-        message: t(apiErrorMessageKey(error), { defaultValue: error.message }),
+        message: apiMessage(error),
       })
     }
   })
@@ -149,9 +147,7 @@ export function CategoryMergeDialog({
 
         <form onSubmit={submit} noValidate className="flex flex-col gap-4">
           {rootError !== undefined && (
-            <Alert variant="destructive">
-              <AlertTitle>{rootError}</AlertTitle>
-            </Alert>
+            <ErrorState message={rootError} />
           )}
 
           <Controller

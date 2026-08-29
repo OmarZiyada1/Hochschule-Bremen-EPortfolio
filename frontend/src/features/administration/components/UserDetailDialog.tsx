@@ -1,11 +1,10 @@
 import type { RefObject } from "react"
 import { useTranslation } from "react-i18next"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { ErrorState } from "@/components/common/ErrorState"
 import { RoleBadge } from "@/components/common/RoleBadge"
 import { UserStatusBadge } from "@/components/common/UserStatusBadge"
 import { DetailRow } from "@/features/administration/components/DetailRow"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -82,17 +81,7 @@ export function UserDetailDialog({
           </div>
         )}
 
-        {detail.error !== null && (
-          <Alert variant="destructive">
-            <AlertTitle>
-              {isApiError(detail.error)
-                ? t(apiErrorMessageKey(detail.error), {
-                    defaultValue: detail.error.message,
-                  })
-                : t("apiError.INTERNAL_ERROR")}
-            </AlertTitle>
-          </Alert>
-        )}
+        {detail.error !== null && <ErrorState error={detail.error} />}
 
         {detail.data !== undefined && (
           <dl className="grid gap-4 sm:grid-cols-2">

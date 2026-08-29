@@ -9,13 +9,14 @@ import { useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
 import { masterDataQueries } from "@/api/queries/masterData"
 import type { SemesterResponse } from "@/api/types"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import { EmptyState } from "@/components/common/EmptyState"
+import { ErrorState } from "@/components/common/ErrorState"
 import { SearchInput } from "@/components/common/SearchInput"
 import { TruncatedText } from "@/components/common/TruncatedText"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -73,6 +74,7 @@ import {
  */
 export default function AdminSemesterListPage() {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   /* Ohne Filter: die Verwaltung zeigt auch die deaktivierten Semester, das
      Metadatenformular liest dieselbe Liste in ihrer aktiven Variante. */
   const semesters = useQuery(masterDataQueries.semesters())
@@ -102,14 +104,8 @@ export default function AdminSemesterListPage() {
         )
   const selectable = all.filter((entry) => entry.active).length
 
-  function messageOf(error: unknown): string {
-    return isApiError(error)
-      ? t(apiErrorMessageKey(error), { defaultValue: error.message })
-      : t("apiError.INTERNAL_ERROR")
-  }
-
   function reportError(error: unknown) {
-    const message = messageOf(error)
+    const message = apiMessage(error)
     setRowError(message)
     setNotice(message)
   }
@@ -123,7 +119,7 @@ export default function AdminSemesterListPage() {
     const message =
       isApiError(error) && error.errorCode === "RESOURCE_IN_USE"
         ? t("administration.semesters.deleteBlocked", { name })
-        : messageOf(error)
+        : apiMessage(error)
     setRowError(message)
     setNotice(message)
   }
@@ -188,16 +184,10 @@ export default function AdminSemesterListPage() {
         </CardContent>
       </Card>
 
-      {semesters.error !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>{messageOf(semesters.error)}</AlertTitle>
-        </Alert>
-      )}
+      {semesters.error !== null && <ErrorState error={semesters.error} />}
 
       {rowError !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>{rowError}</AlertTitle>
-        </Alert>
+        <ErrorState message={rowError} />
       )}
 
       {semesters.isPending && (

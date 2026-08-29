@@ -4,7 +4,9 @@ import { Controller, useForm } from "react-hook-form"
 import { useTranslation } from "react-i18next"
 import { z } from "zod"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
+import { ErrorState } from "@/components/common/ErrorState"
 import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
@@ -62,6 +64,7 @@ export function EmailChangeNotice({
   cancelPending?: boolean
 }) {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const verify = useVerifyCode()
   const resend = useResendVerificationCode()
   const { remaining, ready, restart } = useResendCountdown()
@@ -88,9 +91,7 @@ export function EmailChangeNotice({
       if (!isApiError(error)) {
         throw error
       }
-      setServerError(
-        t(apiErrorMessageKey(error), { defaultValue: error.message })
-      )
+      setServerError(apiMessage(error))
     }
   })
 
@@ -110,9 +111,7 @@ export function EmailChangeNotice({
       if (!isApiError(error)) {
         throw error
       }
-      setServerError(
-        t(apiErrorMessageKey(error), { defaultValue: error.message })
-      )
+      setServerError(apiMessage(error))
     }
   }
 
@@ -159,9 +158,7 @@ export function EmailChangeNotice({
       />
 
       {serverError !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>{serverError}</AlertTitle>
-        </Alert>
+        <ErrorState message={serverError} />
       )}
 
       <div className="flex flex-wrap items-center gap-4">

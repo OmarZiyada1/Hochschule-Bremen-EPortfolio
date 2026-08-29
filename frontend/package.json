@@ -9,6 +9,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "e2e": "playwright test",
     "typecheck": "tsc -b",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write \"**/*.{ts,tsx,css,json,html,md}\"",
@@ -61,6 +62,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "^10",
     "@playwright/test": "^1.62.1",
     "@testing-library/jest-dom": "^7.0.0",

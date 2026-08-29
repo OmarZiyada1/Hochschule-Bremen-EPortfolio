@@ -1,4 +1,60 @@
 {
+  "accessibility": {
+    "title": "Barrierefreiheit",
+    "intro": "Diese Seite berichtet, wie barrierefrei das E-Portfolio Hochschule Bremen zum Zeitpunkt der letzten Prüfung war: was geprüft wurde, womit, und was dabei offen geblieben ist.",
+    "notFormal": "Dies ist keine förmliche Erklärung nach der Barrierefreie-Informationstechnik-Verordnung. Die Anwendung ist ein Prototyp aus einer Bachelorthesis; es gibt keine Stelle, die eine Konformitätserklärung verantworten könnte, und keinen Überwachungs- oder Schlichtungsweg. Berichtet wird deshalb ein Prüfstand, keine Zusage.",
+    "status": {
+      "title": "Stand der Prüfung",
+      "dateLabel": "Geprüft am:",
+      "date": "29. August 2026",
+      "targetLabel": "Zielniveau:",
+      "target": "WCAG 2.2, Stufe AA",
+      "resultLabel": "Ergebnis:",
+      "result": "32 Seiten mit eigenem Inhalt hell geprüft, 31 davon zusätzlich dunkel; die Seite „Projekt anlegen\" legt beim Aufruf einen Entwurf an und läuft deshalb nur einmal je Lauf. Kein verbleibender Verstoß der Stufen A und AA außerhalb der unten genannten Grenzen."
+    },
+    "method": {
+      "title": "Verfahren",
+      "intro": "Geprüft wurde automatisiert gegen den ausgelieferten Stand der Anwendung, nicht gegen den Entwicklungsstand. Jede Seite durchläuft fünf Prüfungen, im hellen und im dunklen Modus:",
+      "items": [
+        "Regelprüfung mit axe-core gegen die Stufen WCAG 2.0 A und AA, WCAG 2.1 AA und WCAG 2.2 AA.",
+        "Überschriftenstruktur: genau eine Überschrift erster Ebene je Seite, keine übersprungene Ebene.",
+        "Tastaturdurchgang: die Seite wird tatsächlich durchgetabbt. Geprüft wird, dass der Fokus wieder herauskommt, dass jeder Tabstopp sichtbar ist und dass jedes Bedienelement erreichbar ist, das ein Tabstopp sein will.",
+        "Sichtbarkeit des Fokus: reicht der Vergleich der Stilangaben nicht, entscheidet ein Bildvergleich desselben Ausschnitts mit und ohne Fokus.",
+        "Darstellung auf schmalen Bildschirmen: bei 320 CSS-Pixeln Breite darf sich die Seite nicht waagerecht schieben lassen. Breite Inhalte rollen in ihrem eigenen Bereich."
+      ]
+    },
+    "scope": {
+      "title": "Geprüfte Bereiche",
+      "intro": "Der Durchgang umfasst alle Seiten der Anwendung:",
+      "items": [
+        "die öffentlichen Ansichten: Startseite, Projektbibliothek, Projektdetails, öffentliche Portfolios, Kontakt und Support, diese Seite, die Fehlerseite und die Meldung bei fehlendem Zugriff,",
+        "Anmeldung, Registrierung in vier Schritten und die Passwortseiten,",
+        "die angemeldeten Ansichten: eigenes Portfolio, Profil bearbeiten, Projekt anlegen und Projekt-Metadaten,",
+        "die Redaktion: eigene Reviews und der Review-Modus,",
+        "die Administrationsseite mit Übersicht, Projekten, Konten, Kategorien, Semestern, Studienstruktur, Top-10-Verwaltung samt Protokoll und Anfragen,",
+        "den blockbasierten Editor als Ganzes."
+      ]
+    },
+    "limits": {
+      "title": "Bekannte Grenzen",
+      "intro": "Die folgenden Punkte sind bekannt und nicht behoben. Sie stehen hier, weil eine unbelegte Zusage schlechter wäre als eine benannte Lücke:",
+      "items": [
+        "Impressum und Datenschutz gibt es noch nicht. Beide Adressen führen auf eine Platzhalterseite; der Durchgang prüft sie mit, aber geprüft ist dort nur der Platzhalter und kein Inhalt.",
+        "Kein Durchgang mit einer Vorlesesoftware. Geprüft sind Struktur, Beschriftungen, Rollen und Meldebereiche im Code und maschinell; ein Durchgang mit einem echten Screenreader steht aus. Ein automatischer Test findet nur einen Teil der Verstöße und ersetzt ihn nicht.",
+        "Videos und Tonaufnahmen haben keine Untertitelspur und keine Transkripte (Erfolgskriterien 1.2.1 und 1.2.2). Das Datenmodell führt dafür kein Feld; das vorhandene Attribut „caption\" ist eine Bildunterschrift und keine Untertitelspur.",
+        "Der Inhalt eingebetteter Fremdmedien stammt von den jeweiligen Anbietern (YouTube, Vimeo, Figma, CodePen). Er wird nicht geprüft und lässt sich nicht beeinflussen; der Abspieler von YouTube bringt eigene Verstöße mit. Geprüft ist die Einbettung selbst, also ihr Titel und ihre Beschriftung.",
+        "In den Beteiligtengruppen an Projektkacheln liegen die Bilder übereinander. Ein verdecktes Bild bietet dadurch im Ruhezustand eine kleinere Fläche als die geforderten 24 mal 24 Pixel (Erfolgskriterium 2.5.8). Mit Maus und Tastatur fächert die Gruppe vor dem Klick auf und die Fläche reicht; auf Tippbildschirmen gibt es kein Zeigen, dort bleibt die Fläche zu klein.",
+        "Ein abgebrochener Datei-Upload lässt sich nicht fortsetzen, sondern nur neu beginnen.",
+        "Beim Ausdruck eines Projekts entscheidet der Browser über die Seitenumbrüche. Wo genau umbrochen wird, ist deshalb nicht vorhersagbar.",
+        "Geprüft wird der Ausgangszustand jeder Seite. Was erst hinter einem geöffneten Dialog, einem Aufklappmenü oder mitten in einem mehrstufigen Ablauf erscheint, deckt der Prüffall des jeweiligen Tickets ab, nicht dieser Durchgang."
+      ]
+    },
+    "feedback": {
+      "title": "Rückmeldung",
+      "text": "Sie sind auf eine Barriere gestoßen, die hier nicht steht? Schreiben Sie uns; jede Meldung hilft, die Liste oben kürzer zu machen.",
+      "link": "Zum Kontaktformular"
+    }
+  },
   "app": {
     "name": "E-Portfolio Hochschule Bremen",
     "institution": "Hochschule Bremen",
@@ -26,6 +82,10 @@
       "previousPage": "Zur vorigen Seite",
       "nextPage": "Zur nächsten Seite",
       "morePages": "Weitere Seiten"
+    },
+    "combobox": {
+      "toggle": "Vorschläge anzeigen",
+      "clear": "Auswahl entfernen"
     },
     "command": {
       "title": "Suche",

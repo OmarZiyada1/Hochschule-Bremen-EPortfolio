@@ -7,6 +7,16 @@ import { defineConfig } from "vitest/config"
 // Compose-Netz der Dienstname (gesetzt in docker-compose.override.yml).
 const proxyTarget = process.env.VITE_PROXY_TARGET ?? "http://localhost:8080"
 
+// Dieselben Pfade fuer Entwicklungs- und Vorschauserver. Der Vorschauserver
+// liefert den gebauten Stand aus und ist damit das Ziel des e2e-Laufs
+// (KAN-42, Umfang 8); ohne diesen Proxy liefe dort jeder Request gegen
+// /api ins Leere, weil die gebaute Anwendung bewusst keine Basis-URL
+// mitbringt (api/client.ts).
+const apiProxy = {
+  "/api": { target: proxyTarget, changeOrigin: true },
+  "/v3/api-docs": { target: proxyTarget, changeOrigin: true },
+}
+
 // Im Container gesetzt. Bind Mounts von Windows melden keine Dateiereignisse
 // in den Container, ohne Polling bliebe der Hot Reload dort stumm. Auf dem
 // Host bleibt Polling aus, es kostet dauerhaft Rechenzeit.
@@ -26,10 +36,7 @@ export default defineConfig({
     // Ein Origin: die API laeuft ueber den Dev-Server. Damit sieht der
     // Browser keinen fremden Ursprung, es gibt kein CORS, und der Code
     // braucht keine Basis-URL, die zur Bauzeit ins Bundle wandert.
-    proxy: {
-      "/api": { target: proxyTarget, changeOrigin: true },
-      "/v3/api-docs": { target: proxyTarget, changeOrigin: true },
-    },
+    proxy: apiProxy,
     watch: {
       usePolling: inContainer,
       // Polling kostet pro Datei und Durchlauf einen Zugriff, und ueber einen
@@ -51,6 +58,54 @@ export default defineConfig({
       binaryInterval: 1000,
     },
   },
+  // Der Vorschauserver liefert dist/ aus. Er ist der Auslieferungsstand und
+  // damit das, wogegen der axe-Lauf prueft: im Entwicklungsserver stehen
+  // zusaetzlich /dev/tokens und /dev/components, und die gehoeren nicht zur
+  // geprueften Anwendung (KAN-42, Umfang 1).
+  preview: {
+    port: 4173,
+    strictPort: true,
+    proxy: {
+      /*
+       * Wie im Entwicklungsserver, aber ohne den Origin-Kopf.
+       *
+       * Der Browser spricht mit dem Vorschauserver auf demselben Ursprung,
+       * fuer ihn gibt es hier gar kein CORS. Der Proxy reicht den
+       * Origin-Kopf trotzdem weiter, und das Backend prueft ihn gegen
+       * CORS_ALLOWED_ORIGINS: dort steht der Entwicklungsserver (5173), nicht
+       * die Vorschau (4173). Lesende Aufrufe kamen durch, schreibende
+       * beantwortete Spring Security mit 403 "Invalid CORS request". Auf
+       * /projects/new hiess das: die Seite zeigte eine Fehlermeldung, und der
+       * Barrierefreiheitslauf prueft die Fehlermeldung statt der Seite.
+       *
+       * Weitergereicht wird deshalb ohne Origin. Das ist keine Umgehung,
+       * sondern die richtige Beschreibung des Vorgangs: der Aufruf des
+       * Proxys ist ein Server-zu-Server-Aufruf und kein Cross-Origin-Aufruf
+       * eines Browsers. Der Entwicklungsserver bleibt unveraendert, damit
+       * dort weiterhin genau die Liste gilt, die auch im Betrieb gilt.
+       */
+      ...Object.fromEntries(
+        Object.entries(apiProxy).map(([path, options]) => [
+          path,
+          {
+            ...options,
+            configure: (proxy: {
+              on: (
+                event: "proxyReq",
+                handler: (request: {
+                  removeHeader: (name: string) => void
+                }) => void
+              ) => void
+            }) => {
+              proxy.on("proxyReq", (request) => {
+                request.removeHeader("origin")
+              })
+            },
+          },
+        ])
+      ),
+    },
+  },
   resolve: {
     alias: {
       // import.meta.dirname statt __dirname: der Config-Lader von Vite
@@ -59,6 +114,15 @@ export default defineConfig({
     },
   },
   test: {
+    /*
+     * Nur, was unter src/ liegt. Ohne diese Zeile sammelt Vitest auch
+     * e2e/accessibility.spec.ts ein, weil sein Standardmuster jede
+     * .spec.ts-Datei des Projekts trifft; die Datei bricht dann mit
+     * "Playwright Test did not expect test.describe() to be called here" ab.
+     * Die Trennung ist gewollt: Vitest braucht weder Server noch Datenbank,
+     * der e2e-Lauf beides (KAN-42, Umfang 8; Skript pnpm e2e).
+     */
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
     environment: "jsdom",
     setupFiles: ["./src/tests/setup.ts"],
     // Die Tokenschicht wird ueber tokens.test.ts gegen die Quelldatei

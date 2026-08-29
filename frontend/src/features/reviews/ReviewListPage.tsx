@@ -9,16 +9,16 @@ import {
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import type { ReviewListParams } from "@/api/queries/projects"
 import type { ProjectCardResponse } from "@/api/types"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import { EmptyState } from "@/components/common/EmptyState"
+import { ErrorState } from "@/components/common/ErrorState"
 import { FilterSelect } from "@/components/common/FilterSelect"
 import { KpiTile } from "@/components/common/KpiTile"
 import { ProjectStatusFilter } from "@/components/common/ProjectStatusFilter"
 import { ProjectTableRow } from "@/components/common/ProjectTableRow"
 import { SearchInput } from "@/components/common/SearchInput"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Pagination,
@@ -319,17 +319,7 @@ export default function ReviewListPage() {
       </Card>
 
       {/* Tabelle */}
-      {list.error !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>
-            {isApiError(list.error)
-              ? t(apiErrorMessageKey(list.error), {
-                  defaultValue: list.error.message,
-                })
-              : t("apiError.INTERNAL_ERROR")}
-          </AlertTitle>
-        </Alert>
-      )}
+      {list.error !== null && <ErrorState error={list.error} />}
 
       {list.isPending && (
         <Card>
@@ -342,9 +332,7 @@ export default function ReviewListPage() {
       )}
 
       {rowError !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>{rowError}</AlertTitle>
-        </Alert>
+        <ErrorState message={rowError} />
       )}
 
       {list.data !== undefined && rows.length === 0 && (
@@ -528,6 +516,7 @@ function ReviewRow({
   onError: (message: string | null) => void
 }) {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const { resign } = useReviewWorkflow(project.id)
 
   return (
@@ -556,11 +545,7 @@ function ReviewRow({
                   })
                 ),
               onError: (error) => {
-                const message = isApiError(error)
-                  ? t(apiErrorMessageKey(error), {
-                      defaultValue: error.message,
-                    })
-                  : t("apiError.INTERNAL_ERROR")
+                const message = apiMessage(error)
                 /* Beides: sichtbar ueber der Tabelle und angesagt. */
                 onError(message)
                 onNotice(message)

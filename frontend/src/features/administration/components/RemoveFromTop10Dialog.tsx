@@ -1,8 +1,8 @@
 import type { RefObject } from "react"
 import { useTranslation } from "react-i18next"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
-import { Alert, AlertTitle } from "@/components/ui/alert"
+import { isApiError } from "@/api/errors"
+import { ErrorState } from "@/components/common/ErrorState"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -80,13 +80,7 @@ export function RemoveFromTop10Dialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        {failed !== null && (
-          <Alert variant="destructive">
-            <AlertTitle>
-              {t(apiErrorMessageKey(failed), { defaultValue: failed.message })}
-            </AlertTitle>
-          </Alert>
-        )}
+        {failed !== null && <ErrorState error={failed} />}
 
         <AlertDialogFooter>
           <AlertDialogCancel>{t("common.action.cancel")}</AlertDialogCancel>

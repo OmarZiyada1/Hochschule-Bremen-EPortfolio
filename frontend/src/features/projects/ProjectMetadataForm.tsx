@@ -4,14 +4,12 @@ import { Controller, useForm, useWatch } from "react-hook-form"
 import { useTranslation } from "react-i18next"
 
 import { useAuth } from "@/api/auth/AuthContext"
-import {
-  apiErrorMessageKey,
-  applyValidationErrors,
-  isApiError,
-} from "@/api/errors"
+import { applyValidationErrors, isApiError } from "@/api/errors"
 import { masterDataQueries } from "@/api/queries/masterData"
 import type { ProjectDetailResponse, ProjectUpdateRequest } from "@/api/types"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import { CharacterCounter } from "@/components/common/CharacterCounter"
+import { ErrorState } from "@/components/common/ErrorState"
 import {
   FilterSelect,
   type FilterOption,
@@ -161,6 +159,7 @@ export function ProjectMetadataForm({
   secondarySubmit?: { label: string; pendingLabel?: string }
 }) {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   /* Die Rolle kommt aus dem Kontext und nicht aus dem Token (§6.5); der
      Server liest sie bei jedem Request neu aus der Datenbank. */
   const { user } = useAuth()
@@ -461,7 +460,7 @@ export function ProjectMetadataForm({
           type: "server",
           message:
             missing.length === 0
-              ? t(apiErrorMessageKey(error), { defaultValue: error.message })
+              ? apiMessage(error)
               : t("project.metadata.incomplete", {
                   fields: missing
                     .map((entry) => t(`projectContent.submit.field.${entry}`))
@@ -472,7 +471,7 @@ export function ProjectMetadataForm({
       }
       form.setError("root.server", {
         type: "server",
-        message: t(apiErrorMessageKey(error), { defaultValue: error.message }),
+        message: apiMessage(error),
       })
     }
   })
@@ -966,17 +965,11 @@ export function ProjectMetadataForm({
           {form.formState.submitCount > 0 &&
             !form.formState.isValid &&
             form.formState.errors.root?.server === undefined && (
-              <Alert variant="destructive">
-                <AlertTitle>{t("project.metadata.invalid")}</AlertTitle>
-              </Alert>
+              <ErrorState message={t("project.metadata.invalid")} />
             )}
 
           {form.formState.errors.root?.server && (
-            <Alert variant="destructive">
-              <AlertTitle>
-                {form.formState.errors.root.server.message}
-              </AlertTitle>
-            </Alert>
+            <ErrorState message={form.formState.errors.root.server.message} />
           )}
 
           <div className="flex flex-wrap items-center gap-4">
