@@ -33,6 +33,7 @@ import {
   AdminDashboardRoute,
   AdminProjectListRoute,
   AdminSemesterListRoute,
+  AdminSiteContentRoute,
   AdminStudyStructureRoute,
   AdminSupportListRoute,
   AdminTop10AuditRoute,
@@ -187,6 +188,15 @@ export const routes: RouteObject[] = [
                    oeffentliche Kontaktformular an (§6.1). */
                 path: "support",
                 element: <AdminSupportListRoute />,
+              },
+              {
+                /* Die redaktionelle Pflege der oeffentlichen Startseite
+                   (§2.16, §3.21). Sie liegt unter derselben Rollenschranke
+                   wie die uebrigen Bereiche: schreiben darf allein ADMIN
+                   (§5), gelesen wird derselbe Bestand PUBLIC von der
+                   Startseite aus. */
+                path: "site-content",
+                element: <AdminSiteContentRoute />,
               },
               {
                 /* Das Protokoll liegt unter der Top-10-Verwaltung, weil es

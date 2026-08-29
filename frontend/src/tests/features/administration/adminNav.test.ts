@@ -8,12 +8,15 @@ import { ADMIN_NAV, isAdminNavActive } from "@/features/administration/adminNav"
  * ist.
  */
 describe("adminNav", () => {
-  it("fuehrt die acht Eintraege der Figma-Komponente in ihrer Reihenfolge", () => {
+  it("fuehrt die acht Eintraege der Figma-Komponente in ihrer Reihenfolge, den neunten dahinter", () => {
     /* Sieben, nicht sechs: „Semester" ist am 17.08.2026 zwischen Kategorien
        und Studienstruktur dazugekommen. Auch die Position von „Top 10"
        stammt aus dem Frame und nicht aus der aelteren Ticketfassung.
        Der achte ist „Support" (KAN-85), am Ende und hinter
-       „Studienstruktur" wie im Frame Admin · Support. */
+       „Studienstruktur" wie im Frame Admin · Support.
+       Der neunte, „Startseitentexte", hat als einziger keinen Frame: er
+       haengt deshalb hinten an, damit die entworfene Reihenfolge der acht
+       davor unberuehrt bleibt. */
     expect(ADMIN_NAV.map((entry) => entry.to)).toEqual([
       "/administration",
       "/administration/projects",
@@ -23,6 +26,7 @@ describe("adminNav", () => {
       "/administration/semesters",
       "/administration/study-structure",
       "/administration/support",
+      "/administration/site-content",
     ])
   })
 

@@ -6,6 +6,7 @@ import {
   LifeBuoyIcon,
   TagsIcon,
   TrophyIcon,
+  TypeIcon,
   UsersIcon,
 } from "lucide-react"
 import type { ComponentType } from "react"
@@ -14,8 +15,18 @@ import type { ComponentType } from "react"
  * Die Eintraege der Seitennavigation, in der Reihenfolge der Figma-Komponente
  * {@code Sidebar} (KAN-38).
  *
- * <p><strong>Acht seit KAN-85.</strong> „Support" steht als letzter Eintrag
- * hinter „Studienstruktur", wie im Frame {@code Admin · Support}. Es ist der
+ * <p><strong>Der neunte Eintrag haengt hinten an, und das ist eine
+ * Entscheidung.</strong> „Startseitentexte" hat als einziger Bereich keinen
+ * Frame in der Figma-Komponente {@code Sidebar}: die redaktionelle Pflege der
+ * Startseite (§2.16, §3.21) ist nach dem Entwurf entstanden. Es gibt deshalb
+ * keine entworfene Position fuer ihn, und jede Einordnung mittendrin waere
+ * eine erfundene: sie verschoebe die acht bestehenden Eintraege gegen den
+ * Frame, aus dem ihre Reihenfolge stammt. Angehaengt bleibt sie unberuehrt,
+ * und die Abweichung steht an genau einer Stelle, naemlich am Ende.
+ *
+ * <p><strong>Acht seit KAN-85.</strong> „Support" steht als letzter der
+ * entworfenen Eintraege hinter „Studienstruktur", wie im Frame
+ * {@code Admin · Support}. Es ist der
  * einzige Bereich der Administrationsseite, dessen Inhalt von aussen entsteht:
  * die Zeilen legt das oeffentliche Kontaktformular an (§6.1).
  *
@@ -99,6 +110,15 @@ export const ADMIN_NAV: readonly AdminNavEntry[] = [
        Zeilen legt das oeffentliche Kontaktformular an (§6.1). Wer die
        Administrationsseite betritt, soll ohne Klick sehen, ob etwas wartet. */
     badge: "openSupportRequests",
+  },
+  {
+    /* Ohne Frame in der Komponente Sidebar und deshalb am Ende, damit die
+       entworfene Reihenfolge der acht darueber unberuehrt bleibt. Das „T"
+       steht fuer den Bereich, in dem ausschliesslich Text gepflegt wird
+       (§2.16). */
+    to: "/administration/site-content",
+    labelKey: "administration.nav.siteContent",
+    icon: TypeIcon,
   },
 ]
 

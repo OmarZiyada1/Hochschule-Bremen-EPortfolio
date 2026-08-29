@@ -949,7 +949,8 @@ class ProjectPermissionServiceTest {
 		}
 
 		@Test
-		@DisplayName("Top-10 kuratieren, User verwalten, Stammdaten, Dashboard: nur Admin")
+		@DisplayName("Top-10 kuratieren, User verwalten, Stammdaten, Startseitentexte, Dashboard: "
+				+ "nur Admin")
 		void adminOnly() {
 			assertThat(service.mayCurateTop10(admin)).isTrue();
 			assertThat(service.mayCurateTop10(editor)).isFalse();
@@ -964,6 +965,14 @@ class ProjectPermissionServiceTest {
 			assertThat(service.maySeeAdminDashboard(admin)).isTrue();
 			assertThat(service.maySeeAdminDashboard(editor)).isFalse();
 			assertThat(service.maySeeAdminDashboard(PUBLIC)).isFalse();
+
+			// Ueber HTTP ist diese Stufe nicht erreichbar: die Filterkette faengt
+			// /api/admin/** schon auf der Rollenebene ab. Geprueft wird sie
+			// deshalb hier, sonst waere die zweite Stufe aus §5 nirgends belegt.
+			assertThat(service.mayManageSiteContent(admin)).isTrue();
+			assertThat(service.mayManageSiteContent(editor)).isFalse();
+			assertThat(service.mayManageSiteContent(author)).isFalse();
+			assertThat(service.mayManageSiteContent(PUBLIC)).isFalse();
 		}
 	}
 
@@ -987,6 +996,7 @@ class ProjectPermissionServiceTest {
 			assertThat(service.mayCreateProject(user)).isFalse();
 			assertThat(service.mayApprove(user, p)).isFalse();
 			assertThat(service.mayManageUsers(user)).isFalse();
+			assertThat(service.mayManageSiteContent(user)).isFalse();
 			assertThat(service.mayReadProject(user, p)).isFalse();
 			// Veroeffentlichtes bleibt lesbar - das ist der PUBLIC-Rest.
 			assertThat(service.mayReadProject(user, project(ProjectStatus.PUBLISHED))).isTrue();

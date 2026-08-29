@@ -340,7 +340,7 @@
       "unknown": "Dieser Abschluss ist unbekannt."
     },
     "projectRole": {
-      "required": "Bitte geben Sie eine Funktionsbezeichnung an."
+      "tooLong": "Die Funktionsbezeichnung darf höchstens 255 Zeichen lang sein."
     },
     "comment": {
       "type": "Bitte eine Art auswählen.",
@@ -397,6 +397,11 @@
         "tooShort": "Die Beschreibung muss mindestens 10 Zeichen lang sein.",
         "tooLong": "Die Beschreibung darf höchstens 2000 Zeichen lang sein."
       }
+    },
+    "siteContent": {
+      "tooLong": "Der Text darf höchstens 1000 Zeichen lang sein.",
+      "placeholderMissing": "Es fehlt ein Platzhalter, den diese Stelle braucht. Ohne ihn verschwindet die Zahl wortlos aus der Seite.",
+      "placeholderUnexpected": "Diese Stelle kennt diesen Platzhalter nicht. Er stünde wörtlich auf der Seite, weil ihn niemand füllt."
     }
   },
   "placeholder": {
@@ -774,12 +779,12 @@
         "personPlaceholder": "Nach Namen suchen …",
         "role": "Rolle",
         "rolePlaceholder": "Rolle im Projekt, etwa Frontend",
-        "roleOf": "Rolle von {{name}} im Projekt",
         "remove": "{{name}} aus den Projektmitgliedern entfernen",
         "chosen": "Aufgenommene Projektmitglieder",
         "invalid": "Bitte prüfen Sie die Angaben zu den Projektmitgliedern.",
         "required": "Pflichtangabe",
         "addButton": "Mitglied aufnehmen",
+        "added": "{{name}} aufgenommen.",
         "none": "Noch keine Mitglieder aufgenommen."
       },
       "notFound": {
@@ -1555,7 +1560,8 @@
       "support": "Support",
       "open": "Navigation der Administrationsseite öffnen",
       "openSupportCount_one": "{{count}} offene Support-Anfrage",
-      "openSupportCount_other": "{{count}} offene Support-Anfragen"
+      "openSupportCount_other": "{{count}} offene Support-Anfragen",
+      "siteContent": "Startseitentexte"
     },
     "dashboard": {
       "title": "Dashboard",
@@ -2081,6 +2087,41 @@
         "IN_PROGRESS": "In Bearbeitung von {{name}} seit {{at}}",
         "RESOLVED": "Erledigt von {{name}} am {{at}}"
       }
+    },
+    "siteContent": {
+      "title": "Startseitentexte",
+      "subtitle": "Fünfzehn Textstellen der öffentlichen Startseite, jeweils deutsch und englisch.",
+      "resetHint": "Ein leeres Feld heißt: an dieser Stelle gilt die ausgelieferte Fassung. Sie steht im leeren Feld als Vorschlag und wird nicht gespeichert; wer ein Feld leert, setzt die Stelle darauf zurück.",
+      "section": {
+        "hero": "Kopfbereich",
+        "top10": "Top-10-Sektion",
+        "cta": "Abschlusssektion"
+      },
+      "language": {
+        "de": "Deutsch",
+        "en": "Englisch"
+      },
+      "field": {
+        "heroLabel": "Überzeile über der Hauptüberschrift",
+        "heroTitleLine1": "Hauptüberschrift, erste Zeile",
+        "heroTitleLine2": "Hauptüberschrift, zweite Zeile",
+        "heroSubtitle": "Einleitungstext unter der Hauptüberschrift",
+        "heroExploreTop10": "Schaltfläche zur Top-10-Liste",
+        "top10Label": "Überzeile der Bestenliste",
+        "top10Title": "Überschrift der Bestenliste",
+        "top10Description": "Beschreibungstext der Bestenliste",
+        "ctaLabel": "Überzeile des Abschlusses",
+        "ctaTitle": "Überschrift des Abschlusses",
+        "ctaDescription": "Beschreibungstext des Abschlusses",
+        "ctaStatWorks": "Beschriftung der Kennzahl Projekte",
+        "ctaStatFaculties": "Beschriftung der Kennzahl Fakultäten",
+        "ctaStatPrograms": "Beschriftung der Kennzahl Studiengänge",
+        "ctaOpenLibrary": "Schaltfläche zur Projektbibliothek"
+      },
+      "placeholderHint": "Diese Stelle braucht die folgenden Platzhalter, genau so geschrieben:",
+      "submit": "Texte speichern",
+      "submitPending": "Wird gespeichert …",
+      "saved": "Die Startseitentexte sind gespeichert."
     }
   },
   "support": {

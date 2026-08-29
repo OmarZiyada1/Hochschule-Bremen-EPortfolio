@@ -236,6 +236,16 @@ public class SecurityConfig {
 					// Rollenregel bekaeme keiner davon: sie kaeme vor dem Laden, und
 					// ein fehlender Parameter ergaebe dann 403 statt des 400, das
 					// §6.1 vorsieht.
+					// /api/site-content steht in dieser Zeile, weil die Texte
+					// auf der oeffentlichen Startseite stehen: sie werden
+					// gelesen, bevor sich irgendjemand anmelden kann, und wer
+					// die Seite aufruft, sieht sie ohnehin. Ohne diese Freigabe
+					// bekaeme die Startseite fuer nicht angemeldete Besucher 401
+					// und faellt still auf ihre mitgelieferten Sprachdateien
+					// zurueck, also ausgerechnet dort, wo die Pflege wirken
+					// soll. Nur GET; gepflegt wird unter
+					// /api/admin/site-content, das faellt eine Zeile weiter
+					// unter hasRole("ADMIN").
 					.requestMatchers(HttpMethod.GET,
 							"/api/projects", "/api/projects/*",
 							"/api/projects/*/blocks",
@@ -245,6 +255,7 @@ public class SecurityConfig {
 							"/api/categories", "/api/faculties",
 							"/api/study-programs", "/api/modules",
 							"/api/semesters", "/api/tags",
+							"/api/site-content",
 							"/api/top10").permitAll()
 
 					// HEAD auf /api/files/* kam mit KAN-72 dazu, zusammen mit

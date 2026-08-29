@@ -510,6 +510,10 @@ export function ProjectMetadataForm({
                 onChange={field.onChange}
                 uploading={uploading}
                 disabled={locked}
+                /* Wie im Editor: die Bedienung liegt als Icon-Leiste oben
+                   rechts auf dem Titelbild und nicht als Verweiszeile
+                   darunter. Das Seitenverhaeltnis bleibt bei 7:4. */
+                controlPlacement="overlay"
                 onUpload={async (file) => {
                   setUploading(true)
                   try {

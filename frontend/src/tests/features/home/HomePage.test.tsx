@@ -1,8 +1,9 @@
 import { HttpResponse, http } from "msw"
-import { screen, within } from "@testing-library/react"
+import { act, screen, within } from "@testing-library/react"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import HomePage from "@/features/home/HomePage"
+import { resetSiteContentOverridesForTests } from "@/features/home/hooks/useSiteContentOverrides"
 import i18n from "@/i18n"
 import { apiErrorResponse } from "@/tests/msw/handlers"
 import { server } from "@/tests/msw/server"
@@ -53,18 +54,23 @@ function member(index: number, firstName: string, lastName: string) {
 }
 
 /**
- * Registriert alle vier Antworten, die die Startseite zieht: Top-10,
- * Projektzahl (size=1), Fakultaeten und Studiengaenge. Ohne Handler ist
- * ein Request ein Testfehler (setup.ts), deshalb stubbt jeder Fall alles.
+ * Registriert alle fuenf Antworten, die die Startseite zieht: Top-10,
+ * Projektzahl (size=1), Fakultaeten, Studiengaenge und die gepflegten
+ * Startseitentexte (§2.16). Ohne Handler ist ein Request ein Testfehler
+ * (setup.ts), deshalb stubbt jeder Fall alles.
  */
 function stubHome({
   top10 = [] as unknown[],
   works = 137,
   faculties = 5,
   programs = 42,
+  siteContent = [] as unknown[],
 } = {}) {
   server.use(
     http.get("*/api/top10", () => HttpResponse.json(top10)),
+    http.get("*/api/site-content", () =>
+      HttpResponse.json({ entries: siteContent })
+    ),
     http.get("*/api/projects", () => HttpResponse.json(pageOf([], works))),
     http.get("*/api/faculties", () =>
       HttpResponse.json(
@@ -94,6 +100,9 @@ function stubHome({
 describe("HomePage", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("de")
+    /* i18next ist ein Modul-Singleton: ein im vorigen Fall gepflegter Text
+       staende sonst noch im naechsten (§2.16, useSiteContentOverrides). */
+    resetSiteContentOverridesForTests(i18n)
   })
 
   it("zeigt Hero-Ueberschrift, Sektionsueberschriften und den Sprunglink", async () => {
@@ -267,6 +276,142 @@ describe("HomePage", () => {
    * weg; die Adressen werden von Hand eingegeben. Die Routen selbst bleiben
    * (routes/index.tsx, nur im Entwicklungs-Build).
    */
+  /*
+   * Die von der Administration gepflegten Texte (Contract §2.16, §3.21,
+   * §6.1). Der Servertext ueberschreibt, die Sprachdatei bleibt Rueckfall,
+   * und zwar je Schluessel und je Sprache.
+   */
+  it("ersetzt eine gepflegte Textstelle durch den Servertext", async () => {
+    stubHome({
+      siteContent: [
+        {
+          key: "home.hero.titleLine1",
+          valueDe: "Was an der HSB entsteht,",
+          valueEn: null,
+        },
+      ],
+    })
+    renderWithProviders(<HomePage />)
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "Was an der HSB entsteht, sichtbar machen.",
+      })
+    ).toBeInTheDocument()
+  })
+
+  /*
+   * Ein Fehler des Textendpoints laesst die Startseite vollstaendig stehen.
+   * Sie rendert ihre mitgelieferten Fassungen ohnehin sofort; eine
+   * Fehlerflaeche ueber einer lesbaren Seite waere eine Falschmeldung.
+   */
+  it("laesst bei einem Fehler der Texte die Vorgabe stehen und zeigt keine Fehlerflaeche", async () => {
+    stubHome()
+    server.use(
+      http.get("*/api/site-content", () =>
+        apiErrorResponse(500, "INTERNAL_ERROR", "/api/site-content")
+      )
+    )
+    renderWithProviders(<HomePage />)
+
+    /* Erst abwarten, bis die Seite fertig geladen hat: sonst prueft der
+       Fall nur, dass zum Startzeitpunkt noch nichts schiefgegangen ist. */
+    expect(await screen.findAllByText("Platz frei")).toHaveLength(10)
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Studentische Innovation sichtbar machen.",
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        "Etwas ist schiefgelaufen. Bitte versuchen Sie es später erneut."
+      )
+    ).not.toBeInTheDocument()
+  })
+
+  /*
+   * Wer nur Deutsch pflegt, sieht in der englischen Ansicht die englische
+   * Vorgabe und nicht deutschen Text: die Rueckfallebene ist je Sprache und
+   * nicht je Schluessel.
+   */
+  it("laesst die englische Ansicht auf der englischen Vorgabe, wenn nur Deutsch gepflegt ist", async () => {
+    await i18n.changeLanguage("en")
+    stubHome({
+      siteContent: [
+        /* Beidsprachig gepflegt: der Nachweis, dass die Antwort ueberhaupt
+           angekommen ist, bevor unten das Ausbleiben geprueft wird. */
+        {
+          key: "home.hero.titleLine1",
+          valueDe: "Was an der HSB entsteht,",
+          valueEn: "What HSB students build,",
+        },
+        /* Nur deutsch gepflegt: hier muss die englische Vorgabe stehen
+           bleiben. */
+        {
+          key: "home.cta.title",
+          valueDe: "Und das ist erst der Anfang.",
+          valueEn: null,
+        },
+      ],
+    })
+    renderWithProviders(<HomePage />)
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "What HSB students build, made visible.",
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", {
+        level: 2,
+        name: "That was just the beginning.",
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("Und das ist erst der Anfang.")
+    ).not.toBeInTheDocument()
+  })
+
+  /*
+   * Der Sprachwechsel traegt auch nach dem Eintreffen der Antwort: gesetzt
+   * werden beide Sprachen in einem Zug, der Umschalter findet den anderen
+   * Stand also bereits vor und laedt nichts nach. Der bisherige Fall wechselt
+   * die Sprache vor dem Rendern und belegt damit nur den Startzustand.
+   */
+  it("traegt den Sprachwechsel nach dem Eintreffen der Texte mit", async () => {
+    stubHome({
+      siteContent: [
+        {
+          key: "home.hero.titleLine1",
+          valueDe: "Was an der HSB entsteht,",
+          valueEn: "What HSB students build,",
+        },
+      ],
+    })
+    renderWithProviders(<HomePage />)
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "Was an der HSB entsteht, sichtbar machen.",
+      })
+    ).toBeInTheDocument()
+
+    await act(async () => {
+      await i18n.changeLanguage("en")
+    })
+
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: "What HSB students build, made visible.",
+      })
+    ).toBeInTheDocument()
+  })
+
   it("fuehrt keine Entwicklungslinks mehr unter der Seite", () => {
     stubHome()
     renderWithProviders(<HomePage />)

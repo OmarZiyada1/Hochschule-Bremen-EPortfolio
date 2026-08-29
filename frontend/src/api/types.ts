@@ -386,5 +386,27 @@ export type SupportRequestCategory = SupportRequestCreateRequest["category"]
  * Bearbeitungsstand nach Contract §2.15: OPEN, IN_PROGRESS, RESOLVED.
  * Angezeigt ueber {@code support.status.<WERT>}.
  */
-export type SupportRequestStatus =
-  SupportRequestStatusUpdateRequest["status"]
+export type SupportRequestStatus = SupportRequestStatusUpdateRequest["status"]
+
+/**
+ * Startseitentexte (Contract §2.16, §3.21, §6.1). Die Administration pflegt
+ * eine feste Auswahl von Textstellen der Startseite; was sie pflegt,
+ * ueberschreibt die mitgelieferte Sprachdatei, und was sie nicht pflegt,
+ * bleibt bei deren Fassung.
+ *
+ * <p><strong>{@code key} ist der i18n-Schluessel selbst</strong>, etwa
+ * {@code home.hero.subtitle}, und keine eigene Kennung daneben. Der Server
+ * fuehrt die Liste der pflegbaren Schluessel (§2.16); das Frontend legt die
+ * Werte unter demselben Schluessel ueber seine Vorgabe und braucht die Liste
+ * deshalb nicht ein zweites Mal.
+ *
+ * <p><strong>{@code null} heisst „nicht gepflegt", nicht „leer".</strong> In
+ * der Antwort steht je Sprache entweder ein Text oder {@code null}; ein
+ * Schluessel, zu dem es in keiner Sprache eine Zeile gibt, fehlt ganz. Im
+ * Request kehrt sich das um: ein leerer Wert oder einer aus reinem Leerraum
+ * loescht diese Sprache.
+ */
+export type SiteContentResponse = ApiSchemas["SiteContentResponse"]
+export type SiteContentEntryResponse = ApiSchemas["SiteContentEntryResponse"]
+export type SiteContentUpdateRequest = ApiSchemas["SiteContentUpdateRequest"]
+export type SiteContentEntryRequest = ApiSchemas["SiteContentEntryRequest"]

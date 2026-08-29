@@ -248,6 +248,12 @@ const CASES: Case[] = [
     as: "admin",
     appFrame: true,
   },
+  {
+    name: "Administration Startseitentexte",
+    path: () => "/administration/site-content",
+    as: "admin",
+    appFrame: true,
+  },
 
   // Editor. In Umfang 1 nicht aufgezaehlt, weil seine Bausteine ihre
   // Nachweise selbst tragen (KAN-36 und Teilaufgaben); die Seite als Ganzes

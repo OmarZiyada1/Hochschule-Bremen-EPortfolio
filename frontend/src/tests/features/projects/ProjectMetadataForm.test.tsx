@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { http, HttpResponse } from "msw"
 import { describe, expect, it, vi } from "vitest"
@@ -94,6 +94,24 @@ describe("ProjectMetadataForm", () => {
     expect(await screen.findByLabelText("Projekttitel")).toBeVisible()
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument()
     expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument()
+  })
+
+  /*
+   * Wie in der Kopfpartie des Editors liegt die Bedienung des Titelbilds auf
+   * der Flaeche und nicht als Verweiszeile darunter. Der Standard von
+   * CoverImageField ist das Gegenteil ("below"), ein Rueckfall faellt ohne
+   * diese Zusicherung also nirgends auf.
+   */
+  it("legt die Bedienung des Titelbilds als Icon-Leiste auf die Flaeche", async () => {
+    renderForm()
+
+    const chooser = await screen.findByLabelText("Titelbild wählen")
+    const preview = document.querySelector('[data-slot="cover-image-preview"]')
+
+    expect(preview).not.toBeNull()
+    expect(preview).toContainElement(chooser)
+    /* Nur Icons: der Name steht unsichtbar im Bedienelement. */
+    expect(screen.getByText("Titelbild wählen")).toHaveClass("sr-only")
   })
 
   it("kommt ohne Abschnittsueberschriften aus, die Feldbeschriftungen tragen alles", async () => {
@@ -377,6 +395,113 @@ describe("ProjectMetadataForm", () => {
       )
     ).toBeVisible()
     expect(screen.queryByRole("option", { name: "Rana Adler" })).toBeNull()
+  })
+
+  it("fuehrt die Funktionsbezeichnung in der Liste als Text und nicht als Eingabefeld", async () => {
+    /*
+     * Dieselbe Angabe soll nicht in zwei Formen dastehen: die Projektseite
+     * schreibt "Name · Rolle" (ProjectMetaSidebar), also schreibt das
+     * Formular es genauso. Getippt wird die Bezeichnung allein oben in der
+     * Eingabezeile, eine Korrektur laeuft ueber Entfernen und erneutes
+     * Aufnehmen.
+     */
+    renderForm({
+      members: [
+        {
+          userId: "m-1",
+          avatarUrl: null,
+          firstName: "Mem",
+          lastName: "Eins",
+          projectRole: "Frontend",
+        },
+        {
+          userId: "m-2",
+          avatarUrl: null,
+          firstName: "Mem",
+          lastName: "Zwei",
+          projectRole: null,
+        },
+      ],
+    })
+
+    const withRole = (
+      await screen.findByRole("button", {
+        name: "Mem Eins aus den Projektmitgliedern entfernen",
+      })
+    ).closest("[role='listitem']")
+    expect(withRole).not.toBeNull()
+    expect(withRole).toHaveTextContent("Mem Eins · Frontend")
+    expect(within(withRole as HTMLElement).queryByRole("textbox")).toBeNull()
+
+    /* Ohne Bezeichnung steht der Name allein da, ohne Trennzeichen. */
+    const withoutRole = screen
+      .getByRole("button", {
+        name: "Mem Zwei aus den Projektmitgliedern entfernen",
+      })
+      .closest("[role='listitem']")
+    expect(withoutRole).toHaveTextContent("Mem Zwei")
+    expect(withoutRole?.textContent).not.toContain("·")
+
+    /* Genau ein Rollenfeld im ganzen Feld: das der Eingabezeile. */
+    expect(screen.getAllByLabelText("Rolle")).toHaveLength(1)
+  })
+
+  it("nimmt mit der Eingabetaste im Rollenfeld auf, statt das Formular abzuschicken", async () => {
+    /*
+     * Ohne diesen Handler loeste die Eingabetaste die implizite Absendung
+     * des umgebenden Formulars aus ("Speichern & weiter zum Editor"), und
+     * die gewaehlte Person ginge als lokaler Zustand dabei verloren: das
+     * Mitglied waere weg, ohne je gespeichert zu sein. Ein eigenes <form>
+     * wie im NameCreateForm scheidet aus, Formulare lassen sich nicht
+     * schachteln (Befund des frontend-reviewers).
+     */
+    const user = userEvent.setup()
+    const onSubmit = vi.fn(
+      (request: ProjectUpdateRequest): Promise<ProjectDetailResponse> =>
+        Promise.resolve(projectDetail({ version: request.version + 1 }))
+    )
+    renderForm({}, onSubmit)
+    server.use(
+      http.get("*/api/users/lookup", () =>
+        HttpResponse.json([
+          { id: "s-1", firstName: "Jonas", lastName: "Kern" },
+        ] satisfies UserLookupResponse[])
+      )
+    )
+
+    await user.type(await screen.findByLabelText(/^Mitglied/), "j")
+    await user.click(
+      await screen.findByRole(
+        "option",
+        { name: "Jonas Kern" },
+        { timeout: 3000 }
+      )
+    )
+
+    const role = screen.getByLabelText("Rolle")
+    /*
+     * Die Servergrenze steht schon am Feld (MemberRequest, @Size(max = 255)).
+     * Ein zu langer Wert liesse sich in der Liste nicht mehr berichtigen,
+     * dort steht die Bezeichnung nur noch als Text.
+     */
+    expect(role).toHaveAttribute("maxlength", "255")
+
+    await user.type(role, "Frontend{Enter}")
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Jonas Kern aus den Projektmitgliedern entfernen",
+      })
+    ).toBeVisible()
+    expect(onSubmit).not.toHaveBeenCalled()
+
+    /*
+     * Der Knopf sperrt sich mit dem Aufnehmen selbst; ohne diesen Griff
+     * fiele der Fokus auf body. Die Personensuche ist ohnehin der naechste
+     * Schritt, und die Aufnahme steht als Ansage da (SC 4.1.3).
+     */
+    expect(screen.getByLabelText(/^Mitglied/)).toHaveFocus()
+    expect(screen.getByText("Jonas Kern aufgenommen.")).toBeInTheDocument()
   })
 
   it("laesst ein Projektmitglied die Redaktion zuweisen (§3.13.1, seit Contract v85)", async () => {
