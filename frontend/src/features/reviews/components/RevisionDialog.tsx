@@ -3,9 +3,9 @@ import { useId, type RefObject } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { useTranslation } from "react-i18next"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
 import { CharacterCounter } from "@/components/common/CharacterCounter"
-import { Alert, AlertTitle } from "@/components/ui/alert"
+import { ErrorState } from "@/components/common/ErrorState"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -115,15 +115,7 @@ export function RevisionDialog({
             )}
           </Field>
 
-          {failed !== null && (
-            <Alert variant="destructive">
-              <AlertTitle>
-                {t(apiErrorMessageKey(failed), {
-                  defaultValue: failed.message,
-                })}
-              </AlertTitle>
-            </Alert>
-          )}
+          {failed !== null && <ErrorState error={failed} />}
 
           <DialogFooter>
             <DialogClose render={<Button type="button" variant="outline" />}>

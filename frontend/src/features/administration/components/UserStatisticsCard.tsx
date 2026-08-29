@@ -159,40 +159,51 @@ export function UserStatisticsCard({
               />
             </div>
 
-            {/* Derselbe Inhalt als Tabelle, sichtbar nur fuer Hilfsmittel. */}
-            <table className="sr-only">
-              <caption>
-                {t("administration.dashboard.users.tableCaption")}
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">
-                    {t("administration.dashboard.users.columnGroup")}
-                  </th>
-                  <th scope="col">
-                    {t("administration.dashboard.users.columnCount")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <th scope="row">
-                    {t("administration.dashboard.users.total")}
-                  </th>
-                  <td>
-                    {data === undefined
-                      ? ""
-                      : numberFormat.format(data.usersTotal)}
-                  </td>
-                </tr>
-                {[...roleSlices, ...statusSlices].map((slice) => (
-                  <tr key={slice.key}>
-                    <th scope="row">{slice.label}</th>
-                    <td>{numberFormat.format(slice.value)}</td>
+            {/* Derselbe Inhalt als Tabelle, sichtbar nur fuer Hilfsmittel.
+
+                sr-only steht an der Huelle und nicht an der Tabelle selbst:
+                die Klasse setzt width auf 1px und overflow auf hidden, und
+                beides greift bei display:table nicht. Die Tabelle nahm
+                dadurch ihre natuerliche Breite an, stand als absolut
+                positioniertes Element neben dem Ausschnitt und schob die
+                Seite bei 320 CSS-Pixeln auf 474 Pixel (SC 1.4.10, Befund
+                des Laufs zu KAN-42). In einem div wirkt die Klasse wie
+                gedacht. */}
+            <div className="sr-only">
+              <table>
+                <caption>
+                  {t("administration.dashboard.users.tableCaption")}
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">
+                      {t("administration.dashboard.users.columnGroup")}
+                    </th>
+                    <th scope="col">
+                      {t("administration.dashboard.users.columnCount")}
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">
+                      {t("administration.dashboard.users.total")}
+                    </th>
+                    <td>
+                      {data === undefined
+                        ? ""
+                        : numberFormat.format(data.usersTotal)}
+                    </td>
+                  </tr>
+                  {[...roleSlices, ...statusSlices].map((slice) => (
+                    <tr key={slice.key}>
+                      <th scope="row">{slice.label}</th>
+                      <td>{numberFormat.format(slice.value)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </>
         )}
       </CardContent>
@@ -289,6 +300,18 @@ function SliceChart({
             <PieChart accessibilityLayer={false}>
               <ChartTooltip content={<ChartTooltipContent nameKey="key" />} />
               <Pie
+                /*
+                 * accessibilityLayer={false} am Diagramm genuegt hier nicht:
+                 * Pie fuehrt mit rootTabIndex einen zweiten, eigenen
+                 * Tabstopp und setzt ihn ohne diese Angabe auf 0 (recharts
+                 * 3.8, types/polar/Pie.d.ts). Innerhalb des
+                 * aria-hidden-Teilbaums lief die Tastatur damit in ein
+                 * g-Element, das kein Screenreader ansagt. Nachgewiesen im
+                 * axe-Lauf zu KAN-42 (Regel aria-hidden-focus, zweimal auf
+                 * der Administrationsseite); die Balkenkarte daneben ist
+                 * nicht betroffen, weil Bar keinen solchen Tabstopp setzt.
+                 */
+                rootTabIndex={-1}
                 data={drawn}
                 dataKey="value"
                 nameKey="key"

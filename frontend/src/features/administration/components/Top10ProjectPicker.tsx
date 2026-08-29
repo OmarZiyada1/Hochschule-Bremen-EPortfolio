@@ -3,10 +3,10 @@ import { PlusIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import { projectQueries } from "@/api/queries/projects"
 import type { ProjectCardResponse } from "@/api/types"
 import { EmptyState } from "@/components/common/EmptyState"
+import { ErrorState } from "@/components/common/ErrorState"
 import { ProjectPeople } from "@/components/common/ProjectPeople"
 import { SearchInput } from "@/components/common/SearchInput"
 import { Alert, AlertTitle } from "@/components/ui/alert"
@@ -102,17 +102,7 @@ export function Top10ProjectPicker({
         </Alert>
       )}
 
-      {query.error !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>
-            {isApiError(query.error)
-              ? t(apiErrorMessageKey(query.error), {
-                  defaultValue: query.error.message,
-                })
-              : t("apiError.INTERNAL_ERROR")}
-          </AlertTitle>
-        </Alert>
-      )}
+      {query.error !== null && <ErrorState error={query.error} />}
 
       {query.isFetching && debounced.trim() !== "" && (
         <div className="flex flex-col gap-2">

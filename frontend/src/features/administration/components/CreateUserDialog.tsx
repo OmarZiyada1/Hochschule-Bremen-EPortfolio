@@ -14,15 +14,12 @@ import {
 } from "react-hook-form"
 import { useTranslation } from "react-i18next"
 
-import {
-  apiErrorMessageKey,
-  applyValidationErrors,
-  isApiError,
-} from "@/api/errors"
+import { applyValidationErrors, isApiError } from "@/api/errors"
 import type { AdminUserResponse } from "@/api/types"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
+import { ErrorState } from "@/components/common/ErrorState"
 import { FilterSelect } from "@/components/common/FilterSelect"
 import { PasswordInput } from "@/components/common/PasswordInput"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -110,6 +107,7 @@ export function CreateUserDialog({
   finalFocus?: RefObject<HTMLElement | null>
 }) {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const fieldId = useId()
   const create = useCreateUser()
 
@@ -203,7 +201,7 @@ export function CreateUserDialog({
       }
       form.setError("root.server", {
         type: "server",
-        message: t(apiErrorMessageKey(error), { defaultValue: error.message }),
+        message: apiMessage(error),
       })
     }
   })
@@ -309,9 +307,7 @@ export function CreateUserDialog({
                 traegt nur, was keinem Feld zuzuordnen ist. Die Eingaben
                 bleiben stehen. */}
             {formError !== undefined && (
-              <Alert variant="destructive">
-                <AlertTitle>{formError}</AlertTitle>
-              </Alert>
+              <ErrorState message={formError} />
             )}
 
             <div className="grid gap-4 sm:grid-cols-2">

@@ -6,8 +6,10 @@ import { useTranslation } from "react-i18next"
  * plus Hinweis auf das zustaendige Ticket. Mehr bewusst nicht; erfundene
  * Inhalte, die nach echten Daten aussehen, verbietet Frontend-Regel 10.
  *
- * Die statischen Fussbereich-Seiten (Impressum, Datenschutz,
- * Barrierefreiheit) haben kein Ticket; dort steht der allgemeine Hinweis.
+ * Die statischen Fussbereich-Seiten Impressum und Datenschutz haben kein
+ * Ticket; dort steht der allgemeine Hinweis. Die dritte, Barrierefreiheit,
+ * ist seit KAN-42 eine eigene Seite und laeuft nicht mehr ueber diese
+ * Huelle.
  */
 export function PlaceholderPage({
   titleKey,

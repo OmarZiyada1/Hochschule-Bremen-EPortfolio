@@ -3,8 +3,8 @@ import { RotateCcwIcon } from "lucide-react"
 import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import type { StudyProgramResponse } from "@/api/types"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import {
   Accordion,
   AccordionContent,
@@ -395,7 +395,7 @@ function OptionsState<T>({
   query: UseQueryResult<T[], Error>
   children: (data: T[]) => ReactNode
 }) {
-  const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   if (query.isPending) {
     return (
       <>
@@ -407,13 +407,7 @@ function OptionsState<T>({
   }
   if (query.error !== null) {
     return (
-      <p className="type-body-sm text-destructive">
-        {isApiError(query.error)
-          ? t(apiErrorMessageKey(query.error), {
-              defaultValue: query.error.message,
-            })
-          : t("apiError.INTERNAL_ERROR")}
-      </p>
+      <p className="type-body-sm text-destructive">{apiMessage(query.error)}</p>
     )
   }
   if (query.data.length === 0) {

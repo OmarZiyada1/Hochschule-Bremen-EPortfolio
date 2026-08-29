@@ -9,19 +9,19 @@ import {
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import type { AdminProjectListParams } from "@/api/queries/projects"
 import type {
   BulkStatusAction,
   ProjectBulkStatusResultResponse,
   ProjectCardResponse,
 } from "@/api/types"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import { EmptyState } from "@/components/common/EmptyState"
+import { ErrorState } from "@/components/common/ErrorState"
 import { FilterSelect } from "@/components/common/FilterSelect"
 import { ProjectStatusFilter } from "@/components/common/ProjectStatusFilter"
 import { ProjectTableRow } from "@/components/common/ProjectTableRow"
 import { SearchInput } from "@/components/common/SearchInput"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -110,6 +110,7 @@ const SEARCH_DEBOUNCE_MS = 300
  */
 export default function AdminProjectListPage() {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const [searchParams, setSearchParams] = useSearchParams()
   const state = readAdminProjectState(searchParams)
 
@@ -268,12 +269,6 @@ export default function AdminProjectListPage() {
     )
   }
 
-  function messageOf(error: unknown): string {
-    return isApiError(error)
-      ? t(apiErrorMessageKey(error), { defaultValue: error.message })
-      : t("apiError.INTERNAL_ERROR")
-  }
-
   const selectedProjects = rows.filter((project) =>
     selected.includes(project.id)
   )
@@ -414,16 +409,10 @@ export default function AdminProjectListPage() {
         </Card>
       )}
 
-      {list.error !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>{messageOf(list.error)}</AlertTitle>
-        </Alert>
-      )}
+      {list.error !== null && <ErrorState error={list.error} />}
 
       {rowError !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>{rowError}</AlertTitle>
-        </Alert>
+        <ErrorState message={rowError} />
       )}
 
       {list.isPending && (
@@ -564,7 +553,7 @@ export default function AdminProjectListPage() {
                               table.current?.focus()
                             },
                             onError: (error) => {
-                              const message = messageOf(error)
+                              const message = apiMessage(error)
                               setRowError(message)
                               setNotice(message)
                             },

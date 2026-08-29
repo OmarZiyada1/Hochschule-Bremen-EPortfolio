@@ -9,15 +9,12 @@ import {
 import { useTranslation } from "react-i18next"
 
 import { useAuth } from "@/api/auth/AuthContext"
-import {
-  apiErrorMessageKey,
-  applyValidationErrors,
-  isApiError,
-} from "@/api/errors"
+import { applyValidationErrors, isApiError } from "@/api/errors"
 import type { SupportRequestCategory } from "@/api/types"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import { CharacterCounter } from "@/components/common/CharacterCounter"
+import { ErrorState } from "@/components/common/ErrorState"
 import { FilterSelect } from "@/components/common/FilterSelect"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
@@ -69,6 +66,7 @@ const CATEGORIES: readonly SupportRequestCategory[] = [
  */
 export default function SupportPage() {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const { user } = useAuth()
   const createMutation = useCreateSupportRequest()
   const [sent, setSent] = useState(false)
@@ -158,7 +156,7 @@ export default function SupportPage() {
        */
       form.setError("root.server", {
         type: "server",
-        message: t(apiErrorMessageKey(error), { defaultValue: error.message }),
+        message: apiMessage(error),
       })
     }
   })
@@ -234,9 +232,7 @@ export default function SupportPage() {
               className="flex flex-col gap-5"
             >
               {formError !== undefined && (
-                <Alert variant="destructive">
-                  <AlertTitle>{formError}</AlertTitle>
-                </Alert>
+                <ErrorState message={formError} />
               )}
 
               <div className="grid gap-5 sm:grid-cols-2">

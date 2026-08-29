@@ -3,10 +3,9 @@ import { useEffect, useId, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { useAuth } from "@/api/auth/AuthContext"
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import type { ProjectStatus } from "@/api/types"
 import { ClapIcon } from "@/components/common/ClapIcon"
-import { Alert, AlertTitle } from "@/components/ui/alert"
+import { ErrorState } from "@/components/common/ErrorState"
 import { Button } from "@/components/ui/button"
 import { useProjectReaction } from "@/features/projects/hooks/useProjectDetail"
 import { cn } from "@/lib/utils"
@@ -246,15 +245,7 @@ export function ReactionPanel({
 
       {/* Ein 403 bleibt nie stumm (Frontend-Regel 4). Entschieden wird ueber
           den errorCode, nie ueber den Meldungstext. */}
-      {failed !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>
-            {isApiError(failed)
-              ? t(apiErrorMessageKey(failed), { defaultValue: failed.message })
-              : t("apiError.INTERNAL_ERROR")}
-          </AlertTitle>
-        </Alert>
-      )}
+      {failed !== null && <ErrorState error={failed} />}
     </div>
   )
 }

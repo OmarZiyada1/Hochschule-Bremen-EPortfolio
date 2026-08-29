@@ -2,9 +2,9 @@ import { useQuery } from "@tanstack/react-query"
 import { useState, type RefObject } from "react"
 import { useTranslation } from "react-i18next"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
 import { projectQueries } from "@/api/queries/projects"
-import { Alert, AlertTitle } from "@/components/ui/alert"
+import { ErrorState } from "@/components/common/ErrorState"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -129,17 +129,7 @@ export function EditorAssignmentDialog({
 
         {detail.isPending && <Skeleton className="h-24 w-full rounded-card" />}
 
-        {detail.error !== null && (
-          <Alert variant="destructive">
-            <AlertTitle>
-              {isApiError(detail.error)
-                ? t(apiErrorMessageKey(detail.error), {
-                    defaultValue: detail.error.message,
-                  })
-                : t("apiError.INTERNAL_ERROR")}
-            </AlertTitle>
-          </Alert>
-        )}
+        {detail.error !== null && <ErrorState error={detail.error} />}
 
         {chosen !== null && detail.data !== undefined && (
           <>
@@ -162,13 +152,7 @@ export function EditorAssignmentDialog({
           </>
         )}
 
-        {failed !== null && (
-          <Alert variant="destructive">
-            <AlertTitle>
-              {t(apiErrorMessageKey(failed), { defaultValue: failed.message })}
-            </AlertTitle>
-          </Alert>
-        )}
+        {failed !== null && <ErrorState error={failed} />}
 
         <DialogFooter>
           <DialogClose render={<Button type="button" variant="outline" />}>

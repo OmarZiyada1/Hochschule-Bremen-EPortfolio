@@ -2,10 +2,9 @@ import { ArrowDownIcon, ArrowRightIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { ErrorState } from "@/components/common/ErrorState"
 import { KpiTile } from "@/components/common/KpiTile"
 import { Top10Card } from "@/components/common/Top10Card"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FeaturedTop10Card } from "@/features/home/components/FeaturedTop10Card"
@@ -124,15 +123,7 @@ export default function HomePage() {
         </div>
 
         {top10.error !== null && (
-          <Alert variant="destructive" className="mt-8">
-            <AlertTitle>
-              {isApiError(top10.error)
-                ? t(apiErrorMessageKey(top10.error), {
-                    defaultValue: top10.error.message,
-                  })
-                : t("apiError.INTERNAL_ERROR")}
-            </AlertTitle>
-          </Alert>
+          <ErrorState error={top10.error} className="mt-8" />
         )}
 
         {top10.isPending && (
@@ -181,15 +172,7 @@ export default function HomePage() {
           </h2>
 
           {statsError !== null && (
-            <Alert variant="destructive" className="max-w-lg text-left">
-              <AlertTitle>
-                {isApiError(statsError)
-                  ? t(apiErrorMessageKey(statsError), {
-                      defaultValue: statsError.message,
-                    })
-                  : t("apiError.INTERNAL_ERROR")}
-              </AlertTitle>
-            </Alert>
+            <ErrorState error={statsError} className="max-w-lg text-left" />
           )}
 
           {statsError === null &&

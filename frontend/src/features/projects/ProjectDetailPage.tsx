@@ -10,11 +10,11 @@ import { useTranslation } from "react-i18next"
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
 import type { BlockResponse, ProjectDetailResponse } from "@/api/types"
 import { EmptyState } from "@/components/common/EmptyState"
+import { ErrorState } from "@/components/common/ErrorState"
 import { StatusBadge } from "@/components/common/StatusBadge"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -287,15 +287,7 @@ export default function ProjectDetailPage() {
         {error !== null && !forbidden && !notFound && (
           <>
             <h1 className="type-h2">{t("project.detail.error.title")}</h1>
-            <Alert variant="destructive">
-              <AlertTitle>
-                {isApiError(error)
-                  ? t(apiErrorMessageKey(error), {
-                      defaultValue: error.message,
-                    })
-                  : t("apiError.INTERNAL_ERROR")}
-              </AlertTitle>
-            </Alert>
+            <ErrorState error={error} />
           </>
         )}
 
@@ -364,7 +356,10 @@ export default function ProjectDetailPage() {
                         onNominate={() => setNominationOpen(true)}
                       />
                     )}
-                    <PrintTrigger onPrint={() => void print()} busy={printing} />
+                    <PrintTrigger
+                      onPrint={() => void print()}
+                      busy={printing}
+                    />
                   </div>
                 </>
               )}

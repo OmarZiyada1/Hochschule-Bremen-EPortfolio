@@ -4,10 +4,12 @@ import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
 import type { AdminUserListParams } from "@/api/queries/admin"
 import type { AdminUserResponse, UserStatus } from "@/api/types"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import { EmptyState } from "@/components/common/EmptyState"
+import { ErrorState } from "@/components/common/ErrorState"
 import { FilterSelect } from "@/components/common/FilterSelect"
 import { SearchInput } from "@/components/common/SearchInput"
 import {
@@ -15,7 +17,6 @@ import {
   type SegmentedOption,
 } from "@/components/common/SegmentedFilter"
 import { UserTableRow } from "@/components/common/UserTableRow"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -85,6 +86,7 @@ const SEARCH_DEBOUNCE_MS = 300
  */
 export default function AdminUserListPage() {
   const { t, i18n } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const state = readAdminUserState(searchParams)
@@ -151,12 +153,6 @@ export default function AdminUserListPage() {
     dateStyle: "medium",
   })
 
-  function messageOf(error: unknown): string {
-    return isApiError(error)
-      ? t(apiErrorMessageKey(error), { defaultValue: error.message })
-      : t("apiError.INTERNAL_ERROR")
-  }
-
   /**
    * Meldet einen Fehlschlag der Zeile sichtbar und hoerbar.
    *
@@ -171,7 +167,7 @@ export default function AdminUserListPage() {
     const message =
       isApiError(error) && error.errorCode === "VALIDATION_FAILED"
         ? t("administration.users.actionNotAllowed")
-        : messageOf(error)
+        : apiMessage(error)
     setRowError(message)
     setNotice(message)
   }
@@ -288,16 +284,10 @@ export default function AdminUserListPage() {
         </CardContent>
       </Card>
 
-      {list.error !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>{messageOf(list.error)}</AlertTitle>
-        </Alert>
-      )}
+      {list.error !== null && <ErrorState error={list.error} />}
 
       {rowError !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>{rowError}</AlertTitle>
-        </Alert>
+        <ErrorState message={rowError} />
       )}
 
       {list.isPending && (

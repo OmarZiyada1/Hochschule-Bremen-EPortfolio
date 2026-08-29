@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslation } from "react-i18next"
 import { Combobox as ComboboxPrimitive } from "@base-ui/react"
 
 import { cn } from "@/lib/utils"
@@ -24,6 +25,7 @@ function ComboboxTrigger({
   children,
   ...props
 }: ComboboxPrimitive.Trigger.Props) {
+  const { t } = useTranslation()
   return (
     <ComboboxPrimitive.Trigger
       data-slot="combobox-trigger"
@@ -32,11 +34,19 @@ function ComboboxTrigger({
     >
       {children}
       <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
+      {/* Ohne diesen Namen ist der Ausloeser eine Schaltflaeche ohne
+          zugaenglichen Text (axe-Regel button-name, SC 4.1.2): die Registry
+          setzt nur das Symbol. Nachgewiesen im axe-Lauf zu KAN-42 auf
+          /projects/:id/metadata, dreimal je Seite. lucide-react setzt an
+          einem Symbol ohne Kinder und ohne a11y-Prop selbst aria-hidden,
+          hier steht deshalb keines. */}
+      <span className="sr-only">{t("common.combobox.toggle")}</span>
     </ComboboxPrimitive.Trigger>
   )
 }
 
 function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
+  const { t } = useTranslation()
   return (
     <ComboboxPrimitive.Clear
       data-slot="combobox-clear"
@@ -44,7 +54,11 @@ function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
       className={cn(className)}
       {...props}
     >
+      {/* Zugaenglicher Name als sr-only-Text und nicht als aria-label, wie
+          bei jeder Schaltflaeche mit reinem Symbol in diesem Projekt (Skill
+          frontend-design, Abschnitt 4). */}
       <XIcon className="pointer-events-none" />
+      <span className="sr-only">{t("common.combobox.clear")}</span>
     </ComboboxPrimitive.Clear>
   )
 }

@@ -3,7 +3,7 @@ import { useRef, type ReactNode, type RefObject } from "react"
 import { useTranslation } from "react-i18next"
 
 import { EmptyState } from "@/components/common/EmptyState"
-import { Alert, AlertTitle } from "@/components/ui/alert"
+import { ErrorState } from "@/components/common/ErrorState"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -120,9 +120,7 @@ export function StudyStructureColumn({
         )}
 
         {error !== undefined && (
-          <Alert variant="destructive">
-            <AlertTitle>{error}</AlertTitle>
-          </Alert>
+          <ErrorState message={error} />
         )}
 
         {loading && (

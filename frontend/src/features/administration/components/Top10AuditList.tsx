@@ -103,7 +103,15 @@ export function Top10AuditList({
                       {t("administration.top10.audit.projectDeleted")}
                     </p>
                   ) : (
-                    <h3 className="type-body font-semibold">
+                    /* Ebene 2 und nicht 3: das Protokoll ist der gesamte
+                       Inhalt von /administration/top10/audit, zwischen der
+                       Seitenueberschrift und diesem Eintrag steht dort
+                       nichts. Mit Ebene 3 sprang die Hierarchie von h1 auf
+                       h3 (SC 1.3.1, Befund des axe-Laufs zu KAN-42). Anders
+                       als bei Top10NominationList, die unter der Ueberschrift
+                       eines Abschnitts der Top-10-Verwaltung steht und
+                       deshalb bei Ebene 3 bleibt. */
+                    <h2 className="type-body font-semibold">
                       <Link
                         to={`/projects/${entry.project.id}`}
                         state={origin}
@@ -111,7 +119,7 @@ export function Top10AuditList({
                       >
                         {entry.project.title}
                       </Link>
-                    </h3>
+                    </h2>
                   )}
 
                   <p className="type-body-sm text-muted-foreground">

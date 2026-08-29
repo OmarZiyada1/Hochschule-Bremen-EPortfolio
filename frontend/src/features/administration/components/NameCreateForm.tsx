@@ -4,11 +4,8 @@ import { useId, useMemo } from "react"
 import { Controller, useForm } from "react-hook-form"
 import { useTranslation } from "react-i18next"
 
-import {
-  apiErrorMessageKey,
-  applyValidationErrors,
-  isApiError,
-} from "@/api/errors"
+import { applyValidationErrors, isApiError } from "@/api/errors"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
@@ -65,6 +62,7 @@ export function NameCreateForm({
   className?: string
 }) {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const fieldId = useId()
 
   const schema = useMemo(
@@ -100,7 +98,7 @@ export function NameCreateForm({
       }
       form.setError("root.server", {
         type: "server",
-        message: t(apiErrorMessageKey(error), { defaultValue: error.message }),
+        message: apiMessage(error),
       })
     }
   })

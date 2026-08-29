@@ -1,11 +1,9 @@
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
-import { useTranslation } from "react-i18next"
 
 import { useAuth } from "@/api/auth/AuthContext"
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import { authQueries } from "@/api/queries/auth"
-import { Alert, AlertTitle } from "@/components/ui/alert"
+import { ErrorState } from "@/components/common/ErrorState"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -42,7 +40,6 @@ import { useOwnPortfolio } from "@/features/portfolio/hooks/usePortfolio"
  * Rueckfalllinie, wenn die Abfrage scheitert.
  */
 export default function ProfileEditPage() {
-  const { t } = useTranslation()
   const { user } = useAuth()
   const { data, isPending, error } = useOwnPortfolio()
   const me = useQuery(authQueries.me())
@@ -81,17 +78,7 @@ export default function ProfileEditPage() {
                   stehen notfalls im Auth-Kontext, nur Biografie und Bild
                   fehlen dann. Gemeldet wird er trotzdem, statt still leere
                   oder veraltete Felder zu zeigen. */}
-                {loadError !== null && (
-                  <Alert variant="destructive">
-                    <AlertTitle>
-                      {isApiError(loadError)
-                        ? t(apiErrorMessageKey(loadError), {
-                            defaultValue: loadError.message,
-                          })
-                        : t("apiError.INTERNAL_ERROR")}
-                    </AlertTitle>
-                  </Alert>
-                )}
+                {loadError !== null && <ErrorState error={loadError} />}
 
                 <ProfileForm
                   user={person}

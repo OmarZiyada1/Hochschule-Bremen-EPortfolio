@@ -10,11 +10,9 @@ import { Link, Navigate, useNavigate } from "react-router-dom"
 import { useAuth } from "@/api/auth/AuthContext"
 import { setPasswordChangeRequired } from "@/api/auth/authStore"
 import { consumeRequestedRoute, LOGIN_PATH } from "@/api/auth/redirect"
-import {
-  apiErrorMessageKey,
-  applyValidationErrors,
-  isApiError,
-} from "@/api/errors"
+import { applyValidationErrors, isApiError } from "@/api/errors"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
+import { ErrorState } from "@/components/common/ErrorState"
 import { PasswordInput } from "@/components/common/PasswordInput"
 import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -55,6 +53,7 @@ import { landingPathFor } from "@/routes/landingPath"
  */
 export default function ChangePasswordPage() {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const navigate = useNavigate()
   const { isAuthenticated, passwordChangeRequired, role } = useAuth()
   const changeMutation = useChangePassword()
@@ -120,7 +119,7 @@ export default function ChangePasswordPage() {
       }
       form.setError("root.server", {
         type: "server",
-        message: t(apiErrorMessageKey(error), { defaultValue: error.message }),
+        message: apiMessage(error),
       })
     }
   })
@@ -192,11 +191,7 @@ export default function ChangePasswordPage() {
           {passwordField("confirmPassword", "new-password")}
 
           {form.formState.errors.root?.server && (
-            <Alert variant="destructive">
-              <AlertTitle>
-                {form.formState.errors.root.server.message}
-              </AlertTitle>
-            </Alert>
+            <ErrorState message={form.formState.errors.root.server.message} />
           )}
 
           <Button type="submit" disabled={form.formState.isSubmitting}>

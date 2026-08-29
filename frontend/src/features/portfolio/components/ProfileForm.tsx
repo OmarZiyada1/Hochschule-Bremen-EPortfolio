@@ -5,13 +5,11 @@ import { useTranslation } from "react-i18next"
 
 import { useAuth } from "@/api/auth/AuthContext"
 import { resolveApiUrl } from "@/api/client"
-import {
-  applyValidationErrors,
-  apiErrorMessageKey,
-  isApiError,
-} from "@/api/errors"
+import { applyValidationErrors, isApiError } from "@/api/errors"
 import type { OwnPortfolioResponse, UserResponse } from "@/api/types"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import { CharacterCounter } from "@/components/common/CharacterCounter"
+import { ErrorState } from "@/components/common/ErrorState"
 import { PasswordInput } from "@/components/common/PasswordInput"
 import { UserAvatar } from "@/components/common/UserAvatar"
 import { Alert, AlertTitle } from "@/components/ui/alert"
@@ -88,6 +86,7 @@ export function ProfileForm({
   onDirtyChange?: (dirty: boolean) => void
 }) {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const { refreshUser } = useAuth()
   const updateProfile = useUpdateOwnProfile()
   const updatePortfolio = useUpdateOwnPortfolio()
@@ -171,9 +170,7 @@ export function ProfileForm({
       }
       /* FILE_TYPE_NOT_ALLOWED und FILE_TOO_LARGE entscheidet der Server
          (§3.15); die Allowlist wird im Client nicht nachgebaut. */
-      setAvatarError(
-        t(apiErrorMessageKey(error), { defaultValue: error.message })
-      )
+      setAvatarError(apiMessage(error))
     }
   }
 
@@ -227,9 +224,7 @@ export function ProfileForm({
       } else {
         form.setError("root.server", {
           type: "server",
-          message: t(apiErrorMessageKey(error), {
-            defaultValue: error.message,
-          }),
+          message: apiMessage(error),
         })
       }
     }
@@ -256,9 +251,7 @@ export function ProfileForm({
       } else {
         form.setError("root.server", {
           type: "server",
-          message: t(apiErrorMessageKey(error), {
-            defaultValue: error.message,
-          }),
+          message: apiMessage(error),
         })
       }
     }
@@ -495,11 +488,7 @@ export function ProfileForm({
                     if (!isApiError(error)) {
                       throw error
                     }
-                    setCancelError(
-                      t(apiErrorMessageKey(error), {
-                        defaultValue: error.message,
-                      })
-                    )
+                    setCancelError(apiMessage(error))
                     return
                   }
                   await refreshUser()
@@ -603,11 +592,7 @@ export function ProfileForm({
           />
 
           {form.formState.errors.root?.server && (
-            <Alert variant="destructive">
-              <AlertTitle>
-                {form.formState.errors.root.server.message}
-              </AlertTitle>
-            </Alert>
+            <ErrorState message={form.formState.errors.root.server.message} />
           )}
 
           {/*

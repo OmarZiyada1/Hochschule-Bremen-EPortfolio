@@ -15,23 +15,21 @@ import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
-import {
-  apiErrorMessageKey,
-  applyValidationErrors,
-  isApiError,
-} from "@/api/errors"
+import { applyValidationErrors, isApiError } from "@/api/errors"
 import type {
   CommentResponse,
   CommentStatus,
   CommentType,
   ProjectDetailResponse,
 } from "@/api/types"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import { CharacterCounter } from "@/components/common/CharacterCounter"
 import {
   COMMENT_TEXT_MAX,
   commentFormSchema,
   type CommentFormValues,
 } from "@/components/common/CommentForm.schema"
+import { ErrorState } from "@/components/common/ErrorState"
 import {
   creatableTuple,
   mayDeleteComment,
@@ -174,6 +172,7 @@ export function CommentPanel({
   className?: string
 }) {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const { user } = useAuth()
   const projectId = project.id
 
@@ -309,17 +308,7 @@ export function CommentPanel({
 
           {/* Ein fehlgeschlagenes Umschalten blieb sonst unsichtbar: der
               Stand aendert sich schlicht nicht. */}
-          {setStatus.error !== null && (
-            <Alert variant="destructive">
-              <AlertTitle>
-                {isApiError(setStatus.error)
-                  ? t(apiErrorMessageKey(setStatus.error), {
-                      defaultValue: setStatus.error.message,
-                    })
-                  : t("apiError.INTERNAL_ERROR")}
-              </AlertTitle>
-            </Alert>
-          )}
+          {setStatus.error !== null && <ErrorState error={setStatus.error} />}
 
           {/* Der Statuswechsel, den ein Aenderungswunsch seit Contract v71
               ausloest (§4.1). role="status" statt einer zweiten Live-Region:
@@ -351,29 +340,9 @@ export function CommentPanel({
 
           {/* Ein fehlgeschlagenes Loeschen blieb sonst unsichtbar: der
               Eintrag bliebe schlicht stehen. */}
-          {remove.error !== null && (
-            <Alert variant="destructive">
-              <AlertTitle>
-                {isApiError(remove.error)
-                  ? t(apiErrorMessageKey(remove.error), {
-                      defaultValue: remove.error.message,
-                    })
-                  : t("apiError.INTERNAL_ERROR")}
-              </AlertTitle>
-            </Alert>
-          )}
+          {remove.error !== null && <ErrorState error={remove.error} />}
 
-          {comments.error !== null && (
-            <Alert variant="destructive">
-              <AlertTitle>
-                {isApiError(comments.error)
-                  ? t(apiErrorMessageKey(comments.error), {
-                      defaultValue: comments.error.message,
-                    })
-                  : t("apiError.INTERNAL_ERROR")}
-              </AlertTitle>
-            </Alert>
-          )}
+          {comments.error !== null && <ErrorState error={comments.error} />}
 
           {comments.data !== undefined && ordered.length === 0 && (
             <EmptyState
@@ -413,14 +382,7 @@ export function CommentPanel({
                           setAnnouncement(t("comment.panel.announce.deleted"))
                           list.current?.focus()
                         },
-                        onError: (error) =>
-                          setAnnouncement(
-                            isApiError(error)
-                              ? t(apiErrorMessageKey(error), {
-                                  defaultValue: error.message,
-                                })
-                              : t("apiError.INTERNAL_ERROR")
-                          ),
+                        onError: (error) => setAnnouncement(apiMessage(error)),
                       })
                     }}
                     /* Nur der angefasste Eintrag wartet: ein gemeinsames
@@ -442,13 +404,7 @@ export function CommentPanel({
                               })
                             ),
                           onError: (error) =>
-                            setAnnouncement(
-                              isApiError(error)
-                                ? t(apiErrorMessageKey(error), {
-                                    defaultValue: error.message,
-                                  })
-                                : t("apiError.INTERNAL_ERROR")
-                            ),
+                            setAnnouncement(apiMessage(error)),
                         }
                       )
                     }}
@@ -980,20 +936,10 @@ function CommentForm({
           root.server. Ohne diese Meldung verschwaende es (Skill frontend-api,
           Abschnitt 3, wie in den Auth-Formularen). */}
       {form.formState.errors.root?.server?.message && (
-        <Alert variant="destructive">
-          <AlertTitle>
-            {t(form.formState.errors.root.server.message)}
-          </AlertTitle>
-        </Alert>
+        <ErrorState message={t(form.formState.errors.root.server.message)} />
       )}
 
-      {failed !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>
-            {t(apiErrorMessageKey(failed), { defaultValue: failed.message })}
-          </AlertTitle>
-        </Alert>
-      )}
+      {failed !== null && <ErrorState error={failed} />}
     </form>
   )
 }

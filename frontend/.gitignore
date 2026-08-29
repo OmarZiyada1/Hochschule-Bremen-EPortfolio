@@ -26,3 +26,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Ergebnisse des e2e-Laufs (KAN-42). Bericht, Spuren und Bildschirmfotos
+# entstehen bei jedem Lauf neu und gehoeren nicht in die Historie.
+playwright-report
+test-results
+blob-report

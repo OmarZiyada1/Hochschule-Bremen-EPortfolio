@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
 import { masterDataQueries } from "@/api/queries/masterData"
-import { Alert, AlertTitle } from "@/components/ui/alert"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
+import { ErrorState } from "@/components/common/ErrorState"
 import { MasterDataRowMenu } from "@/features/administration/components/MasterDataRowMenu"
 import { StudyStructureColumn } from "@/features/administration/components/StudyStructureColumn"
 import { StudyStructureDialog } from "@/features/administration/components/StudyStructureDialog"
@@ -65,6 +66,7 @@ interface DialogState {
  */
 export default function AdminStudyStructurePage() {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const facultyId = searchParams.get("faculty")
@@ -135,12 +137,6 @@ export default function AdminStudyStructurePage() {
   const [notice, setNotice] = useState("")
   const dialogTrigger = useRef<HTMLElement | null>(null)
 
-  function messageOf(error: unknown): string {
-    return isApiError(error)
-      ? t(apiErrorMessageKey(error), { defaultValue: error.message })
-      : t("apiError.INTERNAL_ERROR")
-  }
-
   /**
    * Der 409 beim Loeschen meint die Sperre durch die Ebene darunter (§6.1),
    * und die ist je Ebene eine andere: an der Fakultaet haengt ein
@@ -155,7 +151,7 @@ export default function AdminStudyStructurePage() {
     const message =
       isApiError(error) && error.errorCode === "RESOURCE_IN_USE"
         ? t(`administration.studyStructure.deleteBlocked.${kind}`, { name })
-        : messageOf(error)
+        : apiMessage(error)
     setRowError(message)
     setNotice(message)
   }
@@ -278,9 +274,7 @@ export default function AdminStudyStructurePage() {
       </header>
 
       {rowError !== null && (
-        <Alert variant="destructive">
-          <AlertTitle>{rowError}</AlertTitle>
-        </Alert>
+        <ErrorState message={rowError} />
       )}
 
       <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
@@ -291,7 +285,7 @@ export default function AdminStudyStructurePage() {
           onSelect={(id) => select("faculty", id)}
           loading={faculties.isPending}
           error={
-            faculties.error === null ? undefined : messageOf(faculties.error)
+            faculties.error === null ? undefined : apiMessage(faculties.error)
           }
           emptyTitle={t("administration.studyStructure.empty.faculties")}
           createLabel={t("administration.studyStructure.create.faculty")}
@@ -371,7 +365,7 @@ export default function AdminStudyStructurePage() {
           error={
             studyPrograms.error === null
               ? undefined
-              : messageOf(studyPrograms.error)
+              : apiMessage(studyPrograms.error)
           }
           emptyTitle={t("administration.studyStructure.empty.studyPrograms")}
           createLabel={t("administration.studyStructure.create.studyProgram")}
@@ -453,7 +447,7 @@ export default function AdminStudyStructurePage() {
           items={studyProgramId === null ? [] : (modules.data ?? [])}
           selectedId={null}
           loading={studyProgramId !== null && modules.isPending}
-          error={modules.error === null ? undefined : messageOf(modules.error)}
+          error={modules.error === null ? undefined : apiMessage(modules.error)}
           emptyTitle={
             studyProgramId === null
               ? t("administration.studyStructure.empty.noStudyProgram")

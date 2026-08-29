@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next"
 import { useNavigate, useParams } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
 import { blockQueries } from "@/api/queries/blocks"
 import { projectQueries, withdrawProject } from "@/api/queries/projects"
 import type {
@@ -15,6 +15,7 @@ import type {
   ProjectDetailResponse,
   ProjectUpdateRequest,
 } from "@/api/types"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import { useFileUrl } from "@/api/useFileUrl"
 import { VersionConflictDialog } from "@/components/common/VersionConflictDialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -93,6 +94,7 @@ const EMPTY_BLOCKS: readonly BlockResponse[] = []
  */
 export default function EditorPage() {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const { projectId = "" } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -511,9 +513,7 @@ export default function EditorPage() {
           <AlertTitle>{t("projectContent.load.errorTitle")}</AlertTitle>
           <AlertDescription>
             {isApiError(loadError)
-              ? t(apiErrorMessageKey(loadError), {
-                  defaultValue: loadError.message,
-                })
+              ? apiMessage(loadError)
               : t("projectContent.load.errorDescription")}
           </AlertDescription>
         </Alert>
@@ -631,9 +631,7 @@ export default function EditorPage() {
                 <TriangleAlertIcon aria-hidden="true" />
                 <AlertTitle>{t("projectContent.autosave.error")}</AlertTitle>
                 <AlertDescription>
-                  {t(apiErrorMessageKey(autosave.error), {
-                    defaultValue: autosave.error.message,
-                  })}
+                  {apiMessage(autosave.error)}
                 </AlertDescription>
               </Alert>
             )}

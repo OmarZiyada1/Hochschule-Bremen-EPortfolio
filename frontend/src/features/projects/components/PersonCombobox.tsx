@@ -3,9 +3,9 @@ import type { ReactNode } from "react"
 import { useEffect, useId, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
 import { userQueries } from "@/api/queries/users"
 import type { Role, UserLookupResponse } from "@/api/types"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import {
   Combobox,
   ComboboxContent,
@@ -107,6 +107,7 @@ export function PersonCombobox({
   className?: string
 }) {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
   const generatedId = useId()
   const inputId = id ?? generatedId
 
@@ -242,15 +243,7 @@ export function PersonCombobox({
         </ComboboxContent>
       </Combobox>
 
-      {results.isError && (
-        <FieldError>
-          {isApiError(results.error)
-            ? t(apiErrorMessageKey(results.error), {
-                defaultValue: results.error.message,
-              })
-            : t("apiError.INTERNAL_ERROR")}
-        </FieldError>
-      )}
+      {results.isError && <FieldError>{apiMessage(results.error)}</FieldError>}
 
       {/*
        * Die Trefferzahl gehoert angesagt, aber nicht gedruckt: sie steht

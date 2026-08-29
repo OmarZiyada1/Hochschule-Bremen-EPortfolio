@@ -133,7 +133,14 @@ export function SupportRequestCard({
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* flex-wrap, weil die Zeile sonst breiter wird als die Karte: bei
+              320 CSS-Pixeln stehen hier bis zu 341 Pixel Schaltflaechen in
+              256 Pixeln Platz. Die Karte traegt overflow-hidden, es sah
+              deshalb nicht nach einem Fehler aus, sondern nach einer Karte
+              mit weniger Knoepfen: die rechten waren abgeschnitten und mit
+              dem Zeiger nicht mehr erreichbar (SC 1.4.10, Befund des
+              320-Pixel-Laufs zu KAN-42). */}
+          <div className="flex flex-wrap items-center gap-2">
             {ACTIONS[request.status].map((action) => (
               <Button
                 key={action.target}
@@ -203,7 +210,12 @@ export function SupportRequestCard({
           </p>
         )}
 
-        <h3 className="type-body font-semibold">{request.subject}</h3>
+        {/* Ebene 2 und nicht 3: die Anfragenliste ist der gesamte Inhalt von
+            /administration/support, zwischen der Seitenueberschrift und
+            dieser Karte steht keine weitere Ebene. Mit Ebene 3 sprang die
+            Hierarchie von h1 auf h3 (SC 1.3.1, Befund des axe-Laufs zu
+            KAN-42). */}
+        <h2 className="type-body font-semibold">{request.subject}</h2>
 
         <p className="type-body-sm text-muted-foreground">
           {request.name}

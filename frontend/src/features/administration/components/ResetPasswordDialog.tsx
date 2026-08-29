@@ -2,9 +2,9 @@ import { CopyIcon } from "lucide-react"
 import { useState, type RefObject } from "react"
 import { useTranslation } from "react-i18next"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
 import type { AdminUserResponse } from "@/api/types"
-import { Alert, AlertTitle } from "@/components/ui/alert"
+import { ErrorState } from "@/components/common/ErrorState"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -94,13 +94,7 @@ export function ResetPasswordDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        {failed !== null && (
-          <Alert variant="destructive">
-            <AlertTitle>
-              {t(apiErrorMessageKey(failed), { defaultValue: failed.message })}
-            </AlertTitle>
-          </Alert>
-        )}
+        {failed !== null && <ErrorState error={failed} />}
 
         {password !== null && (
           <div className="flex flex-col gap-2">

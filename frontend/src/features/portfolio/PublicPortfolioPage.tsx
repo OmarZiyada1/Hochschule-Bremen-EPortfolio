@@ -2,10 +2,10 @@ import { FolderOpenIcon, UserXIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Link, useParams } from "react-router-dom"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
 import { EmptyState } from "@/components/common/EmptyState"
+import { ErrorState } from "@/components/common/ErrorState"
 import { ProjectCard } from "@/components/common/ProjectCard"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ProfileCard } from "@/features/portfolio/components/ProfileCard"
@@ -74,15 +74,7 @@ export default function PublicPortfolioPage() {
           />
         )}
 
-        {error !== null && !notFound && (
-          <Alert variant="destructive">
-            <AlertTitle>
-              {isApiError(error)
-                ? t(apiErrorMessageKey(error), { defaultValue: error.message })
-                : t("apiError.INTERNAL_ERROR")}
-            </AlertTitle>
-          </Alert>
-        )}
+        {error !== null && !notFound && <ErrorState error={error} />}
 
         {isPending && (
           <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[1fr_21.25rem] lg:items-start">

@@ -3,10 +3,11 @@ import { type RefObject } from "react"
 import { Controller, useForm } from "react-hook-form"
 import { useTranslation } from "react-i18next"
 
-import { apiErrorMessageKey, isApiError } from "@/api/errors"
+import { isApiError } from "@/api/errors"
 import type { ProjectCardResponse } from "@/api/types"
+import { useApiErrorMessage } from "@/api/useApiErrorMessage"
+import { ErrorState } from "@/components/common/ErrorState"
 import { FilterSelect } from "@/components/common/FilterSelect"
-import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -76,6 +77,7 @@ export function Top10PlacementDialog({
   finalFocus?: RefObject<HTMLElement | null>
 }) {
   const { t } = useTranslation()
+  const apiMessage = useApiErrorMessage()
 
   const defaults = {
     position: freePositions.length === 0 ? "" : String(freePositions[0]),
@@ -99,7 +101,7 @@ export function Top10PlacementDialog({
       }
       form.setError("root.server", {
         type: "server",
-        message: t(apiErrorMessageKey(error), { defaultValue: error.message }),
+        message: apiMessage(error),
       })
     }
   })
@@ -133,9 +135,7 @@ export function Top10PlacementDialog({
 
         <form onSubmit={submit} noValidate className="flex flex-col gap-4">
           {rootError !== undefined && (
-            <Alert variant="destructive">
-              <AlertTitle>{rootError}</AlertTitle>
-            </Alert>
+            <ErrorState message={rootError} />
           )}
 
           <Controller
