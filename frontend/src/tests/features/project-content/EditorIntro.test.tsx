@@ -251,6 +251,28 @@ describe("EditorIntro", () => {
     expect(view.container.querySelector(".aspect-\\[7\\/4\\]")).toBeNull()
   })
 
+  /*
+   * Auch die Platzierung ist eine ausdrueckliche Vorgabe: die Bedienung des
+   * Titelbilds liegt im Editor auf der Bildflaeche und nicht darunter, und
+   * sie zeigt nur Zeichen. Der Standard von CoverImageField ist das
+   * Gegenteil ("below"), ein Rueckfall faellt also ohne diese Zusicherung
+   * nirgends auf: die Komponente selbst ist isoliert geprueft, die
+   * Uebersteuerung steht hier.
+   */
+  it("legt die Bedienung des Titelbilds als Zeichenleiste auf die Flaeche", () => {
+    const { view } = setUp()
+
+    const chooser = screen.getByLabelText("Titelbild wählen")
+    const preview = view.container.querySelector(
+      '[data-slot="cover-image-preview"]'
+    )
+
+    expect(preview).not.toBeNull()
+    expect(preview).toContainElement(chooser)
+    /* Nur Zeichen: der Name steht unsichtbar im Bedienelement. */
+    expect(screen.getByText("Titelbild wählen")).toHaveClass("sr-only")
+  })
+
   /* Wunsch aus der Sitzung: kein Rahmen um die beiden Felder, und zwar
      auch nicht im dunklen Modus, wo die Primitive eine Flaeche mitbringt. */
   it("laesst die beiden Felder ohne Rahmen und ohne dunkle Flaeche", () => {

@@ -1,14 +1,25 @@
 import { useQuery } from "@tanstack/react-query"
-import { ImageIcon } from "lucide-react"
+import {
+  ImageIcon,
+  ImagePlusIcon,
+  ImageUpIcon,
+  LoaderIcon,
+  Trash2Icon,
+} from "lucide-react"
 import { useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { isApiError } from "@/api/errors"
 import { fileQueries } from "@/api/queries/files"
 import { useApiErrorMessage } from "@/api/useApiErrorMessage"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { FieldError, FieldLabel } from "@/components/ui/field"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import {
   COVER_IMAGE_MAX_BYTES,
   COVER_IMAGE_MIME_TYPES,
@@ -37,6 +48,16 @@ const ASPECT_CLASS = {
 
 /** Seitenverhaeltnis der Vorschauflaeche. */
 export type CoverImageAspect = keyof typeof ASPECT_CLASS
+
+/**
+ * Wo die Bedienelemente stehen.
+ *
+ * <p>{@code below} setzt sie unter die Flaeche, wie es das Metadatenformular
+ * in seiner schmalen Vorschau-Spalte braucht. {@code overlay} legt sie als
+ * eigene Leiste auf das Bild, damit die Kopfpartie des Editors ohne einen
+ * Streifen darunter auskommt.
+ */
+export type CoverImageControlPlacement = "below" | "overlay"
 
 /**
  * Das Titelbild in der Vorschau-Spalte des Metadatenformulars (§3.15,
@@ -88,6 +109,7 @@ export function CoverImageField({
   uploading = false,
   disabled = false,
   aspect = "7/4",
+  controlPlacement = "below",
 }: {
   /** Referenz der Form /api/files/{id}, leer heisst "kein Titelbild". */
   value: string
@@ -98,6 +120,8 @@ export function CoverImageField({
   disabled?: boolean
   /** Rahmen der Vorschauflaeche; siehe {@link ASPECT_CLASS}. */
   aspect?: CoverImageAspect
+  /** Lage der Bedienelemente; siehe {@link CoverImageControlPlacement}. */
+  controlPlacement?: CoverImageControlPlacement
 }) {
   const { t } = useTranslation()
   const apiMessage = useApiErrorMessage()
@@ -149,11 +173,144 @@ export function CoverImageField({
     }
   }
 
+  const overlaid = controlPlacement === "overlay"
+
+  /** Beschriftung des Dateiwaehlers; sie haengt am Zustand, nicht am Ort. */
+  const chooseLabel = uploading
+    ? t("project.metadata.cover.pending")
+    : value === ""
+      ? t("project.metadata.cover.choose")
+      : t("project.metadata.cover.replace")
+  const removeLabel = t("project.metadata.cover.remove")
+
+  /*
+   * Die Bedienelemente entstehen einmal und werden anschliessend an einer
+   * von zwei Stellen eingehaengt. Sie zweimal zu schreiben, waere zwei
+   * Dateiwaehler mit zwei Bezeichnern im Baum: der zweite Auslesevorgang
+   * traefe dann je nach Platzierung den falschen.
+   *
+   * <p><strong>Ueberlagert wird das Bild, nicht der Untergrund.</strong> Die
+   * Leiste liegt oben rechts auf einer eigenen Kartenflaeche und nicht
+   * unmittelbar auf dem Bild. Ein Titelbild ist beliebig hell oder dunkel,
+   * und ein Zeichen darauf haelt keinen Kontrast zu (SC 1.4.11); die
+   * undurchsichtige Flaeche stellt genau den Untergrund her, den die Leiste
+   * unterhalb der Flaeche ohnehin hat.
+   *
+   * <p><strong>Nur Zeichen, und deshalb ein Zeichen je Zustand.</strong>
+   * Ueberlagert traegt das Sinnbild die Bedeutung allein, also unterscheidet
+   * es Hinzufuegen ({@code ImagePlus}) von Ersetzen ({@code ImageUp}) und
+   * zeigt waehrend des Uploads den Kreisel. Unterhalb der Flaeche steht die
+   * Beschriftung daneben; dort genuegt das neutrale Zeichen des Templates.
+   * Der zugaengliche Name geht dabei nicht verloren: er steht als
+   * {@code sr-only} im Bedienelement und noch einmal sichtbar im Tooltip
+   * (SC 4.1.2, SC 1.1.1). Die Flaechen messen 32px und damit mehr als die
+   * geforderten 24px (SC 2.5.8).
+   *
+   * <p>Der Dateiwaehler bleibt auch ueberlagert ein echtes
+   * {@code input[type=file]} mit verbundenem Label: {@code TooltipTrigger}
+   * zeichnet das Label selbst, die Wurzel des Tooltips zeichnet nichts, und
+   * damit bleibt das Label im Dokument der Nachbar des Feldes, auf den
+   * {@code peer-focus-visible} zielt.
+   */
+  const controls = disabled ? null : overlaid ? (
+    <div className="absolute top-3 right-3 flex items-center gap-1 rounded-pill border bg-card p-1 text-card-foreground shadow-sm">
+      <input
+        id={inputId}
+        type="file"
+        accept={COVER_IMAGE_MIME_TYPES.join(",")}
+        className="peer sr-only"
+        aria-busy={uploading}
+        aria-describedby={error === null ? undefined : errorId}
+        onChange={(event) => void onFileSelected(event.target.files?.[0])}
+      />
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <FieldLabel
+              htmlFor={inputId}
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "icon" }),
+                "cursor-pointer peer-focus-visible:border-ring peer-focus-visible:ring-3 peer-focus-visible:ring-ring/50"
+              )}
+            />
+          }
+        >
+          {uploading ? (
+            <LoaderIcon aria-hidden="true" className="size-4 animate-spin" />
+          ) : value === "" ? (
+            <ImagePlusIcon aria-hidden="true" className="size-4" />
+          ) : (
+            <ImageUpIcon aria-hidden="true" className="size-4" />
+          )}
+          <span className="sr-only">{chooseLabel}</span>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{chooseLabel}</TooltipContent>
+      </Tooltip>
+
+      {value !== "" && (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="hover:text-destructive"
+                onClick={() => {
+                  setError(null)
+                  onChange("")
+                }}
+              />
+            }
+          >
+            <Trash2Icon aria-hidden="true" className="size-4" />
+            <span className="sr-only">{removeLabel}</span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{removeLabel}</TooltipContent>
+        </Tooltip>
+      )}
+    </div>
+  ) : (
+    <div className="flex flex-wrap items-center gap-3">
+      <input
+        id={inputId}
+        type="file"
+        accept={COVER_IMAGE_MIME_TYPES.join(",")}
+        className="peer sr-only"
+        aria-busy={uploading}
+        aria-describedby={error === null ? undefined : errorId}
+        onChange={(event) => void onFileSelected(event.target.files?.[0])}
+      />
+      <FieldLabel
+        htmlFor={inputId}
+        className="type-body-sm cursor-pointer items-center gap-2 font-semibold text-primary underline-offset-4 peer-focus-visible:underline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring hover:underline"
+      >
+        <ImageIcon aria-hidden="true" className="size-4" />
+        {chooseLabel}
+      </FieldLabel>
+
+      {value !== "" && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setError(null)
+            onChange("")
+          }}
+        >
+          {removeLabel}
+        </Button>
+      )}
+    </div>
+  )
+
   return (
     <div className="flex flex-col gap-2">
       <div
+        data-slot="cover-image-preview"
         className={cn(
-          "flex w-full items-center justify-center overflow-hidden rounded-card bg-surface-brand",
+          "relative flex w-full items-center justify-center overflow-hidden rounded-card bg-surface-brand",
           ASPECT_CLASS[aspect]
         )}
       >
@@ -165,8 +322,24 @@ export function CoverImageField({
           <Skeleton className="size-full" />
         ) : image.isError ? (
           /* Ein fehlgeschlagener Abruf bleibt sichtbar: eine leere Flaeche
-             waere der uebersehene Fall (Skill frontend-modul, Abschnitt 5). */
-          <span className="type-body-sm px-4 text-center text-surface-brand-foreground">
+             waere der uebersehene Fall (Skill frontend-modul, Abschnitt 5).
+
+             Ueberlagert braucht die Meldung Vorlauf nach oben, sonst laeuft
+             sie unter die deckende Leiste. Nachgerechnet fuer den Bezugsfall
+             aus SC 1.4.10, also 320px Ansichtsbreite: die Spalte des Editors
+             ist dort 208px breit, die Flaeche im Verhaeltnis 16:9 also 117px
+             hoch; die Leiste steht ab top-3 und ist 42px hoch, endet also bei
+             54px. Eine Fehlermeldung bricht auf dieser Breite auf mehrere
+             Zeilen, und ihre erste laege mittig genau in diesem Band. 3.5rem
+             Vorlauf setzen den Text darunter. Der Leerzustand braucht das
+             nicht: ohne Bild traegt die Leiste nur den Dateiwaehler, und
+             "Kein Titelbild" bleibt in jeder Breite links daneben. */
+          <span
+            className={cn(
+              "type-body-sm px-4 text-center text-surface-brand-foreground",
+              overlaid && "pt-14"
+            )}
+          >
             {apiMessage(image.error)}
           </span>
         ) : objectUrl !== null ? (
@@ -179,46 +352,11 @@ export function CoverImageField({
             className="size-full object-cover"
           />
         ) : null}
+
+        {overlaid && controls}
       </div>
 
-      {disabled ? null : (
-        <div className="flex flex-wrap items-center gap-3">
-          <input
-            id={inputId}
-            type="file"
-            accept={COVER_IMAGE_MIME_TYPES.join(",")}
-            className="peer sr-only"
-            aria-busy={uploading}
-            aria-describedby={error === null ? undefined : errorId}
-            onChange={(event) => void onFileSelected(event.target.files?.[0])}
-          />
-          <FieldLabel
-            htmlFor={inputId}
-            className="type-body-sm cursor-pointer items-center gap-2 font-semibold text-primary underline-offset-4 peer-focus-visible:underline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring hover:underline"
-          >
-            <ImageIcon aria-hidden="true" className="size-4" />
-            {uploading
-              ? t("project.metadata.cover.pending")
-              : value === ""
-                ? t("project.metadata.cover.choose")
-                : t("project.metadata.cover.replace")}
-          </FieldLabel>
-
-          {value !== "" && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setError(null)
-                onChange("")
-              }}
-            >
-              {t("project.metadata.cover.remove")}
-            </Button>
-          )}
-        </div>
-      )}
+      {overlaid ? null : controls}
 
       {/* Dauerhaft im Baum, nur der Text wechselt: eine Live-Region, die
           zusammen mit ihrem Inhalt entsteht, sagt bei einigen Screenreadern

@@ -252,6 +252,12 @@ export function EditorIntro({
               disabled={!editable}
               /* 16:9 wie gewuenscht; das Metadatenformular bleibt bei 7:4. */
               aspect="16/9"
+              /* Auf der Flaeche und nicht darunter: die Kopfpartie geht
+                 unmittelbar in den Titel ueber, und ein Streifen mit
+                 Bedienelementen dazwischen schoebe sich in diese Naht. In der
+                 schmalen Vorschau-Spalte des Metadatenformulars bleibt es bei
+                 der Leiste darunter. */
+              controlPlacement="overlay"
             />
           )}
         />
