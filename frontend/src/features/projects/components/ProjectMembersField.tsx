@@ -1,4 +1,4 @@
-import { PlusIcon, XIcon } from "lucide-react"
+import { PlusIcon, Trash2Icon } from "lucide-react"
 import type { ReactNode } from "react"
 import { useId, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -15,7 +15,10 @@ import {
   ItemTitle,
 } from "@/components/ui/item"
 import { PersonCombobox } from "@/features/projects/components/PersonCombobox"
-import type { MemberValue } from "@/features/projects/ProjectMetadataForm.schema"
+import {
+  PROJECT_ROLE_MAX_LENGTH,
+  type MemberValue,
+} from "@/features/projects/ProjectMetadataForm.schema"
 import { fullNameOf } from "@/lib/name"
 
 /* Modulweit und nicht als Literal im Default: ein frisches [] je Render wuerde
@@ -23,36 +26,92 @@ import { fullNameOf } from "@/lib/name"
 const NO_IDS: readonly string[] = []
 
 /**
- * Die Projektmitglieder des Metadatenformulars (§3.13, §3.13.1, KAN-35):
- * Co-Autor:innen und Mitwirkende, je Zeile eine Person und eine freie
+ * Die Projektmitglieder des Metadatenformulars (§3.13, §3.13.1):
+ * Co-Autor:innen und Mitwirkende, je Eintrag eine Person und eine freie
  * Funktionsbezeichnung wie "Frontend".
  *
- * <p><strong>Zwei Spalten.</strong> Links die beiden Eingabefelder
- * untereinander, rechts die bereits aufgenommenen Mitglieder, dazwischen
- * der Knopf. So steht das Ergebnis neben der Eingabe und nicht darunter,
- * und die Liste waechst, ohne die Felder wegzuschieben.
+ * <p><strong>Gestapelt, nicht zweispaltig.</strong> Oben steht eine einzige
+ * Eingabezeile aus Personenauswahl, Bezeichnung und Plus-Knopf, darunter die
+ * aufgenommenen Mitglieder ueber die volle Breite. Zwei Spalten drueckten
+ * beide Eingaben auf eine halbe Breite, obwohl die Namenssuche die breiteste
+ * Eingabe des Formulars ist, und legten die Liste neben statt unter den
+ * Knopf, der sie fuellt. Auf schmalen Breiten steht die Zeile untereinander.
+ *
+ * <p><strong>Die Zeile richtet sich unten aus.</strong> Die Beschriftungen
+ * stehen ueber den Feldern, also liegen die Oberkanten verschieden hoch; auf
+ * einer Hoehe liegen allein die Unterkanten, und dort passen Eingabe
+ * ({@code h-11}) und Knopf ({@code size-11}) genau zusammen.
+ *
+ * <p><strong>Der Knopf zeigt nur das Zeichen.</strong> Sein zugaenglicher
+ * Name steht als {@code sr-only} daneben, wie im Anlegefeld der Stammdaten
+ * ({@code NameCreateForm}). Aus demselben Grund wie dort scheidet
+ * {@code input-group} aus: es legte den Knopf in das Feld statt daneben.
+ *
+ * <p><strong>Abschnittsueberschriften braucht das Feld keine</strong>, die
+ * sichtbaren Beschriftungen "Mitglied" und "Rolle" tragen alles, was eine
+ * Ueberschrift sagen wuerde.
  *
  * <p><strong>Die gewaehlte Person bleibt im Feld stehen</strong>, bis sie
  * aufgenommen ist. Vorher wanderte sie sofort als Pille nach unten, und der
  * Blick sprang mit; jetzt tut sich zwischen Auswahl und Aufnahme nichts,
  * was man verfolgen muesste.
  *
- * <p><strong>Beide Angaben sind Pflicht, und das sagen die Sterne.</strong>
- * Ohne {@code userId} gibt es keinen Eintrag, und {@code projectRole} fuehrt
- * §3.13 als {@code not null}; {@code MemberRequest} setzt es mit
- * {@code @NotBlank} durch. Der Knopf bleibt gesperrt, bis beides steht.
- * Erklaerende Saetze daneben braucht es dafuer nicht: die Platzhalter in
- * den Feldern sagen, was hineingehoert.
+ * <p><strong>Pflicht ist allein die Person</strong>, und nur sie traegt
+ * darum die Pflichtkennzeichnung. Ohne {@code userId} gibt es keinen
+ * Eintrag; die Funktionsbezeichnung dagegen ist seit Contract v65
+ * freiwillig, {@code MemberRequest} prueft sie mit {@code @Size(max = 255)}
+ * und nicht mit {@code @NotBlank}. Der Knopf bleibt gesperrt, solange keine
+ * Person feststeht, und laesst sich mit leerer Bezeichnung druecken.
+ *
+ * <p><strong>In der Liste ist die Bezeichnung nur noch Text</strong>, hinter
+ * dem Namen und durch " · " abgesetzt, in derselben Schreibweise wie auf der
+ * Projektseite ({@code ProjectMetaSidebar}). Dieselbe Angabe soll nicht an
+ * zwei Stellen in zwei Formen erscheinen, einmal als Fliesstext und einmal
+ * als Eingabefeld. Eine Korrektur laeuft dafuer ueber Entfernen und erneutes
+ * Aufnehmen: das ist ein Griff mehr, dafuer gibt es die Bezeichnung genau an
+ * einer Stelle einzutippen, naemlich oben in der Eingabezeile.
+ *
+ * <p><strong>Und dieser Text darf umbrechen.</strong> {@code ItemTitle}
+ * bringt {@code line-clamp-1 flex w-fit} mit; in der erzeugten Datei steht
+ * {@code .flex} hinter {@code .line-clamp-1}, also gewinnt
+ * {@code display:flex}, vom Zuschnitt bleibt allein {@code overflow:hidden}
+ * uebrig und eine lange Bezeichnung waere an der Kante abgeschnitten, ohne
+ * Auslassungszeichen und ohne Weg, sie noch zu lesen. Deshalb
+ * {@code block w-full}: {@code tailwind-merge} loest {@code flex} nach
+ * {@code block} und {@code w-fit} nach {@code w-full} auf, und
+ * {@code .block} steht ebenfalls hinter {@code .line-clamp-1}. Der Nebeneffekt
+ * ist erwuenscht: ohne Flexlayout wirkt das {@code gap-2} der Primitive nicht
+ * mehr, und vor dem Trennzeichen steht dasselbe Wortleerzeichen wie auf der
+ * Projektseite (Befund des frontend-reviewers).
+ *
+ * <p><strong>Die Bezeichnung ist schon beim Tippen auf 255 Zeichen
+ * begrenzt</strong> ({@code MemberRequest} prueft {@code @Size(max = 255)}).
+ * Ein natives {@code maxLength} und keine Pruefung neben dem Schema
+ * (Frontend-Regel 12): waere der zu lange Wert erst einmal aufgenommen,
+ * liesse er sich in der Liste nicht mehr berichtigen, und die Sammelmeldung
+ * am Feld nennte weder das Mitglied noch den Grund.
+ *
+ * <p><strong>Die Eingabetaste im Rollenfeld nimmt auf</strong>, statt das
+ * ganze Formular abzuschicken, sobald eine Person feststeht. Ohne das
+ * loeste sie die implizite Absendung aus ("Speichern & weiter zum Editor"),
+ * und {@code pending} und {@code pendingRole} gingen als lokaler Zustand
+ * dabei verloren: das Mitglied waere weg, ohne je gespeichert zu sein. Ein
+ * eigenes {@code <form>} wie im {@code NameCreateForm} scheidet aus,
+ * Formulare lassen sich nicht schachteln. Steht keine Person fest, bleibt es
+ * bei der Absendung: {@code add()} taete dann ohnehin nichts.
+ *
+ * <p><strong>Nach dem Aufnehmen geht der Fokus auf die Personensuche
+ * zurueck</strong> und die Aufnahme wird angesagt. Der Knopf sperrt sich im
+ * selben Zug selbst, der Browser entzoege ihm den Fokus und liesse ihn auf
+ * {@code body} fallen; die Personensuche ist ohnehin der naechste Schritt.
+ * Angesagt wird ueber eine {@code aria-live}-Zeile (SC 4.1.3), wie die
+ * {@code PersonCombobox} es fuer die Trefferzahl tut.
  *
  * <p>Wer schon in der Liste steht, taucht in der Vorschlagsliste nicht mehr
  * auf, ebenso wenig die Autor:in: sie steht in {@code Project.authorId} und
  * ist keine {@code ProjectMember}-Zeile (§3.13.1). Ihre eigene
  * Funktionsbezeichnung traegt {@code authorRole} am Projekt und hat ein
  * eigenes Feld daneben (§3.3 seit Contract v66).
- *
- * <p><strong>Die Bezeichnung laesst sich in der Liste nachtragen.</strong>
- * Sie ist seit Contract v65 freiwillig, und eine Korrektur soll nicht
- * Entfernen und erneutes Aufnehmen verlangen.
  *
  * <p><strong>Und ebenso wenig die zugewiesene Redaktion</strong> (§5, Fussnote 3
  * seit Contract v61, KAN-77). Zugewiesene Redaktion und Projektseite
@@ -97,17 +156,20 @@ export function ProjectMembersField({
 }) {
   const { t } = useTranslation()
   const fieldId = useId()
+  const personInputId = `${fieldId}-person`
   const roleInputId = `${fieldId}-role`
   const listLabelId = `${fieldId}-chosen`
 
   const [pending, setPending] = useState<UserLookupResponse | null>(null)
   const [pendingRole, setPendingRole] = useState("")
+  /* Was zuletzt geschehen ist, allein fuer die Ansage. Sichtbar steht es
+     bereits als neue Zeile in der Liste. */
+  const [announcement, setAnnouncement] = useState("")
 
   /*
    * Nur die Person ist noetig. Die Funktionsbezeichnung ist seit Contract
-   * v65 freiwillig und laesst sich in der Liste jederzeit nachtragen; sie
-   * hier zu verlangen hiesse, beim Aufnehmen eine Angabe zu erzwingen, die
-   * das Datenmodell nicht verlangt.
+   * v65 freiwillig; sie hier zu verlangen hiesse, beim Aufnehmen eine
+   * Angabe zu erzwingen, die das Datenmodell nicht verlangt.
    */
   const complete = pending !== null
 
@@ -126,37 +188,39 @@ export function ProjectMembersField({
     }
     /* Anhaengen, nie ersetzen: die Liste traegt beliebig viele Mitglieder
        (§3.13, 1:N). */
-    onChange([
-      ...value,
-      {
-        id: pending.id,
-        firstName: pending.firstName,
-        lastName: pending.lastName,
-        projectRole: pendingRole.trim(),
-      },
-    ])
+    const added: MemberValue = {
+      id: pending.id,
+      firstName: pending.firstName,
+      lastName: pending.lastName,
+      projectRole: pendingRole.trim(),
+    }
+    onChange([...value, added])
     setPending(null)
     setPendingRole("")
+    setAnnouncement(
+      t("project.metadata.members.added", { name: fullNameOf(added) })
+    )
+    /*
+     * Ueber die ID und nicht ueber ein ref: die PersonCombobox reicht ihr
+     * eigenes Eingabefeld nicht nach aussen, nimmt aber eine ID entgegen,
+     * und diese ID gehoert ohnehin schon hierher (siehe Klassenkopf). Der
+     * Aufruf steht noch vor dem naechsten Rendern, der Knopf ist also
+     * gerade noch bedienbar und gibt den Fokus regulaer ab.
+     */
+    document.getElementById(personInputId)?.focus()
   }
 
   function remove(userId: string) {
     onChange(value.filter((member) => member.id !== userId))
   }
 
-  /** Traegt eine Funktionsbezeichnung an einer vorhandenen Zeile nach. */
-  function setRole(userId: string, projectRole: string) {
-    onChange(
-      value.map((member) =>
-        member.id === userId ? { ...member, projectRole } : member
-      )
-    )
-  }
-
   return (
-    <div className="flex flex-col gap-4 md:flex-row md:items-start">
-      {/* Links: die beiden Felder untereinander. */}
-      <div className="flex flex-1 flex-col gap-3">
+    <div className="flex flex-col gap-4">
+      {/* Oben: Person, Bezeichnung und Knopf in einer Zeile. */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-2">
         <PersonCombobox
+          className="flex-1"
+          id={personInputId}
           label={t("project.metadata.members.person")}
           labelSuffix={labelSuffix}
           value={pending}
@@ -168,13 +232,13 @@ export function ProjectMembersField({
           describedBy={describedBy}
         />
 
-        <Field className="gap-2">
+        <Field className="flex-1">
           <FieldLabel
             htmlFor={roleInputId}
             className="type-label-xs text-muted-foreground uppercase"
           >
             {/* Ohne Pflichtkennzeichnung: die Bezeichnung ist seit Contract
-                v65 freiwillig und laesst sich in der Liste nachtragen. */}
+                v65 freiwillig. */}
             {t("project.metadata.members.role")}
           </FieldLabel>
           <Input
@@ -182,35 +246,48 @@ export function ProjectMembersField({
             className="h-11"
             value={pendingRole}
             disabled={disabled}
+            maxLength={PROJECT_ROLE_MAX_LENGTH}
             placeholder={t("project.metadata.members.rolePlaceholder")}
             onChange={(event) => setPendingRole(event.target.value)}
+            onKeyDown={(event) => {
+              /* Aufnehmen statt Absenden, aber nur wenn es etwas aufzunehmen
+                 gibt (siehe Klassenkopf). */
+              if (event.key !== "Enter" || !complete) {
+                return
+              }
+              event.preventDefault()
+              add()
+            }}
           />
         </Field>
+
+        {/* Quadratisch und ohne sichtbaren Text; der Name steht sr-only. */}
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          className="size-11 shrink-0"
+          disabled={disabled || !complete}
+          onClick={add}
+        >
+          <PlusIcon aria-hidden="true" />
+          <span className="sr-only">
+            {t("project.metadata.members.addButton")}
+          </span>
+        </Button>
       </div>
 
-      {/* Dazwischen: der Knopf, freigegeben sobald beides steht. */}
-      <Button
-        type="button"
-        variant="secondary"
-        className="md:mt-7 md:self-start"
-        disabled={disabled || !complete}
-        onClick={add}
-      >
-        <PlusIcon aria-hidden="true" />
-        {t("project.metadata.members.addButton")}
-      </Button>
-
-      {/* Rechts: die aufgenommenen Mitglieder. */}
-      <div className="flex-1">
+      {/* Darunter: die aufgenommenen Mitglieder ueber die volle Breite. */}
+      <div>
         <span id={listLabelId} className="sr-only">
           {t("project.metadata.members.chosen")}
         </span>
         {value.length === 0 ? (
-          <p className="type-body-sm text-muted-foreground md:mt-7">
+          <p className="type-body-sm text-muted-foreground">
             {t("project.metadata.members.none")}
           </p>
         ) : (
-          <ItemGroup aria-labelledby={listLabelId} className="gap-2 md:mt-7">
+          <ItemGroup aria-labelledby={listLabelId} className="gap-2">
             {value.map((member) => {
               return (
                 <Item
@@ -220,20 +297,15 @@ export function ProjectMembersField({
                   role="listitem"
                 >
                   <ItemContent>
-                    <ItemTitle>{fullNameOf(member)}</ItemTitle>
-                    <Input
-                      value={member.projectRole}
-                      disabled={disabled}
-                      placeholder={t(
-                        "project.metadata.members.rolePlaceholder"
+                    {/* block w-full statt flex w-fit: siehe Klassenkopf. */}
+                    <ItemTitle className="block w-full">
+                      {fullNameOf(member)}
+                      {member.projectRole && (
+                        <span className="type-body-sm font-normal text-muted-foreground">
+                          {` · ${member.projectRole}`}
+                        </span>
                       )}
-                      aria-label={t("project.metadata.members.roleOf", {
-                        name: fullNameOf(member),
-                      })}
-                      onChange={(event) =>
-                        setRole(member.id, event.target.value)
-                      }
-                    />
+                    </ItemTitle>
                   </ItemContent>
                   <ItemActions>
                     <Button
@@ -246,7 +318,7 @@ export function ProjectMembersField({
                       })}
                       onClick={() => remove(member.id)}
                     >
-                      <XIcon aria-hidden="true" />
+                      <Trash2Icon aria-hidden="true" />
                     </Button>
                   </ItemActions>
                 </Item>
@@ -255,6 +327,15 @@ export function ProjectMembersField({
           </ItemGroup>
         )}
       </div>
+
+      {/*
+       * Die Aufnahme gehoert angesagt, aber nicht gedruckt: sie steht
+       * sichtbar bereits als neue Zeile in der Liste (SC 4.1.3), wie die
+       * Trefferzahl der PersonCombobox.
+       */}
+      <p aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
     </div>
   )
 }

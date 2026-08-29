@@ -155,6 +155,11 @@ const ROUTE_TREE: readonly RouteNode[] = [
     parent: "/administration",
   },
   {
+    path: "/administration/site-content",
+    labelKey: "administration.nav.siteContent",
+    parent: "/administration",
+  },
+  {
     path: "/administration/top10/audit",
     labelKey: "administration.top10.nav.audit",
     parent: "/administration/top10",

@@ -50,6 +50,7 @@ Grundlage ist der Bestand aus Contract v17: 337 Bezeichner, 120 Java-Dateien,
 | `Top10Protokoll` | `Top10AuditEntry` | `top10_audit_entry` |
 | `VerifizierungsCode` | `VerificationCode` | `verification_code` |
 | `SupportAnfrage` | `SupportRequest` | `support_request` (seit Contract v87, KAN-85) |
+| `Startseitentext` | `SiteContent` | `site_content` (seit Contract v93) |
 
 Join- und Nebentabellen: `projekt_redakteur` wird `project_editor`,
 `projekt_tag` wird `project_tag`. Seit KAN-75 ist das keine Wertetabelle mehr, sondern die Verknüpfungstabelle zwischen `project` und `tag` (Contract v57, §3.19); der Text steht in `tag.name`, die Zuordnung trägt nur noch `tag_id`.
@@ -109,6 +110,7 @@ qualifiziert Jacksons Klasse voll aus.
 | `Top10Action` | `HINZUGEFUEGT` · `ENTFERNT` · `UMSORTIERT` | `ADDED` · `REMOVED` · `REORDERED` |
 | `SupportRequestCategory` | `TECHNISCHES_PROBLEM` · `KONTO_ANMELDUNG` · `PROJEKT_EINREICHUNG` · `INHALT_MELDEN` · `SONSTIGES` | `TECHNICAL_ISSUE` · `ACCOUNT_ACCESS` · `PROJECT_SUBMISSION` · `ABUSE_REPORT` · `OTHER` (seit Contract v87, KAN-85) |
 | `SupportRequestStatus` | `OFFEN` · `IN_BEARBEITUNG` · `ERLEDIGT` | `OPEN` · `IN_PROGRESS` · `RESOLVED` (seit Contract v87, KAN-85) |
+| `SiteContentKey` | kein deutsches Vorbild | fünfzehn Konstanten aus dem i18n-Schlüssel gebildet, `home.hero.titleLine1` wird `HOME_HERO_TITLE_LINE1` (seit Contract v93) |
 
 `CommentStatus.OFFEN` wird `OPEN`, `NominationStatus.OFFEN` wird `PENDING`.
 Beide hießen im Deutschen gleich, meinen aber Verschiedenes: ein

@@ -340,7 +340,7 @@
       "unknown": "This degree is unknown."
     },
     "projectRole": {
-      "required": "Please state a role in the project."
+      "tooLong": "The role must not be longer than 255 characters."
     },
     "comment": {
       "type": "Please choose a type.",
@@ -397,6 +397,11 @@
         "tooShort": "The description must be at least 10 characters long.",
         "tooLong": "The description must not exceed 2000 characters."
       }
+    },
+    "siteContent": {
+      "tooLong": "The text must not exceed 1000 characters.",
+      "placeholderMissing": "A placeholder that this passage needs is missing. Without it the number silently disappears from the page.",
+      "placeholderUnexpected": "This passage does not know this placeholder. It would appear literally on the page because nobody fills it."
     }
   },
   "placeholder": {
@@ -774,12 +779,12 @@
         "personPlaceholder": "Search by name …",
         "role": "Role",
         "rolePlaceholder": "Role in the project, for example frontend",
-        "roleOf": "Role of {{name}} in the project",
         "remove": "Remove {{name}} from the project members",
         "chosen": "Added project members",
         "invalid": "Please check the project member entries.",
         "required": "required",
         "addButton": "Add member",
+        "added": "{{name}} added.",
         "none": "No members added yet."
       },
       "notFound": {
@@ -1555,7 +1560,8 @@
       "support": "Support",
       "open": "Open the administration navigation",
       "openSupportCount_one": "{{count}} open support request",
-      "openSupportCount_other": "{{count}} open support requests"
+      "openSupportCount_other": "{{count}} open support requests",
+      "siteContent": "Home page texts"
     },
     "dashboard": {
       "title": "Dashboard",
@@ -2081,6 +2087,41 @@
         "IN_PROGRESS": "Handled by {{name}} since {{at}}",
         "RESOLVED": "Resolved by {{name}} on {{at}}"
       }
+    },
+    "siteContent": {
+      "title": "Home page texts",
+      "subtitle": "Fifteen text passages of the public home page, in German and English.",
+      "resetHint": "An empty field means that the shipped wording applies here. It appears in the empty field as a suggestion and is never saved; clearing a field resets the passage to it.",
+      "section": {
+        "hero": "Header area",
+        "top10": "Top 10 section",
+        "cta": "Closing section"
+      },
+      "language": {
+        "de": "German",
+        "en": "English"
+      },
+      "field": {
+        "heroLabel": "Overline above the main heading",
+        "heroTitleLine1": "Main heading, first line",
+        "heroTitleLine2": "Main heading, second line",
+        "heroSubtitle": "Intro text below the main heading",
+        "heroExploreTop10": "Button to the top 10 list",
+        "top10Label": "Overline of the leaderboard",
+        "top10Title": "Heading of the leaderboard",
+        "top10Description": "Description of the leaderboard",
+        "ctaLabel": "Overline of the closing section",
+        "ctaTitle": "Heading of the closing section",
+        "ctaDescription": "Description of the closing section",
+        "ctaStatWorks": "Label of the projects figure",
+        "ctaStatFaculties": "Label of the faculties figure",
+        "ctaStatPrograms": "Label of the degree programmes figure",
+        "ctaOpenLibrary": "Button to the project library"
+      },
+      "placeholderHint": "This passage needs the following placeholders, spelled exactly like this:",
+      "submit": "Save texts",
+      "submitPending": "Saving …",
+      "saved": "The home page texts have been saved."
     }
   },
   "support": {

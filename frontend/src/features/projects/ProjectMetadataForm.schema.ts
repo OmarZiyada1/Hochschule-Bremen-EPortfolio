@@ -63,6 +63,20 @@ export const TITLE_MAX_LENGTH = 100
  */
 export const SUMMARY_MAX_LENGTH = 1024
 
+/**
+ * Freie Funktionsbezeichnung, 255 Zeichen: die Servergrenze und keine
+ * engere Gestaltungsregel daneben. Sie gilt fuer beide Felder, die eine
+ * solche Bezeichnung tragen, {@code MemberRequest.projectRole} (§3.13) und
+ * {@code ProjectUpdateRequest.authorRole} (§3.3), und beide fuehren dort
+ * {@code @Size(max = 255)}.
+ *
+ * <p>Die Zahl steht auch am Eingabefeld der Mitgliederzeile
+ * ({@code ProjectMembersField}) als natives {@code maxLength}: dort ist sie
+ * keine zweite Pruefung neben dem Schema, sondern verhindert einen Zustand,
+ * der sich nachtraeglich nicht mehr berichtigen liesse.
+ */
+export const PROJECT_ROLE_MAX_LENGTH = 255
+
 /** Bild-Allowlist fuer das Titelbild (§3.15). Verbindlich bleibt der Server. */
 export const COVER_IMAGE_MIME_TYPES = [
   "image/png",
@@ -121,7 +135,10 @@ export type PersonValue = z.infer<typeof personValueSchema>
  * einer leeren Zeichenkette getrimmt; der Server macht daraus {@code null}.
  */
 const memberValueSchema = personValueSchema.extend({
-  projectRole: z.string().trim().max(255, "validation.projectRole.tooLong"),
+  projectRole: z
+    .string()
+    .trim()
+    .max(PROJECT_ROLE_MAX_LENGTH, "validation.projectRole.tooLong"),
 })
 
 export type MemberValue = z.infer<typeof memberValueSchema>
@@ -155,7 +172,10 @@ export const projectMetadataSchema = z.object({
   members: z.array(memberValueSchema),
   /* Funktionsbezeichnung der Autor:in (§3.3 seit Contract v66), freiwillig.
      Sie ist keine Mitgliedszeile: die Autor:in bleibt Autor:in (§3.13.1). */
-  authorRole: z.string().trim().max(255, "validation.projectRole.tooLong"),
+  authorRole: z
+    .string()
+    .trim()
+    .max(PROJECT_ROLE_MAX_LENGTH, "validation.projectRole.tooLong"),
 })
 
 export type ProjectMetadataValues = z.infer<typeof projectMetadataSchema>
@@ -218,8 +238,8 @@ export function toProjectMetadataValues(
       id: member.userId,
       firstName: member.firstName,
       lastName: member.lastName,
-      /* Ohne Bezeichnung steht im Formular die leere Zeichenkette: ein
-         Eingabefeld kennt kein null. */
+      /* Die Antwort kennt null fuer "keine Bezeichnung", das Formular nicht:
+         memberValueSchema fuehrt projectRole als z.string(). */
       projectRole: member.projectRole ?? "",
     })),
   }
@@ -277,9 +297,10 @@ export function toProjectUpdateRequest(
     editorIds: values.editors.map((editor) => editor.id),
     members: values.members.map((member): MemberRequest => ({
       userId: member.id,
-      /* Ohne Bezeichnung steht im Formular die leere Zeichenkette: ein
-         Eingabefeld kennt kein null. */
-      projectRole: member.projectRole ?? "",
+      /* Ohne ?? "": memberValueSchema fuehrt projectRole als z.string(),
+           hier kann kein null ankommen. Leer heisst "keine Bezeichnung",
+           der Server macht daraus null. */
+      projectRole: member.projectRole,
     })),
   }
 }

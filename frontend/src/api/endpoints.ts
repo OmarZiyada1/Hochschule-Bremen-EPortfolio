@@ -238,6 +238,17 @@ export const apiPaths = {
     supportRequests: "/api/admin/support",
     supportRequest: (supportRequestId: string) =>
       `/api/admin/support/${supportRequestId}`,
+    /*
+     * Die Startseitentexte pflegen (§2.16, §3.21, §6.1). Ein PUT auf den
+     * ganzen Satz und kein Pfad je Schluessel: gepflegt wird eine Maske mit
+     * allen Stellen, und ein Speichern ist ein Vorgang.
+     *
+     * Der Aufruf ersetzt die uebergebenen Schluessel vollstaendig und laesst
+     * alle uebrigen unberuehrt; ein leerer Wert loescht die Fassung dieser
+     * Sprache, und die Stelle faellt damit auf die Sprachdatei des Frontends
+     * zurueck. Gelesen wird ueber siteContent.list, das PUBLIC ist.
+     */
+    siteContent: "/api/admin/site-content",
   },
   /*
    * Ein einzelner Kommentar (§6.1, §2.4, KAN-37). Bewusst neben projects und
@@ -297,6 +308,18 @@ export const apiPaths = {
      */
     withdrawNomination: (nominationId: string) =>
       `/api/top10-nominations/${nominationId}/withdraw`,
+  },
+  /*
+   * Die von der Administration gepflegten Texte der Startseite (§2.16,
+   * §3.21, §6.1). PUBLIC und ohne Token: die Startseite selbst ist es auch.
+   *
+   * Die Antwort fuehrt beide Sprachen nebeneinander und nicht die des
+   * Sprachumschalters: der wechselt ohne Neuladen, ein zweiter Request je
+   * Sprache waere ein sichtbares Nachladen mitten im Text. Der schreibende
+   * Gegenpart steht unter admin.siteContent.
+   */
+  siteContent: {
+    list: "/api/site-content",
   },
   /*
    * Stammdaten (§6.1, Backend-Modul masterdata): vollstaendige Listen ohne

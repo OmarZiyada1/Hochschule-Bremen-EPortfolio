@@ -657,9 +657,10 @@ describe("ProjectMetadataPage", () => {
     )
 
     /*
-     * Die Bezeichnung ist seit Contract v65 freiwillig und laesst sich in
-     * der Liste nachtragen; sie hier zu verlangen hiesse, beim Aufnehmen
-     * eine Angabe zu erzwingen, die das Datenmodell nicht verlangt.
+     * Die Bezeichnung ist seit Contract v65 freiwillig; sie hier zu
+     * verlangen hiesse, beim Aufnehmen eine Angabe zu erzwingen, die das
+     * Datenmodell nicht verlangt. Nachtragen laeuft ueber Entfernen und
+     * erneutes Aufnehmen: in der Liste steht sie nur noch als Text.
      */
     await waitFor(() => expect(add).toBeEnabled())
 

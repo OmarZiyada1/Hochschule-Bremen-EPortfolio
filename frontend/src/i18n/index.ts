@@ -27,6 +27,23 @@ void i18n.use(initReactI18next).init({
     // Platzhaltern zerlegen.
     escapeValue: false,
   },
+  react: {
+    /*
+     * Ohne diese Zeile bliebe eine nachtraeglich geladene Fassung
+     * unsichtbar. Die Startseite legt die von der Administration
+     * gepflegten Texte per addResourceBundle ueber die mitgelieferten
+     * (features/home/hooks/useSiteContentOverrides.ts, Contract §2.16);
+     * das loest im Ressourcenspeicher das Ereignis "added" aus.
+     *
+     * react-i18next hoert darauf nur, wenn bindI18nStore es nennt: die
+     * Vorgabe der Bibliothek ist der leere String, und
+     * `if (bindI18nStore) i18n.store.on(...)` meldet dann gar nichts an
+     * (nachgesehen in react-i18next 17.0.11, defaults und useTranslation).
+     * Die Werte staenden also im Speicher, und auf dem Bildschirm bliebe
+     * die Vorgabe stehen, bis irgendetwas anderes ein Rendern ausloest.
+     */
+    bindI18nStore: "added",
+  },
 })
 
 export default i18n

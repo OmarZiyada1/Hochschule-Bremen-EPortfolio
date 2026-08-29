@@ -164,6 +164,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/admin/site-content": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Startseitentexte pflegen
+     * @description Ersetzt die uebergebenen Schluessel vollstaendig und laesst alle uebrigen unberuehrt. Ein leerer Wert loescht die Fassung dieser Sprache; die Stelle faellt damit auf die Sprachdatei des Frontends zurueck. Die Antwort ist der neue Gesamtstand, also dieselbe Form wie beim Lesen.
+     */
+    put: operations["replaceSiteContent"]
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/top10-nominations/{nominationId}/withdraw": {
     parameters: {
       query?: never
@@ -1168,6 +1188,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/site-content": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Startseitentexte lesen
+     * @description Alle gepflegten Textstellen der Startseite, deutsch und englisch in einer Antwort. Ein Schluessel erscheint, sobald mindestens eine Sprache gepflegt ist; die ungepflegte steht dann als null. Ungepflegte Schluessel fehlen ganz, dort gilt die Sprachdatei des Frontends. Solange nichts gepflegt ist, ist die Liste leer.
+     */
+    get: operations["siteContent"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/semesters": {
     parameters: {
       query?: never
@@ -1789,6 +1829,38 @@ export interface components {
        */
       addedAt: string
       project: components["schemas"]["ProjectCardResponse"]
+    }
+    /** @description Die zu pflegenden Textstellen. Nicht genannte Schluessel bleiben unberuehrt. Jeder Schluessel hoechstens einmal. */
+    SiteContentEntryRequest: {
+      /**
+       * @description i18n-Schluessel der Textstelle, genau wie im GET. Ein unbekannter Schluessel ergibt 400 VALIDATION_FAILED.
+       * @example home.hero.subtitle
+       */
+      key?: string
+      /** @description Deutscher Text. Leer oder fehlend loescht die deutsche Fassung; die Stelle faellt dann auf die Vorgabe des Frontends zurueck. */
+      valueDe?: string | null
+      /** @description Englischer Text. Leer oder fehlend loescht die englische Fassung; die Stelle faellt dann auf die Vorgabe des Frontends zurueck. */
+      valueEn?: string | null
+    }
+    SiteContentUpdateRequest: {
+      /** @description Die zu pflegenden Textstellen. Nicht genannte Schluessel bleiben unberuehrt. Jeder Schluessel hoechstens einmal. */
+      entries: components["schemas"]["SiteContentEntryRequest"][]
+    }
+    /** @description Die gepflegten Textstellen. Ein Schluessel erscheint, sobald mindestens eine Sprache gepflegt ist; ungepflegte Schluessel fehlen ganz. */
+    SiteContentEntryResponse: {
+      /**
+       * @description i18n-Schluessel der Textstelle. Derselbe Schluessel, unter dem das Frontend seine mitgelieferte Fassung fuehrt.
+       * @example home.hero.subtitle
+       */
+      key: string
+      /** @description Deutscher Text. null heisst: nicht gepflegt, es gilt die Vorgabe des Frontends. */
+      valueDe: string | null
+      /** @description Englischer Text. null heisst: nicht gepflegt, es gilt die Vorgabe des Frontends. */
+      valueEn: string | null
+    }
+    SiteContentResponse: {
+      /** @description Die gepflegten Textstellen. Ein Schluessel erscheint, sobald mindestens eine Sprache gepflegt ist; ungepflegte Schluessel fehlen ganz. */
+      entries: components["schemas"]["SiteContentEntryResponse"][]
     }
     Top10NominationResponse: {
       /** Format: uuid */
@@ -3287,6 +3359,57 @@ export interface operations {
         }
         content: {
           "*/*": components["schemas"]["Top10EntryResponse"][]
+        }
+      }
+    }
+  }
+  replaceSiteContent: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SiteContentUpdateRequest"]
+      }
+    }
+    responses: {
+      /** @description Der neue Gesamtstand. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SiteContentResponse"]
+        }
+      }
+      /** @description VALIDATION_FAILED: unbekannter oder doppelter Schluessel, fehlender oder ueberzaehliger Platzhalter, zu langer Text. */
+      400: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SiteContentResponse"]
+        }
+      }
+      /** @description Kein gueltiges Token mitgeschickt. */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SiteContentResponse"]
+        }
+      }
+      /** @description NO_PERMISSION: die Rolle ist nicht ADMIN. */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SiteContentResponse"]
         }
       }
     }
@@ -6684,6 +6807,26 @@ export interface operations {
         }
         content: {
           "*/*": components["schemas"]["StudyProgramResponse"][]
+        }
+      }
+    }
+  }
+  siteContent: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Die gepflegten Textstellen. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "*/*": components["schemas"]["SiteContentResponse"]
         }
       }
     }

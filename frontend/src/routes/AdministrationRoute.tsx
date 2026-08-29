@@ -47,6 +47,9 @@ const AdminTop10AuditPage = lazy(
 const AdminSupportListPage = lazy(
   () => import("@/features/administration/AdminSupportListPage")
 )
+const AdminSiteContentPage = lazy(
+  () => import("@/features/administration/AdminSiteContentPage")
+)
 
 /**
  * Derselbe Umriss wie der Ladezustand der Seiten selbst, damit der Wechsel
@@ -104,4 +107,8 @@ export function AdminTop10AuditRoute() {
 
 export function AdminSupportListRoute() {
   return withFallback(AdminSupportListPage)
+}
+
+export function AdminSiteContentRoute() {
+  return withFallback(AdminSiteContentPage)
 }

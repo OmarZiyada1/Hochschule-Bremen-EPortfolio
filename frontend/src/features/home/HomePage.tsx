@@ -14,6 +14,7 @@ import {
   useProjectCount,
   useStudyProgramCount,
 } from "@/features/home/hooks/useHomeStats"
+import { useSiteContentOverrides } from "@/features/home/hooks/useSiteContentOverrides"
 import { useTop10List } from "@/features/home/hooks/useTop10List"
 import { top10Slots, type Top10Slot } from "@/features/home/top10Slots"
 import { peopleOfProject } from "@/lib/people"
@@ -48,6 +49,18 @@ import { peopleOfProject } from "@/lib/people"
  */
 export default function HomePage() {
   const { t, i18n } = useTranslation()
+  /*
+   * Die von der Administration gepflegten Fassungen der Texte dieser Seite
+   * (Contract §2.16, §3.21). Der Hook gibt nichts zurueck: er legt die Werte
+   * je Sprache ueber die mitgelieferten, und die t()-Aufrufe darunter bleiben
+   * unveraendert. Was nicht gepflegt ist, bleibt bei der Sprachdatei.
+   *
+   * Er haengt hier und nicht im Wurzel-Layout, weil nur diese Seite die
+   * fuenfzehn Schluessel zeigt. Einen Ladezustand und eine Fehlerflaeche gibt
+   * es dafuer bewusst nicht (Begruendung im Kopf des Hooks): die Seite steht
+   * vollstaendig, auch wenn der Endpoint schweigt.
+   */
+  useSiteContentOverrides()
   const top10 = useTop10List()
   const projectCount = useProjectCount()
   const facultyCount = useFacultyCount()

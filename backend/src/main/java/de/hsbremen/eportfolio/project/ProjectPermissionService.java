@@ -981,6 +981,17 @@ public class ProjectPermissionService {
 		return isAdmin(user);
 	}
 
+	/**
+	 * Zeile „Startseitentexte pflegen": nur ADMIN.
+	 *
+	 * <p>Das Gegenstueck zum Lesen steht bewusst nicht daneben: die Texte der
+	 * Startseite sind fuer PUBLIC lesbar, und ein {@code mayReadSiteContent},
+	 * das immer {@code true} liefert, waere eine Pruefung, die nichts prueft.
+	 */
+	public boolean mayManageSiteContent(AuthenticatedUser user) {
+		return isAdmin(user);
+	}
+
 	/** Zeile „Admin-Dashboard": nur ADMIN. */
 	public boolean maySeeAdminDashboard(AuthenticatedUser user) {
 		return isAdmin(user);
