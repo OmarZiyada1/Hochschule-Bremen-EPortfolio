@@ -2,12 +2,16 @@ import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
+import { TextPage } from "@/components/common/TextPage"
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { inlineLinkClass } from "@/lib/inlineLink"
+import { useTranslatedList } from "@/lib/useTranslatedList"
+import { cn } from "@/lib/utils"
 
 import {
   helpSectionsFor,
@@ -41,7 +45,9 @@ import { helpScreenshots } from "./screenshots"
  * (KAN-42): dieselbe Textbreite, dieselben typografischen Klassen, kein
  * eigenes {@code main} und keine eigene Fusszeile, die stellt der
  * Anwendungsrahmen. Diese Seite ist ein Text mit Bildern und keine
- * Oberflaeche.
+ * Oberflaeche. Seit KAN-95 ist „dieselbe Huelle" keine Absichtserklaerung
+ * mehr, sondern {@link TextPage}: beide Seiten nehmen sie, und die dritte
+ * entsteht ohne dritte Kopie.
  *
  * <p><strong>Alles kommt aus i18n</strong>, deutsch und englisch, die
  * Alternativtexte der Bilder eingeschlossen. Die Bilder selbst erzeugt
@@ -56,23 +62,17 @@ export default function HelpPage() {
   const sections = helpSectionsFor(role)
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-12">
-      <header className="flex flex-col gap-3">
-        <h1 className="type-title text-primary">{t("help.title")}</h1>
-        <p className="type-body-lg text-muted-foreground">{t("help.intro")}</p>
-        <p className="type-body-sm text-muted-foreground">
-          {t("help.roleHint")}
-        </p>
-        {/* Die Abbildungen zeigen die englische Oberflaeche im hellen Modus,
-            auch wenn die lesende Person gerade Deutsch oder Dunkel benutzt
-            (Entscheidung der Klaerungsrunde zu KAN-93). Das steht hier und
-            nicht an jedem Bild: einmal gesagt reicht, zwanzigmal wiederholt
-            liest es niemand mehr. */}
-        <p className="type-body-sm text-muted-foreground">
-          {t("help.imageNote")}
-        </p>
-      </header>
-
+    /* Zwei kleine Absaetze im Kopf: der Rollenhinweis und der Bildhinweis.
+       Die Abbildungen zeigen die englische Oberflaeche im hellen Modus, auch
+       wenn die lesende Person gerade Deutsch oder Dunkel benutzt
+       (Entscheidung der Klaerungsrunde zu KAN-93). Das steht einmal im Kopf
+       und nicht an jedem Bild: einmal gesagt reicht, zwanzigmal wiederholt
+       liest es niemand mehr. */
+    <TextPage
+      title={t("help.title")}
+      intro={t("help.intro")}
+      notes={[t("help.roleHint"), t("help.imageNote")]}
+    >
       {/* Ein Sprungverzeichnis und keine bloße Liste: es fuehrt nur die
           Bereiche, die diese Zugriffsebene ueberhaupt sieht, und ist damit
           zugleich die Antwort auf „was steht hier drin". Eigene nav mit
@@ -95,7 +95,7 @@ export default function HelpPage() {
               <li key={section.key}>
                 <a
                   href={`#help-${section.key}`}
-                  className="type-body-sm rounded-selection text-primary underline underline-offset-4 hover:text-primary-hover"
+                  className={cn("type-body-sm", inlineLinkClass)}
                 >
                   {t(`help.${section.key}.title`)}
                 </a>
@@ -111,14 +111,11 @@ export default function HelpPage() {
 
       <p className="type-body">
         {t("help.feedback.text")}{" "}
-        <Link
-          to="/support"
-          className="rounded-selection text-primary underline underline-offset-4 hover:text-primary-hover"
-        >
+        <Link to="/support" className={inlineLinkClass}>
           {t("help.feedback.link")}
         </Link>
       </p>
-    </div>
+    </TextPage>
   )
 }
 
@@ -198,13 +195,10 @@ function HelpTopicBody({
   const base = `help.${sectionKey}.topics.${topic.key}`
 
   /* Wie in der Barrierefreiheitserklaerung: die Aufzaehlung steht als Feld in
-     der Sprachdatei, damit ein Punkt mehr keine Codeaenderung braucht. Der
-     Standardwert faengt einen fehlenden Schluessel ab, statt
-     "[object Object]" zu rendern. */
-  const steps = t(`${base}.steps`, {
-    returnObjects: true,
-    defaultValue: [],
-  }) as string[]
+     der Sprachdatei, damit ein Punkt mehr keine Codeaenderung braucht
+     (KAN-95: derselbe Helfer aus lib/). */
+  const translatedList = useTranslatedList()
+  const steps = translatedList(`${base}.steps`)
 
   const image = topic.shot === undefined ? null : helpScreenshots[topic.shot]
 

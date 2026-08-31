@@ -10,6 +10,17 @@ import { useTranslation } from "react-i18next"
  * Ticket; dort steht der allgemeine Hinweis. Die dritte, Barrierefreiheit,
  * ist seit KAN-42 eine eigene Seite und laeuft nicht mehr ueber diese
  * Huelle.
+ *
+ * <p><strong>Diese Huelle bleibt eigen und nutzt nicht {@code TextPage}</strong>
+ * (entschieden in KAN-95). Der Baustein traegt Textseiten: Kopfbereich mit
+ * Einleitung, kleine Hinweise, Abschnitte darunter. Hier gibt es nichts
+ * davon, sondern eine Ueberschrift und einen Satz, der sagt, dass die Seite
+ * noch fehlt. Der Umzug haette ausserdem das Aussehen von {@code /imprint}
+ * und {@code /privacy} veraendert, und zwar Abstaende und
+ * Ueberschriftengroesse ({@code gap-4 py-16} und {@code type-h1} gegen
+ * {@code gap-8 py-12} und {@code type-title}); genau das schliesst KAN-95
+ * aus. Bekommen die beiden Seiten eines Tages echten Text, ziehen sie mit
+ * diesem Ticket auf {@link TextPage} um und diese Huelle entfaellt.
  */
 export function PlaceholderPage({
   titleKey,

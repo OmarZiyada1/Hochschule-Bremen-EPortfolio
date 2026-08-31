@@ -1,6 +1,10 @@
 import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
 
+import { TextPage } from "@/components/common/TextPage"
+import { inlineLinkClass } from "@/lib/inlineLink"
+import { useTranslatedList } from "@/lib/useTranslatedList"
+
 /**
  * Die Barrierefreiheitserklaerung unter {@code /accessibility} (KAN-42,
  * Umfang 9). Bis dahin stand hier ein {@link PlaceholderPage}.
@@ -20,7 +24,8 @@ import { Link } from "react-router-dom"
  *
  * <p>Aufbau aus Ueberschriften und Listen statt aus Karten: die Seite ist ein
  * Text und keine Oberflaeche. Alle Inhalte kommen aus i18n, deutsch und
- * englisch (Frontend-Regel 7).
+ * englisch (Frontend-Regel 7). Textspalte und Kopfbereich stellt seit KAN-95
+ * {@link TextPage}; hier steht nur noch, was diese Seite ausmacht.
  *
  * <p><strong>Datum und Zahlen stehen als Text in den Schluesseln</strong>, nicht
  * als Variablen aus dem Code. Ein spaeterer Durchgang aendert sie deshalb in
@@ -31,27 +36,16 @@ import { Link } from "react-router-dom"
  */
 export default function AccessibilityPage() {
   const { t } = useTranslation()
-
-  /*
-   * Die Listen kommen als Feld aus i18n (returnObjects), damit ein Punkt
-   * mehr keine Codeaenderung braucht. Der Standardwert faengt einen fehlenden
-   * Schluessel ab, statt "[object Object]" zu rendern.
-   */
-  const list = (key: string): string[] =>
-    t(key, { returnObjects: true, defaultValue: [] }) as string[]
+  /* Die Listen kommen als Feld aus i18n, damit ein Punkt mehr keine
+     Codeaenderung braucht (KAN-95: der Helfer liegt in lib/). */
+  const list = useTranslatedList()
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-12">
-      <header className="flex flex-col gap-3">
-        <h1 className="type-title text-primary">{t("accessibility.title")}</h1>
-        <p className="type-body-lg text-muted-foreground">
-          {t("accessibility.intro")}
-        </p>
-        <p className="type-body-sm text-muted-foreground">
-          {t("accessibility.notFormal")}
-        </p>
-      </header>
-
+    <TextPage
+      title={t("accessibility.title")}
+      intro={t("accessibility.intro")}
+      notes={[t("accessibility.notFormal")]}
+    >
       <section className="flex flex-col gap-3">
         <h2 className="type-h2">{t("accessibility.status.title")}</h2>
         <dl className="type-body flex flex-col gap-2">
@@ -110,14 +104,11 @@ export default function AccessibilityPage() {
         <h2 className="type-h2">{t("accessibility.feedback.title")}</h2>
         <p className="type-body">
           {t("accessibility.feedback.text")}{" "}
-          <Link
-            to="/support"
-            className="rounded-selection text-primary underline underline-offset-4 hover:text-primary-hover"
-          >
+          <Link to="/support" className={inlineLinkClass}>
             {t("accessibility.feedback.link")}
           </Link>
         </p>
       </section>
-    </div>
+    </TextPage>
   )
 }
