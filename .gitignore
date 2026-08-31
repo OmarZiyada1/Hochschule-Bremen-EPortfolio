@@ -18,3 +18,10 @@ var/
 # IDE
 .idea/
 *.iml
+
+# Arbeitskopien der Confluence-Kapitelseiten (Skill thesis-schreiben).
+# Werden per contract.py neu gezogen, gehoeren nicht in die Historie.
+.thesis-cache/
+
+# Bytecode der Skill-Werkzeuge (contract.py, thesis.py).
+__pycache__/
