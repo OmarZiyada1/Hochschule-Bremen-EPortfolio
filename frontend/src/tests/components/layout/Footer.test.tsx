@@ -19,6 +19,7 @@ describe("Footer", () => {
 
     for (const label of [
       "Projektbibliothek",
+      "Hilfe & Dokumentation",
       "Impressum",
       "Datenschutz",
       "Barrierefreiheit",
@@ -35,6 +36,16 @@ describe("Footer", () => {
     expect(
       screen.queryByRole("link", { name: "Häufige Fragen" })
     ).not.toBeInTheDocument()
+  })
+
+  /* Der zweite Einstieg in die Hilfeseite (KAN-93). Der erste ist das
+     Fragezeichen in der Kopfleiste, und das traegt keine Beschriftung. */
+  it("fuehrt zur Hilfeseite", () => {
+    renderWithProviders(<Footer />)
+
+    expect(
+      screen.getByRole("link", { name: "Hilfe & Dokumentation" })
+    ).toHaveAttribute("href", "/help")
   })
 
   it("setzt das Jahr zur Laufzeit und nicht als festen Text", () => {

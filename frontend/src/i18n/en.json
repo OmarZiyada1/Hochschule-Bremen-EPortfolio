@@ -6,11 +6,11 @@
     "status": {
       "title": "Audit status",
       "dateLabel": "Tested on:",
-      "date": "29 August 2026",
+      "date": "31 August 2026",
       "targetLabel": "Target level:",
       "target": "WCAG 2.2, level AA",
       "resultLabel": "Result:",
-      "result": "32 pages with content of their own tested in light mode, 31 of them additionally in dark mode; the page “create project” creates a draft when opened and therefore runs only once per test run. No remaining level A or AA violation outside the limits listed below."
+      "result": "36 pages with content of their own tested, in light and in dark mode, 73 runs in total. Two departures from the simple arithmetic: the help page runs twice per mode, because it shows different things without a session and as an administrator, and the page “create project” creates a draft when opened and therefore runs only once per test run. No remaining level A or AA violation outside the limits listed below."
     },
     "method": {
       "title": "Method",
@@ -27,11 +27,11 @@
       "title": "Pages covered",
       "intro": "The audit covers every page of the application:",
       "items": [
-        "the public views: home, project library, project details, public portfolios, contact and support, this page, the error page and the no-access notice,",
+        "the public views: home, project library, project details, public portfolios, contact and support, help and documentation, this page, the error page and the no-access notice,",
         "sign-in, the four-step registration and the password pages,",
         "the signed-in views: own portfolio, edit profile, create project and project metadata,",
         "the editorial views: own reviews and review mode,",
-        "the administration area with dashboard, projects, accounts, categories, semesters, study structure, top 10 management including its audit log, and support requests,",
+        "the administration area with dashboard, projects, accounts, categories, semesters, study structure, top 10 management including its audit log, support requests and home page texts,",
         "the block-based editor as a whole."
       ]
     },
@@ -124,7 +124,8 @@
       "logout": "Log out",
       "profile": "Profile",
       "openMenu": "Open menu",
-      "support": "Contact & support"
+      "support": "Contact & support",
+      "help": "Help & documentation"
     },
     "footer": {
       "imprint": "Legal notice",
@@ -138,7 +139,8 @@
         "platform": "Platform",
         "legal": "Legal"
       },
-      "support": "Contact & support"
+      "support": "Contact & support",
+      "help": "Help & documentation"
     },
     "language": {
       "switchTo": {
@@ -2155,6 +2157,345 @@
       "OPEN": "Open",
       "IN_PROGRESS": "In progress",
       "RESOLVED": "Resolved"
+    }
+  },
+  "help": {
+    "title": "Help & documentation",
+    "intro": "How to use the e-portfolio: find and read published work, write and submit your own projects, review them editorially and administer the platform.",
+    "roleHint": "This page shows the sections that match your access. Without signing in you see what is possible without an account; a signed-in account also sees the editor, an editor also sees the review section, an administrator sees everything.",
+    "imageNote": "The figures are captured from the running application with sample data. They show the English interface in light mode, even if you are currently using German or dark mode; layout and controls are the same.",
+    "contents": "On this page",
+    "feedback": {
+      "text": "If a question remains open or something does not work, you can reach the administration team through the contact form:",
+      "link": "Contact & support"
+    },
+    "visitors": {
+      "title": "Exploring the portal",
+      "intro": "Anyone can read published work, with or without an account. An account is only needed to write something yourself.",
+      "topics": {
+        "browse": {
+          "title": "Finding and filtering projects",
+          "text": "The entry “Projects” lists every published student work. The search field covers title, summary, the author's name and the tags; it does not match the names of project members. The filter column on the left narrows the list further.",
+          "steps": [
+            "Six filter groups: faculty, degree programme, degree, semester, project type and category. Each group accepts several values at once.",
+            "Search, filters and page number live in the address. A result can therefore be shared, and the browser's back button returns to the previous selection.",
+            "Above the list you see how many works the current selection matches."
+          ],
+          "imageAlt": "The page “Student projects”: on the left the filter column with the group “Faculty/institution” expanded into five checkboxes, on the right the search field, the result count and project cards showing cover image, faculty code, project type, summary, semester and reaction count.",
+          "imageCaption": "The project library under “Projects”."
+        },
+        "projectPage": {
+          "title": "Reading a project page",
+          "text": "The detail page shows the work as its author laid it out: cover image, title, summary and below them the content blocks. There are fifteen kinds: heading, paragraph, list, quote, source code, divider, table, image, gallery, video, audio, document, embed, formula and table of contents.",
+          "steps": [
+            "Beside the content you find the details of the work: degree programme, semester, category, subject and the people involved.",
+            "The hand below the content is the reaction, the counterpart of applause. It is open to signed-in accounts and can be taken back.",
+            "The printer icon on the cover image produces a PDF version through the browser's print dialogue."
+          ],
+          "imageAlt": "The detail view of a published work: a large cover image with a printer icon, below it title, summary and the content; on the right a column with the details of the work.",
+          "imageCaption": "Detail view of a published work."
+        },
+        "top10": {
+          "title": "The top 10 of the year",
+          "text": "Below the opening section of the home page sits the curated top 10 list. Editors propose works for it; the administration decides on inclusion and order.",
+          "steps": [
+            "The order is chosen, not calculated: it reflects neither click counts nor reactions.",
+            "Every place links to the project page of the work."
+          ],
+          "imageAlt": "The “Top 10” section of the home page: a heading, an explanatory sentence and below them cards of the selected works with place number and cover image.",
+          "imageCaption": "The top 10 list on the home page."
+        },
+        "portfolio": {
+          "title": "Someone's portfolio",
+          "text": "The name attached to a work leads to that person's public portfolio: a short introduction and all of their published work on one page.",
+          "steps": [
+            "Only published work is visible. Drafts and submitted contributions stay hidden.",
+            "A person's university address never appears in public. The private address, on the other hand, is part of the public profile and is therefore visible without signing in."
+          ],
+          "imageAlt": "The public portfolio of a student: a profile header with initials, name, role badge and short introduction, below it the cards of the published works.",
+          "imageCaption": "The public portfolio of a person."
+        },
+        "account": {
+          "title": "Creating an account and signing in",
+          "text": "A portfolio of your own needs an account. Registration takes three steps and requires an address of Hochschule Bremen; its domain also determines the role. There is no role selection.",
+          "steps": [
+            "Step 1: first name, last name, private email address as the login name, university address and password. The password is at least twelve characters long.",
+            "Steps 2 and 3: one six-digit code each, one sent to the private address and one to the university address.",
+            "You always sign in with the private address, never with the university address.",
+            "“Forgot password” on the sign-in page sends a six-digit code to the private address; with that code and a new password the account can be opened again."
+          ],
+          "imageAlt": "The first step of registration: a card with progress dots and the fields for first name, last name, private email address, university address and password.",
+          "imageCaption": "Step 1 of registration."
+        },
+        "appearance": {
+          "title": "Language, light and dark",
+          "text": "On the right of the header sit the controls that belong to presentation: the question mark leads to this page, DE or EN switches the language, the moon or sun icon switches between light and dark mode.",
+          "steps": [
+            "Language and mode stay in the same place at every window width. On narrow screens the question mark moves into the menu behind the three lines, because exactly one menu leads there.",
+            "Light or dark mode is remembered by the browser and still applies on your next visit.",
+            "The language choice is not stored: after a reload the interface is back in German.",
+            "A second way to this page sits in the footer, under “Platform”."
+          ],
+          "imageAlt": "The full-width header: on the left the Hochschule Bremen wordmark with the addition E-Portfolio, in the middle the navigation entries, on the right the question mark, the language code, the mode switch and the sign-in button.",
+          "imageCaption": "The header, here without being signed in."
+        },
+        "contact": {
+          "title": "Asking questions and reporting problems",
+          "text": "“Contact & support” accepts enquiries, deliberately also without signing in: the most common case is that someone cannot get in, and a form behind the sign-in does not help there.",
+          "steps": [
+            "Name, email address, category, subject and description are all required. A signed-in account finds name and address filled in, which does not make them optional.",
+            "The enquiry arrives in the administration area; the reply comes by email."
+          ],
+          "imageAlt": "The public contact form with the fields name, email address, category, subject and description as well as the send button.",
+          "imageCaption": "The contact form under “Contact & support”."
+        }
+      }
+    },
+    "students": {
+      "title": "Your portfolio and the editor",
+      "intro": "Every signed-in account keeps a portfolio of its own and can create, write and submit projects for review.",
+      "topics": {
+        "myPortfolio": {
+          "title": "My portfolio",
+          "text": "“My portfolio” lists all of your own work regardless of its state, next to your own profile card.",
+          "steps": [
+            "The bar above the cards filters by state: all, draft, submitted, approved, published, revision.",
+            "The pencil opens the editor while the work is in draft or revision. The bin only appears on your own drafts: deleting is done by the author alone and only in draft. Anyone involved as a project member leaves the project instead.",
+            "“New project” immediately creates a draft and opens it. Until it has a title it carries a placeholder.",
+            "“Edit profile” changes name, picture, short introduction (500 characters at most) and the password. Changing the private address additionally requires the current password and a code sent to the new address; until that is confirmed the old address remains the login name."
+          ],
+          "imageAlt": "The page “My portfolio”: a heading with the button “New project”, below it the state filter and your own project cards with pencil and bin; on the right the profile card with initials, name, role badge, private address and the button “Edit profile”.",
+          "imageCaption": "Your own overview under “My portfolio”."
+        },
+        "metadata": {
+          "title": "Details of a project",
+          "text": "Besides its content, every work carries details that determine how it is found and who is responsible for it. They live in the metadata form, reachable from the editor through “Edit metadata”.",
+          "steps": [
+            "Seven details are required as soon as you submit: project type, faculty, degree programme, degree, category, semester and the responsible editor.",
+            "Project members are added through the person search; the function label beside them is optional.",
+            "The project side chooses the responsible editor itself, that is the author and the project members, while the work is in draft or revision. From submission onwards only the administration assigns.",
+            "Anyone who belongs to the project side is not offered for selection: nobody takes on their own work editorially.",
+            "Tags are free text, are created when you save and are limited to five per work."
+          ],
+          "imageAlt": "The metadata form of a project with a cover image area, title, summary and the select fields for project type, faculty, degree programme, degree, category and semester.",
+          "imageCaption": "The metadata form of a draft."
+        },
+        "workspace": {
+          "title": "The writing surface",
+          "text": "The editor opens through the pencil on a card. The toolbar sits at the top, the content in the middle with cover image, title and summary, and the details of the project on the right.",
+          "steps": [
+            "Editing is only possible in the states draft and revision. In any other state the surface is read-only and a message names the reason.",
+            "Only one person edits at a time. The lock covers every writing view of the work, including the metadata form: whoever has the metadata open also holds the editor. If someone else has the work open, the page says so with their name and the time.",
+            "Saving happens on its own, a little over a second after the last keystroke. The state is shown in the header.",
+            "“Preview” shows the work in its public view, “Print as PDF” produces the print version, and the button beside them inserts a table of contents or brings it up to date."
+          ],
+          "imageAlt": "The writing surface of the editor: at the top the toolbar with back, undo, redo and the formatting controls, below it cover image, title and the content; on the right the column with state, history and the project details.",
+          "imageCaption": "The editor with a draft."
+        },
+        "blocks": {
+          "title": "Inserting and moving blocks",
+          "text": "A contribution consists of blocks. There are two ways to insert one, both offering the same choice: the plus sign to the left of a block, and the slash at the beginning of an empty line.",
+          "steps": [
+            "Ten block types: image, gallery, video, audio, document, embed, formula, table, source code and divider.",
+            "Headings, paragraphs, lists and quotes are not created here but through the toolbar at the top; the table of contents through its own button in the header.",
+            "Blocks are moved with the handle beside them; by keyboard through Alt+F9, then the arrow keys, Enter drops the block and Escape puts it back.",
+            "A deleted block comes back in full with “Undo”, which is why deleting a block does not ask first."
+          ],
+          "imageAlt": "The editor with the insert bar open: a pill of eleven round buttons sits above the content, on the left the close cross, beside it the icons for image, gallery, video, audio, document, embed, formula, table, source code and divider.",
+          "imageCaption": "The insert bar at the plus sign; the slash offers the same choice."
+        },
+        "formatting": {
+          "title": "Formatting text",
+          "text": "The toolbar stays in the header at all times and acts on the current selection in the text.",
+          "steps": [
+            "On the left the block type menu: text and heading levels 1 to 6.",
+            "Then bold, italic, underline, strikethrough, inline code, superscript, subscript and the link.",
+            "Then bulleted list, numbered list, quote and alignment. Justified is blocked on a heading.",
+            "On the right text colour and highlight. The editor only ever applies one of the two: the second replaces the first. “Default” removes the formatting.",
+            "Alt+F10 moves the keyboard focus into the toolbar, Escape returns to the text."
+          ],
+          "imageAlt": "The header of the editor with the toolbar: back, undo, redo, the block type menu showing “Heading 1”, the character formats, lists, quote, alignment, text colour and highlight, and on the right “Preview” and “Submit”.",
+          "imageCaption": "The toolbar in the editor header."
+        },
+        "sidebar": {
+          "title": "State, history, details and comments",
+          "text": "Beside the writing surface sit the current state of the work, its history and two collapsible sections.",
+          "steps": [
+            "“History” lists every change of state with its time and the person, newest first.",
+            "“Project information” summarises the details and leads into the form through “Edit metadata”.",
+            "“Comments” shows the change requests from the editorial side and accepts replies. Internal editorial notes do not appear there."
+          ],
+          "imageAlt": "The editor sidebar: at the top the state badge “Draft” and the button “History”, below it the expanded section “Project information” with project type, faculty, degree programme, degree, semester, category, subject, project members, editors and tags, and at the bottom the collapsed section “Comments”.",
+          "imageCaption": "The editor sidebar."
+        },
+        "workflow": {
+          "title": "Submitting, withdrawing, revising",
+          "text": "A work passes through five states. What is possible at any moment depends on which one it is in.",
+          "steps": [
+            "Draft: editable and visible to the project side and the administration. “Submit” first leads to the metadata, because seven details are required there.",
+            "Submitted: no longer editable. “Withdraw” takes the work back to draft after a confirmation.",
+            "Revision: editable again. The editorial side has left change requests; you can only submit again once none of them is open. The project side marks them resolved itself, in the comment column.",
+            "Approved: cleared on the merits, but not public yet.",
+            "Published: visible to everyone, including people who are not signed in."
+          ]
+        }
+      }
+    },
+    "editors": {
+      "title": "Editorial work: review, comment, release",
+      "intro": "Editors review the works assigned to them and decide whether to release them. An account with the administrator role may do the same, even without an assignment.",
+      "topics": {
+        "list": {
+          "title": "My reviews",
+          "text": "“My reviews” lists exactly those works for which you are entered as the editor. Drafts never appear there: a work becomes visible only when it is submitted.",
+          "steps": [
+            "Four counters at the top: submitted, approved, published, revision.",
+            "Below them the search field and three filters for degree programme, semester and subject, plus the state bar.",
+            "In the table the menu at the end of a row leads to “Review”, “Nominate for top 10” and “Give up assignment”."
+          ],
+          "imageAlt": "The page “My reviews”: four counter tiles for submitted, approved, published and revision, below them search field and filters, then the table with the columns project, students, degree programme, semester, subject and status.",
+          "imageCaption": "The editorial work list."
+        },
+        "open": {
+          "title": "Reviewing a work",
+          "text": "“Review” opens the work in review mode: on the left the content as readers see it, on the right the editorial column.",
+          "steps": [
+            "The switch at the top toggles between preview and review.",
+            "Below it sit the state badge and the “History” button with every change so far.",
+            "The content itself is not edited here; feedback goes through the comments."
+          ],
+          "imageAlt": "Review mode of a submitted work: on the left cover image, title and content, on the right the switch between preview and review, the state badge “Submitted”, “History” and the comment column.",
+          "imageCaption": "Review mode of a submitted work."
+        },
+        "comments": {
+          "title": "Notes, change requests and replies",
+          "text": "The comment column knows three kinds, and they differ not in appearance but in effect.",
+          "steps": [
+            "Reply: visible to everyone who may read the work. On a published work the comment list is therefore retrievable without signing in as well.",
+            "Note: for the editorial side and the administration only. It is not delivered to the project side at all.",
+            "Change request: also visible to everyone with read access, carrying the state “Open” or “Resolved”. The project side marks it resolved. While one is open the work cannot be submitted again.",
+            "Enter sends, Shift and Enter make a line break."
+          ],
+          "imageAlt": "The comment column of a work: a note on a yellow background with its author, the marking NOTE and a timestamp, below it the three buttons reply, note and change request as well as the input field with a character counter.",
+          "imageCaption": "The comment column in review mode."
+        },
+        "decide": {
+          "title": "Approving, publishing, sending back",
+          "text": "The decision is made through the menu on the state badge. Whatever is not possible right now stays visible and carries its reason; nothing disappears silently.",
+          "steps": [
+            "Approve: the work counts as cleared on the merits, but it is not public yet.",
+            "Publish: the work is visible to everyone, including people who are not signed in. After that it can only be taken back through “Request revision”, and only once it is no longer in the top 10 list; while it is held there the server rejects the step.",
+            "Request revision: a reason is required. It appears as a change request in the project side's editor.",
+            "Back to review: only out of revision, and only by the assigned editor or the administration. The same conditions as for submitting apply, that is no open change request and the seven required details.",
+            "Every one of these steps asks first and names the title of the work."
+          ],
+          "imageAlt": "Review mode with the menu on the state badge open: the possible targets sit below one another, impossible ones are dimmed and carry a line of reasoning.",
+          "imageCaption": "The menu for changing the state."
+        },
+        "fourEyes": {
+          "title": "Four eyes: nobody releases their own work",
+          "text": "Approve and publish are blocked as soon as you belong to the project side yourself, that is as author or project member. This holds even when the work is assigned to you editorially, and it holds for every role including administration.",
+          "steps": [
+            "Sending a work back for revision is not affected.",
+            "The block follows current membership, not history: leaving the project members releases you from it, but you are then no longer named as a contributor either.",
+            "Giving up your own assignment as the last assigned editor sends the work back to draft. That is only possible while the work is submitted or in revision."
+          ]
+        },
+        "nominate": {
+          "title": "Proposing a work for the top 10",
+          "text": "Published works can be proposed for the top 10 list on the home page. The administration decides on inclusion.",
+          "steps": [
+            "You propose through the menu in the “My reviews” table, choosing a tier: place 1, places 2 to 5, or places 6 to 10. The tier is an assessment, not a promise of a place.",
+            "At most one proposal is open per work, and a work that is already in the list cannot be proposed again.",
+            "Your own proposals are listed on the same page and can be filtered by state: open, accepted, rejected, withdrawn.",
+            "An open proposal can be withdrawn."
+          ]
+        }
+      }
+    },
+    "admins": {
+      "title": "Administration area",
+      "intro": "The administration area gathers everything that concerns the platform as a whole. It is reachable through the entry “Administration” in the header.",
+      "topics": {
+        "dashboard": {
+          "title": "Dashboard and section navigation",
+          "text": "The entry point shows where work is waiting: the number of works per state, the user statistics by role and account state, and the number of open top 10 proposals.",
+          "steps": [
+            "The section navigation on the left holds nine entries, from dashboard to home page texts.",
+            "The entry “Support” carries the number of open enquiries, so it is visible without a click."
+          ],
+          "imageAlt": "The dashboard of the administration area: on the left the section navigation with dashboard, projects, top 10, users, categories, semesters, study structure, support and home page texts, on the right tiles with the number of all projects per state and below them the user statistics as ring charts.",
+          "imageCaption": "The entry point of the administration area."
+        },
+        "projects": {
+          "title": "Managing all projects",
+          "text": "The only view that also lists other people's drafts. It filters across all states and allows interventions nobody else has.",
+          "steps": [
+            "Select several rows and publish them together or send them back for revision.",
+            "Assign the responsible editor, also after the fact.",
+            "Delete a work. That cannot be undone, which is why it asks first."
+          ],
+          "imageAlt": "Project management in the administration area: search field and filters above a table with checkboxes, title, author, faculty, state and last change.",
+          "imageCaption": "Project management."
+        },
+        "users": {
+          "title": "Accounts and roles",
+          "text": "Create accounts, change roles, deactivate accounts and reset passwords. The role of an account can be changed here and only here.",
+          "steps": [
+            "The role determines the rights: students write, editors review, administrators manage and may additionally do both.",
+            "A deactivated account can no longer sign in.",
+            "A reset password forces a change at the next sign-in."
+          ],
+          "imageAlt": "User management: search field and filters above a table with name, address, role, account state and a menu per row, and at the top right the button for creating an account.",
+          "imageCaption": "User management."
+        },
+        "masterData": {
+          "title": "Master data: categories, semesters, study structure",
+          "text": "These three lists feed the select fields in the metadata form and the filter groups in the project library. What is not listed here cannot be chosen there.",
+          "steps": [
+            "Study structure: faculties, degree programmes and modules, hierarchically in three columns.",
+            "Categories can be merged when two of them mean the same thing; the works concerned move along.",
+            "Semesters carry an active switch and an order of their own.",
+            "Anything a work still refers to cannot be deleted. The active switch is there for that case: it removes the entry from the select fields without touching the existing data."
+          ],
+          "imageAlt": "The study structure in the administration area: three columns side by side for faculties, degree programmes and modules, each with its own list and its own button for adding an entry.",
+          "imageCaption": "The study structure as an example of master data."
+        },
+        "top10": {
+          "title": "Curating the top 10",
+          "text": "This is where it is decided which works appear on the home page and in which order.",
+          "steps": [
+            "Accept or reject the proposals from the editorial side.",
+            "Ten places, reorderable; every change takes effect immediately.",
+            "The change log records who changed what and when."
+          ],
+          "imageAlt": "Top 10 management: on the left the ten places with the works filling them and arrows for reordering, beside them the open editorial proposals with their tier and the decision.",
+          "imageCaption": "Top 10 management."
+        },
+        "support": {
+          "title": "Support enquiries",
+          "text": "The enquiries from the public contact form arrive here, with category, sender and state.",
+          "steps": [
+            "Three states: open, in progress, resolved.",
+            "Replies go by email; afterwards the entry can be closed or deleted."
+          ],
+          "imageAlt": "Management of support enquiries: filters by state and category above a list of enquiries with subject, sender, category, time and state.",
+          "imageCaption": "The incoming support enquiries."
+        },
+        "siteContent": {
+          "title": "Home page texts",
+          "text": "Fifteen pieces of text on the public home page can be maintained here, separately per language.",
+          "steps": [
+            "The opening section with its overline, two heading lines, introduction and the call to action leading to the top 10 list, which makes five places.",
+            "Overline, heading and explanation above the top 10 list, which makes three.",
+            "The closing section with overline, heading, text, the three figure labels and the link into the project library, which makes seven.",
+            "Anything left empty here falls back to the text shipped with the application.",
+            "All other texts of the application cannot be maintained editorially, this help page included."
+          ],
+          "imageAlt": "The maintenance form for the home page texts: input fields listed one below the other per piece of text, each separated into a German and an English version.",
+          "imageCaption": "Maintaining the home page texts."
+        }
+      }
     }
   }
 }

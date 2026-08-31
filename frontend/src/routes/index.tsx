@@ -8,6 +8,7 @@ import AccessibilityPage from "@/features/accessibility/AccessibilityPage"
 import ChangePasswordPage from "@/features/auth/ChangePasswordPage"
 import ComponentGalleryPage from "@/features/token-gallery/ComponentGalleryPage"
 import ForgotPasswordPage from "@/features/auth/ForgotPasswordPage"
+import HelpPage from "@/features/help/HelpPage"
 import HomePage from "@/features/home/HomePage"
 import LoginPage from "@/features/auth/LoginPage"
 import MyPortfolioPage from "@/features/portfolio/MyPortfolioPage"
@@ -125,6 +126,15 @@ export const routes: RouteObject[] = [
            Name und Adresse vor; der Endpoint ist derselbe. */
         path: "/support",
         element: <SupportPage />,
+      },
+      {
+        /* Die Hilfeseite steht ebenfalls offen (KAN-93). Sie ist eine
+           Textseite ohne Serverdaten, und ihr erster Abschnitt richtet sich
+           an Personen ohne Konto: PUBLIC ist der Zustand "nicht angemeldet"
+           (§2.1). Welche Bereiche darueber hinaus erscheinen, entscheidet
+           die Seite selbst aus useAuth(). */
+        path: "/help",
+        element: <HelpPage />,
       },
       {
         element: <RequireAuth />,

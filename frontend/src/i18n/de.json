@@ -6,11 +6,11 @@
     "status": {
       "title": "Stand der Prüfung",
       "dateLabel": "Geprüft am:",
-      "date": "29. August 2026",
+      "date": "31. August 2026",
       "targetLabel": "Zielniveau:",
       "target": "WCAG 2.2, Stufe AA",
       "resultLabel": "Ergebnis:",
-      "result": "32 Seiten mit eigenem Inhalt hell geprüft, 31 davon zusätzlich dunkel; die Seite „Projekt anlegen\" legt beim Aufruf einen Entwurf an und läuft deshalb nur einmal je Lauf. Kein verbleibender Verstoß der Stufen A und AA außerhalb der unten genannten Grenzen."
+      "result": "36 Seiten mit eigenem Inhalt geprüft, in hell und in dunkel, zusammen 73 Durchgänge. Zwei Abweichungen von der einfachen Rechnung: die Hilfeseite läuft je Modus zweimal, weil sie ohne Anmeldung und als Admin Verschiedenes zeigt, und die Seite „Projekt anlegen“ legt beim Aufruf einen Entwurf an und läuft deshalb nur einmal je Lauf. Kein verbleibender Verstoß der Stufen A und AA außerhalb der unten genannten Grenzen."
     },
     "method": {
       "title": "Verfahren",
@@ -27,11 +27,11 @@
       "title": "Geprüfte Bereiche",
       "intro": "Der Durchgang umfasst alle Seiten der Anwendung:",
       "items": [
-        "die öffentlichen Ansichten: Startseite, Projektbibliothek, Projektdetails, öffentliche Portfolios, Kontakt und Support, diese Seite, die Fehlerseite und die Meldung bei fehlendem Zugriff,",
+        "die öffentlichen Ansichten: Startseite, Projektbibliothek, Projektdetails, öffentliche Portfolios, Kontakt und Support, Hilfe und Dokumentation, diese Seite, die Fehlerseite und die Meldung bei fehlendem Zugriff,",
         "Anmeldung, Registrierung in vier Schritten und die Passwortseiten,",
         "die angemeldeten Ansichten: eigenes Portfolio, Profil bearbeiten, Projekt anlegen und Projekt-Metadaten,",
         "die Redaktion: eigene Reviews und der Review-Modus,",
-        "die Administrationsseite mit Übersicht, Projekten, Konten, Kategorien, Semestern, Studienstruktur, Top-10-Verwaltung samt Protokoll und Anfragen,",
+        "die Administrationsseite mit Übersicht, Projekten, Konten, Kategorien, Semestern, Studienstruktur, Top-10-Verwaltung samt Protokoll, Anfragen und Startseitentexten,",
         "den blockbasierten Editor als Ganzes."
       ]
     },
@@ -124,7 +124,8 @@
       "logout": "Abmelden",
       "profile": "Profil",
       "openMenu": "Menü öffnen",
-      "support": "Kontakt & Support"
+      "support": "Kontakt & Support",
+      "help": "Hilfe & Dokumentation"
     },
     "footer": {
       "imprint": "Impressum",
@@ -138,7 +139,8 @@
         "platform": "Plattform",
         "legal": "Rechtliches"
       },
-      "support": "Kontakt & Support"
+      "support": "Kontakt & Support",
+      "help": "Hilfe & Dokumentation"
     },
     "language": {
       "switchTo": {
@@ -2155,6 +2157,345 @@
       "OPEN": "Offen",
       "IN_PROGRESS": "In Bearbeitung",
       "RESOLVED": "Erledigt"
+    }
+  },
+  "help": {
+    "title": "Hilfe & Dokumentation",
+    "intro": "Wie das E-Portfolio bedient wird: Arbeiten finden und lesen, eigene Projekte schreiben und einreichen, redaktionell prüfen und die Plattform verwalten.",
+    "roleHint": "Diese Seite zeigt die Bereiche, die zu Ihrem Zugang passen. Ohne Anmeldung steht hier, was auch ohne Konto möglich ist; ein angemeldetes Konto sieht zusätzlich den Editor, eine Redakteurin oder ein Redakteur die Redaktion, die Administration alles.",
+    "imageNote": "Die Abbildungen sind Aufnahmen aus der laufenden Anwendung mit Beispieldaten. Sie zeigen die englische Fassung der Oberfläche im hellen Modus, auch wenn Sie gerade Deutsch oder den dunklen Modus benutzen; Anordnung und Bedienung sind dieselben.",
+    "contents": "Auf dieser Seite",
+    "feedback": {
+      "text": "Bleibt eine Frage offen oder funktioniert etwas nicht, erreichen Sie das Administrationsteam über das Kontaktformular:",
+      "link": "Kontakt & Support"
+    },
+    "visitors": {
+      "title": "Portal entdecken",
+      "intro": "Veröffentlichte Arbeiten kann jede Person lesen, auch ohne Konto. Ein Konto braucht erst, wer selbst etwas schreiben will.",
+      "topics": {
+        "browse": {
+          "title": "Projekte finden und filtern",
+          "text": "Der Eintrag „Projekte“ führt alle veröffentlichten studentischen Arbeiten. Das Suchfeld greift auf Titel, Kurzbeschreibung, den Namen der Autorin oder des Autors und die Schlagwörter; die Namen von Projektmitgliedern trifft es nicht. Die Filterspalte links grenzt die Liste weiter ein.",
+          "steps": [
+            "Sechs Filtergruppen: Fakultät, Studiengang, Abschluss, Semester, Art der Arbeit und Kategorie. In jeder Gruppe lassen sich mehrere Werte gleichzeitig ankreuzen.",
+            "Suche, Filter und Seitenzahl stehen in der Adresse. Ein Ergebnis lässt sich damit weitergeben, und der Zurück-Knopf des Browsers führt in die vorige Auswahl.",
+            "Über der Liste steht, wie viele Arbeiten die aktuelle Auswahl trifft."
+          ],
+          "imageAlt": "Die Seite „Studentische Projekte“: links die Filterspalte mit der aufgeklappten Gruppe „Fakultät/Institution“ und fünf Kästchen, rechts das Suchfeld, die Trefferzahl und Projektkacheln mit Titelbild, Fakultätskürzel, Art der Arbeit, Kurzbeschreibung, Semester und Reaktionszähler.",
+          "imageCaption": "Die Projektbibliothek unter „Projekte“."
+        },
+        "projectPage": {
+          "title": "Eine Projektseite lesen",
+          "text": "Die Detailseite zeigt den Beitrag so, wie die Autorin oder der Autor ihn gesetzt hat: Titelbild, Titel, Kurzbeschreibung und darunter die Inhaltsblöcke. Es gibt fünfzehn Arten: Überschrift, Absatz, Aufzählung, Zitat, Quelltext, Trenner, Tabelle, Bild, Galerie, Video, Audio, Dokument, Einbettung, Formel und Inhaltsverzeichnis.",
+          "steps": [
+            "Neben dem Beitrag stehen die Angaben zur Arbeit: Studiengang, Semester, Kategorie, Fach und die Beteiligten.",
+            "Die Hand unter dem Beitrag ist die Reaktion, das Gegenstück zum Applaus. Sie steht angemeldeten Konten offen und lässt sich zurücknehmen.",
+            "Das Druckersymbol am Titelbild erzeugt eine PDF-Fassung über den Druckdialog des Browsers."
+          ],
+          "imageAlt": "Die Detailansicht einer veröffentlichten Arbeit: großes Titelbild mit Druckersymbol, darunter Titel, Kurzbeschreibung und der Beitrag; rechts eine Spalte mit den Angaben zur Arbeit.",
+          "imageCaption": "Detailansicht einer veröffentlichten Arbeit."
+        },
+        "top10": {
+          "title": "Die Top 10 des Jahres",
+          "text": "Auf der Startseite steht unter dem Einstieg die kuratierte Top-10-Liste. Redakteurinnen und Redakteure schlagen Arbeiten dafür vor, über die Aufnahme und die Reihenfolge entscheidet die Administration.",
+          "steps": [
+            "Die Reihenfolge ist gesetzt und nicht errechnet: sie spiegelt weder Klickzahlen noch Reaktionen.",
+            "Jeder Platz führt auf die Projektseite der Arbeit."
+          ],
+          "imageAlt": "Der Abschnitt „Top 10“ auf der Startseite: eine Überschrift, ein erläuternder Satz und darunter Karten der ausgewählten Arbeiten mit Platznummer und Titelbild.",
+          "imageCaption": "Die Top-10-Liste auf der Startseite."
+        },
+        "portfolio": {
+          "title": "Das Portfolio einer Person",
+          "text": "Über den Namen an einer Arbeit gelangt man auf das öffentliche Portfolio der Person: Kurzvorstellung und alle veröffentlichten Arbeiten auf einer Seite.",
+          "steps": [
+            "Sichtbar sind ausschließlich veröffentlichte Arbeiten. Entwürfe und eingereichte Beiträge bleiben verborgen.",
+            "Die Hochschuladresse einer Person erscheint nirgends öffentlich. Die private Adresse dagegen gehört zum öffentlichen Profil und ist damit auch ohne Anmeldung zu sehen."
+          ],
+          "imageAlt": "Das öffentliche Portfolio einer studierenden Person: Profilkopf mit Initialen, Name, Rollenkennzeichen und Kurzvorstellung, darunter die Kacheln der veröffentlichten Arbeiten.",
+          "imageCaption": "Das öffentliche Portfolio einer Person."
+        },
+        "account": {
+          "title": "Konto anlegen und anmelden",
+          "text": "Für ein eigenes Portfolio braucht es ein Konto. Die Registrierung läuft in drei Schritten und setzt eine Adresse der Hochschule Bremen voraus; aus deren Domäne ergibt sich zugleich die Rolle. Eine Rollenauswahl gibt es nicht.",
+          "steps": [
+            "Schritt 1: Vorname, Nachname, private E-Mail-Adresse als Anmeldename, Hochschuladresse und Passwort. Das Passwort ist mindestens zwölf Zeichen lang.",
+            "Schritt 2 und 3: je ein sechsstelliger Code, einer an die private und einer an die Hochschuladresse.",
+            "Angemeldet wird immer mit der privaten Adresse, nie mit der Hochschuladresse.",
+            "„Passwort vergessen“ auf der Anmeldeseite schickt einen sechsstelligen Code an die private Adresse; mit ihm und einem neuen Passwort lässt sich das Konto wieder öffnen."
+          ],
+          "imageAlt": "Der erste Schritt der Registrierung: eine Karte mit Fortschrittspunkten und den Feldern für Vorname, Nachname, private E-Mail-Adresse, Hochschuladresse und Passwort.",
+          "imageCaption": "Schritt 1 der Registrierung."
+        },
+        "appearance": {
+          "title": "Sprache, Hell und Dunkel",
+          "text": "Rechts in der Kopfleiste stehen die Bedienelemente, die zur Darstellung gehören: das Fragezeichen führt auf diese Seite, DE beziehungsweise EN wechselt die Sprache, das Mond- oder Sonnensymbol den hellen und dunklen Modus.",
+          "steps": [
+            "Sprache und Modus stehen in jeder Fensterbreite an derselben Stelle. Das Fragezeichen weicht auf schmalen Bildschirmen ins Menü hinter den drei Strichen aus, weil dort genau ein Menü führt.",
+            "Der helle oder dunkle Modus wird im Browser gemerkt und gilt beim nächsten Besuch weiter.",
+            "Die Sprachwahl wird nicht gespeichert: nach einem Neuladen steht die Oberfläche wieder auf Deutsch.",
+            "Ein zweiter Weg zu dieser Seite steht in der Fußzeile, unter „Plattform“."
+          ],
+          "imageAlt": "Die Kopfleiste in ganzer Breite: links die Bildmarke der Hochschule Bremen mit dem Zusatz E-Portfolio, mittig die Navigationseinträge, rechts das Fragezeichen, das Sprachkürzel, der Moduswechsel und die Anmeldung.",
+          "imageCaption": "Die Kopfleiste, hier ohne Anmeldung."
+        },
+        "contact": {
+          "title": "Fragen stellen und Probleme melden",
+          "text": "„Kontakt & Support“ nimmt Anfragen entgegen, ausdrücklich auch ohne Anmeldung: der häufigste Fall ist, dass jemand nicht hineinkommt, und ein Formular hinter der Anmeldung hilft genau dort nicht.",
+          "steps": [
+            "Name, E-Mail-Adresse, Kategorie, Betreff und Beschreibung sind Pflicht. Ein angemeldetes Konto findet Name und Adresse vorbelegt; freiwillig sind sie damit nicht.",
+            "Die Anfrage läuft auf der Administrationsseite auf; geantwortet wird per E-Mail."
+          ],
+          "imageAlt": "Das öffentliche Kontaktformular mit den Feldern Name, E-Mail-Adresse, Kategorie, Betreff und Beschreibung sowie der Schaltfläche zum Absenden.",
+          "imageCaption": "Das Kontaktformular unter „Kontakt & Support“."
+        }
+      }
+    },
+    "students": {
+      "title": "Eigenes Portfolio und der Editor",
+      "intro": "Jedes angemeldete Konto führt ein eigenes Portfolio und kann Projekte anlegen, schreiben und zur Prüfung einreichen.",
+      "topics": {
+        "myPortfolio": {
+          "title": "Mein Portfolio",
+          "text": "„Mein Portfolio“ führt alle eigenen Arbeiten, unabhängig von ihrem Stand, dazu die eigene Profilkarte.",
+          "steps": [
+            "Die Leiste über den Kacheln filtert nach Stand: Alle, Entwurf, Eingereicht, Genehmigt, Veröffentlicht, Überarbeitung.",
+            "Der Stift öffnet den Editor, solange die Arbeit im Entwurf oder in der Überarbeitung steht. Der Papierkorb erscheint nur an eigenen Entwürfen: gelöscht wird allein von der Autorin oder dem Autor und allein im Entwurf. Wer als Projektmitglied beteiligt ist, verlässt das Projekt stattdessen.",
+            "„Neues Projekt“ legt sofort einen Entwurf an und öffnet ihn. Bis der Titel steht, trägt er einen Platzhalter.",
+            "„Profil bearbeiten“ ändert Name, Bild, Kurzvorstellung (höchstens 500 Zeichen) und das Passwort. Ein Wechsel der privaten Adresse verlangt zusätzlich das aktuelle Passwort und einen Code an die neue Adresse; bis der bestätigt ist, gilt die alte Adresse als Anmeldename."
+          ],
+          "imageAlt": "Die Seite „Mein Portfolio“: Überschrift mit der Schaltfläche „Neues Projekt“, darunter die Standsleiste und die eigenen Projektkacheln mit Stift und Papierkorb; rechts die Profilkarte mit Initialen, Name, Rollenkennzeichen, privater Adresse und der Schaltfläche „Profil bearbeiten“.",
+          "imageCaption": "Die eigene Übersicht unter „Mein Portfolio“."
+        },
+        "metadata": {
+          "title": "Angaben zum Projekt",
+          "text": "Neben dem Inhalt trägt jede Arbeit Angaben, aus denen Auffindbarkeit und Zuständigkeit folgen. Sie stehen im Metadatenformular, erreichbar aus dem Editor über „Metadaten bearbeiten“.",
+          "steps": [
+            "Sieben Angaben sind Pflicht, sobald eingereicht wird: Art der Arbeit, Fakultät, Studiengang, Abschluss, Kategorie, Semester und die zuständige Redaktion.",
+            "Projektmitglieder kommen über die Personensuche hinzu; die Funktionsbezeichnung daneben ist freiwillig.",
+            "Die zuständige Redaktion wählt die Projektseite selbst, also die Autorin oder der Autor und die Projektmitglieder, solange die Arbeit im Entwurf oder in der Überarbeitung steht. Ab dem Einreichen weist nur noch die Administration zu.",
+            "Wer selbst zur Projektseite gehört, steht dabei nicht zur Auswahl: niemand weist sich die eigene Arbeit als Redaktion zu.",
+            "Schlagwörter sind freier Text, entstehen beim Speichern und sind auf fünf je Arbeit begrenzt."
+          ],
+          "imageAlt": "Das Metadatenformular eines Projekts mit Titelbildfläche, Titel, Kurzbeschreibung und den Auswahlfeldern für Art der Arbeit, Fakultät, Studiengang, Abschluss, Kategorie und Semester.",
+          "imageCaption": "Das Metadatenformular eines Entwurfs."
+        },
+        "workspace": {
+          "title": "Die Schreibfläche",
+          "text": "Der Editor öffnet sich über den Stift an einer Kachel. Oben liegt die Werkzeugleiste, in der Mitte der Beitrag mit Titelbild, Titel und Kurzbeschreibung, rechts die Angaben zum Projekt.",
+          "steps": [
+            "Bearbeitet wird nur in den Ständen Entwurf und Überarbeitung. In jedem anderen Stand ist die Fläche schreibgeschützt, und eine Meldung nennt den Grund.",
+            "Es bearbeitet immer nur eine Person zugleich. Die Sperre gilt für jede Schreibansicht der Arbeit, also auch für das Metadatenformular: wer die Metadaten offen hat, hält damit zugleich den Editor. Hat jemand anderes die Arbeit offen, sagt die Seite das mit Namen und Uhrzeit.",
+            "Gespeichert wird von selbst, gut eine Sekunde nach der letzten Eingabe. Der Stand steht in der Kopfzeile.",
+            "„Vorschau“ zeigt den Beitrag in der öffentlichen Ansicht, „Als PDF drucken“ erzeugt die Druckfassung, und die Schaltfläche daneben fügt ein Inhaltsverzeichnis ein oder bringt es auf den neuesten Stand."
+          ],
+          "imageAlt": "Die Schreibfläche des Editors: oben die Werkzeugleiste mit Zurück, Rückgängig, Wiederholen und den Auszeichnungen, darunter Titelbild, Titel und der Beitrag; rechts die Spalte mit Stand, Historie und den Projektangaben.",
+          "imageCaption": "Der Editor mit einem Entwurf."
+        },
+        "blocks": {
+          "title": "Blöcke einfügen und verschieben",
+          "text": "Ein Beitrag besteht aus Blöcken. Zum Einfügen gibt es zwei Wege mit derselben Auswahl: das Pluszeichen links am Block und den Schrägstrich am Anfang einer leeren Zeile.",
+          "steps": [
+            "Zehn Blocktypen: Bild, Galerie, Video, Audio, Dokument, Einbettung, Formel, Tabelle, Quelltext und Trenner.",
+            "Überschrift, Absatz, Aufzählung und Zitat entstehen nicht hier, sondern über die Werkzeugleiste oben; das Inhaltsverzeichnis über die eigene Schaltfläche in der Kopfzeile.",
+            "Verschoben wird mit dem Griff neben dem Block; mit der Tastatur über Alt+F9, dann die Pfeiltasten, Enter legt ab und Escape stellt zurück.",
+            "Ein gelöschter Block kommt mit „Rückgängig“ vollständig zurück; deshalb fragt das Löschen eines Blocks nicht nach."
+          ],
+          "imageAlt": "Der Editor mit geöffneter Einfügeleiste: eine Pille aus elf runden Schaltflächen liegt über dem Beitrag, links das Schließen-Kreuz, daneben die Zeichen für Bild, Galerie, Video, Audio, Dokument, Einbettung, Formel, Tabelle, Quelltext und Trenner.",
+          "imageCaption": "Die Einfügeleiste am Pluszeichen; der Schrägstrich zeigt dieselbe Auswahl."
+        },
+        "formatting": {
+          "title": "Text auszeichnen",
+          "text": "Die Werkzeugleiste steht dauerhaft in der Kopfzeile und wirkt auf die aktuelle Auswahl im Text.",
+          "steps": [
+            "Links das Blocktyp-Menü: Text und die Überschriftenebenen 1 bis 6.",
+            "Danach fett, kursiv, unterstrichen, durchgestrichen, Quelltext, hochgestellt, tiefgestellt und der Link.",
+            "Danach Aufzählung, Nummerierung, Zitat und die Ausrichtung. Blocksatz ist an einer Überschrift gesperrt.",
+            "Rechts Textfarbe und Hervorhebung. Der Editor setzt immer nur eine von beiden: die zweite ersetzt die erste. „Standard“ nimmt die Auszeichnung zurück.",
+            "Alt+F10 springt mit der Tastatur in die Leiste, Escape führt in den Text zurück."
+          ],
+          "imageAlt": "Die Kopfzeile des Editors mit der Werkzeugleiste: Zurück, Rückgängig, Wiederholen, das Blocktyp-Menü mit „Heading 1“, die Zeichenauszeichnungen, Listen, Zitat, Ausrichtung, Textfarbe und Hervorhebung, rechts „Vorschau“ und „Einreichen“.",
+          "imageCaption": "Die Werkzeugleiste in der Kopfzeile des Editors."
+        },
+        "sidebar": {
+          "title": "Stand, Historie, Angaben und Kommentare",
+          "text": "Neben der Schreibfläche stehen der aktuelle Stand der Arbeit, die Historie und zwei aufklappbare Bereiche.",
+          "steps": [
+            "„Historie“ listet jeden Standwechsel mit Zeitpunkt und Person, der jüngste zuerst.",
+            "„Projektinformationen“ fasst die Angaben zusammen und führt über „Metadaten bearbeiten“ ins Formular.",
+            "„Kommentare“ zeigt die Änderungswünsche der Redaktion und nimmt Antworten entgegen. Interne Notizen der Redaktion erscheinen dort nicht."
+          ],
+          "imageAlt": "Die Seitenleiste des Editors: oben die Standspille „Draft“ und die Schaltfläche „Historie“, darunter der aufgeklappte Bereich „Projektinformationen“ mit Art der Arbeit, Fakultät, Studiengang, Abschluss, Semester, Kategorie, Fach, Projektmitgliedern, Redaktion und Schlagwörtern, ganz unten der zugeklappte Bereich „Kommentare“.",
+          "imageCaption": "Die Seitenleiste des Editors."
+        },
+        "workflow": {
+          "title": "Einreichen, zurückziehen, überarbeiten",
+          "text": "Eine Arbeit durchläuft fünf Stände. Was gerade möglich ist, hängt davon ab, in welchem sie steht.",
+          "steps": [
+            "Entwurf: bearbeitbar und sichtbar für die Projektseite und die Administration. „Einreichen“ führt zuerst auf die Metadaten, weil dort sieben Angaben Pflicht sind.",
+            "Eingereicht: nicht mehr bearbeitbar. „Zurückziehen“ holt die Arbeit nach einer Rückfrage in den Entwurf zurück.",
+            "Überarbeitung: wieder bearbeitbar. Die Redaktion hat Änderungswünsche hinterlassen; erneut einreichen lässt sich erst, wenn keiner mehr offen steht. Auf „Erledigt“ setzt sie die Projektseite selbst, im Kommentarbereich.",
+            "Genehmigt: fachlich freigegeben, aber noch nicht öffentlich.",
+            "Veröffentlicht: für alle sichtbar, auch ohne Anmeldung."
+          ]
+        }
+      }
+    },
+    "editors": {
+      "title": "Redaktion: prüfen, kommentieren, freigeben",
+      "intro": "Redakteurinnen und Redakteure prüfen die Arbeiten, die ihnen zugewiesen sind, und entscheiden über die Freigabe. Ein Konto mit der Rolle Administration darf dasselbe, auch ohne Zuweisung.",
+      "topics": {
+        "list": {
+          "title": "Meine Reviews",
+          "text": "„Meine Reviews“ führt genau die Arbeiten, für die Sie als Redaktion eingetragen sind. Entwürfe erscheinen dort nie: sichtbar wird eine Arbeit erst mit dem Einreichen.",
+          "steps": [
+            "Oben vier Zähler: Eingereicht, Genehmigt, Veröffentlicht, Überarbeitung.",
+            "Darunter das Suchfeld und drei Filter nach Studiengang, Semester und Fach, dazu die Standsleiste.",
+            "In der Tabelle führt das Menü am Zeilenende zu „Überprüfen“, „Top 10 nominieren“ und „Zuweisung abgeben“."
+          ],
+          "imageAlt": "Die Seite „Meine Reviews“: vier Zählerkacheln für Eingereicht, Genehmigt, Veröffentlicht und Überarbeitung, darunter Suchfeld und Filter, dann die Tabelle mit den Spalten Projekt, Studierende, Studiengang, Semester, Fach und Status.",
+          "imageCaption": "Die Arbeitsliste der Redaktion."
+        },
+        "open": {
+          "title": "Eine Arbeit prüfen",
+          "text": "„Überprüfen“ öffnet den Beitrag im Review-Modus: links der Beitrag, wie ihn Leserinnen und Leser sehen, rechts die redaktionelle Spalte.",
+          "steps": [
+            "Der Schalter oben wechselt zwischen Vorschau und Review.",
+            "Darunter stehen der Stand als Pille und die Schaltfläche „Historie“ mit allen bisherigen Wechseln.",
+            "Der Beitrag selbst wird hier nicht bearbeitet; Rückmeldungen laufen über die Kommentare."
+          ],
+          "imageAlt": "Der Review-Modus einer eingereichten Arbeit: links Titelbild, Titel und Beitrag, rechts der Umschalter zwischen Vorschau und Review, die Standspille „Submitted“, „Historie“ und die Kommentarspalte.",
+          "imageCaption": "Der Review-Modus einer eingereichten Arbeit."
+        },
+        "comments": {
+          "title": "Notizen, Änderungswünsche und Antworten",
+          "text": "Die Kommentarspalte kennt drei Arten, und sie unterscheiden sich nicht im Aussehen, sondern in ihrer Wirkung.",
+          "steps": [
+            "Antwort: sichtbar für alle, die die Arbeit lesen dürfen. Bei einer veröffentlichten Arbeit ist die Kommentarliste damit auch ohne Anmeldung abrufbar.",
+            "Notiz: nur für die Redaktion und die Administration. Sie wird der Projektseite gar nicht erst ausgeliefert.",
+            "Änderungswunsch: ebenfalls für alle mit Lesezugriff sichtbar, mit dem Stand „Offen“ oder „Erledigt“. Auf „Erledigt“ setzt ihn die Projektseite. Solange einer offen steht, lässt sich die Arbeit nicht erneut einreichen.",
+            "Enter sendet, Umschalt und Enter machen einen Zeilenumbruch."
+          ],
+          "imageAlt": "Die Kommentarspalte einer Arbeit: eine gelb hinterlegte Notiz mit Verfasser, der Kennzeichnung NOTE und Zeitpunkt, darunter die drei Schaltflächen Antwort, Notiz und Änderungswunsch sowie das Eingabefeld mit Zeichenzähler.",
+          "imageCaption": "Die Kommentarspalte im Review-Modus."
+        },
+        "decide": {
+          "title": "Freigeben, veröffentlichen, zurückgeben",
+          "text": "Die Entscheidung fällt über das Menü an der Standspille. Was gerade nicht möglich ist, bleibt sichtbar und trägt den Grund; nichts verschwindet stillschweigend.",
+          "steps": [
+            "Genehmigen: die Arbeit gilt als fachlich freigegeben, öffentlich ist sie damit noch nicht.",
+            "Veröffentlichen: die Arbeit ist für alle sichtbar, auch ohne Anmeldung. Zurückholen lässt sie sich danach nur über „Zur Überarbeitung“, und das erst, wenn sie nicht mehr in der Top-10-Liste steht; solange sie dort gebunden ist, weist der Server den Schritt ab.",
+            "Zur Überarbeitung: eine Begründung ist Pflicht. Sie erscheint als Änderungswunsch im Editor der Projektseite.",
+            "Zurück in die Prüfung: nur aus der Überarbeitung heraus und nur durch die zugewiesene Redaktion oder die Administration. Es gelten dieselben Bedingungen wie beim Einreichen, also kein offener Änderungswunsch und die sieben Pflichtangaben.",
+            "Jeder dieser Schritte fragt vorher nach und nennt dabei den Titel der Arbeit."
+          ],
+          "imageAlt": "Der Review-Modus mit geöffnetem Menü an der Standspille: die möglichen Ziele stehen untereinander, nicht mögliche sind abgeblendet und tragen eine Begründungszeile.",
+          "imageCaption": "Das Menü zum Ändern des Standes."
+        },
+        "fourEyes": {
+          "title": "Vier Augen: die eigene Arbeit gibt niemand frei",
+          "text": "Genehmigen und Veröffentlichen sind gesperrt, sobald Sie selbst zur Projektseite gehören, also Autorin, Autor oder Projektmitglied sind. Das gilt auch dann, wenn Ihnen die Arbeit als Redaktion zugewiesen ist, und es gilt für jede Rolle einschließlich der Administration.",
+          "steps": [
+            "Die Rücknahme zur Überarbeitung ist davon nicht betroffen.",
+            "Die Sperre hängt an der Zugehörigkeit, nicht an der Vergangenheit: wer die Projektmitgliedschaft beendet, fällt aus ihr heraus, wird danach aber auch nicht mehr als Mitwirkende oder Mitwirkender genannt.",
+            "Wer die eigene Zuweisung abgibt und die letzte zugewiesene Redaktion war, schickt die Arbeit zurück in den Entwurf. Möglich ist das nur, solange die Arbeit eingereicht ist oder in der Überarbeitung steht."
+          ]
+        },
+        "nominate": {
+          "title": "Für die Top 10 vorschlagen",
+          "text": "Veröffentlichte Arbeiten lassen sich für die Top-10-Liste der Startseite vorschlagen. Über die Aufnahme entscheidet die Administration.",
+          "steps": [
+            "Vorgeschlagen wird über das Menü in der Tabelle „Meine Reviews“, mit einer Stufe: Platz 1, Plätze 2 bis 5 oder Plätze 6 bis 10. Die Stufe ist eine Einschätzung und keine Platzzusage.",
+            "Je Arbeit steht höchstens ein Vorschlag offen, und eine Arbeit, die bereits in der Liste steht, lässt sich nicht erneut vorschlagen.",
+            "Die eigenen Vorschläge stehen auf derselben Seite und lassen sich nach Stand filtern: offen, angenommen, abgelehnt, zurückgezogen.",
+            "Ein offener Vorschlag lässt sich zurücknehmen."
+          ]
+        }
+      }
+    },
+    "admins": {
+      "title": "Administrationsseite",
+      "intro": "Die Administrationsseite bündelt alles, was die Plattform als Ganzes betrifft. Sie ist über den Eintrag „Administration“ in der Kopfleiste erreichbar.",
+      "topics": {
+        "dashboard": {
+          "title": "Dashboard und Bereichsnavigation",
+          "text": "Der Einstieg zeigt, wo Arbeit wartet: die Zahl der Arbeiten je Stand, die Nutzerstatistik nach Rolle und Kontostand und die Zahl der offenen Top-10-Vorschläge.",
+          "steps": [
+            "Links steht die Bereichsnavigation mit neun Einträgen, von Dashboard bis Startseitentexte.",
+            "Am Eintrag „Support“ steht die Zahl der offenen Anfragen, damit sie ohne Klick zu sehen ist."
+          ],
+          "imageAlt": "Das Dashboard der Administrationsseite: links die Bereichsnavigation mit Dashboard, Projekte, Top 10, Nutzer, Kategorien, Semester, Studienstruktur, Support und Startseitentexte, rechts Kacheln mit der Zahl aller Projekte je Stand und darunter die Nutzerstatistik als Ringdiagramme.",
+          "imageCaption": "Der Einstieg in die Administrationsseite."
+        },
+        "projects": {
+          "title": "Alle Projekte verwalten",
+          "text": "Die einzige Ansicht, die auch fremde Entwürfe führt. Sie filtert über alle Stände hinweg und erlaubt Eingriffe, die sonst niemand hat.",
+          "steps": [
+            "Mehrere Zeilen auswählen und gemeinsam veröffentlichen oder zur Überarbeitung zurückgeben.",
+            "Die zuständige Redaktion zuweisen, auch nachträglich.",
+            "Eine Arbeit löschen. Das lässt sich nicht rückgängig machen und fragt deshalb nach."
+          ],
+          "imageAlt": "Die Projektverwaltung der Administrationsseite: Suchfeld und Filter über einer Tabelle mit Auswahlkästchen, Titel, Autorin oder Autor, Fakultät, Stand und letzter Änderung.",
+          "imageCaption": "Die Projektverwaltung."
+        },
+        "users": {
+          "title": "Konten und Rollen",
+          "text": "Konten anlegen, Rollen ändern, Konten deaktivieren und Passwörter zurücksetzen. Nur hier lässt sich die Rolle eines Kontos ändern.",
+          "steps": [
+            "Die Rolle entscheidet über die Rechte: Studierende schreiben, die Redaktion prüft, die Administration verwaltet und darf zusätzlich beides.",
+            "Ein deaktiviertes Konto kann sich nicht mehr anmelden.",
+            "Ein zurückgesetztes Passwort erzwingt beim nächsten Anmelden eine Änderung."
+          ],
+          "imageAlt": "Die Nutzerverwaltung: Suchfeld und Filter über einer Tabelle mit Name, Adresse, Rolle, Kontostand und einem Menü je Zeile, rechts oben die Schaltfläche zum Anlegen eines Kontos.",
+          "imageCaption": "Die Nutzerverwaltung."
+        },
+        "masterData": {
+          "title": "Stammdaten: Kategorien, Semester, Studienstruktur",
+          "text": "Diese drei Listen sind die Quelle der Auswahlfelder im Metadatenformular und der Filtergruppen in der Projektbibliothek. Was hier nicht steht, kann dort niemand wählen.",
+          "steps": [
+            "Studienstruktur: Fakultäten, Studiengänge und Module, hierarchisch in drei Spalten.",
+            "Kategorien lassen sich zusammenführen, wenn zwei dasselbe meinen; die betroffenen Arbeiten wandern mit.",
+            "Semester tragen einen Schalter für aktiv und eine eigene Reihenfolge.",
+            "Was an einer Arbeit hängt, lässt sich nicht löschen. Für diesen Fall gibt es den Schalter „aktiv“: er nimmt den Eintrag aus den Auswahlfeldern, ohne den Bestand anzufassen."
+          ],
+          "imageAlt": "Die Studienstruktur der Administrationsseite: drei nebeneinanderliegende Spalten für Fakultäten, Studiengänge und Module, jede mit eigener Liste und eigener Schaltfläche zum Anlegen.",
+          "imageCaption": "Die Studienstruktur als Beispiel für die Stammdaten."
+        },
+        "top10": {
+          "title": "Top 10 kuratieren",
+          "text": "Hier entscheidet sich, welche Arbeiten auf der Startseite stehen und in welcher Reihenfolge.",
+          "steps": [
+            "Vorschläge der Redaktion annehmen oder ablehnen.",
+            "Zehn Plätze, umsortierbar; jede Änderung wirkt sofort.",
+            "Das Änderungsprotokoll hält fest, wer wann was geändert hat."
+          ],
+          "imageAlt": "Die Top-10-Verwaltung: links die zehn Plätze mit den belegten Arbeiten und Pfeilen zum Umsortieren, daneben die offenen Vorschläge der Redaktion mit Stufe und Entscheidung.",
+          "imageCaption": "Die Top-10-Verwaltung."
+        },
+        "support": {
+          "title": "Support-Anfragen",
+          "text": "Die Anfragen aus dem öffentlichen Kontaktformular laufen hier auf, mit Kategorie, Absender und Stand.",
+          "steps": [
+            "Drei Stände: offen, in Arbeit, erledigt.",
+            "Geantwortet wird per E-Mail; danach lässt sich der Eintrag schließen oder löschen."
+          ],
+          "imageAlt": "Die Verwaltung der Support-Anfragen: Filter nach Stand und Kategorie über einer Liste der Anfragen mit Betreff, Absender, Kategorie, Zeitpunkt und Stand.",
+          "imageCaption": "Die eingegangenen Support-Anfragen."
+        },
+        "siteContent": {
+          "title": "Startseitentexte",
+          "text": "Fünfzehn Textstellen der öffentlichen Startseite lassen sich hier pflegen, je Sprache getrennt.",
+          "steps": [
+            "Der Einstieg mit Überzeile, zwei Überschriftenzeilen, Einleitung und der Handlungsaufforderung in die Top-10-Liste, das sind fünf Stellen.",
+            "Überzeile, Überschrift und Erläuterung über der Top-10-Liste, das sind drei.",
+            "Der Abschlussbereich mit Überzeile, Überschrift, Text, den drei Kennzahlbeschriftungen und dem Link in die Projektbibliothek, das sind sieben.",
+            "Was hier leer bleibt, zeigt die mitgelieferte Fassung.",
+            "Alle übrigen Texte der Anwendung sind nicht redaktionell pflegbar, auch diese Hilfeseite nicht."
+          ],
+          "imageAlt": "Die Pflegemaske der Startseitentexte: untereinanderliegende Eingabefelder je Textstelle, jeweils getrennt nach deutscher und englischer Fassung.",
+          "imageCaption": "Die Pflege der Startseitentexte."
+        }
+      }
     }
   }
 }

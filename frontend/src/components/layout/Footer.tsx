@@ -17,6 +17,14 @@ const footerGroups = [
     links: [
       { key: "projects", href: "/projects" },
       /*
+       * Der zweite Einstieg in die Hilfeseite (KAN-93). Der erste ist das
+       * Fragezeichen in der Kopfleiste; hier steht er noch einmal, weil das
+       * Symbol dort ohne Beschriftung auskommt und deshalb nicht jeder es
+       * als Hilfe liest. Vor "Kontakt & Support", denn die Reihenfolge ist
+       * die des Weges: erst nachlesen, dann fragen.
+       */
+      { key: "help", href: "/help" },
+      /*
        * Der zweite Einstieg ins Kontaktformular (KAN-85). Er steht
        * ausgerechnet in der Fusszeile, weil sie auch erreicht, wer sich
        * gerade nicht anmelden kann, und das ist der haeufigste

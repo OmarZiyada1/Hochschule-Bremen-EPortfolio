@@ -83,6 +83,23 @@ const CASES: Case[] = [
     appFrame: true,
   },
   { name: "Kontakt und Support", path: () => "/support", appFrame: true },
+  /*
+   * Die Hilfeseite (KAN-93) steht zweimal, und beide Faelle messen
+   * Verschiedenes. Ohne Anmeldung traegt sie genau einen Bereich und kein
+   * Sprungverzeichnis, das ist der schmale Fall. Als Admin traegt sie alle
+   * vier Bereiche, das Verzeichnis und 27 aufklappbare Punkte: erst dort ist
+   * die Ueberschriftenkette in voller Laenge zu sehen, und erst dort misst
+   * der Tastaturdurchgang mehr als sieben Schaltflaechen. Ein Fall allein
+   * haette die Seite zur Haelfte ungeprueft gelassen (Befund aus dem
+   * Review).
+   */
+  { name: "Hilfe und Dokumentation", path: () => "/help", appFrame: true },
+  {
+    name: "Hilfe und Dokumentation (Admin)",
+    path: () => "/help",
+    as: "admin",
+    appFrame: true,
+  },
   { name: "Impressum", path: () => "/imprint", appFrame: true },
   { name: "Datenschutz", path: () => "/privacy", appFrame: true },
   { name: "Barrierefreiheit", path: () => "/accessibility", appFrame: true },

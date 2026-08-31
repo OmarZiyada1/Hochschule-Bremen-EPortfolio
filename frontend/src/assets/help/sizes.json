@@ -1,0 +1,98 @@
+{
+  "project-list": {
+    "width": 2560,
+    "height": 1600
+  },
+  "project-detail": {
+    "width": 2560,
+    "height": 1600
+  },
+  "top10": {
+    "width": 2560,
+    "height": 1600
+  },
+  "public-portfolio": {
+    "width": 2560,
+    "height": 1600
+  },
+  "register": {
+    "width": 2560,
+    "height": 1600
+  },
+  "navigation": {
+    "width": 2560,
+    "height": 128
+  },
+  "support": {
+    "width": 2560,
+    "height": 1600
+  },
+  "my-portfolio": {
+    "width": 2560,
+    "height": 1600
+  },
+  "project-metadata": {
+    "width": 2560,
+    "height": 1600
+  },
+  "editor": {
+    "width": 2560,
+    "height": 1600
+  },
+  "editor-toolbar": {
+    "width": 2560,
+    "height": 242
+  },
+  "editor-insert": {
+    "width": 2560,
+    "height": 1600
+  },
+  "editor-sidebar": {
+    "width": 720,
+    "height": 1704
+  },
+  "review-list": {
+    "width": 2560,
+    "height": 1600
+  },
+  "review-detail": {
+    "width": 2560,
+    "height": 1600
+  },
+  "review-status-menu": {
+    "width": 2560,
+    "height": 1600
+  },
+  "review-comments": {
+    "width": 616,
+    "height": 768
+  },
+  "admin-dashboard": {
+    "width": 2560,
+    "height": 1600
+  },
+  "admin-projects": {
+    "width": 2560,
+    "height": 1600
+  },
+  "admin-users": {
+    "width": 2560,
+    "height": 1600
+  },
+  "admin-study-structure": {
+    "width": 2560,
+    "height": 1600
+  },
+  "admin-top10": {
+    "width": 2560,
+    "height": 1600
+  },
+  "admin-support": {
+    "width": 2560,
+    "height": 1600
+  },
+  "admin-site-content": {
+    "width": 2560,
+    "height": 1600
+  }
+}

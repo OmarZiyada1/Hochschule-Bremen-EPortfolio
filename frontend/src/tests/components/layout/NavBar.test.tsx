@@ -212,6 +212,67 @@ describe("NavBar", () => {
     ).toBeInTheDocument()
   })
 
+  /*
+   * Das Fragezeichen fuehrt auf die Hilfeseite (KAN-93). Es haengt nicht an
+   * den rollenabhaengigen Eintraegen, sondern steht in der Umschaltergruppe
+   * und damit in jeder Zugriffsebene und in jeder Fensterbreite. Geprueft
+   * wird deshalb ohne Nutzer und mit Nutzer.
+   */
+  it("fuehrt in jeder Zugriffsebene auf die Hilfeseite", () => {
+    const { unmount } = renderWithProviders(<NavBar links={publicLinks} />)
+
+    expect(
+      screen.getByRole("link", { name: "Hilfe & Dokumentation" })
+    ).toHaveAttribute("href", "/help")
+    unmount()
+
+    renderWithProviders(
+      <NavBar
+        links={studentLinks}
+        menuItems={studentMenu}
+        role="STUDENT"
+        user={{ firstName: "Mira", lastName: "Beispiel" }}
+      />
+    )
+    expect(
+      screen.getByRole("link", { name: "Hilfe & Dokumentation" })
+    ).toHaveAttribute("href", "/help")
+  })
+
+  /*
+   * Der Name steht als sr-only im Link und nicht nur im Tooltip: der
+   * erscheint auf einem Tippbildschirm gar nicht und haengt nachgemessen
+   * weder als aria-labelledby noch als aria-describedby am Ausloeser (Skill
+   * frontend-design, Abschnitt 4). Ein Text unter aria-hidden bestuende
+   * getByText anstandslos und wuerde trotzdem nie vorgelesen.
+   */
+  it("benennt das Fragezeichen erreichbar und nicht nur im Tooltip", () => {
+    renderWithProviders(<NavBar links={publicLinks} />)
+
+    const link = screen.getByRole("link", { name: "Hilfe & Dokumentation" })
+    const label = within(link).getByText("Hilfe & Dokumentation")
+    expect(label).toHaveClass("sr-only")
+    expect(label.closest("[aria-hidden]")).toBeNull()
+  })
+
+  /*
+   * Unterhalb von lg ist das Symbol ausgeblendet und der Weg fuehrt ueber das
+   * Sheet: es ist ein Navigationsziel und kein Umschalter, gehoert dort also
+   * ins eine Menue. In der Leiste kostete es gemessen rund 40 Pixel, genug
+   * fuer einen waagerechten Ueberlauf bei 320 Pixeln (KAN-93).
+   */
+  it("fuehrt die Hilfe auch im schmalen Menue", async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<NavBar links={publicLinks} />)
+
+    await user.click(screen.getByRole("button", { name: "Menü öffnen" }))
+    const sheet = within(await screen.findByRole("dialog"))
+
+    expect(
+      sheet.getByRole("link", { name: "Hilfe & Dokumentation" })
+    ).toHaveAttribute("href", "/help")
+  })
+
   it("traegt den Moduswechsel in der Leiste", async () => {
     const user = userEvent.setup()
     renderWithProviders(<NavBar links={publicLinks} />)

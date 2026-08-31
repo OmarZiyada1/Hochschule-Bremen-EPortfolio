@@ -46,4 +46,21 @@ void i18n.use(initReactI18next).init({
   },
 })
 
+/*
+ * Nur im Entwicklungs-Build: die i18n-Instanz haengt am Fenster, damit ein
+ * Browserlauf die Sprache setzen kann, ohne sich durch die Oberflaeche zu
+ * klicken (KAN-93). Gebraucht wird das vom Screenshot-Lauf
+ * `pnpm screenshots`, der die Bilder der Hilfeseite erzeugt: die Sprachwahl
+ * wird nirgends gespeichert, und der Editor fuehrt gar keine Kopfleiste und
+ * damit keinen Sprachumschalter (KAN-86). Ohne diesen Haken waeren
+ * englischsprachige Bilder des Editors nicht zu erzeugen.
+ *
+ * import.meta.env.DEV ist im Produktionsbuild eine Konstante; der Zweig
+ * faellt beim Buendeln weg, genau wie die Pruefflaechen unter /dev (KAN-6).
+ * Es haengt daran keine Rechteentscheidung: die Sprache ist Darstellung.
+ */
+if (import.meta.env.DEV) {
+  ;(window as unknown as { __i18n?: typeof i18n }).__i18n = i18n
+}
+
 export default i18n
