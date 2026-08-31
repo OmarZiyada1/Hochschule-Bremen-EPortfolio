@@ -1,6 +1,7 @@
 import {
   ChartColumnIcon,
   ChevronDownIcon,
+  CircleQuestionMarkIcon,
   CircleUserIcon,
   LifeBuoyIcon,
   LogOutIcon,
@@ -41,6 +42,12 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { fullNameOf, type PersonName } from "@/lib/name"
 import { cn } from "@/lib/utils"
 
@@ -70,7 +77,19 @@ const menuIcons: Record<string, LucideIcon> = {
   newProject: PlusIcon,
   administration: ShieldCheckIcon,
   support: LifeBuoyIcon,
+  help: CircleQuestionMarkIcon,
 }
+
+/**
+ * Der Eintrag der Hilfeseite im schmalen Menue (KAN-93).
+ *
+ * <p>Er steht hier und nicht in {@code routes/navLinks.ts}, weil er an keiner
+ * Rolle haengt: die Seite ist ohne Anmeldung erreichbar, und ob sie als
+ * Symbol oben oder als Zeile im Sheet erscheint, entscheidet allein die
+ * Fensterbreite. Das ist Darstellung und keine Zustaendigkeit des
+ * Anwendungsrahmens.
+ */
+const HELP_ENTRY: NavBarLink = { key: "help", href: "/help" }
 
 /*
  * Der Fokusring der Grundregel zeigt auf --ring, also blau/600. Auf der
@@ -160,10 +179,18 @@ export function NavBar({
   /* Das Sheet zeigt zusaetzlich die Menuepunkte, die oben nur im Dropdown
      liegen (Neues Projekt): auf schmalen Bildschirmen gibt es das Dropdown
      nicht als zweite Ebene neben dem Sheet. Eintraege, die in beiden Listen
-     stehen (Mein Portfolio), erscheinen dabei nur einmal. */
+     stehen (Mein Portfolio), erscheinen dabei nur einmal.
+
+     Die Hilfe haengt hinten an und kommt nicht aus den Props (KAN-93): oben
+     ist sie ein Symbol in der Umschaltergruppe und unterhalb von lg
+     ausgeblendet, hier ist sie ein Eintrag wie jeder andere. Sie haengt an
+     keiner Rolle, deshalb entscheidet der Anwendungsrahmen darueber nichts;
+     es ist eine Frage der Breite und damit Darstellung. Als letzter Eintrag,
+     aus demselben Grund wie „Kontakt & Support" im Nutzermenue. */
   const sheetLinks = [
     ...links,
     ...menuItems.filter((item) => links.every((link) => link.key !== item.key)),
+    HELP_ENTRY,
   ]
 
   return (
@@ -247,6 +274,48 @@ export function NavBar({
         </NavigationMenu>
 
         <div className="flex items-center gap-2">
+          {/* Das Fragezeichen fuehrt auf /help (KAN-93). Es steht hier und
+              nicht in navLinksFor, weil Hilfe kein Arbeitsziel ist, das neben
+              Projekten und Portfolio um Aufmerksamkeit wirbt; dieselbe
+              Ueberlegung haelt „Kontakt & Support" am Ende des Nutzermenues
+              (routes/navLinks.ts).
+
+              Unterhalb von lg verschwindet es, und der Eintrag steht
+              stattdessen im Sheet (siehe sheetLinks). Anders als Sprache und
+              Modus ist es ein Navigationsziel und kein Umschalter mit
+              sofortiger Wirkung, gehoert nach der Regel dieser Leiste also
+              ins eine Menue. Gemessen kostete es in der schmalen Leiste rund
+              40 Pixel: bei 320 Pixeln entstand ein waagerechter Ueberlauf von
+              zwei Pixeln, bei 360 brach die Wortmarke auf drei Zeilen und
+              stand damit hoeher als die Leiste selbst (Befund aus dem
+              Review).
+
+              Ein Link und keine Schaltflaeche: er fuehrt auf eine Seite und
+              gehoert damit in die Linkliste eines Screenreaders. Der Name
+              steht als sr-only im Ziel, der Tooltip ist die sichtbare
+              Ergaenzung fuer die Maus und ersetzt ihn nicht (Skill
+              frontend-design, Abschnitt 4). */}
+          <TooltipProvider delay={400}>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Link
+                    to="/help"
+                    className={cn(
+                      buttonVariants({ variant: "ghost", size: "icon" }),
+                      navGhost,
+                      navFocus,
+                      "max-lg:hidden"
+                    )}
+                  />
+                }
+              >
+                <CircleQuestionMarkIcon aria-hidden="true" />
+                <span className="sr-only">{t("common.nav.help")}</span>
+              </TooltipTrigger>
+              <TooltipContent>{t("common.nav.help")}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           {/* Sprache und Modus stehen in jeder Breite an derselben Stelle,
               also links neben dem Nutzermenue bzw. neben der
               Menueschaltflaeche, und wandern nicht ins Sheet: es sind

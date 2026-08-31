@@ -123,6 +123,15 @@ const ROUTE_TREE: readonly RouteNode[] = [
    */
   { path: "/support", labelKey: "common.nav.support", parent: "/" },
 
+  /*
+   * Die Hilfeseite (KAN-93), aus demselben Grund unter der Startseite: sie
+   * ist aus jeder Ansicht ueber das Fragezeichen erreichbar und gehoert
+   * keiner Rolle. Der labelKey ist die Ueberschrift der Seite und nicht ein
+   * eigener Navigationsschluessel, wie bei /accessibility: zwei Schluessel
+   * mit demselben Wort laufen auseinander.
+   */
+  { path: "/help", labelKey: "help.title", parent: "/" },
+
   {
     path: "/administration/projects",
     labelKey: "administration.nav.projects",

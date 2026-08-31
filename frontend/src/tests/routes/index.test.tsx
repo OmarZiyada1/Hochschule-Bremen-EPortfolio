@@ -488,6 +488,24 @@ describe("Routenbaum", () => {
     }
   })
 
+  /*
+   * Die Hilfeseite liegt bewusst vor jeder Schranke (KAN-93): PUBLIC ist der
+   * Zustand "nicht angemeldet" (§2.1), und ihr erster Abschnitt richtet sich
+   * an genau diese Personen. Laege sie hinter RequireAuth, landete jede
+   * Person ohne Konto beim Klick auf das Fragezeichen auf der Anmeldeseite.
+   */
+  it("gibt die Hilfeseite ohne Anmeldung heraus", () => {
+    renderWithProviders(<AppUnderTest />, "/help")
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Hilfe & Dokumentation" })
+    ).toBeInTheDocument()
+    /* Im Anwendungsrahmen, also mit Kopfleiste und Fusszeile. */
+    expect(
+      screen.getByRole("link", { name: "Zum Inhalt springen" })
+    ).toBeInTheDocument()
+  })
+
   it("zeigt die /dev-Prueffflaechen ausserhalb des Anwendungsrahmens", () => {
     /* Nur im Entwicklungs-Build vorhanden (import.meta.env.DEV, im
        Testlauf true); ausserhalb der Layout-Route, damit der Rahmen die

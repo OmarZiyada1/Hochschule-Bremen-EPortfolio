@@ -33,6 +33,15 @@ import { defineConfig, devices } from "@playwright/test"
 export default defineConfig({
   testDir: "./e2e",
   /*
+   * Der Screenshot-Lauf der Hilfeseite liegt im selben Ordner, gehoert aber
+   * nicht hierher (KAN-93): er erzeugt Artefakte, statt zu messen, und
+   * braucht den Entwicklungsserver auf 5173 statt der Vorschau auf 4173.
+   * Ohne diese Zeile liefe er bei jedem Barrierefreiheitsdurchgang mit, und
+   * zwar zweimal, einmal je Farbprojekt. Seine eigene Konfiguration steht in
+   * playwright.screenshots.config.ts, sein Skript heisst `pnpm screenshots`.
+   */
+  testIgnore: /screenshots\.spec\.ts$/,
+  /*
    * Ein Arbeiter. Die Laeufe teilen sich eine Datenbank, und /projects/new
    * legt beim Aufruf ein Projekt an (das ist die Aufgabe der Seite, kein
    * Nebeneffekt des Tests). Parallel laufende Arbeiter wuerden einander die
