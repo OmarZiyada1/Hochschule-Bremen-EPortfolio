@@ -21,11 +21,11 @@ const STATUS_ORDER: Record<UserStatus, number> = {
   DEACTIVATED: 3,
 }
 
-const ROLES = (Object.keys(ROLE_ORDER) as Role[]).sort(
-  (a, b) => ROLE_ORDER[a] - ROLE_ORDER[b]
+const ROLES = ( Object.keys( ROLE_ORDER ) as Role[] ).sort(
+  ( a, b ) => ROLE_ORDER[a] - ROLE_ORDER[b]
 )
-const USER_STATUSES = (Object.keys(STATUS_ORDER) as UserStatus[]).sort(
-  (a, b) => STATUS_ORDER[a] - STATUS_ORDER[b]
+const USER_STATUSES = ( Object.keys( STATUS_ORDER ) as UserStatus[] ).sort(
+  ( a, b ) => STATUS_ORDER[a] - STATUS_ORDER[b]
 )
 
 /*
@@ -45,9 +45,9 @@ const USER_STATUSES = (Object.keys(STATUS_ORDER) as UserStatus[]).sort(
  * ein vierter Wert bricht den Typecheck, statt still farblos zu bleiben.
  */
 const STATUS_COLORS: Record<UserStatus, string> = {
-  ACTIVE: chartColor(1),
-  REGISTRATION_PENDING: chartColor(2),
-  DEACTIVATED: chartColor(3),
+  ACTIVE: chartColor( 1 ),
+  REGISTRATION_PENDING: chartColor( 2 ),
+  DEACTIVATED: chartColor( 3 ),
 }
 
 /**
@@ -78,7 +78,7 @@ const STATUS_COLORS: Record<UserStatus, string> = {
  * den Konten, sondern der einzige Handlungsbedarf der Seite, und in der
  * Kopfzeile dieser Karte gingen sie zwischen Ring, Kuchen und Tabelle unter.
  */
-export function UserStatisticsCard({
+export function UserStatisticsCard( {
   data,
   isPending,
   numberFormat,
@@ -86,7 +86,7 @@ export function UserStatisticsCard({
   data: DashboardResponse | undefined
   isPending: boolean
   numberFormat: Intl.NumberFormat
-}) {
+} ) {
   const { t } = useTranslation()
 
   /*
@@ -95,36 +95,36 @@ export function UserStatisticsCard({
    * aus einer kaputten Antwort stillschweigend eine plausible, dieselbe
    * Begruendung wie in ProjectStatusCard.
    */
-  const roleSlices = ROLES.map((role) => ({
+  const roleSlices = ROLES.map( ( role ) => ( {
     key: role,
-    label: t(`user.rolePlural.${role}`),
+    label: t( `user.rolePlural.${role}` ),
     value: data === undefined ? 0 : data.usersByRole[role],
     fill: `var(--color-${role})`,
-  }))
-  const statusSlices = USER_STATUSES.map((status) => ({
+  } ) )
+  const statusSlices = USER_STATUSES.map( ( status ) => ( {
     key: status,
-    label: t(`user.status.${status}`),
+    label: t( `user.status.${status}` ),
     value: data === undefined ? 0 : data.usersByStatus[status],
     fill: `var(--color-${status})`,
-  }))
+  } ) )
 
   const roleConfig = {
-    value: { label: t("administration.dashboard.users.roles") },
+    value: { label: t( "administration.dashboard.users.roles" ) },
     ...Object.fromEntries(
-      ROLES.map((role, index) => [
+      ROLES.map( ( role, index ) => [
         role,
-        { label: t(`user.rolePlural.${role}`), color: chartColor(index) },
-      ])
+        { label: t( `user.rolePlural.${role}` ), color: chartColor( index ) },
+      ] )
     ),
   } satisfies ChartConfig
 
   const statusConfig = {
-    value: { label: t("administration.dashboard.users.statuses") },
+    value: { label: t( "administration.dashboard.users.statuses" ) },
     ...Object.fromEntries(
-      USER_STATUSES.map((status) => [
+      USER_STATUSES.map( ( status ) => [
         status,
-        { label: t(`user.status.${status}`), color: STATUS_COLORS[status] },
-      ])
+        { label: t( `user.status.${status}` ), color: STATUS_COLORS[status] },
+      ] )
     ),
   } satisfies ChartConfig
 
@@ -132,7 +132,7 @@ export function UserStatisticsCard({
     <Card>
       <CardContent className="flex flex-col gap-4">
         <h2 className="type-label-xs font-medium tracking-widest text-muted-foreground uppercase">
-          {t("administration.dashboard.users.title")}
+          {t( "administration.dashboard.users.title" )}
         </h2>
 
         {isPending ? (
@@ -144,16 +144,16 @@ export function UserStatisticsCard({
           <>
             <div className="grid gap-6 sm:grid-cols-2">
               <SliceChart
-                title={t("administration.dashboard.users.roles")}
+                title={t( "administration.dashboard.users.roles" )}
                 config={roleConfig}
                 slices={roleSlices}
                 centerValue={
-                  data === undefined ? "" : numberFormat.format(data.usersTotal)
+                  data === undefined ? "" : numberFormat.format( data.usersTotal )
                 }
-                centerLabel={t("administration.dashboard.users.total")}
+                centerLabel={t( "administration.dashboard.users.total" )}
               />
               <SliceChart
-                title={t("administration.dashboard.users.statuses")}
+                title={t( "administration.dashboard.users.statuses" )}
                 config={statusConfig}
                 slices={statusSlices}
               />
@@ -172,35 +172,35 @@ export function UserStatisticsCard({
             <div className="sr-only">
               <table>
                 <caption>
-                  {t("administration.dashboard.users.tableCaption")}
+                  {t( "administration.dashboard.users.tableCaption" )}
                 </caption>
                 <thead>
                   <tr>
                     <th scope="col">
-                      {t("administration.dashboard.users.columnGroup")}
+                      {t( "administration.dashboard.users.columnGroup" )}
                     </th>
                     <th scope="col">
-                      {t("administration.dashboard.users.columnCount")}
+                      {t( "administration.dashboard.users.columnCount" )}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
                     <th scope="row">
-                      {t("administration.dashboard.users.total")}
+                      {t( "administration.dashboard.users.total" )}
                     </th>
                     <td>
                       {data === undefined
                         ? ""
-                        : numberFormat.format(data.usersTotal)}
+                        : numberFormat.format( data.usersTotal )}
                     </td>
                   </tr>
-                  {[...roleSlices, ...statusSlices].map((slice) => (
+                  {[...roleSlices, ...statusSlices].map( ( slice ) => (
                     <tr key={slice.key}>
                       <th scope="row">{slice.label}</th>
-                      <td>{numberFormat.format(slice.value)}</td>
+                      <td>{numberFormat.format( slice.value )}</td>
                     </tr>
-                  ))}
+                  ) )}
                 </tbody>
               </table>
             </div>
@@ -263,7 +263,7 @@ const CENTER_LABEL_OFFSET = 12
  * Ausnahmefall auf Verdacht: eine frische Installation hat noch keine
  * deaktivierten Konten.
  */
-function SliceChart({
+function SliceChart( {
   title,
   config,
   slices,
@@ -275,10 +275,10 @@ function SliceChart({
   slices: readonly { key: string; label: string; value: number }[]
   centerValue?: string
   centerLabel?: string
-}) {
+} ) {
   const { t } = useTranslation()
-  const total = slices.reduce((sum, slice) => sum + slice.value, 0)
-  const drawn = slices.filter((slice) => slice.value > 0)
+  const total = slices.reduce( ( sum, slice ) => sum + slice.value, 0 )
+  const drawn = slices.filter( ( slice ) => slice.value > 0 )
   const isRing = centerValue !== undefined
 
   return (
@@ -287,7 +287,7 @@ function SliceChart({
 
       {total === 0 ? (
         <p className="type-body-sm py-8 text-center text-muted-foreground">
-          {t("administration.dashboard.users.emptyChart")}
+          {t( "administration.dashboard.users.emptyChart" )}
         </p>
       ) : (
         /* aria-hidden, weil die Tabelle in der Karte denselben Inhalt
@@ -326,10 +326,10 @@ function SliceChart({
               >
                 {isRing && (
                   <Label
-                    content={({ viewBox }) => {
+                    content={( { viewBox } ) => {
                       if (
                         viewBox === undefined ||
-                        !("cx" in viewBox) ||
+                        !( "cx" in viewBox ) ||
                         typeof viewBox.cx !== "number" ||
                         typeof viewBox.cy !== "number"
                       ) {
@@ -339,14 +339,12 @@ function SliceChart({
                         /* central und nicht middle: middle richtet in SVG an
                            der halben x-Hoehe aus und nicht an der Mitte der
                            Schriftflaeche, und der Block sass damit ein paar
-                           Pixel zu tief. central nimmt die Mitte zwischen
-                           Ober- und Unterlaenge, also das, was das Auge als
-                           Mitte liest. */
+                           Pixel zu tief. */
                         <text
                           x={viewBox.cx}
                           y={viewBox.cy}
                           textAnchor="middle"
-                          dominantBaseline="central"
+
                         >
                           <tspan
                             x={viewBox.cx}
