@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none"><metadata><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/"><rdf:Description><dc:creator>RealFaviconGenerator</dc:creator><dc:source>https://realfavicongenerator.net</dc:source></rdf:Description></rdf:RDF></metadata><g id="App Icon">
+<rect width="512" height="512" rx="112" fill="#0A3E7A"></rect>
+<g id="HsbKeyLogo" clip-path="url(#clip0_1_2)">
+<path id="Vector" d="M181.682 146.534L212.216 116L242.75 146.534L212.216 177.068L181.682 146.534Z" fill="white"></path>
+<path id="Vector_2" d="M225.452 190.304L255.986 159.77L286.52 190.304L255.986 220.838L225.452 190.304Z" fill="white"></path>
+<path id="Vector_3" d="M137.885 190.304L168.419 159.77L242.75 234.101L212.216 264.635L137.885 190.304Z" fill="white"></path>
+<path id="Vector_4" d="M299.784 352.202L255.986 396L225.452 365.466L269.25 321.668L225.452 277.899L255.986 247.365L299.784 291.135L343.581 247.365L374.115 277.899L330.317 321.668L374.115 365.466L343.581 396L299.784 352.202Z" fill="white"></path>
+</g>
+</g><defs>
+<clipPath id="clip0_1_2">
+<rect width="236.23" height="280" fill="white" transform="translate(137.885 116)"></rect>
+</clipPath>
+</defs></svg>
