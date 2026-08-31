@@ -4,6 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>E-Portfolio Hochschule Bremen</title>
+    <!--
+      App-Icon und Favicon (KAN-96). Die Dateien liegen unter public/ und
+      werden von Vite unveraendert ins Wurzelverzeichnis von dist/ kopiert,
+      deshalb absolute Pfade und kein Bundler-Import. Motiv ist der Bremer
+      Schluessel aus components/common/HsbKeyLogo.tsx auf einer Kachel in
+      blau/800; erzeugt aus der Figma-Komponente "App Icon" (Seite
+      Components) ueber realfavicongenerator.net.
+
+      theme-color faerbt die Browserleiste auf Android und die Titelleiste
+      der installierten Anwendung. Bewusst ein fester Wert und keine zwei
+      Varianten je Modus: die Kachel ist in beiden Modi dieselbe.
+    -->
+    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="E-Portfolio" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#0a3e7a" />
     <script>
       /*
         Setzt die Modusklasse an <html>, bevor React rendert, damit die Seite
