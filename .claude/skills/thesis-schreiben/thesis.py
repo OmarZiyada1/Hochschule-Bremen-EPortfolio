@@ -78,6 +78,7 @@ KERNQUELLEN = {
 	"Bosch",
 	"W3C",
 	"WCAG",
+	"Sauro",
 }
 # Belegt, aber noch nicht in der Literaturuebersicht gefuehrt. Erlaubt, mit
 # Hinweis, damit die Tabelle in Confluence nachgezogen wird. Bangor, Kortum,
@@ -89,7 +90,6 @@ RANDQUELLEN = {
 	"Kortum",
 	"Miller",
 	"Landauer",
-	"Sauro",
 	"ISO",
 	"WAI",
 }
@@ -182,7 +182,7 @@ NAME_IM_BELEG = re.compile(r"[A-ZÄÖÜ][A-Za-z0-9äöüßÄÖÜ\-]+")
 DOPPELWORT = re.compile(r"\b([A-Za-zÄÖÜäöüß]{3,})\s+\1\b")
 DOPPELTES_LEERZEICHEN = re.compile(r"\S {2,}\S")
 LEER_VOR_SATZZEICHEN = re.compile(r"\s[,.;:!?]")
-FEHLENDES_LEERZEICHEN = re.compile(r"[a-zäöüß][,;:][A-Za-zÄÖÜäöüß]|[a-zäöüß]{2,}\.[A-ZÄÖÜ]")
+FEHLENDES_LEERZEICHEN = re.compile(r"[a-zäöüß][,;][A-Za-zÄÖÜäöüß]|[a-zäöüß]:(?!in)[A-Za-zÄÖÜäöüß]|[a-zäöüß]{2,}\.[A-ZÄÖÜ]")
 
 SATZENDE = re.compile(r"(?<=[.!?])\s+(?=[A-ZÄÖÜ„])")
 
@@ -319,7 +319,7 @@ def cmd_lint(args: argparse.Namespace) -> None:
 			befunde.add("BEFUND", nummer, "gedankenstrich", "Em-Dash „—“ gefunden. CLAUDE.md verbietet ihn überall.")
 		if re.search(r"\s–\s", zeile):
 			befunde.add("BEFUND", nummer, "halbgeviert", "Halbgeviertstrich „–“ als Stilmittel. Komma, Doppelpunkt oder zwei Sätze verwenden.")
-		if re.search(r'["“”]', zeile):
+		if re.search(r'["”]', zeile):
 			befunde.add("BEFUND", nummer, "anfuehrung", "Gerade oder englische Anführungszeichen. Im Deutschen „so“.")
 
 		if art in ("text", "quote"):
