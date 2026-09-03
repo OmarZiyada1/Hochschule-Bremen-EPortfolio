@@ -79,6 +79,16 @@ KERNQUELLEN = {
 	"W3C",
 	"WCAG",
 	"Sauro",
+	# Seit 03.09.2026 in der Literaturuebersicht gefuehrt (Kuerzel LS18). Traegt
+	# den SUS-Zielwert von 68 Punkten und ersetzt darin Sauro (2011), das als
+	# kostenpflichtiger Selbstverlag nicht im Volltext vorlag.
+	"Lewis",
+	# Die Hochschule selbst als Primaerquelle der Ordnungsstruktur aus fuenf
+	# Fakultaeten, 75 Studiengaengen und den Modullisten (Kuerzel HSB26,
+	# eingetragen am 03.09.2026). Beide Woerter, weil der Beleg im Text
+	# "(Hochschule Bremen, 2026)" lautet.
+	"Hochschule",
+	"Bremen",
 }
 # Belegt, aber noch nicht in der Literaturuebersicht gefuehrt. Erlaubt, mit
 # Hinweis, damit die Tabelle in Confluence nachgezogen wird. Bangor, Kortum,
@@ -336,7 +346,8 @@ def cmd_lint(args: argparse.Namespace) -> None:
 
 		if art == "figure":
 			felder = roh_felder(zeile)
-			if len(felder) < 4 or not felder[3]:
+			ist_tabelle = zeile.strip().startswith("[[tabelle:")
+			if (len(felder) < 4 or not felder[3]) and not ist_tabelle:
 				befunde.add("PRUEFEN", nummer, "bildstelle", "Bildplatz ohne Dateiname. Erst `attach`, dann den Dateinamen als viertes Feld eintragen, sonst bleibt in Confluence ein Hinweiskasten stehen.")
 			elif len(felder) < 3 or not felder[2]:
 				befunde.add("PRUEFEN", nummer, "bildherkunft", "Bildplatz ohne Herkunft. Jede Abbildung nennt ihre Quelle, eigene Darstellungen ausdruecklich.")
@@ -569,6 +580,11 @@ def abbildung(zeile: str) -> str:
 	beschriftung = "%s %s: %s" % (wort, nummer, titel)
 
 	if not datei:
+		# Eine Tabelle steht im Kapiteltext als echte Tabelle und braucht kein
+		# Bild. Ihr Platzhalter traegt deshalb nur die Beschriftung, die sonst
+		# als Fettdruck im Fliesstext stehen muesste und dort ein Befund waere.
+		if art.strip() == "tabelle":
+			return "<p><strong>%s</strong> (%s)</p>" % (inline(beschriftung), inline(herkunft))
 		hinweis = "%s (%s) [Bilddatei fehlt noch]" % (beschriftung, herkunft)
 		return (
 			'<ac:structured-macro ac:name="info" ac:schema-version="1">'
