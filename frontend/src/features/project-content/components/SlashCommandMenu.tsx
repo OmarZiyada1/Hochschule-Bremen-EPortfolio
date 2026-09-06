@@ -168,7 +168,7 @@ export function SlashCommandMenu({
       id={listboxId}
       role="listbox"
       aria-label={t("projectContent.insert.label")}
-      className="max-h-72 w-64 overflow-y-auto rounded-card border border-border bg-popover p-1 shadow-md"
+      className="scrollbar-slim max-h-72 w-64 overflow-y-auto rounded-card border border-border bg-popover p-1 shadow-md"
     >
       {entries.map(({ kind, icon: Icon }, index) => {
         const label = t(`projectContent.insert.type.${kind}`)

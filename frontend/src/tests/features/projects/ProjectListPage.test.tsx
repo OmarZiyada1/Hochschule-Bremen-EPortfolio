@@ -567,6 +567,39 @@ describe("ProjectListPage", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("laesst eine lange Optionsliste in der Gruppe scrollen", async () => {
+    server.use(http.get("*/api/projects", () => HttpResponse.json(pageOf([]))))
+    renderWithProviders(<ProjectListPage />)
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Studiengang" })
+    )
+    /* jsdom rechnet keine Layouthoehen, geprueft wird deshalb die Zusage
+       selbst: Die Optionen einer Gruppe stehen in einem Rahmen mit
+       Hoehengrenze, der scrollt. Ohne ihn zog die Studiengangliste die
+       Seitenleiste ueber mehrere Fensterhoehen (Nacharbeit zu KAN-80). */
+    const options = (
+      await screen.findByRole("checkbox", { name: "Informatik" })
+    ).closest('[data-slot="filter-group-options"]')
+    /* Vollstaendig aufgezaehlt, nicht nur die zwei auffaelligen: Gerade
+       py-2 und scroll-py-1 tragen die Zusagen, die niemand im Klassennamen
+       vermutet, und fallen bei einer spaeteren Umformulierung als Erstes
+       weg. py-2 haelt die unsichtbare Trefferflaeche der Checkbox aus dem
+       rollbaren Bereich, ohne das rollte schon eine dreizeilige Gruppe. */
+    expect(options).toHaveClass(
+      "max-h-96",
+      "overflow-y-auto",
+      "overflow-x-hidden",
+      "scroll-py-1",
+      "px-1",
+      "py-2",
+      "scrollbar-slim"
+    )
+    /* Kein overscroll-contain: Am Ende der Liste soll die Seite
+       weiterrollen und nicht anhalten (Vorgabe). */
+    expect(options).not.toHaveClass("overscroll-contain")
+  })
+
   it("entfernt bei der Abwahl einer Fakultaet deren unsichtbar werdende Studiengaenge", async () => {
     const requests: URLSearchParams[] = []
     server.use(

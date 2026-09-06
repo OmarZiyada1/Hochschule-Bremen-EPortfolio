@@ -165,7 +165,7 @@ export function AdministrationLayout() {
                 display:none steht und damit aus dem Baum faellt. */}
             <nav
               aria-label={t("administration.nav.label")}
-              className="flex flex-col gap-0.5 overflow-y-auto px-4 pb-4"
+              className="flex scrollbar-slim flex-col gap-0.5 overflow-y-auto px-4 pb-4"
             >
               {navItems(() => setMenuOpen(false))}
             </nav>

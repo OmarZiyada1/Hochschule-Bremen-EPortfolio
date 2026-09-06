@@ -743,7 +743,7 @@ export default function EditorPage() {
                 Ueberschrift darin. */}
             <SheetTitle>{t("projectContent.sidebar.label")}</SheetTitle>
           </SheetHeader>
-          <div className="overflow-y-auto p-4">
+          <div className="scrollbar-slim overflow-y-auto p-4">
             <EditorSidebar
               project={detail}
               onEditMetadata={() => {

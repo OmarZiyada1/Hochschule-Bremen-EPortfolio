@@ -256,3 +256,56 @@
     }
   }
 }
+
+/*
+ * Schlanke Rollleiste fuer eingebettete Listen.
+ *
+ * Die Systemrollleiste ist unter Windows rund 17 Pixel breit. In einer
+ * 16rem schmalen Seitenleiste frisst sie damit ein Zwoelftel der Zeile, und
+ * in einem Aufklappmenue steht sie als graues Band neben dem Text. Fuer die
+ * Rollleiste des Fensters ist diese Breite richtig, fuer eine Liste in
+ * einer Karte nicht.
+ *
+ * Die shadcn-Stildatei (Zeile 22) bringt nur no-scrollbar mit, also
+ * gar keine Rollleiste. Das ist hier die falsche Antwort: Zeigt nichts an,
+ * dass die Liste weitergeht, sucht niemand weiter. Es fehlt der Schritt
+ * dazwischen, und den fuellt diese Klasse.
+ *
+ * scrollbar-width und scrollbar-color sind der heutige Weg (Firefox,
+ * Chromium ab 121, Safari ab 18.2). Die ::-webkit-Regeln daneben greifen in
+ * aelteren WebKit- und Chromium-Fassungen, die beides noch nicht kennen;
+ * wo beides gilt, gewinnt scrollbar-width, und die Breiten sind bewusst
+ * dieselben. Die Farbe kommt aus der Tokenschicht (Frontend-Regel 5) und
+ * folgt damit hell und dunkel von selbst.
+ */
+@utility scrollbar-slim {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+
+  &::-webkit-scrollbar {
+    width: --spacing(1.5);
+    height: --spacing(1.5);
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: --spacing(1);
+    background-color: var(--color-border);
+  }
+
+  /*
+   * Beim Zeigen etwas kraeftiger: Der ruhende Zustand soll neben dem Text
+   * nicht mitreden, der angefasste soll zu sehen sein. Kein Verschwinden im
+   * Ruhezustand, siehe oben.
+   */
+  &:hover {
+    scrollbar-color: var(--color-muted-foreground) transparent;
+  }
+
+  &:hover::-webkit-scrollbar-thumb {
+    background-color: var(--color-muted-foreground);
+  }
+}

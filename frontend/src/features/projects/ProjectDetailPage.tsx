@@ -549,7 +549,10 @@ export default function ProjectDetailPage() {
 
         {data !== undefined && (
           <Sheet open={infoOpen} onOpenChange={setInfoOpen}>
-            <SheetContent side="left" className="overflow-y-auto lg:hidden">
+            <SheetContent
+              side="left"
+              className="scrollbar-slim overflow-y-auto lg:hidden"
+            >
               <SheetHeader>
                 <SheetTitle>{t("project.detail.meta.label")}</SheetTitle>
               </SheetHeader>

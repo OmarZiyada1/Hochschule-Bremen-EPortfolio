@@ -143,7 +143,7 @@ export function BulkStatusDialog({
             erst im Ergebnis: eine Sammelaktion ueber eine Auswahl, die man
             nicht mehr sieht, ist nicht zu verantworten. */}
         {!done && (
-          <ul className="max-h-40 overflow-y-auto rounded-card border px-3 py-2">
+          <ul className="scrollbar-slim max-h-40 overflow-y-auto rounded-card border px-3 py-2">
             {projectTitles.map((title) => (
               <li key={title} className="type-body-sm">
                 {title}
@@ -247,7 +247,7 @@ function BulkResultList({
           total: results.length,
         })}
       </p>
-      <ul className="flex max-h-60 flex-col gap-2 overflow-y-auto">
+      <ul className="flex scrollbar-slim max-h-60 flex-col gap-2 overflow-y-auto">
         {results.map((entry, index) => (
           <li key={entry.projectId} className="flex items-start gap-2">
             {entry.success ? (

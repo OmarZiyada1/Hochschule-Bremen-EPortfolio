@@ -322,6 +322,21 @@ export function FilterSidebar({
  * <p>Der Wert des Akkordeon-Glieds ist der Gruppenschluessel und nicht die
  * Position: eine neue Gruppe in der Mitte verschoebe sonst, welche offen
  * steht.
+ *
+ * <p><strong>Lange Optionslisten scrollen innerhalb der Gruppe.</strong> Die
+ * Studiengaenge sind der auffaellige Fall: Es sind rund siebzig, und ohne
+ * Hoehengrenze zog die aufgeklappte Gruppe die Leiste auf ein Vielfaches der
+ * Fensterhoehe. Die Annahme aus KAN-80, das Akkordeon halte die Leiste kurz
+ * genug, um ohne Klebeposition auszukommen (Begruendung in
+ * ProjectListPage), traegt erst mit dieser Grenze. Kurze Gruppen wie die
+ * Abschlussart merken davon nichts.
+ *
+ * <p>24rem sind rund vierzehn Zeilen. Knapper gesetzt faengt eine Gruppe
+ * schon dort an zu scrollen, wo das Rollen mehr kostet, als es einbringt;
+ * hoeher gesetzt steht die Karte samt der fuenf zugeklappten Gruppen ueber
+ * einem 768 Pixel hohen Fenster. Die Rollleiste selbst ist schlank gesetzt
+ * (scrollbar-slim in index.css): die Systembreite von rund 17 Pixeln nimmt
+ * einer 16rem schmalen Leiste ein Zwoelftel der Zeile.
  */
 function FilterGroup({
   group,
@@ -358,8 +373,37 @@ function FilterGroup({
           />
         )}
       </AccordionTrigger>
-      <AccordionContent className="flex flex-col gap-1">
-        {children}
+      <AccordionContent>
+        {/* Die Grenze steht hier und nicht je Gruppe: max-height erzwingt
+            keine Hoehe, sie greift also von selbst erst dort, wo sie noetig
+            ist. Die drei Abschlussarten bleiben drei Zeilen, die rund
+            siebzig Studiengaenge scrollen.
+
+            py-2 ist kein Rand nach Gefuehl, sondern die Bedingung dafuer,
+            dass die kurzen Gruppen ueberhaupt ohne Rollleiste auskommen.
+            Die Checkbox traegt eine unsichtbare Trefferflaeche
+            (after:-inset-y-2 in checkbox.tsx), die acht Pixel ueber ihre
+            Zeile hinausragt. Absolut gesetzt zaehlt sie nicht zur Hoehe des
+            Rahmens, sehr wohl aber zu seinem rollbaren Bereich: ohne
+            Polsterung stand schon bei drei Zeilen eine Rollleiste fuer drei
+            Pixel da (gemessen 83 zu 80).
+
+            Kein overscroll-contain: Wer am Ende der Studiengangliste
+            angekommen ist, soll mit derselben Bewegung die Seite
+            weiterrollen (Vorgabe). scroll-py-1 haelt beim Tabben auf eine
+            halb verdeckte Zeile den Fokusring der Checkbox frei, den der
+            Browser sonst buendig an die Kante schiebt (Rezept aus
+            command.tsx). overflow-x-hidden verhindert eine zweite,
+            waagerechte Rollleiste: overflow-y allein macht die waagerechte
+            Achse zu auto. px-1 gibt dem Fokusring links und rechts Platz;
+            ein Gegenrand -mx-1 daneben brauchte es nicht, Panel und Karte
+            klippen beide bei null. */}
+        <div
+          data-slot="filter-group-options"
+          className="flex scrollbar-slim max-h-96 scroll-py-1 flex-col gap-1 overflow-x-hidden overflow-y-auto px-1 py-2"
+        >
+          {children}
+        </div>
       </AccordionContent>
     </AccordionItem>
   )
@@ -378,7 +422,12 @@ function FilterOption({
   return (
     <Label className="py-1 font-normal">
       <Checkbox checked={checked} onCheckedChange={onToggle} />
-      {label}
+      {/* Ein eigenes Element und nicht blosser Text: Ein anonymes Flex-Kind
+          traegt min-width:auto und schrumpft nie unter sein laengstes Wort.
+          „Wirtschaftsingenieurwesen" ist in der 16rem schmalen Leiste
+          laenger als die Zeile und stuende sonst ueber den Rand hinaus, wo
+          der Scrollrahmen ihn abschneidet. */}
+      <span className="min-w-0 break-words">{label}</span>
     </Label>
   )
 }

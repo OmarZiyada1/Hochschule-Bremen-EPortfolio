@@ -119,9 +119,7 @@ export function StudyStructureColumn({
           <p className="type-body-sm text-muted-foreground">{disabledHint}</p>
         )}
 
-        {error !== undefined && (
-          <ErrorState message={error} />
-        )}
+        {error !== undefined && <ErrorState message={error} />}
 
         {loading && (
           <div className="flex flex-col gap-2">
@@ -136,7 +134,7 @@ export function StudyStructureColumn({
         )}
 
         {items.length > 0 && (
-          <ul className="flex max-h-96 flex-col gap-0.5 overflow-y-auto">
+          <ul className="flex scrollbar-slim max-h-96 flex-col gap-0.5 overflow-y-auto">
             {items.map((item) => {
               const selected = item.id === selectedId
               return (
