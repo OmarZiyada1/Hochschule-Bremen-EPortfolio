@@ -30,7 +30,12 @@ Alle Versionen aus `backend/pom.xml` bzw. `frontend/package.json`.
 - `frontend/`: React/Vite-App, inkl. `Dockerfile` und `nginx.conf`
 - `docs/`: diese Dokumentation
 - `compose.base.yml`: gemeinsame Grundlage; daneben `compose.dev.yml`, `compose.artifact.yml` und `compose.prod.yml`, je eine Betriebsart
-- `eportfolio.ps1`: Menü für Starten, Bauen, Logs, Tests und Aufräumen
+- `eportfolio.ps1`: Menü für Starten, Bauen, Logs, Tests, Saatdaten und Aufräumen
+- `stammdaten-seeder.sh` und `stammdaten-seeder-entfernen.sh`: die fünf
+  Fakultäten, 75 Studiengänge und ihre Module, erhoben aus der
+  Confluence-Seite „Fakultäten-Hierarchie"
+- `test-seeder.sh`, `test-sitzung.sh` und ihre Gegenstücke zum Entfernen,
+  dazu `test-seeder-pruefen.sh`: Datenbestand der Usability-Testwoche
 
 ## Schnellstart
 

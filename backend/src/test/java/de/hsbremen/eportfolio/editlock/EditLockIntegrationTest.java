@@ -27,6 +27,7 @@ import de.hsbremen.eportfolio.masterdata.Semester;
 import de.hsbremen.eportfolio.masterdata.SemesterRepository;
 import de.hsbremen.eportfolio.masterdata.StudyProgram;
 import de.hsbremen.eportfolio.masterdata.StudyProgramRepository;
+import de.hsbremen.eportfolio.masterdata.TestMasterData;
 import de.hsbremen.eportfolio.project.Project;
 import de.hsbremen.eportfolio.project.ProjectMemberRepository;
 import de.hsbremen.eportfolio.project.ProjectRepository;
@@ -155,10 +156,12 @@ class EditLockIntegrationTest {
 		admin = save(Role.ADMIN);
 
 		category = categoryRepository.findAllByOrderByNameAsc().getFirst();
-		faculty = facultyRepository.findAllByOrderByNameAsc().getFirst();
 		semester = semesterRepository.findAllByOrderBySortOrderAsc().getFirst();
-		studyProgram = studyProgramRepository.findByFacultyIdOrderByNameAsc(faculty.getId())
-				.getFirst();
+		// Kategorie und Semester stammen aus dem Seeder, die Hierarchie nicht mehr:
+		// sie kommt seit dem Umzug in das Seeder-Skript aus dem Bestand, und falls
+		// der leer ist, legt der Helfer sie an (TestMasterData.anyStudyProgram).
+		studyProgram = TestMasterData.anyStudyProgram(facultyRepository, studyProgramRepository);
+		faculty = studyProgram.getFaculty();
 
 		draft = complete(author, ProjectStatus.DRAFT, "Gruppenarbeit");
 		draft.getEditors().add(assignedEditor);

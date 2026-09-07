@@ -47,12 +47,14 @@ public class Module extends BaseEntity {
 	/**
 	 * Das Sammelmodul eines Studiengangs (§3.9, seit Contract v84).
 	 *
-	 * <p><strong>Eine Fabrik statt zweier Aufrufstellen mit derselben Regel.</strong>
+	 * <p><strong>Eine Fabrik statt mehrerer Aufrufstellen mit derselben Regel.</strong>
 	 * Angelegt wird die Zeile vom {@code MasterDataAdminService} beim Anlegen des
-	 * Studiengangs und vom {@code DevMasterDataSeeder}; die Namensbildung stuende
-	 * sonst zweimal da und liefe auseinander. Ein drittes Mal steht sie
-	 * unvermeidlich in der Migration {@code V202608262015__module_collective.sql},
-	 * die den Bestand nachtraegt; deren Kommentar verweist hierher.
+	 * Studiengangs; die Namensbildung stuende sonst mehrfach da und liefe
+	 * auseinander. Ein zweites Mal steht sie unvermeidlich in der Migration
+	 * {@code V202608262015__module_collective.sql}, die den Bestand nachtraegt,
+	 * und ein drittes Mal im Skript {@code stammdaten-seeder.sh}, das die
+	 * Hierarchie der Hochschule schreibt und am Dienst vorbeigeht. Beide
+	 * verweisen im Kommentar hierher.
 	 *
 	 * <p><strong>Warum „Studiengang" im Namen steht.</strong> „Module aus dem
 	 * Medieninformatik" waere grammatisch falsch: die Namen der Studiengaenge

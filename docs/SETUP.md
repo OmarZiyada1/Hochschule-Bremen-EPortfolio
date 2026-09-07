@@ -142,6 +142,25 @@ Weigert sich PowerShell wegen der Ausführungsrichtlinie:
 powershell -ExecutionPolicy Bypass -File .\eportfolio.ps1
 ```
 
+### Saatdaten
+
+Die Gruppe `s1` bis `s7` füllt und leert die Datenbank der gewählten
+Betriebsart. Sie ist in PROD gesperrt: der Produktivbestand entsteht über die
+Administrationsseite und nicht über ein Skript, das an der Anwendung vorbei
+schreibt.
+
+| Punkt | Was |
+| --- | --- |
+| `s1` / `s2` | Stammdaten anlegen und entfernen: fünf Fakultäten, 75 Studiengänge und ihre Module, erhoben aus der Confluence-Seite „Fakultäten-Hierarchie". `s2` entfernt die **gesamte** Hierarchie und löst dabei die Fakultäts-, Studiengangs- und Modulangabe der Projekte. |
+| `s3` / `s4` | Testbestand der Usability-Testwoche anlegen und entfernen: Konten, rund fünfzig Projekte samt Blöcken und Titelbildern, die zwei gleichbedeutenden Kategorien aus Aufgabe D3, Nominierungen und Änderungsprotokoll. |
+| `s5` / `s6` | Eine einzelne Sitzung TN00 bis TN11 vorbereiten und entfernen. `s5` läuft **je Sitzung** und ist zugleich der Rücksetzschritt zwischen zwei Testpersonen. |
+| `s7` | Den Bestand gegen die Seed-Prüfliste zählen. Ändert nichts. |
+
+Die Punkte rufen Shell-Skripte im Wurzelverzeichnis auf, dieselbe Bauart wie
+die vorhandenen `demo-daten-*.sh`. Unter Windows kommt `bash` mit Git. Jedes
+Skript läuft auch ohne das Menü; dann sagt ihm `DB_CONTAINER`, welche
+Datenbank gemeint ist.
+
 ### Ein Origin
 
 Das Frontend spricht die API unter der Adresse an, unter der es selbst

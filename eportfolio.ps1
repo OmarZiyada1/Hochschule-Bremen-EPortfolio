@@ -428,6 +428,180 @@ function Invoke-ApiTestsuite {
 	}
 }
 
+# --------------------------------------------------------------------------
+# Saatdaten
+#
+# Sechs Skripte im Wurzelverzeichnis, je ein Paar aus Anlegen und Entfernen:
+#
+#   stammdaten-seeder.sh              die 5 Fakultaeten, 75 Studiengaenge und
+#   stammdaten-seeder-entfernen.sh    ihre Module, erhoben aus Confluence
+#   test-seeder.sh                    der gemeinsame Bestand fuer die
+#   test-seeder-entfernen.sh          Usability-Testwoche
+#   test-sitzung.sh                   Konto und Vorbedingungen einer
+#   test-sitzung-entfernen.sh         einzelnen Sitzung, je Teilnehmer
+#
+# Shell-Skripte und keine PowerShell-Funktionen, aus demselben Grund wie bei
+# den vorhandenen demo-daten-*.sh: sie sprechen ueber "docker exec" mit psql
+# im Container, teilen sich deren Hilfsfunktionen und laufen genauso auch
+# ohne dieses Menue. Unter Windows kommt bash mit Git.
+#
+# Welche Datenbank gemeint ist, sagt ihnen DB_CONTAINER. Ohne diese Variable
+# nehmen sie die von DEV; sie wird hier auf die gewaehlte Betriebsart gesetzt,
+# damit ein Lauf in ARTIFACT nicht die Entwicklungsdatenbank trifft.
+# --------------------------------------------------------------------------
+
+# Sucht die Bash von Git, nicht irgendeine.
+#
+# Warum nicht einfach "bash": unter Windows liegt in C:\Windows\System32 ein
+# bash.exe, das den WSL-Starter aufruft und sonst nichts. Steht kein
+# WSL-System bereit, endet der Aufruf mit
+#   WSL (...) ERROR: CreateProcessCommon:798: execvpe(/bin/bash) failed
+# und nicht mit einer Meldung, die auf die Ursache zeigt. Der Eintrag steht
+# ausserdem frueher im PATH als Git, gewinnt also auch dann, wenn Git Bash
+# installiert ist.
+#
+# Gesucht wird deshalb in dieser Reihenfolge:
+#   1. neben dem gefundenen git.exe (deckt jeden Installationsort ab)
+#   2. die ueblichen Installationsorte
+#   3. ein bash aus dem PATH, sofern es NICHT im Windows-Verzeichnis liegt
+function Get-BashPfad {
+	$kandidaten = @()
+
+	$git = (Get-Command git -ErrorAction SilentlyContinue)
+	if ($null -ne $git -and $git.Source) {
+		# ...\Git\cmd\git.exe -> ...\Git
+		$wurzel = Split-Path (Split-Path $git.Source -Parent) -Parent
+		$kandidaten += (Join-Path $wurzel 'bin\bash.exe')
+	}
+
+	# Join-Path wirft bei einem leeren Basispfad, und unter Set-StrictMode
+	# faellt das sofort auf die Fuesse. Deshalb je Variable erst pruefen.
+	foreach ($basis in @($env:ProgramFiles, ${env:ProgramFiles(x86)})) {
+		if ($basis) { $kandidaten += (Join-Path $basis 'Git\bin\bash.exe') }
+	}
+	if ($env:LOCALAPPDATA) {
+		$kandidaten += (Join-Path $env:LOCALAPPDATA 'Programs\Git\bin\bash.exe')
+	}
+
+	foreach ($kandidat in $kandidaten) {
+		if ($kandidat -and (Test-Path $kandidat)) { return $kandidat }
+	}
+
+	$ausPfad = Get-Command bash -All -ErrorAction SilentlyContinue
+	foreach ($treffer in $ausPfad) {
+		if ($treffer.Source -and $treffer.Source -notlike "$env:WINDIR*") {
+			return $treffer.Source
+		}
+	}
+
+	Write-Host ''
+	Write-Host 'Die Bash von Git ist nicht auffindbar. Die Saatdaten-Skripte sind' -ForegroundColor Red
+	Write-Host 'Shell-Skripte, wie die vorhandenen demo-daten-*.sh auch.' -ForegroundColor Red
+	Write-Host 'Unter Windows kommt bash mit Git (https://git-scm.com).' -ForegroundColor Red
+	Write-Host 'Das bash.exe in C:\Windows\System32 zaehlt nicht: es startet WSL.' -ForegroundColor Red
+	return ''
+}
+
+function Invoke-Saatskript {
+	param(
+		[Parameter(Mandatory = $true)][string]$Skript,
+		[Parameter(Mandatory = $true)][string]$Titel,
+		[string[]]$Argumente = @(),
+		[string]$Warnung
+	)
+
+	Write-Head $Titel
+
+	# Saatdaten sind Entwicklungs- und Testdaten. Die Produktivdatenbank
+	# bekommt ihren Bestand ueber die Administrationsseite, nicht ueber ein
+	# Skript, das mit psql an der Anwendung vorbei schreibt.
+	if ($script:Mode -eq 'prod') {
+		Write-Host 'Nicht in PROD moeglich. Saatdaten sind Entwicklungs- und Testdaten;' -ForegroundColor Yellow
+		Write-Host 'der Produktivbestand entsteht ueber die Administrationsseite.' -ForegroundColor Yellow
+		return
+	}
+
+	$pfad = Join-Path $PSScriptRoot $Skript
+	if (-not (Test-Path $pfad)) {
+		Write-Host "Es fehlt $Skript im Wurzelverzeichnis." -ForegroundColor Red
+		return
+	}
+	$bash = Get-BashPfad
+	if ($bash -eq '') { return }
+
+	$m = Get-Mode
+	$db = "$($m['Project'])-db-1"
+	$backend = "$($m['Project'])-backend-1"
+
+	$laeuft = & docker inspect -f '{{.State.Running}}' $db 2>$null
+	if ($laeuft -ne 'true') {
+		Write-Host ''
+		Write-Host "Der Container $db laeuft nicht." -ForegroundColor Red
+		Write-Host 'Erst starten: Menuepunkt 1 (alles) oder 3 (nur die Datenbank).' -ForegroundColor Red
+		return
+	}
+
+	if ($Warnung -and -not (Confirm-Action $Warnung)) {
+		Write-Host 'Abgebrochen.' -ForegroundColor DarkGray
+		return
+	}
+
+	$env:DB_CONTAINER = $db
+	$env:BACKEND_CONTAINER = $backend
+	$env:POSTGRES_USER = Get-EnvValue -Name 'POSTGRES_USER' -Default 'eportfolio'
+	$env:POSTGRES_DB = Get-EnvValue -Name 'POSTGRES_DB' -Default 'eportfolio'
+
+	# Der Pfad geht mit Schraegstrichen an die Bash. Mit Rueckstrichen liest
+	# MSYS die Trennzeichen als Escapes und findet die Datei nicht.
+	$pfadFuerBash = $pfad -replace '\\', '/'
+
+	Write-Host ''
+	Write-Host "> bash $Skript $($Argumente -join ' ')" -ForegroundColor DarkGray
+	Write-Host "  Bash:      $bash" -ForegroundColor DarkGray
+	Write-Host "  Datenbank: $db" -ForegroundColor DarkGray
+	& $bash $pfadFuerBash @Argumente
+	if ($LASTEXITCODE -ne 0) {
+		Write-Host ''
+		Write-Host "Das Skript meldet Exit-Code $LASTEXITCODE." -ForegroundColor Red
+	}
+}
+
+# Die zwoelf Pseudonyme der Testwoche. TN08 und TN11 sind die externen
+# Kurzsitzungen: sie bearbeiten nur Block A und melden sich nie an, bekommen
+# also kein Konto (Testmaterial/17_Vor_der_Sitzung.docx).
+function Read-Teilnehmer {
+	Write-Host ''
+	Write-Host 'TN00        Pilot, zaehlt nicht, Bloecke A und B' -ForegroundColor DarkGray
+	Write-Host 'TN01..TN05  Studierende, Bloecke A und B' -ForegroundColor DarkGray
+	Write-Host 'TN06, TN07  Redaktion, Bloecke A und C' -ForegroundColor DarkGray
+	Write-Host 'TN08, TN11  extern, nur Block A, ohne Konto' -ForegroundColor DarkGray
+	Write-Host 'TN09, TN10  Administration, Bloecke A und D' -ForegroundColor DarkGray
+	$antwort = (Read-Host 'Pseudonym').Trim().ToUpper()
+	if ($antwort -notmatch '^TN(0[0-9]|1[01])$') {
+		Write-Host ''
+		Write-Host "Unbekanntes Pseudonym: $antwort. Erwartet wird TN00 bis TN11." -ForegroundColor Red
+		return ''
+	}
+	return $antwort
+}
+
+function Invoke-Sitzung {
+	param([switch]$Entfernen)
+
+	$teilnehmer = Read-Teilnehmer
+	if ($teilnehmer -eq '') { return }
+
+	if ($Entfernen) {
+		Invoke-Saatskript -Skript 'test-sitzung-entfernen.sh' -Argumente @($teilnehmer) `
+			-Titel "Sitzung $teilnehmer entfernen" `
+			-Warnung "Konto und Spuren der Sitzung $teilnehmer werden geloescht. Der gemeinsame Testbestand bleibt."
+		return
+	}
+
+	Invoke-Saatskript -Skript 'test-sitzung.sh' -Argumente @($teilnehmer) `
+		-Titel "Sitzung $teilnehmer vorbereiten"
+}
+
 function Get-ProjektImages {
 	$images = & docker images --format '{{.Repository}}:{{.Tag}}' --filter 'reference=eportfolio-*'
 	if ($LASTEXITCODE -ne 0) { return @() }
@@ -541,6 +715,15 @@ function Show-Menu {
 	Write-Host '   t  API-Testsuite mit Newman      (postman/, alle Endpoints in einem Lauf)'
 	Write-Host '  tc  API-Testsuite: nur Cleanup    (raeumt Reste eines abgebrochenen Laufs weg)'
 	Write-Host ''
+	Write-Host ' Saatdaten                                (nicht in PROD)' -ForegroundColor White
+	Write-Host '  s1  Stammdaten anlegen           (5 Fakultaeten, 75 Studiengaenge, Module)'
+	Write-Host '  s2  Stammdaten entfernen         [die gesamte Hierarchie]'
+	Write-Host '  s3  Testbestand anlegen          (Usability-Test, gemeinsamer Bestand)'
+	Write-Host '  s4  Testbestand entfernen        [Testkonten und Testprojekte]'
+	Write-Host '  s5  Sitzung vorbereiten          (TN00 bis TN11, je Sitzung einmal)'
+	Write-Host '  s6  Sitzung entfernen'
+	Write-Host '  s7  Testbestand zaehlen         (Seed-Pruefliste, aendert nichts)'
+	Write-Host ''
 	Write-Host ' Aufraeumen' -ForegroundColor White
 	Write-Host '  19  Stoppen                       (Container und Daten bleiben)'
 	Write-Host '  20  Container entfernen           (Volumes bleiben erhalten)'
@@ -602,6 +785,33 @@ while ($running) {
 		'18' { Invoke-FrontendTests }
 		't'  { Invoke-ApiTestsuite }
 		'tc' { Invoke-ApiTestsuite -NurCleanup }
+		's1' {
+			Invoke-Saatskript -Skript 'stammdaten-seeder.sh' `
+				-Titel 'Stammdaten anlegen'
+		}
+		's2' {
+			Invoke-Saatskript -Skript 'stammdaten-seeder-entfernen.sh' `
+				-Titel 'Stammdaten entfernen' `
+				-Warnung ('Das entfernt ALLE Fakultaeten, Studiengaenge und Module dieser ' +
+					'Betriebsart. Projekte, die daran haengen, verlieren diese drei Angaben; ' +
+					'sie bleiben sonst unveraendert. Kategorien und Semester bleiben.')
+		}
+		's3' {
+			Invoke-Saatskript -Skript 'test-seeder.sh' `
+				-Titel 'Testbestand anlegen'
+		}
+		's4' {
+			Invoke-Saatskript -Skript 'test-seeder-entfernen.sh' `
+				-Titel 'Testbestand entfernen' `
+				-Warnung ('Das entfernt Testkonten, Testprojekte und alles, was daran haengt. ' +
+					'Stammdaten, Demodaten und die dev-Testnutzer bleiben.')
+		}
+		's5' { Invoke-Sitzung }
+		's6' { Invoke-Sitzung -Entfernen }
+		's7' {
+			Invoke-Saatskript -Skript 'test-seeder-pruefen.sh' `
+				-Titel 'Testbestand gegen die Seed-Pruefliste zaehlen'
+		}
 		'19' { Write-Head 'Stoppen'; Invoke-Compose @('stop') }
 		'20' { Write-Head 'Container entfernen'; Invoke-Compose @('down', '--remove-orphans') }
 		'21' { Remove-Betriebsart }

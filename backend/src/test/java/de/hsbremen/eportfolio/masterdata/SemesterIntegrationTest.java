@@ -381,8 +381,10 @@ class SemesterIntegrationTest {
 			project.setProjectType(ProjectType.THESIS);
 			project.setDegree(Degree.BACHELOR);
 			project.setCategory(categoryRepository.findAllByOrderByNameAsc().getFirst());
-			project.setFaculty(facultyRepository.findAllByOrderByNameAsc().getFirst());
-			project.setStudyProgram(studyProgramRepository.findAllByOrderByNameAsc().getFirst());
+			StudyProgram studyProgram =
+					TestMasterData.anyStudyProgram(facultyRepository, studyProgramRepository);
+			project.setFaculty(studyProgram.getFaculty());
+			project.setStudyProgram(studyProgram);
 			Project stored = projectRepository.saveAndFlush(project);
 
 			mockMvc.perform(as(student, post("/api/projects/" + stored.getId() + "/submit")))

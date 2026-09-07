@@ -1,7 +1,6 @@
 package de.hsbremen.eportfolio.masterdata;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,14 +22,6 @@ public interface StudyProgramRepository extends JpaRepository<StudyProgram, UUID
 	/** Studiengaenge einer Fakultaet, nach Name aufsteigend: Filter aus §6.1. */
 	@EntityGraph(attributePaths = "faculty")
 	List<StudyProgram> findByFacultyIdOrderByNameAsc(UUID facultyId);
-
-	/**
-	 * Suche ueber den fachlichen Schluessel innerhalb einer Fakultaet. Die
-	 * Tabelle hat darauf keinen Unique-Index; fuer den
-	 * {@link DevMasterDataSeeder} ist das Paar aus Fakultaet und Name trotzdem
-	 * eindeutig genug, um einen zweiten Lauf ohne Duplikate zu ueberstehen.
-	 */
-	Optional<StudyProgram> findByFacultyIdAndName(UUID facultyId, String name);
 
 	/**
 	 * Haengt an dieser Fakultaet noch ein Studiengang? Sperrt das Loeschen der

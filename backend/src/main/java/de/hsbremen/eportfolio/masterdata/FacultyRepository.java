@@ -1,7 +1,6 @@
 package de.hsbremen.eportfolio.masterdata;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -23,13 +22,6 @@ public interface FacultyRepository extends JpaRepository<Faculty, UUID> {
 	 * Die Spalte ist unique, die Reihenfolge damit eindeutig.
 	 */
 	List<Faculty> findAllByOrderByAbbreviationAsc();
-
-	/**
-	 * Suche ueber das Kuerzel ({@code faculty.abbreviation} ist unique). Wird vom
-	 * {@link DevMasterDataSeeder} gebraucht, damit ein zweiter Lauf nichts
-	 * doppelt anlegt.
-	 */
-	Optional<Faculty> findByAbbreviation(String abbreviation);
 
 	/**
 	 * Ist dieses Kuerzel schon an eine <em>andere</em> Fakultaet vergeben? Ergibt

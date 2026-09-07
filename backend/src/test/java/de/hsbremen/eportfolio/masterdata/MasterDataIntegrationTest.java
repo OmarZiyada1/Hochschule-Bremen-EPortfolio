@@ -24,32 +24,37 @@ import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Die vier Endpoints aus §6.1 gegen die echte Datenbank und die echten
- * Seed-Daten: Erreichbarkeit ohne Token, Sortierung, Filter und die
- * Mehrfachausfuehrbarkeit des {@link DevMasterDataSeeder}.
+ * Die vier Endpoints aus §6.1 gegen die echte Datenbank: Erreichbarkeit ohne
+ * Token, Sortierung, Filter und die Mehrfachausfuehrbarkeit des
+ * {@link DevMasterDataSeeder}.
  *
  * <p>{@code @Transactional} sorgt dafuer, dass alles, was dieser Test anlegt,
  * hinterher zurueckgerollt wird: die Entwicklungsdatenbank bleibt so, wie sie
  * war. Die Endpoints laufen im selben Thread und damit in derselben
- * Transaktion; sie sehen die Seed-Daten deshalb auch ohne Commit.
+ * Transaktion; sie sehen die Testdaten deshalb auch ohne Commit.
  *
- * <p>Der Seeder wird in {@link #ensureSeed()} selbst aufgerufen, statt sich
- * darauf zu verlassen, dass Spring den {@code ApplicationRunner} beim
- * Hochfahren des Testkontexts ausgefuehrt hat. Weil er idempotent ist, kostet
- * das nichts und macht den Test unabhaengig davon.
+ * <p><strong>Der Test bringt seine Hierarchie selbst mit.</strong> Frueher
+ * prueften Sortierung und Filter gegen die Fakultaeten, Studiengaenge und
+ * Module des {@link DevMasterDataSeeder}, also gegen Namen wie
+ * &bdquo;Informatik&ldquo; oder &bdquo;Medieninformatik&ldquo;. Diese Hierarchie
+ * fuehrt der Seeder nicht mehr; sie kommt aus dem Skript
+ * {@code stammdaten-seeder.sh}, das den echten Bestand der Hochschule schreibt
+ * und ausserhalb des ausgelieferten Programms steht. Ein Test, der gegen dessen
+ * Inhalt zusichert, haenge an einer Datenlieferung, die sich mit jeder
+ * Aktualisierung der Hochschulseiten aendern darf. Die eigenen Zeilen tragen
+ * Kuerzel mit dem Praefix {@code FKT}, das keiner echten Fakultaet gehoert:
+ * {@code faculty.abbreviation} ist unique.
+ *
+ * <p>Kategorien und Semester kommen weiterhin aus dem Seeder. Er wird in
+ * {@link #buildData()} selbst aufgerufen, statt sich darauf zu verlassen, dass
+ * Spring den {@code ApplicationRunner} beim Hochfahren des Testkontexts
+ * ausgefuehrt hat. Weil er idempotent ist, kostet das nichts und macht den Test
+ * unabhaengig davon.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
 class MasterDataIntegrationTest {
-
-	/** Die fuenf Fakultaeten des Seeders in der erwarteten Reihenfolge (nach name). */
-	private static final List<String> FACULTIES_BY_NAME = List.of(
-			"Architektur, Bau und Umwelt",
-			"Elektrotechnik und Informatik",
-			"Gesellschaftswissenschaften",
-			"Natur und Technik",
-			"Wirtschaftswissenschaften");
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -64,6 +69,9 @@ class MasterDataIntegrationTest {
 	private CategoryRepository categoryRepository;
 
 	@Autowired
+	private SemesterRepository semesterRepository;
+
+	@Autowired
 	private FacultyRepository facultyRepository;
 
 	@Autowired
@@ -72,9 +80,48 @@ class MasterDataIntegrationTest {
 	@Autowired
 	private ModuleRepository moduleRepository;
 
+	/** Traegt die Studiengaenge, gegen die Sortierung und Filter pruefen. */
+	private Faculty faculty;
+
+	/** Zweite Fakultaet, damit der Filter etwas auszuschliessen hat. */
+	private Faculty otherFaculty;
+
+	private StudyProgram alpha;
+
+	private StudyProgram bravo;
+
+	/**
+	 * Legt die eigene Hierarchie an, absichtlich in falscher Reihenfolge: eine
+	 * Zusicherung auf Sortierung traegt nur, wenn die Einfuegereihenfolge nicht
+	 * schon die erwartete ist.
+	 */
 	@BeforeEach
-	void ensureSeed() {
+	void buildData() {
 		seeder.run(new DefaultApplicationArguments());
+
+		otherFaculty = facultyRepository.saveAndFlush(
+				TestMasterData.facultyWithoutId("FKT2", "Testfakultaet Zeta"));
+		faculty = facultyRepository.saveAndFlush(
+				TestMasterData.facultyWithoutId("FKT1", "Testfakultaet Alpha"));
+
+		bravo = studyProgramRepository.saveAndFlush(
+				TestMasterData.studyProgramWithoutId("TSTB", "Testgang Bravo", faculty));
+		alpha = studyProgramRepository.saveAndFlush(
+				TestMasterData.studyProgramWithoutId("TSTA", "Testgang Alpha", faculty));
+		studyProgramRepository.saveAndFlush(
+				TestMasterData.studyProgramWithoutId("TSTZ", "Testgang Zeta", otherFaculty));
+
+		moduleRepository.saveAndFlush(
+				TestMasterData.moduleWithoutId("TSTA-Z", "Zeta Modul", alpha));
+		moduleRepository.saveAndFlush(
+				TestMasterData.moduleWithoutId("TSTA-A", "Alpha Modul", alpha));
+		// Das Sammelmodul entsteht im Betrieb als Nebenwirkung des Anlegens
+		// (§3.9). Der Test geht am Dienst vorbei und legt es ueber dieselbe
+		// Fabrik an, damit der Name nicht ein zweites Mal gebildet wird.
+		moduleRepository.saveAndFlush(Module.collectiveFor(alpha));
+
+		moduleRepository.saveAndFlush(
+				TestMasterData.moduleWithoutId("TSTB-OE", "Ökologie im Test", bravo));
 	}
 
 	// --- Seeder ------------------------------------------------------------
@@ -83,35 +130,50 @@ class MasterDataIntegrationTest {
 	@DisplayName("Zweiter Seeder-Lauf legt nichts doppelt an")
 	void seederIsIdempotent() {
 		long categories = categoryRepository.count();
+		long semesters = semesterRepository.count();
 		long faculties = facultyRepository.count();
 		long studyPrograms = studyProgramRepository.count();
 		long modules = moduleRepository.count();
 
-		// Nach dem Lauf in ensureSeed() ist das bereits der zweite,
+		// Nach dem Lauf in buildData() ist das bereits der zweite,
 		// bei laufendem ApplicationRunner der dritte.
 		seeder.run(new DefaultApplicationArguments());
 
 		assertThat(categoryRepository.count()).isEqualTo(categories);
+		assertThat(semesterRepository.count()).isEqualTo(semesters);
+		// Die drei folgenden zaehlt der Seeder gar nicht mehr hoch; die
+		// Zusicherung bleibt stehen, weil genau das ihre Aussage ist.
 		assertThat(facultyRepository.count()).isEqualTo(faculties);
 		assertThat(studyProgramRepository.count()).isEqualTo(studyPrograms);
 		assertThat(moduleRepository.count()).isEqualTo(modules);
 	}
 
 	@Test
-	@DisplayName("Seeder legt FK1 bis FK5 genau einmal an")
-	void seederCreatesEachFacultyExactlyOnce() {
+	@DisplayName("Seeder legt Kategorien und Semester an, aber keine Hierarchie")
+	void seederCreatesCategoriesAndSemestersOnly() {
+		long faculties = facultyRepository.count();
+		long studyPrograms = studyProgramRepository.count();
+		long modules = moduleRepository.count();
+
 		seeder.run(new DefaultApplicationArguments());
 
-		assertThat(facultyRepository.findAllByOrderByNameAsc())
-				.extracting(Faculty::getAbbreviation)
-				.doesNotHaveDuplicates()
-				.contains("FK1", "FK2", "FK3", "FK4", "FK5");
+		assertThat(categoryRepository.findAllByOrderByNameAsc())
+				.as("die Filterleiste braucht Kategorien")
+				.isNotEmpty();
+		assertThat(semesterRepository.findAllByOrderBySortOrderAsc())
+				.as("das Metadatenformular braucht Semester")
+				.isNotEmpty();
+		assertThat(facultyRepository.count())
+				.as("Fakultaeten kommen aus dem Seeder-Skript, nicht aus dem Seeder")
+				.isEqualTo(faculties);
+		assertThat(studyProgramRepository.count()).isEqualTo(studyPrograms);
+		assertThat(moduleRepository.count()).isEqualTo(modules);
 	}
 
 	// --- Erreichbarkeit ohne Token -----------------------------------------
 
 	@Test
-	@DisplayName("Alle vier Endpoints antworten ohne Token mit 200 und Seed-Daten")
+	@DisplayName("Alle vier Endpoints antworten ohne Token mit 200 und Daten")
 	void allFourEndpointsWithoutToken() throws Exception {
 		assertThat(fetch(get("/api/categories"), CategoryResponse.class)).isNotEmpty();
 		assertThat(fetch(get("/api/faculties"), FacultyResponse.class)).isNotEmpty();
@@ -126,38 +188,35 @@ class MasterDataIntegrationTest {
 	void facultiesAreSorted() throws Exception {
 		List<FacultyResponse> response = fetch(get("/api/faculties"), FacultyResponse.class);
 
-		// Nur die Seed-Fakultaeten betrachten: in einer benutzten
-		// Entwicklungsdatenbank koennen weitere Zeilen stehen.
-		assertThat(response.stream()
-				.map(FacultyResponse::name)
-				.filter(FACULTIES_BY_NAME::contains)
-				.toList())
-				.containsExactlyElementsOf(FACULTIES_BY_NAME);
+		// Nur die eigenen Zeilen betrachten: in einer benutzten
+		// Entwicklungsdatenbank stehen daneben die echten Fakultaeten.
+		List<String> own = List.of("Testfakultaet Alpha", "Testfakultaet Zeta");
+		assertThat(response.stream().map(FacultyResponse::name).filter(own::contains).toList())
+				.containsExactlyElementsOf(own);
 	}
 
 	@Test
 	@DisplayName("Module eines Studiengangs kommen nach name sortiert, samt Sammelmodul")
 	void modulesAreSorted() throws Exception {
-		UUID informatik = studyProgramId("FK4", "Informatik");
-
 		List<ModuleResponse> response = fetch(
-				get("/api/modules").param("studyProgram", informatik.toString()), ModuleResponse.class);
+				get("/api/modules").param("studyProgram", alpha.getId().toString()),
+				ModuleResponse.class);
 
 		/*
 		 * Das Sammelmodul steht seit Contract v84 in jeder Modulliste (§3.9) und
 		 * sortiert sich als gewoehnliche Zeile nach Name ein. Ans Listenende
 		 * stellt es die Oberflaeche, dafuer traegt die Antwort das Merkmal
 		 * collective; der Server sortiert es bewusst nicht um, sonst haette die
-		 * Zusage „nach name sortiert“ eine stille Ausnahme.
+		 * Zusage &bdquo;nach name sortiert&ldquo; eine stille Ausnahme.
 		 */
 		assertThat(response).extracting(ModuleResponse::name)
-				.containsExactly("Grundlagen der Programmierung",
-						"Module aus dem Studiengang Informatik",
-						"Softwaretechnik");
+				.containsExactly("Alpha Modul",
+						"Module aus dem Studiengang Testgang Alpha",
+						"Zeta Modul");
 
 		assertThat(response).filteredOn(ModuleResponse::collective)
 				.extracting(ModuleResponse::name)
-				.containsExactly("Module aus dem Studiengang Informatik");
+				.containsExactly("Module aus dem Studiengang Testgang Alpha");
 	}
 
 	// --- Filter ------------------------------------------------------------
@@ -165,34 +224,32 @@ class MasterDataIntegrationTest {
 	@Test
 	@DisplayName("?faculty liefert nur die Studiengaenge dieser Fakultaet")
 	void studyProgramsFiltered() throws Exception {
-		UUID fk4 = facultyId("FK4");
-
 		List<StudyProgramResponse> response = fetch(
-				get("/api/study-programs").param("faculty", fk4.toString()), StudyProgramResponse.class);
+				get("/api/study-programs").param("faculty", faculty.getId().toString()),
+				StudyProgramResponse.class);
 
-		assertThat(response).isNotEmpty();
-		assertThat(response).extracting(StudyProgramResponse::facultyId).containsOnly(fk4);
+		assertThat(response).extracting(StudyProgramResponse::facultyId)
+				.containsOnly(faculty.getId());
 		assertThat(response).extracting(StudyProgramResponse::name)
-				.contains("Elektrotechnik", "Informatik", "Medieninformatik");
+				.containsExactly("Testgang Alpha", "Testgang Bravo");
 
-		// Gegenprobe: ohne Filter sind auch andere Fakultaeten dabei.
+		// Gegenprobe: ohne Filter ist auch die zweite Fakultaet dabei.
 		assertThat(fetch(get("/api/study-programs"), StudyProgramResponse.class))
 				.extracting(StudyProgramResponse::facultyId)
-				.contains(facultyId("FK1"));
+				.contains(otherFaculty.getId());
 	}
 
 	@Test
 	@DisplayName("?studyProgram liefert nur die Module dieses Studiengangs")
 	void modulesFiltered() throws Exception {
-		UUID medieninformatik = studyProgramId("FK4", "Medieninformatik");
-
 		List<ModuleResponse> response = fetch(
-				get("/api/modules").param("studyProgram", medieninformatik.toString()), ModuleResponse.class);
+				get("/api/modules").param("studyProgram", bravo.getId().toString()),
+				ModuleResponse.class);
 
 		assertThat(response).isNotEmpty();
-		assertThat(response).extracting(ModuleResponse::studyProgramId).containsOnly(medieninformatik);
-		assertThat(response).extracting(ModuleResponse::name)
-				.contains("Mensch-Maschine-Interaktion", "Webtechnologien");
+		assertThat(response).extracting(ModuleResponse::studyProgramId)
+				.containsOnly(bravo.getId());
+		assertThat(response).extracting(ModuleResponse::name).contains("Ökologie im Test");
 	}
 
 	@Test
@@ -209,25 +266,14 @@ class MasterDataIntegrationTest {
 	@Test
 	@DisplayName("Umlaute ueberstehen den Weg Java-Quelltext, Datenbank, JSON")
 	void umlautsSurvive() throws Exception {
-		UUID biologie = studyProgramId("FK5", "Biologie");
-
 		List<ModuleResponse> response = fetch(
-				get("/api/modules").param("studyProgram", biologie.toString()), ModuleResponse.class);
+				get("/api/modules").param("studyProgram", bravo.getId().toString()),
+				ModuleResponse.class);
 
-		assertThat(response).extracting(ModuleResponse::name).contains("Ökologie");
+		assertThat(response).extracting(ModuleResponse::name).contains("Ökologie im Test");
 	}
 
 	// --- Hilfsmittel -------------------------------------------------------
-
-	private UUID facultyId(String abbreviation) {
-		return facultyRepository.findByAbbreviation(abbreviation).orElseThrow().getId();
-	}
-
-	private UUID studyProgramId(String facultyAbbreviation, String name) {
-		return studyProgramRepository.findByFacultyIdAndName(facultyId(facultyAbbreviation), name)
-				.orElseThrow()
-				.getId();
-	}
 
 	/**
 	 * Fuehrt die Anfrage aus, erwartet 200 und liest den Koerper als Liste.

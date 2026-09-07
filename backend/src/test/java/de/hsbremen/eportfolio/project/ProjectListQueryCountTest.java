@@ -179,7 +179,7 @@ class ProjectListQueryCountTest {
 	 */
 	private void create(int count) {
 		var category = categoryRepository.findAllByOrderByNameAsc().getFirst();
-		var faculty = facultyRepository.findAllByOrderByNameAsc().getFirst();
+		var faculty = TestMasterData.anyFaculty(facultyRepository);
 
 		for (int i = 0; i < count; i++) {
 			Project project = TestProject.withoutId(author, ProjectStatus.PUBLISHED, "Projekt " + i);

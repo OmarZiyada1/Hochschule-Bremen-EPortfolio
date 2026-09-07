@@ -14,6 +14,8 @@ import de.hsbremen.eportfolio.masterdata.CategoryRepository;
 import de.hsbremen.eportfolio.masterdata.DevMasterDataSeeder;
 import de.hsbremen.eportfolio.masterdata.SemesterRepository;
 import de.hsbremen.eportfolio.masterdata.FacultyRepository;
+import de.hsbremen.eportfolio.masterdata.StudyProgram;
+import de.hsbremen.eportfolio.masterdata.TestMasterData;
 import de.hsbremen.eportfolio.masterdata.StudyProgramRepository;
 import de.hsbremen.eportfolio.user.TestUser;
 import de.hsbremen.eportfolio.user.User;
@@ -147,8 +149,10 @@ class ProjectWorkflowFourEyesDisabledTest {
 	private Project complete(User owner, ProjectStatus status, String title) {
 		Project project = TestProject.withoutId(owner, status, title);
 		project.setProjectType(ProjectType.REGULAR);
-		project.setFaculty(facultyRepository.findAllByOrderByNameAsc().getFirst());
-		project.setStudyProgram(studyProgramRepository.findAllByOrderByNameAsc().getFirst());
+		StudyProgram studyProgram =
+				TestMasterData.anyStudyProgram(facultyRepository, studyProgramRepository);
+		project.setFaculty(studyProgram.getFaculty());
+		project.setStudyProgram(studyProgram);
 		project.setDegree(Degree.MASTER);
 		project.setCategory(categoryRepository.findAllByOrderByNameAsc().getFirst());
 		project.setSemester(semesterRepository.findAllByOrderBySortOrderAsc().getFirst());

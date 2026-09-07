@@ -24,12 +24,6 @@ public interface ModuleRepository extends JpaRepository<Module, UUID> {
 	List<Module> findByStudyProgramIdOrderByNameAsc(UUID studyProgramId);
 
 	/**
-	 * Suche ueber den fachlichen Schluessel innerhalb eines Studiengangs, fuer
-	 * den {@link DevMasterDataSeeder}.
-	 */
-	Optional<Module> findByStudyProgramIdAndName(UUID studyProgramId, String name);
-
-	/**
 	 * Haengt an diesem Studiengang noch ein <em>Fachmodul</em>? Sperrt das
 	 * Loeschen des Studiengangs mit 409 {@code RESOURCE_IN_USE}, aus demselben
 	 * Grund wie {@link StudyProgramRepository#existsByFacultyId}.

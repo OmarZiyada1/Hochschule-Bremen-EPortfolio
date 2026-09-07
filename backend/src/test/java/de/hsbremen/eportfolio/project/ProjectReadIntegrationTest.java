@@ -193,9 +193,12 @@ class ProjectReadIntegrationTest {
 		admin = save(Role.ADMIN);
 
 		category = categoryRepository.findAllByOrderByNameAsc().getFirst();
-		UUID fk4 = facultyRepository.findByAbbreviation("FK4").orElseThrow().getId();
-		studyProgram = studyProgramRepository.findByFacultyIdAndName(fk4, "Informatik").orElseThrow();
-		module = moduleRepository.findByStudyProgramIdOrderByNameAsc(studyProgram.getId()).getFirst();
+		// Frueher fest auf FK4 und "Informatik" aus dem Seeder. Seit die Hierarchie
+		// aus dem Seeder-Skript kommt, gibt es diesen Namen dort nicht mehr; die
+		// Zusicherungen unten pruefen ohnehin nur ueber IDs und Kuerzel.
+		studyProgram = TestMasterData.anyStudyProgram(facultyRepository, studyProgramRepository);
+		module = TestMasterData.anyModule(facultyRepository, studyProgramRepository,
+				moduleRepository);
 
 		draftOfAuthor = newProject(author, ProjectStatus.DRAFT, "Alpha Entwurf");
 

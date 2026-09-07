@@ -1,5 +1,6 @@
 package de.hsbremen.eportfolio.masterdata;
 
+import java.util.List;
 import java.util.UUID;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -102,6 +103,82 @@ public final class TestMasterData {
 		Tag tag = tag(name);
 		ReflectionTestUtils.setField(tag, "id", null);
 		return tag;
+	}
+
+	/**
+	 * Wie {@link #studyProgram(String, String, Faculty)}, aber ohne vorbelegte ID:
+	 * fuer Tests, die den Studiengang tatsaechlich speichern.
+	 */
+	public static StudyProgram studyProgramWithoutId(String abbreviation, String name, Faculty faculty) {
+		StudyProgram studyProgram = studyProgram(abbreviation, name, faculty);
+		ReflectionTestUtils.setField(studyProgram, "id", null);
+		return studyProgram;
+	}
+
+	/**
+	 * Wie {@link #module(String, String, StudyProgram)}, aber ohne vorbelegte ID:
+	 * fuer Tests, die das Modul tatsaechlich speichern.
+	 */
+	public static Module moduleWithoutId(String abbreviation, String name, StudyProgram studyProgram) {
+		Module module = module(abbreviation, name, studyProgram);
+		ReflectionTestUtils.setField(module, "id", null);
+		return module;
+	}
+
+	// --- Stammdatenkette fuer Integrationstests ----------------------------
+	//
+	// Viele Integrationstests brauchen irgendeine Fakultaet, irgendeinen
+	// Studiengang, irgendein Modul, nur um die Pflichtfelder eines Projekts zu
+	// fuellen. Frueher kamen die aus dem DevMasterDataSeeder. Der fuehrt seit
+	// dem Umzug der Hierarchie in das Seeder-Skript nur noch Kategorien und
+	// Semester (siehe DevMasterDataSeeder), und eine frische Datenbank haette
+	// sonst gar keine.
+	//
+	// Die drei Methoden nehmen deshalb, was da ist, und legen nur an, wenn
+	// nichts da ist. In einer benutzten Entwicklungsdatenbank verhalten sich die
+	// Tests damit genau wie vorher; in einer leeren laufen sie trotzdem. Weil
+	// alle betroffenen Tests @Transactional sind, bleibt eine so angelegte Zeile
+	// nicht stehen.
+
+	/** Irgendeine Fakultaet, angelegt falls die Tabelle leer ist. */
+	public static Faculty anyFaculty(FacultyRepository repository) {
+		List<Faculty> existing = repository.findAllByOrderByNameAsc();
+		if (!existing.isEmpty()) {
+			return existing.getFirst();
+		}
+		// Das Kuerzel ist unique und darf keiner echten Fakultaet gehoeren.
+		// Ohne Sonderzeichen, damit die Sortierung der Datenbank und die von
+		// Java nicht auseinanderlaufen (siehe AdminDashboardIntegrationTest).
+		return repository.saveAndFlush(facultyWithoutId("FKT0", "Fakultaet fuer Tests"));
+	}
+
+	/** Irgendein Studiengang, angelegt falls die Fakultaet noch keinen hat. */
+	public static StudyProgram anyStudyProgram(FacultyRepository facultyRepository,
+			StudyProgramRepository repository) {
+		Faculty faculty = anyFaculty(facultyRepository);
+		List<StudyProgram> existing = repository.findByFacultyIdOrderByNameAsc(faculty.getId());
+		if (!existing.isEmpty()) {
+			return existing.getFirst();
+		}
+		return repository.saveAndFlush(
+				studyProgramWithoutId("SGT0", "Studiengang fuer Tests", faculty));
+	}
+
+	/**
+	 * Irgendein Modul, angelegt falls der Studiengang noch keines hat.
+	 *
+	 * <p>Geliefert wird das erste nach Name, also gegebenenfalls das Sammelmodul
+	 * (§3.9). Fuer die Pflichtfelder eines Projekts ist das gleichwertig; wer ein
+	 * Fachmodul braucht, legt es sich selbst an.
+	 */
+	public static Module anyModule(FacultyRepository facultyRepository,
+			StudyProgramRepository studyProgramRepository, ModuleRepository repository) {
+		StudyProgram studyProgram = anyStudyProgram(facultyRepository, studyProgramRepository);
+		List<Module> existing = repository.findByStudyProgramIdOrderByNameAsc(studyProgram.getId());
+		if (!existing.isEmpty()) {
+			return existing.getFirst();
+		}
+		return repository.saveAndFlush(moduleWithoutId("MODT0", "Modul fuer Tests", studyProgram));
 	}
 
 	/**

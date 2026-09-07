@@ -113,6 +113,11 @@ class AdminDashboardIntegrationTest {
 		admin = userRepository.saveAndFlush(TestUser.activeWithoutId(Role.ADMIN, "nicht-relevant"));
 		student = userRepository.saveAndFlush(
 				TestUser.activeWithoutId(Role.STUDENT, "nicht-relevant"));
+		// Das Dashboard zaehlt je Fakultaet, die Tests unten greifen deshalb auf
+		// die erste zu. Seit die Hierarchie nicht mehr aus dem DevMasterDataSeeder
+		// kommt, sondern aus dem Seeder-Skript, kann die Tabelle leer sein; der
+		// Helfer legt dann eine an und nimmt sonst die vorhandene.
+		TestMasterData.anyFaculty(facultyRepository);
 	}
 
 	@Test
