@@ -25,3 +25,8 @@ var/
 
 # Bytecode der Skill-Werkzeuge (contract.py, thesis.py).
 __pycache__/
+
+# Ausgefuellte Karten B1 der Usability-Testwoche (make_docs.py --passwort).
+# Sie tragen das Testpasswort im Klartext, werden je Sitzung gedruckt und
+# danach vernichtet. Sie gehoeren nicht in die Historie.
+Testmaterial/_sitzung/

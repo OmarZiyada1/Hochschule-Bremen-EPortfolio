@@ -7,6 +7,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx_bau import (neues_dokument, titel, absatz, zwischentitel, linie, kaestchen,
                       tabelle, kastenblock, seitenumbruch, txt)
 from aufgaben import AUFGABEN
+import werte
 
 GRAU = RGBColor(0x66, 0x66, 0x66)
 ROT = RGBColor(0xC0, 0x30, 0x20)
@@ -150,8 +151,8 @@ def moderation():
     zwischentitel(d, "9 Startzustand, Erfolgskriterium und Zeitbudget je Aufgabe")
     absatz(d, "Nur für mich. Der Startzustand wird vor jeder Aufgabe hergestellt, am "
               "Erfolgskriterium halte ich die Stoppuhr an.", 10.5, nach=4)
-    zeilen = [[a["kennung"], txt(a["start"]), txt(a["erfolg"]), a["budget"], a["abbruch"]]
-              for a in AUFGABEN]
+    zeilen = [[a["kennung"], werte.start(a["kennung"], txt(a["start"])), txt(a["erfolg"]),
+               a["budget"], a["abbruch"]] for a in AUFGABEN]
     tabelle(d, ["Aufg.", "Startzustand", "Erfolgskriterium", "Budget", "Abbruch"],
             zeilen, breiten=[1.3, 6.0, 6.4, 1.6, 1.7], groesse=8)
     absatz(d, "Baut eine spätere Aufgabe auf einer abgebrochenen auf (A4 auf A3, A5 auf A2 oder A4, "
@@ -377,6 +378,7 @@ def vor_der_sitzung():
         ["2", "Kurzbogen zur Person", "1", "Moderation"],
         ["3", "Aufgabenkarten Block A, A1 bis A5", "1 Satz", "Moderation"],
         ["4", "Aufgabenkarten des Rollenblocks", "1 Satz, entfällt bei TN08 und TN11", "Moderation"],
+        ["4a", "Karte B1 der Sitzung, aus Testmaterial/_sitzung", "1, nur Block B", "Moderation"],
         ["5", "Beobachtungsprotokoll, passende Fassung", "1", "Protokoll"],
         ["6", "SUS-Bogen", "1", "Moderation"],
         ["7", "TAM-Bogen in der richtigen Fassung", "1", "Moderation"],
@@ -423,6 +425,8 @@ def vor_der_sitzung():
               "Aufzeichnung vorbereitet, Tonpegel geprüft, Aufnahme noch nicht gestartet",
               "Stoppuhr bereit, Stift und Ersatzstift, Wasser für die Testperson",
               "Zugangsdatenblatt für die heutigen Sitzungen ausgefüllt",
+              "Bei Block B: Karte B1 der Sitzung gedruckt. Sie entsteht mit "
+              "„python make_docs.py --passwort“ und liegt in Testmaterial/_sitzung",
               "Erste Zeile im Rücksetzprotokoll ausgefüllt"]:
         kaestchen(d, t, 10.5)
 

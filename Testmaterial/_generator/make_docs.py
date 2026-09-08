@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
-"""Erzeugt alle Word-Druckvorlagen der Testphase."""
-import os, sys
+"""Erzeugt alle Word-Druckvorlagen der Testphase.
+
+    python make_docs.py                  die 20 Dateien in Testmaterial/
+    python make_docs.py --passwort       zusaetzlich die ausgefuellten Karten B1
+                                         je Pseudonym in Testmaterial/_sitzung,
+                                         Passwort aus DEV_TEST_PASSWORD der .env
+    python make_docs.py --passwort <wert>  dasselbe mit einem Wert von Hand
+"""
+import io, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from docx.shared import Pt, Cm, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -8,20 +15,13 @@ from docx_bau import (neues_dokument, titel, absatz, zwischentitel, linie, kaest
                       tabelle, kastenblock, seitenumbruch, txt)
 from aufgaben import AUFGABEN
 import docs_leitung
+import werte
 from p4_druck import SUS, PU, PEOU
 
 ZIEL = "d:/malas/Documents/Projects/Hochschule-Bremen-EPortfolio/Testmaterial"
+SITZUNG = os.path.join(ZIEL, "_sitzung")
 ROT = RGBColor(0xC0, 0x30, 0x20)
 GRAU = RGBColor(0x66, 0x66, 0x66)
-
-MARKEN = {
-    "A2": [("[Seed-Thema einsetzen]", "[ Seed-Thema ]")],
-    "A3": [("[X]", "[ Fakultät ]"), ("[Y]", "[ Semester ]")],
-    "B2": [("[Titel]", "[ Projekttitel ]")],
-    "C2": [("[Titel]", "[ Projekttitel 1 ]")],
-    "C3": [("[Titel]", "[ Projekttitel 2 ]")],
-    "D2": [("[Name aus dem Seed]", "[ Name aus dem Seed ]")],
-}
 
 BEZUG = {
     "A": ("Studentische Projekte suchen und ansehen",
@@ -92,25 +92,27 @@ def anleitung():
         ["TN09, TN10", "Administration", "A, dann D", "Fassung D"],
     ], breiten=[3.6, 4.4, 3.4, 3.6])
 
-    zwischentitel(d, "4 Vor dem Druck ausfüllen")
-    absatz(d, "Sieben Stellen in den Aufgabenkarten sind offen. Sie stehen dort in eckigen Klammern "
-              "und rot. Eine Karte mit einer roten Klammer darf nicht auf den Tisch.", 10.5)
-    tabelle(d, ["Karte", "Was eingesetzt wird", "Wert"], [
-        ["A2", "Thema des Zielprojekts", "Baustoffbörse"],
-        ["A3", "Fakultät und Semester", "Elektrotechnik und Informatik, WiSe 2025/26"],
-        ["B1", "Beide Adressen und das Passwort", "Zugangsdatenblatt der Sitzung, je Sitzung neu"],
-        ["B2", "Ein Projekttitel", "frei gewählt, je Sitzung derselbe"],
-        ["C2", "Projekttitel, der zurückgegeben wird",
-         "Zahlungsbereitschaft für regionale Milch in Bremen"],
-        ["C3", "Projekttitel, der veröffentlicht wird",
-         "Wiederverwendung von Ziegeln aus einem Abbruch in Walle"],
-        ["D2", "Name des Zusatzkontos", "Nele Ostermann"],
+    zwischentitel(d, "4 Was auf den Karten schon steht")
+    absatz(d, "Die Karten sind fertig: in Word ist nichts nachzutragen. Die Tabelle sagt nur, "
+              "welcher Wert wo steht, damit sich das nach einem neu aufgesetzten Bestand "
+              "nachprüfen lässt.", 10.5)
+    tabelle(d, ["Karte", "Was dort steht", "Wert"], [
+        ["A2", "Thema des Zielprojekts", werte.THEMA_A2],
+        ["A3", "Fakultät und Semester", "%s, %s" % (werte.FAKULTAET_A3, werte.SEMESTER_A3)],
+        ["B1", "Beide Adressen und das Passwort", "je Sitzung neu, siehe unten"],
+        ["B2", "Titel, den die Testperson eintippt", werte.TITEL_B2],
+        ["C2", "Projekttitel, der zurückgegeben wird", werte.TITEL_C2],
+        ["C3", "Projekttitel, der veröffentlicht wird", werte.TITEL_C3],
+        ["D2", "Name des Zusatzkontos", werte.NAME_D2],
     ], breiten=[1.8, 6.2, 8.8])
-    absatz(d, "Diese Werte legt der Seed-Bestand fest. Sie werden am Ende jedes Laufs von "
-              "Menüpunkt s3 ausgegeben, die Titel für C2 und C3 auch von s5. Wird der Bestand "
-              "inhaltlich neu aufgesetzt, gilt die Ausgabe des Skripts und nicht diese Tabelle. "
-              "Auf der Karte A3 steht der Name der Fakultät und nicht das Kürzel FK4: in der "
-              "Filterleiste steht der Name.", 10, vor=4)
+    absatz(d, "Die Werte legt der Seed-Bestand fest; Menüpunkt s3 gibt sie am Ende jedes Laufs "
+              "aus. Weicht seine Ausgabe von dieser Tabelle ab, gilt das Skript: dann wird "
+              "_generator/werte.py nachgezogen und neu erzeugt. Auf A3 steht der Name der "
+              "Fakultät und nicht FK4, weil in der Filterleiste der Name steht.", 10, vor=4)
+    absatz(d, "Offen bleibt allein B1: die Karte trägt das Passwort und liegt im Satz Block B "
+              "nur als Vorlage. Die ausgefüllten Karten für TN00 bis TN05 entstehen mit "
+              "„python make_docs.py --passwort“ in Testmaterial/_sitzung. Je Sitzung wird "
+              "eine gedruckt und danach vernichtet.", 10, vor=6)
 
     zwischentitel(d, "5 Reihenfolge in der Sitzung")
     for i, t in enumerate([
@@ -226,57 +228,81 @@ def kurzbogen():
 
 
 # ------------------------------------------------------------ 03-06 Karten
+NAMEN = {"A": "Block A: ohne Anmeldung", "B": "Block B: Studierende",
+         "C": "Block C: Redaktion", "D": "Block D: Administration"}
+
+
+def _kartenkopf(d, block, nummer, gesamt, kennung):
+    absatz(d, NAMEN[block] + "   ·   Karte %d von %d" % (nummer, gesamt),
+           9, farbe=GRAU, nach=16)
+    p = d.add_paragraph()
+    r = p.add_run("Aufgabe " + kennung)
+    r.bold = True
+    r.font.size = Pt(13)
+    r.font.color.rgb = GRAU
+    p.paragraph_format.space_after = Pt(10)
+
+
+def _kartenkasten(d, text):
+    """Der Szenariotext in seinem Rahmen. Gibt die Zelle zurueck, weil die
+    Karte B1 ihre Zugangsdaten in denselben Kasten setzt."""
+    t = d.add_table(rows=1, cols=1)
+    t.style = "Table Grid"
+    zelle = t.rows[0].cells[0]
+    zelle.text = ""
+    par = zelle.paragraphs[0]
+    par.paragraph_format.space_before = Pt(14)
+    par.paragraph_format.space_after = Pt(14)
+    run = par.add_run(text)
+    run.font.size = Pt(18)
+    return zelle
+
+
+def _zugangszeilen(zelle, paare):
+    """Die drei Zeilen unter dem Szenario der Karte B1. Ein leerer Wert wird
+    zur Linie: so ist dieselbe Karte einmal Vorlage und einmal fertig."""
+    erste = zelle.add_paragraph()
+    erste.paragraph_format.space_before = Pt(18)
+    for label, wert in paare:
+        q = zelle.add_paragraph()
+        rr = q.add_run(label + "  " + (wert if wert else "_" * 34))
+        rr.font.size = Pt(15)
+        q.paragraph_format.space_after = Pt(12)
+
+
 def karten(block, nummer):
     d = neues_dokument()
     liste = [a for a in AUFGABEN if a["block"] == block]
-    namen = {"A": "Block A: ohne Anmeldung", "B": "Block B: Studierende",
-             "C": "Block C: Redaktion", "D": "Block D: Administration"}
     for n, a in enumerate(liste):
         if n:
             seitenumbruch(d)
-        absatz(d, namen[block] + "   ·   Karte %d von %d" % (n + 1, len(liste)),
-               9, farbe=GRAU, nach=16)
-        p = d.add_paragraph()
-        r = p.add_run("Aufgabe " + a["kennung"])
-        r.bold = True
-        r.font.size = Pt(13)
-        r.font.color.rgb = GRAU
-        p.paragraph_format.space_after = Pt(10)
-
-        s = txt(a["szenario"])
-        marken = MARKEN.get(a["kennung"], [])
-        t = d.add_table(rows=1, cols=1)
-        t.style = "Table Grid"
-        zelle = t.rows[0].cells[0]
-        zelle.text = ""
-        par = zelle.paragraphs[0]
-        par.paragraph_format.space_before = Pt(14)
-        par.paragraph_format.space_after = Pt(14)
-        rest = s
-        if marken:
-            for alt, neu in marken:
-                vor, _, rest = rest.partition(alt)
-                run = par.add_run(vor)
-                run.font.size = Pt(18)
-                run2 = par.add_run(neu)
-                run2.font.size = Pt(18)
-                run2.bold = True
-                run2.font.color.rgb = ROT
-        run = par.add_run(rest)
-        run.font.size = Pt(18)
-
+        _kartenkopf(d, block, n + 1, len(liste), a["kennung"])
+        zelle = _kartenkasten(d, werte.einsetzen(txt(a["szenario"]),
+                                                 werte.KARTE.get(a["kennung"])))
         if a["kennung"] == "B1":
-            zusatz = zelle.add_paragraph()
-            zusatz.paragraph_format.space_before = Pt(18)
-            for label in ["Adresse 1:", "Adresse 2:", "Passwort:"]:
-                q = zelle.add_paragraph()
-                rr = q.add_run(label + "  " + "_" * 34)
-                rr.font.size = Pt(15)
-                q.paragraph_format.space_after = Pt(12)
-        if marken:
-            absatz(d, "Vor dem Druck: die rot markierte Stelle durch den echten Wert ersetzen.",
+            _zugangszeilen(zelle, [("Adresse 1:", ""), ("Adresse 2:", ""),
+                                   ("Passwort:", "")])
+            absatz(d, "Nur diese eine Karte bleibt offen, weil das Passwort darauf steht. Die "
+                      "ausgefüllte Fassung je Pseudonym entsteht mit "
+                      "„python make_docs.py --passwort“ in Testmaterial/_sitzung.",
                    9, kursiv=True, farbe=ROT, vor=10)
     return d, "%02d_Aufgabenkarten_Block_%s.docx" % (nummer, block)
+
+
+def karte_b1(pseudonym, passwort):
+    """Die fertige Karte B1 einer einzelnen Sitzung: beide Adressen und das
+    Passwort stehen darauf, ohne zu verraten, welche Adresse die Kennung ist.
+    Sie traegt ein Geheimnis, gehoert deshalb nicht in die Versionsverwaltung
+    und wird nach der Sitzung vernichtet."""
+    a = [x for x in AUFGABEN if x["kennung"] == "B1"][0]
+    gesamt = len([x for x in AUFGABEN if x["block"] == "B"])
+    d = neues_dokument()
+    _kartenkopf(d, "B", 1, gesamt, "B1")
+    zelle = _kartenkasten(d, txt(a["szenario"]))
+    adresse, hochschuladresse = werte.adressen(pseudonym)
+    _zugangszeilen(zelle, [("Adresse 1:", adresse), ("Adresse 2:", hochschuladresse),
+                           ("Passwort:", passwort)])
+    return d, "B1_%s.docx" % pseudonym
 
 
 # --------------------------------------------------------------- 07 SUS-Bogen
@@ -406,6 +432,37 @@ def tam_bogen(fassung, nummer):
     return d, "%02d_TAM-Bogen_Fassung_%s.docx" % (nummer, fassung)
 
 
+def _passwort_aus_env():
+    """DEV_TEST_PASSWORD aus der .env im Wurzelverzeichnis. Genau dieser Wert
+    steht in den Testkonten: test-sitzung.sh nimmt den bcrypt-Hash aus dem
+    Konto dev-studi@dev.invalid."""
+    pfad = os.path.join(os.path.dirname(ZIEL), ".env")
+    if not os.path.exists(pfad):
+        raise SystemExit("Keine .env unter %s gefunden. Wert direkt angeben: "
+                         "python make_docs.py --passwort <wert>" % pfad)
+    for zeile in io.open(pfad, encoding="utf-8"):
+        zeile = zeile.strip()
+        if zeile.startswith("DEV_TEST_PASSWORD="):
+            return zeile.split("=", 1)[1].strip().strip("\"'")
+    raise SystemExit("DEV_TEST_PASSWORD steht nicht in %s." % pfad)
+
+
+def sitzungskarten(passwort):
+    """Die Karten B1 fuer alle Pseudonyme mit Block B. Getrennter Ordner, weil
+    das Passwort darauf steht: _sitzung ist von der Versionsverwaltung
+    ausgenommen, und die Blaetter werden nach der Sitzung vernichtet."""
+    os.makedirs(SITZUNG, exist_ok=True)
+    for tn in werte.PSEUDONYME_BLOCK_B:
+        d, name = karte_b1(tn, passwort)
+        pfad = os.path.join(SITZUNG, name)
+        d.save(pfad)
+        print("_sitzung/%-32s %6d Bytes" % (name, os.path.getsize(pfad)))
+    print()
+    print("Diese sechs Karten tragen das Passwort im Klartext. Es wird je Sitzung")
+    print("genau eine gedruckt, und sie wird danach vernichtet (Blatt „Nach der")
+    print("Sitzung“, Abschnitt 1).")
+
+
 def main():
     os.makedirs(ZIEL, exist_ok=True)
     bauen = [anleitung(), einwilligung(), kurzbogen(),
@@ -417,6 +474,13 @@ def main():
         pfad = os.path.join(ZIEL, name)
         d.save(pfad)
         print("%-42s %6d Bytes" % (name, os.path.getsize(pfad)))
+
+    # --passwort ohne Wert liest die .env, --passwort <wert> nimmt den Wert.
+    if "--passwort" in sys.argv:
+        i = sys.argv.index("--passwort")
+        rest = sys.argv[i + 1:]
+        print()
+        sitzungskarten(rest[0] if rest else _passwort_aus_env())
 
 
 if __name__ == "__main__":

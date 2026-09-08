@@ -11,7 +11,8 @@ die sie beschreibt, damit beide Beteiligten sie haben.
 | `01_Einwilligung.docx` | je Sitzung **zweimal** | 1 | 4 Druckvorlagen |
 | `02_Kurzbogen.docx` | je Sitzung | 1 | 4 Druckvorlagen |
 | `03_Aufgabenkarten_Block_A.docx` | einmal für die Woche | 5 | 4 Druckvorlagen |
-| `04_Aufgabenkarten_Block_B.docx` | einmal, Karte B1 je Sitzung neu | 7 | 4 Druckvorlagen |
+| `04_Aufgabenkarten_Block_B.docx` | einmal für die Woche, Karte B1 nur als Vorlage | 7 | 4 Druckvorlagen |
+| `_sitzung/B1_TN..docx` | je Sitzung eine, danach vernichten | 1 | entsteht auf Aufruf |
 | `05_Aufgabenkarten_Block_C.docx` | einmal für die Woche | 5 | 4 Druckvorlagen |
 | `06_Aufgabenkarten_Block_D.docx` | einmal für die Woche | 6 | 4 Druckvorlagen |
 | `07_SUS-Bogen.docx` | je Sitzung | 1 | 4 Druckvorlagen |
@@ -42,26 +43,47 @@ mit Mühe, nicht geschafft. Welche Wertung gilt, sagt die Moderation laut an. Zu
 zwei Kürzel: **N** für einen falschen Weg, **E** für eine Überraschung. Alles Übrige wird in
 normalen Worten mit Zeitmarke notiert. Fehlversuche kommen als Strichliste in die eigene Spalte.
 
-## Vor dem ersten Druck ausfüllen
+## Was auf den Karten schon steht
 
-Sieben Stellen in den Aufgabenkarten stehen in roten eckigen Klammern. Sie werden in Word
-durch den echten Wert ersetzt. Eine Karte mit roter Klammer darf nicht auf den Tisch.
+Die Aufgabenkarten sind fertig. In Word ist nichts nachzutragen: die Werte, die der
+Seed-Bestand festlegt, sind eingedruckt. Diese Tabelle sagt nur, welcher Wert wo steht,
+damit sich das nach einem neu aufgesetzten Bestand nachprüfen lässt.
 
 | Karte | Wert |
 | --- | --- |
 | `A2` | Baustoffbörse |
 | `A3` | Elektrotechnik und Informatik, WiSe 2025/26 |
-| `B1` | beide Adressen und das Passwort des Testkontos, je Sitzung neu |
-| `B2` | ein frei gewählter Projekttitel |
+| `B2` | Lastenrad-Verleih im Bremer Westen |
 | `C2` | Zahlungsbereitschaft für regionale Milch in Bremen |
 | `C3` | Wiederverwendung von Ziegeln aus einem Abbruch in Walle |
 | `D2` | Nele Ostermann |
 
-Diese Werte legt der Seed-Bestand fest. Sie werden am Ende jedes Laufs von Menüpunkt `s3`
-in `eportfolio.ps1` ausgegeben, die Titel für `C2` und `C3` auch von `s5`. Wird der Bestand
-inhaltlich neu aufgesetzt, gilt die Ausgabe des Skripts und nicht diese Tabelle. Auf der
-Karte `A3` steht der Name der Fakultät und nicht das Kürzel FK4: in der Filterleiste steht
-der Name.
+Dieselben Werte stehen im Moderationsblatt, Abschnitt 9, als Startzustand von `A5`, `C2`
+und `C3`. Gepflegt werden sie an einer einzigen Stelle: `_generator/werte.py`. Der
+Aufgabenkatalog in `_generator/aufgaben.py` bleibt allgemein, wortgleich mit Confluence,
+und behält seine Platzhalter.
+
+Menüpunkt `s3` in `eportfolio.ps1` gibt diese Werte am Ende jedes Laufs aus, die Titel für
+`C2` und `C3` auch `s5`. Weicht die Ausgabe des Skripts von der Tabelle ab, gilt das
+Skript: dann wird `werte.py` nachgezogen und neu erzeugt. Auf der Karte `A3` steht der Name
+der Fakultät und nicht das Kürzel FK4, weil in der Filterleiste der Name steht.
+
+## Die einzige Karte, die offen bleibt: `B1`
+
+Auf `B1` stehen beide Adressen des Testkontos und das Passwort. Das Passwort gehört nicht
+ins Repository, deshalb liegt die Karte in `04_Aufgabenkarten_Block_B.docx` nur als Vorlage
+mit drei Linien. Die ausgefüllten Karten für `TN00` bis `TN05` entstehen auf Aufruf:
+
+```bash
+cd Testmaterial/_generator
+python make_docs.py --passwort            # Wert aus DEV_TEST_PASSWORD der .env
+python make_docs.py --passwort geheim123  # oder ein Wert von Hand
+```
+
+Sie landen in `Testmaterial/_sitzung/` als `B1_TN00.docx` bis `B1_TN05.docx`, einzeln,
+damit je Sitzung genau eine gedruckt wird. Der Ordner ist von der Versionsverwaltung
+ausgenommen. Die gedruckte Karte wird nach der Sitzung vernichtet, wie das Blatt
+„Nach der Sitzung“ es in Abschnitt 1 verlangt.
 
 ## Nach dem Pilottest neu erzeugen
 
@@ -75,9 +97,11 @@ python make_docs.py
 ```
 
 Das Skript schreibt alle 20 Dateien nach `Testmaterial/` und überschreibt die alten. Die
-Aufgabentexte stehen in `_generator/aufgaben.py`, die Bogenitems in `_generator/p4_druck.py`,
-die Blätter der Testleitung in `_generator/docs_leitung.py`. Werden sie geändert, müssen sie
-in Confluence ebenfalls nachgezogen werden.
+Aufgabentexte stehen in `_generator/aufgaben.py`, die eingesetzten Werte in
+`_generator/werte.py`, die Bogenitems in `_generator/p4_druck.py`, die Blätter der
+Testleitung in `_generator/docs_leitung.py`. Werden die Texte geändert, müssen sie in
+Confluence ebenfalls nachgezogen werden; `werte.py` steht nur hier, weil es den
+Datenbestand beschreibt und nicht die Aufgabe.
 
 ## Woher der Datenbestand kommt
 
