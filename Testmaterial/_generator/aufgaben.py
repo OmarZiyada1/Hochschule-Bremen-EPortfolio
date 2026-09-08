@@ -5,7 +5,7 @@ kennung, titel, budget, abbruch, szenario, start, erfolg, fokus, bezug"""
 AUFGABEN = [
  dict(kennung="A1", block="A", titel="Orientierung", budget="2 min", abbruch="3 min",
   szenario="&bdquo;Du bist gerade auf der Startseite dieses Portals gelandet, ohne dass dir jemand erkl&auml;rt hat, was das ist. Schau dich um und sag laut, was du vermutest: Was ist das f&uuml;r eine Seite, wer betreibt sie, und was kann man hier tun?&ldquo;",
-  start="Startseite, abgemeldet, frisches Browserprofil, kein Scrollen vorbereitet.",
+  start="Startseite, abgemeldet, frisches Browserprofil, kein Scrollen vorbereitet. Die Top 10 ist vollst&auml;ndig belegt.",
   erfolg="Keine Erfolgswertung und keine Zeitnahme gegen ein Kriterium. Erhoben wird, ob Zweck, Betreiber und mindestens eine Handlungsm&ouml;glichkeit ohne Hilfe benannt werden.",
   fokus="Welche Fl&auml;che wird zuerst betrachtet? Wird die Top-10-Fl&auml;che als kuratierte Auswahl oder als Werbefl&auml;che gelesen? F&auml;llt das Wort &bdquo;Portfolio&ldquo; von selbst, oder wird von &bdquo;Projekten&ldquo; gesprochen?",
   bezug="H2, H8; TF 2"),
@@ -101,7 +101,7 @@ AUFGABEN = [
   bezug="H1, H4, H5"),
  dict(kennung="C5", block="C", titel="F&uuml;r die Top 10 vorschlagen", budget="5 min", abbruch="7,5 min",
   szenario="&bdquo;Du h&auml;ltst dieses Projekt f&uuml;r eines der besten des Semesters. Schlage es daf&uuml;r vor.&ldquo;",
-  start="Ein ver&ouml;ffentlichtes Projekt ist ge&ouml;ffnet.",
+  start="Ein ver&ouml;ffentlichtes Projekt ist ge&ouml;ffnet. In der Top 10 sind sechs der zehn Pl&auml;tze belegt.",
   erfolg="Nominierung mit Stufe ist abgegeben.",
   fokus="Wird &bdquo;Stufe&ldquo; statt &bdquo;Platz&ldquo; verstanden? Ist erkennbar, wer am Ende entscheidet und dass die Nominierung noch keine Aufnahme ist? Wird nach einer R&uuml;ckmeldung gesucht, ob der Vorschlag angekommen ist?",
   bezug="KAN-40, Contract &sect;3.11.1; H1, H2"),

@@ -41,6 +41,24 @@
 #            nur Block A und melden sich nie an; das Zugangsdatenblatt
 #            entfaellt fuer sie.
 #
+# DIE TOP 10 DER STARTSEITE wird bei jedem Lauf neu gesetzt, und zwar je
+# Rollenblock verschieden:
+#   Bloecke A und B  alle zehn Plaetze belegt. Der Beobachtungsfokus zu
+#            A1 fragt ausdruecklich, ob die Top-10-Flaeche als kuratierte
+#            Auswahl oder als Werbeflaeche gelesen wird; an einer leeren
+#            Flaeche laesst sich das nicht beobachten. TN08 und TN11
+#            bearbeiten nur Block A und fallen deshalb hierunter.
+#   Block C  sechs Plaetze belegt. C5 schlaegt nur vor und entscheidet
+#            nicht; an einer teilweise gefuellten Liste ist zu sehen,
+#            dass die Nominierung noch keine Aufnahme ist.
+#   Block D  kein Platz belegt. D5 verlangt als Startzustand
+#            ausdruecklich "keine Top 10 gesetzt" und laesst die ganze
+#            Liste erst entstehen (Aufgabenkatalog, Abschnitt 3).
+# Belegt werden die Projekte ...0015 bis ...0024 auf den Plaetzen 1 bis
+# 10. Sie liegen ausserhalb der vierzehn Nominierungen (...0001 bis
+# ...0014), damit in D5 kein Projekt zugleich vorgeschlagen und schon
+# platziert ist.
+#
 # DAS PASSWORT kommt aus dem Konto dev-studi@dev.invalid: bcrypt laesst
 # sich in SQL nicht rechnen, und ein erfundener Hash ergaebe ein Konto,
 # an dem sich niemand anmeldet. Es ist damit dasselbe wie DEV_TEST_PASSWORD
@@ -50,6 +68,7 @@
 #   7e5700f0-...  Sitzungskonten (die letzten beiden Stellen sind die
 #                 Teilnehmernummer)
 #   7e5700f1-...  deren Portfolios
+#   7e570019-...  die gesetzten Top-10-Plaetze
 # Alles Uebrige gehoert dem gemeinsamen Bestand aus test-seeder.sh.
 #
 # Andere Containernamen? Ueber Umgebungsvariablen:
@@ -191,7 +210,71 @@ ENDE_SQL_SITZUNG_KONTO
 fi
 
 # -------------------------------------------------------------------
-# 4) Vorbedingungen des Rollenblocks einstellen.
+# 4) Top 10 der Startseite setzen.
+#
+#    Wie viele Plaetze belegt sind, haengt am Rollenblock; die
+#    Begruendung steht im Kopf dieser Datei. Gesetzt wird bei jedem Lauf
+#    neu, damit der Stand der vorigen Sitzung nicht stehen bleibt.
+#
+#    Die Tabelle gehoert dem gemeinsamen Bestand und nicht dem
+#    Sitzungskonto. Sie steht deshalb hier und nicht in Abschnitt 2, der
+#    ausschliesslich Zeilen dieses einen Kontos wegraeumt.
+# -------------------------------------------------------------------
+case "$BLOCK" in
+	A|B) TOP10_PLAETZE=10 ;;
+	C)   TOP10_PLAETZE=6 ;;
+	*)   TOP10_PLAETZE=0 ;;
+esac
+
+echo "== Top 10 setzen =="
+sql <<ENDE_SQL_SITZUNG_TOP10
+begin;
+
+-- Immer zuerst leeren: dieser Abschnitt setzt den Stand, er ergaenzt
+-- ihn nicht. Ein Rest aus den Demodaten waere sonst ein Platz zu viel.
+delete from top10_entry;
+
+-- Die zehn Projekte liegen ausserhalb der vierzehn Nominierungen, damit
+-- in D5 kein Projekt zugleich vorgeschlagen und schon platziert ist.
+-- Platz 1 traegt das aelteste Aufnahmedatum; sichtbar ist ohnehin die
+-- Reihenfolge, das Datum ist nur Beiwerk.
+insert into top10_entry (id, project_id, position, added_at)
+select v.id::uuid, v.project_id::uuid, v.position,
+       now() - ((11 - v.position) || ' days')::interval
+from (values
+	('7e570019-0000-4000-8000-000000000001', '7e570011-0000-4000-8000-000000000015',  1),
+	('7e570019-0000-4000-8000-000000000002', '7e570011-0000-4000-8000-000000000016',  2),
+	('7e570019-0000-4000-8000-000000000003', '7e570011-0000-4000-8000-000000000017',  3),
+	('7e570019-0000-4000-8000-000000000004', '7e570011-0000-4000-8000-000000000018',  4),
+	('7e570019-0000-4000-8000-000000000005', '7e570011-0000-4000-8000-000000000019',  5),
+	('7e570019-0000-4000-8000-000000000006', '7e570011-0000-4000-8000-000000000020',  6),
+	('7e570019-0000-4000-8000-000000000007', '7e570011-0000-4000-8000-000000000021',  7),
+	('7e570019-0000-4000-8000-000000000008', '7e570011-0000-4000-8000-000000000022',  8),
+	('7e570019-0000-4000-8000-000000000009', '7e570011-0000-4000-8000-000000000023',  9),
+	('7e570019-0000-4000-8000-000000000010', '7e570011-0000-4000-8000-000000000024', 10)
+) as v(id, project_id, position)
+where v.position <= ${TOP10_PLAETZE}
+  and exists (select 1 from project p
+              where p.id = v.project_id::uuid and p.status = 'PUBLISHED');
+
+commit;
+ENDE_SQL_SITZUNG_TOP10
+if [ "$TOP10_PLAETZE" -eq 0 ]; then
+	echo "  Kein Platz belegt: D5 verlangt eine leere Liste als Startzustand."
+else
+	gesetzt=$(sql -tAc "select count(*) from top10_entry;" | tr -d '[:space:]')
+	echo "  $gesetzt von zehn Plaetzen belegt (Block $BLOCK verlangt $TOP10_PLAETZE)."
+	if [ "$gesetzt" != "$TOP10_PLAETZE" ]; then
+		abbruch "Es sind $gesetzt statt $TOP10_PLAETZE Plaetze belegt.
+         Die Projekte 7e570011-...-0015 bis ...-0024 muessen im Status
+         Veroeffentlicht stehen. Fehlen sie, erst den gemeinsamen
+         Bestand anlegen: bash test-seeder.sh (Menuepunkt s3)."
+	fi
+fi
+echo
+
+# -------------------------------------------------------------------
+# 5) Vorbedingungen des Rollenblocks einstellen.
 # -------------------------------------------------------------------
 case "$BLOCK" in
 B)
@@ -275,12 +358,11 @@ update project
 set status = 'APPROVED', published_at = null, version = version + 1, updated_at = now()
 where id::text like '7e570011-0000-4000-8000-00000000006%';
 
--- D5: Top 10 leeren und die Nominierungen wieder auf offen setzen.
--- Das Aenderungsprotokoll bleibt ausdruecklich stehen: D6 sucht darin
+-- D5: die Nominierungen wieder auf offen setzen. Die Top 10 selbst hat
+-- Abschnitt 4 schon geleert, fuer Block D auf null Plaetze. Das
+-- Aenderungsprotokoll bleibt ausdruecklich stehen: D6 sucht darin
 -- Eintraege verschiedener Personen, und die entstehen nur ueber die
 -- Zeit.
-delete from top10_entry;
-
 update top10_nomination
 set status = 'PENDING', decided_by = null, decided_at = null
 where id::text like '7e570017-%';
@@ -301,7 +383,7 @@ esac
 echo
 
 # -------------------------------------------------------------------
-# 5) Was auf die Blaetter kommt.
+# 6) Was auf die Blaetter kommt.
 # -------------------------------------------------------------------
 echo "== Fuer die Testleitung =="
 if [ -n "$ROLLE" ]; then

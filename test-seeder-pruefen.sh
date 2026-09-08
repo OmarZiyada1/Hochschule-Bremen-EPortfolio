@@ -3,6 +3,14 @@
 # Zaehlt den Testbestand gegen die Seed-Pruefliste.
 #
 #     bash test-seeder-pruefen.sh
+#     bash test-seeder-pruefen.sh TN01
+#
+# DAS PSEUDONYM IST FREIWILLIG und aendert genau einen Punkt: die Zahl
+# der belegten Top-10-Plaetze. Sie haengt am Rollenblock der anstehenden
+# Sitzung und wird von test-sitzung.sh gesetzt, zehn in den Bloecken A
+# und B, sechs in Block C, keiner in Block D. Mit Pseudonym prueft das
+# Skript den genauen Wert, ohne Pseudonym nur, dass einer dieser drei
+# Staende steht. Der Menuepunkt s7 ruft ohne Pseudonym auf.
 #
 # Das Blatt "Vor der Sitzung" verlangt in Abschnitt 5, den Seed VOR
 # JEDEM TERMIN zu zaehlen und nicht nur einmal am Anfang der Woche.
@@ -34,6 +42,25 @@ sql() { docker exec -i -e PGCLIENTENCODING=UTF8 "$DB" \
 zahl() { sql -tAc "$1" | tr -d '[:space:]'; }
 
 FEHLER=0
+
+# Optionales Pseudonym. Leer heisst: es steht keine bestimmte Sitzung an,
+# und die Top 10 wird nur grob geprueft. Die Zuordnung ist dieselbe wie
+# in test-sitzung.sh; wer sie dort aendert, aendert sie auch hier.
+TN="${1:-}"
+TOP10_SOLL=""
+if [ -n "$TN" ]; then
+	TN=$(echo "$TN" | tr '[:lower:]' '[:upper:]')
+	case "$TN" in
+		TN00|TN01|TN02|TN03|TN04|TN05) TOP10_SOLL=10 ;;
+		TN06|TN07)                     TOP10_SOLL=6  ;;
+		TN08|TN11)                     TOP10_SOLL=10 ;;
+		TN09|TN10)                     TOP10_SOLL=0  ;;
+		*)
+			echo "ABBRUCH: Unbekanntes Pseudonym: $TN. Erwartet wird TN00 bis TN11." >&2
+			exit 1
+			;;
+	esac
+fi
 
 # $1 Beschriftung, $2 Istwert, $3 Vergleich als Testausdruck, $4 Sollwert-Text
 pruefe() {
@@ -148,9 +175,31 @@ pruefe "Projekte im Status Genehmigt (D4)" "$d4" "$(genau "$d4" 5)" "5"
 d5_nom=$(zahl "select count(*) from top10_nomination where status = 'PENDING';")
 pruefe "offene Nominierungen (D5)" "$d5_nom" "$(mindestens "$d5_nom" 12)" "mindestens 12"
 
+# Die belegten Plaetze gehoeren nicht zu Block D allein: test-sitzung.sh
+# setzt sie je Rollenblock, weil der Beobachtungsfokus zu A1 nach der
+# Top-10-Flaeche fragt und C5 an einer teilweise gefuellten Liste zeigt,
+# dass eine Nominierung noch keine Aufnahme ist. Nur Block D braucht die
+# leere Liste, die D5 als Startzustand verlangt.
 d5_top=$(zahl "select count(*) from top10_entry;")
-pruefe "gesetzte Top-10-Plaetze (D5 verlangt keine)" "$d5_top" \
-	"$(genau "$d5_top" 0)" "0"
+if [ -n "$TOP10_SOLL" ]; then
+	pruefe "belegte Top-10-Plaetze (Sitzung $TN)" "$d5_top" \
+		"$(genau "$d5_top" "$TOP10_SOLL")" "$TOP10_SOLL"
+	if [ "$d5_top" != "$TOP10_SOLL" ]; then
+		printf '      Herstellen mit: bash test-sitzung.sh %s (Menuepunkt s5)\n' "$TN"
+	fi
+else
+	if [ "$d5_top" = "0" ] || [ "$d5_top" = "6" ] || [ "$d5_top" = "10" ]; then
+		top10_zulaessig=ok
+	else
+		top10_zulaessig=nein
+	fi
+	pruefe "belegte Top-10-Plaetze (ohne Pseudonym nur grob)" "$d5_top" \
+		"$top10_zulaessig" "0, 6 oder 10"
+	if [ "$d5_top" != "0" ]; then
+		printf '      Genau geprueft wird mit dem Pseudonym der anstehenden\n'
+		printf '      Sitzung: bash test-seeder-pruefen.sh TN01\n'
+	fi
+fi
 
 d6_zeilen=$(zahl "select count(*) from top10_audit_entry;")
 d6_personen=$(zahl "select count(distinct admin_id) from top10_audit_entry;")

@@ -443,6 +443,9 @@ def vor_der_sitzung():
               "8 Autorinnen und Autoren, davon mindestens 1 mit mehreren Projekten",
               "1 Zielprojekt für A2, unter dem gesetzten Thema auffindbar",
               "1 inhaltsreiches Projekt für A5",
+              "Top 10 belegt, je nach Rollenblock der anstehenden Sitzung: 10 Plätze in den "
+              "Blöcken A und B, 6 in Block C, keiner in Block D. Gesetzt von Menüpunkt s5, "
+              "gezählt mit bash test-seeder-pruefen.sh TN01",
               "Block C: 4 Projekte im Status Eingereicht, davon 2 aus fremder Feder, dazu "
               "1 veröffentlichtes Projekt für C5",
               "Block D: 2 gleichbedeutende Kategorien mit je mindestens 3 Projekten, 5 Projekte im "
