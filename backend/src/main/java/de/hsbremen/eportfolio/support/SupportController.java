@@ -82,9 +82,14 @@ public class SupportController {
 	 * Bewusst {@code getRemoteAddr()} ohne Auswertung von
 	 * {@code X-Forwarded-For}, wie im {@code AuthController}: der Header ist
 	 * frei setzbar, und ihn ungeprueft auszuwerten machte die IP-Sperre mit
-	 * jedem Request umgehbar (§6.5). Sobald die Anwendung hinter einem Reverse
-	 * Proxy laeuft, gehoert das in die Konfiguration des Rahmenwerks und nicht
-	 * in diesen Controller.
+	 * jedem Request umgehbar (§6.5).
+	 *
+	 * <p>Seit Contract v97 (KAN-98) laeuft die Anwendung im Profil {@code prod}
+	 * tatsaechlich hinter einem Reverse Proxy, und wie §6.5 es verlangt, ist das
+	 * in der Rahmenkonfiguration geloest und nicht hier:
+	 * {@code server.forward-headers-strategy: native} setzt die Adresse bereits
+	 * vor dieser Methode um. Ausfuehrliche Begruendung samt Begleitbedingung im
+	 * gleichnamigen Javadoc des {@code AuthController}.
 	 */
 	private static String clientIp(HttpServletRequest request) {
 		return request.getRemoteAddr();

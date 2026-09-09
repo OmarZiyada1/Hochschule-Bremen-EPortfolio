@@ -55,6 +55,45 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
+server:
+  # Hinter dem Proxy die echte Adresse des Clients auswerten (KAN-98).
+  #
+  # Im Betrieb steht die Anwendung hinter zwei Proxys: dem TLS-Terminierer am
+  # Rand und dem nginx des Frontend-Containers. Ohne diesen Schalter sieht
+  # Tomcat als Absender jedes Requests die Container-Adresse des nginx, und
+  # zwar bei jedem Request dieselbe. Das trifft nicht nur das Log: die
+  # Brute-Force-Bremse aus app.security.login-attempts zaehlt getrennt je
+  # E-Mail und je Client-IP, und der IP-Zaehler stuende dann fuer alle Nutzer
+  # gemeinsam. Fuenf Fehlversuche irgendeiner Person sperrten damit den Login
+  # fuer alle. Dasselbe gilt fuer das Rate-Limit am Kontaktformular (§6.5).
+  #
+  # "native" und nicht "framework": die Auswertung uebernimmt Tomcats
+  # RemoteIpValve. Sie setzt neben der Adresse auch Schema und Port aus
+  # X-Forwarded-Proto und X-Forwarded-Port, sodass von der Anwendung erzeugte
+  # absolute URLs https tragen statt http.
+  #
+  # Nur im Profil prod: die Zusage "davor steht ein vertrauenswuerdiger Proxy"
+  # gilt allein im Betrieb. Im Profil dev spricht der Browser direkt mit der
+  # Anwendung, und ein X-Forwarded-For waere dort eine Behauptung des Clients.
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      # Wem geglaubt wird. Die Liste steht ausdruecklich hier und nicht auf
+      # dem Vorgabewert, damit im Code nachlesbar ist, welche Absender als
+      # Proxy gelten: die privaten Bereiche, in denen Docker seine Netze
+      # anlegt (Compose vergibt aus 172.16.0.0/12), dazu Loopback.
+      #
+      # Ausgewertet wird der rechteste Eintrag in X-Forwarded-For, der NICHT
+      # auf dieses Muster passt. Ein vom Client selbst gesetzter Wert steht
+      # links davon und wird dadurch wirkungslos.
+      #
+      # ZWINGENDE BEGLEITBEDINGUNG: der Backend-Port darf nicht oeffentlich
+      # veroeffentlicht sein (compose.prod.yml bindet ihn auf 127.0.0.1).
+      # Waere er es, koennte jeder direkt daran einen beliebigen
+      # X-Forwarded-For senden und sich jede Absenderadresse der Welt
+      # aussuchen. Die Sperre waere dann schlechter als ohne diesen Block.
+      internal-proxies: '172\.1[6-9]\.\d{1,3}\.\d{1,3}|172\.2\d\.\d{1,3}\.\d{1,3}|172\.3[01]\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|0:0:0:0:0:0:0:1|::1'
+
 app:
   security:
     cors:

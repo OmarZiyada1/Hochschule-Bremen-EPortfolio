@@ -2,7 +2,7 @@
 
 Beschreibt den Stand von Branch `main`. Basis-Paket ist
 `de.hsbremen.eportfolio`, Gruppen-ID `de.hsbremen`, Artefakt `eportfolio`.
-Der API-Contract steht auf v96 (Confluence, Seiten-ID 36732929); wo ein
+Der API-Contract steht auf v97 (Confluence, Seiten-ID 36732929); wo ein
 Abschnitt eine ältere Version nennt, ist damit die Version gemeint, mit der
 die beschriebene Festlegung entstand.
 

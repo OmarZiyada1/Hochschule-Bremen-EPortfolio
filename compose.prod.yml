@@ -20,15 +20,65 @@
 # Einzige Ausnahme ist MAIL_PORT: ein leerer Wert liesse sich nicht in eine
 # Zahl umwandeln, und dieser Umwandlungsfehler wuerde die eigentliche Meldung
 # ueberdecken. 587 ist der Wert aus der .env.example.
+#
+# ----------------------------------------------------------------------
+# Betrieb auf einem Server (KAN-98)
+# ----------------------------------------------------------------------
+# Diese Datei beschreibt seit KAN-98 nicht mehr nur einen lokalen PROD-Lauf,
+# sondern den Dauerbetrieb auf einem VPS. Vier Dinge kommen dadurch dazu, und
+# jedes einzelne davon fehlte vorher:
+#
+#   1. Der Dienst "caddy" als einziges nach aussen geoeffnetes Tor. Er
+#      terminiert TLS; alles andere ist nur noch ueber 127.0.0.1 erreichbar.
+#   2. "restart: unless-stopped" je Dienst, sonst ist das Portal nach jedem
+#      Neustart des Servers aus.
+#   3. Log-Rotation, sonst wachsen die Container-Logs bis die Platte voll ist.
+#   4. Ein groesseres Zeitfenster fuer die Gesundheitspruefung des Backends,
+#      weil sie im Profil prod am Mailserver haengt.
+#
+# Nichts davon steht in compose.base.yml: der DEV-Stack auf den Rechnern der
+# Entwickler soll weder beim Hochfahren von Windows mitstarten noch einen
+# TLS-Terminierer bekommen.
 
 name: eportfolio-prod
 
+# Log-Rotation, einmal beschrieben und viermal verwendet.
+#
+# Ohne Begrenzung legt der json-file-Treiber unbegrenzt an: bei einem
+# Dauerbetrieb ueber Wochen ist die volle Platte kein Randfall, sondern der
+# Normalfall, und sie trifft zuerst Postgres. 10 MB mal 5 Dateien sind je
+# Dienst hoechstens 50 MB, zusammen also ein knappes Viertel Gigabyte.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   db:
+    restart: unless-stopped
+    logging: *logging
+    # Nur auf 127.0.0.1 und nicht auf allen Schnittstellen. Vorher stand hier
+    # "${PROD_POSTGRES_PORT:-5434}:5432", und das haette die Datenbank auf
+    # einem Server mit oeffentlicher Adresse ab der ersten Minute ins offene
+    # Netz gestellt.
+    #
+    # Eine Firewall auf dem Wirt genuegt dagegen NICHT: Docker traegt seine
+    # Weiterleitungen selbst in die iptables-Ketten DOCKER-USER und nat ein
+    # und umgeht damit die Regeln von ufw. Ein veroeffentlichter Port ist
+    # trotz aktiver ufw von aussen erreichbar. Die Bindeadresse hier ist die
+    # Stelle, an der das wirklich entschieden wird; die Firewall des Anbieters
+    # kommt als zweite, unabhaengige Schicht dazu.
+    #
+    # Der Port bleibt veroeffentlicht und wird nicht gestrichen, damit
+    # Sicherung und Fehlersuche auf dem Server selbst weiter mit psql
+    # herankommen, ohne den Container zu betreten.
     ports:
-      - "${PROD_POSTGRES_PORT:-5434}:5432"
+      - "127.0.0.1:${PROD_POSTGRES_PORT:-5434}:5432"
 
   backend:
+    restart: unless-stopped
+    logging: *logging
     build:
       target: runtime
     environment:
@@ -42,13 +92,103 @@ services:
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
+    healthcheck:
+      # Nur das Zeitfenster wird ueberschrieben, Befehl und Takt kommen aus
+      # compose.base.yml (Compose fuehrt Abbildungen schluesselweise zusammen).
+      #
+      # 3 Sekunden aus der Basis reichen im Profil prod nicht. Weil dort
+      # spring.mail.host gesetzt ist, legt Spring Boot von allein eine
+      # Gesundheitspruefung fuer den Mailserver an, und die oeffnet bei jedem
+      # Aufruf eine SMTP-Verbindung. application-prod.yml gibt ihr bewusst
+      # 5000 ms Zeit, bevor sie aufgibt. Die Antwort kann damit knapp ueber
+      # fuenf Sekunden brauchen, und der Container galt bisher als unhealthy,
+      # obwohl die Anwendung einwandfrei lief.
+      timeout: 10s
+    # Wie bei db: nur 127.0.0.1. Von aussen wird das Backend nie direkt
+    # angesprochen, der Weg fuehrt ueber caddy und den nginx des Frontends
+    # (frontend/nginx.conf, proxy_pass http://backend:8080).
+    #
+    # Diese Bindung ist zugleich die Begleitbedingung fuer
+    # server.forward-headers-strategy aus application-prod.yml: waere der Port
+    # oeffentlich, koennte jeder direkt daran einen beliebigen
+    # X-Forwarded-For senden und sich jede Absenderadresse aussuchen. Die
+    # IP-Sperre am Login waere dann schlechter als ohne den Schalter.
     ports:
-      - "${PROD_BACKEND_PORT:-8280}:8080"
+      - "127.0.0.1:${PROD_BACKEND_PORT:-8280}:8080"
     # Kein storage-Volume: im Profil prod liegen die Dateien in Azure Blob
     # Storage, nicht im Dateisystem des Containers.
 
   frontend:
+    restart: unless-stopped
+    logging: *logging
     build:
       target: runtime
+    # Ebenfalls nur 127.0.0.1. Oeffentlich erreichbar ist allein caddy, und
+    # der spricht das Frontend im Compose-Netz unter seinem Dienstnamen an.
+    # Der Port bleibt trotzdem veroeffentlicht: er ist der kuerzeste Weg, auf
+    # dem Server selbst zu pruefen, ob ein Fehler vom Terminierer oder aus der
+    # Anwendung kommt.
     ports:
-      - "${PROD_FRONTEND_PORT:-5373}:80"
+      - "127.0.0.1:${PROD_FRONTEND_PORT:-5373}:80"
+
+  # --------------------------------------------------------------------
+  # TLS-Terminierer (KAN-98)
+  # --------------------------------------------------------------------
+  # Das einzige nach aussen geoeffnete Tor. Der uebrige Stapel spricht nur
+  # noch ueber 127.0.0.1 und das Compose-Netz.
+  #
+  # Caddy und nicht nginx mit certbot: Caddy beschafft und erneuert das
+  # Zertifikat von allein, ohne zweiten Dienst, ohne cron-Auftrag und ohne
+  # eine Erneuerungslogik, die niemand pflegt. Bei einer Bachelorarbeit mit
+  # zwei Personen ist das der entscheidende Unterschied: ein certbot, dessen
+  # Erneuerung nach 90 Tagen still scheitert, faellt erst auf, wenn die Seite
+  # nicht mehr aufgeht.
+  #
+  # Die Konfiguration steht in ./Caddyfile. Sie kennt keine Adresse, sondern
+  # liest APP_DOMAIN aus der Umgebung, damit die Domain wie jeder andere
+  # Betriebswert in der .env steht und nicht im Repository.
+  caddy:
+    image: caddy:2-alpine
+    # Nur auf einem Server, nicht bei einem PROD-Lauf auf dem eigenen Rechner.
+    #
+    # Ohne dieses Profil startete caddy bei jedem "up -d" mit, auch lokal, und
+    # zwar mit leerem APP_DOMAIN. Der Caddyfile liest die leere Adresse dann
+    # als globalen Optionsblock und bricht ab mit "unrecognized global option:
+    # tls"; der Container liefe in eine Neustartschleife, und der lokale
+    # PROD-Lauf, den docs/SETUP.md ausdruecklich vorsieht, waere kaputt.
+    #
+    # Geschaltet wird ueber COMPOSE_PROFILES in der .env und NICHT ueber einen
+    # Schalter am Aufruf. Damit bleibt der Startbefehl auf dem Server derselbe
+    # wie lokal, und der Unterschied steht dort, wo in diesem Projekt jeder
+    # Umgebungsunterschied steht. Ein vergessenes "--profile" am Aufruf haette
+    # dagegen still keinen Terminierer gestartet.
+    profiles:
+      - edge
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      - frontend
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    ports:
+      # Hier bewusst OHNE 127.0.0.1: das ist die Tuer, und sie soll offen
+      # sein. 80 bleibt noetig, obwohl alles auf 443 laeuft: Caddy leitet von
+      # dort um und beantwortet die HTTP-01-Anfrage von Let's Encrypt.
+      # 443/udp ist HTTP/3; faellt es aus, sprechen Browser weiter TCP.
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # caddy_data traegt die ausgestellten Zertifikate und den ACME-Zugang.
+      # Ohne dieses Volume holt Caddy nach jedem Neuerstellen des Containers
+      # ein neues Zertifikat und laeuft nach wenigen Malen in das Wochenlimit
+      # von Let's Encrypt. Dann steht die Seite tagelang ohne gueltiges
+      # Zertifikat da, und daran ist nichts schnell zu reparieren.
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
