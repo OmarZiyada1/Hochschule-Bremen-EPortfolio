@@ -6,10 +6,10 @@ veröffentlichen; Redakteur:innen geben Beiträge frei, eine Top-10-Liste hebt
 ausgewählte Projekte hervor. Umgesetzt wird ein Spring-Boot-Backend mit
 PostgreSQL und ein React-Frontend. Das Backend deckt den API-Contract
 vollständig ab (Auth, Projekte, Blöcke, Workflow, Kommentare, Dateien,
-Top 10, Administration, Registrierung); im Frontend stehen Tokenschicht und
-Komponentenbibliothek, die Seiten entstehen ticketweise. Verbindlicher
-Arbeitsstand ist Jira (Projekt KAN), nicht
-[docs/STAND.md](docs/STAND.md).
+Top 10, Administration, Registrierung); das Frontend setzt darauf die
+öffentlichen Ansichten, den blockbasierten Editor, die Redaktionsansicht und
+die Administrationsseite. Verbindlicher Arbeitsstand ist das Jira-Board
+(Projekt KAN); der Code in diesem Repository ist die Momentaufnahme dazu.
 
 ## Tech-Stack
 
@@ -36,6 +36,12 @@ Alle Versionen aus `backend/pom.xml` bzw. `frontend/package.json`.
   Confluence-Seite „Fakultäten-Hierarchie"
 - `test-seeder.sh`, `test-sitzung.sh` und ihre Gegenstücke zum Entfernen,
   dazu `test-seeder-pruefen.sh`: Datenbestand der Usability-Testwoche
+- `postman/`: Postman-Sammlung über alle Endpoints, im Menü unter `t` mit
+  Newman ausführbar
+- `Testmaterial/`: Bögen und Aufgabenkarten der Usability-Testwoche samt
+  ihrem Generator; gehört zur empirischen Erhebung, nicht zur Anwendung
+- `thesis/`: Textteil der Bachelorarbeit
+- `.claude/`: Projektregeln, Skills und Agents für die Arbeit mit Claude Code
 
 ## Schnellstart
 
@@ -54,12 +60,43 @@ Das startet Datenbank, Backend und Frontend. Der erste Lauf dauert, weil die
 Maven-Abhängigkeiten und `node_modules` einmal geladen werden; beides bleibt
 danach in benannten Volumes liegen.
 
-Wer sich die Befehle nicht merken will, nimmt das Menü: `.\eportfolio.ps1`
-bündelt Starten, Bauen, Logs, Tests und Aufräumen.
-
 Prüfen: <http://localhost:5173> zeigt die Oberfläche,
 <http://localhost:8080/actuator/health> muss `{"status":"UP"}` liefern. Die API
-lässt sich über <http://localhost:8080/swagger-ui.html> ausprobieren.
+lässt sich über <http://localhost:8080/swagger-ui.html> ausprobieren. Anmelden
+mit `dev-studi@dev.invalid` und dem `DEV_TEST_PASSWORD` aus der `.env`; daneben
+gibt es `dev-redakteur@…` und `dev-admin@…` mit denselben Zugangsdaten.
+
+Fakultäten, Studiengänge und Module legt beim Start niemand an: sie sind eine
+Datenlieferung und kommen aus `stammdaten-seeder.sh` (Menüpunkt `s1`). Ohne
+diesen Lauf bleiben die zugehörigen Auswahlfelder leer, ohne dass ein Fehler
+auftritt.
+
+### Bequemer: das Menü
+
+`eportfolio.ps1` im Wurzelverzeichnis fasst alles zusammen, was man im Alltag
+braucht, und ist der empfohlene Weg:
+
+```powershell
+.\eportfolio.ps1
+.\eportfolio.ps1 -Mode artifact    # mit vorgewählter Betriebsart
+```
+
+Es prüft zuerst, ob Docker läuft und ob es eine `.env` gibt, und nennt sonst
+den fehlenden Schritt. Dann zeigt es ein Menü mit Betriebsart im Kopf:
+Starten und Bauen, Status und Gesundheit, Logs je Dienst, Shell und `psql`,
+die Backend- und Frontend-Testläufe, die Postman-Sammlung über alle Endpoints,
+die Saatdaten und das Aufräumen. Jeder Docker-Befehl wird vorher angezeigt,
+man kann ihn also auch von Hand verwenden; die löschenden Punkte fragen nach
+und benennen, was verloren geht. Menüpunkte im Einzelnen in
+[docs/SETUP.md](docs/SETUP.md), Abschnitt 2.
+
+Weigert sich PowerShell wegen der Ausführungsrichtlinie:
+`powershell -ExecutionPolicy Bypass -File .\eportfolio.ps1`.
+
+Das Menü setzt Windows mit PowerShell voraus; unter macOS und Linux führen die
+`docker compose`-Befehle oben zum selben Ergebnis. Die Saatdaten-Punkte rufen
+ohnehin Shell-Skripte im Wurzelverzeichnis auf, die auch ohne das Menü laufen;
+dann sagt ihnen `DB_CONTAINER`, welche Datenbank gemeint ist.
 
 Das Frontend spricht die API unter seinem eigenen Ursprung an
 (`http://localhost:5173/api/…`), in DEV über den Vite-Proxy, sonst über
@@ -105,8 +142,9 @@ Umgebung des Prozesses (API-Contract §6.8).
 
 Das Portal braucht einen Objektspeicher für hochgeladene Dateien und einen
 Mailversand für Verifizierungscodes. Beide sind über einen Port abstrahiert und
-über eine Property austauschbar. Die Adapter selbst entstehen in KAN-23
-(Dateien) und KAN-51 (Mail); hier steht die Auswahl.
+über eine Property austauschbar; je zwei Adapter stehen bereit
+(`backend/…/file/` und `backend/…/mail/`). Welcher greift, entscheidet allein
+die Property:
 
 | Property               | Wert    | Wirkung                                        |
 |------------------------|---------|------------------------------------------------|
@@ -167,6 +205,6 @@ Konfiguration: Mail-Adapter=smtp, Absender=...
 
 ## Weitere Dokumentation
 
-- [docs/SETUP.md](docs/SETUP.md) — Installation, Start, Testnutzer, Fehlerbehebung
-- [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md) — Paketstruktur, Migrationen, Sicherheitsablauf, wo was hingehört
-- [docs/STAND.md](docs/STAND.md) — Momentaufnahme: was umgesetzt ist und was nicht
+- [docs/SETUP.md](docs/SETUP.md): Installation, Start, Testnutzer, Fehlerbehebung
+- [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md): Paketstruktur, Migrationen, Sicherheitsablauf, wo was hingehört
+- [docs/NAMENSSCHEMA.md](docs/NAMENSSCHEMA.md): verbindliche Zuordnung Deutsch nach Englisch für Klassen, Felder, Enums, Endpoints und Datenbankspalten

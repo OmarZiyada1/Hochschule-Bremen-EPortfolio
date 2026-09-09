@@ -35,8 +35,9 @@ am Zeilenanfang sind davon nicht betroffen.
    `python .claude/skills/api-contract-sync/contract.py` (Zugang aus
    `.env.atlassian`). Die Seite ist zu groß für das MCP-Werkzeug, deshalb
    arbeitet das Skript abschnittsweise auf einer lokalen Arbeitskopie.
-2. **Jira**: Projekt `KAN`, verbindlicher Arbeitsstand. `docs/STAND.md` ist
-   nur eine Momentaufnahme.
+2. **Jira**: Projekt `KAN`, verbindlicher Arbeitsstand. Eine Datei im
+   Repository ist nie der Beleg dafür, was umgesetzt ist; der Beleg ist der
+   Code selbst, und was er noch werden soll, steht in Jira.
 3. **docs/ARCHITEKTUR.md**: Paketbaum, Basisklassen, Migrationsliste,
    Security-Ablauf und die Tabelle „Wo kommt was hin" (§6 dort).
 4. **docs/NAMENSSCHEMA.md**: verbindliche Zuordnung Deutsch nach Englisch
@@ -158,7 +159,7 @@ docker compose up -d          # Postgres 16 starten (Wurzelverzeichnis)
 cd backend && ./mvnw test     # alle Tests (braucht laufende DB + .env)
 cd backend && ./mvnw spring-boot:run   # Start im Profil dev
 # Swagger-UI (nur dev): http://localhost:8080/swagger-ui.html
-# Dev-Login: dev-studi@dev.invalid / test1234 (siehe DevTestnutzerSeeder)
+# Dev-Login: dev-studi@dev.invalid / DEV_TEST_PASSWORD aus der .env (siehe DevTestUserSeeder)
 ```
 
 ## Konnektoren prüfen, bevor ein Ticket beginnt
@@ -199,8 +200,8 @@ es weiter.
 Zwei Feinheiten:
 
 - **Atlassian blockiert immer.** Ohne Jira gibt es keinen Sollzustand, ohne
-  Confluence keinen Contract. Ersatzweise aus dem Gedächtnis, aus `docs/` oder
-  aus `docs/STAND.md` zu arbeiten ist ausgeschlossen.
+  Confluence keinen Contract. Ersatzweise aus dem Gedächtnis oder aus `docs/`
+  zu arbeiten ist ausgeschlossen.
 - **Figma blockiert Frontend-Tickets.** Ein reines Backend-Ticket darf bei
   ausgefallenem Figma-Konnektor weiterlaufen, aber nur auf ausdrückliche
   Zusage hin, nach der Meldung. Ungefragt wird das nicht entschieden.
@@ -283,7 +284,6 @@ Drei Fallstricke, die sonst jedes Mal neu Zeit kosten:
    bereits aus Schritt 3 geklärt. Was den **Sollzustand** eines noch offenen
    Tickets verändert, gehört dagegen in dessen Beschreibung und nicht in den
    Kommentar (Abschnitt „Ein Ticket hat genau einen Sollzustand").
-   `docs/STAND.md` nicht pflegen (veraltet bewusst; Jira ist verbindlich).
 
 ## Git: Claude schreibt nicht in die Historie
 

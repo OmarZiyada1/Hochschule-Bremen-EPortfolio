@@ -1,8 +1,9 @@
-# Setup — von `git clone` bis zur laufenden Anwendung
+# Setup: von `git clone` bis zur laufenden Anwendung
 
 Diese Anleitung ist für jemanden geschrieben, der das Repository frisch klont
-und nichts vorinstalliert hat. Sie beschreibt den Stand von Branch `main`
-einschließlich KAN-14 (Stammdaten-Endpoints), dessen Merge noch aussteht.
+und nichts vorinstalliert hat. Sie beschreibt den Stand von Branch `main`.
+Bezeichner, Endpoint-Pfade und Fehlercodes sind seit KAN-49 durchgehend
+englisch (`docs/NAMENSSCHEMA.md`); deutsch bleibt allein die Prosa.
 
 Alle Befehle werden **aus dem Repository-Wurzelverzeichnis** ausgeführt, sofern
 nicht anders angegeben.
@@ -18,7 +19,7 @@ nicht anders angegeben.
 | Git             | beliebig                        | `git --version`           |
 | OpenSSL         | für das JWT-Secret; in Git Bash enthalten | `openssl version` |
 
-Maven wird **nicht** gebraucht — das Repository bringt den Maven Wrapper
+Maven wird **nicht** gebraucht: das Repository bringt den Maven Wrapper
 (`backend/mvnw`, `backend/mvnw.cmd`) mit.
 
 Wer alles im Container laufen lässt (Abschnitt 2), braucht von dieser Liste
@@ -121,26 +122,50 @@ ihre eigene Datenbank mit den Dev-Daten.
 
 ### Menü statt Befehle
 
-Wer sich die Befehle nicht merken will, startet das Menü im
-Wurzelverzeichnis:
+`eportfolio.ps1` im Wurzelverzeichnis ist der bequemste Weg und für den
+täglichen Gebrauch gedacht. Es ersetzt keinen Docker-Befehl, sondern setzt sie
+zusammen: jeder Aufruf wird vor der Ausführung angezeigt (`> docker compose -f
+… up -d`), man kann ihn also jederzeit von Hand weiterverwenden.
 
 ```powershell
 .\eportfolio.ps1
 .\eportfolio.ps1 -Mode artifact    # mit vorgewählter Betriebsart
 ```
 
-Im Kopf steht immer, welche Betriebsart gewählt ist; alle Punkte beziehen
-sich darauf, gewechselt wird mit `b`. Es bündelt Starten und Bauen, Status
-(auch über alle Betriebsarten hinweg), Gesundheit, Logs je Dienst, Shell und
-`psql`, die Testläufe sowie das Aufräumen. Die löschenden Punkte fragen
-vorher nach und benennen, was verloren geht. Jeder Docker-Befehl wird vor
-der Ausführung angezeigt, damit man ihn auch von Hand verwenden kann.
-
 Weigert sich PowerShell wegen der Ausführungsrichtlinie:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\eportfolio.ps1
 ```
+
+**Vor dem Menü prüft das Skript drei Dinge** und bricht sonst ab, statt in
+einen unverständlichen Docker-Fehler zu laufen: ob `docker` im `PATH` liegt, ob
+der Docker-Daemon antwortet (also Docker Desktop läuft), und ob es eine `.env`
+neben dem Skript gibt. Fehlt sie, nennt es den Befehl zum Anlegen und die drei
+Werte, die mindestens gesetzt sein müssen.
+
+Im Kopf steht immer, welche Betriebsart gewählt ist, mit Projektname,
+Spring-Profil und Port der Oberfläche. **Alle Punkte beziehen sich auf diese
+eine Betriebsart**, gewechselt wird mit `b`. Die Gruppen:
+
+| Punkte | Was |
+| --- | --- |
+| `1` bis `5` | Starten und Bauen: starten, neu bauen und starten, nur die Datenbank starten, Images bauen, Images ohne Cache bauen |
+| `6` bis `12` | Beobachten: Status, Status **aller** Betriebsarten, Gesundheit (Health, Proxy, OpenAPI in einem Durchgang), Logs folgen für alle Dienste oder je Backend, Frontend, Datenbank |
+| `13` bis `18` | Arbeiten: Backend neu übersetzen (löst in DEV den Hot Reload aus), Shell im Backend oder Frontend, `psql` in der Datenbank, Backend-Tests, Frontend-Tests |
+| `t`, `tc` | Die Postman-Sammlung aus `postman/` mit Newman gegen die laufende Betriebsart; `tc` räumt nur die Reste eines abgebrochenen Laufs weg |
+| `s1` bis `s7` | Saatdaten, siehe nächster Abschnitt |
+| `19` bis `24` | Aufräumen: stoppen, Container entfernen, diese Betriebsart samt Datenbank entfernen, Images entfernen, alle drei Betriebsarten entfernen, Build-Cache leeren |
+
+Nach dem Starten nennt das Skript die vier Adressen der gewählten Betriebsart
+(Oberfläche, API, Swagger-UI, Health) mit den richtigen Ports, damit man sie
+nicht aus der Tabelle oben ablesen muss. In PROD steht dort ausdrücklich, dass
+die Swagger-UI abgeschaltet ist.
+
+Die löschenden Punkte sind im Menü mit eckigen Klammern markiert
+(`[inkl. ihrer Datenbank]`), fragen vorher nach und benennen, was verloren
+geht. `24` betrifft als einziger Punkt **alle** Docker-Projekte auf dem
+Rechner und nicht nur dieses.
 
 ### Saatdaten
 
@@ -264,12 +289,12 @@ cp .env.example .env
 
 Gelesen wird die Datei von zwei Stellen:
 
-- die `compose.*.yml` — Compose lädt `.env` aus dem Verzeichnis, in dem es
+- die `compose.*.yml`: Compose lädt `.env` aus dem Verzeichnis, in dem es
   aufgerufen wird.
-- `backend/src/main/resources/application-dev.yml` — importiert
+- `backend/src/main/resources/application-dev.yml`: importiert
   `optional:file:../.env[.properties]` und `optional:file:./.env[.properties]`,
   damit der Start sowohl aus `backend/` als auch aus dem Wurzelverzeichnis
-  funktioniert. `optional:` bedeutet: fehlt die Datei, ist das kein Fehler — die
+  funktioniert. `optional:` bedeutet: fehlt die Datei, ist das kein Fehler, die
   Werte können stattdessen echte Umgebungsvariablen sein.
 
 ### Die Variablen
@@ -285,16 +310,27 @@ Gelesen wird die Datei von zwei Stellen:
 | `CORS_ALLOWED_ORIGINS`  | im Profil `dev` nein, im Profil `prod` ja | `application.yml`, Default `http://localhost:5173`; `application-prod.yml` ohne Default | im `dev` greift der Default, im `prod` startet die Anwendung nicht |
 | `DEV_TEST_PASSWORD`     | nein, aber praktisch nötig | `DevTestUserSeeder` | Die App startet, legt aber **keine** Testnutzer an und schreibt eine Warnung ins Log. Ohne Testnutzer kann man sich nirgends anmelden. |
 
-Seit KAN-50 kommen vier weitere Variablen dazu. Sie gehören **ausschließlich
-zum Profil `prod`**; zum Entwickeln bleiben sie leer, denn dort liegen Dateien
-im Dateisystem und Mails in der Serverkonsole (API-Contract §6.8):
+Der zweite Block der `.env` gehört **ausschließlich zum Profil `prod`**; zum
+Entwickeln bleibt er leer, denn dort liegen Dateien im Dateisystem und Mails in
+der Serverkonsole (API-Contract §6.8). Im Profil `prod` ist jeder dieser acht
+Werte Pflicht:
 
-| Variable | Wird gelesen von | Wenn sie im Profil `prod` fehlt |
-|----------|------------------|----------------------------------|
-| `AZURE_STORAGE_CONTAINER` | `app.storage.container` | Start bricht ab: `app.storage.provider=azure, aber diese Pflichtwerte fehlen: app.storage.container (AZURE_STORAGE_CONTAINER)` |
-| `AZURE_STORAGE_CONNECTION_STRING` | `app.storage.connection-string` | wie oben, mit dem anderen Schlüssel. Der Wert ist ein Geheimnis (er enthält den Kontoschlüssel) |
-| `MAIL_FROM_ADDRESS` | `app.mail.from-address` | Start bricht ab |
-| `APP_BASE_URL` | `app.mail.base-url` | Start bricht ab |
+| Variable | Wird gelesen als | Bedeutung |
+|----------|------------------|-----------|
+| `AZURE_STORAGE_CONTAINER` | `app.storage.container` | Name des Blob-Containers für die hochgeladenen Dateien |
+| `AZURE_STORAGE_CONNECTION_STRING` | `app.storage.connection-string` | Verbindungszeichenfolge des Speicherkontos. **Geheimnis**, sie enthält den Kontoschlüssel |
+| `MAIL_FROM_ADDRESS` | `app.mail.from-address` | Absender der Verifizierungs- und Rücksetzmails; muss zur Domain des Relays passen |
+| `APP_BASE_URL` | `app.mail.base-url` | öffentliche Adresse des Frontends, Basis der Links in diesen Mails, ohne abschließenden Schrägstrich |
+| `MAIL_HOST` | `spring.mail.host` | Adresse des SMTP-Relays |
+| `MAIL_PORT` | `spring.mail.port` | **587**, der STARTTLS-Port. 465 (SMTPS) funktioniert nicht, siehe Abschnitt 9 |
+| `MAIL_USERNAME` | `spring.mail.username` | Kennung des Relay-Kontos, meist die Postfachadresse |
+| `MAIL_PASSWORD` | `spring.mail.password` | Passwort oder Anwendungsschlüssel des Relay-Kontos. **Geheimnis** |
+
+Fehlt einer davon, bricht der Start ab und nennt ihn samt Umgebungsvariablen:
+`app.storage.provider=azure, aber diese Pflichtwerte fehlen:
+app.storage.container (AZURE_STORAGE_CONTAINER)`. `MAIL_PORT` ist die einzige
+Ausnahme mit einem Default (587 in `compose.prod.yml`), weil ein leerer Wert
+einen Umwandlungsfehler auslöste und damit die eigentliche Meldung verdeckte.
 
 ### JWT-Secret erzeugen
 
@@ -314,7 +350,7 @@ JWT_SECRET=<hier die Ausgabe einfügen>
 ```
 
 `JwtService` liest den Wert zuerst als Base64 und fällt auf die Rohbytes
-zurück, falls es kein gültiges Base64 ist — eine ausreichend lange Passphrase
+zurück, falls es kein gültiges Base64 ist; eine ausreichend lange Passphrase
 funktioniert also auch, ist aber schwächer.
 
 Ohne OpenSSL geht es auch mit PowerShell:
@@ -327,7 +363,7 @@ $b = New-Object byte[] 64
 
 ### Weitere Werte
 
-`POSTGRES_PASSWORD` und `DEV_TEST_PASSWORT` sind in der Vorlage `change-me` und
+`POSTGRES_PASSWORD` und `DEV_TEST_PASSWORD` sind in der Vorlage `change-me` und
 müssen ersetzt werden. Achtung bei `POSTGRES_PASSWORD`: siehe Abschnitt 8, das
 Passwort steckt nach dem ersten Start im Volume fest.
 
@@ -415,7 +451,7 @@ cd backend
 ```
 
 Zum Profil: `application.yml` setzt `spring.profiles.default: dev`. Ohne
-gesetztes `SPRING_PROFILES_ACTIVE` läuft die Anwendung also im Profil `dev` —
+gesetztes `SPRING_PROFILES_ACTIVE` läuft die Anwendung also im Profil `dev`,
 das ist der Normalfall für lokale Entwicklung und die Voraussetzung dafür, dass
 die `.env` geladen wird und der Testnutzer-Seeder greift.
 
@@ -438,12 +474,18 @@ Hibernate steht auf `ddl-auto: validate` und legt selbst nichts an.
 curl http://localhost:8080/actuator/health
 ```
 
-Erwartete Antwort: `{"status":"UP", ...}` — der Pfad ist ohne Token freigegeben.
-Im Log sollten außerdem die Zeilen von Flyway (`Successfully validated 7
-migrations` bzw. `Migrating schema "public"`) und beim ersten Lauf drei Zeilen
-`Dev-Testnutzer angelegt: …` sowie `Dev-Stammdaten ergaenzt: 46 neue
-Datensaetze.` auftauchen (8 Kategorien, 5 Fakultäten, 11 Studiengänge,
-22 Module).
+Erwartete Antwort: `{"status":"UP", ...}`; der Pfad ist ohne Token freigegeben.
+Im Log sollten außerdem die Zeilen von Flyway (`Successfully validated 28
+migrations` bzw. beim ersten Lauf `Migrating schema "public"`) und die beiden
+Dev-Seeder auftauchen: drei Zeilen `Dev-Testnutzer angelegt: …` und
+`Dev-Stammdaten ergaenzt: 12 neue Datensaetze.` (8 Kategorien und 4 Semester).
+
+Fakultäten, Studiengänge und Module legt der Seeder **nicht** an. Sie sind eine
+Datenlieferung und kein Programmbestandteil und kommen deshalb aus
+`stammdaten-seeder.sh` (Menüpunkt `s1`, siehe Abschnitt 2, „Saatdaten").
+Ohne diesen Lauf antworten `GET /api/faculties`, `/api/study-programs` und
+`/api/modules` mit einer leeren Liste, und im Metadaten-Formular eines Projekts
+bleiben die zugehörigen Auswahlfelder leer.
 
 Ab dem zweiten Start bleiben beide Seeder still: sie legen nur nach, was fehlt,
 und sind damit beliebig oft ausführbar.
@@ -458,16 +500,16 @@ Auto-Build dafür eingeschaltet).
 
 ### Dev-Testnutzer
 
-`DevTestnutzerSeeder` legt im Profil `dev` drei aktive Konten an — nur, wenn
-`DEV_TEST_PASSWORT` gesetzt ist. Das Passwort ist für alle drei derselbe Wert
+`DevTestUserSeeder` legt im Profil `dev` drei aktive Konten an, aber nur, wenn
+`DEV_TEST_PASSWORD` gesetzt ist. Das Passwort ist für alle drei derselbe Wert
 aus der `.env`. Die Domain `dev.invalid` ist nach RFC 2606 garantiert nicht
 auflösbar; das sind ausdrücklich Entwicklungsdaten.
 
-| E-Mail (Login-Kennung)      | Rolle       |
-|-----------------------------|-------------|
-| `dev-studi@dev.invalid`     | STUDIERENDE |
-| `dev-redakteur@dev.invalid` | REDAKTEUR   |
-| `dev-admin@dev.invalid`     | ADMIN       |
+| E-Mail (Login-Kennung)      | Rolle     |
+|-----------------------------|-----------|
+| `dev-studi@dev.invalid`     | `STUDENT` |
+| `dev-redakteur@dev.invalid` | `EDITOR`  |
+| `dev-admin@dev.invalid`     | `ADMIN`   |
 
 Angemeldet wird sich mit der **privaten** E-Mail-Adresse (`email`). Die
 HSB-Adresse (`hsbEmail`, z. B. `dev-admin@hs-bremen.de`) ist nur
@@ -478,7 +520,7 @@ Zugehörigkeitsnachweis; ein Login damit schlägt fehl.
 ```bash
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"dev-admin@dev.invalid","passwort":"<DEV_TEST_PASSWORT>"}'
+  -d '{"email":"dev-admin@dev.invalid","password":"<DEV_TEST_PASSWORD>"}'
 ```
 
 Antwort enthält `token`. Damit:
@@ -487,6 +529,10 @@ Antwort enthält `token`. Damit:
 curl http://localhost:8080/api/auth/me -H "Authorization: Bearer <token>"
 ```
 
+Beide Feldnamen sind englisch, wie alle JSON-Felder der API: `password` und
+nicht `passwort`. Ein deutsches Feld ergibt 400 `VALIDATION_FAILED`, weil
+`password` dann fehlt.
+
 ### Swagger-UI
 
 - URL: <http://localhost:8080/swagger-ui.html> (leitet auf `/swagger-ui/index.html`)
@@ -494,48 +540,99 @@ curl http://localhost:8080/api/auth/me -H "Authorization: Bearer <token>"
 
 Die Oberfläche ist **nur im Profil `dev`** erreichbar: in `application.yml`
 stehen `springdoc.swagger-ui.enabled` und `springdoc.api-docs.enabled` auf
-`false`, `application-dev.yml` schaltet beide ein. Diese Richtung ist Absicht —
+`false`, `application-dev.yml` schaltet beide ein. Diese Richtung ist Absicht:
 ein später angelegtes Profil (`prod`, `staging`) erbt automatisch „aus".
 
 So meldet man sich in der UI an:
 
 1. `POST /api/auth/login` aufklappen, „Try it out", im Body eines der oben
-   genannten Dev-Konten und das `DEV_TEST_PASSWORT` eintragen, ausführen.
+   genannten Dev-Konten und das `DEV_TEST_PASSWORD` eintragen, ausführen.
 2. Den Wert des Felds `token` aus der Antwort kopieren.
-3. Oben rechts auf „Authorize" klicken und **nur das Token** einfügen — das
+3. Oben rechts auf „Authorize" klicken und **nur das Token** einfügen; das
    Präfix `Bearer ` ergänzt die Oberfläche selbst.
 
 Danach schickt die UI bei jedem Aufruf `Authorization: Bearer <token>` mit.
-Zu sehen sind bisher zwei Gruppen: **Auth** (drei Endpoints) und **Stammdaten**
-(vier Endpoints). Bei den Stammdaten zeigt die UI bewusst kein Schloss — sie
-sind PUBLIC und brauchen kein Token.
+Zu sehen ist die vollständige API: Auth und Registrierung, Projekte, Blöcke,
+Workflow, Kommentare, Reaktionen, Dateien, Bearbeitungssperre, Portfolios,
+Stammdaten, Nutzerauswahl, Top 10 samt Nominierungen, Support,
+Startseitentexte und der Admin-Bereich. Ohne Schloss stehen die Endpoints, die
+keinen Token brauchen (nächster Abschnitt).
 
-### Stammdaten abrufen (ohne Token)
+### Ohne Token abrufbar
 
-Diese vier Endpoints liefern die Referenzlisten für Filter und Auswahlfelder.
-Sie sind sortiert nach `name` und nicht paginiert:
+Maßgeblich ist `config/SecurityConfig.java`; die vollständige Liste mit
+Begründung je Pfad steht in [ARCHITEKTUR.md](ARCHITEKTUR.md), Abschnitt 5.
 
-```bash
-curl http://localhost:8080/api/kategorien
-curl http://localhost:8080/api/fakultaeten
-curl http://localhost:8080/api/studiengaenge
-curl http://localhost:8080/api/module
-```
-
-Die letzten beiden lassen sich filtern — die ID stammt jeweils aus der
-übergeordneten Liste:
+**Lesend.** Diese Pfade stehen als `GET` auf `permitAll`:
 
 ```bash
-curl "http://localhost:8080/api/studiengaenge?fakultaet=<id-aus-/api/fakultaeten>"
-curl "http://localhost:8080/api/module?studiengang=<id-aus-/api/studiengaenge>"
+# Referenzlisten für Filter und Auswahlfelder
+curl http://localhost:8080/api/categories
+curl http://localhost:8080/api/faculties
+curl http://localhost:8080/api/study-programs
+curl http://localhost:8080/api/modules
+curl http://localhost:8080/api/semesters
+curl http://localhost:8080/api/tags
+
+# veröffentlichte Inhalte
+curl http://localhost:8080/api/projects
+curl http://localhost:8080/api/projects/<id>
+curl http://localhost:8080/api/projects/<id>/blocks
+curl http://localhost:8080/api/projects/<id>/comments
+curl http://localhost:8080/api/portfolios/<userId>
+curl http://localhost:8080/api/files/<id>          # auch als HEAD
+curl http://localhost:8080/api/top10
+curl http://localhost:8080/api/site-content
 ```
 
-Eine unbekannte ID ergibt `200` mit leerer Liste (der Parameter filtert, er
-adressiert keine Ressource); ein Wert, der keine UUID ist, ergibt `400` im
-Fehler-Envelope.
+Offen ist dabei nur die Filterkette. Was ein nicht angemeldeter Aufrufer
+tatsächlich zu sehen bekommt, entscheiden `ProjectPermissionService` und
+`FileService` an Status und Eigentümer der Ressource: ein Projekt in `DRAFT`
+ergibt hier 404 und nicht 401.
 
-Die Daten kommen vom `DevStammdatenSeeder` und existieren nur im Profil `dev`.
-Anders als beim Testnutzer-Seeder braucht er keine Variable in der `.env`.
+**Schreibend.** Sechs Pfade sind ausdrücklich ohne Token erreichbar, alles
+Übrige braucht eines:
+
+| Pfad | Warum |
+| --- | --- |
+| `POST /api/auth/login` | hier holt man sich das Token erst |
+| `POST /api/auth/register`, `/verify`, `/verify/resend` | wer sich registriert, hat noch kein Konto |
+| `POST /api/auth/forgot-password`, `/reset-password` | wer sein Passwort vergessen hat, kann sich nicht anmelden |
+| `POST /api/support` | der häufigste Support-Fall ist „ich komme nicht hinein"; gebremst über `SupportRateLimitService` statt über die Anmeldung |
+
+**Sortierung.** Kategorien, Fakultäten, Studiengänge und Module kommen nach
+`name`. Zwei Listen weichen ab, und zwar mit Absicht: Semester sortieren nach
+`sortOrder`, weil sich aus „WiSe 2025/26" keine Reihenfolge berechnen lässt,
+und Schlagworte nach Verwendungshäufigkeit absteigend, bei Gleichstand nach
+`name`. Keine dieser Listen ist paginiert.
+
+**Filter.** Vier der Listen lassen sich einschränken:
+
+```bash
+curl "http://localhost:8080/api/study-programs?faculty=<id-aus-/api/faculties>"
+curl "http://localhost:8080/api/modules?studyProgram=<id-aus-/api/study-programs>"
+curl "http://localhost:8080/api/semesters?active=true"
+curl "http://localhost:8080/api/tags?q=react&limit=10"
+```
+
+Bei den ersten beiden stammt die ID aus der übergeordneten Liste. Eine
+unbekannte ID ergibt `200` mit leerer Liste (der Parameter filtert, er
+adressiert keine Ressource); ein Wert, der keine UUID ist, ergibt `400`
+`VALIDATION_FAILED` im Fehler-Envelope aus §6.2.
+
+**Woher die Daten kommen.** Kategorien und Semester legt der
+`DevMasterDataSeeder` an, nur im Profil `dev`. Fakultäten, Studiengänge und
+Module kommen aus `stammdaten-seeder.sh` (Abschnitt 4); ohne diesen Lauf sind
+die drei Listen leer, ohne dass ein Fehler auftritt. Schlagworte entstehen
+überhaupt nicht durch Pflege, sondern als Nebenwirkung beim Speichern eines
+Projekts: es gibt deshalb kein `/api/admin/tags`. Die übrigen Stammdaten pflegt
+die Administrationsseite unter `/api/admin/…`.
+
+### Die ganze API in einem Lauf
+
+`postman/` enthält eine Postman-Sammlung über alle Endpoints. Menüpunkt `t` in
+`eportfolio.ps1` führt sie mit Newman gegen die laufende Betriebsart aus und
+räumt hinterher auf; `tc` räumt allein auf, wenn ein Lauf abgebrochen ist.
 
 ---
 
@@ -565,55 +662,105 @@ weiter. Ziel ist `http://localhost:8080`, im Container der Dienstname aus
 die Oberfläche, und im Anwendungscode steht keine Basis-URL.
 
 Was im Frontend vorhanden ist: Routing, i18n (Deutsch und Englisch),
-Design-Tokens samt Token-Galerie unter `/dev/tokens`, die shadcn-Grundlage
-und die Komponentenbibliothek mit eigener Prüffläche unter
-`/dev/components` (KAN-29). Eine Anbindung an die API gibt es noch nicht,
-`frontend/src/api/` ist leer. `pnpm gen:api` erzeugt die Typen aus dem
-laufenden Backend nach `src/api/schema.d.ts`.
+Design-Tokens samt Token-Galerie unter `/dev/tokens`, die shadcn-Grundlage und
+die Komponentenbibliothek mit eigener Prüffläche unter `/dev/components`
+(KAN-29), die API-Anbindung in `src/api/` (ein Client, ein Fehlertyp) und
+darauf die Feature-Ordner unter `src/features/`: öffentliche Startseite und
+Projektbibliothek, Anmeldung und Registrierung, Portfolio, blockbasierter
+Editor, Kommentare, Redaktionsansicht, Support, Hilfe und die
+Administrationsseite.
+
+Weitere nützliche Skripte:
+
+```bash
+pnpm gen:api      # Typen aus dem laufenden Backend nach src/api/schema.d.ts
+pnpm typecheck    # tsc -b
+pnpm lint         # eslint, --max-warnings 0
+pnpm test         # Vitest, siehe Abschnitt 7
+pnpm e2e          # Playwright
+```
+
+`src/api/schema.d.ts` wird eingecheckt und **nicht von Hand bearbeitet**: die
+Datei entsteht aus `/v3/api-docs`, das Backend muss dafür laufen. Direkt danach
+Prettier über **genau diese eine Datei** laufen lassen, sonst steht sie
+vollständig im Diff, obwohl sich fachlich nichts geändert hat:
+
+```bash
+pnpm gen:api
+pnpm exec prettier --write src/api/schema.d.ts
+```
+
+Nicht `pnpm format`: das Skript formatiert den ganzen Baum und zieht Hunderte
+unbeteiligter Dateien in den Diff.
 
 ---
 
 ## 7. Tests ausführen
+
+### Backend
 
 ```bash
 cd backend
 ./mvnw test
 ```
 
-Stand `main` plus KAN-14: **108 Tests, alle grün** (`Tests run: 108,
-Failures: 0, Errors: 0, Skipped: 0`). Sie verteilen sich auf neun Testklassen:
+69 Testklassen unter `backend/src/test/java`, geschnitten wie der
+Produktivcode nach Fachlichkeit: je ein Paket `auth`, `project`, `masterdata`,
+`admin`, `top10`, `file`, `mail`, `comment`, `reaction`, `editlock`,
+`portfolio`, `support`, `sitecontent`, `user`, `config`, `common`. Drei Arten
+kommen vor:
 
-| Testklasse | Tests | Art |
-|------------|------:|-----|
-| `EportfolioApplicationTests` | 1 | Kontext lädt (`@SpringBootTest`) |
-| `auth/AnmeldeversuchServiceTest` | 7 | Unit |
-| `auth/AuthControllerTest` | 14 | `@WebMvcTest` |
-| `auth/AuthServiceTest` | 13 | Unit, teils `@Nested` |
-| `auth/JwtServiceTest` | 6 | Unit |
-| `projekt/ProjektBerechtigungServiceTest` | 40 | Unit, `@Nested` entlang der Rechtematrix |
-| `stammdaten/StammdatenServiceTest` | 9 | Unit |
-| `stammdaten/StammdatenControllerTest` | 9 | `@WebMvcTest` |
-| `stammdaten/StammdatenIntegrationTest` | 9 | `@SpringBootTest` gegen die echte DB |
+| Art | Woran erkennbar | Wofür |
+|-----|-----------------|-------|
+| Unit | keine Spring-Annotation, z. B. `ProjectPermissionServiceTest` | Fachlogik, insbesondere die Rechtematrix aus Contract §5 |
+| `@WebMvcTest` | z. B. `ProjectControllerTest` | Statuscodes, Envelope, Serialisierung, ohne Datenbank |
+| `@SpringBootTest` | die `…IntegrationTest`-Klassen | vollständiger Kontext gegen die echte Postgres |
 
-Im Surefire-Textreport stehen bei `AuthServiceTest` und
-`ProjektBerechtigungServiceTest` `0` Tests, weil verschachtelte Klassen dort
-unter ihrem `@DisplayName` erscheinen. Die Zahlen oben stammen aus den
-XML-Reports (`target/surefire-reports/TEST-*.xml`).
+Eine feste Testzahl steht hier bewusst nicht: sie ist mit jedem Ticket eine
+andere. Verbindlich ist, dass der Lauf grün endet; die Zahl nennt Surefire am
+Ende selbst (`Tests run: …, Failures: 0, Errors: 0`), im Zweifel genauer die
+XML-Reports unter `backend/target/surefire-reports/`. Im Textreport stehen bei
+Klassen mit `@Nested` scheinbar `0` Tests, weil verschachtelte Klassen dort
+unter ihrem `@DisplayName` erscheinen.
 
-`TestUser`, `TestProjekt` und `TestStammdaten` sind Hilfsklassen ohne eigene
-Tests.
+Ohne eigene Tests, weil sie Vorbedingungen bauen: `TestUser`, `TestProject`,
+`TestMasterData`, `TestFiles`, `TestReaction`, `TestTop10` und
+`TestConfigurationFiles`. Sie nehmen, was in der Datenbank schon da ist, und
+legen nur sonst etwas an; neue Tests bauen ihre Vorbedingungen darüber und
+nicht von Hand.
 
 **Wichtig:** Die Tests brauchen eine laufende Datenbank und eine gültige
-`.env`. `EportfolioApplicationTests` und `StammdatenIntegrationTest` sind
-`@SpringBootTest`s, starten also den kompletten Kontext inklusive Datasource und
-Flyway. Ohne Container schlägt der Testlauf fehl. Eine Testkonfiguration mit
-In-Memory-DB oder Testcontainers gibt es nicht.
+`.env`. Die `…IntegrationTest`-Klassen starten den kompletten Kontext
+inklusive Datasource und Flyway. Ohne Container schlägt der Testlauf fehl.
+Eine Testkonfiguration mit In-Memory-DB oder Testcontainers gibt es nicht,
+und zwar bewusst: geprüft wird gegen dasselbe PostgreSQL 16, gegen das die
+Anwendung läuft, samt `jsonb`, partiellen Indizes und Check-Constraints.
 
 Der Testlauf läuft im Profil `dev` und damit gegen dieselbe Datenbank wie die
-Anwendung. Was er schreibt, rollt er wieder zurück (`@Transactional` am
-Integrationstest); die Seeder laufen beim Hochfahren des Testkontexts aber
+Anwendung. Was er schreibt, rollt er wieder zurück (`@Transactional` an den
+Integrationstests); die Seeder laufen beim Hochfahren des Testkontexts aber
 regulär durch, ein Testlauf befüllt eine leere Datenbank also mit den
 Dev-Daten.
+
+**Verbindungen:** Ein voller Lauf öffnet viele Verbindungen gleichzeitig.
+Läuft daneben noch das Backend im Container, meldet Postgres irgendwann
+`FATAL: sorry, too many clients already`. Dann vorher den Backend-Container
+der Betriebsart stoppen und verwaiste Java-Prozesse beenden.
+
+### Frontend
+
+```bash
+cd frontend
+pnpm test
+```
+
+Vitest mit Testing Library, Serverantworten über MSW; die Dateien liegen als
+`*.test.ts`/`*.test.tsx` neben der Einheit, die sie prüfen. Kein laufendes
+Backend nötig: MSW beantwortet die Requests. Dazu `pnpm e2e` für die
+Playwright-Läufe, die ihrerseits eine laufende Anwendung brauchen.
+
+Beide Läufe gibt es auch im Menü: Punkt `17` für das Backend, `18` für das
+Frontend, `t` für die Postman-Sammlung über die laufende API.
 
 ---
 
@@ -667,12 +814,12 @@ Es gibt keine `.env`, oder sie liegt nicht im Verzeichnis, aus dem `docker
 compose` aufgerufen wird. `cp .env.example .env` im Repository-Wurzelverzeichnis
 ausführen und die Werte setzen.
 
-### `APPLICATION FAILED TO START` — `JwtEigenschaften failed: Reason: darf nicht leer sein`
+### `APPLICATION FAILED TO START`: `JwtProperties failed: Reason: darf nicht leer sein`
 
 `JWT_SECRET` ist leer oder fehlt. Es gibt keinen Default im Code. Wert erzeugen
 mit `openssl rand -base64 64` und in die `.env` eintragen. Ist die Variable gar
 nicht vorhanden, scheitert Spring stattdessen schon daran, den Platzhalter
-`${JWT_SECRET}` aufzulösen — die Meldung sieht dann anders aus, die Ursache ist
+`${JWT_SECRET}` aufzulösen; die Meldung sieht dann anders aus, die Ursache ist
 dieselbe.
 
 ### `IllegalStateException: JWT_SECRET ist zu kurz`
@@ -725,7 +872,7 @@ kill <pid>
 Alternativ mit anderem Port starten:
 `./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=8081`.
 
-### Port 5432 ist belegt — `Bind for 0.0.0.0:5432 failed`
+### Port 5432 ist belegt: `Bind for 0.0.0.0:5432 failed`
 
 Vollständige Meldung von Compose: `driver failed programming external
 connectivity … Bind for 0.0.0.0:5432 failed: port is already allocated`. Meist
@@ -738,7 +885,7 @@ Statt die fremde Instanz zu stoppen, reicht ein anderer Host-Port in der `.env`:
 POSTGRES_PORT=5433
 ```
 
-Die Variable steuert beides — den Host-Port von DEV in `compose.dev.yml` und die
+Die Variable steuert beides, den Host-Port von DEV in `compose.dev.yml` und die
 JDBC-URL in `application-dev.yml`. Ein Wert genügt also, danach
 `docker compose up -d db`. Im Container bleibt der Port unverändert 5432.
 
@@ -747,18 +894,19 @@ JDBC-URL in `application-dev.yml`. Ein Wert genügt also, danach
 Das Passwort in der `.env` passt nicht zu dem, was im Volume steht. Postgres
 wertet `POSTGRES_PASSWORD` **nur beim allerersten Start** aus, wenn das
 Datenverzeichnis leer ist. Wird das Passwort später in der `.env` geändert,
-behält die Datenbank im Volume `eportfolio_pgdata` das alte.
+behält die Datenbank im Volume der Betriebsart (in DEV `eportfolio-dev_pgdata`)
+das alte.
 
 Zwei Wege:
 
 1. Passwort in der `.env` wieder auf den Wert setzen, mit dem das Volume
    angelegt wurde.
-2. Das Volume verwerfen und neu aufbauen — **alle Daten sind danach weg**,
+2. Das Volume verwerfen und neu aufbauen; **alle Daten sind danach weg**,
    Flyway legt das Schema beim nächsten Backend-Start neu an:
 
    ```bash
    docker compose -f compose.base.yml -f compose.dev.yml down -v
-   docker compose up -d db
+   docker compose -f compose.base.yml -f compose.dev.yml up -d db
    ```
 
 ### `Connection refused` beim Backend-Start
@@ -782,21 +930,21 @@ docker compose -f compose.base.yml -f compose.dev.yml exec backend env | grep PO
 
 ### Kein Login möglich, keine Testnutzer vorhanden
 
-Im Log steht `DEV_TEST_PASSWORT ist nicht gesetzt - es werden keine Testnutzer
+Im Log steht `DEV_TEST_PASSWORD ist nicht gesetzt - es werden keine Testnutzer
 angelegt.` Wert in der `.env` ergänzen und die Anwendung neu starten. Ist die
-Anwendung schon einmal ohne den Wert gelaufen, reicht ein Neustart — der Seeder
+Anwendung schon einmal ohne den Wert gelaufen, reicht ein Neustart: der Seeder
 legt fehlende Konten nach.
 
-Wird `DEV_TEST_PASSWORT` **geändert**, nachdem die Konten existieren, ändert der
+Wird `DEV_TEST_PASSWORD` **geändert**, nachdem die Konten existieren, ändert der
 Seeder die Passwörter nicht: er überspringt vorhandene E-Mail-Adressen. Dann
 entweder das alte Passwort weiterverwenden oder die Zeilen aus `app_user`
 löschen.
 
-### `429 ZU_VIELE_ANMELDEVERSUCHE`
+### `429 TOO_MANY_LOGIN_ATTEMPTS`
 
 Nach 5 Fehlversuchen ist die Kombination aus E-Mail bzw. IP für 15 Minuten
-gesperrt (`app.security.anmeldeversuche` in `application.yml`). Der Zähler liegt
-nur im Arbeitsspeicher — ein Neustart der Anwendung hebt die Sperre sofort auf.
+gesperrt (`app.security.login-attempts` in `application.yml`). Der Zähler liegt
+nur im Arbeitsspeicher: ein Neustart der Anwendung hebt die Sperre sofort auf.
 
 ### Flyway meldet `Validate failed` / Checksum-Fehler
 

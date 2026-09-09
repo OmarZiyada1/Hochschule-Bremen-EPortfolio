@@ -95,10 +95,10 @@ nie abgekürzt:
    Aktualisieren erbeten (`git pull` bleibt bei Omar, `CLAUDE.md`,
    Arbeitsablauf Schritt 1). Ein veralteter Stand erzeugt Befunde, die
    keine sind. Dann nachsehen, was wirklich da ist: Ordner, Dateien,
-   Exporte, `package.json`, Controller. `docs/STAND.md` ist ausdrücklich
-   eine veraltende Momentaufnahme und taugt nicht als Beleg (`CLAUDE.md`).
-   Auch ein gemergter Branch belegt nur, was im Diff steht, nicht was das
-   Ticket versprochen hat.
+   Exporte, `package.json`, Controller. Eine Doku-Datei taugt nie als Beleg
+   dafür, was umgesetzt ist; sie beschreibt einen Stand und veraltet. Auch ein
+   gemergter Branch belegt nur, was im Diff steht, nicht was das Ticket
+   versprochen hat.
 2. **Contract-§§ nachschlagen** (Confluence 36732929): mindestens §5
    (Rechtematrix), §6.1 (Endpoint-Zeilen), §6.2 (Fehlercodes), dazu die im
    Ticket genannten. Eine Endpoint-Zeile im Contract ist **kein** Beleg für
@@ -259,8 +259,8 @@ Vor der Bewertung eines Frontend-Tickets diese Bestandsfragen gegen
 
 ## 6. Definition of Done
 
-- [ ] Repo-Stand vor der Bewertung tatsächlich nachgesehen, nicht aus
-      `docs/STAND.md` übernommen
+- [ ] Repo-Stand vor der Bewertung im Code nachgesehen, nicht aus einer
+      Doku-Datei übernommen
 - [ ] Genannte Contract-§§ und, bei Frontend, die Template-Seite gelesen
 - [ ] Klärungsrunde vor dem Umschreiben stattgefunden, wo der Zuschnitt betroffen war
 - [ ] Jede Änderung steht **in der Beschreibung**, kein Refinement-Kommentar

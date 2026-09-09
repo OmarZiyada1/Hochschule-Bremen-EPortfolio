@@ -174,10 +174,10 @@ sie nur anlegen und ändern.
 
 Eine erhöhte Contract-Version ist erst fertig, wenn **jede** Stelle, die die
 alte Nummer nennt, geprüft und geändert ist. Eine Nummer nur in Confluence zu
-erhöhen erzeugt genau den Zustand, den `docs/STAND.md` schon einmal festgehalten
-hat („`OpenApiConfig` nennt weiterhin v10, der Contract steht auf v11"), und den
-umgekehrten Fall gab es mit v23 auch schon: im Code vergeben, in Confluence nie
-veröffentlicht.
+erhöhen erzeugt genau den Zustand, den das Projekt schon einmal hatte
+(`OpenApiConfig` nannte weiterhin v10, während der Contract auf v11 stand), und
+den umgekehrten Fall gab es mit v23 auch schon: im Code vergeben, in Confluence
+nie veröffentlicht.
 
 ### Schritt 1: Fundstellen ermitteln, nicht raten
 
@@ -204,7 +204,6 @@ Bekannte Stellen als Ausgangspunkt, jede einzeln ansehen:
 | Doku | `docs/ARCHITEKTUR.md` | nennt bislang keine Versionsnummer, aber §-Verweise: prüfen, ob die Änderung einen §-Verweis oder eine Tabellenzeile verschiebt |
 | Doku | `docs/NAMENSSCHEMA.md` | „Grundlage ist der Bestand aus Contract v17": historische Aussage, bleibt stehen. Bringt die neue Version neue Bezeichner, kommt die **Zuordnung** dazu, nicht die Nummer |
 | Doku | `README.md` | nennt nur die Seiten-ID `36732929`, keine Version: in der Regel nichts zu tun |
-| Doku | `docs/STAND.md` | **nicht anfassen**, veraltet bewusst (`CLAUDE.md`) |
 | Skill | dieser Skill | nennt bewusst **keine** Nummer mehr, damit sie hier nicht veralten kann: nichts zu tun |
 | Jira | auslösendes Ticket | Abschnitt „Bezug" in der Beschreibung plus Veröffentlichungsprotokoll als Kommentar |
 | Jira | offene Tickets mit älterer Nummer, deren Inhalt betroffen ist | Suche: `project = KAN AND statusCategory != Done AND text ~ "API-Contract v"`; nur **inhaltlich betroffene** Tickets nachziehen, nicht pauschal alle Nummern hochzählen. Nachgezogen wird **in der Beschreibung**, nie als Kommentar |
@@ -231,8 +230,8 @@ ist ein Protokoll des Geschehenen, keine Bitte um Erledigung:
 | Jira | KAN-18, Beschreibung „Bezug" | v23 | v24 | refined |
 
 Unverändert und warum: `StorageProvider.java:27` („seit v21", historisch),
-`docs/NAMENSSCHEMA.md:13` („Bestand aus v17", historisch), `docs/STAND.md`
-(veraltet bewusst), `README.md` (nennt nur die Seiten-ID).
+`docs/NAMENSSCHEMA.md:13` („Bestand aus v17", historisch), `README.md` (nennt
+nur die Seiten-ID).
 ```
 
 Regeln dazu:
