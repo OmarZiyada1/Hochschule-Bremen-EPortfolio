@@ -1,0 +1,124 @@
+# TLS-Terminierer der Betriebsart PROD (KAN-98).
+#
+# Gelesen vom Dienst "caddy" aus compose.prod.yml, dort als schreibgeschuetzter
+# Mount unter /etc/caddy/Caddyfile. Nur PROD benutzt diese Datei: DEV und
+# ARTIFACT-DEV laufen ohne Terminierer auf localhost.
+#
+# WARUM DIESE DATEI KEINE ADRESSE ENTHAELT. APP_DOMAIN und ACME_EMAIL kommen
+# aus der Umgebung, also aus der nicht eingecheckten .env. Das ist dieselbe
+# Regel, nach der application-prod.yml keinen einzigen Wert traegt, sondern
+# nur Verweise: eine Adresse im Repository waere spaetestens beim naechsten
+# Umzug falsch, und eine Mailadresse gehoert ohnehin niemandem, der in die
+# Historie schaut.
+#
+# WARUM DIE SPERREN HIER STEHEN UND NICHT IN frontend/nginx.conf. Die
+# nginx-Konfiguration liegt im Frontend-Image und wird von BEIDEN
+# Container-Betriebsarten benutzt. ARTIFACT-DEV laeuft im Profil dev, und dort
+# ist die Swagger-UI ausdruecklich erwuenscht (siehe Kopf von
+# compose.artifact.yml). Was also nur im Betrieb verschwinden soll,
+# verschwindet am Rand und nicht im Image: so bleibt ein Bild fuer beide
+# Betriebsarten, und PROD verliert trotzdem nichts an Schaerfe.
+
+{$APP_DOMAIN} {
+	tls {$ACME_EMAIL}
+
+	# ------------------------------------------------------------------
+	# Was von aussen nicht erreichbar sein soll
+	# ------------------------------------------------------------------
+	# /actuator: management.endpoint.health.show-details steht auf "always".
+	# Der Endpunkt nennt damit den Zustand der Datenbank, die Belegung der
+	# Platte und im Fehlerfall die Meldung des SMTP-Relays samt Hostnamen.
+	# Das ist genau die Auskunft, die beim Betrieb hilft und die man einem
+	# Fremden nicht gibt. Auf dem Server selbst bleibt sie ueber
+	# 127.0.0.1:8280 erreichbar, und der Docker-Healthcheck fragt ohnehin im
+	# Container und nicht ueber diesen Weg.
+	#
+	# /v3/api-docs und /swagger-ui: im Profil prod ist springdoc abgeschaltet,
+	# dahinter steht also nichts. Die Sperre kostet nichts und nimmt einer
+	# spaeteren, versehentlichen Freischaltung die Wirkung.
+	#
+	# 404 und nicht 403: eine Verweigerung bestaetigt, dass es den Pfad gibt.
+	#
+	# Die Muster tragen ein abschliessendes *, nicht /*: Caddys path-Matcher
+	# vergleicht ohne Platzhalter EXAKT, und "/swagger-ui/*" passt deshalb
+	# nicht auf "/swagger-ui.html". Genau diese Adresse nennen aber der
+	# Contract-Vorspann und SecurityConfig als Ort der Oberflaeche, und
+	# "/v3/api-docs.yaml" ist die zweite Standardform des Dokuments. Mit den
+	# engeren Mustern waeren ausgerechnet die beiden gebraeuchlichen Pfade
+	# offen geblieben, waehrend die Sperre daneben griffe. Nachgemessen an
+	# einem laufenden caddy:2-alpine.
+	@verborgen path /actuator /actuator/* /v3/api-docs* /swagger-ui*
+	respond @verborgen 404
+
+	# ------------------------------------------------------------------
+	# Kopfzeilen
+	# ------------------------------------------------------------------
+	# Bewusst hier und nicht in nginx: Caddy setzt sie auf JEDE Antwort, auch
+	# auf die durchgereichten der API. In nginx haette ein add_header in einem
+	# location-Block alle im server-Block geerbten aufgehoben, ein Fehler, der
+	# nicht auffaellt, weil die Seite weiter funktioniert.
+	header {
+		# Ein Jahr. includeSubDomains gilt nur unterhalb dieser Adresse und
+		# beruehrt die uebrige Zone nicht. Kein preload: der Eintrag in die
+		# Browserliste ist auf Jahre bindend und laesst sich praktisch nicht
+		# zuruecknehmen, was fuer einen Prototypen die falsche Zusage waere.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# Verhindert, dass der Browser einen Inhaltstyp errät. Zusammen mit
+		# der Auslieferung ueber GET /api/files/{id} ist das der Riegel gegen
+		# eine hochgeladene Datei, die als Skript ausgefuehrt wird.
+		X-Content-Type-Options "nosniff"
+		# Beim Wechsel auf eine fremde Seite nur noch die Herkunft senden,
+		# nicht den vollen Pfad. Ein Projektpfad traegt eine ID und gehoert
+		# nicht in das Log einer fremden Seite.
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Kein Einbetten in fremde Rahmen (Clickjacking).
+		X-Frame-Options "SAMEORIGIN"
+		# Die Software des Servers muss niemand erfahren.
+		-Server
+	}
+
+	# Content-Security-Policy steht hier bewusst NOCH NICHT.
+	#
+	# Die Oberflaeche braucht ein Inline-Skript, laedt Bilder aus blob:-URLs
+	# und bettet mehrere Anbieter ein. Eine blind gesetzte Richtlinie macht
+	# Teile der Seite unbrauchbar, und zwar lautlos: der Browser verweigert im
+	# Hintergrund, die Seite sieht nur kaputt aus. Der Weg dorthin fuehrt ueber
+	# Content-Security-Policy-Report-Only, einmal messen, dann scharf schalten.
+
+	# ------------------------------------------------------------------
+	# Weiterleitung an das Frontend
+	# ------------------------------------------------------------------
+	# Ziel ist der nginx des Frontend-Containers, nicht das Backend: er
+	# entscheidet zwischen ausgeliefertem Build und /api/ und ist damit die
+	# einzige Stelle, an der diese Aufteilung steht.
+	#
+	# Caddy setzt dabei X-Forwarded-For, X-Forwarded-Proto und
+	# X-Forwarded-Host von allein. Der nginx reicht sie weiter, und Tomcat
+	# wertet sie ueber server.forward-headers-strategy aus
+	# (application-prod.yml).
+	reverse_proxy frontend:80
+
+	# Obergrenze des Anfragekoerpers. Caddy begrenzt von sich aus nicht; der
+	# Wert steht hier trotzdem, weil eine fehlende Grenze am Rand bedeutet,
+	# dass ein 300-MB-Upload erst nach vollstaendiger Uebertragung abgewiesen
+	# wird, und zwar vom nginx dahinter.
+	#
+	# Er ist absichtlich GLEICH GROSS wie client_max_body_size in
+	# frontend/nginx.conf und nicht kleiner: eine dritte, engere Schranke am
+	# Rand wuerde die beiden dahinterliegenden aushebeln, und der Nutzer saehe
+	# eine Fehlerseite des Terminierers statt des Envelopes aus §6.2.
+	#
+	# MiB UND NICHT MB, und das ist keine Schoenschrift. Caddy liest Groessen
+	# mit go-humanize, dort ist MB dezimal (10^6) und MiB binaer (2^20); nginx
+	# rechnet sein "m" dagegen immer binaer. "205MB" ergaebe 205.000.000 Byte
+	# und laege damit 4.715.200 Byte UNTER der fachlichen Videogrenze von
+	# 200 MiB aus §3.15. Ein zulaessiges Video zwischen rund 195,5 und 200 MiB
+	# waere am Rand mit 413 gestorben, ohne je den FileService zu erreichen,
+	# und der Kommentar darueber haette das Gegenteil behauptet.
+	# "205MiB" sind 214.958.080 Byte, also auf das Byte genau nginx' 205m.
+	# Nachgemessen mit "caddy adapt": max_size 205MB ergibt 205000000,
+	# max_size 205MiB ergibt 214958080.
+	request_body {
+		max_size 205MiB
+	}
+}

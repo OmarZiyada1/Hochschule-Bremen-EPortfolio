@@ -1018,3 +1018,270 @@ Start auf; existiert der Backend-Container zu diesem Zeitpunkt nicht, bricht
 es ab. `depends_on` in `compose.base.yml` verhindert das im Normalfall.
 Tritt es doch auf, wurde der Frontend-Container einzeln gestartet: dann
 die Betriebsart ohne Dienstnamen starten, also `... up -d` statt `... up -d frontend`.
+
+---
+
+## 10. Betrieb auf einem Server (PROD auf einem VPS)
+
+Bis KAN-98 beschrieb dieses Dokument PROD als Betriebsart, die man **lokal**
+startet, um die Produktivkonfiguration zu prüfen. Dieser Abschnitt beschreibt
+den Dauerbetrieb auf einem eigenen Server. Er ersetzt die frühere Aussage,
+`APP_BASE_URL` sei „für einen lokalen PROD-Lauf also `http://localhost:5373`":
+das gilt weiterhin für den lokalen Lauf, auf einem Server steht dort die
+öffentliche `https`-Adresse.
+
+### Was auf dem Server dazukommt
+
+Drei Dinge, die es lokal nicht gibt:
+
+| | wozu |
+| --- | --- |
+| Dienst `caddy` | terminiert TLS und ist das einzige nach außen offene Tor |
+| `Caddyfile` | dessen Konfiguration; kennt keine Adresse, liest `APP_DOMAIN` |
+| `COMPOSE_PROFILES=edge` | schaltet den Dienst `caddy` überhaupt erst ein |
+| `APP_DOMAIN`, `ACME_EMAIL` | Adresse und Kontaktpostfach für das Zertifikat |
+
+Alle übrigen Ports sind auf `127.0.0.1` gebunden. Von außen erreichbar sind
+ausschließlich 22, 80 und 443.
+
+**Warum `caddy` hinter einem Profil steht.** Der Dienst trägt in
+`compose.prod.yml` das Profil `edge` und läuft ohne `COMPOSE_PROFILES=edge`
+nicht mit. Das ist kein Schmückwerk: startete er lokal mit leerem
+`APP_DOMAIN`, läse der `Caddyfile` die leere Adresse als globalen
+Optionsblock und bräche ab mit `unrecognized global option: tls`. Der
+Container liefe in eine Neustartschleife, und der lokale PROD-Lauf aus
+Abschnitt 3 wäre kaputt.
+
+Der Schalter steht in der `.env` und **nicht** als `--profile edge` am Aufruf.
+Damit ist der Startbefehl auf dem Server derselbe wie lokal, und ein
+vergessener Schalter kann nicht still den Terminierer weglassen.
+
+### Reihenfolge der Erstausrollung
+
+Die Reihenfolge ist nicht beliebig. Schritt 4 lässt sich später nur noch mit
+Datenverlust korrigieren, und Schritt 3 entscheidet, ob die Datenbank
+zwischenzeitlich offen im Netz steht.
+
+**1a. System aktuell machen**
+
+```bash
+apt update && apt full-upgrade -y && reboot
+```
+
+Bewusst ein eigener Block, der mit `reboot` endet. Stuende der Swap-Teil im
+selben Block, liefe er beim Einfuegen am Stueck noch waehrend des
+Herunterfahrens los oder gar nicht: `reboot` kehrt sofort zurueck, und eine
+Kommentarzeile haelt die Shell nicht an. Das Ergebnis waere ein Server ohne
+Swap, und genau darauf laeuft der naechste Absatz hinaus.
+
+**1b. Nach dem Neustart: Swap anlegen und Sicherheitsupdates**
+
+```bash
+fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+apt install -y unattended-upgrades && dpkg-reconfigure -f noninteractive unattended-upgrades
+```
+
+Danach pruefen, und zwar alle drei:
+
+```bash
+swapon --show                 # muss /swapfile file 4G zeigen
+grep swap /etc/fstab          # ohne diese Zeile ist der Swap nach dem naechsten Neustart weg
+systemctl is-enabled docker   # muss "enabled" sagen, sonst startet nach einem
+                              # Neustart kein Container, egal welche restart-Regel
+```
+
+Der Swap ist keine Zierde. Auf dem Server werden beide Images gebaut, und
+`pnpm build` typprüft dabei auch die Playwright-Tests mit. Fehlt der Puffer,
+bricht der Bau nicht sauber ab, sondern der Kernel schießt den Prozess ab; die
+Meldung nennt dann nicht den Grund.
+
+**2. Betriebsnutzer und SSH**
+
+Nicht als `root` betreiben. Eigener Nutzer, Mitglied der Gruppe `docker`, in
+`/etc/ssh/sshd_config` anschließend `PermitRootLogin no` und
+`PasswordAuthentication no`, dazu `fail2ban` und `unattended-upgrades`.
+
+**3. Firewall, BEVOR der Stapel zum ersten Mal startet**
+
+Beim Anbieter eine Firewall-Gruppe anlegen: **TCP** 22, 80 und 443 zulassen,
+alles Übrige verwerfen, der Maschine zuweisen, aktivieren. Im Hostinger-Panel
+gehört danach noch ein Klick auf **Synchronisieren**: ohne ihn stehen die
+Regeln nur im Panel und nicht auf dem Server.
+
+`compose.prod.yml` veröffentlicht zusätzlich 443/udp für HTTP/3. Bleibt UDP in
+der Firewall gesperrt, ist das kein Fehler: Browser sprechen dann TCP, und
+außer einem ungenutzten Port ändert sich nichts. Wer HTTP/3 wirklich will,
+nimmt 443/UDP mit auf.
+
+**`ufw` allein genügt nicht.** Docker trägt seine Weiterleitungen selbst in
+die iptables-Ketten `DOCKER-USER` und `nat` ein und umgeht damit die Regeln
+von `ufw`. Ein veröffentlichter Containerport ist trotz aktiver `ufw` von
+außen erreichbar. Deshalb greift `compose.prod.yml` zusätzlich an der
+Bindeadresse an: beide Schichten zusammen, damit nicht eine einzelne
+vergessene Stelle das System öffnet.
+
+**4. `.env` anlegen, mit eigenen Geheimnissen**
+
+```bash
+cp .env.example .env && chmod 600 .env
+```
+
+Vor dem ersten Start zu setzen:
+
+* `POSTGRES_PASSWORD`: **nicht** den Wert aus der Vorlage und nicht den der
+  Entwicklungsumgebung. Postgres brennt das Passwort bei der Initialisierung
+  des Volumes ein; danach hilft nur noch der Weg unten unter „Passwort der
+  Datenbank nachträglich ändern". Neuen Wert etwa mit `openssl rand -base64 32`.
+* `JWT_SECRET`: eigener Wert, mindestens 64 Byte.
+* `COMPOSE_PROFILES=edge`: ohne diese Zeile startet der TLS-Terminierer nicht,
+  und die Seite ist nur über die auf `127.0.0.1` gebundenen Ports erreichbar,
+  also von außen gar nicht. Auf dem eigenen Rechner bleibt die Zeile leer.
+* `APP_DOMAIN`: der Name ohne Schema, etwa `eportfolio.example.org`. Muss
+  bereits per A-Eintrag auf den Server zeigen, sonst scheitert die Ausstellung
+  des Zertifikats, und Let's Encrypt zählt den Fehlversuch mit.
+* `ACME_EMAIL`: ein Postfach, das jemand liest.
+* `APP_BASE_URL` und `CORS_ALLOWED_ORIGINS`: dieselbe Adresse wie
+  `APP_DOMAIN`, mit `https://` davor und ohne abschließenden Schrägstrich.
+
+Diese drei gehören zusammen. Laufen sie auseinander, verschickt die Anwendung
+Maillinks ins Leere (`APP_BASE_URL` steht wörtlich im Mailtext) oder weist
+jeden schreibenden Aufruf mit **403** `Invalid CORS request` ab.
+
+**5. Starten**
+
+```bash
+docker compose -f compose.base.yml -f compose.prod.yml up -d --build
+```
+
+Der erste Lauf dauert mehrere Minuten: beide Images werden gebaut.
+
+**6. Prüfen**
+
+```bash
+docker compose -f compose.base.yml -f compose.prod.yml ps
+curl -fsS http://127.0.0.1:8280/actuator/health   # db UP und mail UP
+curl -I https://<APP_DOMAIN>                       # 200 mit gueltigem Zertifikat
+curl -I http://<APP_DOMAIN>                        # 308 auf https
+curl -o /dev/null -s -w '%{http_code}\n' https://<APP_DOMAIN>/actuator/health  # 404
+```
+
+Von einem **anderen** Rechner aus gegenprüfen, dass weder 5434 noch 8280
+antworten. Auf dem Server selbst antworten sie, das ist Absicht.
+
+**7. Erstbestand einspielen**
+
+Die Datenbank ist jetzt bis auf das Schema leer: die beiden Seeder im Code
+tragen `@Profile("dev")` und laufen hier nicht. Wie Admin-Konto, Kategorien,
+Semester und die Hochschulhierarchie entstehen, steht in KAN-99.
+
+### Aktualisieren
+
+```bash
+cd /opt/eportfolio
+git pull
+docker compose -f compose.base.yml -f compose.prod.yml up -d --build
+```
+
+Zwei Dinge dazu, beide unangenehm und beide besser vorher gewusst:
+
+* **Das ist ein Stop-Start mit echtem Ausfall.** Bei diesem Stapel gibt es
+  keinen unterbrechungsfreien Weg. Für ein Vorführsystem ist das vertretbar,
+  es gehört nur eingeplant.
+* **Immer beide Dienste neu erstellen, nie nur einen.** Wird allein das
+  Backend ersetzt, bekommt es eine neue Adresse im Compose-Netz, und der
+  nginx des Frontends hält die alte fest: die API antwortet danach dauerhaft
+  mit **502**, obwohl beide Container laufen.
+
+Vor jedem Update mit neuen Flyway-Migrationen eine Sicherung ziehen. Eine
+Migration, die zur Hälfte durchgelaufen ist, hat keinen Rückweg.
+
+### Sichern
+
+```bash
+docker exec eportfolio-prod-db-1 pg_dump -U eportfolio -d eportfolio \
+  | gzip > /pfad/ausserhalb/eportfolio-$(date +%F).sql.gz
+```
+
+Als täglichen systemd-Timer einrichten:
+
+```bash
+cat > /etc/systemd/system/eportfolio-dump.service <<'EOF'
+[Unit]
+Description=Taegliche Sicherung der E-Portfolio-Datenbank
+[Service]
+Type=oneshot
+EnvironmentFile=/opt/eportfolio/.env
+ExecStart=/bin/sh -c 'docker exec eportfolio-prod-db-1 pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" | gzip > /var/backups/eportfolio-$(date +%%F).sql.gz'
+ExecStartPost=/bin/sh -c 'find /var/backups -name "eportfolio-*.sql.gz" -mtime +14 -delete'
+EOF
+cat > /etc/systemd/system/eportfolio-dump.timer <<'EOF'
+[Unit]
+Description=Taeglich um 03:30
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+[Install]
+WantedBy=timers.target
+EOF
+mkdir -p /var/backups && systemctl daemon-reload && systemctl enable --now eportfolio-dump.timer
+systemctl start eportfolio-dump.service && ls -l /var/backups
+```
+
+`POSTGRES_USER` und `POSTGRES_DB` kommen aus der `.env` und stehen nicht fest
+verdrahtet im Auftrag: ein Timer zeigt seine Fehlerausgabe niemandem, und ein
+geänderter Name würde sonst still eine leere Sicherung erzeugen.
+
+Die Dateien gehören **vom Server herunter**. Eine Sicherung, die neben dem
+Original liegt, ist keine.
+
+**Zurückspielen**, der Teil, der geübt sein muss:
+
+```bash
+gunzip -c /var/backups/eportfolio-JJJJ-MM-TT.sql.gz | docker exec -i eportfolio-prod-db-1 psql -U eportfolio -d eportfolio
+```
+
+**Die Datenbank allein genügt nicht.** Im Profil `prod` liegen die
+hochgeladenen Dateien in Azure Blob Storage, nicht in der Datenbank und nicht
+im Container. Ein allein zurückgespielter Datenbankstand hat Dateizeilen ohne
+Bytes, und `GET /api/files/{id}` antwortet dann mit 500. Zur vollständigen
+Sicherung gehören beide Seiten.
+
+Eine Rückspielprobe gehört dazu. Eine Sicherung, die nie zurückgespielt
+wurde, ist eine Vermutung.
+
+### Passwort der Datenbank nachträglich ändern
+
+Abschnitt 8 nennt bisher nur, dass das Passwort im Volume festhängt, und legt
+damit `down -v` nahe. Ohne Datenverlust geht es so:
+
+```bash
+# 1. neues Passwort IN der Datenbank setzen, ueber die Standardeingabe statt
+#    als Befehlsargument: ein Argument steht in der Prozessliste des Wirts und
+#    ist dort fuer jeden sichtbar, der ps aufrufen darf.
+docker exec -i eportfolio-prod-db-1 psql -U eportfolio -d eportfolio <<'EOF'
+alter user eportfolio with password 'HIER-DAS-NEUE';
+EOF
+# 2. denselben Wert in die .env schreiben
+# 3. Backend neu erzeugen, damit es die neue Umgebung sieht
+docker compose -f compose.base.yml -f compose.prod.yml up -d --force-recreate backend
+```
+
+Der Heredoc hält das Passwort aus der Argumentliste heraus, nicht aber aus der
+Shell-Historie. Die betreffende Zeile danach mit `history -d` entfernen, oder
+die Sitzung von vornherein mit `unset HISTFILE` beginnen.
+
+### Zwei Fallen im Umgang mit dem Server
+
+**`docker compose config` gibt Geheimnisse im Klartext aus.** Der Befehl setzt
+alle Variablen ein und schreibt Azure-Kontoschlüssel, `JWT_SECRET` und beide
+Passwörter in das Terminal, wo sie in der Sitzungshistorie stehen bleiben. Zum
+Prüfen der zusammengeführten Konfiguration deshalb
+`docker compose ... config --no-interpolate` verwenden. Dasselbe gilt für
+`docker inspect`: die Umgebung eines Containers ist für jedes Mitglied der
+Gruppe `docker` lesbar.
+
+**Die `.env` liegt unverschlüsselt auf dem Server.** Das ist hinnehmbar, muss
+aber bekannt sein: wer Zugriff auf den Server hat, hat Zugriff auf das
+Azure-Speicherkonto und das Mailkonto. Der Kreis der Konten auf dem Server ist
+entsprechend klein zu halten.

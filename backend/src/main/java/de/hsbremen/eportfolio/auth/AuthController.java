@@ -234,9 +234,25 @@ public class AuthController {
 	 * <p>Bewusst {@code getRemoteAddr()} ohne Auswertung von
 	 * {@code X-Forwarded-For}: dieser Header ist frei setzbar, solange kein
 	 * vertrauenswuerdiger Reverse Proxy davorsteht, der ihn ueberschreibt. Ein
-	 * Angreifer koennte die IP-Sperre sonst mit jedem Request umgehen. Sobald
-	 * die Anwendung hinter einem Proxy laeuft, gehoert das ueber
-	 * {@code server.forward-headers-strategy} geloest, nicht hier.
+	 * Angreifer koennte die IP-Sperre sonst mit jedem Request umgehen.
+	 *
+	 * <p><strong>Seit Contract v97 (KAN-98) ist der Proxy-Fall kein
+	 * Zukunftsfall mehr, und diese Zeile bleibt trotzdem stehen.</strong> Im
+	 * Profil {@code prod} steht die Anwendung hinter einem TLS-Terminierer und
+	 * dem nginx des Frontends. Geloest ist das genau dort, wo §6.5 es verlangt,
+	 * naemlich in der Rahmenkonfiguration und nicht hier:
+	 * {@code server.forward-headers-strategy: native} in
+	 * {@code application-prod.yml} schaltet Tomcats {@code RemoteIpValve} ein,
+	 * und die setzt die Adresse schon <em>vor</em> dieser Methode um. Der Aufruf
+	 * liefert damit von selbst die echte Client-Adresse, ohne dass der
+	 * Controller etwas davon wissen muss. Im Profil {@code dev} greift der Ventil
+	 * nicht, und {@code getRemoteAddr()} bleibt die Verbindungsadresse.
+	 *
+	 * <p>Die Zusage haengt an einer Bedingung ausserhalb dieser Datei: der
+	 * Backend-Port ist in {@code compose.prod.yml} auf {@code 127.0.0.1}
+	 * gebunden. Waere er oeffentlich, koennte jeder die Proxys umgehen und einen
+	 * beliebigen {@code X-Forwarded-For} senden; die Sperre waere dann schlechter
+	 * als ohne den Schalter.
 	 */
 	private static String clientIp(HttpServletRequest request) {
 		return request.getRemoteAddr();
