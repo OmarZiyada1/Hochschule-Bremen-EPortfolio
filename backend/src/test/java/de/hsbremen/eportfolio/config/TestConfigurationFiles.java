@@ -70,6 +70,48 @@ final class TestConfigurationFiles {
 	}
 
 	/**
+	 * Das Overlay der Betriebsart PROD (KAN-99).
+	 *
+	 * <p>Gebraucht, weil im Profil {@code prod} niemand die {@code .env} liest:
+	 * {@code application-prod.yml} verzichtet bewusst auf
+	 * {@code spring.config.import}, und Compose benutzt die Datei nur, um
+	 * Platzhalter in der Compose-Datei selbst zu ersetzen. Ein Wert erreicht die
+	 * Anwendung im Betrieb also ausschliesslich ueber den
+	 * {@code environment}-Block dieser Datei.
+	 */
+	static Path composeProdYaml() {
+		Path compose = repositoryRoot().resolve("compose.prod.yml");
+		assertThat(compose).as("compose.prod.yml fehlt").isRegularFile();
+		return compose;
+	}
+
+	/** Alle Java-Quelldateien des Hauptcodes. */
+	static List<Path> mainJavaSources() {
+		Path java = repositoryRoot().resolve("backend/src/main/java");
+		try (Stream<Path> files = Files.walk(java)) {
+			List<Path> found = files
+					.filter(path -> path.getFileName().toString().endsWith(".java"))
+					.sorted(Comparator.comparing(Path::toString))
+					.toList();
+			assertThat(found).as("Keine Java-Quellen unter " + java).isNotEmpty();
+			return found;
+		}
+		catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+
+	/** Der vollstaendige Inhalt einer Datei, Kommentare eingeschlossen. */
+	static String contentOf(Path file) {
+		try {
+			return Files.readString(file, StandardCharsets.UTF_8);
+		}
+		catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+
+	/**
 	 * Zeilen ohne Kommentare und ohne Leerzeilen. Ein abgeschnittener
 	 * Zeilenkommentar zaehlt nicht mit: sonst schlaegt ein erlaeuternder Satz
 	 * ueber ein Passwort als Passwort an.
