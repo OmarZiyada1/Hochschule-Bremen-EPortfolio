@@ -92,6 +92,31 @@ services:
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
+      # Erstes Admin-Konto einer neuen Umgebung (KAN-99), gelesen vom
+      # InitialAdminSeeder.
+      #
+      # Sie MUESSEN hier stehen. Die .env im Projektverzeichnis benutzt
+      # Compose nur, um Platzhalter IN DIESER DATEI zu ersetzen; in den
+      # Container kommt ausschliesslich, was unter environment steht. Und
+      # anders als im Profil dev liest die Anwendung die .env auch nicht
+      # selbst: application-prod.yml verzichtet bewusst auf
+      # spring.config.import, im Betrieb kommen die Werte aus der Umgebung
+      # des Prozesses.
+      #
+      # Genau das ist beim ersten Ausrollen schiefgegangen: die Werte
+      # standen in der .env, der Seeder sah sie nie und uebersprang seine
+      # Arbeit stillschweigend, wie es sein Riegel vorsieht. Der Fehler war
+      # nicht sichtbar, weil ein fehlender Wert kein Fehlerfall ist.
+      #
+      # Mit ausdruecklich leerem Vorgabewert und nicht ohne: die drei
+      # Werte sind optional, und ohne das :- warnt Compose bei jedem Start
+      # ueber eine nicht gesetzte Variable. Das ist Laerm, der die echten
+      # Meldungen verdeckt.
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_HSB_EMAIL: ${BOOTSTRAP_ADMIN_HSB_EMAIL:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      BOOTSTRAP_ADMIN_FIRST_NAME: ${BOOTSTRAP_ADMIN_FIRST_NAME:-System}
+      BOOTSTRAP_ADMIN_LAST_NAME: ${BOOTSTRAP_ADMIN_LAST_NAME:-Administration}
     healthcheck:
       # Nur das Zeitfenster wird ueberschrieben, Befehl und Takt kommen aus
       # compose.base.yml (Compose fuehrt Abbildungen schluesselweise zusammen).
