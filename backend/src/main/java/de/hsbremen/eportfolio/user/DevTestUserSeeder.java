@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,7 +50,20 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Component
 @Profile("dev")
+@Order(DevTestUserSeeder.ORDER)
 public class DevTestUserSeeder implements ApplicationRunner {
+
+	/**
+	 * Laeuft vor {@link InitialAdminSeeder#ORDER} (KAN-99).
+	 *
+	 * <p>Die Reihenfolge mehrerer {@link ApplicationRunner} ist ohne
+	 * {@link Order} nicht bestimmt. Seit es einen zweiten Runner gibt, der
+	 * Konten anlegt, waere das eine Zufallsquelle: der andere prueft, ob
+	 * {@code app_user} leer ist, und in einer frischen Entwicklungsdatenbank
+	 * haengt seine Antwort dann davon ab, wer zuerst drankam. Diese Konstante
+	 * legt fest, dass die Dev-Testkonten zuerst entstehen.
+	 */
+	public static final int ORDER = 0;
 
 	private static final Logger LOG = LoggerFactory.getLogger(DevTestUserSeeder.class);
 
