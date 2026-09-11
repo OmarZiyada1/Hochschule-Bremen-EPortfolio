@@ -34,6 +34,14 @@ Alle Versionen aus `backend/pom.xml` bzw. `frontend/package.json`.
 - `stammdaten-seeder.sh` und `stammdaten-seeder-entfernen.sh`: die fünf
   Fakultäten, 75 Studiengänge und ihre Module, erhoben aus der
   Confluence-Seite „Fakultäten-Hierarchie"
+- `kategorien-semester-seeder.sh`: die acht Kategorien und vier Semester,
+  die im laufenden Programm nur aus dem `DevMasterDataSeeder` kommen und im
+  Profil `prod` deshalb nie entstehen (KAN-99). Ohne diesen Lauf scheitert
+  dort jedes Einreichen mit 400 `PROJECT_INCOMPLETE`
+- `demo-daten-komplett.sh` und `demo-daten-raeumen.sh`: der Demobestand aus
+  zehn Projekten und zehn Konten für die öffentliche Vorführung. Das
+  Aufräumskript läuft **nur** gegen eine Entwicklungsdatenbank; es prüft das
+  und bricht sonst ab
 - `test-seeder.sh`, `test-sitzung.sh` und ihre Gegenstücke zum Entfernen,
   dazu `test-seeder-pruefen.sh`: Datenbestand der Usability-Testwoche
 - `postman/`: Postman-Sammlung über alle Endpoints, im Menü unter `t` mit

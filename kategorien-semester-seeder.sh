@@ -12,7 +12,7 @@
 #
 # Danach steht in der Datenbank:
 #
-#      8 Kategorien   (§3.6 bis §3.9)
+#      8 Kategorien   (§3.6)
 #      4 Semester     (§3.18), aelteste zuerst
 #
 # WOZU DAS NOETIG IST (KAN-99). Beide Arten kommen im laufenden

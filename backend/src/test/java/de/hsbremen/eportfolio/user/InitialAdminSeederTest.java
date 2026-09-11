@@ -6,6 +6,9 @@ import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
 import de.hsbremen.eportfolio.portfolio.PortfolioRepository;
 import de.hsbremen.eportfolio.portfolio.PortfolioService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -42,7 +45,7 @@ class InitialAdminSeederTest {
 	private static final String HSB_EMAIL = "bootstrap-admin@hs-bremen.de";
 
 	/** Zwoelf Zeichen, also genau an der Grenze aus {@code PasswordPolicy}. */
-	private static final String PASSWORT = "bootstrap-99";
+	private static final String PASSWORD = "bootstrap-99";
 
 	@Autowired
 	private UserRepository userRepository;
@@ -56,36 +59,67 @@ class InitialAdminSeederTest {
 	@Autowired
 	private PortfolioRepository portfolioRepository;
 
-	private InitialAdminSeeder seeder(String email, String hsbEmail, String passwort) {
+	/**
+	 * Zum Leeren der Tabellen in Fremdschluesselreihenfolge. Ueber Repositories
+	 * ginge das nicht: fuer die meisten der beteiligten Tabellen gibt es keines,
+	 * und {@code deleteAll()} setzte ohnehin nur Einzel-DELETEs in der falschen
+	 * Reihenfolge ab.
+	 */
+	@PersistenceContext
+	private EntityManager entityManager;
+
+	private InitialAdminSeeder seeder(String email, String hsbEmail, String password) {
 		return new InitialAdminSeeder(userRepository, passwordEncoder, portfolioService,
-				email, hsbEmail, passwort, "System", "Administration");
+				email, hsbEmail, password, "System", "Administration");
 	}
 
 	private InitialAdminSeeder seeder() {
-		return seeder(EMAIL, HSB_EMAIL, PASSWORT);
+		return seeder(EMAIL, HSB_EMAIL, PASSWORD);
 	}
 
 	/**
 	 * Versetzt die Datenbank in den Zustand einer frisch aufgesetzten Umgebung.
 	 *
-	 * <p>Portfolios zuerst: {@code portfolio.user_id} zeigt auf {@code app_user},
-	 * und die andere Reihenfolge liefe in den Fremdschluessel.
+	 * <p><strong>Warum hier so viele Tabellen stehen.</strong> Die erste Fassung
+	 * loeschte nur Portfolios und Konten und war deshalb nur auf einer
+	 * projektlosen Datenbank gruen. Sieben Fremdschluessel auf {@code app_user}
+	 * kaskadieren bewusst <em>nicht</em> ({@code project.author_id},
+	 * {@code comment.author_id}, {@code project_status_history.changed_by},
+	 * {@code stored_file.uploaded_by}, {@code top10_audit_entry.admin_id} und
+	 * beide Nutzerspalten von {@code top10_nomination}); die Migration begruendet
+	 * das ausdruecklich. Sobald jemand den Demobestand aus KAN-99 geladen hat,
+	 * also im dokumentierten Normalzustand der Entwicklungsdatenbank, waere jeder
+	 * Test dieser Klasse an einer Fremdschluesselverletzung gescheitert. Ein Test,
+	 * dessen Ergebnis vom Datenbestand des jeweiligen Rechners abhaengt, prueft
+	 * nichts Verlaessliches.
+	 *
+	 * <p>Die Reihenfolge ist dieselbe wie in {@code demo-daten-raeumen.sh} und
+	 * folgt den Fremdschluesseln von aussen nach innen. {@code @Transactional} an
+	 * der Testklasse rollt alles wieder zurueck: die Entwicklungsdatenbank
+	 * ueberlebt den Lauf unveraendert.
 	 */
-	private void leereKontotabelle() {
-		portfolioRepository.deleteAll();
-		portfolioRepository.flush();
-		userRepository.deleteAll();
-		userRepository.flush();
+	private void emptyAccountTable() {
+		for (String table : List.of(
+				"top10_audit_entry", "top10_nomination", "top10_entry", "reaction",
+				"comment", "project_status_history", "project_member", "project_editor",
+				"project_tag", "block", "stored_file", "project", "portfolio", "app_user")) {
+			entityManager.createNativeQuery("delete from " + table).executeUpdate();
+		}
+		entityManager.flush();
+		// Der Persistenzkontext haelt sonst die eben geloeschten Zeilen weiter
+		// vor, und der Seeder saehe ueber findByEmail ein Konto, das es in der
+		// Datenbank nicht mehr gibt.
+		entityManager.clear();
 	}
 
 	@Nested
 	@DisplayName("Frische Umgebung, alle Werte gesetzt")
-	class FrischeUmgebung {
+	class FreshEnvironment {
 
 		@Test
 		@DisplayName("Legt genau ein Konto an, und zwar mit der Rolle ADMIN")
-		void legtAdminAn() {
-			leereKontotabelle();
+		void createsAdminAccount() {
+			emptyAccountTable();
 
 			seeder().run(null);
 
@@ -98,23 +132,23 @@ class InitialAdminSeederTest {
 
 		@Test
 		@DisplayName("Das Konto ist anmeldbar: beide Bestaetigungen stehen, das Passwort passt")
-		void istAnmeldbar() {
-			leereKontotabelle();
+		void accountCanLogIn() {
+			emptyAccountTable();
 
 			seeder().run(null);
 
 			User admin = userRepository.findByEmail(EMAIL).orElseThrow();
 			assertThat(admin.isEmailVerified()).isTrue();
 			assertThat(admin.isHsbEmailVerified()).isTrue();
-			assertThat(passwordEncoder.matches(PASSWORT, admin.getPasswordHash()))
+			assertThat(passwordEncoder.matches(PASSWORD, admin.getPasswordHash()))
 					.as("das gesetzte Passwort muss zum gespeicherten Hash passen")
 					.isTrue();
 		}
 
 		@Test
 		@DisplayName("Die Passwortaenderung ist erzwungen (§6.7): eine zweite Partei kennt das Initialpasswort")
-		void erzwingtPasswortaenderung() {
-			leereKontotabelle();
+		void requiresPasswordChange() {
+			emptyAccountTable();
 
 			seeder().run(null);
 
@@ -124,8 +158,8 @@ class InitialAdminSeederTest {
 
 		@Test
 		@DisplayName("Das Konto bekommt sein Portfolio (§3.2.1)")
-		void legtPortfolioAn() {
-			leereKontotabelle();
+		void createsPortfolio() {
+			emptyAccountTable();
 
 			seeder().run(null);
 
@@ -135,63 +169,95 @@ class InitialAdminSeederTest {
 
 		@Test
 		@DisplayName("Ein zweiter Lauf legt kein zweites Konto an, weil die Tabelle dann nicht mehr leer ist")
-		void zweiterLaufLegtNichtsAn() {
-			leereKontotabelle();
+		void secondRunCreatesNothing() {
+			emptyAccountTable();
 
 			seeder().run(null);
-			long nachErstemLauf = userRepository.count();
+			long afterFirstRun = userRepository.count();
 			seeder().run(null);
 
-			assertThat(userRepository.count()).isEqualTo(nachErstemLauf);
+			assertThat(userRepository.count()).isEqualTo(afterFirstRun);
+		}
+
+		/**
+		 * Der teuerste denkbare Fehler dieser Klasse, deshalb ein eigener Test.
+		 *
+		 * <p>§3.1 verlangt, dass Adressen kleingeschrieben gespeichert und
+		 * gesucht werden, und {@code AuthService} normalisiert die Eingabe beim
+		 * Anmelden. Landete die Adresse hier ungewandelt in der Tabelle, faende
+		 * die Anmeldung sie nie: 401, und zwar dauerhaft. Auch
+		 * {@code POST /auth/forgot-password} hilft dann nicht, denn es
+		 * normalisiert ebenso. Und der zweite Riegel verhindert, dass ein
+		 * Neustart es richtigstellt, weil {@code app_user} nicht mehr leer ist.
+		 * Die Umgebung waere ohne Handgriff per SQL nicht mehr in Betrieb zu
+		 * nehmen.
+		 *
+		 * <p>Der Fall ist keine Spitzfindigkeit: eine {@code .env} auf einem
+		 * Server entsteht von Hand, und eine Adresse mit grossem Anfangsbuchstaben
+		 * oder ein Leerzeichen am Zeilenende sind dabei das Naheliegendste.
+		 */
+		@Test
+		@DisplayName("Gross geschriebene Adressen mit Leerraum landen klein in der Tabelle (§3.1)")
+		void storesAddressesInLowerCase() {
+			emptyAccountTable();
+
+			seeder("  Bootstrap.Admin@Test.INVALID  ", "Bootstrap.Admin@HS-Bremen.DE ", PASSWORD)
+					.run(null);
+
+			assertThat(userRepository.findByEmail("bootstrap.admin@test.invalid"))
+					.as("die Anmeldung sucht kleingeschrieben; genau so muss die Zeile stehen")
+					.isPresent();
+			User admin = userRepository.findByEmail("bootstrap.admin@test.invalid").orElseThrow();
+			assertThat(admin.getHsbEmail()).isEqualTo("bootstrap.admin@hs-bremen.de");
 		}
 	}
 
 	@Nested
 	@DisplayName("Riegel: der Runner darf nichts anlegen")
-	class Riegel {
+	class Guards {
 
 		@Test
 		@DisplayName("Bestehende Konten: der Runner uebernimmt keine laufende Installation")
-		void bestehendeKonteBlockieren() {
+		void existingAccountsBlockTheRunner() {
 			// Die Dev-Testkonten aus dem Kontextstart genuegen als Bestand. Falls
 			// die Umgebung ohne DEV_TEST_PASSWORD laeuft, wird hier eines angelegt,
 			// damit der Fall auch dann geprueft wird.
 			if (userRepository.count() == 0) {
-				seeder("vorhandener@test.invalid", "vorhandener@hs-bremen.de", PASSWORT).run(null);
+				seeder("vorhandener@test.invalid", "vorhandener@hs-bremen.de", PASSWORD).run(null);
 			}
-			long vorher = userRepository.count();
-			assertThat(vorher).isPositive();
+			long before = userRepository.count();
+			assertThat(before).isPositive();
 
 			seeder().run(null);
 
-			assertThat(userRepository.count()).isEqualTo(vorher);
+			assertThat(userRepository.count()).isEqualTo(before);
 			assertThat(userRepository.findByEmail(EMAIL)).isEmpty();
 		}
 
 		@Test
 		@DisplayName("Fehlende Adresse: kein Konto")
-		void ohneAdresseNichts() {
-			leereKontotabelle();
+		void withoutEmailNothingHappens() {
+			emptyAccountTable();
 
-			seeder("", HSB_EMAIL, PASSWORT).run(null);
+			seeder("", HSB_EMAIL, PASSWORD).run(null);
 
 			assertThat(userRepository.count()).isZero();
 		}
 
 		@Test
 		@DisplayName("Fehlende Hochschuladresse: kein Konto")
-		void ohneHsbAdresseNichts() {
-			leereKontotabelle();
+		void withoutHsbEmailNothingHappens() {
+			emptyAccountTable();
 
-			seeder(EMAIL, "   ", PASSWORT).run(null);
+			seeder(EMAIL, "   ", PASSWORD).run(null);
 
 			assertThat(userRepository.count()).isZero();
 		}
 
 		@Test
 		@DisplayName("Fehlendes Passwort: kein Konto")
-		void ohnePasswortNichts() {
-			leereKontotabelle();
+		void withoutPasswordNothingHappens() {
+			emptyAccountTable();
 
 			seeder(EMAIL, HSB_EMAIL, "").run(null);
 
@@ -200,8 +266,8 @@ class InitialAdminSeederTest {
 
 		@Test
 		@DisplayName("Zu kurzes Passwort: kein Konto, statt eines schwachen Admins")
-		void zuKurzesPasswortNichts() {
-			leereKontotabelle();
+		void tooShortPasswordCreatesNothing() {
+			emptyAccountTable();
 
 			// Elf Zeichen, also eines zu wenig fuer PasswordPolicy.MIN_LENGTH.
 			seeder(EMAIL, HSB_EMAIL, "elfzeichen1").run(null);

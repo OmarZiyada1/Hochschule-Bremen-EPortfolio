@@ -85,6 +85,44 @@ final class TestConfigurationFiles {
 		return compose;
 	}
 
+	/**
+	 * Die Basis der Compose-Dateien (KAN-99).
+	 *
+	 * <p>Gebraucht neben dem Overlay, weil die Umgebung des Containers aus
+	 * beiden Dateien zusammen entsteht: {@code JWT_SECRET} und die
+	 * {@code POSTGRES_}-Werte stehen ausschliesslich hier.
+	 */
+	static Path composeBaseYaml() {
+		Path compose = repositoryRoot().resolve("compose.base.yml");
+		assertThat(compose).as("compose.base.yml fehlt").isRegularFile();
+		return compose;
+	}
+
+	/**
+	 * Wie {@link #effectiveLines(Path)}, aber ein auskommentierter Eintrag der
+	 * Form {@code #NAME=} bleibt erhalten.
+	 *
+	 * <p>Fuer {@code .env.example}: ein Wert mit sinnvollem Vorgabewert soll in
+	 * der Vorlage sichtbar sein, ohne leer gesetzt zu werden. Eine leere Zeile
+	 * {@code NAME=} ist etwas anderes als eine fehlende, denn Spring setzt
+	 * seinen Vorgabewert nur bei der fehlenden ein. Erhaltungswuerdig ist
+	 * ausschliesslich diese Form; ein erlaeuternder Satz mit einem
+	 * Gleichheitszeichen faellt weiterhin weg.
+	 */
+	static List<String> effectiveLinesKeepingCommentedEntries(Path file) {
+		try {
+			return Files.readAllLines(file, StandardCharsets.UTF_8).stream()
+					.map(line -> line.matches("^\\s*#[A-Z][A-Z0-9_]*=.*$")
+							? line.trim()
+							: withoutComment(line))
+					.filter(line -> !line.isBlank())
+					.toList();
+		}
+		catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+
 	/** Alle Java-Quelldateien des Hauptcodes. */
 	static List<Path> mainJavaSources() {
 		Path java = repositoryRoot().resolve("backend/src/main/java");

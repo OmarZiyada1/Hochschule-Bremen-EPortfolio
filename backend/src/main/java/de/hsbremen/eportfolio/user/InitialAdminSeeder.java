@@ -1,5 +1,6 @@
 package de.hsbremen.eportfolio.user;
 
+import de.hsbremen.eportfolio.auth.EmailAddresses;
 import de.hsbremen.eportfolio.auth.PasswordPolicy;
 import de.hsbremen.eportfolio.common.enums.Role;
 import de.hsbremen.eportfolio.common.enums.UserStatus;
@@ -86,7 +87,7 @@ public class InitialAdminSeeder implements ApplicationRunner {
 
 	private final PasswordEncoder passwordEncoder;
 
-	/** Portfolio im selben Vorgang wie das Konto, dritter Anlageweg aus §3.2.1. */
+	/** Portfolio im selben Vorgang wie das Konto, vierter Anlageweg aus §3.2.1. */
 	private final PortfolioService portfolioService;
 
 	private final String email;
@@ -127,31 +128,55 @@ public class InitialAdminSeeder implements ApplicationRunner {
 			return;
 		}
 
-		// Zu kurz ist ein Fehler und kein Grund zum Weitermachen: ein
-		// Admin-Konto mit schwachem Passwort waere schlimmer als gar keines,
-		// weil niemand mehr danach sucht. Dieselbe Grenze wie fuer jedes
-		// selbst gewaehlte Passwort (§3.1.1).
-		if (password.length() < PasswordPolicy.MIN_LENGTH) {
-			LOG.error("Kein Bootstrap-Admin: BOOTSTRAP_ADMIN_PASSWORD ist kuerzer als {} Zeichen.",
-					PasswordPolicy.MIN_LENGTH);
+		// Beide Grenzen aus §3.1.1, nicht nur die untere. Zu kurz ist ein
+		// Fehler und kein Grund zum Weitermachen: ein Admin-Konto mit
+		// schwachem Passwort waere schlimmer als gar keines, weil niemand mehr
+		// danach sucht.
+		//
+		// Die Obergrenze ist kein Sicherheitsmerkmal, sondern ein
+		// BCrypt-Detail: der Algorithmus verarbeitet nur die ersten 72 Byte.
+		// Ein laengeres Initialpasswort aus einem Passwortmanager wuerde
+		// stillschweigend abgeschnitten; notiert waere dann eines und gueltig
+		// ein anderes. Genau deshalb fuehrt PasswordPolicy beide Werte an
+		// einer Stelle, und genau deshalb gelten sie auch hier.
+		if (password.length() < PasswordPolicy.MIN_LENGTH
+				|| password.length() > PasswordPolicy.MAX_LENGTH) {
+			LOG.error("Kein Bootstrap-Admin: BOOTSTRAP_ADMIN_PASSWORD muss zwischen {} und {} "
+					+ "Zeichen lang sein.", PasswordPolicy.MIN_LENGTH, PasswordPolicy.MAX_LENGTH);
 			return;
 		}
 
-		long vorhandene = userRepository.count();
-		if (vorhandene > 0) {
+		long existingAccounts = userRepository.count();
+		if (existingAccounts > 0) {
 			// Der zweite Riegel. Steht die Umgebung dauerhaft, laeuft der Runner
 			// bei jedem Start hier hinein; das ist der gewollte Normalfall nach
 			// dem Erstaufsetzen.
-			LOG.info("Kein Bootstrap-Admin: es bestehen bereits {} Konten.", vorhandene);
+			LOG.info("Kein Bootstrap-Admin: es bestehen bereits {} Konten.", existingAccounts);
 			return;
 		}
 
 		User user = new User();
+		// BEIDE ADRESSEN NORMALISIERT, und das ist hier kein Schoenheitsfehler.
+		// §3.1 verlangt Kleinschreibung an allen drei Stellen: Registrierung,
+		// Verifizierung, Anmeldung. AuthService normalisiert die Eingabe beim
+		// Anmelden. Stuende hier "Vorname.Nachname@example.org" mit
+		// Grossbuchstaben, oder haenge in der .env des Servers ein Leerzeichen
+		// am Zeilenende, dann faende die Anmeldung diese Zeile nie und
+		// antwortete mit 401. Auch "Passwort vergessen" hilft nicht, denn es
+		// normalisiert ebenso. Und der zweite Riegel unten verhindert, dass ein
+		// Neustart es richtigstellt: app_user ist dann nicht mehr leer. Die
+		// Umgebung waere ohne Handgriff per SQL nicht mehr in Betrieb zu
+		// nehmen, also genau der Ausgang, den §3.1 mit dieser Regel verhindern
+		// will.
+		//
 		// email = private Adresse und damit die Anmeldekennung.
-		user.setEmail(email);
+		String loginAddress = EmailAddresses.normalize(email);
+		user.setEmail(loginAddress);
 		// hsbEmail = Zugehoerigkeitsnachweis (§3.1). Mit ihr ist keine Anmeldung
-		// moeglich; sie steht hier, weil die Spalte not null ist.
-		user.setHsbEmail(hsbEmail);
+		// moeglich; sie steht hier, weil die Spalte not null ist. Kleingeschrieben
+		// wird sie trotzdem: die Spalte ist unique, und zwei Schreibweisen
+		// derselben Adresse waeren zwei verschiedene Zeilen.
+		user.setHsbEmail(EmailAddresses.normalize(hsbEmail));
 		// Beide Bestaetigungen gesetzt: der Flow aus §3.1.1 verschickt Codes an
 		// zwei Postfaecher, und genau das ist beim Erstaufsetzen niemand da, um
 		// zu bestaetigen. Wer die Werte setzt, hat Zugriff auf den Server und
@@ -159,8 +184,15 @@ public class InitialAdminSeeder implements ApplicationRunner {
 		user.setEmailVerified(true);
 		user.setHsbEmailVerified(true);
 		user.setPasswordHash(passwordEncoder.encode(password));
-		user.setFirstName(firstName);
-		user.setLastName(lastName);
+		// Der Vorgabewert der Annotation greift nur bei FEHLENDER Eigenschaft,
+		// nicht bei leerer. In der .env steht sie aber leicht leer da
+		// ("BOOTSTRAP_ADMIN_FIRST_NAME=" ohne Wert), und im Profil dev liest
+		// application-dev.yml die .env ein. Ohne diese Pruefung entstuende ein
+		// Konto mit leerem Namen: die Spalten sind zwar not null, eine leere
+		// Zeichenkette erfuellt den Zwang aber und das Konto stuende danach
+		// namenlos in der Kontoverwaltung und an jeder Autor:innenangabe.
+		user.setFirstName(orDefault(firstName, "System"));
+		user.setLastName(orDefault(lastName, "Administration"));
 		user.setRole(Role.ADMIN);
 		// Nur ACTIVE kann sich anmelden (§2.9).
 		user.setStatus(UserStatus.ACTIVE);
@@ -172,12 +204,20 @@ public class InitialAdminSeeder implements ApplicationRunner {
 
 		// warn und nicht info: das ist ein Vorgang, der genau einmal im Leben
 		// einer Installation vorkommt und im Protokoll auffallen soll.
+		//
+		// Protokolliert wird die normalisierte Adresse und nicht der Rohwert:
+		// im Protokoll soll stehen, womit die Anmeldung tatsaechlich gelingt.
 		LOG.warn("Bootstrap-Admin angelegt: {}. Das Passwort stammt aus der Umgebung und ist "
 				+ "bei der ersten Anmeldung zu aendern. Danach koennen die "
-				+ "BOOTSTRAP_ADMIN_-Werte aus der Umgebung entfernt werden.", email);
+				+ "BOOTSTRAP_ADMIN_-Werte aus der Umgebung entfernt werden.", loginAddress);
 	}
 
-	private static boolean isBlank(String wert) {
-		return wert == null || wert.isBlank();
+	private static boolean isBlank(String value) {
+		return value == null || value.isBlank();
+	}
+
+	/** Der Wert, oder die Vorgabe, wenn er fehlt oder nur aus Leerraum besteht. */
+	private static String orDefault(String value, String fallback) {
+		return isBlank(value) ? fallback : value.trim();
 	}
 }
