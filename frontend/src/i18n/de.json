@@ -55,6 +55,150 @@
       "link": "Zum Kontaktformular"
     }
   },
+  "imprint": {
+    "title": "Impressum",
+    "intro": "Angaben nach § 5 Digitale-Dienste-Gesetz (DDG) und § 18 Absatz 2 Medienstaatsvertrag (MStV).",
+    "prototypeNote": "Diese Seite ist ein Prototyp aus einer Bachelorthesis und wird privat betrieben. Sie ist kein Angebot der Hochschule Bremen: die Hochschule betreibt sie nicht, gibt sie nicht in Auftrag und verantwortet ihre Inhalte nicht.",
+    "operator": {
+      "title": "Betreiber und inhaltlich verantwortlich",
+      "intro": "Betrieben wird diese Seite privat von:",
+      "emailLabel": "E-Mail:",
+      "responsible": "Dieselbe Anschrift ist die ladungsfähige Anschrift und zugleich die Angabe der inhaltlich verantwortlichen Person nach § 18 Absatz 2 MStV.",
+      "contactText": "Für Rückfragen steht außerdem das Kontaktformular bereit:",
+      "contactLink": "Kontakt & Support",
+      "missing": "In diesem Stand der Anwendung sind die Angaben zum Betreiber nicht hinterlegt. Sie werden beim Bauen aus der Umgebung gesetzt und fehlen deshalb in einem Entwicklungsstand. Ein öffentlich erreichbarer Stand ohne diese Angaben ist ein Fehler und keine Absicht."
+    },
+    "university": {
+      "title": "Verhältnis zur Hochschule Bremen",
+      "intro": "Name und Bildmarke der Hochschule Bremen erscheinen auf dieser Seite, weil die Anwendung im Rahmen einer Bachelorthesis an der Fakultät 4 der Hochschule Bremen entstanden ist und ein Portal für deren Studiengänge entwirft. Mehr folgt daraus nicht:",
+      "items": [
+        "Die Hochschule Bremen ist weder Betreiberin noch Auftraggeberin dieser Seite und verantwortet ihre Inhalte nicht.",
+        "Die Rechte an Name und Bildmarke liegen bei der Hochschule Bremen. Sie erscheinen hier allein zur Darstellung der Abschlussarbeit.",
+        "Eine Anfrage zu dieser Seite richten Sie an den oben genannten Betreiber und nicht an die Hochschule."
+      ]
+    },
+    "content": {
+      "title": "Haftung und Inhalte Dritter",
+      "items": [
+        "Für eigene Inhalte ist der Betreiber nach den allgemeinen Gesetzen verantwortlich. Eine Pflicht, fremde Inhalte zu überwachen oder nach Umständen zu forschen, die auf eine rechtswidrige Tätigkeit hinweisen, besteht davon unberührt nicht.",
+        "Projekte, Kommentare und Profiltexte stammen von den angemeldeten Personen, die sie verfasst haben, und geben deren Auffassung wieder. Wird ein Verstoß bekannt, wird der Beitrag entfernt.",
+        "Verweise auf fremde Seiten führen zu Inhalten, auf die der Betreiber keinen Einfluss hat. Zum Zeitpunkt des Setzens war dort kein Verstoß erkennbar; eine dauernde Kontrolle ohne konkreten Anhaltspunkt findet nicht statt."
+      ]
+    },
+    "attribution": {
+      "title": "Bildnachweis",
+      "intro": "Die Symbole der Reaktionsschaltfläche stammen von Smashicons und stehen unter der Flaticon Free License, die eine Namensnennung verlangt. Der vorgeschriebene Nennungstext lautet:",
+      "notice": "Clapping icons created by Smashicons - Flaticon",
+      "detail": "Beide Dateien sind unverändert übernommen und werden als Maske verwendet: die Zeichnung liefert die Form, die Farbe kommt aus der Gestaltung der Anwendung. Alle übrigen Symbole der Oberfläche stammen aus der Sammlung Lucide unter der ISC-Lizenz."
+    },
+    "related": {
+      "title": "Weitere Seiten",
+      "intro": "Wie dieses Portal mit personenbezogenen Daten umgeht und wie barrierefrei es ist, steht jeweils auf einer eigenen Seite:",
+      "privacy": "Datenschutzerklärung",
+      "accessibility": "Barrierefreiheit"
+    }
+  },
+  "privacy": {
+    "title": "Datenschutzerklärung",
+    "intro": "Welche personenbezogenen Daten dieses Portal verarbeitet, wozu, wer sie außer dem Betreiber zu sehen bekommt und welche Rechte Sie dabei haben.",
+    "prototypeNote": "Die Anwendung ist ein Prototyp aus einer Bachelorthesis und wird privat betrieben, nicht von der Hochschule Bremen. Sie ist kein dauerhaft betriebener Dienst; wann sie abgeschaltet wird, entscheidet der Verlauf der Arbeit.",
+    "controller": {
+      "title": "Verantwortlicher",
+      "intro": "Verantwortlicher im Sinne der Datenschutz-Grundverordnung ist:",
+      "emailLabel": "E-Mail:",
+      "noDpo": "Ein Datenschutzbeauftragter ist nicht bestellt. Die Voraussetzungen des Artikels 37 DSGVO liegen für einen privat betriebenen Prototypen dieses Umfangs nicht vor.",
+      "missing": "In diesem Stand der Anwendung sind die Angaben zum Verantwortlichen nicht hinterlegt. Sie werden beim Bauen aus der Umgebung gesetzt und fehlen deshalb in einem Entwicklungsstand. Ein öffentlich erreichbarer Stand ohne diese Angaben ist ein Fehler und keine Absicht."
+    },
+    "data": {
+      "title": "Welche Daten verarbeitet werden",
+      "intro": "Erhoben wird, was die Anwendung zum Arbeiten braucht:",
+      "items": [
+        "Konto: Vor- und Nachname, Ihre private E-Mail-Adresse, Ihre Hochschuladresse, das Passwort als nicht umkehrbarer Hashwert, Rolle und Kontostatus, der Stand der beiden Adressbestätigungen und der Vermerk, ob das Passwort gewechselt werden muss. Der Passworthash verlässt den Server in keiner Antwort. Ihre Hochschuladresse sehen nur Sie selbst und die Administration in der Nutzerverwaltung; anderen Konten wird sie nie ausgeliefert.",
+        "Öffentliches Profil: Ihr Name, Ihre private E-Mail-Adresse, Ihre Biografie und Ihr Profilbild sind über Ihre Portfolioseite ohne Anmeldung abrufbar, sobald das Konto besteht. Die Adresse steht dort als Kontaktweg zur Autorin oder zum Autor. Das heißt zugleich, dass eine maschinelle Sammlung sie erfassen kann; es ist eine Festlegung dieses Portals und keine Wahl, die Sie treffen.",
+        "Projekte: Titel, Kurzbeschreibung, Inhaltsblöcke, Schlagwörter und die Zuordnung zu Fakultät, Studiengang, Abschluss und Semester. Einen Entwurf sehen nur Sie, die von Ihnen eingetragenen Projektmitglieder und die Administration; nach dem Einreichen zusätzlich die zuständige Redaktion. Veröffentlicht ist ein Projekt für alle lesbar.",
+        "Statusverlauf: zu jedem Schritt eines Projekts, wer ihn wann ausgelöst hat. Daraus ist ablesbar, wie oft eine Arbeit zur Überarbeitung zurückging.",
+        "Redaktionelle Notizen: Die Redaktion kann zu einem Projekt Anmerkungen hinterlegen, die als intern gekennzeichnet und für Studierende nicht sichtbar sind. Sie betreffen Sie und sind Teil einer Auskunft nach Artikel 15 DSGVO.",
+        "Hochgeladene Dateien: Bilder, Videos, Tondateien und Dokumente, jeweils mit Dateiname, Größe, Typ und dem Konto, das sie hochgeladen hat.",
+        "Kommentare und Reaktionen zu Projekten, jeweils mit dem Konto, von dem sie stammen. An einem veröffentlichten Projekt ist die Kommentarliste ohne Anmeldung lesbar; Ihr Name steht dann öffentlich darunter.",
+        "Anfragen über das öffentliche Kontaktformular: Name, E-Mail-Adresse, Kategorie, Betreff und der Freitext der Nachricht. Waren Sie beim Absenden angemeldet, wird zusätzlich Ihr Konto vermerkt, auch wenn dieser Vermerk in keiner Ansicht erscheint. Festgehalten wird ferner, welches Administrationskonto die Anfrage wann bearbeitet hat.",
+        "Bestätigungscodes für Ihre beiden Adressen, bis sie eingelöst sind oder ablaufen.",
+        "Technische Zugriffsdaten: IP-Adresse, Zeitpunkt, aufgerufene Adresse und Browserkennung. Sie fallen beim Betrieb jedes Webservers an und stehen in dessen Protokoll.",
+        "Fehlversuche: Um massenhafte Versuche abzuwehren, zählt der Server erfolglose Anläufe getrennt nach E-Mail-Adresse und IP-Adresse, und zwar an der Anmeldung, an beiden Bestätigungsschritten, beim Zurücksetzen des Passworts und am Kontaktformular. Die Zähler liegen allein im Arbeitsspeicher, verfallen mit ihrem Zeitfenster und sind nach einem Neustart des Servers leer; in die Datenbank gelangen sie nicht.",
+        "Bei Konten der Redaktion und der Administration zusätzlich: Nominierungen für die Startseite, das Protokoll der Top-10-Auswahl und der Vermerk, wer gerade eine Bearbeitungssperre hält."
+      ]
+    },
+    "purposes": {
+      "title": "Zwecke und Rechtsgrundlagen",
+      "items": [
+        "Konto führen, anmelden und Passwörter zurücksetzen: Erfüllung des Nutzungsverhältnisses und vorvertragliche Maßnahmen, Artikel 6 Absatz 1 Buchstabe b DSGVO.",
+        "Projekte schreiben, einreichen, redaktionell prüfen und veröffentlichen: Erfüllung des Nutzungsverhältnisses, Artikel 6 Absatz 1 Buchstabe b DSGVO. Wann ein Projekt öffentlich wird, entscheiden Sie mit dem Einreichen; Ihr Profil dagegen ist bereits ab dem Anlegen des Kontos öffentlich abrufbar.",
+        "Rolle aus der Hochschuladresse ableiten: Beim Registrieren entscheidet allein die Domain Ihrer Hochschuladresse, ob das Konto als studentisch oder als Beschäftigtenkonto geführt wird; passt sie zu keiner der beiden hinterlegten Listen, wird die Registrierung abgewiesen und es entsteht kein Konto. Das geschieht ohne menschliche Beteiligung. Artikel 6 Absatz 1 Buchstabe b DSGVO.",
+        "Beide Adressen bestätigen, um Zugänge auf Angehörige der Hochschule zu begrenzen: berechtigtes Interesse, Artikel 6 Absatz 1 Buchstabe f DSGVO.",
+        "Anfragen über das Kontaktformular beantworten: berechtigtes Interesse, Artikel 6 Absatz 1 Buchstabe f DSGVO.",
+        "Protokolle führen und Fehlversuche zählen, um den Betrieb gegen Missbrauch zu sichern: berechtigtes Interesse, Artikel 6 Absatz 1 Buchstabe f DSGVO."
+      ]
+    },
+    "processors": {
+      "title": "Empfänger und Auftragsverarbeiter",
+      "intro": "Die Anwendung läuft nicht auf eigener Hardware. Drei Dienstleister tragen den Betrieb; dazu kommen die Anbieter eingebetteter Medien, sobald ein Projekt welche enthält:",
+      "items": [
+        "Serverbetrieb: Hostinger International Ltd., Litauen. Anwendung und Datenbank laufen auf einem virtuellen Server dieses Anbieters; das Rechenzentrum steht in Deutschland.",
+        "Dateiablage: Microsoft Azure Blob Storage, in der Europäischen Union erbracht durch die Microsoft Ireland Operations Ltd., Irland. Hochgeladene Bilder, Videos, Tondateien und Dokumente liegen in einem privaten Speicherkonto der Region Sweden Central, also in Schweden. Der Speicher erlaubt keinen anonymen Zugriff; ausgeliefert werden die Dateien allein durch die Anwendung.",
+        "Mailversand: ein SMTP-Relay der Hostinger International Ltd., Litauen. Darüber laufen Bestätigungs-, Benachrichtigungs- und Passwortmails. Die Verbindung dorthin ist verschlüsselt (STARTTLS).",
+        "Eingebettete Medien: Enthält ein veröffentlichtes Projekt einen Video- oder Einbettungsblock, lädt Ihr Browser diesen Inhalt unmittelbar bei YouTube (Google Ireland Ltd. und Google LLC, Vereinigte Staaten), Vimeo (Vimeo.com Inc., Vereinigte Staaten), Figma (Figma Inc., Vereinigte Staaten) oder CodePen (CodePen Inc., Vereinigte Staaten). Diese Anbieter erfahren dabei Ihre IP-Adresse, Ihre Browserkennung und die aufgerufene Seite, und sie können auf Merkmale zugreifen, die auf Ihrem Gerät gespeichert sind. Das geschieht beim Aufbau der Seite, nicht erst beim Abspielen."
+      ],
+      "note": "Serverbetrieb, Dateiablage und Mailversand liegen in der Europäischen Union. Bei der Dateiablage kann ein Unterauftragsverarbeiter von Microsoft aus einem Drittland zugreifen; dafür gelten die Standardvertragsklauseln des Anbieters. Die Anbieter eingebetteter Medien sitzen dagegen in den Vereinigten Staaten, und dorthin fließen die im letzten Punkt genannten Daten. Weitere Empfänger gibt es nicht."
+    },
+    "retention": {
+      "title": "Speicherdauer",
+      "items": [
+        "Konto, Profil und Projekte bleiben, solange das Konto besteht.",
+        "Ein veröffentlichtes Projekt können Sie weder selbst zurückziehen noch selbst löschen. Aus dem veröffentlichten Zustand führt allein die Redaktion oder die Administration heraus, und ein eigenes Projekt löschen kann nur, wer es noch als Entwurf führt. Für alles Weitere gilt der Weg von Hand aus dem nächsten Abschnitt.",
+        "Anfragen über das Kontaktformular bleiben, bis sie bearbeitet sind, und werden danach auf Wunsch gelöscht. Die Antwort schreibt die Administration aus ihrem eigenen Postfach; dieser Schriftwechsel liegt dann dort und nicht mehr in diesem System.",
+        "Bestätigungscodes verfallen 24 Stunden nach ihrer Ausgabe.",
+        "Die Protokolle des Servers rollen nach Größe: je Dienst höchstens fünf Dateien zu je zehn Megabyte, ältere Einträge werden dabei überschrieben.",
+        "Die Zähler der Fehlversuche verfallen mit ihrem Zeitfenster und sind nach einem Neustart des Servers leer."
+      ]
+    },
+    "deletion": {
+      "title": "Löschung eines Kontos",
+      "text": "Hier ist dieser Prototyp offen gegenüber sich selbst: eine Schaltfläche, mit der Sie Ihr Konto selbst löschen, gibt es nicht. Die Administration kann ein Konto deaktivieren, wodurch es sich nicht mehr anmelden kann; die Zeile in der Datenbank bleibt dabei bestehen, damit die Zuordnung bereits veröffentlichter Projekte nicht zerfällt. Eine tatsächliche Löschung im Sinne des Artikels 17 DSGVO erfolgt deshalb von Hand: Schreiben Sie an die oben genannte Adresse, dann werden Konto, Profil, Projekte und hochgeladene Dateien entfernt."
+    },
+    "rights": {
+      "title": "Ihre Rechte",
+      "intro": "Gegenüber dem oben genannten Verantwortlichen haben Sie das Recht auf:",
+      "items": [
+        "Auskunft darüber, welche Daten zu Ihnen verarbeitet werden, Artikel 15 DSGVO. Sie umfasst auch das, was die Oberfläche Ihnen nicht zeigt, etwa redaktionelle Notizen und den Statusverlauf Ihrer Projekte.",
+        "Berichtigung unrichtiger Daten, Artikel 16 DSGVO.",
+        "Löschung, Artikel 17 DSGVO, auf dem im vorigen Abschnitt beschriebenen Weg.",
+        "Einschränkung der Verarbeitung, Artikel 18 DSGVO.",
+        "Datenübertragbarkeit, Artikel 20 DSGVO.",
+        "Widerspruch gegen eine Verarbeitung, die auf ein berechtigtes Interesse gestützt ist, Artikel 21 DSGVO."
+      ],
+      "authority": "Unabhängig davon können Sie sich nach Artikel 77 DSGVO bei einer Aufsichtsbehörde beschweren. Zuständig ist die Behörde Ihres gewöhnlichen Aufenthaltsorts, Ihres Arbeitsplatzes oder des Orts des mutmaßlichen Verstoßes."
+    },
+    "contactForm": {
+      "title": "Wenn Sie nur das Kontaktformular benutzt haben",
+      "text": "Das Kontaktformular steht ohne Anmeldung offen. Wer es benutzt, hinterlässt Name, E-Mail-Adresse, Kategorie, Betreff und den Text der Nachricht, hat aber kein Konto und damit keinen Weg über die Oberfläche, diese Daten einzusehen oder löschen zu lassen. Für diesen Fall genügt eine formlose Nachricht an die oben genannte Adresse: Nennen Sie die E-Mail-Adresse, mit der Sie geschrieben haben, und ungefähr den Zeitpunkt. Die Anfrage wird dann herausgesucht, auf Wunsch im Wortlaut mitgeteilt und gelöscht."
+    },
+    "noTracking": {
+      "title": "Kein Tracking, kein Einwilligungsbanner",
+      "text": "Das Portal selbst setzt keine Analyse- und keine Werbedienste ein, misst kein Verhalten und lädt weder Schriftarten noch Karten fremder Anbieter nach. Alles, was die Oberfläche braucht, kommt vom eigenen Server. Es findet kein Profiling statt.",
+      "consent": "Die eine Ausnahme sind die eingebetteten Medien aus dem Abschnitt „Empfänger“. Sie stehen auf einer Seite, weil eine Autorin oder ein Autor sie in ein Projekt gesetzt hat, und sie laden von den Servern ihrer Anbieter, sobald die Seite aufgebaut wird. Sauberer wäre, sie erst nach einer Einwilligung zu laden. Dieser Prototyp tut das nicht; das ist eine bekannte Grenze und wird hier benannt, statt sie mit einem Banner zu überdecken, das nichts steuert.",
+      "storage": "Im Browser liegen: Ihre angemeldete Sitzung, also das Anmeldezeichen, sein Ablaufzeitpunkt und die Angaben Ihres Kontos (Name, beide Adressen, Rolle und Status); während einer laufenden Registrierung Ihre beiden Adressen und der Stand der Bestätigung; der Pfad, auf den nach einer Anmeldung zurückgesprungen wird; und Ihre Wahl zwischen hellem und dunklem Modus. Alles davon bleibt auf Ihrem Gerät und geht an niemanden sonst.",
+      "logout": "Beim Abmelden wird das Anmeldezeichen aus Ihrem Browser gelöscht. Auf dem Server bleibt es bis zu seinem Ablaufzeitpunkt gültig: die Schnittstelle führt keine Sitzung, die sie beenden könnte. Auch das ist eine bewusst dokumentierte Grenze dieses Prototyps."
+    },
+    "indexing": {
+      "title": "Keine Auffindbarkeit über Suchmaschinen",
+      "text": "Öffentliche Projekt- und Portfolioseiten tragen Klarnamen. Damit sie nicht über Suchmaschinen auffindbar werden, weist dieses Portal jede seiner Seiten und jede ausgelieferte Datei ausdrücklich an, nicht in den Index aufgenommen und keinem Verweis weiter gefolgt zu werden. Das Crawlen bleibt dabei bewusst erlaubt, denn eine Suchmaschine kann diese Anweisung nur befolgen, wenn sie sie auch lesen darf. Erreichbar ist das Portal deshalb für den, der seine Adresse kennt, und nicht über eine Suche nach Ihrem Namen."
+    },
+    "related": {
+      "title": "Weitere Seiten",
+      "intro": "Wer die Seite betreibt und wie barrierefrei sie ist, steht jeweils auf einer eigenen Seite:",
+      "imprint": "Impressum",
+      "accessibility": "Barrierefreiheit"
+    }
+  },
   "app": {
     "name": "E-Portfolio Hochschule Bremen",
     "institution": "Hochschule Bremen",
@@ -133,7 +277,7 @@
       "description": "E-Portfolio-Portal für studentische Projekte und akademische Arbeiten der Hochschule Bremen.",
       "projects": "Projektbibliothek",
       "accessibility": "Barrierefreiheit",
-      "copyright": "© {{year}} Hochschule Bremen, Fakultät 4 Elektrotechnik und Informatik",
+      "copyright": "© {{year}} Hochschule Bremen, Fakultät 4 Elektrotechnik und Informatik (Name und Bildmarke)",
       "tagline": "Mit Sorgfalt für die HSB-Gemeinschaft gebaut",
       "group": {
         "platform": "Plattform",
@@ -404,26 +548,6 @@
       "tooLong": "Der Text darf höchstens 1000 Zeichen lang sein.",
       "placeholderMissing": "Es fehlt ein Platzhalter, den diese Stelle braucht. Ohne ihn verschwindet die Zahl wortlos aus der Seite.",
       "placeholderUnexpected": "Diese Stelle kennt diesen Platzhalter nicht. Er stünde wörtlich auf der Seite, weil ihn niemand füllt."
-    }
-  },
-  "placeholder": {
-    "hint": "Diese Seite ist ein Platzhalter. Sie entsteht mit dem Ticket {{ticket}}.",
-    "hintStatic": "Der Inhalt dieser Seite wird noch ergänzt.",
-    "title": {
-      "portfolio": "Portfolio",
-      "projectNew": "Neues Projekt",
-      "projectMetadata": "Projekt-Metadaten",
-      "myPortfolio": "Mein Portfolio",
-      "profile": "Profil bearbeiten",
-      "administration": "Administrationsseite",
-      "adminProjects": "Projektverwaltung",
-      "adminUsers": "Nutzer:innen",
-      "adminCategories": "Kategorien",
-      "adminStudyStructure": "Studienstruktur",
-      "imprint": "Impressum",
-      "privacy": "Datenschutz",
-      "accessibility": "Barrierefreiheit",
-      "adminSemesters": "Semester"
     }
   },
   "accessDenied": {

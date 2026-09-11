@@ -1,0 +1,35 @@
+# Crawlen ausdruecklich erlaubt, Indexieren ausdruecklich verboten (KAN-100).
+#
+# Das sieht verkehrt herum aus und ist der Kern der Sache.
+#
+# Die Anwendung stellt veroeffentlichte Projekte und oeffentliche Portfolios
+# ohne Anmeldung dar; beide tragen Klarnamen, die private Mailadresse und die
+# Biografie echter Personen. Auffindbar ueber eine Suchmaschine soll das
+# nicht sein. Der Prototyp laeuft unter einer privaten Domain und ist kein
+# Angebot der Hochschule Bremen; wer ihn sehen soll, bekommt die Adresse
+# genannt.
+#
+# WARUM HIER TROTZDEM KEIN "Disallow: /" STEHT. Ein Disallow verbietet das
+# ABRUFEN, nicht das AUFNEHMEN. Eine Suchmaschine, die nicht abrufen darf,
+# liest auch die Anweisung nicht, die in der Antwort selbst steht; eine von
+# aussen verlinkte Adresse kann sie dann weiterhin als blossen URL-Eintrag
+# fuehren, ohne je ihren Inhalt gesehen zu haben. Die beiden Massnahmen hoben
+# sich also gegenseitig auf: das Verbot machte genau die Anweisung unlesbar,
+# die als einzige wirkt.
+#
+# Der tragfaehige Weg ist deshalb der umgekehrte: abrufen lassen, damit die
+# Anweisung gelesen wird, und in der Antwort sagen, dass die Seite nicht in
+# den Index gehoert. Sie steht an zwei Stellen:
+#
+#   - als <meta name="robots" content="noindex, nofollow"> im Kopf von
+#     index.html. Das gilt fuer jede Seite der Anwendung, weil die
+#     Oberflaeche aus einem einzigen Dokument besteht.
+#   - als Kopfzeile X-Robots-Tag im Caddyfile. Das gilt fuer JEDE Antwort und
+#     damit auch fuer die ueber /api/files/{id} ausgelieferten Profilbilder
+#     und Dokumente, die ein meta-Tag nie erreicht.
+#
+# Soll das Portal eines Tages gefunden werden, fallen jene beiden Anweisungen
+# weg. Diese Datei bleibt dann unveraendert stehen.
+
+User-agent: *
+Allow: /

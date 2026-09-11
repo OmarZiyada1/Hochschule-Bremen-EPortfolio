@@ -54,6 +54,38 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY . .
+
+# Die Angaben des Impressums (KAN-100).
+#
+# Sie sind sichtbarer Oberflaechentext und stehen trotzdem nicht in den
+# Sprachdateien: das Repository liegt oeffentlich auf GitHub, und eine
+# ladungsfaehige Privatanschrift bliebe dort auch nach dem Herausnehmen in
+# der Historie stehen. Sie kommen deshalb aus der .env, wie jeder andere
+# Betriebswert.
+#
+# WARUM ARG UND NICHT ENV IM LAUFENDEN CONTAINER. Vite backt die Werte
+# beim Buendeln in die JS-Dateien ein; zur Laufzeit liest niemand mehr
+# eine Umgebungsvariable. Die Stufe runtime ist ein nginx, der fertige
+# Dateien ausliefert. Der einzige Zeitpunkt, an dem der Wert ankommen
+# kann, ist also dieser hier.
+#
+# Die leeren Standardwerte halten den Bau ohne gesetzte .env am Laufen:
+# ohne sie bricht "docker compose build" mit einer Warnung ab, sobald
+# jemand das Bild ohne diese Werte baut. Fehlt der Wert, sagt das
+# Impressum das sichtbar, statt eine Anschrift zu erfinden.
+#
+# Jeder ARG braucht sein ENV daneben. ARG allein ist eine Variable des
+# Dockerfiles und steht dem Prozess in RUN nicht in der Umgebung; Vite
+# nimmt VITE_-Werte aber genau von dort entgegen, naemlich aus process.env.
+ARG VITE_IMPRINT_OPERATOR=""
+ARG VITE_IMPRINT_STREET=""
+ARG VITE_IMPRINT_CITY=""
+ARG VITE_IMPRINT_EMAIL=""
+ENV VITE_IMPRINT_OPERATOR=$VITE_IMPRINT_OPERATOR
+ENV VITE_IMPRINT_STREET=$VITE_IMPRINT_STREET
+ENV VITE_IMPRINT_CITY=$VITE_IMPRINT_CITY
+ENV VITE_IMPRINT_EMAIL=$VITE_IMPRINT_EMAIL
+
 RUN pnpm build
 
 # --------------------------------------------------------------------------

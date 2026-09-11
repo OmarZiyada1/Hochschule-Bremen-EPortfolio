@@ -73,6 +73,20 @@
 		Referrer-Policy "strict-origin-when-cross-origin"
 		# Kein Einbetten in fremde Rahmen (Clickjacking).
 		X-Frame-Options "SAMEORIGIN"
+		# Keine Indexierung durch Suchmaschinen (KAN-100).
+		#
+		# Dieselbe Anweisung steht als meta-Tag im Kopf von index.html. Sie
+		# steht hier ein zweites Mal, weil eine Kopfzeile etwas erreicht, was
+		# ein meta-Tag nie erreichen kann: ANTWORTEN, DIE KEIN HTML SIND.
+		# Ueber GET /api/files/{id} gehen Profilbilder, Bilder aus Projekten
+		# und hochgeladene Dokumente hinaus; ein Bild traegt keinen Kopf, in
+		# den sich ein meta-Tag schreiben liesse, und die Bildersuche ist
+		# genau der Weg, auf dem ein Portraet einer Person auffindbar wird.
+		#
+		# Begleitbedingung ist public/robots.txt, die das Crawlen ausdruecklich
+		# ERLAUBT. Ein Disallow dort machte diese Kopfzeile unlesbar und damit
+		# wirkungslos; die Begruendung steht im Kopf jener Datei.
+		X-Robots-Tag "noindex, nofollow"
 		# Die Software des Servers muss niemand erfahren.
 		-Server
 	}

@@ -474,10 +474,14 @@ describe("Routenbaum", () => {
 
   it("gibt den statischen Fussbereich-Zielen eine Seite", () => {
     /* Klaerungsrunde KAN-7: die drei rechtlichen Seiten haben Routen,
-       damit kein Footer-Link auf der 404-Seite endet. */
+       damit kein Footer-Link auf der 404-Seite endet. Seit KAN-100
+       tragen alle drei eigene Texte statt einer Platzhalterhuelle, und
+       die Ueberschrift von /privacy ist deshalb die volle
+       "Datenschutzerklaerung"; "Datenschutz" steht nur noch als
+       Beschriftung im Fussbereich. */
     for (const [path, title] of [
       ["/imprint", "Impressum"],
-      ["/privacy", "Datenschutz"],
+      ["/privacy", "Datenschutzerklärung"],
       ["/accessibility", "Barrierefreiheit"],
     ] as const) {
       const { unmount } = renderWithProviders(<AppUnderTest />, path)

@@ -10,6 +10,7 @@ import ComponentGalleryPage from "@/features/token-gallery/ComponentGalleryPage"
 import ForgotPasswordPage from "@/features/auth/ForgotPasswordPage"
 import HelpPage from "@/features/help/HelpPage"
 import HomePage from "@/features/home/HomePage"
+import ImprintPage from "@/features/legal/ImprintPage"
 import LoginPage from "@/features/auth/LoginPage"
 import MyPortfolioPage from "@/features/portfolio/MyPortfolioPage"
 import NotFoundPage from "@/features/not-found/NotFoundPage"
@@ -18,6 +19,7 @@ import ProjectDetailPage from "@/features/projects/ProjectDetailPage"
 import ProjectListPage from "@/features/projects/ProjectListPage"
 import NewProjectPage from "@/features/projects/NewProjectPage"
 import ProjectMetadataPage from "@/features/projects/ProjectMetadataPage"
+import PrivacyPage from "@/features/legal/PrivacyPage"
 import SupportPage from "@/features/support/SupportPage"
 import { AdministrationLayout } from "@/features/administration/AdministrationLayout"
 import ProjectReviewPage from "@/features/reviews/ProjectReviewPage"
@@ -46,7 +48,6 @@ import { AuthLayout } from "@/routes/AuthLayout"
 import { EditorLayout } from "@/routes/EditorLayout"
 import { EditorRoute } from "@/routes/EditorRoute"
 import { RootLayout } from "@/routes/RootLayout"
-import { PlaceholderPage } from "@/routes/PlaceholderPage"
 import { RequireAuth } from "@/routes/RequireAuth"
 import { RequireRole } from "@/routes/RequireRole"
 
@@ -223,22 +224,24 @@ export const routes: RouteObject[] = [
         ],
       },
       {
-        /* Statische Fussbereich-Seiten ohne eigenes Ticket (Klaerungsrunde
-           KAN-7): der Footer verlinkt sie, also fuehren sie nicht auf die
-           404-Seite. */
+        /* Seit KAN-100 kein Platzhalter mehr. Beide Seiten muessen stehen,
+           BEVOR das Portal oeffentlich erreichbar ist: es traegt Namen und
+           Bildmarke der Hochschule, wird aber privat betrieben, und es
+           verarbeitet echte Personendaten. Bis KAN-7 hiess es hier, die
+           beiden haetten kein Ticket; seit KAN-100 haben sie eines. */
         path: "/imprint",
-        element: <PlaceholderPage titleKey="placeholder.title.imprint" />,
+        element: <ImprintPage />,
       },
       {
         path: "/privacy",
-        element: <PlaceholderPage titleKey="placeholder.title.privacy" />,
+        element: <PrivacyPage />,
       },
       {
         /* Seit KAN-42 kein Platzhalter mehr: die Seite traegt den Pruefstand
            des Barrierefreiheitsdurchgangs, das Verfahren, die geprueften
            Bereiche, die benannten Grenzen und den Weg zur Rueckmeldung.
-           Impressum und Datenschutz bleiben Platzhalter, sie haben kein
-           Ticket. */
+           Seit KAN-100 ist sie damit nicht mehr die einzige der drei
+           Fussbereich-Seiten mit eigenem Inhalt. */
         path: "/accessibility",
         element: <AccessibilityPage />,
       },

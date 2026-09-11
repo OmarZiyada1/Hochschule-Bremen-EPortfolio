@@ -142,9 +142,17 @@ Jira-Kommentare**, das Werkzeug kann sie nur anlegen und ändern.
 6. **Statusregeln serverseitig.** Inhaltsbearbeitung nur in `DRAFT` /
    `REVISION` (sonst 409 `PROJECT_STATUS_NOT_EDITABLE`);
    Zustandsautomat strikt nach Contract §4.1.
-7. **Sensible Felder.** `passwordHash` und `hsbEmail` verlassen den Server in
-   keiner Response (Contract §3.1). Keine Secrets im Code: `JWT_SECRET` u. a.
-   kommen aus `.env`; es gibt bewusst keine Fallbacks.
+7. **Sensible Felder.** `passwordHash` verlässt den Server in keiner
+   Response (Contract §3.1). Für `hsbEmail` gilt seit **Contract v50** die
+   engere Fassung, nicht mehr das pauschale Verbot: sie steht in den
+   Auth-Antworten an die Person selbst (Login, Registrierung,
+   `GET/PUT /auth/me`) und in der Nutzerverwaltung der Administration
+   (`GET /admin/users`), aber in keiner Antwort an Dritte;
+   `PortfolioUserResponse` und die Projektantworten führen sie nicht.
+   Beachte dabei: `PortfolioUserResponse` führt dafür die **private**
+   `email` als Kontaktweg (§3.2), und `/api/portfolios/*` ist öffentlich.
+   Keine Secrets im Code: `JWT_SECRET` u. a. kommen aus `.env`; es gibt
+   bewusst keine Fallbacks.
 8. **Tests sind Teil jedes Tickets.** `./mvnw test` läuft gegen die echte
    Postgres aus den `compose.*.yml` (kein H2, keine Testcontainers).
    Bestehende Tests bleiben grün. Testdaten-Helfer wie `TestUser` /

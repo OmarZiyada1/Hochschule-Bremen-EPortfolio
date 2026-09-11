@@ -68,6 +68,28 @@ services:
   frontend:
     build:
       context: ./frontend
+      # Die Angaben des Impressums (KAN-100).
+      #
+      # Sie stehen hier und nicht in den Sprachdateien, weil dieses
+      # Repository oeffentlich auf GitHub liegt und eine ladungsfaehige
+      # Privatanschrift dort auch nach dem Herausnehmen in der Historie
+      # bliebe. Wie jeder andere Betriebswert kommen sie aus der .env.
+      #
+      # Warum in der Basis und nicht im prod-Overlay: sie gehoeren zur
+      # BAU-Definition, und die ist in allen Betriebsarten dieselbe. DEV
+      # baut kein dist/ und laesst sie damit von selbst liegen;
+      # ARTIFACT-DEV baut dieselbe Stufe runtime wie PROD und soll das
+      # Impressum genauso zeigen, sonst faellt eine leere Seite erst im
+      # Betrieb auf.
+      #
+      # Der leere Default ist Absicht. Ohne ihn bricht der Bau ab, sobald
+      # jemand ohne diese Werte baut; mit ihm sagt das Impressum sichtbar,
+      # dass die Angaben fehlen, und erfindet keine Anschrift.
+      args:
+        VITE_IMPRINT_OPERATOR: ${VITE_IMPRINT_OPERATOR:-}
+        VITE_IMPRINT_STREET: ${VITE_IMPRINT_STREET:-}
+        VITE_IMPRINT_CITY: ${VITE_IMPRINT_CITY:-}
+        VITE_IMPRINT_EMAIL: ${VITE_IMPRINT_EMAIL:-}
     depends_on:
       - backend
 
