@@ -35,6 +35,23 @@ function createProjectHandler() {
   )
 }
 
+/**
+ * Wartezeit fuer die Routen, die als eigener Chunk nachgeladen werden.
+ *
+ * Die Vorgabe von einer Sekunde reicht dafuer nie, deshalb stand hier von
+ * Anfang an ein eigener Wert. Er lag bei zehn Sekunden und war trotzdem zu
+ * knapp: gemessen braucht so ein Fall im vollen Lauf rund 1,3 Sekunden, unter
+ * Last hat er die zehn aber ueberschritten und den Lauf rot gemacht, ohne
+ * dass sich am Verhalten etwas geaendert haette. Seit KAN-101 blockiert genau
+ * das die Ausrollung, denn ein roter Lauf haelt den Merge nach main an.
+ *
+ * Zwanzig Sekunden sind derselbe Wert, den die Editor-Tests unter
+ * features/project-content/ als WAIT fuehren: dieselbe Ursache, dieselbe
+ * Antwort. Ein automatischer Wiederholungslauf waere die falsche gewesen, er
+ * wuerde ein tatsaechlich langsamer werdendes Nachladen dauerhaft verdecken.
+ */
+const LAZY_ROUTE = { timeout: 20_000 }
+
 describe("Routenbaum", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("de")
@@ -262,12 +279,19 @@ describe("Routenbaum", () => {
     ).toBeInTheDocument()
   })
 
-  it("ADMIN erreicht die Administrationsseite und das Top-10-Protokoll", async () => {
+  /* Zwei Faelle und nicht einer, seit KAN-101.
+
+     Beide Routen kommen als eigener Chunk und warten deshalb bis zu
+     LAZY_ROUTE. In EINEM Fall nacheinander waeren das im schlechtesten Fall
+     vierzig Sekunden Wartezeit innerhalb eines Zeitbudgets von dreissig:
+     der Fall waere mit "Test timed out" gestorben, bevor waitFor sagen kann,
+     wonach es gesucht hat. Getrennt hat jede Haelfte ihr eigenes Budget. */
+  it("ADMIN erreicht die Administrationsseite", async () => {
     signInAs("ADMIN")
     /* Die Seitennavigation zaehlt seit der Nacharbeit die offenen
        Support-Anfragen; ohne Antwort scheiterte der Test daran. */
     server.use(dashboardHandler(), openSupportCountHandler())
-    const { unmount } = renderWithProviders(<AppUnderTest />, "/administration")
+    renderWithProviders(<AppUnderTest />, "/administration")
     /* Seit KAN-38 ist die Index-Route die echte Startansicht und kein
        Platzhalter mehr. Sie kommt als eigener Chunk (AdministrationRoute),
        deshalb findBy und nicht getBy; im vollstaendigen Lauf dauert das
@@ -277,22 +301,28 @@ describe("Routenbaum", () => {
       await screen.findByRole(
         "heading",
         { level: 1, name: "Dashboard" },
-        { timeout: 10_000 }
+        LAZY_ROUTE
       )
     ).toBeInTheDocument()
-    unmount()
+  })
 
+  /* Zweite Haelfte des bis KAN-101 gemeinsamen Falls, Begruendung oben. */
+  it("ADMIN erreicht das Top-10-Protokoll", async () => {
+    signInAs("ADMIN")
     /* Seit KAN-40 steht auch hier die echte Seite. Ueberschrift und
        Untertitel sind dieselben wie in der Verwaltung, so zeigt es der
        Frame „Admin · Top 10 Protokoll"; unterschieden wird ueber die
-       Leiste darunter. */
-    server.use(...top10AdminHandlers())
+       Leiste darunter.
+
+       openSupportCountHandler stand vor der Aufteilung im vorigen Fall und
+       galt hier mit; jeder Fall setzt seine Handler seit KAN-101 selbst. */
+    server.use(openSupportCountHandler(), ...top10AdminHandlers())
     renderWithProviders(<AppUnderTest />, "/administration/top10/audit")
     expect(
       await screen.findByRole(
         "heading",
         { level: 1, name: "Top 10 Verwaltung" },
-        { timeout: 10_000 }
+        LAZY_ROUTE
       )
     ).toBeInTheDocument()
     /* Innerhalb der Bereichsleiste gesucht: seit KAN-80 nennt auch die
@@ -308,6 +338,14 @@ describe("Routenbaum", () => {
 
   it("zeigt die Seitennavigation auf jeder Seite der Administration", async () => {
     signInAs("ADMIN")
+    /* Die Seitennavigation zaehlt auf JEDER Admin-Seite die offenen
+       Support-Anfragen. Ohne Handler lief der Abruf bisher in
+       onUnhandledRequest "error": der Fall blieb gruen, weil retry auf false
+       steht und die Navigation trotzdem entsteht, aber jeder Lauf trug die
+       MSW-Fehlermeldung im Protokoll mit. Seit KAN-101 ist das Protokoll der
+       Action die erste Stelle der Fehlersuche und soll nur Meldungen
+       enthalten, die etwas bedeuten. */
+    server.use(openSupportCountHandler())
     renderWithProviders(<AppUnderTest />, "/administration/categories")
 
     /* Der Rahmen liegt ueber allen Admin-Routen, auch ueber denen, die noch
@@ -339,7 +377,14 @@ describe("Routenbaum", () => {
       ),
       http.get("*/api/study-programs", () => HttpResponse.json([])),
       http.get("*/api/semesters", () => HttpResponse.json([])),
-      http.get("*/api/modules", () => HttpResponse.json([]))
+      http.get("*/api/modules", () => HttpResponse.json([])),
+      /* Die beiden letzten wie oben bei der Seitennavigation: der Rahmen der
+         Administration zaehlt die offenen Support-Anfragen, und die
+         Projektverwaltung fragt die Top 10 ab, um eine platzierte Zeile zu
+         kennzeichnen. Ohne Handler stand in jedem Lauf eine MSW-Fehlermeldung
+         im Protokoll (KAN-101). */
+      http.get("*/api/top10", () => HttpResponse.json([])),
+      openSupportCountHandler()
     )
     renderWithProviders(<AppUnderTest />, "/administration/projects")
 
@@ -347,7 +392,7 @@ describe("Routenbaum", () => {
       await screen.findByRole(
         "heading",
         { level: 1, name: "Projekte" },
-        { timeout: 10_000 }
+        LAZY_ROUTE
       )
     ).toBeInTheDocument()
   })

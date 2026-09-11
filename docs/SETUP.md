@@ -1091,16 +1091,25 @@ systemctl is-enabled docker   # muss "enabled" sagen, sonst startet nach einem
                               # Neustart kein Container, egal welche restart-Regel
 ```
 
-Der Swap ist keine Zierde. Auf dem Server werden beide Images gebaut, und
-`pnpm build` typprüft dabei auch die Playwright-Tests mit. Fehlt der Puffer,
-bricht der Bau nicht sauber ab, sondern der Kernel schießt den Prozess ab; die
-Meldung nennt dann nicht den Grund.
+Der Swap ist keine Zierde. Bei der Ersteinrichtung und auf dem Notweg werden
+beide Images **auf dem Server** gebaut, und `pnpm build` typprüft dabei auch
+die Playwright-Tests mit. Fehlt der Puffer, bricht der Bau nicht sauber ab,
+sondern der Kernel schießt den Prozess ab; die Meldung nennt dann nicht den
+Grund. Im Normalbetrieb baut seit KAN-101 die Action, dann wird der Puffer
+hier nicht gebraucht; er bleibt trotzdem, weil genau die beiden Fälle, in
+denen doch gebaut wird, die ungünstigsten sind.
 
 **2. Betriebsnutzer und SSH**
 
-Nicht als `root` betreiben. Eigener Nutzer, Mitglied der Gruppe `docker`, in
-`/etc/ssh/sshd_config` anschließend `PermitRootLogin no` und
-`PasswordAuthentication no`, dazu `fail2ban` und `unattended-upgrades`.
+Nicht als `root` betreiben. Eigener Nutzer, Mitglied der Gruppe `docker`, dazu
+`fail2ban` und `unattended-upgrades`.
+
+Die Abschaltung von `PermitRootLogin` und `PasswordAuthentication` steht
+**nicht** hier, sondern im Abschnitt „Einmalige Einrichtung auf dem Server",
+Schritt 6. Zwei Gründe: sie gehört hinter den Deploy-Nutzer, und sie gehört in
+eine Datei unter `/etc/ssh/sshd_config.d/`, nicht in die Hauptdatei. Eine
+Änderung dort bleibt auf Ubuntu wirkungslos, weil `50-cloud-init.conf` vorher
+gelesen wird und `sshd` je Schlüssel den zuerst gefundenen Wert nimmt.
 
 **3. Firewall, BEVOR der Stapel zum ersten Mal startet**
 
@@ -1350,7 +1359,292 @@ Projekte und Personen erfunden sind.
   erfundene Namen an der echten Domain `hs-bremen.de` und ein Klartextpasswort
   aus dem Repository.
 
-### Aktualisieren
+### Ausrollen: der automatische Weg (KAN-101)
+
+Seit KAN-101 rollt ein Merge nach `main` sich selbst aus. Auf dem Server ist
+im Normalbetrieb **nichts mehr zu tun**, insbesondere kein `git pull`: das
+Repository unter `/opt/eportfolio` wird nur noch für die Compose-Dateien und
+die `.env` gebraucht, der Code kommt als fertiges Image.
+
+`.github/workflows/deploy.yml` führt drei Jobs nacheinander aus:
+
+| Job | Wann | Was |
+| --- | --- | --- |
+| `test` | jeder Pull Request, jeder Push auf `main` oder `dev` | `./mvnw test` gegen Postgres 16 und Azurite, danach `pnpm test`, `typecheck`, `lint`, `build` |
+| `build` | nur Push auf `main`, nur nach grünem `test` | beide Images bauen und nach GHCR schieben, je zweifach markiert |
+| `deploy` | nur nach grünem `build` | über SSH als `deploy`: sichern, ziehen, neu starten, auf die Gesundheitsprüfung warten |
+
+Der Riegel liegt in der Abhängigkeit der Jobs: **ein roter Test erreicht den
+Server nie**, und der Server bleibt dabei unverändert stehen. Auf `dev` läuft
+ausschließlich `test`, dort wird nichts gebaut und nichts ausgerollt.
+
+Die Ausrollung dauert Sekunden statt der fünf bis zehn Minuten, die ein Bau
+auf den zwei vCPU des VPS gekostet hat. **Ein Ausfall bleibt es trotzdem:**
+auch mit fertigen Images ist ein `up -d` ein Stop-Start.
+
+#### Einmalige Einrichtung auf dem Server
+
+Die Reihenfolge ist nicht beliebig. Schritt 6 sperrt aus, wer die Schritte
+davor übersprungen hat.
+
+**1. Ein Administrationskonto mit `sudo`, falls es noch keines gibt**
+
+Das ist der Schritt, den man zu überspringen versucht ist, und der hinterher
+fehlt. Nach Schritt 6 ist die Anmeldung als `root` abgeschaltet, und der
+Nutzer `deploy` aus Schritt 2 hat bewusst kein `sudo`. Ohne ein drittes Konto
+führt danach kein Weg mehr auf den Server außer die Webkonsole des Anbieters.
+
+```bash
+adduser --gecos "" <name>
+usermod -aG sudo <name>
+install -d -m 700 -o <name> -g <name> /home/<name>/.ssh
+# den eigenen oeffentlichen Schluessel eintragen, nicht den des Servers
+install -m 600 -o <name> -g <name> /dev/null /home/<name>/.ssh/authorized_keys
+echo 'ssh-ed25519 AAAA... eigener-rechner' >> /home/<name>/.ssh/authorized_keys
+```
+
+**2. Deploy-Nutzer**
+
+```bash
+adduser --system --group --shell /bin/bash --home /home/deploy deploy
+usermod -aG docker deploy
+install -d -m 700 -o deploy -g deploy /home/deploy/.ssh
+```
+
+Kein Passwort, kein `sudo`. Die Mitgliedschaft in `docker` genügt für alles,
+was die Ausrollung tut. Wer `deploy` zusätzlich `sudo` gäbe, machte das
+GitHub-Secret zu einem Root-Zugang und hätte sich den eigenen Nutzer sparen
+können.
+
+**3. Schlüsselpaar, erzeugt auf dem Server**
+
+```bash
+sudo -u deploy ssh-keygen -t ed25519 -N '' -C 'github-actions-deploy' \
+  -f /home/deploy/.ssh/id_ed25519_deploy
+sudo -u deploy sh -c 'cat /home/deploy/.ssh/id_ed25519_deploy.pub \
+  >> /home/deploy/.ssh/authorized_keys'
+chmod 600 /home/deploy/.ssh/authorized_keys
+cat /home/deploy/.ssh/id_ed25519_deploy      # Inhalt -> Secret VPS_SSH_KEY
+```
+
+Der private Teil verlässt den Server genau einmal und genau in diese eine
+Richtung. Danach hat er auf dem Server nichts mehr zu suchen:
+
+```bash
+shred -u /home/deploy/.ssh/id_ed25519_deploy
+```
+
+**4. `/opt/eportfolio` übereignen und den Sicherungsordner anlegen**
+
+```bash
+chown -R deploy:deploy /opt/eportfolio
+install -d -o deploy -g deploy /var/backups/eportfolio
+```
+
+Der zweite Befehl ist keine Feinheit: der Deploy-Schritt zieht vor **jeder**
+Ausrollung einen `pg_dump` genau dorthin, und zwar ohne Fallunterscheidung.
+Fehlt das Verzeichnis, **bricht die Ausrollung ab** und sagt warum.
+
+Warum ohne Fallunterscheidung, obwohl nur Migrationen gefährlich sind: eine
+Erkennung über den Commit-Vergleich beantwortet die falsche Frage. Sie
+vergleicht Push gegen Push, während es auf den Abstand zwischen **Serverstand**
+und neuem Stand ankäme. Scheitert ein Lauf in `build` oder `deploy`, bleibt der
+Server zurück; der nächste Push verglich dann ab dem gescheiterten Commit, sähe
+keine Migration mehr und rollte sie ungesichert aus. Genau der Fall, gegen den
+die Sicherung da ist. Ein `pg_dump` dieses Bestands kostet Sekunden.
+
+Die Dateien heißen `vor-sha-<hash>-<datum>.sql.gz` und werden nach 14 Tagen
+gelöscht, dieselbe Frist wie beim täglichen Timer aus KAN-98. Die beiden
+Aufräumregeln stören sich nicht: der Timer schreibt nach `/var/backups/`
+selbst, die Ausrollung in das Unterverzeichnis darunter.
+
+**5. Lesezugang zur Registry**
+
+Ein Personal Access Token (classic) mit **ausschließlich** `read:packages`,
+einmalig als `deploy` hinterlegt:
+
+```bash
+sudo -u deploy -H sh -c 'echo <PAT> | docker login ghcr.io -u <github-konto> --password-stdin'
+```
+
+Das `-H` ist wichtig: ohne es schriebe Docker die Anmeldung nach
+`/root/.docker/config.json`, und der Nutzer `deploy` fände sie nie. Prüfen:
+
+```bash
+sudo -u deploy docker pull ghcr.io/omarziyada1/eportfolio-backend:main
+```
+
+Auf dem Server liegt damit **kein Token mit Schreibrechten**. Geschoben wird
+ausschließlich aus der Action, und zwar mit deren eingebautem `GITHUB_TOKEN`,
+das nur für den einzelnen Lauf gilt.
+
+**6. SSH härten**
+
+> **Vorher eine zweite Sitzung öffnen und offen lassen.** Wer sich hier
+> aussperrt, kommt nur noch über die Webkonsole des Anbieters herein.
+
+In der zweiten Sitzung zuerst prüfen, dass beide Konten funktionieren:
+
+```bash
+ssh <name>@<host> 'id'                       # Administrationskonto
+ssh -i <privater-schluessel> deploy@<host> 'docker ps'   # Deploy-Konto
+```
+
+Erst danach:
+
+```bash
+tee /etc/ssh/sshd_config.d/00-eportfolio.conf > /dev/null <<'EOF'
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+EOF
+sshd -t && systemctl reload ssh
+```
+
+**Als Datei unter `sshd_config.d/` und nicht als Änderung an
+`/etc/ssh/sshd_config`**, und mit `00-` am Anfang. `sshd` nimmt bei jedem
+Schlüssel den **zuerst** gefundenen Wert, und die Einbindung des Verzeichnisses
+steht ganz oben in der Hauptdatei. Ubuntu legt dort selbst
+`50-cloud-init.conf` ab, die `PasswordAuthentication yes` setzen kann; eine
+Datei mit `99-` im Namen käme danach und bliebe wirkungslos. Eine Änderung in
+der Hauptdatei ebenso.
+
+#### Die Secrets im Repository
+
+Unter *Settings → Secrets and variables → Actions*:
+
+| Secret | Inhalt | woher |
+| --- | --- | --- |
+| `VPS_HOST` | Hostname oder IP des Servers | bekannt |
+| `VPS_USER` | `deploy` | fest |
+| `VPS_SSH_KEY` | privater Schlüssel aus Schritt 3 | vollständig, mit Kopf- und Fußzeile |
+| `VPS_SSH_KNOWN_HOSTS` | öffentlicher Wirtsschlüssel des Servers | siehe unten |
+| `VITE_IMPRINT_OPERATOR` | Betreiber laut Impressum | wie in der `.env` |
+| `VITE_IMPRINT_STREET` | Straße und Hausnummer | wie in der `.env` |
+| `VITE_IMPRINT_CITY` | Postleitzahl und Ort | wie in der `.env` |
+| `VITE_IMPRINT_EMAIL` | Kontaktpostfach | wie in der `.env` |
+
+**Der Hostname steht ausdrücklich als Secret** und nicht im Workflow: ein
+öffentlich gewordener Workflow soll nicht die Serveradresse mitliefern.
+
+**`VPS_SSH_KNOWN_HOSTS` auf dem Server erzeugen**, nicht mit `ssh-keyscan`
+von außen. Ein Scan von außen glaubt dem, der antwortet, und genau das soll
+der Eintrag ja ausschließen:
+
+```bash
+printf '%s %s\n' "<genau der Wert aus VPS_HOST>" \
+  "$(cut -d' ' -f1,2 /etc/ssh/ssh_host_ed25519_key.pub)"
+```
+
+Der Name muss **zeichengenau** dem entsprechen, was in `VPS_HOST` steht. Ein
+Eintrag auf den Hostnamen passt nicht, wenn sich die Action zur IP verbindet;
+der Lauf scheitert dann mit `Host key verification failed`.
+
+#### Die vier Impressumswerte
+
+**Sie müssen als Secrets hinterlegt sein.** Vite backt sie beim Bündeln
+in die JS-Dateien ein, und das Image entsteht jetzt in der Action, nicht mehr
+auf dem VPS: es sieht die `.env` des Servers nie. Fehlen sie, bricht nichts
+ab, das Impressum sagt dann nur sichtbar, dass die Angaben fehlen. In der
+`.env` auf dem Server bleiben sie trotzdem stehen, sie werden für den Notweg
+weiter unten gebraucht.
+
+#### Branch-Schutz für `main`
+
+Der Riegel in den Jobs verhindert, dass ein roter Stand **ausgerollt** wird:
+schlägt `test` nach dem Merge fehl, laufen `build` und `deploy` nicht, und auf
+dem Server bleibt der alte Stand. Er verhindert nicht, dass ein roter Pull
+Request überhaupt gemergt wird. Dafür braucht es eine Regel unter
+*Settings → Branches → Add branch ruleset* für `main`:
+
+* *Require a pull request before merging*
+* *Require status checks to pass* mit dem Check **Tests**
+
+Ohne diese Regel bleibt der Server zwar sauber, aber `main` trägt einen roten
+Stand, und die nächste Ausrollung ist blockiert, bis ihn jemand repariert.
+
+#### Rollback
+
+Ausgerollt wird über `sha-<kurzer commit-hash>` und nicht über `:main`. Das ist
+der Unterschied zwischen „wir haben irgendwas Neues" und „auf dem Server läuft
+Commit abc1234": ohne den SHA gibt es keinen definierten Punkt, auf den ein
+Rollback zurückgeht.
+
+Welcher Stand gerade läuft:
+
+```bash
+docker inspect --format '{{.Config.Image}}' \
+  $(docker compose -f compose.base.yml -f compose.prod.yml ps -q backend frontend)
+```
+
+Zurück auf einen älteren Stand:
+
+```bash
+cd /opt/eportfolio
+sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=sha-<alt>/' .env
+docker compose -f compose.base.yml -f compose.prod.yml pull backend frontend
+docker compose -f compose.base.yml -f compose.prod.yml up -d --no-build
+```
+
+**Das bringt den Code zurück, nicht das Schema.** Flyway-Migrationen laufen
+beim Start des Backends und haben keinen Rückweg; ein älteres Image trifft
+dann auf eine neuere Datenbank. Brachte der zurückgerollte Stand eine
+Migration mit, ist die Sicherung unter `/var/backups/eportfolio/` der einzige
+Weg, und das Zurückspielen steht im Abschnitt „Sichern".
+
+**Wie weit zurück das reicht.** Auf dem Server bleiben die letzten **fünf**
+Stände liegen, ältere räumt die Ausrollung selbst ab. Ohne diese Regel wüchsen
+die Images unbegrenzt: jede Ausrollung legt rund 800 MB an, und `docker image
+prune` rührt markierte Images nie an. Auf einem Server, dessen volle Platte
+zuerst Postgres trifft, wäre das nach etwa zwanzig Merges ein echtes Problem.
+Ein älterer Stand ist damit nicht verloren, er wird nur nachgeladen: in GHCR
+bleibt jede Marke liegen, und `pull` holt sie zurück.
+
+**Zwei Wege, auf denen ein ausgerollter Stand versehentlich überschrieben
+wird.** Beide enden damit, dass `sha-<hash>` auf dem Server nicht mehr das
+zeigt, was der Commit `<hash>` enthält:
+
+* ein `--build` im Notweg unten, solange `IMAGE_TAG` noch gesetzt ist,
+* ein `docker compose -f compose.base.yml -f compose.artifact.yml build` auf
+  dem Server. ARTIFACT trägt bewusst keine eigene Marke, es teilt sich das
+  Image mit PROD, und auf dem Server steht die Marke der letzten Ausrollung in
+  der `.env`.
+
+Auf dem Server wird deshalb im Normalbetrieb überhaupt nicht gebaut.
+
+#### Wenn die Action rot ist
+
+| Meldung | Ursache |
+| --- | --- |
+| `Host key verification failed` | `VPS_SSH_KNOWN_HOSTS` passt nicht zu `VPS_HOST` (Hostname gegen IP) |
+| `Permission denied (publickey)` | Schlüssel nicht in `~deploy/.ssh/authorized_keys`, oder `VPS_SSH_KEY` unvollständig kopiert |
+| `denied: requested access to the resource is denied` beim `pull` | `docker login` fehlt für den Nutzer `deploy` (siehe `-H` in Schritt 5) |
+| `Kein beschreibbares /var/backups/eportfolio` | Schritt 4 nicht ausgeführt |
+| `Keine .env in /opt/eportfolio` | die Datei fehlt oder liegt woanders; sie wird nicht neu erzeugt, das wäre geraten |
+| `.env unvollständig, nicht ersetzt` | die Datei trägt kein `POSTGRES_PASSWORD` mehr; die alte bleibt unangetastet stehen |
+| `Backend wurde nicht gesund` | die Action hängt die letzten 80 Zeilen des Backend-Logs an; meist ein fehlender Wert in der `.env` |
+| `Profil edge ist gesetzt, aber caddy läuft nicht` | der TLS-Terminierer ist nicht hochgekommen; die Seite wäre von außen weg, obwohl das Backend gesund meldet |
+
+**Ein gescheiterter Deploy rollt nicht automatisch zurück, und die Seite ist
+dann unten.** Der Riegel in den Jobs schützt davor, dass ein roter *Test* auf
+den Server kommt; ist die Ausrollung selbst schon gelaufen und das Backend
+kommt nicht hoch, steht dort der neue, kaputte Stand. Das ist Absicht: eine
+Flyway-Migration dieses Standes kann bereits gelaufen sein, und ein
+automatisch zurückgerolltes älteres Image träfe dann auf ein neueres Schema.
+Das kann schlimmer sein als der Stillstand. Die Action schreibt die drei
+Befehle für den Rückweg und den Pfad der Sicherung in ihre Fehlerausgabe.
+
+Ein **einzelner Testfehler wird nicht automatisch wiederholt**, und zwar
+bewusst: ein roter Lauf bleibt rot und wird über *Re-run failed jobs* von Hand
+erneut gestartet. Ein automatischer zweiter Versuch verdeckt ein flackerndes
+Testverfahren, und das wäre bei `main` gleich `prod` die teuerste Form von
+Ruhe.
+
+### Aktualisieren von Hand (Notweg)
+
+Dieser Weg wird bei der Ersteinrichtung gebraucht und dann, wenn GitHub
+Actions oder GHCR nicht erreichbar sind. Im Normalbetrieb ersetzt ihn der
+Abschnitt darüber.
 
 ```bash
 cd /opt/eportfolio
@@ -1367,6 +1661,14 @@ Zwei Dinge dazu, beide unangenehm und beide besser vorher gewusst:
   Backend ersetzt, bekommt es eine neue Adresse im Compose-Netz, und der
   nginx des Frontends hält die alte fest: die API antwortet danach dauerhaft
   mit **502**, obwohl beide Container laufen.
+
+* **`IMAGE_TAG` vorher leeren.** Steht in der `.env` noch die Marke der
+  letzten automatischen Ausrollung, überschreibt ein `--build` genau diese
+  Marke mit dem lokal gebauten Ergebnis. Der Name `sha-abc1234` zeigte danach
+  auf etwas anderes als der Commit `abc1234`, und ein späterer Rollback
+  dorthin holte den falschen Stand zurück. Also erst `IMAGE_TAG=` setzen,
+  bauen, und die Zeile beim nächsten automatischen Lauf wieder von der Action
+  füllen lassen.
 
 Vor jedem Update mit neuen Flyway-Migrationen eine Sicherung ziehen. Eine
 Migration, die zur Hälfte durchgelaufen ist, hat keinen Rückweg.
@@ -1413,8 +1715,18 @@ Original liegt, ist keine.
 **Zurückspielen**, der Teil, der geübt sein muss:
 
 ```bash
+# aus dem taeglichen Timer
 gunzip -c /var/backups/eportfolio-JJJJ-MM-TT.sql.gz | docker exec -i eportfolio-prod-db-1 psql -U eportfolio -d eportfolio
+
+# aus der Sicherung, die die Ausrollung selbst gezogen hat (KAN-101)
+ls -lt /var/backups/eportfolio/
+gunzip -c /var/backups/eportfolio/vor-sha-<hash>-JJJJ-MM-TT-HHMM.sql.gz | docker exec -i eportfolio-prod-db-1 psql -U eportfolio -d eportfolio
 ```
+
+Es gibt also **zwei** Ablagen, und sie haben verschiedene Zwecke: der Timer
+sichert täglich um 03:30, die Ausrollung sichert den Stand unmittelbar vor
+einem Deployment. Nach einer schiefgegangenen Migration ist die zweite die
+richtige, sie liegt nur Sekunden vor dem Schaden.
 
 **Die Datenbank allein genügt nicht.** Im Profil `prod` liegen die
 hochgeladenen Dateien in Azure Blob Storage, nicht in der Datenbank und nicht
