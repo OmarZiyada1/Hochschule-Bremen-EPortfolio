@@ -29,9 +29,11 @@ liefert nur die Form, die Farbe kommt aus der Tokenschicht.
 Bildunterschrift mitten in der Reaktionsschaltfläche wäre als Namensnennung
 unbrauchbar, weil sie bei 20 Pixel Kantenlänge niemand liest und ein
 Screenreader sie als Teil des Namens der Schaltfläche vorläse. Ihr Ort ist das
-Impressum, sobald dessen Seite entsteht: heute liegt unter `/imprint` nur ein
-`PlaceholderPage`, die Seite hat kein eigenes Ticket. Bis dahin steht die
-Nennung hier, und dieser Absatz ist der Text, der dann dorthin wandert.
+Impressum, und **seit KAN-100 steht sie dort**: der Abschnitt „Bildnachweis“
+unter `/imprint` führt den Nennungstext im Wortlaut, in beiden Sprachen
+gleich, weil die Lizenz ihn wörtlich vorschreibt (`imprint.attribution` in
+`frontend/src/i18n/de.json` und `en.json`). Dieser Absatz ist damit nicht
+mehr der einzige Ort der Nennung, sondern nur noch ihre Herleitung.
 
 Die Alternative wäre eine erworbene Einzellizenz (Flaticon Premium), die ohne
 Namensnennung auskommt. Dann fällt der Abschnitt hier ersatzlos weg.

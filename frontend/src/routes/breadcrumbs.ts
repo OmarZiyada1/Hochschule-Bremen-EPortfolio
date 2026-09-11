@@ -184,8 +184,11 @@ const ROUTE_TREE: readonly RouteNode[] = [
     parent: "/",
   },
 
-  { path: "/imprint", labelKey: "placeholder.title.imprint", parent: "/" },
-  { path: "/privacy", labelKey: "placeholder.title.privacy", parent: "/" },
+  /* Seit KAN-100 haben beide Seiten eigene Texte; die Brotkrume nimmt
+     deren Ueberschrift und nicht mehr den Platzhalter-Schluessel, aus
+     demselben Grund wie bei /accessibility weiter unten. */
+  { path: "/imprint", labelKey: "imprint.title", parent: "/" },
+  { path: "/privacy", labelKey: "privacy.title", parent: "/" },
   {
     /* Seit KAN-42 hat die Seite eigene Texte; die Brotkrume nimmt deren
        Ueberschrift und nicht mehr den Platzhalter-Schluessel. Zwei

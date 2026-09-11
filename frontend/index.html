@@ -5,6 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>E-Portfolio Hochschule Bremen</title>
     <!--
+      Keine Indexierung durch Suchmaschinen (KAN-100).
+
+      Die oeffentlichen Ansichten zeigen Klarnamen, Studiengang und
+      Biografie echter Personen. Der Prototyp laeuft unter einer privaten
+      Domain; auffindbar ueber eine Suchmaschine soll er nicht sein.
+
+      Diese Angabe steht HIER und nicht je Route, und das ist der Punkt:
+      die Oberflaeche ist eine einzige HTML-Datei, jede Route erbt den
+      Kopf. Eine Angabe, die React erst nachtraeglich ins Dokument haengt,
+      erreicht einen Crawler ohne JavaScript gar nicht und kaeme selbst mit
+      JavaScript zu spaet. So traegt jede Seite sie vom ersten Byte an,
+      auch die Projektdetailseite, die das Ticket ausdruecklich nennt.
+
+      nofollow zusaetzlich zu noindex: sonst folgt ein Crawler den Links
+      der Startseite weiter auf Projekt- und Portfolioseiten und legt
+      deren Adressen an, auch wenn er den Inhalt nicht aufnimmt.
+
+      public/robots.txt ERLAUBT das Crawlen ausdruecklich, und das ist die
+      Bedingung dafuer, dass diese Zeile ueberhaupt gelesen wird: wer nicht
+      abrufen darf, sieht sie nie und kann die Seite trotzdem als blossen
+      URL-Eintrag fuehren. Die Begruendung steht dort im Kopf.
+
+      Dieselbe Anweisung liegt zusaetzlich als Kopfzeile X-Robots-Tag im
+      Caddyfile. Sie erreicht, was ein meta-Tag nie erreicht: die ueber
+      /api/files/{id} ausgelieferten Profilbilder und Dokumente.
+    -->
+    <meta name="robots" content="noindex, nofollow" />
+    <!--
       App-Icon und Favicon (KAN-96). Die Dateien liegen unter public/ und
       werden von Vite unveraendert ins Wurzelverzeichnis von dist/ kopiert,
       deshalb absolute Pfade und kein Bundler-Import. Motiv ist der Bremer

@@ -55,6 +55,150 @@
       "link": "Go to the contact form"
     }
   },
+  "imprint": {
+    "title": "Legal notice",
+    "intro": "Information required by section 5 of the German Digital Services Act (DDG) and section 18(2) of the German Interstate Media Treaty (MStV).",
+    "prototypeNote": "This site is a prototype from a bachelor thesis and is operated privately. It is not a service of Hochschule Bremen: the university does not run it, did not commission it, and is not responsible for its content.",
+    "operator": {
+      "title": "Operator and person responsible for content",
+      "intro": "This site is operated privately by:",
+      "emailLabel": "Email:",
+      "responsible": "The same address is the postal address for service of process and the address of the person responsible for content under section 18(2) MStV.",
+      "contactText": "There is also a contact form for questions:",
+      "contactLink": "Contact & support",
+      "missing": "This build of the application carries no operator details. They are set from the environment at build time and are therefore absent from a development build. A publicly reachable build without them is a mistake, not a choice."
+    },
+    "university": {
+      "title": "Relationship to Hochschule Bremen",
+      "intro": "The name and the logo of Hochschule Bremen appear on this site because the application was built for a bachelor thesis at Faculty 4 of Hochschule Bremen and designs a portal for its degree programmes. Nothing further follows from that:",
+      "items": [
+        "Hochschule Bremen neither operates nor commissioned this site and is not responsible for its content.",
+        "The rights to the name and the logo belong to Hochschule Bremen. They appear here solely to present the thesis.",
+        "Address any enquiry about this site to the operator named above, not to the university."
+      ]
+    },
+    "content": {
+      "title": "Liability and third-party content",
+      "items": [
+        "The operator is responsible for their own content under general law. This does not create an obligation to monitor third-party content or to investigate circumstances that suggest unlawful activity.",
+        "Projects, comments and profile texts come from the signed-in people who wrote them and express their own views. Where a violation becomes known, the contribution is removed.",
+        "Links to external sites lead to content beyond the operator's control. No violation was apparent when the link was set; there is no continuous review without a concrete reason."
+      ]
+    },
+    "attribution": {
+      "title": "Image credits",
+      "intro": "The icons on the reaction button were created by Smashicons and are used under the Flaticon Free License, which requires attribution. The prescribed notice reads:",
+      "notice": "Clapping icons created by Smashicons - Flaticon",
+      "detail": "Both files are used unchanged and serve as a mask: the drawing supplies the shape, the colour comes from the application's own styling. Every other icon in the interface comes from the Lucide set under the ISC licence."
+    },
+    "related": {
+      "title": "Related pages",
+      "intro": "How this portal handles personal data and how accessible it is are each covered on a page of their own:",
+      "privacy": "Privacy policy",
+      "accessibility": "Accessibility"
+    }
+  },
+  "privacy": {
+    "title": "Privacy policy",
+    "intro": "Which personal data this portal processes, what for, who besides the operator gets to see it, and what rights you have.",
+    "prototypeNote": "The application is a prototype from a bachelor thesis and is operated privately, not by Hochschule Bremen. It is not a permanently operated service; when it is shut down depends on how the thesis proceeds.",
+    "controller": {
+      "title": "Controller",
+      "intro": "The controller within the meaning of the General Data Protection Regulation is:",
+      "emailLabel": "Email:",
+      "noDpo": "No data protection officer has been appointed. The conditions of Article 37 GDPR are not met for a privately operated prototype of this size.",
+      "missing": "This build of the application carries no controller details. They are set from the environment at build time and are therefore absent from a development build. A publicly reachable build without them is a mistake, not a choice."
+    },
+    "data": {
+      "title": "What data is processed",
+      "intro": "What is collected is what the application needs in order to work:",
+      "items": [
+        "Account: first and last name, your private email address, your university email address, your password as an irreversible hash, role and account status, the state of both address verifications, and a note on whether the password must be changed. The password hash leaves the server in no response. Your university address is seen only by you and by the administration in user management; it is never delivered to other accounts.",
+        "Public profile: your name, your private email address, your biography and your profile picture can be retrieved through your portfolio page without signing in, as soon as the account exists. The address appears there as a way to contact the author. That also means a harvester can pick it up; it is a decision made by this portal and not a choice you get to make.",
+        "Projects: title, summary, content blocks, tags and the assignment to faculty, degree programme, degree and semester. A draft is seen only by you, by the project members you entered, and by the administration; after submission also by the editor in charge. Once published, a project can be read by anyone.",
+        "Status history: for every step a project takes, who triggered it and when. It reveals how often a piece of work was sent back for revision.",
+        "Editorial notes: an editor can attach remarks to a project that are marked internal and are not visible to students. They concern you and form part of an access request under Article 15 GDPR.",
+        "Uploaded files: images, video, audio and documents, each with file name, size, type and the account that uploaded them.",
+        "Comments and reactions on projects, each with the account they come from. On a published project the comment list can be read without signing in; your name then appears publicly beneath it.",
+        "Enquiries through the public contact form: name, email address, category, subject and the free text of the message. If you were signed in when sending, your account is recorded as well, even though that record appears in no view. It is also recorded which administration account handled the enquiry and when.",
+        "Verification codes for your two addresses, until they are redeemed or expire.",
+        "Technical access data: IP address, time, requested address and browser identification. These arise in the operation of any web server and appear in its log.",
+        "Failed attempts: to fend off bulk attempts, the server counts unsuccessful tries separately by email address and by IP address, at sign-in, at both verification steps, when resetting a password, and at the contact form. The counters live in memory only, expire with their time window, and are empty after the server restarts; they never reach the database.",
+        "For editorial and administration accounts additionally: nominations for the home page, the audit trail of the top ten selection, and a note on who currently holds an editing lock."
+      ]
+    },
+    "purposes": {
+      "title": "Purposes and legal bases",
+      "items": [
+        "Keeping an account, signing in and resetting passwords: performance of the usage relationship and pre-contractual steps, Article 6(1)(b) GDPR.",
+        "Writing, submitting, reviewing and publishing projects: performance of the usage relationship, Article 6(1)(b) GDPR. When a project becomes public is your decision when you submit it; your profile, by contrast, can be retrieved publicly from the moment the account is created.",
+        "Deriving the role from the university address: at registration, the domain of your university address alone decides whether the account is kept as a student or a staff account; if it matches neither of the two configured lists, registration is refused and no account is created. This happens without human involvement. Article 6(1)(b) GDPR.",
+        "Verifying both addresses in order to limit access to members of the university: legitimate interest, Article 6(1)(f) GDPR.",
+        "Answering enquiries from the contact form: legitimate interest, Article 6(1)(f) GDPR.",
+        "Keeping logs and counting failed attempts in order to protect operation against abuse: legitimate interest, Article 6(1)(f) GDPR."
+      ]
+    },
+    "processors": {
+      "title": "Recipients and processors",
+      "intro": "The application does not run on hardware of its own. Three service providers carry the operation; on top of them come the providers of embedded media, as soon as a project contains any:",
+      "items": [
+        "Server operation: Hostinger International Ltd., Lithuania. The application and its database run on a virtual server of this provider; the data centre is located in Germany.",
+        "File storage: Microsoft Azure Blob Storage, provided within the European Union by Microsoft Ireland Operations Ltd., Ireland. Uploaded images, video, audio and documents are held in a private storage account in the Sweden Central region, that is, in Sweden. The store permits no anonymous access; files are delivered by the application alone.",
+        "Mail delivery: an SMTP relay operated by Hostinger International Ltd., Lithuania. Verification, notification and password messages go out through it. The connection to it is encrypted (STARTTLS).",
+        "Embedded media: if a published project contains a video or embed block, your browser loads that content directly from YouTube (Google Ireland Ltd. and Google LLC, United States), Vimeo (Vimeo.com Inc., United States), Figma (Figma Inc., United States) or CodePen (CodePen Inc., United States). Those providers thereby learn your IP address, your browser identification and the page you opened, and they can access information stored on your device. This happens as the page is built, not only when you press play."
+      ],
+      "note": "Server operation, file storage and mail delivery are within the European Union. For file storage, a Microsoft sub-processor may access data from a third country; the provider's standard contractual clauses apply to that. The providers of embedded media, by contrast, are based in the United States, and the data named in the last point flows there. There are no further recipients."
+    },
+    "retention": {
+      "title": "Retention",
+      "items": [
+        "Account, profile and projects remain for as long as the account exists.",
+        "You can neither withdraw nor delete a published project yourself. Only an editor or the administration can take it out of the published state, and you can delete a project of your own only while it is still a draft. For anything beyond that, the manual route in the next section applies.",
+        "Enquiries from the contact form remain until they have been dealt with and are deleted on request afterwards. The reply itself is written by the administration from its own mailbox; that correspondence then lives there and no longer in this system.",
+        "Verification codes expire 24 hours after they are issued.",
+        "The server logs roll over by size: at most five files of ten megabytes each per service, with older entries overwritten in the process.",
+        "The counters of failed attempts expire with their time window and are empty after the server restarts."
+      ]
+    },
+    "deletion": {
+      "title": "Deleting an account",
+      "text": "Here the prototype is candid about itself: there is no button with which you can delete your own account. The administration can deactivate an account, after which it can no longer sign in; the row in the database remains so that the attribution of already published projects does not fall apart. Actual erasure within the meaning of Article 17 GDPR is therefore done by hand: write to the address above and the account, profile, projects and uploaded files will be removed."
+    },
+    "rights": {
+      "title": "Your rights",
+      "intro": "In relation to the controller named above you have the right to:",
+      "items": [
+        "Access to the data processed about you, Article 15 GDPR. This also covers what the interface does not show you, such as editorial notes and the status history of your projects.",
+        "Rectification of inaccurate data, Article 16 GDPR.",
+        "Erasure, Article 17 GDPR, by the route described in the previous section.",
+        "Restriction of processing, Article 18 GDPR.",
+        "Data portability, Article 20 GDPR.",
+        "Objection to processing based on a legitimate interest, Article 21 GDPR."
+      ],
+      "authority": "Independently of this, you may lodge a complaint with a supervisory authority under Article 77 GDPR. The competent authority is the one of your habitual residence, your place of work, or the place of the alleged infringement."
+    },
+    "contactForm": {
+      "title": "If you only used the contact form",
+      "text": "The contact form is open without signing in. Whoever uses it leaves a name, an email address, a category, a subject and the text of the message, but has no account and therefore no route through the interface to view that data or have it deleted. For this case an informal message to the address above is enough: state the email address you wrote from and roughly when. The enquiry will then be looked up, quoted back to you on request, and deleted."
+    },
+    "noTracking": {
+      "title": "No tracking, no consent banner",
+      "text": "The portal itself uses no analytics and no advertising services, measures no behaviour, and loads neither fonts nor maps from third parties. Everything the interface needs comes from its own server. There is no profiling.",
+      "consent": "The one exception is the embedded media described under “Recipients”. They appear on a page because an author placed them in a project, and they load from their providers' servers as soon as the page is built. The cleaner approach would be to load them only after consent. This prototype does not do that; it is a known limitation, and it is named here rather than covered up with a banner that controls nothing.",
+      "storage": "Stored in your browser are: your signed-in session, that is the sign-in token, its expiry and the details of your account (name, both addresses, role and status); during a registration in progress, your two addresses and the state of verification; the path to return to after signing in; and your choice between light and dark mode. All of it stays on your device and goes to nobody else.",
+      "logout": "Signing out deletes the sign-in token from your browser. On the server it stays valid until its expiry: the API keeps no session that it could end. That, too, is a deliberately documented limitation of this prototype."
+    },
+    "indexing": {
+      "title": "Not findable through search engines",
+      "text": "Public project and portfolio pages carry real names. So that they do not become findable through search engines, this portal explicitly instructs that every one of its pages and every file it delivers must not be taken into an index and that no link from it be followed. Crawling is deliberately left permitted, because a search engine can only obey that instruction if it is allowed to read it. The portal is therefore reachable by anyone who knows its address, and not through a search for your name."
+    },
+    "related": {
+      "title": "Related pages",
+      "intro": "Who operates this site and how accessible it is are each covered on a page of their own:",
+      "imprint": "Legal notice",
+      "accessibility": "Accessibility"
+    }
+  },
   "app": {
     "name": "E-Portfolio Hochschule Bremen",
     "institution": "Hochschule Bremen",
@@ -133,7 +277,7 @@
       "description": "E-portfolio platform for student projects and academic work at Hochschule Bremen.",
       "projects": "Project library",
       "accessibility": "Accessibility",
-      "copyright": "© {{year}} Hochschule Bremen, Faculty 4 Electrical Engineering and Computer Science",
+      "copyright": "© {{year}} Hochschule Bremen, Faculty 4 Electrical Engineering and Computer Science (name and logo)",
       "tagline": "Built with care for the HSB community",
       "group": {
         "platform": "Platform",
@@ -404,26 +548,6 @@
       "tooLong": "The text must not exceed 1000 characters.",
       "placeholderMissing": "A placeholder that this passage needs is missing. Without it the number silently disappears from the page.",
       "placeholderUnexpected": "This passage does not know this placeholder. It would appear literally on the page because nobody fills it."
-    }
-  },
-  "placeholder": {
-    "hint": "This page is a placeholder. It will be built with ticket {{ticket}}.",
-    "hintStatic": "The content of this page is still to come.",
-    "title": {
-      "portfolio": "Portfolio",
-      "projectNew": "New project",
-      "projectMetadata": "Project metadata",
-      "myPortfolio": "My portfolio",
-      "profile": "Edit profile",
-      "administration": "Administration",
-      "adminProjects": "Project management",
-      "adminUsers": "Users",
-      "adminCategories": "Categories",
-      "adminStudyStructure": "Study structure",
-      "imprint": "Legal notice",
-      "privacy": "Privacy",
-      "accessibility": "Accessibility",
-      "adminSemesters": "Semesters"
     }
   },
   "accessDenied": {

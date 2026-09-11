@@ -7,7 +7,9 @@ import { useTranslatedList } from "@/lib/useTranslatedList"
 
 /**
  * Die Barrierefreiheitserklaerung unter {@code /accessibility} (KAN-42,
- * Umfang 9). Bis dahin stand hier ein {@link PlaceholderPage}.
+ * Umfang 9). Bis dahin stand hier die Platzhalterhuelle aus KAN-7; sie ist
+ * mit KAN-100 entfallen, weil Impressum und Datenschutz als letzte zwei
+ * Routen eigene Texte bekommen haben.
  *
  * <p><strong>Kein foermliches Dokument nach BITV.</strong> Eine
  * Konformitaetserklaerung setzt eine Stelle voraus, die sie verantwortet,
