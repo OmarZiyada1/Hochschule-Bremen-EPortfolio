@@ -435,6 +435,17 @@ function Invoke-ApiTestsuite {
 #
 #   stammdaten-seeder.sh              die 5 Fakultaeten, 75 Studiengaenge und
 #   stammdaten-seeder-entfernen.sh    ihre Module, erhoben aus Confluence
+#
+# NICHT IM MENUE, und das mit Absicht (KAN-99):
+#
+#   kategorien-semester-seeder.sh     die 8 Kategorien und 4 Semester
+#   demo-daten-komplett.sh            der Demobestand der Vorfuehrung
+#   demo-daten-raeumen.sh             und sein Gegenstueck
+#
+# Die drei gehoeren auf den Server und werden dort von Hand aufgerufen, mit
+# gesetztem DB_CONTAINER. Dieses Menue ist reines Windows-Werkzeug und auf
+# dem VPS nicht nutzbar; es sperrt die Saatdaten in der Betriebsart PROD
+# ohnehin ab.
 #   test-seeder.sh                    der gemeinsame Bestand fuer die
 #   test-seeder-entfernen.sh          Usability-Testwoche
 #   test-sitzung.sh                   Konto und Vorbedingungen einer

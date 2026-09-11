@@ -9,11 +9,13 @@
 #
 # Danach steht in der Entwicklungsdatenbank:
 #
-#   7 zusaetzliche Konten  (6 Studierende, 1 Redakteurin)
+#  10 zusaetzliche Konten  7 Beteiligte (6 Studierende, 1 Redakteurin)
+#                          und 3 anmeldbare Rollenkonten (STUDENT,
+#                          EDITOR, ADMIN) zum Vorfuehren
 #  10 Projekte             ueber alle fuenf Status, fuenf Fakultaeten,
 #                          alle drei Projektarten und Abschluesse
-# 121 Inhaltsbloecke       ueber alle 15 Blocktypen
-#  47 Dateien              Titelbilder, Galerien, Avatare, PDF, Audio,
+# 120 Inhaltsbloecke       ueber alle 15 Blocktypen
+#  50 Dateien              Titelbilder, Galerien, Avatare, PDF, Audio,
 #                          Video, echte Bytes im Objektspeicher
 #      dazu Mitglieder, Redaktionszuweisung, Schlagworte, Statusverlauf,
 #      Kommentare, Reaktionen und ein gefuellter Top-10-Bestand.
@@ -83,6 +85,10 @@ echo "== Vorbedingungen =="
 command -v docker >/dev/null 2>&1 || abbruch "docker nicht gefunden."
 command -v curl   >/dev/null 2>&1 || abbruch "curl nicht gefunden."
 command -v tar    >/dev/null 2>&1 || abbruch "tar nicht gefunden."
+# Seit KAN-99 erzeugt das Skript das Demopasswort selbst, wenn keines
+# vorgegeben ist. Ohne openssl braeche der Lauf mit einer nackten
+# Shell-Meldung ab statt mit einer Erklaerung.
+command -v openssl >/dev/null 2>&1 || abbruch "openssl nicht gefunden."
 
 for c in "$DB" "$BACKEND"; do
 	if [ "$(docker inspect -f '{{.State.Running}}' "$c" 2>/dev/null)" != "true" ]; then
@@ -95,33 +101,81 @@ echo "  Container laufen: $DB, $BACKEND"
 docker exec "$DB" pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1 \
 	|| abbruch "Die Datenbank $DB_NAME antwortet nicht."
 
-# Der Passwort-Hash der neuen Konten wird von dev-studi uebernommen:
-# bcrypt laesst sich in SQL nicht rechnen, und ein erfundener Hash
-# ergaebe Konten, an denen sich niemand anmelden kann. Fehlt die Zeile,
-# liefe der INSERT in eine NOT-NULL-Verletzung, und zwar erst nach dem
-# Loeschschritt.
-hash_da=$(sql -tAc "select count(*) from app_user where email = 'dev-studi@dev.invalid';" | tr -d '[:space:]')
-[ "$hash_da" = "1" ] || abbruch "Das Konto dev-studi@dev.invalid fehlt.
-         Aus ihm stammt der Passwort-Hash der neuen Konten. Es entsteht
-         beim Start des Backends im Profil dev (DevTestnutzerSeeder)."
+# -------------------------------------------------------------------
+# Passwort und Hash der drei Rollenkonten (KAN-99)
+# -------------------------------------------------------------------
+# HIER STAND FRUEHER EINE ABHAENGIGKEIT VOM PROFIL DEV. Der Hash aller
+# Demokonten kam per Unterabfrage von dev-studi@dev.invalid, und drei
+# weitere Konten (dev-studi, dev-redakteur, dev-admin) wurden nicht
+# angelegt, sondern vorausgesetzt. Alle drei legt ausschliesslich der
+# DevTestUserSeeder an, und der traegt @Profile("dev").
+#
+# Auf einer Produktivumgebung gibt es sie also nicht. Das Skript brach
+# genau hier ab, und wer nur die Pruefung entfernte, bekam einen
+# NOT-NULL-Verstoss auf password_hash. Wer daraufhin nur den Hash
+# austauschte, bekam etwas Schlimmeres: 42 Verweise auf die drei Konten
+# stehen in INNER JOINs und CROSS JOINs verteilt ueber neun Tabellen und
+# faenden nichts. Das Skript liefe durch und liesse stillschweigend
+# Redaktionszuweisungen, Kommentare, Statusverlaeufe, Nominierungen und
+# die Top-10-Pruefspur weg.
+#
+# Seit KAN-99 legt das Skript die drei Rollenkonten selbst an und haengt
+# an keinem Profil mehr.
+#
+# BCRYPT LAESST SICH IN SQL NICHT RECHNEN. Der Hash entsteht deshalb in
+# einem Wegwerf-Container mit htpasswd. Bewusst nicht ueber pgcrypto:
+# das verlangte "create extension" in der Datenbank, also eine
+# Schemaaenderung an Flyway vorbei, nur um Demodaten zu setzen.
+#
+# NUR DIE DREI ROLLENKONTEN SIND ANMELDBAR. Die sieben uebrigen treten
+# als Autor:innen, Mitglieder und Kommentierende auf und bekommen einen
+# unbrauchbaren Hash. Der Bestand landet auf einem oeffentlich
+# erreichbaren Server; jedes anmeldbare Konto mehr ist ein Ziel mehr.
+if [ -z "${DEMO_PASSWORT:-}" ]; then
+	# Kein Pipe und kein tr: mit "set -o pipefail" ist eine Kette, deren
+	# vorderes Glied durch SIGPIPE endet, ein Abbruch des ganzen Skripts.
+	DEMO_PASSWORT=$(openssl rand -hex 10)
+	PASSWORT_ERZEUGT=ja
+else
+	PASSWORT_ERZEUGT=nein
+fi
 
-# dev-redakteur und dev-admin werden nicht angelegt, sondern benutzt:
-# der eine als zugewiesene Redaktion und Nominierender, der andere als
-# entscheidende Administration und in der Top-10-Pruefspur. Fehlen sie,
-# faende der join nichts und es entstuenden schweigend weniger
-# Redaktionszuweisungen, Nominierungen und Pruefspurzeilen als
-# behauptet.
-fehlend=$(sql -tAc "
-select string_agg(v.email, ', ')
-from (values ('dev-redakteur@dev.invalid'), ('dev-admin@dev.invalid')) as v(email)
-where not exists (select 1 from app_user u where u.email = v.email);" | tr -d '[:space:]')
-[ -z "$fehlend" ] || abbruch "Seeder-Konten fehlen: $fehlend.
-         Sie entstehen beim Start des Backends im Profil dev."
+# Dieselbe Grenze wie fuer jedes selbst gewaehlte Passwort
+# (PasswordPolicy.MIN_LENGTH, §3.1.1).
+[ "${#DEMO_PASSWORT}" -ge 12 ] || abbruch "DEMO_PASSWORT ist kuerzer als 12 Zeichen."
+
+echo "  Passwort-Hash wird erzeugt (einmaliger Wegwerf-Container)"
+# Das Passwort geht als exportierte Variable hinein und NICHT als Argument.
+# Ein Wert im Aufrufwort stuende in der Prozessliste des Wirts und, solange
+# der Container laeuft, in "docker inspect": jede Person, die "ps" oder
+# "docker" aufrufen darf, koennte ihn mitlesen. Docker reicht bei "-e NAME"
+# ohne "=wert" nur den Namen weiter und holt den Wert aus der eigenen
+# Umgebung. Dieselbe Ueberlegung wie beim Azure-Zweig weiter unten, wo die
+# Verbindungszeichenfolge aus genau diesem Grund so uebergeben wird.
+export DEMO_PASSWORT
+DEMO_HASH=$(docker run --rm -e DEMO_PASSWORT httpd:2.4-alpine \
+	sh -c 'htpasswd -nbBC 10 "" "$DEMO_PASSWORT"' | tr -d ':\n')
+# Gegenprobe statt Vertrauen: htpasswd meldet manche Fehler auf stdout,
+# und ein unbrauchbarer Hash faellt sonst erst beim ersten Anmeldeversuch
+# auf. BCryptPasswordEncoder akzeptiert $2a$, $2b$ und $2y$.
+case "$DEMO_HASH" in
+	'$2y$'*|'$2a$'*|'$2b$'*) echo "  Hash erzeugt (${#DEMO_HASH} Zeichen)" ;;
+	*) abbruch "Der erzeugte Hash sieht nicht wie bcrypt aus." ;;
+esac
 
 # Die Projekte greifen Fakultaet, Studiengang, Modul, Kategorie und
 # Semester ueber ihre Kuerzel und Namen ab, nicht ueber einkopierte
 # UUIDs: die sind auf jedem Rechner andere. Fehlen die Stammdaten, faende
 # der join nichts und es entstuende schweigend gar kein Projekt.
+#
+# Die Meldung nennt das Skript, das die fehlende Art anlegt, und nicht
+# mehr die Migrationen (KAN-99). Sie tat es frueher, und das schickte
+# auf die falsche Faehrte: KEINE der fuenf Arten entsteht auf einer
+# frischen Datenbank aus einer Migration. V202608161915__semester.sql
+# uebernimmt nur die Semestertexte bereits vorhandener Projekte, und auf
+# einer leeren Datenbank gibt es keine; Fakultaeten, Studiengaenge und
+# Module haben ueberhaupt keine Migration, die Zeilen schreibt. Wer die
+# alte Meldung las, suchte den Fehler bei Flyway und fand dort nichts.
 fehlend=$(sql -tAc "
 select string_agg(x.was, ', ')
 from (
@@ -132,15 +186,25 @@ from (
   union all select 'Semester'      where (select count(*) from semester)      = 0
 ) x;" | tr -d '[:space:]')
 [ -z "$fehlend" ] || abbruch "Stammdaten fehlen: $fehlend.
-         Die Datenbank ist nicht vollstaendig migriert."
+         Sie entstehen nicht beim Migrieren, sondern durch zwei Skripte.
+         Fakultaeten, Studiengaenge und Module:
+           DB_CONTAINER=$DB bash stammdaten-seeder.sh
+         Kategorien und Semester:
+           DB_CONTAINER=$DB bash kategorien-semester-seeder.sh
+         Ohne DB_CONTAINER treffen beide die DEV-Datenbank."
 
-echo "  Datenbank erreichbar, Stammdaten und Seeder-Konten vorhanden"
+echo "  Datenbank erreichbar, Stammdaten vollstaendig"
 echo
 # -------------------------------------------------------------------
 # 1) Nutzer, Projekte und alles, was am Projekt haengt.
 # -------------------------------------------------------------------
 echo "== 1/4  Nutzer, Projekte, Kommentare, Reaktionen, Top-10 =="
-sql -f - <<'ENDE_SQL_STAMMDATEN'
+# Der bcrypt-Hash geht als psql-Variable hinein und nicht als
+# Shell-Ersetzung: der Heredoc ist mit 'ENDE_SQL_STAMMDATEN' in
+# Anfuehrungszeichen geschrieben, damit die Shell die vielen $ und `
+# in den Blockinhalten nicht anfasst. psql setzt :'hash' selbst ein und
+# maskiert dabei richtig.
+sql -v hash="$DEMO_HASH" -f - <<'ENDE_SQL_STAMMDATEN'
 -- ===================================================================
 -- Demodaten, Teil 1: Nutzer, Projekte und alles, was am Projekt hängt
 -- außer den Inhaltsblöcken (die stehen in Schritt 2 dieses Skripts).
@@ -205,15 +269,30 @@ delete from stored_file        where id::text like 'd0d00012-%';
 delete from project            where id::text like 'd0d00011-%';
 delete from portfolio          where id::text like 'd0d00013-%';
 delete from app_user           where id::text like 'd0d00010-%';
+-- Der Hinweis auf der Startseite (KAN-99). Eigener ID-Praefix, damit ihn
+-- der naechste Lauf und demo-daten-raeumen.sh wiederfinden; die
+-- Startseitenpflege selbst vergibt zufaellige UUIDs.
+delete from site_content       where id::text like 'd0d0001b-%';
 
 -- -------------------------------------------------------------------
--- 1) Sieben zusätzliche Konten: sechs Studierende und eine Redakteurin.
+-- 1) Zehn Konten: sieben Beteiligte und drei Rollenkonten zum Vorführen.
 --
---    Der Passwort-Hash ist derselbe wie beim Konto dev-studi aus dem
---    DevTestnutzerSeeder, also gilt auch dasselbe Passwort. Er wird
---    hier nicht neu erzeugt: bcrypt lässt sich in SQL nicht rechnen,
---    und ein erfundener Hash ergäbe ein Konto, an dem sich niemand
---    anmelden kann.
+--    NUR DIE DREI ROLLENKONTEN SIND ANMELDBAR (KAN-99). Sie tragen den
+--    bcrypt-Hash aus :'hash', erzeugt im Skriptkopf. Die sieben übrigen
+--    bekommen einen Wert, der kein bcrypt-Hash ist und deshalb zu keinem
+--    Passwort passt; sie treten nur als Autor:innen, Mitglieder und
+--    Kommentierende auf. Der Bestand landet auf einem öffentlich
+--    erreichbaren Server, und jedes anmeldbare Konto mehr ist ein Ziel
+--    mehr. Das Ausrufezeichen am Anfang ist die übliche Schreibweise für
+--    ein gesperrtes Konto und macht die Absicht in der Datenbank lesbar.
+--
+--    DIE HOCHSCHULDOMAINS SIND BEWUSST NICHT DIE ECHTEN. Vorher standen
+--    hier erfundene Personen an stud.hs-bremen.de, mit
+--    hsb_email_verified = true. app_user.hsb_email ist unique: jede
+--    dieser Adressen hätte die reale Trägerin dauerhaft von der
+--    Registrierung ausgesperrt (409 RESOURCE_IN_USE), ohne dass jemand
+--    den Zusammenhang je gefunden hätte. .invalid ist nach RFC 2606
+--    garantiert nicht auflösbar.
 --
 --    status ACTIVE und beide Bestätigungsmerkmale auf true: ein Konto
 --    in REGISTRATION_PENDING käme nicht am Login vorbei und wäre als
@@ -226,25 +305,42 @@ insert into app_user (
 )
 select
 	v.id::uuid, v.email, v.hsb_email, true, true,
-	(select password_hash from app_user where email = 'dev-studi@dev.invalid'),
+	case when v.login = 'ja' then :'hash' else '!kein-login-demodaten' end,
 	v.first_name, v.last_name, v.role, 'ACTIVE',
 	false, now() - (v.age || ' days')::interval, now() - interval '20 days'
 from (values
 	('d0d00010-0000-4000-8000-000000000001', 'lena.brinkmann@demo.invalid',
-	 'lena.brinkmann@stud.hs-bremen.de',  'Lena',    'Brinkmann', 'STUDENT', '420'),
+	 'lena.brinkmann@stud.demo.invalid',  'Lena',    'Brinkmann', 'STUDENT', '420', 'nein'),
 	('d0d00010-0000-4000-8000-000000000002', 'jonas.petersen@demo.invalid',
-	 'jonas.petersen@stud.hs-bremen.de',  'Jonas',   'Petersen',  'STUDENT', '395'),
+	 'jonas.petersen@stud.demo.invalid',  'Jonas',   'Petersen',  'STUDENT', '395', 'nein'),
 	('d0d00010-0000-4000-8000-000000000003', 'aylin.demir@demo.invalid',
-	 'aylin.demir@stud.hs-bremen.de',     'Aylin',   'Demir',     'STUDENT', '360'),
+	 'aylin.demir@stud.demo.invalid',     'Aylin',   'Demir',     'STUDENT', '360', 'nein'),
 	('d0d00010-0000-4000-8000-000000000004', 'malte.focke@demo.invalid',
-	 'malte.focke@stud.hs-bremen.de',     'Malte',   'Focke',     'STUDENT', '340'),
+	 'malte.focke@stud.demo.invalid',     'Malte',   'Focke',     'STUDENT', '340', 'nein'),
 	('d0d00010-0000-4000-8000-000000000005', 'sofia.kowalski@demo.invalid',
-	 'sofia.kowalski@stud.hs-bremen.de',  'Sofia',   'Kowalski',  'STUDENT', '310'),
+	 'sofia.kowalski@stud.demo.invalid',  'Sofia',   'Kowalski',  'STUDENT', '310', 'nein'),
 	('d0d00010-0000-4000-8000-000000000006', 'timo.ahrens@demo.invalid',
-	 'timo.ahrens@stud.hs-bremen.de',     'Timo',    'Ahrens',    'STUDENT', '288'),
+	 'timo.ahrens@stud.demo.invalid',     'Timo',    'Ahrens',    'STUDENT', '288', 'nein'),
 	('d0d00010-0000-4000-8000-000000000007', 'claudia.vogt@demo.invalid',
-	 'claudia.vogt@hs-bremen.de',         'Claudia', 'Vogt',      'EDITOR',  '500')
-) as v(id, email, hsb_email, first_name, last_name, role, age);
+	 'claudia.vogt@hsb.demo.invalid',     'Claudia', 'Vogt',      'EDITOR',  '500', 'nein'),
+
+	-- Die drei Rollenkonten zum Vorführen. Ihre Adressen nennen die
+	-- Rolle, damit beim Vorführen niemand raten muss, mit welchem Konto
+	-- er sich gerade anmeldet.
+	--
+	-- Sie ersetzen zugleich die drei dev-Konten, an denen der Bestand
+	-- vorher hing: student übernimmt die Autorschaft der Projekte 7 und
+	-- 8, redaktion die vier Redaktionszuweisungen und die
+	-- Änderungswünsche, admin die Entscheidungen über die Nominierungen
+	-- und die Top-10-Prüfspur. Damit lässt sich der Ablauf aus §4.1 an
+	-- einem Stück vorführen, ohne die Rolle eines Kontos zu wechseln.
+	('d0d00010-0000-4000-8000-000000000008', 'student@demo.invalid',
+	 'nele.reimers@stud.demo.invalid',    'Nele',    'Reimers',   'STUDENT', '520', 'ja'),
+	('d0d00010-0000-4000-8000-000000000009', 'redaktion@demo.invalid',
+	 'henrik.osterloh@hsb.demo.invalid',  'Henrik',  'Osterloh',  'EDITOR',  '540', 'ja'),
+	('d0d00010-0000-4000-8000-00000000000a', 'admin@demo.invalid',
+	 'britta.sandvoss@hsb.demo.invalid',  'Britta',  'Sandvoss',  'ADMIN',   '560', 'ja')
+) as v(id, email, hsb_email, first_name, last_name, role, age, login);
 
 -- -------------------------------------------------------------------
 -- 2) Portfolios: Kurzbiografie und Profilbild.
@@ -276,6 +372,15 @@ from (values
 	('d0d00013-0000-4000-8000-000000000006', 'd0d00010-0000-4000-8000-000000000006',
 	 'Wirtschaftsinformatik, davor eine kaufmännische Ausbildung. Findet Tabellen schön, wenn sie stimmen, und schreibt am liebsten über Kennzahlen, die niemand nachrechnet.',
 	 'd0d00012-0000-4000-8000-000000000006'),
+	('d0d00013-0000-4000-8000-000000000008', 'd0d00010-0000-4000-8000-000000000008',
+	 'Informatik: Software- und Systemtechnik, fuenftes Semester. Interessiert sich fuer alles, was zwischen Datenmodell und Oberflaeche passiert, und schreibt Dokumentation lieber vorher als nachher.',
+	 'd0d00012-0000-4000-8000-000000000008'),
+	('d0d00013-0000-4000-8000-000000000009', 'd0d00010-0000-4000-8000-000000000009',
+	 'Redaktion des E-Portfolio-Portals. Liest Beitraege vor der Veroeffentlichung gegen, achtet auf Nachvollziehbarkeit der Angaben und begruendet jeden Aenderungswunsch so, dass er ohne Rueckfrage umsetzbar ist.',
+	 'd0d00012-0000-4000-8000-000000000009'),
+	('d0d00013-0000-4000-8000-00000000000a', 'd0d00010-0000-4000-8000-00000000000a',
+	 'Administration des E-Portfolio-Portals. Pflegt Stammdaten und Konten, entscheidet ueber die Top-10-Nominierungen und haelt die Startseite aktuell.',
+	 'd0d00012-0000-4000-8000-00000000000a'),
 	('d0d00013-0000-4000-8000-000000000007', 'd0d00010-0000-4000-8000-000000000007',
 	 'Redaktion des E-Portfolio-Portals, Fakultät 4. Liest Beiträge vor der Veröffentlichung gegen und achtet besonders auf Alternativtexte und Quellenangaben.',
 	 'd0d00012-0000-4000-8000-000000000007')
@@ -319,13 +424,21 @@ where not exists (select 1 from tag t where lower(t.name) = lower(v.name));
 --
 --    Projekt 10 hängt bewusst am Sammelmodul des Studiengangs
 --    (module.collective = true, KAN-83): der Fall, dass ein Beitrag
---    keinem einzelnen Modul zugeordnet ist.
+--    keinem einzelnen Modul zugeordnet ist. Das Kürzel lautet deshalb
+--    ISMI-ALLG und nicht MCI: stammdaten-seeder.sh legt je Studiengang
+--    genau eine Sammelzeile <Kürzel>-ALLG an, alle übrigen Module
+--    tragen collective = false. Wäre hier ein Fachmodul eingetragen,
+--    käme der Fall aus §3.9 im ganzen Demobestand nicht mehr vor.
 --
---    Projekt 7 und 8 gehören dev-studi@dev.invalid. Das Skript hatte
---    dafür ursprünglich ein Konto omar@gmail.com vorgesehen, das es in
---    dieser Datenbank nicht gibt; ein leerer join hätte Projekt 8
---    schweigend ausfallen lassen und den Blockschritt danach in eine
---    Fremdschlüsselverletzung laufen lassen.
+--    Projekt 7 und 8 gehören student@demo.invalid, einem der drei
+--    Rollenkonten. Wer sich damit anmeldet, sieht sofort einen Entwurf
+--    und einen zurückgewiesenen Beitrag, also genau die zwei Zustände,
+--    die man einer Studierenden vorführen will.
+--
+--    Vorher stand hier dev-studi@dev.invalid, und davor omar@gmail.com.
+--    Beide gab es in der Zieldatenbank nicht: ein leerer join hätte die
+--    Projekte schweigend ausfallen lassen und den Blockschritt danach in
+--    eine Fremdschlüsselverletzung laufen lassen (KAN-99).
 -- -------------------------------------------------------------------
 insert into project (
 	id, title, summary, cover_image_url, status, project_type, degree,
@@ -350,7 +463,7 @@ from (values
 	 'd0d00012-0000-4000-8000-000000000010',
 	 'PUBLISHED', 'REGULAR', 'BACHELOR',
 	 'lena.brinkmann@demo.invalid', 'Projektleitung und Auswertung',
-	 'FK4', 'MIN', 'MMI', 'Semesterprojekt', 'WiSe 2025/26', 160, 96),
+	 'FK4', 'ISS', 'PROJISS', 'Semesterprojekt', 'WiSe 2025/26', 160, 96),
 
 	('d0d00011-0000-4000-8000-000000000002',
 	 'Tideklänge: ein Hörarchiv der Unterweser',
@@ -358,7 +471,7 @@ from (values
 	 'd0d00012-0000-4000-8000-000000000020',
 	 'PUBLISHED', 'REGULAR', 'BACHELOR',
 	 'malte.focke@demo.invalid', 'Feldaufnahmen und Schnitt',
-	 'FK5', 'BIO', 'OEK', 'Forschungsprojekt', 'SoSe 2025', 300, 210),
+	 'FK5', 'ISTAB-M', 'AQUAOEKO', 'Forschungsprojekt', 'SoSe 2025', 300, 210),
 
 	('d0d00011-0000-4000-8000-000000000003',
 	 'Gewächshaus im Regelkreis',
@@ -366,7 +479,7 @@ from (values
 	 'd0d00012-0000-4000-8000-000000000030',
 	 'PUBLISHED', 'REGULAR', 'MASTER',
 	 'aylin.demir@demo.invalid', 'Regelungsentwurf und Messtechnik',
-	 'FK4', 'ELT', 'RET', 'Praxisprojekt', 'WiSe 2025/26', 150, 80),
+	 'FK4', 'ATMECH', 'REGTECH', 'Praxisprojekt', 'WiSe 2025/26', 150, 80),
 
 	('d0d00011-0000-4000-8000-000000000004',
 	 'Nachhaltigkeitsberichte ohne Nebelkerzen',
@@ -374,7 +487,7 @@ from (values
 	 'd0d00012-0000-4000-8000-000000000040',
 	 'PUBLISHED', 'THESIS', 'MBA',
 	 'timo.ahrens@demo.invalid', null,
-	 'FK1', 'BW', 'BUB', 'Abschlussarbeit', 'SoSe 2025', 280, 190),
+	 'FK1', 'SBE', 'ESGAT', 'Abschlussarbeit', 'SoSe 2025', 280, 190),
 
 	('d0d00011-0000-4000-8000-000000000005',
 	 'Ein Tragwerk aus Buchenholz',
@@ -382,7 +495,7 @@ from (values
 	 'd0d00012-0000-4000-8000-000000000050',
 	 'APPROVED', 'REGULAR', 'BACHELOR',
 	 'jonas.petersen@demo.invalid', 'Tragwerksberechnung',
-	 'FK2', 'BIW', 'TME', 'Wettbewerbsbeitrag', 'WiSe 2025/26', 120, 26),
+	 'FK2', 'BAU', 'BST1-STB1', 'Wettbewerbsbeitrag', 'WiSe 2025/26', 120, 26),
 
 	('d0d00011-0000-4000-8000-000000000006',
 	 'Repair-Café Gröpelingen: 14 Termine, 212 Geräte',
@@ -390,23 +503,23 @@ from (values
 	 'd0d00012-0000-4000-8000-000000000060',
 	 'SUBMITTED', 'REGULAR', 'BACHELOR',
 	 'sofia.kowalski@demo.invalid', 'Organisation und Auswertung',
-	 'FK3', 'SOA', 'SOP', 'Studentische Initiative', 'WiSe 2025/26', 100, 12),
+	 'FK3', 'SOZ', 'MAGW', 'Studentische Initiative', 'WiSe 2025/26', 100, 12),
 
 	('d0d00011-0000-4000-8000-000000000007',
 	 'Werkstattbericht: der blockbasierte Editor',
 	 'Ein Zwischenstand aus der Lehrveranstaltung: welche Blocktypen der Editor kennt, warum das Inhaltsverzeichnis eine Momentaufnahme und keine Ableitung ist, und was beim Umsortieren schiefgehen kann.',
 	 'd0d00012-0000-4000-8000-000000000070',
 	 'DRAFT', 'REGULAR', 'BACHELOR',
-	 'dev-studi@dev.invalid', null,
-	 'FK4', 'INF', 'SWT', 'Lehrveranstaltung', 'SoSe 2026', 30, 2),
+	 'student@demo.invalid', null,
+	 'FK4', 'ISS', 'SWTSP', 'Lehrveranstaltung', 'SoSe 2026', 30, 2),
 
 	('d0d00011-0000-4000-8000-000000000008',
 	 'Bewegungsabsicht statt Knopfdruck',
 	 'Ein Handgelenk-Exoskelett, das nicht auf einen Taster wartet, sondern auf das Muskelsignal. Aufbau der Messkette, Merkmalsauswahl, Klassifikation in Echtzeit und was die Probandenstudie mit zwölf Personen ergeben hat.',
 	 'd0d00012-0000-4000-8000-000000000080',
 	 'REVISION', 'PAPER', 'MASTER',
-	 'dev-studi@dev.invalid', 'Messkette und Klassifikation',
-	 'FK4', 'ELT', 'EMS', 'Forschungsprojekt', 'SoSe 2025', 260, 40),
+	 'student@demo.invalid', 'Messkette und Klassifikation',
+	 'FK4', 'ATMECH', 'PA-SENSAK', 'Forschungsprojekt', 'SoSe 2025', 260, 40),
 
 	('d0d00011-0000-4000-8000-000000000009',
 	 '74 Befunde: Bauzustand des Gebäudes AB',
@@ -414,7 +527,7 @@ from (values
 	 'd0d00012-0000-4000-8000-000000000090',
 	 'PUBLISHED', 'REGULAR', 'BACHELOR',
 	 'jonas.petersen@demo.invalid', 'Begehung und Dokumentation',
-	 'FK2', 'ARC', 'EUK', 'Praxisprojekt', 'WiSe 2024/25', 480, 400),
+	 'FK2', 'BAU-M', 'BESTAND', 'Praxisprojekt', 'WiSe 2024/25', 480, 400),
 
 	('d0d00011-0000-4000-8000-000000000010',
 	 'Wegeführung im Foyer: ein Leitsystem zum Anfassen',
@@ -422,7 +535,7 @@ from (values
 	 'd0d00012-0000-4000-8000-0000000000a0',
 	 'PUBLISHED', 'REGULAR', 'MASTER',
 	 'lena.brinkmann@demo.invalid', 'Gestaltung und Nutzertests',
-	 'FK4', 'MIN', 'MIN-ALLG', 'Interaktive Medien', 'SoSe 2026', 60, 8)
+	 'FK4', 'ISMI', 'ISMI-ALLG', 'Interaktive Medien', 'SoSe 2026', 60, 8)
 ) as v(id, title, summary, cover, status, project_type, degree,
        author_email, author_role, faculty, program, module, category,
        semester, created, updated)
@@ -446,10 +559,10 @@ select v.id::uuid, v.project_id::uuid, u.id, v.project_role
 from (values
 	('d0d00019-0000-4000-8000-000000000001', 'd0d00011-0000-4000-8000-000000000001', 'timo.ahrens@demo.invalid',    'Buchungsoberfläche'),
 	('d0d00019-0000-4000-8000-000000000002', 'd0d00011-0000-4000-8000-000000000001', 'aylin.demir@demo.invalid',    'Schließtechnik'),
-	('d0d00019-0000-4000-8000-000000000003', 'd0d00011-0000-4000-8000-000000000001', 'dev-studi@dev.invalid',       'Datenauswertung'),
+	('d0d00019-0000-4000-8000-000000000003', 'd0d00011-0000-4000-8000-000000000001', 'student@demo.invalid',        'Datenauswertung'),
 	('d0d00019-0000-4000-8000-000000000004', 'd0d00011-0000-4000-8000-000000000002', 'sofia.kowalski@demo.invalid', 'Interviews mit Anwohnenden'),
 	('d0d00019-0000-4000-8000-000000000005', 'd0d00011-0000-4000-8000-000000000003', 'malte.focke@demo.invalid',    'Pflanzenauswahl'),
-	('d0d00019-0000-4000-8000-000000000006', 'd0d00011-0000-4000-8000-000000000003', 'dev-studi@dev.invalid',       'Sensorik'),
+	('d0d00019-0000-4000-8000-000000000006', 'd0d00011-0000-4000-8000-000000000003', 'student@demo.invalid',        'Sensorik'),
 	('d0d00019-0000-4000-8000-000000000007', 'd0d00011-0000-4000-8000-000000000005', 'lena.brinkmann@demo.invalid', 'Visualisierung'),
 	('d0d00019-0000-4000-8000-000000000008', 'd0d00011-0000-4000-8000-000000000005', 'aylin.demir@demo.invalid',    'Messtechnik am Prüfstand'),
 	('d0d00019-0000-4000-8000-000000000009', 'd0d00011-0000-4000-8000-000000000006', 'timo.ahrens@demo.invalid',    'Warenwirtschaft'),
@@ -474,14 +587,14 @@ insert into project_editor (project_id, user_id)
 select v.project_id::uuid, u.id
 from (values
 	('d0d00011-0000-4000-8000-000000000001', 'claudia.vogt@demo.invalid'),
-	('d0d00011-0000-4000-8000-000000000002', 'dev-redakteur@dev.invalid'),
+	('d0d00011-0000-4000-8000-000000000002', 'redaktion@demo.invalid'),
 	('d0d00011-0000-4000-8000-000000000003', 'claudia.vogt@demo.invalid'),
-	('d0d00011-0000-4000-8000-000000000004', 'dev-redakteur@dev.invalid'),
+	('d0d00011-0000-4000-8000-000000000004', 'redaktion@demo.invalid'),
 	('d0d00011-0000-4000-8000-000000000005', 'claudia.vogt@demo.invalid'),
-	('d0d00011-0000-4000-8000-000000000006', 'dev-redakteur@dev.invalid'),
+	('d0d00011-0000-4000-8000-000000000006', 'redaktion@demo.invalid'),
 	('d0d00011-0000-4000-8000-000000000008', 'claudia.vogt@demo.invalid'),
 	('d0d00011-0000-4000-8000-000000000009', 'claudia.vogt@demo.invalid'),
-	('d0d00011-0000-4000-8000-000000000010', 'dev-redakteur@dev.invalid')
+	('d0d00011-0000-4000-8000-000000000010', 'redaktion@demo.invalid')
 ) as v(project_id, user_email)
 join app_user u on u.email = v.user_email;
 
@@ -543,25 +656,43 @@ from (values
 	('d0d00018-0000-4000-8000-000000000002', 'd0d00011-0000-4000-8000-000000000001', 'SUBMITTED', 'APPROVED',  'claudia.vogt@demo.invalid',   103),
 	('d0d00018-0000-4000-8000-000000000003', 'd0d00011-0000-4000-8000-000000000001', 'APPROVED',  'PUBLISHED', 'claudia.vogt@demo.invalid',    96),
 	('d0d00018-0000-4000-8000-000000000004', 'd0d00011-0000-4000-8000-000000000002', 'DRAFT',     'SUBMITTED', 'malte.focke@demo.invalid',    232),
-	('d0d00018-0000-4000-8000-000000000005', 'd0d00011-0000-4000-8000-000000000002', 'SUBMITTED', 'APPROVED',  'dev-redakteur@dev.invalid',   219),
-	('d0d00018-0000-4000-8000-000000000006', 'd0d00011-0000-4000-8000-000000000002', 'APPROVED',  'PUBLISHED', 'dev-redakteur@dev.invalid',   210),
+	('d0d00018-0000-4000-8000-000000000005', 'd0d00011-0000-4000-8000-000000000002', 'SUBMITTED', 'APPROVED',  'redaktion@demo.invalid',      219),
+	('d0d00018-0000-4000-8000-000000000006', 'd0d00011-0000-4000-8000-000000000002', 'APPROVED',  'PUBLISHED', 'redaktion@demo.invalid',      210),
 	('d0d00018-0000-4000-8000-000000000007', 'd0d00011-0000-4000-8000-000000000003', 'DRAFT',     'SUBMITTED', 'aylin.demir@demo.invalid',     97),
 	('d0d00018-0000-4000-8000-000000000008', 'd0d00011-0000-4000-8000-000000000003', 'SUBMITTED', 'APPROVED',  'claudia.vogt@demo.invalid',    88),
 	('d0d00018-0000-4000-8000-000000000009', 'd0d00011-0000-4000-8000-000000000003', 'APPROVED',  'PUBLISHED', 'claudia.vogt@demo.invalid',     80),
 	('d0d00018-0000-4000-8000-00000000000a', 'd0d00011-0000-4000-8000-000000000004', 'DRAFT',     'SUBMITTED', 'timo.ahrens@demo.invalid',    214),
-	('d0d00018-0000-4000-8000-00000000000b', 'd0d00011-0000-4000-8000-000000000004', 'SUBMITTED', 'APPROVED',  'dev-redakteur@dev.invalid',   201),
-	('d0d00018-0000-4000-8000-00000000000c', 'd0d00011-0000-4000-8000-000000000004', 'APPROVED',  'PUBLISHED', 'dev-redakteur@dev.invalid',   190),
+	('d0d00018-0000-4000-8000-00000000000b', 'd0d00011-0000-4000-8000-000000000004', 'SUBMITTED', 'APPROVED',  'redaktion@demo.invalid',      201),
+	('d0d00018-0000-4000-8000-00000000000c', 'd0d00011-0000-4000-8000-000000000004', 'APPROVED',  'PUBLISHED', 'redaktion@demo.invalid',      190),
 	('d0d00018-0000-4000-8000-00000000000d', 'd0d00011-0000-4000-8000-000000000005', 'DRAFT',     'SUBMITTED', 'jonas.petersen@demo.invalid',  38),
 	('d0d00018-0000-4000-8000-00000000000e', 'd0d00011-0000-4000-8000-000000000005', 'SUBMITTED', 'APPROVED',  'claudia.vogt@demo.invalid',    26),
 	('d0d00018-0000-4000-8000-00000000000f', 'd0d00011-0000-4000-8000-000000000006', 'DRAFT',     'SUBMITTED', 'sofia.kowalski@demo.invalid',  12),
-	('d0d00018-0000-4000-8000-000000000010', 'd0d00011-0000-4000-8000-000000000008', 'DRAFT',     'SUBMITTED', 'dev-studi@dev.invalid',        58),
+	('d0d00018-0000-4000-8000-000000000010', 'd0d00011-0000-4000-8000-000000000008', 'DRAFT',     'SUBMITTED', 'student@demo.invalid',         58),
 	('d0d00018-0000-4000-8000-000000000011', 'd0d00011-0000-4000-8000-000000000008', 'SUBMITTED', 'REVISION',  'claudia.vogt@demo.invalid',    40),
 	('d0d00018-0000-4000-8000-000000000012', 'd0d00011-0000-4000-8000-000000000009', 'DRAFT',     'SUBMITTED', 'jonas.petersen@demo.invalid', 425),
 	('d0d00018-0000-4000-8000-000000000013', 'd0d00011-0000-4000-8000-000000000009', 'SUBMITTED', 'APPROVED',  'claudia.vogt@demo.invalid',   411),
 	('d0d00018-0000-4000-8000-000000000014', 'd0d00011-0000-4000-8000-000000000009', 'APPROVED',  'PUBLISHED', 'claudia.vogt@demo.invalid',   400),
 	('d0d00018-0000-4000-8000-000000000015', 'd0d00011-0000-4000-8000-000000000010', 'DRAFT',     'SUBMITTED', 'lena.brinkmann@demo.invalid',  22),
-	('d0d00018-0000-4000-8000-000000000016', 'd0d00011-0000-4000-8000-000000000010', 'SUBMITTED', 'APPROVED',  'dev-redakteur@dev.invalid',    14),
-	('d0d00018-0000-4000-8000-000000000017', 'd0d00011-0000-4000-8000-000000000010', 'APPROVED',  'PUBLISHED', 'dev-redakteur@dev.invalid',     8)
+	('d0d00018-0000-4000-8000-000000000016', 'd0d00011-0000-4000-8000-000000000010', 'SUBMITTED', 'APPROVED',  'redaktion@demo.invalid',       14),
+	('d0d00018-0000-4000-8000-000000000017', 'd0d00011-0000-4000-8000-000000000010', 'APPROVED',  'PUBLISHED', 'redaktion@demo.invalid',        8),
+
+	-- Die Erstanlage, je Projekt eine Zeile (§3.12, §4.1: "Anlegen: - nach
+	-- DRAFT"). Sie fehlte, und das war an Projekt 7 sofort zu sehen: als
+	-- einziger reiner Entwurf hatte es dadurch gar keinen Verlauf, und bei
+	-- den uebrigen neun begann er mitten im Ablauf. Kein Projekt sah damit
+	-- so aus, wie die Anwendung es angelegt haette; ProjectWriteService
+	-- .recordCreation schreibt genau diese Zeile mit from_status null.
+	-- days ist jeweils das created_at des Projekts aus Abschnitt 2.
+	('d0d00018-0000-4000-8000-000000000018', 'd0d00011-0000-4000-8000-000000000001', null, 'DRAFT', 'lena.brinkmann@demo.invalid', 160),
+	('d0d00018-0000-4000-8000-000000000019', 'd0d00011-0000-4000-8000-000000000002', null, 'DRAFT', 'malte.focke@demo.invalid',    300),
+	('d0d00018-0000-4000-8000-00000000001a', 'd0d00011-0000-4000-8000-000000000003', null, 'DRAFT', 'aylin.demir@demo.invalid',    150),
+	('d0d00018-0000-4000-8000-00000000001b', 'd0d00011-0000-4000-8000-000000000004', null, 'DRAFT', 'timo.ahrens@demo.invalid',    280),
+	('d0d00018-0000-4000-8000-00000000001c', 'd0d00011-0000-4000-8000-000000000005', null, 'DRAFT', 'jonas.petersen@demo.invalid', 120),
+	('d0d00018-0000-4000-8000-00000000001d', 'd0d00011-0000-4000-8000-000000000006', null, 'DRAFT', 'sofia.kowalski@demo.invalid', 100),
+	('d0d00018-0000-4000-8000-00000000001e', 'd0d00011-0000-4000-8000-000000000007', null, 'DRAFT', 'student@demo.invalid',         30),
+	('d0d00018-0000-4000-8000-00000000001f', 'd0d00011-0000-4000-8000-000000000008', null, 'DRAFT', 'student@demo.invalid',        260),
+	('d0d00018-0000-4000-8000-000000000020', 'd0d00011-0000-4000-8000-000000000009', null, 'DRAFT', 'jonas.petersen@demo.invalid', 480),
+	('d0d00018-0000-4000-8000-000000000021', 'd0d00011-0000-4000-8000-000000000010', null, 'DRAFT', 'lena.brinkmann@demo.invalid',  60)
 ) as v(id, project_id, from_status, to_status, user_email, days)
 join app_user u on u.email = v.user_email;
 
@@ -598,6 +729,13 @@ from (values
 	('d0d00012-0000-4000-8000-000000000005', null::text, 'sofia-kowalski.jpg', 'image/jpeg', 30259, 'sofia.kowalski@demo.invalid', 300),
 	('d0d00012-0000-4000-8000-000000000006', null::text, 'timo-ahrens.jpg', 'image/jpeg', 29920, 'timo.ahrens@demo.invalid', 300),
 	('d0d00012-0000-4000-8000-000000000007', null::text, 'claudia-vogt.jpg', 'image/jpeg', 17758, 'claudia.vogt@demo.invalid', 300),
+	-- Profilbilder der drei Rollenkonten (KAN-99). Sie bekommen eines wie
+	-- alle anderen: wer die Administrationsseite vorfuehrt, soll dort kein
+	-- leeres Kreissymbol sehen. size ist ein Schaetzwert und wird von
+	-- Schritt 3 nach dem Herunterladen durch den gemessenen ersetzt.
+	('d0d00012-0000-4000-8000-000000000008', null::text, 'nele-reimers.jpg', 'image/jpeg', 20000, 'student@demo.invalid', 300),
+	('d0d00012-0000-4000-8000-000000000009', null::text, 'henrik-osterloh.jpg', 'image/jpeg', 20000, 'redaktion@demo.invalid', 300),
+	('d0d00012-0000-4000-8000-00000000000a', null::text, 'britta-sandvoss.jpg', 'image/jpeg', 20000, 'admin@demo.invalid', 300),
 	('d0d00012-0000-4000-8000-000000000010', 'd0d00011-0000-4000-8000-000000000001', 'lastenrad-station.jpg', 'image/jpeg', 292453, 'lena.brinkmann@demo.invalid', 155),
 	('d0d00012-0000-4000-8000-000000000011', 'd0d00011-0000-4000-8000-000000000001', 'lastenrad-werkstatt.jpg', 'image/jpeg', 243737, 'lena.brinkmann@demo.invalid', 155),
 	('d0d00012-0000-4000-8000-000000000012', 'd0d00011-0000-4000-8000-000000000001', 'lastenrad-transport.jpg', 'image/jpeg', 140241, 'lena.brinkmann@demo.invalid', 155),
@@ -621,12 +759,12 @@ from (values
 	('d0d00012-0000-4000-8000-000000000055', 'd0d00011-0000-4000-8000-000000000005', 'statischer-nachweis-buchenholz.pdf', 'application/pdf', 20597, 'jonas.petersen@demo.invalid', 115),
 	('d0d00012-0000-4000-8000-000000000060', 'd0d00011-0000-4000-8000-000000000006', 'repaircafe-tisch.jpg', 'image/jpeg', 196684, 'sofia.kowalski@demo.invalid', 95),
 	('d0d00012-0000-4000-8000-000000000061', 'd0d00011-0000-4000-8000-000000000006', 'repaircafe-loetkolben.jpg', 'image/jpeg', 240191, 'sofia.kowalski@demo.invalid', 95),
-	('d0d00012-0000-4000-8000-000000000070', 'd0d00011-0000-4000-8000-000000000007', 'editor-werkstatt.jpg', 'image/jpeg', 273165, 'dev-studi@dev.invalid', 25),
-	('d0d00012-0000-4000-8000-000000000080', 'd0d00011-0000-4000-8000-000000000008', 'exoskelett-hand.jpg', 'image/jpeg', 127209, 'dev-studi@dev.invalid', 255),
-	('d0d00012-0000-4000-8000-000000000081', 'd0d00011-0000-4000-8000-000000000008', 'exoskelett-messkette.jpg', 'image/jpeg', 88131, 'dev-studi@dev.invalid', 255),
-	('d0d00012-0000-4000-8000-000000000082', 'd0d00011-0000-4000-8000-000000000008', 'exoskelett-elektroden.jpg', 'image/jpeg', 67864, 'dev-studi@dev.invalid', 255),
-	('d0d00012-0000-4000-8000-000000000083', 'd0d00011-0000-4000-8000-000000000008', 'probandenstudie-ablauf.mp4', 'video/mp4', 2848208, 'dev-studi@dev.invalid', 255),
-	('d0d00012-0000-4000-8000-000000000084', 'd0d00011-0000-4000-8000-000000000008', 'studienprotokoll-zwoelf-probanden.pdf', 'application/pdf', 13264, 'dev-studi@dev.invalid', 255),
+	('d0d00012-0000-4000-8000-000000000070', 'd0d00011-0000-4000-8000-000000000007', 'editor-werkstatt.jpg', 'image/jpeg', 273165, 'student@demo.invalid', 25),
+	('d0d00012-0000-4000-8000-000000000080', 'd0d00011-0000-4000-8000-000000000008', 'exoskelett-hand.jpg', 'image/jpeg', 127209, 'student@demo.invalid', 255),
+	('d0d00012-0000-4000-8000-000000000081', 'd0d00011-0000-4000-8000-000000000008', 'exoskelett-messkette.jpg', 'image/jpeg', 88131, 'student@demo.invalid', 255),
+	('d0d00012-0000-4000-8000-000000000082', 'd0d00011-0000-4000-8000-000000000008', 'exoskelett-elektroden.jpg', 'image/jpeg', 67864, 'student@demo.invalid', 255),
+	('d0d00012-0000-4000-8000-000000000083', 'd0d00011-0000-4000-8000-000000000008', 'probandenstudie-ablauf.mp4', 'video/mp4', 2848208, 'student@demo.invalid', 255),
+	('d0d00012-0000-4000-8000-000000000084', 'd0d00011-0000-4000-8000-000000000008', 'studienprotokoll-zwoelf-probanden.pdf', 'application/pdf', 13264, 'student@demo.invalid', 255),
 	('d0d00012-0000-4000-8000-000000000090', 'd0d00011-0000-4000-8000-000000000009', 'gebaeude-ab-fassade.jpg', 'image/jpeg', 66739, 'jonas.petersen@demo.invalid', 475),
 	('d0d00012-0000-4000-8000-000000000091', 'd0d00011-0000-4000-8000-000000000009', 'gebaeude-ab-treppenhaus.jpg', 'image/jpeg', 177435, 'jonas.petersen@demo.invalid', 475),
 	('d0d00012-0000-4000-8000-000000000092', 'd0d00011-0000-4000-8000-000000000009', 'gebaeude-ab-riss.jpg', 'image/jpeg', 65415, 'jonas.petersen@demo.invalid', 475),
@@ -668,11 +806,11 @@ from (values
 	 'Den beiden Bildern in der Galerie fehlt ein Alternativtext, der den Aufbau beschreibt. „Foto 1" und „Foto 2" reichen nicht, wer sich den Beitrag vorlesen lässt, erfährt damit nichts.',
 	 'OPEN', 40),
 	('d0d00014-0000-4000-8000-000000000003', 'd0d00011-0000-4000-8000-000000000008',
-	 'dev-studi@dev.invalid', 'REPLY',
+	 'student@demo.invalid', 'REPLY',
 	 'Die Grundwahrheit kam aus dem Handschuh mit Biegesensoren, den wir parallel mitlaufen ließen. Ich ergänze den Absatz und schiebe die Abbildung dazu nach.',
 	 null, 38),
 	('d0d00014-0000-4000-8000-000000000004', 'd0d00011-0000-4000-8000-000000000006',
-	 'dev-redakteur@dev.invalid', 'NOTE',
+	 'redaktion@demo.invalid', 'NOTE',
 	 'Schöner Beitrag, ich lese ihn diese Woche vollständig gegen. Erster Eindruck: die Tabelle mit den Gerätearten trägt den Text.',
 	 null, 8),
 	('d0d00014-0000-4000-8000-000000000005', 'd0d00011-0000-4000-8000-000000000001',
@@ -684,7 +822,7 @@ from (values
 	 'Stimmt, im Vorspann stand noch der Stand von Dezember. Beide Stellen zeigen jetzt 312.',
 	 null, 105),
 	('d0d00014-0000-4000-8000-000000000007', 'd0d00011-0000-4000-8000-000000000002',
-	 'dev-redakteur@dev.invalid', 'CHANGE_REQUEST',
+	 'redaktion@demo.invalid', 'CHANGE_REQUEST',
 	 'Bitte die Herkunft der Hörprobe angeben: Messpunkt, Datum und Tidephase. Ohne das ist die Aufnahme nicht einzuordnen.',
 	 'RESOLVED', 224),
 	('d0d00014-0000-4000-8000-000000000008', 'd0d00011-0000-4000-8000-000000000005',
@@ -696,7 +834,7 @@ from (values
 	 'Die Bildunterschriften habe ich für alle Befunde im Keller nachgetragen.',
 	 null, 405),
 	('d0d00014-0000-4000-8000-00000000000a', 'd0d00011-0000-4000-8000-000000000010',
-	 'dev-redakteur@dev.invalid', 'NOTE',
+	 'redaktion@demo.invalid', 'NOTE',
 	 'Das tastbare Modell ist der stärkste Teil des Beitrags. Ich habe den Abschnitt in der Reihenfolge nach vorne vorgeschlagen, die Entscheidung liegt bei euch.',
 	 null, 16)
 ) as v(id, project_id, author_email, type, text, status, days)
@@ -710,8 +848,8 @@ join app_user u on u.email = v.author_email;
 --     ein Datensatz ohne Vorgang.
 --
 --     Die beiden Zeilen 05 und 11 trugen ursprünglich das Konto
---     omar@gmail.com. Nach dem Umbiegen auf dev-studi wären sie
---     Dubletten geworden: dev-studi reagiert an denselben beiden
+--     omar@gmail.com. Nach dem Umbiegen auf student@demo.invalid wären
+--     sie Dubletten geworden: dieses Konto reagiert an denselben beiden
 --     Beiträgen schon in Zeile 04 und 10, und reaction ist eindeutig
 --     über (project_id, user_id). Sie tragen deshalb claudia.vogt, das
 --     einzige der sieben neuen Konten, das an keinem der beiden
@@ -723,7 +861,7 @@ from (values
 	('d0d00015-0000-4000-8000-000000000001', 'd0d00011-0000-4000-8000-000000000001', 'jonas.petersen@demo.invalid', 90),
 	('d0d00015-0000-4000-8000-000000000002', 'd0d00011-0000-4000-8000-000000000001', 'sofia.kowalski@demo.invalid', 88),
 	('d0d00015-0000-4000-8000-000000000003', 'd0d00011-0000-4000-8000-000000000001', 'malte.focke@demo.invalid',    77),
-	('d0d00015-0000-4000-8000-000000000004', 'd0d00011-0000-4000-8000-000000000001', 'dev-studi@dev.invalid',       61),
+	('d0d00015-0000-4000-8000-000000000004', 'd0d00011-0000-4000-8000-000000000001', 'student@demo.invalid',        61),
 	('d0d00015-0000-4000-8000-000000000005', 'd0d00011-0000-4000-8000-000000000001', 'claudia.vogt@demo.invalid',   44),
 	('d0d00015-0000-4000-8000-000000000006', 'd0d00011-0000-4000-8000-000000000002', 'lena.brinkmann@demo.invalid', 200),
 	('d0d00015-0000-4000-8000-000000000007', 'd0d00011-0000-4000-8000-000000000002', 'aylin.demir@demo.invalid',    185),
@@ -735,7 +873,7 @@ from (values
 	('d0d00015-0000-4000-8000-00000000000d', 'd0d00011-0000-4000-8000-000000000009', 'timo.ahrens@demo.invalid',    350),
 	('d0d00015-0000-4000-8000-00000000000e', 'd0d00011-0000-4000-8000-000000000010', 'malte.focke@demo.invalid',      6),
 	('d0d00015-0000-4000-8000-00000000000f', 'd0d00011-0000-4000-8000-000000000010', 'aylin.demir@demo.invalid',      5),
-	('d0d00015-0000-4000-8000-000000000010', 'd0d00011-0000-4000-8000-000000000010', 'dev-studi@dev.invalid',         3),
+	('d0d00015-0000-4000-8000-000000000010', 'd0d00011-0000-4000-8000-000000000010', 'student@demo.invalid',          3),
 	('d0d00015-0000-4000-8000-000000000011', 'd0d00011-0000-4000-8000-000000000010', 'claudia.vogt@demo.invalid',     2)
 ) as v(id, project_id, user_email, days)
 join app_user u on u.email = v.user_email;
@@ -767,22 +905,27 @@ select v.id::uuid, v.project_id::uuid, n.id, v.tier, v.position::integer,
 from (values
 	('d0d00017-0000-4000-8000-000000000001', 'd0d00011-0000-4000-8000-000000000001',
 	 'claudia.vogt@demo.invalid', 'TOP_1',  null, 'ACCEPTED',
-	 'dev-admin@dev.invalid', '84', 90),
+	 'admin@demo.invalid', '84', 90),
 	('d0d00017-0000-4000-8000-000000000002', 'd0d00011-0000-4000-8000-000000000009',
 	 'claudia.vogt@demo.invalid', 'TOP_5',  null, 'ACCEPTED',
-	 'dev-admin@dev.invalid', '360', 372),
+	 'admin@demo.invalid', '360', 372),
 	('d0d00017-0000-4000-8000-000000000003', 'd0d00011-0000-4000-8000-000000000002',
-	 'dev-redakteur@dev.invalid', 'TOP_5', null, 'ACCEPTED',
-	 'dev-admin@dev.invalid', '196', 205),
+	 'redaktion@demo.invalid', 'TOP_5', null, 'ACCEPTED',
+	 'admin@demo.invalid', '196', 205),
 	('d0d00017-0000-4000-8000-000000000004', 'd0d00011-0000-4000-8000-000000000010',
-	 'dev-redakteur@dev.invalid', 'TOP_10', null, 'PENDING',
+	 'redaktion@demo.invalid', 'TOP_10', null, 'PENDING',
 	 null, null, 6),
 	('d0d00017-0000-4000-8000-000000000005', 'd0d00011-0000-4000-8000-000000000003',
 	 'claudia.vogt@demo.invalid', 'TOP_1',  null, 'REJECTED',
-	 'dev-admin@dev.invalid', '72', 78),
+	 'admin@demo.invalid', '72', 78),
+	-- Zurueckziehen ist eine Entscheidung und kein Loeschen (§3.11.1 seit
+	-- v70): der Vorgang schreibt decided_by und decided_at wie jeder andere
+	-- Abschluss auch. Beide standen hier auf null, und diesen Zustand kann
+	-- keiner der Wege im Programm erzeugen. Zurueck zieht die nominierende
+	-- Person ihren eigenen offenen Vorschlag, also redaktion@demo.invalid.
 	('d0d00017-0000-4000-8000-000000000006', 'd0d00011-0000-4000-8000-000000000004',
-	 'dev-redakteur@dev.invalid', 'TOP_10', null, 'WITHDRAWN',
-	 null, null, 180)
+	 'redaktion@demo.invalid', 'TOP_10', null, 'WITHDRAWN',
+	 'redaktion@demo.invalid', '175', 180)
 ) as v(id, project_id, nominator_email, tier, position, status,
        decider_email, decided_days, days)
 join app_user n on n.email = v.nominator_email
@@ -822,7 +965,73 @@ from (values
 	('d0d0001a-0000-4000-8000-000000000005', 'd0d00011-0000-4000-8000-000000000009',
 	 'REORDERED', '1',  '3', 82)
 ) as v(id, project_id, action, previous_position, new_position, days)
-cross join (select id from app_user where email = 'dev-admin@dev.invalid') as a;
+cross join (select id from app_user where email = 'admin@demo.invalid') as a;
+
+-- -------------------------------------------------------------------
+-- 14) Der Hinweis, dass dies Demodaten sind (KAN-99)
+--
+--     WARUM DAS SEIN MUSS. Die Beiträge tragen erfundene Personen mit
+--     Hochschulbezug: Lena Brinkmann, Jonas Petersen, Aylin Demir und so
+--     weiter. Auf einer öffentlich erreichbaren Seite, die Namen und
+--     Bildmarke der Hochschule Bremen trägt, ist ohne Hinweis nicht
+--     erkennbar, dass keine dieser Personen und keines dieser Projekte
+--     existiert. Der Prototyp-Hinweis im Impressum (KAN-100) genügt
+--     dafür nicht: ihn sieht nicht, wer auf der Startseite landet.
+--
+--     WARUM ÜBER site_content UND NICHT ÜBER EINEN NEUEN BAUSTEIN. Die
+--     Startseitenpflege aus KAN-90 kann genau das, ohne Codeänderung.
+--     Ein eigener Hinweisbaustein bräuchte einen neuen content_key, also
+--     eine Migration am ck_site_content_key und einen Nachtrag in §3.21;
+--     das wäre eine Änderung am Programm, um Demodaten zu kennzeichnen.
+--
+--     BEIDE SPRACHEN. Ein fehlender Eintrag heißt "hier gilt die
+--     mitgelieferte Fassung": stünde nur der deutsche Text, sähe die
+--     englische Ansicht den unveränderten Vorgabetext und damit keinen
+--     Hinweis (§2.5, WCAG 2.2 SC 3.1.2).
+--
+--     DER GELIEFERTE SATZ BLEIBT STEHEN, der Hinweis kommt dahinter.
+--     Der Untertitel der Lieferung sagt, was das Portal ist
+--     ("Abschlussarbeiten, Projekte und Forschung aus allen
+--     Fakultäten …"); wer ihn durch den Hinweis ersetzt, nimmt der
+--     Startseite ihre Beschreibung, um eine Warnung unterzubringen.
+--     Beides passt nebeneinander und bleibt weit unter den 1000
+--     Zeichen, die SiteContentEntryRequest zulässt. Diese Grenze ist
+--     einzuhalten, obwohl die Spalte "text" ist: ein längerer Wert
+--     liesse sich über die Pflegemaske laden, aber nicht mehr
+--     speichern (400 VALIDATION_FAILED).
+--
+--     Die englische Auszeichnung schreibt "e-portfolio" klein, weil die
+--     Sprachdatei der Lieferung es so schreibt. Der Hinweis soll wie
+--     ein gepflegter Text aussehen und nicht wie ein fremder Eingriff.
+--
+--     on conflict, weil beides sein kann: die Zeilen sind oben über den
+--     Präfix gelöscht worden, eine von Hand gepflegte Fassung mit
+--     zufälliger UUID aber nicht. uq_site_content_key_locale lässt nur
+--     eine Fassung je Stelle und Sprache zu, und dieser Lauf soll sie
+--     setzen und nicht an ihr scheitern.
+--
+--     WARUM AUCH DIE ID ÜBERSCHRIEBEN WIRD. Ohne "set id = excluded.id"
+--     behielte eine von Hand gepflegte Zeile ihre zufällige UUID. Sie
+--     trüge dann zwar den Demohinweis, läge aber außerhalb des Präfixes,
+--     und demo-daten-raeumen.sh fände sie nicht mehr: nach dem Räumen
+--     stünde auf der Startseite weiter "alle gezeigten Projekte sind
+--     erfunden", obwohl gar keine Projekte mehr da sind. Der Preis ist,
+--     dass eine gepflegte Fassung beim Räumen mitgeht; die Stelle fällt
+--     dann auf den ausgelieferten Text zurück. Das ist der bessere
+--     Ausgang von beiden.
+-- -------------------------------------------------------------------
+insert into site_content (id, content_key, locale, value)
+values
+	('d0d0001b-0000-4000-8000-000000000001', 'HOME_HERO_LABEL', 'de',
+	 'HSB · E-Portfolio · Demodaten'),
+	('d0d0001b-0000-4000-8000-000000000002', 'HOME_HERO_LABEL', 'en',
+	 'HSB · e-portfolio · demo data'),
+	('d0d0001b-0000-4000-8000-000000000003', 'HOME_HERO_SUBTITLE', 'de',
+	 'Abschlussarbeiten, Projekte und Forschung aus allen Fakultäten der Hochschule Bremen, an einem Ort. Hinweis: Dies ist eine öffentliche Vorführung. Alle gezeigten Projekte, Namen und Profile sind erfunden und stehen für keine realen Personen und keine realen Arbeiten der Hochschule Bremen.'),
+	('d0d0001b-0000-4000-8000-000000000004', 'HOME_HERO_SUBTITLE', 'en',
+	 'Theses, projects and research from all faculties of Hochschule Bremen, in one place. Please note: this is a public demonstration. All projects, names and profiles shown are fictitious and do not represent real people or real work at Hochschule Bremen.')
+on conflict (content_key, locale) do update
+	set id = excluded.id, value = excluded.value;
 
 commit;
 
@@ -977,7 +1186,18 @@ from (values
 (7, 'HEADING', '{"type":"heading","attrs":{"level":2,"textAlign":null},"content":[{"type":"text","text":"Ergebnisse aus acht Wochen"}]}'),
 (8, 'TABLE', '{"type":"table","attrs":{"caption":"Abweichung vom Sollwert, Zeitschaltuhr gegen Regler"},"content":[{"type":"tableRow","content":[{"type":"tableHeader","attrs":{"colspan":1,"rowspan":1},"content":[{"type":"paragraph","content":[{"type":"text","text":"Größe"}]}]},{"type":"tableHeader","attrs":{"colspan":1,"rowspan":1},"content":[{"type":"paragraph","content":[{"type":"text","text":"Vorher"}]}]},{"type":"tableHeader","attrs":{"colspan":1,"rowspan":1},"content":[{"type":"paragraph","content":[{"type":"text","text":"Nachher"}]}]}]},{"type":"tableRow","content":[{"type":"tableCell","attrs":{"colspan":1,"rowspan":1},"content":[{"type":"paragraph","content":[{"type":"text","text":"Temperatur, mittlere Abweichung"}]}]},{"type":"tableCell","attrs":{"colspan":1,"rowspan":1},"content":[{"type":"paragraph","content":[{"type":"text","text":"3,4 K"}]}]},{"type":"tableCell","attrs":{"colspan":1,"rowspan":1},"content":[{"type":"paragraph","content":[{"type":"text","text":"0,8 K"}]}]}]},{"type":"tableRow","content":[{"type":"tableCell","attrs":{"colspan":1,"rowspan":1},"content":[{"type":"paragraph","content":[{"type":"text","text":"Bodenfeuchte unter Grenzwert"}]}]},{"type":"tableCell","attrs":{"colspan":1,"rowspan":1},"content":[{"type":"paragraph","content":[{"type":"text","text":"31 Stunden"}]}]},{"type":"tableCell","attrs":{"colspan":1,"rowspan":1},"content":[{"type":"paragraph","content":[{"type":"text","text":"4 Stunden"}]}]}]},{"type":"tableRow","content":[{"type":"tableCell","attrs":{"colspan":1,"rowspan":1},"content":[{"type":"paragraph","content":[{"type":"text","text":"Wasserverbrauch je Woche"}]}]},{"type":"tableCell","attrs":{"colspan":1,"rowspan":1},"content":[{"type":"paragraph","content":[{"type":"text","text":"420 l"}]}]},{"type":"tableCell","attrs":{"colspan":1,"rowspan":1},"content":[{"type":"paragraph","content":[{"type":"text","text":"318 l"}]}]}]}]}'),
 (9, 'LIST', '{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Die Totzeit ist der begrenzende Faktor, nicht die Rechenleistung des Knotens"}]}]},{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Ein Sensor je Beet reicht nicht: die Bodenfeuchte streut über die Beetlänge um mehr als der Regler ausgleichen kann"}]}]},{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Die Anti-Windup-Begrenzung war die wirksamste einzelne Änderung im ganzen Projekt"}]}]}]}'),
-(10, 'VIDEO', '{"type":"videoBlock","attrs":{"provider":"vimeo","videoId":"76979871","caption":"Die Firstlüftung im Regelbetrieb, Zeitraffer über einen Tag","width":100}}'),
+-- Anbieter youtube und nicht vimeo (KAN-99): der erzeugte Demobestand
+-- kommt ohne Figma und Vimeo aus. Das betrifft NUR diese Daten; die
+-- Allowlist in BlockValidationService fuehrt beide Anbieter unveraendert
+-- weiter (Contract §2.5), Studierende koennen sie also nach wie vor
+-- einbetten. youtube ist fuer einen VIDEO-Block der einzige zulaessige
+-- Ersatz: VIDEO_PROVIDERS kennt nur youtube und vimeo.
+--
+-- Ersetzt und nicht gestrichen, damit der order_index lueckenlos bleibt.
+-- Eine Luecke waere kein Schoenheitsfehler: der Server lehnt danach jedes
+-- Speichern dieses Beitrags ab, und das faellt erst auf, wenn jemand ihn
+-- im Editor oeffnet und etwas aendert.
+(10, 'VIDEO', '{"type":"videoBlock","attrs":{"provider":"youtube","videoId":"aqz-KE-bpKQ","caption":"Die Firstlüftung im Regelbetrieb, Zeitraffer über einen Tag","width":100}}'),
 (11, 'DOCUMENT', '{"type":"documentBlock","attrs":{"fileId":"d0d00012-0000-4000-8000-000000000032","fileName":"regelgueteprotokoll.pdf","size":13264,"caption":"Regelgüteprotokoll über acht Wochen, mit allen Sprungantworten"}}'),
 (12, 'TEXT', '{"type":"paragraph","attrs":{"textAlign":null},"content":[{"type":"text","text":"Der Aufbau läuft seit dem Ende des Projekts unverändert weiter. Die einzige Nacharbeit betraf die Kalibrierung der CO2-Sensoren, die nach etwa einem halben Jahr sichtbar driften."}]}')
 ) as v(order_index, type, content);
@@ -1074,7 +1294,20 @@ from (values
 (1, 'TEXT', '{"type":"paragraph","attrs":{"textAlign":null},"content":[{"type":"text","text":"Notizen aus der Lehrveranstaltung, noch nicht sortiert. Ein Block entspricht genau einem Top-Level-Knoten des Dokuments, und der gespeicherte Typ ist nur die abfragbare Projektion davon. Das klingt nach einer Kleinigkeit, entscheidet aber darüber, ob sich nach Blocktyp filtern lässt, ohne das JSON zu durchsuchen."}]}'),
 (2, 'LIST', '{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Das Inhaltsverzeichnis ist eine gespeicherte Momentaufnahme und keine Ableitung beim Lesen. Grund ist der Lesepfad: Detailansicht, Redaktionsansicht und PDF-Export rendern ohne laufenden Editor"}]}]},{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Es darf höchstens eines je Projekt geben, ein zweites ergibt 400"}]}]},{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Der Preis ist, dass es veralten kann. Der Editor weist darauf hin, aktualisiert wird von Hand"}]}]},{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Noch offen: wie sich das Verzeichnis beim Umsortieren zweier Überschriften verhält"}]}]}]}'),
 (3, 'CODE', '{"type":"codeBlock","attrs":{"language":"typescript"},"content":[{"type":"text","text":"export function collectHeadings(editor: Editor): TocEntry[] {\n  const entries: TocEntry[] = []\n  let index = 0\n\n  editor.state.doc.forEach((node) => {\n    if (node.type.name !== \"heading\") return\n    const text = node.textContent.trim().slice(0, MAX_TEXT)\n    if (text !== \"\" && entries.length < MAX_ENTRIES) {\n      entries.push({ level: node.attrs.level, text, index })\n    }\n    index += 1\n  })\n\n  return entries\n}"}]}'),
-(4, 'EMBED', '{"type":"embedBlock","attrs":{"provider":"figma","embedUrl":"https://embed.figma.com/design/o6SECXRMKGOzCfG5xZebPV/HSB_E-Portfolio","height":520}}'),
+-- Anbieter codepen und nicht figma (KAN-99). Zwei Gruende, und der zweite
+-- wiegt schwerer: der Demobestand kommt ohne Figma aus, und die bisherige
+-- Adresse zeigte auf die INTERNE Figma-Arbeitsdatei dieses Projekts
+-- (o6SECXRMKGOzCfG5xZebPV). Die haette auf einer oeffentlich erreichbaren
+-- Vorfuehrung nichts zu suchen.
+--
+-- Die Allowlist bleibt unberuehrt: figma ist in BlockValidationService
+-- weiterhin zulaessig (Contract §2.5), nur dieser Demoinhalt nicht mehr.
+-- codepen passt fachlich: der Beitrag ist ein Werkstattbericht ueber den
+-- Editor, und direkt darueber steht der TypeScript-Block zu
+-- collectHeadings. Dieselbe Adresse benutzt Projekt 01 bereits.
+--
+-- Ersetzt und nicht gestrichen: der order_index bleibt lueckenlos.
+(4, 'EMBED', '{"type":"embedBlock","attrs":{"provider":"codepen","embedUrl":"https://codepen.io/codepen/embed/PNaGbb","height":460}}'),
 (5, 'DIVIDER', '{"type":"horizontalRule"}'),
 (6, 'TEXT', '{"type":"paragraph","attrs":{"textAlign":null},"content":[{"type":"text","marks":[{"type":"italic"}],"text":"Noch zu ergänzen: ein Absatz zur Schemaversion und dazu, warum ein Block beim Lesen aufwärts migriert wird, aber erst beim nächsten Speichern in der neuen Fassung landet."}]}')
 ) as v(order_index, type, content);
@@ -1134,10 +1367,11 @@ from (values
 -- -------------------------------------------------------------------
 -- Projekt 10: Wegeführung im Foyer (PUBLISHED)
 --
--- Hängt am Sammelmodul des Studiengangs (module.collective) und ist
--- damit der Fall, in dem ein Beitrag keinem einzelnen Modul zugeordnet
--- ist. Zeigt AUDIO und EMBED über vimeo, dazu VIDEO über youtube: der
--- Unterschied zwischen einem Videoblock und einer freien Einbettung.
+-- Hängt am Sammelmodul des Studiengangs (ISMI-ALLG, module.collective)
+-- und ist damit der Fall, in dem ein Beitrag keinem einzelnen Modul
+-- zugeordnet ist. Zeigt AUDIO mit eigener Datei und VIDEO über youtube.
+-- Der EMBED, den dieser Beitrag früher über vimeo trug, ist mit KAN-99
+-- entfallen; EMBED kommt im Bestand weiterhin vor, nur nicht mehr hier.
 -- -------------------------------------------------------------------
 insert into block (id, project_id, type, order_index, content, schema_version, created_at, updated_at)
 select gen_random_uuid(), 'd0d00011-0000-4000-8000-000000000010'::uuid,
@@ -1155,8 +1389,21 @@ from (values
 (8, 'AUDIO', '{"type":"audioBlock","attrs":{"fileId":"d0d00012-0000-4000-8000-0000000000a4","caption":"Die Ansage am Modell, gesprochen und auf 20 Sekunden gekürzt"}}'),
 (9, 'TEXT', '{"type":"paragraph","attrs":{"textAlign":null},"content":[{"type":"text","text":"Elf Personen, keine davon aus dem Studiengang, sollten nacheinander drei Ziele finden. Vorher fanden vier von elf das Prüfungsamt ohne zu fragen, nachher neun. Der größte einzelne Gewinn kam nicht von den Piktogrammen, sondern "},{"type":"text","marks":[{"type":"highlight","attrs":{"color":"green"}}],"text":"von der Entscheidung, den Plan an die Wand gegenüber dem Eingang zu hängen"},{"type":"text","text":" statt neben die Tür."}]}'),
 (10, 'CODE', '{"type":"codeBlock","attrs":{"language":"css"},"content":[{"type":"text","text":"/* Die Piktogramme liegen als Maske vor, damit die Farbe aus der\n   Tokenschicht kommt und nicht aus der Zeichnung. */\n.pictogram {\n  background-color: var(--color-foreground);\n  mask-image: var(--pictogram-src);\n  mask-size: contain;\n  mask-repeat: no-repeat;\n  inline-size: 3rem;\n  block-size: 3rem;\n}"}]}'),
-(11, 'VIDEO', '{"type":"videoBlock","attrs":{"provider":"youtube","videoId":"aqz-KE-bpKQ","caption":"Ein Durchlauf aus dem siebten Nutzertest, gekürzt","width":50}}'),
-(12, 'EMBED', '{"type":"embedBlock","attrs":{"provider":"vimeo","embedUrl":"https://player.vimeo.com/video/76979871","height":420}}')
+-- Hier endete der Beitrag frueher mit einem EMBED auf vimeo. Er ist
+-- ersatzlos gestrichen (KAN-99): der Demobestand kommt ohne Vimeo aus.
+--
+-- Ersatzlos und nicht ersetzt, weil es der LETZTE Block war. Der
+-- order_index laeuft damit weiterhin lueckenlos von 0 bis 11, und es
+-- entsteht nichts, was der Server beim naechsten Speichern beanstanden
+-- wuerde. Bei den beiden anderen Fundstellen (Projekt 03 und 07) stand der
+-- Block mittendrin, dort wurde deshalb der Anbieter getauscht statt der
+-- Block entfernt.
+--
+-- Der Beitrag verliert dadurch seinen einzigen EMBED, behaelt aber das
+-- VIDEO darueber. Die Blockart EMBED bleibt im Gesamtbestand vertreten
+-- (Projekt 01 und 07), die Zusage der Definition of Done zu §2.5 gilt also
+-- weiter.
+(11, 'VIDEO', '{"type":"videoBlock","attrs":{"provider":"youtube","videoId":"aqz-KE-bpKQ","caption":"Ein Durchlauf aus dem siebten Nutzertest, gekürzt","width":50}}')
 ) as v(order_index, type, content);
 
 commit;
@@ -1268,6 +1515,9 @@ ${F}04|avatars|$(bild avatar-malte    portrait 4 $AVATAR)
 ${F}05|avatars|$(bild avatar-sofia    portrait 5 $AVATAR)
 ${F}06|avatars|$(bild avatar-timo     portrait 6 $AVATAR)
 ${F}07|avatars|$(bild avatar-claudia  portrait 7 $AVATAR)
+${F}08|avatars|$(bild avatar-nele     portrait 8 $AVATAR)
+${F}09|avatars|$(bild avatar-henrik   portrait 9 $AVATAR)
+${F}0a|avatars|$(bild avatar-britta   portrait 10 $AVATAR)
 ${F}10|${P}01|$(bild lastenrad-station        cargobike        10 $COVER)
 ${F}11|${P}01|$(bild lastenrad-werkstatt      bicycle,workshop 11 $INLINE)
 ${F}12|${P}01|$(bild lastenrad-transport      cargobike        12 $GAL)
@@ -1317,10 +1567,37 @@ ${F}a4|${P}10|$OGG
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 
+# Die Schluessel, unter denen die Dateien im Objektspeicher liegen
+# muessen. Genau diese Werte traegt stored_file.path; das SQL weiter oben
+# bildet sie nach derselben Regel. Beide Zweige der Ablage benutzen diese
+# Funktion, damit die Regel nur an einer Stelle steht.
+erwartete_schluessel() {
+	while IFS='|' read -r file_id place url; do
+		[ -z "${file_id:-}" ] && continue
+		if [ "$place" = "avatars" ]; then
+			echo "avatars/$file_id"
+		else
+			echo "projects/$place/$file_id"
+		fi
+	done <<< "$MANIFEST"
+}
+
 pfad_im_ablage() {
 	if [ "$2" = "avatars" ]; then echo "$STAGE/avatars/$1"
 	else echo "$STAGE/projects/$2/$1"; fi
 }
+
+# Die Gesamtzahl wird aus dem MANIFEST gezaehlt und nicht in den Text
+# geschrieben. Vorher stand dort eine feste 47, und nach dem Ergaenzen der
+# drei Avatare fuer die Rollenkonten meldete der Fortschritt "50 von 47"
+# (KAN-99). Eine Zahl, die an zwei Stellen gepflegt werden muss, laeuft
+# frueher oder spaeter auseinander.
+#
+# Bewusst nicht "erwartet": diesen Namen benutzt die Signaturpruefung
+# weiter unten je Datei, und eine gemeinsame Variable haette sich beim
+# ersten Schleifendurchlauf selbst ueberschrieben.
+dateien_gesamt=$(printf '%s
+' "$MANIFEST" | grep -c '|')
 
 count=0
 while IFS='|' read -r file_id place url; do
@@ -1339,7 +1616,7 @@ while IFS='|' read -r file_id place url; do
 		abbruch "$url liess sich nicht laden ($file_id)."
 	fi
 	count=$((count + 1))
-	printf '\r  %2d von 47 geladen' "$count"
+	printf '\r  %2d von %d geladen' "$count" "$dateien_gesamt"
 done <<< "$MANIFEST"
 echo
 
@@ -1369,19 +1646,137 @@ while IFS='|' read -r file_id place url; do
 done <<< "$MANIFEST"
 echo "  Signaturen geprueft"
 
-# Uebertragen als tar-Strom und nicht mit "docker cp": unter Git Bash
-# schreibt MSYS aus "$STAGE/." das Verzeichnis selbst, der Inhalt landete
-# dann eine Ebene zu tief und jeder Abruf antwortete mit 500, ohne dass
-# an den Zeilen etwas falsch waere. Der tar-Strom kennt nur relative
-# Namen und ist von der Umschreibung nicht betroffen.
-im_container "mkdir -p '$ROOT'"
-tar -C "$STAGE" -cf - . | docker exec -i "$BACKEND" sh -lc "tar -C '$ROOT' -xf -"
+# -------------------------------------------------------------------
+# Ablegen im Objektspeicher: zwei Wege, je nach Betriebsart (KAN-99)
+# -------------------------------------------------------------------
+# Der Zwischenschritt oben ist fuer beide gleich: die Dateien liegen in
+# $STAGE bereits unter genau den Schluesseln, die stored_file.path
+# traegt (avatars/<id> und projects/<projektId>/<id>). Nur die letzte
+# Meile unterscheidet sich.
+#
+# Im Profil dev ist der Objektspeicher ein Ordner im Backend-Container.
+# Im Profil prod ist er Azure Blob Storage, und compose.prod.yml gibt
+# dem Container dafuer bewusst KEIN storage-Volume. Der bisherige
+# tar-Weg haette dort 50 Dateizeilen in der Datenbank hinterlassen,
+# deren Bytes nirgends abrufbar sind: kaputte Titelbilder, leere
+# Galerien, tote Downloads, und GET /api/files/{id} antwortet mit 500.
+# Die alte Gegenprobe haette das nicht bemerkt, denn sie zaehlte im
+# Container und faende dort genau die Dateien, die sie selbst
+# hineingelegt hat.
+#
+# Die Betriebsart wird nicht geraten, sondern beim laufenden Backend
+# erfragt. Damit kann das Skript nicht in den falschen Speicher
+# schreiben, auch wenn jemand DB_CONTAINER und BACKEND_CONTAINER
+# uebersehen hat.
+# Das "|| true" ist noetig und kein Schmuck: printenv endet mit 1, wenn
+# die Variable nicht gesetzt ist, und mit "set -o pipefail" reisst das die
+# ganze Zuweisung und damit das Skript mit. Der leere Fall wird jeweils
+# eine Zeile weiter abgefangen.
+PROFIL=$(im_container 'printenv SPRING_PROFILES_ACTIVE' 2>/dev/null | tr -d '\r\n') || true
+# Keine Vorgabe bei leerer Antwort, sondern Abbruch. Frueher stand hier
+# ein Rueckfall auf "dev", und der zeigte in die gefaehrlichere Richtung:
+# auf einem PROD-Stapel haette das Skript die Bytes in einen Container
+# ohne storage-Volume kopiert und 50 Dateizeilen hinterlassen, deren
+# Inhalt nirgends abrufbar ist. Wer raet, raet hier zum Schaden.
+[ -n "$PROFIL" ] || abbruch "Der Container $BACKEND nennt kein
+         SPRING_PROFILES_ACTIVE. Ohne die Betriebsart weiss das Skript
+         nicht, wohin die Dateien gehoeren: in das Dateisystem des
+         Containers (dev) oder nach Azure (prod). Laeuft das Backend, und
+         ist BACKEND_CONTAINER richtig gesetzt?"
+echo "  Betriebsart des Backends: $PROFIL"
 
-# Gegenprobe: liegen die Dateien dort, wo FileService sie sucht?
-gelegt=$(im_container "find '$ROOT/avatars' '$ROOT/projects' -type f 2>/dev/null | wc -l" | tr -d '[:space:]')
-[ "$gelegt" = "$count" ] || abbruch "$count Dateien geladen, aber $gelegt unter $ROOT gefunden.
-         Erwartet werden $ROOT/avatars/... und $ROOT/projects/..."
-echo "  $gelegt Dateien im Objektspeicher"
+if [ "$PROFIL" != "prod" ]; then
+	# Uebertragen als tar-Strom und nicht mit "docker cp": unter Git Bash
+	# schreibt MSYS aus "$STAGE/." das Verzeichnis selbst, der Inhalt landete
+	# dann eine Ebene zu tief und jeder Abruf antwortete mit 500, ohne dass
+	# an den Zeilen etwas falsch waere. Der tar-Strom kennt nur relative
+	# Namen und ist von der Umschreibung nicht betroffen.
+	im_container "mkdir -p '$ROOT'"
+	tar -C "$STAGE" -cf - . | docker exec -i "$BACKEND" sh -lc "tar -C '$ROOT' -xf -"
+
+	# Gegenprobe: liegt JEDER erwartete Schluessel dort, wo FileService ihn
+	# sucht?
+	#
+	# Geprueft und nicht gezaehlt (KAN-99). Vorher zaehlte diese Stelle
+	# alle Dateien unterhalb von $ROOT und verglich die Zahl mit der des
+	# Laufs. Das geht nur auf einem frischen Volume auf: liegen dort noch
+	# Dateien aus frueheren Laeufen, bricht der Lauf ab, obwohl alles
+	# richtig ist (beobachtet mit 116 gefundenen gegen 50 erwartete).
+	# Umgekehrt faende eine Zaehlung nicht, wenn eine Datei fehlt und
+	# dafuer eine fremde zu viel liegt.
+	# "docker exec -i" und nicht die Hilfsfunktion im_container: die laeuft
+	# ohne -i und bekaeme die Standardeingabe gar nicht.
+	#
+	# Der Ablageort geht als Umgebungsvariable hinein und nicht in den
+	# Befehlstext. Der Rumpf steht dadurch in einfachen Anfuehrungszeichen,
+	# und weder $ABLAGE noch $k werden vom Wirt angefasst; beides loest
+	# erst die Shell im Container auf.
+	fehlende=$(erwartete_schluessel | docker exec -i -e ABLAGE="$ROOT" "$BACKEND" \
+		sh -c 'cd "$ABLAGE" 2>/dev/null || exit 0; while IFS= read -r k; do [ -f "$k" ] || echo "$k"; done')
+	[ -z "$fehlende" ] || abbruch "Diese Schluessel fehlen unter $ROOT:
+$(echo "$fehlende" | sed 's/^/         /')"
+	echo "  alle $count Schluessel im Dateisystem des Backend-Containers"
+else
+	# Zugangsdaten vom laufenden Backend und nicht aus der .env: so wird
+	# garantiert in genau den Container geschrieben, aus dem die Anwendung
+	# auch liest. Eine zweite Quelle waere eine zweite Gelegenheit, sie
+	# auseinanderlaufen zu lassen.
+	AZ_CONTAINER=$(im_container 'printenv AZURE_STORAGE_CONTAINER' 2>/dev/null | tr -d '\r\n') || true
+	AZURE_STORAGE_CONNECTION_STRING=$(im_container 'printenv AZURE_STORAGE_CONNECTION_STRING' 2>/dev/null | tr -d '\r\n') || true
+	[ -n "$AZ_CONTAINER" ] || abbruch "AZURE_STORAGE_CONTAINER ist im Backend-Container nicht gesetzt."
+	[ -n "$AZURE_STORAGE_CONNECTION_STRING" ] || abbruch "AZURE_STORAGE_CONNECTION_STRING ist im Backend-Container nicht gesetzt."
+	# Als exportierte Variable und NICHT als "-e NAME=wert": ein Wert im
+	# Aufrufwort stuende in der Prozessliste des Wirts und waere dort fuer
+	# jeden lesbar, der ps aufrufen darf. So reicht Docker nur den Namen
+	# durch und holt den Wert aus der Umgebung.
+	export AZURE_STORAGE_CONNECTION_STRING
+
+	echo "  Hochladen nach Azure, Container $AZ_CONTAINER"
+	# Wegwerf-Container mit der Azure-CLI. Das Abbild ist gross und wird
+	# beim ersten Lauf geladen; dafuer bleibt auf dem Server nichts
+	# zurueck, und es entsteht keine selbst geschriebene Signaturlogik,
+	# die niemand pflegt.
+	#
+	# --overwrite, weil das Skript wiederholbar sein soll: ein zweiter
+	# Lauf ersetzt dieselben Schluessel, statt an vorhandenen Blobs zu
+	# scheitern.
+	#
+	# KEIN --content-type: der Content-Type am Blob ist fuer die
+	# Auslieferung ohne Bedeutung. FileController setzt ihn aus
+	# stored_file.mime_type, und AzureBlobFileStorage.load oeffnet nur
+	# den Datenstrom. Nachgeprueft, nicht angenommen.
+	docker run --rm \
+		-e AZURE_STORAGE_CONNECTION_STRING \
+		-v "$STAGE:/daten:ro" \
+		mcr.microsoft.com/azure-cli \
+		az storage blob upload-batch \
+			--destination "$AZ_CONTAINER" \
+			--source /daten \
+			--overwrite \
+			--output none \
+		|| abbruch "Das Hochladen nach Azure ist fehlgeschlagen."
+
+	# Gegenprobe am Ziel und nicht an der Quelle: gezaehlt wird, was
+	# tatsaechlich im Blob-Container liegt. Genau diese Richtung fehlte
+	# dem alten Weg.
+	# Gegenprobe am Ziel und nicht an der Quelle, und wie im lokalen Zweig
+	# geprueft statt gezaehlt: eine Zahl stimmt auch dann noch, wenn eine
+	# Datei fehlt und dafuer eine fremde zu viel im Container liegt.
+	vorhanden=$(docker run --rm \
+		-e AZURE_STORAGE_CONNECTION_STRING \
+		mcr.microsoft.com/azure-cli \
+		az storage blob list --container-name "$AZ_CONTAINER" \
+			--query "[].name" --output tsv | tr -d '\r')
+	# grep -F: die Schluessel sind Zeichenketten und keine Muster.
+	# -x: nur ganze Zeilen, sonst passte "avatars/abc" auch auf
+	# "projects/xy/avatars/abc". -v: gesucht sind die FEHLENDEN.
+	# "|| true": grep endet mit 1, wenn nichts fehlt, und genau das ist
+	# der Erfolgsfall.
+	fehlende=$(erwartete_schluessel | grep -Fxv "$vorhanden" || true)
+	[ -z "$fehlende" ] || abbruch "Diese Schluessel fehlen im Azure-Container $AZ_CONTAINER:
+$(echo "$fehlende" | sed 's/^/         /')"
+	echo "  alle $count Schluessel im Azure-Container $AZ_CONTAINER"
+fi
 
 # Die tatsaechlichen Groessen nachtragen. stored_file.size ist keine
 # Zierde: FileController setzt daraus den Content-Length der Antwort.
@@ -1467,18 +1862,20 @@ cat <<'ABSCHLUSS'
 
 Fertig.
 
-Anmelden koennen sich die sieben neuen Konten mit demselben Passwort wie
-dev-studi (gleicher Hash aus dem DevTestnutzerSeeder):
+ANMELDEN KOENNEN SICH GENAU DREI KONTEN, die Rollenkonten zum Vorfuehren:
 
-  lena.brinkmann@demo.invalid    STUDENT
-  jonas.petersen@demo.invalid    STUDENT
-  aylin.demir@demo.invalid       STUDENT
-  malte.focke@demo.invalid       STUDENT
-  sofia.kowalski@demo.invalid    STUDENT
-  timo.ahrens@demo.invalid       STUDENT
-  claudia.vogt@demo.invalid      EDITOR
+  student@demo.invalid      STUDENT   Nele Reimers
+  redaktion@demo.invalid    EDITOR    Henrik Osterloh
+  admin@demo.invalid        ADMIN     Britta Sandvoss
 
-Projekt 7 (DRAFT) und Projekt 8 (REVISION) gehoeren dev-studi@dev.invalid:
+Die sieben uebrigen Konten (Lena Brinkmann, Jonas Petersen, Aylin Demir,
+Malte Focke, Sofia Kowalski, Timo Ahrens, Claudia Vogt) treten nur als
+Autor:innen, Mitglieder und Kommentierende auf. Sie tragen keinen
+brauchbaren Passwort-Hash und sind nicht anmeldbar: der Bestand steht auf
+einem oeffentlich erreichbaren Server, und jedes anmeldbare Konto mehr
+waere ein Ziel mehr.
+
+Projekt 7 (DRAFT) und Projekt 8 (REVISION) gehoeren student@demo.invalid:
 wer sich damit anmeldet, sieht sofort einen Entwurf und einen
 zurueckgewiesenen Beitrag mit zwei offenen Aenderungswuenschen.
 
@@ -1486,3 +1883,22 @@ Sechs der zehn Projekte sind PUBLISHED und damit ohne Anmeldung zu sehen.
 Die uebrigen zeigen die anderen Zustaende: APPROVED, SUBMITTED, DRAFT und
 REVISION.
 ABSCHLUSS
+
+# Das Passwort wird GENAU EINMAL ausgegeben, und nur wenn dieser Lauf es
+# selbst erzeugt hat. Wer es vorgibt, kennt es schon; es ein zweites Mal
+# in die Sitzungshistorie zu schreiben waere ein Risiko ohne Nutzen.
+if [ "$PASSWORT_ERZEUGT" = "ja" ]; then
+	cat <<PASSWORT_HINWEIS
+
+Passwort der drei Rollenkonten (einmalige Ausgabe, wird nicht gespeichert):
+
+  $DEMO_PASSWORT
+
+Notiere es jetzt. Es steht in keiner Datei und laesst sich aus dem
+bcrypt-Hash nicht zurueckrechnen; ein neuer Lauf vergibt ein neues.
+Wer ein eigenes setzen will, ruft das Skript mit DEMO_PASSWORT=... auf.
+PASSWORT_HINWEIS
+else
+	echo
+	echo "Passwort der drei Rollenkonten: das aus DEMO_PASSWORT."
+fi

@@ -2,7 +2,7 @@
 
 Beschreibt den Stand von Branch `main`. Basis-Paket ist
 `de.hsbremen.eportfolio`, Gruppen-ID `de.hsbremen`, Artefakt `eportfolio`.
-Der API-Contract steht auf v97 (Confluence, Seiten-ID 36732929); wo ein
+Der API-Contract steht auf v98 (Confluence, Seiten-ID 36732929); wo ein
 Abschnitt eine ältere Version nennt, ist damit die Version gemeint, mit der
 die beschriebene Festlegung entstand.
 
@@ -77,7 +77,7 @@ Was in welchem Paket steckt:
 | `reaction`   | `Reaction`, `ReactionRepository`, `ReactionCount` (Abfrageergebnis für die Kachelzählung) |
 | `sitecontent` | `SiteContent` (Entity), `SiteContentKey`, `SiteContentRepository`, `SiteContentService`, `SiteContentController`, `dto/{SiteContentResponse, SiteContentEntryResponse, SiteContentUpdateRequest, SiteContentEntryRequest}`. Die von der Administration gepflegten Texte der öffentlichen Startseite (Contract §3.21, §6.1). **Ein Controller statt der Trennung public/admin** wie bei `masterdata`: dort stehen fünf PUBLIC-Lesemethoden vierzehn ADMIN-Schreibmethoden gegenüber, hier sind es genau zwei Methoden auf derselben Ressource, und die Aufhebung der Token-Anforderung steht deshalb an der einen Methode, die sie braucht, statt an einer eigenen Klasse. **`SiteContentKey` liegt im Feature-Paket und nicht in `common.enums`**: die Regel in §6 schickt dorthin, was *mehrere* Features nutzen, und dieses Enum trägt Feature-Wissen, nämlich die Zuordnung zum i18n-Schlüssel und die Pflichtplatzhalter je Stelle. `SupportRequestCategory` und `SupportRequestStatus` liegen trotz nur eines Nutzers in `common.enums`; diese Zeile hält fest, dass das hier bewusst anders entschieden ist und nicht übersehen wurde. Ohne eigene Ressourcenprüfung: `mayManageSiteContent` im `ProjectPermissionService` ist reine Rollenebene und prüft nur `isAdmin` |
 | `top10`      | `Top10Entry`, `Top10Nomination`, `Top10Service`, `Top10NominationService`, `Top10Controller`, `Top10AdminController`, `Top10NominationController`, seit KAN-37 `OwnTop10NominationController` (die eigenen Vorschläge der Redaktion), `dto/{Top10EntryResponse, Top10NominationResponse, Top10NominationRequest, Top10AcceptRequest, Top10OrderRequest}` (KAN-24). Seit KAN-45 das Änderungsprotokoll: `Top10AuditEntry`, `Top10AuditEntryRepository`, `Top10AuditService`, `Top10AuditSpecifications`, `Top10Placement`, `dto/Top10AuditEntryResponse`, siehe Kapitel 13 |
-| `user`       | `User`, `UserRepository`, `DevTestUserSeeder`, seit KAN-25 die Abfrageergebnisse `UserRoleCount` und `UserStatusCount` für die Dashboard-Kennzahlen |
+| `user`       | `User`, `UserRepository`, `DevTestUserSeeder`, seit KAN-25 die Abfrageergebnisse `UserRoleCount` und `UserStatusCount` für die Dashboard-Kennzahlen, seit KAN-99 der `InitialAdminSeeder`. **Der neue Runner trägt bewusst kein `@Profile`** und läuft damit auch im Betrieb: er ist der einzige Weg zum ersten ADMIN-Konto einer frisch aufgesetzten Umgebung, weil die Registrierung die Rolle aus der Domain ableitet und nie `ADMIN` ergeben kann (§3.1.1). Gesichert ist er doppelt: alle drei `BOOTSTRAP_ADMIN_`-Werte gesetzt **und** `app_user` vollständig leer. Beide Runner tragen seitdem eine Ordnungszahl (`DevTestUserSeeder.ORDER` = 0, `InitialAdminSeeder.ORDER` = 100), weil der zweite auf eine leere Tabelle prüft und die Reihenfolge sonst unbestimmt wäre |
 
 ---
 
@@ -146,10 +146,15 @@ diese Pfade steht als `/api/admin/**` mit `hasRole("ADMIN")` schon lange in
 `SecurityConfig` (siehe Abschnitt 5); für KAN-25, KAN-45 und die beiden
 Nachzügler war dort nichts zu ergänzen.
 
-Die Stammdaten kommen aus zwei Quellen, und die Trennung ist begründet. Der
+Die Stammdaten kommen aus drei Quellen, und die Trennung ist begründet. Der
 `DevMasterDataSeeder` (Profil `dev`, idempotent) legt acht Kategorien und vier
 Semester an, also genau das, ohne das Filterleiste und Metadaten-Formular leer
-blieben. Die Fakultätshierarchie legt er **nicht** an: fünf Fakultäten,
+blieben. **Im Profil `prod` läuft er nicht**, und dieselben Werte legt dort
+`kategorien-semester-seeder.sh` an (KAN-99, ebenfalls idempotent). Ohne diesen
+Lauf ist die Lücke lange unauffällig und trifft spät: `GET /api/categories`
+und `/api/semesters` antworten mit **200** und einer leeren Liste, die
+Auswahlfelder bleiben leer, und erst das Einreichen scheitert mit **400**
+`PROJECT_INCOMPLETE`. Die Fakultätshierarchie legt er **nicht** an: fünf Fakultäten,
 75 Studiengänge und ihre Module sind eine Datenlieferung und kein Bestandteil
 des Programms. Sie ändert sich, wenn die Hochschule ihre Studiengangsseiten
 ändert, sie wäre als Java-Literal eine unlesbare Quelldatei, und sie muss sich
@@ -158,6 +163,10 @@ sie im Skript `stammdaten-seeder.sh` im Wurzelverzeichnis, mit dem Gegenstück
 `stammdaten-seeder-entfernen.sh`; beide laufen über `eportfolio.ps1` (`s1`,
 `s2`). Ohne diesen Lauf antworten `GET /api/faculties`, `/api/study-programs`
 und `/api/modules` mit einer leeren Liste.
+
+Auf einem Server gehen beide Skripte von Hand, und zwar mit gesetztem
+`DB_CONTAINER`: ohne ihn treffen sie die DEV-Datenbank, denn das ist ihr
+Vorgabewert.
 
 Keine dieser Daten steht in einer Migration: sie würde die Beispieldaten sonst
 in jede Umgebung tragen, auch in die produktive.

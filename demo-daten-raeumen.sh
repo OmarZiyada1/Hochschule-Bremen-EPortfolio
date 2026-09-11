@@ -15,17 +15,20 @@
 #   - alle Konten ausser den drei Seeder-Konten, samt ihren Portfolios
 #     und Bestaetigungscodes
 #   - alle Bytes im Objektspeicher unter /app/var/storage
+#   - der Startseitenhinweis auf die Demodaten, den
+#     demo-daten-komplett.sh unter dem Praefix d0d0001b- in
+#     site_content schreibt
 #
 # Was bleibt:
 #   - dev-studi@dev.invalid, dev-redakteur@dev.invalid und
-#     dev-admin@dev.invalid aus dem DevTestnutzerSeeder. Sie muessen
-#     bleiben: demo-daten-komplett.sh uebernimmt den Passwort-Hash von
-#     dev-studi und braucht die Rollen EDITOR und ADMIN fuer
-#     Redaktionszuweisung, Nominierungen und Pruefspur.
+#     dev-admin@dev.invalid aus dem DevTestnutzerSeeder. Sie sind der
+#     Beleg dafuer, dass hier eine Entwicklungsdatenbank steht, und
+#     zugleich der einzige Riegel dieses Skripts (siehe unten).
 #   - alle Stammdaten aus den Migrationen: Fakultaeten, Studiengaenge,
 #     Module, Kategorien, Semester
-#   - site_content und support_request. Die eine vorhandene
-#     Supportanfrage ist anonym eingereicht und haengt an keinem Konto.
+#   - site_content, soweit es von Hand gepflegt ist, und
+#     support_request. Die eine vorhandene Supportanfrage ist anonym
+#     eingereicht und haengt an keinem Konto.
 #
 # DIESER LAUF IST NICHT UMKEHRBAR. Es gibt kein Backup und keinen
 # Erzeuger fuer den alten Bestand.
@@ -58,17 +61,42 @@ done
 docker exec "$DB" pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1 \
 	|| abbruch "Die Datenbank $DB_NAME antwortet nicht."
 
-# Ohne die drei Seeder-Konten waere nach dem Raeumen kein Konto mehr da,
-# aus dem demo-daten-komplett.sh den Passwort-Hash ziehen koennte. Dann
-# lieber gar nicht erst loeschen.
+# DER RIEGEL: hier wird geprueft, WO das Skript laeuft, nicht was es
+# spaeter braucht. Dieses Skript loescht jedes Projekt und jedes Konto
+# der Datenbank, an der es haengt, ohne Rueckfrage und ohne Weg zurueck.
+# Ein falsch gesetztes DB_CONTAINER genuegt, und es traefe den Betrieb.
+#
+# Die drei Konten des DevTestnutzerSeeders entstehen ausschliesslich im
+# Profil dev; im Profil prod laeuft der Seeder nie. Sind sie da, steht
+# eine Entwicklungsdatenbank vor uns, sonst wird abgebrochen.
+#
+# (Frueher stand hier eine andere Begruendung: demo-daten-komplett.sh
+# zog seinen Passwort-Hash per Unterabfrage aus dev-studi. Das tut es
+# seit KAN-99 nicht mehr, es erzeugt den Hash selbst. Der Riegel bleibt
+# trotzdem, jetzt als Schutz gegen die falsche Datenbank.)
 fehlend=$(sql -tAc "
 select string_agg(v.email, ', ')
 from (values ('dev-studi@dev.invalid'), ('dev-redakteur@dev.invalid'),
              ('dev-admin@dev.invalid')) as v(email)
 where not exists (select 1 from app_user u where u.email = v.email);" | tr -d '[:space:]')
 [ -z "$fehlend" ] || abbruch "Seeder-Konten fehlen: $fehlend.
-         Backend im Profil dev starten, damit der DevTestnutzerSeeder laeuft."
-echo "  Container laufen, Seeder-Konten vorhanden"
+         Damit ist nicht belegt, dass hier eine Entwicklungsdatenbank
+         steht, und dieses Skript loescht jedes Projekt und jedes Konto.
+         Pruefe DB_CONTAINER (aktuell: $DB). Ist es die richtige
+         Datenbank, das Backend im Profil dev starten, damit der
+         DevTestnutzerSeeder laeuft."
+# Der zweite Riegel, und er gilt dem anderen Container. Weiter unten
+# loescht dieses Skript den Inhalt von /app/var/storage im Container
+# $BACKEND. Das ist eine zweite, unabhaengig gesetzte Variable: wer
+# DB_CONTAINER stehen laesst und nur BACKEND_CONTAINER verstellt, kaeme
+# am Riegel oben vorbei und raeumte das Dateisystem eines fremden
+# Containers. Geprueft wird deshalb auch dessen Betriebsart.
+profil=$(im_container 'printenv SPRING_PROFILES_ACTIVE' 2>/dev/null | tr -d '\r\n') || true
+[ "$profil" = "dev" ] || abbruch "Der Container $BACKEND laeuft in der
+         Betriebsart '${profil:-unbekannt}' und nicht in 'dev'. Dieses
+         Skript loescht den Inhalt von $ROOT in genau diesem Container.
+         Pruefe BACKEND_CONTAINER."
+echo "  Container laufen, Entwicklungsdatenbank und -backend belegt"
 echo
 
 echo "== Stand vor dem Raeumen =="
@@ -120,6 +148,22 @@ delete from app_user
 where email not in ('dev-studi@dev.invalid',
                     'dev-redakteur@dev.invalid',
                     'dev-admin@dev.invalid');
+
+-- Der Startseitenhinweis auf die Demodaten (KAN-99). Er haengt an
+-- keiner Fremdschluesselkette und bliebe sonst stehen: eine Startseite,
+-- die weiter "Alle gezeigten Projekte sind erfunden" sagt, obwohl
+-- ueberhaupt keine Projekte mehr da sind.
+--
+-- ACHTUNG, das trifft auch eine von Hand gepflegte Fassung. War eine
+-- dieser vier Stellen ueber die Startseitenpflege (KAN-90) gesetzt, hat
+-- demo-daten-komplett.sh sie beim Schreiben unter den Demopraefix
+-- gezogen ("set id = excluded.id"), und diese Zeile loescht sie damit
+-- mit. Das ist die bewusste Abwaegung: die Stelle faellt danach auf den
+-- ausgelieferten Text der Sprachdatei zurueck, und das ist allemal
+-- besser, als den Demohinweis stehen zu lassen, nachdem die Demodaten
+-- weg sind. Wer eine gepflegte Fassung behalten will, sichert sie vor
+-- dem Lauf von demo-daten-komplett.sh.
+delete from site_content where id::text like 'd0d0001b-%';
 
 commit;
 ENDE_SQL_RAEUMEN
