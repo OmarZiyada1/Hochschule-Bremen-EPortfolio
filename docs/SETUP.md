@@ -1172,8 +1172,183 @@ antworten. Auf dem Server selbst antworten sie, das ist Absicht.
 **7. Erstbestand einspielen**
 
 Die Datenbank ist jetzt bis auf das Schema leer: die beiden Seeder im Code
-tragen `@Profile("dev")` und laufen hier nicht. Wie Admin-Konto, Kategorien,
-Semester und die Hochschulhierarchie entstehen, steht in KAN-99.
+tragen `@Profile("dev")` und laufen hier nicht. Wie der Bestand entsteht,
+steht im naechsten Abschnitt.
+
+### Erstbestand auf PROD (KAN-99)
+
+Vier Schritte, und **die Reihenfolge ist nicht beliebig**. Der erste ist der
+einzige, der sich nicht nachholen laesst.
+
+#### Die Reihenfolge, und warum sie zwingend ist
+
+Der `InitialAdminSeeder` legt das erste ADMIN-Konto nur an, wenn `app_user`
+**vollstaendig leer** ist (§3.1.1). Diese Bedingung faellt unwiderruflich weg,
+sobald irgendein Konto entsteht, und dafuer genuegt schon:
+
+* ein Lauf von `demo-daten-komplett.sh` (er legt zehn Konten an),
+* oder eine einzige Selbstregistrierung ueber `POST /api/auth/register`, denn
+  dieser Pfad ist oeffentlich.
+
+Danach gibt es keinen Weg mehr zurueck: der Runner schweigt fortan, und ein
+Admin muss von Hand per SQL entstehen. Deshalb gilt:
+
+> **Erst den Bootstrap-Admin belegen, dann alles andere.**
+
+Nachsehen, bevor irgendetwas laeuft:
+
+```bash
+docker exec eportfolio-prod-db-1 psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  -c "select email, role, status, password_change_required from app_user;"
+```
+
+Ist die Tabelle leer, gehoeren die drei `BOOTSTRAP_ADMIN_`-Werte in die `.env`
+(Abschnitt 3), danach `up -d` und dann diese Abfrage erneut. Steht das Konto
+da, ist der Schritt erledigt und die Werte koennen aus der `.env` verschwinden:
+sie werden nie wieder gebraucht, und solange sie dort stehen, ist das
+Initialpasswort ueber `docker inspect` lesbar.
+
+**Schweigen im Protokoll ist eine Diagnose.** Der Seeder meldet das Fehlen der
+Werte auf `debug`, und `application-prod.yml` setzt keine Protokollebene, es
+gilt also INFO. Findet
+
+```bash
+docker logs eportfolio-prod-backend-1 2>&1 | grep -i "Bootstrap-Admin"
+```
+
+**gar nichts**, dann waren die Werte nicht gesetzt. Findet es
+`es bestehen bereits N Konten`, war die Tabelle nicht leer. Findet es
+`BOOTSTRAP_ADMIN_PASSWORD muss zwischen 12 und 72 Zeichen lang sein`, lag es am
+Passwort; diese eine Meldung steht auf `error`.
+
+#### 1. Fakultaeten, Studiengaenge, Module
+
+```bash
+cd /opt/eportfolio
+DB_CONTAINER=eportfolio-prod-db-1 bash stammdaten-seeder.sh
+```
+
+**Genau einmal.** Ein zweiter Lauf raeumt seinen eigenen ID-Praefix ab und
+loest dabei `project.module_id` und `project.study_program_id` aller Projekte,
+die auf diese Lieferung zeigen. Da auf PROD saemtliche 75 Studiengaenge aus
+genau dieser Lieferung stammen, trifft das dort faktisch jedes Projekt. Die
+Fakultaet bliebe stehen, Studiengang und Modul waeren weg.
+
+#### 2. Kategorien und Semester
+
+```bash
+DB_CONTAINER=eportfolio-prod-db-1 bash kategorien-semester-seeder.sh
+```
+
+Idempotent ueber `where not exists`, ein zweiter Lauf ist folgenlos. Ohne
+diesen Schritt antworten `GET /api/categories` und `/api/semesters` mit **200**
+und einer leeren Liste, und erst das Einreichen scheitert mit **400**
+`PROJECT_INCOMPLETE`.
+
+#### 3. Demobestand fuer die Vorfuehrung
+
+Vier Dinge muessen vorher stimmen, sonst bricht der Lauf mitten drin ab:
+
+* **Das Backend laeuft.** Das Skript liest `SPRING_PROFILES_ACTIVE`,
+  `AZURE_STORAGE_CONTAINER` und `AZURE_STORAGE_CONNECTION_STRING` per
+  `printenv` aus dem Backend-Container, nicht aus der `.env`. Steht der
+  Container, bricht es ab.
+* **Der Blob-Container existiert.** `AzureBlobFileStorage` legt ihn
+  ausdruecklich **nicht** an. Hat auf dieser Instanz noch nie jemand eine Datei
+  hochgeladen, kann er im Speicherkonto fehlen, und das Hochladen scheitert
+  erst nach dem Schreiben der Datenbank.
+* **Ausgehende Verbindungen sind offen** zu `picsum.photos`,
+  `loremflickr.com`, `upload.wikimedia.org`, `download.samplelib.com`,
+  `www.w3.org`, `www.orimi.com` und `pdfobject.com`. Nur die Bildquelle hat
+  einen Rueckfall, die uebrigen nicht.
+* **Auf dem Wirt liegen `docker`, `curl`, `tar` und `openssl`**, und es ist
+  Platz fuer zwei Fremdimages: `httpd:2.4-alpine` (rund 20 MB, fuer den
+  bcrypt-Hash) und `mcr.microsoft.com/azure-cli` (mehrere hundert MB, fuer das
+  Hochladen).
+
+```bash
+cd /opt/eportfolio
+read -rsp 'Demopasswort (mindestens 12 Zeichen): ' DEMO_PASSWORT; echo
+export DEMO_PASSWORT
+BACKEND_CONTAINER=eportfolio-prod-backend-1 \
+DB_CONTAINER=eportfolio-prod-db-1 \
+bash demo-daten-komplett.sh
+unset DEMO_PASSWORT
+```
+
+`read -rsp` und nicht `DEMO_PASSWORT=... bash …`: die zweite Form schreibt das
+Passwort in `~/.bash_history` und in die Prozessumgebung. Wird die Variable gar
+nicht gesetzt, wuerfelt das Skript eines und nennt es **genau einmal** am Ende
+des Laufs. Wer es dort nicht mitschreibt, hat drei unbrauchbare Vorfuehrkonten
+und muss den ganzen Lauf wiederholen, und der vergibt dann wieder ein anderes.
+
+Am Ende sind **genau drei Konten anmeldbar**: `student@`, `redaktion@` und
+`admin@demo.invalid`. Die uebrigen sieben tragen keinen brauchbaren Hash.
+
+Zwei Dinge, die man ueber diesen Bestand wissen muss, bevor er auf einem
+oeffentlich erreichbaren Server steht:
+
+* **`admin@demo.invalid` ist ein echter ADMIN**, und sein
+  `password_change_required` steht auf `false`. Das ist Absicht: bei `true`
+  muesste die erste Person, die sich zur Vorfuehrung anmeldet, das Passwort
+  aendern, und alle danach kaemen nicht mehr hinein. Die Folge ist aber, dass
+  das einmal genannte Passwort unbefristet gilt. Es gehoert entsprechend stark
+  gewaehlt und nicht weitergegeben.
+* **Die 30 Schlagworte lassen sich nicht wieder entfernen.** Sie entstehen mit
+  `gen_random_uuid()` und liegen damit ausserhalb jedes ID-Praefixes; kein
+  zweiter Lauf und kein auf PROD lauffaehiges Skript raeumt sie weg. Dafuer
+  braeuchte es handgeschriebenes SQL gegen die 30 Namen.
+
+**Wenn der Lauf mitten drin abbricht.** `demo-daten-raeumen.sh` ist auf PROD
+gesperrt und kann hier nicht helfen; es verlangt eine Entwicklungsdatenbank und
+ein Backend im Profil `dev`. Der einfachste Ausweg ist, das Skript noch einmal
+vollstaendig laufen zu lassen: es raeumt seinen eigenen vorigen Lauf ueber die
+festen ID-Praefixe selbst ab. Nur das Passwort ist dann ein anderes, sofern
+`DEMO_PASSWORT` nicht wieder gesetzt wird.
+
+#### 4. Gegenprobe
+
+```bash
+docker exec eportfolio-prod-db-1 psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "
+select 'Fakultaeten' as was, count(*) from faculty
+union all select 'Studiengaenge',  count(*) from study_program
+union all select 'Sammelmodule',   count(*) from module where collective
+union all select 'Kategorien',     count(*) from category
+union all select 'Semester',       count(*) from semester
+union all select 'Konten',         count(*) from app_user
+union all select 'Projekte',       count(*) from project
+union all select 'Bloecke',        count(*) from block
+union all select 'Dateizeilen',    count(*) from stored_file
+union all select 'Startseitentexte', count(*) from site_content;"
+```
+
+Erwartet: 5 Fakultaeten, 75 Studiengaenge, 75 Sammelmodule, 8 Kategorien,
+4 Semester, 10 Konten (11 mit dem Bootstrap-Admin), 10 Projekte, 120 Bloecke,
+50 Dateizeilen, 4 Startseitentexte.
+
+Von aussen, und das ist die Probe, die wirklich zaehlt:
+
+```bash
+curl -s https://<domain>/api/site-content
+curl -s -o /dev/null -w "%{http_code}\n" https://<domain>/api/projects
+```
+
+Der erste Aufruf muss `home.hero.label` und `home.hero.subtitle` in beiden
+Sprachen nennen, der zweite mit 200 antworten. Danach die Startseite im Browser
+oeffnen: unter der Ueberschrift steht jetzt der Hinweis, dass alle gezeigten
+Projekte und Personen erfunden sind.
+
+#### Was auf diesem Server nichts zu suchen hat
+
+* `stammdaten-seeder-entfernen.sh` und ein **zweiter** Lauf von
+  `stammdaten-seeder.sh`: beide reissen die Studiengangs- und Modulzuordnung
+  bestehender Projekte ab.
+* `demo-daten-raeumen.sh`: loescht jedes Projekt und jedes Konto ohne
+  Rueckfrage. Es bricht auf PROD von selbst ab, aber es gehoert dort auch nicht
+  aufgerufen.
+* `test-seeder.sh` und `test-sitzung.sh`: der Usability-Testbestand traegt
+  erfundene Namen an der echten Domain `hs-bremen.de` und ein Klartextpasswort
+  aus dem Repository.
 
 ### Aktualisieren
 
