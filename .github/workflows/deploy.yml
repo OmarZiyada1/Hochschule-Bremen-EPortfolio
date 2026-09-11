@@ -62,9 +62,13 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     # Ohne diese Zeile gilt die Voreinstellung von sechs Stunden. Ein Fall,
-    # der wirklich haengt, blockiert den Runner dann einen halben Tag; der
-    # ganze Lauf dauert heute rund fuenf Minuten. Die Grenze greift nur bei
-    # einer echten Haengepartie und nie im Regelbetrieb.
+    # der wirklich haengt, blockiert den Runner dann einen halben Tag.
+    #
+    # Gemessen dauert der Job rund 14 Minuten (Lauf 34642034483, zwei Kerne:
+    # Backend rund 4, Frontend mit Installation und Bau der Rest). Dreissig
+    # lassen also Luft fuer einen langsameren Tag, ohne eine echte
+    # Haengepartie ueber Stunden mitzuschleppen. Wer die Zahl aendert, misst
+    # vorher nach; geschaetzt war sie schon einmal falsch.
     timeout-minutes: 30
 
     services:
@@ -114,13 +118,13 @@ jobs:
 
     steps:
       - name: Quellcode holen
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # ----------------------------------------------------------------
       # Backend
       # ----------------------------------------------------------------
       - name: Java 21 einrichten
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "21"
@@ -200,7 +204,7 @@ jobs:
       # Frontend
       # ----------------------------------------------------------------
       - name: Node 24 einrichten
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
 
@@ -220,7 +224,7 @@ jobs:
         run: echo "pfad=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
 
       - name: pnpm-Speicher aus dem Zwischenspeicher
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm-store.outputs.pfad }}
           key: pnpm-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
@@ -278,7 +282,7 @@ jobs:
 
     steps:
       - name: Quellcode holen
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Marke bestimmen
         id: marke
@@ -293,10 +297,10 @@ jobs:
           echo "image_tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
       - name: Buildx einrichten
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: An GHCR anmelden
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -306,7 +310,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Backend-Image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./backend
           # Ausdruecklich die Stufe runtime: das schlanke JRE-Image mit dem
@@ -324,7 +328,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=backend
 
       - name: Frontend-Image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./frontend
           target: runtime
