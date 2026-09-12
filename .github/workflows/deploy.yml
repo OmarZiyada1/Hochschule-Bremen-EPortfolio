@@ -1,15 +1,42 @@
-# Ein Merge nach main rollt sich selbst aus (KAN-101).
+# Ein Merge nach main rollt sich selbst aus (KAN-101, Zuschnitt aus KAN-102).
 #
-# Drei Jobs, jeder haengt am vorigen:
+# Der Graph, und zwar genau so, wie die needs-Zeilen ihn aufspannen:
 #
-#   test    prueft Backend und Frontend. Laeuft bei jedem Pull Request und bei
-#           jedem Push auf main oder dev.
-#   build   baut beide Images und schiebt sie nach GHCR. Nur bei Push auf main.
-#   deploy  zieht sie auf dem VPS und startet neu. Nur nach gruenem build.
+#   backend-tests  ─┐
+#                   ├─ tests ─┬─ build-backend  ─┐
+#   frontend-tests ─┘         └─ build-frontend ─┴─ deploy
 #
-# DER RIEGEL LIEGT IN "needs". Seit diesem Ticket ist main gleich prod; ohne
-# diese Reihenfolge ginge jeder fehlerhafte Merge sofort live. Ein roter Test
+#   marke laeuft daneben, ohne Vorgaenger, und liefert seine Marke an
+#   build-backend, build-frontend und deploy. Er steht bewusst NICHT vor den
+#   Testjobs: die brauchen ihn nicht, und er soll sie nicht aufhalten.
+#
+#   marke           bestimmt die Marke der Images.
+#   backend-tests   ./mvnw test gegen echte Postgres und Azurite.
+#   frontend-tests  pnpm test, typecheck, lint, build. Ohne Dienst-Container.
+#   tests           das Gate. Traegt den Namen, auf den der Branch-Schutz
+#                   zeigt, und fasst die beiden Testjobs zu einem Ergebnis.
+#   build-backend   je ein Image, parallel, nur bei push auf main.
+#   build-frontend
+#   deploy          zieht beide auf dem VPS und startet neu.
+#
+# DER RIEGEL LIEGT IN "needs". Seit KAN-101 ist main gleich prod; ohne diese
+# Reihenfolge ginge jeder fehlerhafte Merge sofort live. Ein roter Test
 # erreicht den Server nie, und der Server bleibt dabei unveraendert stehen.
+#
+# WARUM GETRENNTE JOBS UND NICHT EIN GROSSER (KAN-102). Zwei Gruende, und der
+# erste ist der wichtigere: in der Pruefliste eines Pull Requests steht dann
+# "Backend-Tests" oder "Frontend-Tests" rot, und niemand muss ein Protokoll
+# oeffnen, um zu erfahren, welche Schicht betroffen ist. Der zweite ist Zeit:
+# im Lauf 34700332110 trug der Frontend-Testlauf 442 der 681 Sekunden, das
+# Backend 128. Nebeneinander ist der kritische Pfad der laengere der beiden
+# statt ihrer Summe.
+#
+# WOHER DIE ZEITANGABEN IN DIESER DATEI STAMMEN. Alle Zahlen unten sind aus
+# den SCHRITTZEITEN des Laufs 34700332110 abgeleitet, und der lief noch mit
+# dem alten Sammeljob; in dieser Form hat der Workflow zu dem Zeitpunkt nicht
+# existiert. Es sind also begruendete Erwartungen und keine Messungen dieser
+# Fassung. Wer eine Zahl aendert, misst vorher an einem echten Lauf nach:
+# geschaetzt war schon einmal eine falsch (fuenf Minuten statt vierzehn).
 #
 # WARUM HIER UND NICHT AUF DEM SERVER GEBAUT WIRD. Bis KAN-98 lief der Bau auf
 # dem VPS. Er dauerte je Ausrollung fuenf bis zehn Minuten auf denselben zwei
@@ -29,9 +56,9 @@ on:
       - dev
   pull_request:
 
-# Lesend als Grundausstattung. Nur der Job build hebt sich "packages: write"
-# selbst an, und nur fuer sich. Ohne diese Zeile traegt jeder Job den
-# Vorgabesatz des Repositories, und der ist grosszuegiger als noetig.
+# Lesend als Grundausstattung. Nur die beiden Build-Jobs heben sich
+# "packages: write" selbst an, und nur fuer sich. Ohne diese Zeile traegt jeder
+# Job den Vorgabesatz des Repositories, und der ist grosszuegiger als noetig.
 permissions:
   contents: read
 
@@ -39,8 +66,10 @@ permissions:
 # der zweite Deploy sein Image, waehrend der erste noch neu startet, und auf
 # dem Server laeuft am Ende ein anderer Stand, als die Action meldet.
 #
-# cancel-in-progress ausdruecklich NUR fuer Pull Requests. Einen laufenden
-# Deploy abzubrechen hiesse, den Server mitten im Stop-Start stehen zu lassen.
+# Die Gruppe haengt am Workflow und nicht am Job, gilt also fuer den ganzen
+# Graphen. cancel-in-progress ausdruecklich NUR fuer Pull Requests. Einen
+# laufenden Deploy abzubrechen hiesse, den Server mitten im Stop-Start stehen
+# zu lassen.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -56,20 +85,55 @@ env:
 
 jobs:
   # ======================================================================
-  # 1. test
+  # marke
   # ======================================================================
-  test:
-    name: Tests
+  marke:
+    name: Marke bestimmen
     runs-on: ubuntu-latest
-    # Ohne diese Zeile gilt die Voreinstellung von sechs Stunden. Ein Fall,
-    # der wirklich haengt, blockiert den Runner dann einen halben Tag.
+    timeout-minutes: 5
+
+    # KEIN needs. Der Job laeuft sofort, parallel zu den Tests, und ist damit
+    # nie auf dem kritischen Pfad: wenn die Tests durch sind, liegt die Marke
+    # laengst vor.
     #
-    # Gemessen dauert der Job rund 14 Minuten (Lauf 34642034483, zwei Kerne:
-    # Backend rund 4, Frontend mit Installation und Bau der Rest). Dreissig
-    # lassen also Luft fuer einen langsameren Tag, ohne eine echte
-    # Haengepartie ueber Stunden mitzuschleppen. Wer die Zahl aendert, misst
-    # vorher nach; geschaetzt war sie schon einmal falsch.
-    timeout-minutes: 30
+    # Auch KEIN "if". Damit laeuft er bei jedem Pull Request mit, obwohl dort
+    # niemand die Marke braucht; das kostet rund fuenfzehn Sekunden Runner und
+    # sonst nichts. Die Bedingung ein drittes Mal hinzuschreiben waere der
+    # schlechtere Tausch: sie steht schon an build-backend und build-frontend,
+    # und drei Kopien laufen mit der Zeit auseinander. Ausgerollt wird davon
+    # nichts, deploy haengt an den beiden Build-Jobs.
+    #
+    # WARUM UEBERHAUPT EIN EIGENER JOB fuer eine einzige Zeile. build-backend,
+    # build-frontend und deploy brauchen denselben Wert. Drei Stellen, die ihn
+    # je fuer sich berechnen, sind genau das Duplikat, das mit der Zeit
+    # auseinanderlaeuft, und die Folge waere ein Server, der ein anderes Image
+    # faehrt, als die Action meldet.
+    outputs:
+      image_tag: ${{ steps.setzen.outputs.image_tag }}
+
+    steps:
+      - name: Marke setzen
+        id: setzen
+        run: |
+          # Zwei Marken je Image: sha-<kurzer hash> als eindeutiger Stand und
+          # :main als beweglicher Zeiger.
+          #
+          # Ausgerollt wird ueber den SHA und nicht ueber :main. Das ist der
+          # Unterschied zwischen "wir haben irgendwas Neues" und "auf dem
+          # Server laeuft Commit abc1234": ohne den SHA gibt es keinen
+          # definierten Punkt, auf den ein Rollback zurueckgeht.
+          echo "image_tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+  # ======================================================================
+  # backend-tests
+  # ======================================================================
+  backend-tests:
+    name: Backend-Tests
+    runs-on: ubuntu-latest
+    # Erwartet rund 3:15 einschliesslich Container und Aufsetzen, abgeleitet
+    # aus den Schrittzeiten von Lauf 34700332110 (siehe Kopf der Datei). Die
+    # Grenze greift nur bei einer echten Haengepartie.
+    timeout-minutes: 25
 
     services:
       # Echte Postgres statt H2 oder Testcontainers (CLAUDE.md Regel 8). Die
@@ -120,9 +184,6 @@ jobs:
       - name: Quellcode holen
         uses: actions/checkout@v7
 
-      # ----------------------------------------------------------------
-      # Backend
-      # ----------------------------------------------------------------
       - name: Java 21 einrichten
         uses: actions/setup-java@v6
         with:
@@ -148,17 +209,10 @@ jobs:
       - name: Maven-Wrapper ausfuehrbar machen
         working-directory: backend
         run: |
-          # backend/mvnw steht in Git mit Modus 100644, also ohne
-          # Ausfuehrungsbit. Auf einem Linux-Runner scheitert "./mvnw" daran
-          # mit "Permission denied"; auf Windows faellt es nie auf, weil dort
-          # mvnw.cmd laeuft.
-          #
-          # Das Bit wird mit KAN-101 zusaetzlich in Git gesetzt
-          # ("git update-index --chmod=+x backend/mvnw", siehe Umfang 5 des
-          # Tickets). Diese Zeile bleibt trotzdem stehen und ist keine
-          # Vertagung: sie kostet nichts und faengt den Fall ab, dass das Bit
-          # spaeter wieder verloren geht, etwa beim Auspacken eines Archivs
-          # oder ueber ein Dateisystem ohne Rechtebits.
+          # Das Ausfuehrungsbit steht seit KAN-101 in Git. Diese Zeile bleibt
+          # trotzdem stehen und ist keine Vertagung: sie kostet nichts und
+          # faengt den Fall ab, dass es wieder verloren geht, etwa beim
+          # Auspacken eines Archivs oder ueber ein Dateisystem ohne Rechtebits.
           chmod +x ./mvnw
 
       - name: Auf Azurite warten
@@ -183,7 +237,7 @@ jobs:
           echo "Azurite antwortet auf 127.0.0.1:10000 nicht." >&2
           exit 1
 
-      - name: Backend-Tests
+      - name: Tests
         working-directory: backend
         env:
           # POSTGRES_HOST ist localhost und nicht "db": Dienst-Container von
@@ -200,9 +254,27 @@ jobs:
           AZURITE_BLOB_PORT: 10000
         run: ./mvnw -B test
 
-      # ----------------------------------------------------------------
-      # Frontend
-      # ----------------------------------------------------------------
+  # ======================================================================
+  # frontend-tests
+  # ======================================================================
+  frontend-tests:
+    name: Frontend-Tests
+    runs-on: ubuntu-latest
+    # Erwartet rund 8:40, abgeleitet wie oben. Der laengste Ast des Graphen
+    # und damit der kritische Pfad; wer die Gesamtzeit druecken will, setzt
+    # hier an und nicht am Backend.
+    timeout-minutes: 30
+
+    # KEINE services. Das Frontend braucht weder Datenbank noch
+    # Blob-Emulator: MSW beantwortet die Requests im Testlauf, und
+    # typecheck, lint und build sprechen ohnehin mit niemandem. Allein das
+    # spart die 37 Sekunden, die das Hochfahren der beiden Container im
+    # gemeinsamen Job gekostet hat.
+
+    steps:
+      - name: Quellcode holen
+        uses: actions/checkout@v7
+
       - name: Node 24 einrichten
         uses: actions/setup-node@v7
         with:
@@ -242,7 +314,7 @@ jobs:
           PNPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
         run: pnpm install --frozen-lockfile
 
-      - name: Frontend-Tests
+      - name: Tests
         working-directory: frontend
         run: pnpm test
 
@@ -254,47 +326,88 @@ jobs:
         working-directory: frontend
         run: pnpm lint
 
-      - name: Frontend bauen
+      - name: Bauen
         working-directory: frontend
         run: pnpm build
 
   # ======================================================================
-  # 2. build
+  # tests (Gate)
   # ======================================================================
-  build:
-    name: Images bauen und nach GHCR schieben
-    needs: test
-    # Nur der Produktivstand wird gebaut. Ein Pull Request und ein Push auf
-    # dev enden nach dem Testjob.
+  # Fasst die beiden Testjobs zu EINEM Ergebnis zusammen. Das ist der Check,
+  # auf den der Branch-Schutz von main zeigt, und deshalb heisst er weiterhin
+  # "Tests": eine bestehende Regel muss durch den Umbau aus KAN-102 nicht
+  # angefasst werden.
+  #
+  # ================= DIE FALLE, DERENTWEGEN ES DIESEN JOB GIBT =============
+  # "if: always()" ist hier KEIN Schoenheitsfehler, sondern der Kern.
+  #
+  # Ohne die Zeile gilt die Vorgabe: ein Job mit needs laeuft nur, wenn alle
+  # Abhaengigkeiten erfolgreich waren. Faellt backend-tests um, wird dieser
+  # Job also nicht ROT, sondern UEBERSPRUNGEN. Und ein uebersprungener
+  # Pflicht-Check gilt dem Branch-Schutz als bestanden. Ergebnis waere ein
+  # roter Pull Request, der sich mergen laesst, und bei main gleich prod ist
+  # das genau der Fehler, gegen den KAN-101 gebaut wurde.
+  #
+  # Mit always() laeuft der Job immer und entscheidet selbst. Akzeptiert wird
+  # ausschliesslich "success": "skipped" und "cancelled" sind ausdruecklich
+  # KEIN Erfolg, sonst haette man sich die Falle nur eine Ebene tiefer wieder
+  # eingebaut.
+  # =========================================================================
+  tests:
+    name: Tests
+    needs: [backend-tests, frontend-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Ergebnisse der Teiljobs pruefen
+        env:
+          BACKEND: ${{ needs.backend-tests.result }}
+          FRONTEND: ${{ needs.frontend-tests.result }}
+        run: |
+          echo "backend-tests:  $BACKEND"
+          echo "frontend-tests: $FRONTEND"
+
+          fehler=0
+          for paar in "Backend:$BACKEND" "Frontend:$FRONTEND"; do
+            name="${paar%%:*}"
+            wert="${paar#*:}"
+            if [ "$wert" != "success" ]; then
+              echo "$name ist nicht gruen (Ergebnis: $wert)." >&2
+              fehler=1
+            fi
+          done
+          exit "$fehler"
+
+  # ======================================================================
+  # build-backend und build-frontend
+  # ======================================================================
+  # Zwei Jobs statt zweier Schritte in einem: die Images wissen nichts
+  # voneinander, und nebeneinander dauert der Bau so lange wie der laengere
+  # der beiden statt so lange wie ihre Summe (im Lauf 34700332110 brauchten
+  # sie nacheinander 3:55 und 2:00).
+  #
+  # Beide tragen "if" OHNE Statusfunktion. GitHub ergaenzt dort von selbst ein
+  # success(), die Jobs laufen also weiterhin nur nach gruenem Gate. Wer hier
+  # spaeter always() einsetzt, hebelt den Riegel aus.
+  build-backend:
+    name: Backend-Image bauen und schieben
+    needs: [tests, marke]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     permissions:
       contents: read
-      # Nur hier: allein dieser Job schreibt in die Registry. Der VPS bekommt
-      # niemals ein Token mit Schreibrechten, er liest mit einem PAT, das
-      # ausschliesslich read:packages traegt.
+      # Nur hier und in build-frontend: allein diese beiden Jobs schreiben in
+      # die Registry. Der VPS bekommt niemals ein Token mit Schreibrechten, er
+      # liest mit einem PAT, das ausschliesslich read:packages traegt.
       packages: write
-
-    outputs:
-      image_tag: ${{ steps.marke.outputs.image_tag }}
 
     steps:
       - name: Quellcode holen
         uses: actions/checkout@v7
-
-      - name: Marke bestimmen
-        id: marke
-        run: |
-          # Zwei Marken je Image: sha-<kurzer hash> als eindeutiger Stand und
-          # :main als beweglicher Zeiger.
-          #
-          # Ausgerollt wird ueber den SHA und nicht ueber :main. Das ist der
-          # Unterschied zwischen "wir haben irgendwas Neues" und "auf dem
-          # Server laeuft Commit abc1234": ohne den SHA gibt es keinen
-          # definierten Punkt, auf den ein Rollback zurueckgeht.
-          echo "image_tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
       - name: Buildx einrichten
         uses: docker/setup-buildx-action@v4
@@ -309,7 +422,7 @@ jobs:
           # unter permissions stehen.
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Backend-Image
+      - name: Bauen und schieben
         uses: docker/build-push-action@v7
         with:
           context: ./backend
@@ -319,22 +432,49 @@ jobs:
           target: runtime
           push: true
           tags: |
-            ${{ env.IMAGE_NAMESPACE }}/eportfolio-backend:${{ steps.marke.outputs.image_tag }}
+            ${{ env.IMAGE_NAMESPACE }}/eportfolio-backend:${{ needs.marke.outputs.image_tag }}
             ${{ env.IMAGE_NAMESPACE }}/eportfolio-backend:main
           # Eigener scope je Dienst. Mit einem gemeinsamen Zwischenspeicher
-          # verdraengen sich Backend und Frontend gegenseitig, und jeder Lauf
-          # dauert so lange wie der erste.
+          # verdraengen Backend und Frontend einander, und jeder Lauf dauert
+          # so lange wie der erste; seit sie parallel laufen, wuerden sie sich
+          # ausserdem gegenseitig den Eintrag ueberschreiben. Der Bau braeche
+          # davon nicht ab, er waere nur jedes Mal wieder kalt.
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
 
-      - name: Frontend-Image
+  build-frontend:
+    name: Frontend-Image bauen und schieben
+    needs: [tests, marke]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Quellcode holen
+        uses: actions/checkout@v7
+
+      - name: Buildx einrichten
+        uses: docker/setup-buildx-action@v4
+
+      - name: An GHCR anmelden
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bauen und schieben
         uses: docker/build-push-action@v7
         with:
           context: ./frontend
           target: runtime
           push: true
           tags: |
-            ${{ env.IMAGE_NAMESPACE }}/eportfolio-frontend:${{ steps.marke.outputs.image_tag }}
+            ${{ env.IMAGE_NAMESPACE }}/eportfolio-frontend:${{ needs.marke.outputs.image_tag }}
             ${{ env.IMAGE_NAMESPACE }}/eportfolio-frontend:main
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
@@ -361,15 +501,19 @@ jobs:
             VITE_IMPRINT_EMAIL=${{ secrets.VITE_IMPRINT_EMAIL }}
 
   # ======================================================================
-  # 3. deploy
+  # deploy
   # ======================================================================
   deploy:
     name: Auf dem VPS ausrollen
-    # Bewusst ohne eigenes "if". Die Bedingung erbt dieser Job ueber "needs":
-    # wird build uebersprungen, gilt fuer deploy dieselbe Bedingung als nicht
-    # erfuellt, und er laeuft nicht mit. Eine zweite, gleichlautende Zeile
-    # koennte mit der Zeit von der ersten abweichen.
-    needs: build
+    # Bewusst ohne eigenes "if". Die Bedingung erben wir ueber "needs": auf
+    # einem Pull Request und auf dev werden build-backend und build-frontend
+    # uebersprungen, und ein uebersprungener Vorgaenger ueberspringt jeden Job,
+    # der ihn braucht und selbst kein "if" traegt. Dass marke dort gruen ist,
+    # aendert daran nichts, es genuegt ein uebersprungener Vorgaenger.
+    #
+    # Eine zweite, gleichlautende if-Zeile koennte mit der Zeit von den beiden
+    # an den Build-Jobs abweichen.
+    needs: [marke, build-backend, build-frontend]
     runs-on: ubuntu-latest
     # Knapper als bei den anderen beiden: der eigentliche Ausfall auf dem
     # Server dauert Sekunden, und die Gesundheitsschleife gibt nach fuenf
@@ -379,7 +523,7 @@ jobs:
 
     # KEIN actions/checkout. Dieser Job braucht den Quellcode nicht: er setzt
     # eine Marke, zieht zwei Images und startet neu. Alles, was er dazu wissen
-    # muss, steht in den Secrets und in needs.build.outputs.
+    # muss, steht in den Secrets und in needs.marke.outputs.
 
     steps:
       - name: SSH-Zugang einrichten
@@ -403,7 +547,7 @@ jobs:
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
-          IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
+          IMAGE_TAG: ${{ needs.marke.outputs.image_tag }}
         run: |
           # Der Hostname steht ausdruecklich als Secret und nicht im Workflow:
           # ein oeffentlich gewordener Workflow soll nicht die Serveradresse
@@ -466,8 +610,8 @@ jobs:
             # Eine Erkennung ueber den Commit-Vergleich beantwortet die
             # falsche Frage: sie vergleicht Push gegen Push, waehrend es auf
             # den Abstand zwischen SERVERSTAND und neuem Stand ankaeme.
-            # Scheitert ein Lauf in build oder deploy, bleibt der Server
-            # zurueck; der naechste Push vergleicht ab dem gescheiterten
+            # Scheitert ein Lauf in einem der Build-Jobs oder in deploy,
+            # bleibt der Server zurueck; der naechste Push vergleicht ab dem gescheiterten
             # Commit, saehe keine Migration mehr und rollte sie ungesichert
             # aus. Genau der Fall, gegen den die Sicherung da ist.
             #
