@@ -30,6 +30,8 @@ Alle Versionen aus `backend/pom.xml` bzw. `frontend/package.json`.
 - `frontend/`: React/Vite-App, inkl. `Dockerfile` und `nginx.conf`
 - `docs/`: diese Dokumentation
 - `compose.base.yml`: gemeinsame Grundlage; daneben `compose.dev.yml`, `compose.artifact.yml` und `compose.prod.yml`, je eine Betriebsart
+- `.github/workflows/deploy.yml`: testet jeden Pull Request und rollt einen
+  Merge nach `main` von selbst auf den Server aus (KAN-101)
 - `eportfolio.ps1`: Menü für Starten, Bauen, Logs, Tests, Saatdaten und Aufräumen
 - `stammdaten-seeder.sh` und `stammdaten-seeder-entfernen.sh`: die fünf
   Fakultäten, 75 Studiengänge und ihre Module, erhoben aus der
@@ -205,6 +207,20 @@ und Container. Niemals ein Schlüssel oder Passwort:
 Konfiguration: Speicher-Adapter=azure, Speicherkonto=..., Container=...
 Konfiguration: Mail-Adapter=smtp, Absender=...
 ```
+
+## Ausrollen
+
+`main` ist der Produktivstand, `dev` der Entwicklungsstand. Ein Merge nach
+`main` rollt sich selbst aus: die Action testet, baut beide Images, schiebt sie
+nach GHCR, und der Server zieht sie und startet neu. **Ein fehlgeschlagener
+Test oder Build erreicht den Server nie.** Auf `dev` laufen nur die Tests.
+
+Auf dem Server ist im Normalbetrieb nichts mehr zu tun, insbesondere kein
+`git pull`. Ausgerollt wird über `sha-<kurzer commit-hash>`, ein Rollback ist
+deshalb ein geänderter `IMAGE_TAG` in der `.env` plus `pull` und `up -d`.
+
+Einrichtung, Secrets, Rollback und die Fehlerbilder der Action stehen in
+[docs/SETUP.md](docs/SETUP.md), Abschnitt 10.
 
 ## Links
 

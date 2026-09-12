@@ -22,6 +22,26 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
 
   backend:
+    # Eigene Marke fuer die Stufe dev (KAN-101).
+    #
+    # OHNE DIESE ZEILE TRAEGT DAS DEV-IMAGE DENSELBEN NAMEN WIE DAS
+    # AUSLIEFERUNGS-IMAGE. Die drei Betriebsarten liegen zwar in getrennten
+    # Compose-Projekten, Marken gelten aber fuer den ganzen Docker-Dienst.
+    # Wer erst DEV baut und danach ARTIFACT-DEV oder PROD startet, bekaeme von
+    # Compose kein neues Image, sondern das vorhandene: "up" baut nur, wenn
+    # zur Marke nichts da ist. Auf dem Auslieferungsstand liefe dann die
+    # Werkzeugkette der Entwicklung, und zwar ohne jede Meldung.
+    #
+    # ARTIFACT und PROD brauchen keine solche Zeile: beide bauen die Stufe
+    # runtime, ihre Images sind also tatsaechlich dasselbe.
+    #
+    # FEST UND OHNE ${IMAGE_TAG}, anders als in compose.base.yml. Waere der
+    # Wert hier einsetzbar, gaelte der Schutz nur, solange IMAGE_TAG leer ist:
+    # nach einem Rollback-Versuch stuende in der .env eine Marke, und DEV
+    # loeste wieder auf denselben Namen auf wie der Auslieferungsstand. Zu
+    # ziehen gibt es fuer DEV ohnehin nichts, diese Betriebsart baut immer
+    # selbst.
+    image: ghcr.io/omarziyada1/eportfolio-backend:local-dev
     build:
       target: dev
     environment:
@@ -63,6 +83,8 @@ services:
       - azurite-data:/data
 
   frontend:
+    # Siehe die Begruendung beim Dienst backend (KAN-101).
+    image: ghcr.io/omarziyada1/eportfolio-frontend:local-dev
     build:
       target: dev
     # node_modules liegt im benannten Volume und ist beim ersten Start leer.

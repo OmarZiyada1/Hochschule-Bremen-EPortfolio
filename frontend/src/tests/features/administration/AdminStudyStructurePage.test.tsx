@@ -115,30 +115,54 @@ describe("AdminStudyStructurePage", () => {
     /* Ohne Vorauswahl stuenden die beiden rechten Spalten leer da und die
        Seite saehe aus, als sei nichts angelegt.
 
-       Die Wartezeit steht ausdruecklich da und liegt ueber der Vorgabe von
-       einer Sekunde: die Vorauswahl entsteht erst, nachdem zwei Abfragen
-       nacheinander geantwortet haben (Fakultaeten, dann deren
-       Studiengaenge). Im Einzellauf reicht die Vorgabe, im vollstaendigen
-       Lauf nicht immer, und der Test war zeitweise rot ohne dass sich etwas
-       am Verhalten geaendert haette. */
+       DREI WARTEZEITEN, WEIL DREI ABFRAGEN AUFEINANDER WARTEN. Die Seite
+       baut die Vorauswahl in einer Kette auf, nicht in einem Zug
+       (AdminStudyStructurePage.tsx): faculties antwortet, ein Effekt
+       schreibt ?faculty= in die URL, erst dadurch startet
+       studyPrograms(facultyId); deren Antwort setzt ?studyProgram=, und erst
+       dadurch wird modules(studyProgramId) ueberhaupt eingeschaltet
+       (enabled). Zwischen je zwei Behauptungen hier liegt also ein eigener
+       Umlauf ueber MSW und einen weiteren Query-Zyklus. Jede Stufe braucht
+       ihre eigene Wartezeit; eine kurze an der zweiten oder dritten Stelle
+       waere die knappste im ganzen Ablauf, obwohl sie am weitesten hinten
+       haengt.
+
+       Zwanzig Sekunden je Stufe sind derselbe Wert, den die Editor-Tests als
+       WAIT fuehren und die Routentests als LAZY_ROUTE. Die Vorgabe von einer
+       Sekunde reicht im Einzellauf, im vollstaendigen nicht immer, und der
+       Test war zeitweise rot, ohne dass sich am Verhalten etwas geaendert
+       haette. Seit KAN-101 haelt ein roter Lauf den Merge nach main an.
+
+       Deshalb traegt dieser Fall ein EIGENES Zeitbudget (der dritte
+       Parameter von it). Drei mal zwanzig Sekunden passen nicht in die
+       dreissig aus vite.config.ts; ohne das eigene Budget stuerbe der Fall
+       mit "Test timed out", bevor waitFor sagen kann, was es nicht gefunden
+       hat. Aufteilen liesse er sich nicht: jede Stufe setzt die vorige
+       voraus. */
     await waitFor(
       () =>
         expect(screen.getByRole("button", { name: FK1.name })).toHaveAttribute(
           "aria-pressed",
           "true"
         ),
-      { timeout: 10_000 }
+      { timeout: 20_000 }
     )
     await waitFor(
       () =>
         expect(
           screen.getByRole("button", { name: "Bauingenieurwesen" })
         ).toHaveAttribute("aria-pressed", "true"),
-      { timeout: 10_000 }
+      { timeout: 20_000 }
     )
-    /* Und die Module des vorgewaehlten Studiengangs stehen daneben. */
-    expect(await screen.findByText("Technische Mechanik")).toBeInTheDocument()
-  })
+    /* Und die Module des vorgewaehlten Studiengangs stehen daneben. Dritte
+       Stufe der Kette, also ausdruecklich dieselbe Grenze und nicht die
+       Vorgabe von einer Sekunde. */
+    expect(
+      await screen.findByText("Technische Mechanik", undefined, {
+        timeout: 20_000,
+      })
+    ).toBeInTheDocument()
+  }, 70_000)
 
   it("schraenkt mit der Auswahl links die Liste rechts ein", async () => {
     const requests: URL[] = []

@@ -129,12 +129,21 @@ export default defineConfig({
     // geprueft, nicht ueber gerendertes CSS. Tailwind im Testlauf zu
     // uebersetzen kostet Zeit und belegt nichts zusaetzlich.
     css: false,
-    // Zwanzig Sekunden statt der fuenf aus der Voreinstellung. Eine Seite
+    // Dreissig Sekunden statt der fuenf aus der Voreinstellung. Eine Seite
     // mit dem Editor braucht in jsdom mehrere Sekunden, bis sie steht, und
     // unter Last deutlich laenger: mit der Voreinstellung fielen im vollen
     // Lauf wechselnde Faelle aus, die einzeln gruen sind. Die Faelle, die
     // ihr Limit selbst setzen, behalten es; global gilt eine Grenze, die
     // eine echte Haengepartie weiterhin abbricht.
-    testTimeout: 20000,
+    //
+    // Von zwanzig auf dreissig mit KAN-101, aus zwei Gruenden. Erstens laeuft
+    // dieser Lauf jetzt auch in GitHub Actions auf zwei Kernen, wo die
+    // parallelen Faelle einander deutlich staerker im Weg stehen als auf
+    // einem Entwicklerrechner. Zweitens warten die lastempfindlichen Faelle
+    // selbst bis zu zwanzig Sekunden; laege die globale Grenze gleichauf,
+    // braeche der Fall mit "Test timed out" ab, bevor waitFor sagen kann,
+    // wonach es gesucht hat und was stattdessen im DOM stand. Ein groesseres
+    // Limit kostet nur dort Zeit, wo ohnehin schon etwas kaputt ist.
+    testTimeout: 30000,
   },
 })

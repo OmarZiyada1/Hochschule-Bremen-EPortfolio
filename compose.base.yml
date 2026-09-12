@@ -43,6 +43,31 @@ services:
       retries: 20
 
   backend:
+    # Der Name, unter dem dieses Image in der Registry liegt (KAN-101).
+    #
+    # DER SCHLUESSEL STEHT NEBEN "build", NICHT STATT DESSEN. Lokal baut
+    # Compose weiterhin und vergibt dabei genau diesen Namen; auf dem Server
+    # wird nur noch gezogen ("pull" und "up -d --no-build"), und ohne einen
+    # image-Schluessel wuesste Compose dort nicht, was es ziehen soll.
+    #
+    # WARUM DER VORGABEWERT "local" HEISST UND NICHT "latest". Unter diesem
+    # Namen liegt nach einem lokalen Bau das Ergebnis DIESES Rechners, und das
+    # ist etwas anderes als der Stand, den die Action nach GHCR schiebt. Ein
+    # ":latest" behauptete das Gegenteil. Gezogen wird ohnehin nie mit dem
+    # Vorgabewert: der Deploy-Schritt setzt IMAGE_TAG in der .env auf
+    # sha-<kurzer commit-hash>, und genau darueber laeuft auch ein Rollback.
+    #
+    # IMAGE_TAG liest COMPOSE aus der .env, nicht die Anwendung. Der Hinweis
+    # aus Contract §6.8, dass eine .env den Container im Profil prod nicht von
+    # selbst erreicht, greift hier also nicht: der Wert wird beim Ersetzen
+    # dieser Zeile gebraucht und nicht im Prozess.
+    #
+    # WER DEN NAMENSRAUM AENDERT, AENDERT IHN AN VIER STELLEN: hier, beim
+    # Dienst frontend darunter, in compose.dev.yml und in
+    # .github/workflows/deploy.yml (dort unter IMAGE_NAMESPACE). Die Action
+    # schiebt sonst woanders hin, als der Server zieht, und der Fehler faellt
+    # erst beim Ausrollen auf.
+    image: ghcr.io/omarziyada1/eportfolio-backend:${IMAGE_TAG:-local}
     build:
       context: ./backend
     depends_on:
@@ -66,6 +91,8 @@ services:
       start_period: 40s
 
   frontend:
+    # Siehe die Begruendung beim Dienst backend (KAN-101).
+    image: ghcr.io/omarziyada1/eportfolio-frontend:${IMAGE_TAG:-local}
     build:
       context: ./frontend
       # Die Angaben des Impressums (KAN-100).
