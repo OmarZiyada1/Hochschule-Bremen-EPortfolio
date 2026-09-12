@@ -1366,17 +1366,40 @@ im Normalbetrieb **nichts mehr zu tun**, insbesondere kein `git pull`: das
 Repository unter `/opt/eportfolio` wird nur noch für die Compose-Dateien und
 die `.env` gebraucht, der Code kommt als fertiges Image.
 
-`.github/workflows/deploy.yml` führt drei Jobs nacheinander aus:
+`.github/workflows/deploy.yml` führt sieben Jobs aus, teils nebeneinander
+(Zuschnitt aus KAN-102):
+
+```
+backend-tests  ─┐
+                ├─ tests ─┬─ build-backend  ─┐
+frontend-tests ─┘         └─ build-frontend ─┴─ deploy
+
+marke laeuft daneben, ohne Vorgaenger, und liefert seine Marke an
+build-backend, build-frontend und deploy.
+```
 
 | Job | Wann | Was |
 | --- | --- | --- |
-| `test` | jeder Pull Request, jeder Push auf `main` oder `dev` | `./mvnw test` gegen Postgres 16 und Azurite, danach `pnpm test`, `typecheck`, `lint`, `build` |
-| `build` | nur Push auf `main`, nur nach grünem `test` | beide Images bauen und nach GHCR schieben, je zweifach markiert |
-| `deploy` | nur nach grünem `build` | über SSH als `deploy`: sichern, ziehen, neu starten, auf die Gesundheitsprüfung warten |
+| `marke` | immer | bestimmt `sha-<kurzer commit-hash>`; ohne Abhängigkeit, läuft parallel zu den Tests |
+| `backend-tests` | jeder Pull Request, jeder Push auf `main` oder `dev` | `./mvnw test` gegen Postgres 16 und Azurite |
+| `frontend-tests` | wie oben | `pnpm test`, `typecheck`, `lint`, `build`; **ohne** Dienst-Container, MSW beantwortet die Requests |
+| `tests` | nach beiden Testjobs, immer | das Gate: fasst beide zu einem Ergebnis zusammen. Dieser Check heißt `Tests` und ist der, auf den der Branch-Schutz zeigt |
+| `build-backend` | nur Push auf `main`, nur nach grünem `tests` | Backend-Image bauen und nach GHCR schieben, zweifach markiert |
+| `build-frontend` | wie oben | Frontend-Image, dazu die vier Impressumswerte als build-args |
+| `deploy` | nur wenn **beide** Build-Jobs grün sind (und `marke`, sonst wäre die Marke nicht zu erreichen) | über SSH als `deploy`: sichern, ziehen, neu starten, auf die Gesundheitsprüfung warten |
 
 Der Riegel liegt in der Abhängigkeit der Jobs: **ein roter Test erreicht den
-Server nie**, und der Server bleibt dabei unverändert stehen. Auf `dev` läuft
-ausschließlich `test`, dort wird nichts gebaut und nichts ausgerollt.
+Server nie**, und der Server bleibt dabei unverändert stehen. Auf `dev` laufen
+die beiden Testjobs, das Gate und `marke`; gebaut und ausgerollt wird nichts.
+Für einen Pull Request gilt dasselbe.
+
+**Warum es den Gate-Job `tests` gibt und warum er `if: always()` trägt.** Ein
+Job mit `needs` läuft nach Vorgabe nur, wenn alle Abhängigkeiten erfolgreich
+waren. Ohne `always()` würde das Gate bei einem roten Teiljob deshalb nicht
+rot, sondern **übersprungen**, und ein übersprungener Pflicht-Check gilt dem
+Branch-Schutz als bestanden. Ein roter Pull Request wäre dann mergefähig. Der
+Job prüft deshalb selbst und akzeptiert ausschließlich `success`; `skipped` und
+`cancelled` sind Fehlschläge.
 
 Die Ausrollung dauert Sekunden statt der fünf bis zehn Minuten, die ein Bau
 auf den zwei vCPU des VPS gekostet hat. **Ein Ausfall bleibt es trotzdem:**
@@ -1448,7 +1471,7 @@ Fehlt das Verzeichnis, **bricht die Ausrollung ab** und sagt warum.
 Warum ohne Fallunterscheidung, obwohl nur Migrationen gefährlich sind: eine
 Erkennung über den Commit-Vergleich beantwortet die falsche Frage. Sie
 vergleicht Push gegen Push, während es auf den Abstand zwischen **Serverstand**
-und neuem Stand ankäme. Scheitert ein Lauf in `build` oder `deploy`, bleibt der
+und neuem Stand ankäme. Scheitert ein Lauf in einem der Build-Jobs oder in `deploy`, bleibt der
 Server zurück; der nächste Push verglich dann ab dem gescheiterten Commit, sähe
 keine Migration mehr und rollte sie ungesichert aus. Genau der Fall, gegen den
 die Sicherung da ist. Ein `pg_dump` dieses Bestands kostet Sekunden.
@@ -1552,13 +1575,19 @@ weiter unten gebraucht.
 #### Branch-Schutz für `main`
 
 Der Riegel in den Jobs verhindert, dass ein roter Stand **ausgerollt** wird:
-schlägt `test` nach dem Merge fehl, laufen `build` und `deploy` nicht, und auf
-dem Server bleibt der alte Stand. Er verhindert nicht, dass ein roter Pull
-Request überhaupt gemergt wird. Dafür braucht es eine Regel unter
+schlägt ein Testjob nach dem Merge fehl, laufen die Build-Jobs und `deploy`
+nicht, und auf dem Server bleibt der alte Stand. Er verhindert nicht, dass ein
+roter Pull Request überhaupt gemergt wird. Dafür braucht es eine Regel unter
 *Settings → Branches → Add branch ruleset* für `main`:
 
 * *Require a pull request before merging*
 * *Require status checks to pass* mit dem Check **Tests**
+
+Ausdrücklich **`Tests` und nicht** `Backend-Tests` oder `Frontend-Tests`: das
+Gate fasst beide zusammen, und wer die Einzelchecks einträgt, muss die Regel
+bei jedem weiteren Teiljob nachziehen. Der Name ist seit KAN-101 derselbe
+geblieben, eine bestehende Regel musste durch den Umbau nicht angefasst
+werden.
 
 Ohne diese Regel bleibt der Server zwar sauber, aber `main` trägt einen roten
 Stand, und die nächste Ausrollung ist blockiert, bis ihn jemand repariert.
