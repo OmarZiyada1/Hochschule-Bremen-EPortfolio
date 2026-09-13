@@ -1,10 +1,14 @@
 import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { EditorContent, useEditor, type Editor } from "@tiptap/react"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
-import { EditorHeader } from "@/features/project-content/components/EditorHeader"
+import type { ProjectStatus } from "@/api/types"
+import {
+  EditorHeader,
+  type EditorMode,
+} from "@/features/project-content/components/EditorHeader"
 import { createEditorExtensions } from "@/features/project-content/editorSchema"
 import type { AutosaveState } from "@/features/project-content/hooks/useAutosave"
 import { renderWithProviders } from "@/tests/render"
@@ -24,8 +28,10 @@ import { renderWithProviders } from "@/tests/render"
  *
  * <p>Seit dem Umzug der Formatierungsleiste steht ausserdem fest: die
  * Leiste steht dauerhaft in der Kopfzeile, ihre aktiven Zustaende folgen
- * der Textmarke, ohne Schreibrecht ist sie deaktiviert, und der Umschalter
- * Vorschau/Bearbeiten meldet den Wechsel.
+ * der Textmarke, und ohne Schreibrecht ist sie deaktiviert. Seit KAN-104
+ * wechselt der Umschalter an Ort und Stelle zwischen Schreibflaeche und
+ * Vorschau, und im Vorschau-Modus traegt die Werkzeugzeile nur noch Drucken
+ * und Hell/Dunkel.
  */
 
 const WAIT = { timeout: 20000 }
@@ -34,23 +40,32 @@ let captured: Editor | null = null
 
 function Harness({
   mayWrite = true,
-  onPreview = () => undefined,
+  initialMode = "edit",
+  onModeToggle = () => undefined,
   onShowInfo = () => undefined,
   onPrint = () => undefined,
+  onWithdraw = () => undefined,
   mayRunWorkflow = false,
   autosaveState = "idle",
+  status = "DRAFT",
 }: {
   mayWrite?: boolean
-  onPreview?: () => void
+  initialMode?: EditorMode
+  onModeToggle?: () => void
   onShowInfo?: () => void
   onPrint?: () => void
+  onWithdraw?: () => void
   mayRunWorkflow?: boolean
   autosaveState?: AutosaveState
+  status?: ProjectStatus
 }) {
   const editor = useEditor({
     extensions: createEditorExtensions(),
     content: "<p>Ein Absatz</p>",
   })
+  /* Der Modus liegt wie in der Seite ausserhalb der Kopfzeile; die Huelle
+     haelt ihn, damit ein Test den Wechsel samt Beschriftung sieht. */
+  const [mode, setMode] = useState<EditorMode>(initialMode)
   /* Im Effekt und nicht beim Rendern: eine Zuweisung an eine Variable
      ausserhalb der Komponente waere waehrend des Renderns eine
      Nebenwirkung (react-hooks/globals). */
@@ -65,15 +80,19 @@ function Harness({
     <div>
       <EditorHeader
         editor={editor}
-        status="DRAFT"
+        status={status}
         autosaveState={autosaveState}
         busy={false}
         mayRunWorkflow={mayRunWorkflow}
         mayWrite={mayWrite}
         onSubmit={() => undefined}
-        onWithdraw={() => undefined}
+        onWithdraw={onWithdraw}
         onBack={() => undefined}
-        onPreview={onPreview}
+        mode={mode}
+        onModeToggle={() => {
+          onModeToggle()
+          setMode((current) => (current === "edit" ? "preview" : "edit"))
+        }}
         onPrint={onPrint}
         printing={false}
         onShowInfo={onShowInfo}
@@ -146,11 +165,15 @@ describe("EditorHeader", () => {
   })
 
   it("fuehrt die uebrigen Aktionen im Menue", async () => {
-    const onPreview = vi.fn()
+    const onModeToggle = vi.fn()
     const onShowInfo = vi.fn()
     const user = userEvent.setup()
     renderWithProviders(
-      <Harness mayRunWorkflow onPreview={onPreview} onShowInfo={onShowInfo} />
+      <Harness
+        mayRunWorkflow
+        onModeToggle={onModeToggle}
+        onShowInfo={onShowInfo}
+      />
     )
 
     await user.click(
@@ -169,14 +192,18 @@ describe("EditorHeader", () => {
         name: "Vorschau",
       })
     )
-    expect(onPreview).toHaveBeenCalledTimes(1)
+    expect(onModeToggle).toHaveBeenCalledTimes(1)
 
-    /* Einreichen steht im Status DRAFT und nur fuer die Autor:in (§4.1, §5). */
+    /* Einreichen steht im Status DRAFT und nur fuer die Projektseite
+       (§4.1, §5); der Menueeintrag des Umschalters nennt jetzt die
+       Gegenrichtung. */
     await user.click(screen.getByRole("button", { name: "Weitere Aktionen" }))
+    const next = await screen.findByRole("menu", {}, WAIT)
     expect(
-      within(await screen.findByRole("menu", {}, WAIT)).getByRole("menuitem", {
-        name: "Einreichen",
-      })
+      within(next).getByRole("menuitem", { name: "Einreichen" })
+    ).toBeInTheDocument()
+    expect(
+      within(next).getByRole("menuitem", { name: "Bearbeiten" })
     ).toBeInTheDocument()
   })
 
@@ -206,21 +233,128 @@ describe("EditorHeader", () => {
     expect(screen.getByRole("button", { name: "Zitat" })).toBeDisabled()
   })
 
-  it("fuehrt mit einer Schaltflaeche in die Vorschau und nicht mit einem Schalter", async () => {
-    const onPreview = vi.fn()
-    renderWithProviders(<Harness onPreview={onPreview} />)
+  it("schaltet mit einem Knopf mit wechselnder Beschriftung und nicht mit einem Schalter", async () => {
+    const onModeToggle = vi.fn()
+    const user = userEvent.setup()
+    renderWithProviders(<Harness onModeToggle={onModeToggle} />)
 
-    /* Der Editor kennt nur eine Richtung; ein Schalter mit zwei Zustaenden
-       lud dazu ein, „Bearbeiten" anzuklicken, obwohl man darin war
-       (Nutzerentscheidung). Zurueck fuehrt der Schalter auf der
-       oeffentlichen Seite. */
+    /* Kein Schiebeschalter (KAN-104, Entscheidung): ein Knopf, der nennt,
+       wohin der Druck fuehrt. */
     expect(screen.queryByRole("switch")).not.toBeInTheDocument()
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Vorschau" }, WAIT)
-    )
-    expect(onPreview).toHaveBeenCalledTimes(1)
+    const toggle = await screen.findByRole("button", { name: "Vorschau" }, WAIT)
+    await user.click(toggle)
+    expect(onModeToggle).toHaveBeenCalledTimes(1)
+
+    /* Derselbe Knoten mit neuer Beschriftung, und der Fokus bleibt darauf
+       (SC 2.4.3). Kein aria-pressed: der Name traegt die Handlung. */
+    const edit = screen.getByRole("button", { name: "Bearbeiten" })
+    expect(edit).toBe(toggle)
+    expect(edit).toHaveFocus()
+    expect(edit).not.toHaveAttribute("aria-pressed")
+
+    await user.click(edit)
+    expect(screen.getByRole("button", { name: "Vorschau" })).toBe(toggle)
+    expect(toggle).toHaveFocus()
   })
+
+  it("laesst im Vorschau-Modus nur Drucken und Hell/Dunkel in der Werkzeugzeile", async () => {
+    const { container } = renderWithProviders(<Harness initialMode="preview" />)
+
+    await screen.findByRole("button", { name: "Bearbeiten" }, WAIT)
+
+    /* Rueckgaengig, Wiederholen, Formatierung und Inhaltsverzeichnis
+       entfallen; es gibt nichts, worauf sie wirken koennten. */
+    for (const name of ["Rückgängig", "Wiederholen", "Fett", "Zitat"]) {
+      expect(screen.queryByRole("button", { name }), name).toBeNull()
+    }
+    expect(
+      screen.queryByRole("button", { name: /Inhaltsverzeichnis/ })
+    ).toBeNull()
+    expect(container.querySelector("[data-selection-toolbar]")).toBeNull()
+
+    /* Drucken und Hell/Dunkel bleiben an ihrem Platz. */
+    const tools = container.querySelector<HTMLElement>(
+      '[data-header-area="tools"]'
+    )
+    expect(tools).not.toBeNull()
+    const area = within(tools as HTMLElement)
+    expect(area.getByRole("button", { name: "Als PDF drucken" })).toBeVisible()
+    expect(
+      area.getByRole("button", { name: /Modus einschalten/ })
+    ).toBeVisible()
+
+    /* Kein Trenner ohne linken Nachbarn: der Ausdruck ist der erste
+       Eintrag der Zeile. */
+    expect(tools?.querySelector('[data-slot="separator"]')).toBeNull()
+  })
+
+  it("stellt die Schreibwerkzeuge beim Wechsel zurueck in die Schreibflaeche wieder her", async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<Harness initialMode="preview" />)
+
+    await user.click(
+      await screen.findByRole("button", { name: "Bearbeiten" }, WAIT)
+    )
+
+    expect(
+      await screen.findByRole("button", { name: "Fett" }, WAIT)
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Rückgängig" })).toBeVisible()
+  })
+
+  it("laesst Zurueckziehen in beiden Modi sichtbar und bedienbar", async () => {
+    /* Bei SUBMITTED zieht die Projektseite zurueck (§4.1, §5). Der Wechsel in
+       die Vorschau darf diesen Weg nicht verstecken. */
+    const onWithdraw = vi.fn()
+    const user = userEvent.setup()
+    renderWithProviders(
+      <Harness
+        status="SUBMITTED"
+        mayRunWorkflow
+        mayWrite={false}
+        onWithdraw={onWithdraw}
+      />
+    )
+
+    const withdraw = await screen.findByRole(
+      "button",
+      { name: "Zurückziehen" },
+      WAIT
+    )
+    expect(withdraw).toBeEnabled()
+
+    await user.click(screen.getByRole("button", { name: "Vorschau" }))
+    await screen.findByRole("button", { name: "Bearbeiten" }, WAIT)
+
+    const inPreview = screen.getByRole("button", { name: "Zurückziehen" })
+    expect(inPreview).toBeEnabled()
+    await user.click(inPreview)
+    expect(onWithdraw).toHaveBeenCalledTimes(1)
+  })
+
+  it("gibt den Fokus nach dem Menueeintrag an den Menueausloeser zurueck", async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<Harness />)
+
+    const trigger = await screen.findByRole(
+      "button",
+      { name: "Weitere Aktionen" },
+      WAIT
+    )
+    await user.click(trigger)
+    await user.click(
+      within(await screen.findByRole("menu", {}, WAIT)).getByRole("menuitem", {
+        name: "Vorschau",
+      })
+    )
+
+    /* Der Eintrag ist mit dem Menue fort; ohne Rueckgabe fiele der Fokus auf
+       den Seitenanfang (SC 2.4.3). */
+    await waitFor(() => expect(trigger).toHaveFocus(), WAIT)
+    expect(screen.getByRole("button", { name: "Bearbeiten" })).toBeVisible()
+  })
+
   it("loest den Ausdruck aus, ohne Schreibrecht ebenso", async () => {
     /*
      * Die Aktion „PDF" (KAN-41) steht am Ende der Werkzeugzeile, hinter der

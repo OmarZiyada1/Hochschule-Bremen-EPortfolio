@@ -150,7 +150,8 @@ describe("Der Druckkopf", () => {
       <ProjectPrintHeader project={full()} coverUrl={null} now={PRINTED_AT} />
     )
 
-    expect(screen.getByText("Study programme")).toBeInTheDocument()
+    /* Seit KAN-104 wie in Projektinformationen und Filtern. */
+    expect(screen.getByText("Degree programme")).toBeInTheDocument()
     expect(screen.getByText("Printed on")).toBeInTheDocument()
     await i18n.changeLanguage("de")
   })

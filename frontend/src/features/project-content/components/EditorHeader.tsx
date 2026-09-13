@@ -1,7 +1,6 @@
 import { useEditorState, type Editor } from "@tiptap/react"
 import {
   ArrowLeftIcon,
-  EyeIcon,
   InfoIcon,
   ListTreeIcon,
   MenuIcon,
@@ -14,6 +13,10 @@ import type { RefObject } from "react"
 import { useTranslation } from "react-i18next"
 
 import type { ProjectStatus } from "@/api/types"
+import {
+  PreviewModeButton,
+  PreviewModeLabel,
+} from "@/components/common/PreviewModeButton"
 import { ThemeToggle } from "@/components/common/ThemeToggle"
 import {
   applyTableOfContents,
@@ -38,6 +41,12 @@ import { SelectionToolbarBar } from "@/features/project-content/components/Selec
 import type { AutosaveState } from "@/features/project-content/hooks/useAutosave"
 
 /**
+ * Die beiden Ansichten des Editors (KAN-104): die Schreibflaeche und die
+ * Vorschau an derselben Stelle.
+ */
+export type EditorMode = "edit" | "preview"
+
+/**
  * Die Kopfzeile des Editors: Zurueck ganz links, dann Rueckgaengig und
  * Wiederholen, ein Trenner, die Formatierungsleiste, rechts Speicherzustand,
  * der Umschalter Vorschau/Bearbeiten und die Workflow-Aktion.
@@ -52,11 +61,25 @@ import type { AutosaveState } from "@/features/project-content/hooks/useAutosave
  * zurueck; den Sprung faengt die Seite ab und trifft die Leiste ueber
  * {@code data-selection-toolbar}, egal wo sie steht.
  *
- * <p><strong>Der Weg in die Vorschau stand in der Seitenleiste</strong> und
- * steht jetzt hier, zwischen Formatierung und Workflow-Aktion: er gehoert
- * zur Bedienung des Editors, nicht zu den Projektinformationen. Er fuehrt
- * unveraendert auf die oeffentliche Detailseite; die Seite leert vorher den
- * Speichertakt.
+ * <p><strong>Der Umschalter in die Vorschau stand in der
+ * Seitenleiste</strong> und steht hier, zwischen Formatierung und
+ * Workflow-Aktion: er gehoert zur Bedienung des Editors, nicht zu den
+ * Projektinformationen. Seit KAN-104 fuehrt er nicht mehr auf die
+ * oeffentliche Detailseite, sondern wechselt an Ort und Stelle: die Seite
+ * bleibt auf ihrer Adresse und ihrer Scrollposition, und der Beitrag
+ * erscheint durch den Read-Only-Renderer an der Stelle der Schreibflaeche
+ * ({@code EditorPage}). Welcher Modus gilt, haelt die Seite; diese
+ * Komponente zeigt ihn und meldet den Wechsel.
+ *
+ * <p><strong>Im Vorschau-Modus traegt die Werkzeugzeile nur, was nicht
+ * schreibt</strong> (KAN-104, Entscheidung). Rueckgaengig, Wiederholen,
+ * Formatierung und Inhaltsverzeichnis entfallen samt ihren Trennern, denn
+ * es gibt nichts, worauf sie wirken koennten; ein Trenner ohne linken
+ * Nachbarn bliebe als Strich vor dem Ausdruck stehen. Anders als ohne
+ * Schreibrecht (gesperrt und nicht versteckt, siehe oben) ist das keine
+ * Frage des Rechts, sondern die gewaehlte Ansicht, und derselbe Knopf nimmt
+ * sie zurueck. Drucken und Hell/Dunkel bleiben an ihrem Platz, ebenso
+ * Zurueck, Speicherzustand und Workflow-Aktion.
  *
  * <p><strong>Der Speicherzustand bleibt in der Kopfzeile.</strong> Die
  * gewuenschte Reihenfolge nennt ihn nicht, aber er muss sichtbar bleiben
@@ -137,7 +160,8 @@ export function EditorHeader({
   onSubmit,
   onWithdraw,
   onBack,
-  onPreview,
+  mode,
+  onModeToggle,
   onPrint,
   printing,
   onShowInfo,
@@ -164,8 +188,14 @@ export function EditorHeader({
    * den Speichertakt leeren muss.
    */
   onBack: () => void
-  /** Wechselt in die oeffentliche Ansicht; die Seite speichert vorher. */
-  onPreview: () => void
+  /** Die Ansicht der Seite: Schreibflaeche oder Vorschau (KAN-104). */
+  mode: EditorMode
+  /**
+   * Wechselt zwischen Schreibflaeche und Vorschau (KAN-104). Ohne Speichern
+   * vorher: die Vorschau nimmt ihren Stand aus dem Dokument, und der
+   * Speichertakt laeuft unveraendert weiter.
+   */
+  onModeToggle: () => void
   /** Druckt den Beitrag (KAN-41); die Seite besorgt den Druckbereich. */
   onPrint: () => void
   /** Solange der Ausdruck vorbereitet wird, ist die Schaltflaeche gesperrt. */
@@ -249,6 +279,8 @@ export function EditorHeader({
 
   const canSubmit = status === "DRAFT" || status === "REVISION"
   const canWithdraw = status === "SUBMITTED"
+  /* Die Schreibwerkzeuge stehen nur auf der Schreibflaeche (Javadoc oben). */
+  const editing = mode === "edit"
 
   return (
     <header className="editor-header sticky top-0 z-30 items-center gap-x-3 gap-y-2 border-b border-border bg-card">
@@ -302,47 +334,55 @@ export function EditorHeader({
         className="relative flex items-center gap-1 overflow-x-auto border-t border-border px-4 py-2 *:shrink-0 sm:px-8 lg:gap-3 lg:overflow-x-visible lg:border-t-0 lg:px-0 lg:py-3"
       >
         {/* Die beiden dichter beieinander als die Gruppen untereinander,
-            wie vor dem Umbruch in zwei Zeilen. */}
-        <div className="flex items-center gap-1 *:shrink-0">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  disabled={!canUndo}
-                  onClick={() => editor?.chain().focus().undo().run()}
-                />
-              }
-            >
-              <Undo2Icon aria-hidden="true" />
-              <span className="sr-only">{t("projectContent.header.undo")}</span>
-            </TooltipTrigger>
-            <TooltipContent>{t("projectContent.header.undo")}</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  disabled={!canRedo}
-                  onClick={() => editor?.chain().focus().redo().run()}
-                />
-              }
-            >
-              <Redo2Icon aria-hidden="true" />
-              <span className="sr-only">{t("projectContent.header.redo")}</span>
-            </TooltipTrigger>
-            <TooltipContent>{t("projectContent.header.redo")}</TooltipContent>
-          </Tooltip>
-        </div>
+            wie vor dem Umbruch in zwei Zeilen. Im Vorschau-Modus entfallen
+            sie, wie Formatierung und Inhaltsverzeichnis dahinter (KAN-104,
+            Javadoc oben). */}
+        {editing && (
+          <div className="flex items-center gap-1 *:shrink-0">
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={!canUndo}
+                    onClick={() => editor?.chain().focus().undo().run()}
+                  />
+                }
+              >
+                <Undo2Icon aria-hidden="true" />
+                <span className="sr-only">
+                  {t("projectContent.header.undo")}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{t("projectContent.header.undo")}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={!canRedo}
+                    onClick={() => editor?.chain().focus().redo().run()}
+                  />
+                }
+              >
+                <Redo2Icon aria-hidden="true" />
+                <span className="sr-only">
+                  {t("projectContent.header.redo")}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{t("projectContent.header.redo")}</TooltipContent>
+            </Tooltip>
+          </div>
+        )}
 
         {/* Dieselbe Leiste wie zuvor in der Blase, nur ohne Rahmen und
             Flaeche: Rand und Schatten gehoeren zur schwebenden Fassung, in
             der Kopfzeile traegt der Header beides. Der Trenner steht bei der
             Leiste und entfaellt mit ihr. */}
-        {editor !== null && (
+        {editing && editor !== null && (
           <>
             <Separator
               orientation="vertical"
@@ -371,7 +411,7 @@ export function EditorHeader({
          * geschieht. Eingefuegt wird am Anfang des Beitrags, dort steht ein
          * Inhaltsverzeichnis.
          */}
-        {mayWrite && (
+        {editing && mayWrite && (
           <>
             <Separator
               orientation="vertical"
@@ -424,12 +464,18 @@ export function EditorHeader({
          * eine Schaltflaeche, die im Augenblick des Klicks {@code disabled}
          * wird, verliert den Fokus an den Seitenanfang (SC 2.4.3). Das
          * zweite Ausloesen faengt der Handler ab.
+         *
+         * <p>Der Trenner davor steht nur, wo links etwas steht: im
+         * Vorschau-Modus ist der Ausdruck der erste Eintrag der Zeile
+         * (KAN-104).
          */}
-        <Separator
-          orientation="vertical"
-          className="h-5 self-center"
-          aria-hidden="true"
-        />
+        {editing && (
+          <Separator
+            orientation="vertical"
+            className="h-5 self-center"
+            aria-hidden="true"
+          />
+        )}
         <Tooltip>
           <TooltipTrigger
             render={
@@ -491,18 +537,25 @@ export function EditorHeader({
         {/* Breit: jede Aktion sichtbar. */}
         <div className="hidden items-center gap-3 lg:flex">
           {/*
-           * Ein Weg und kein Schalter (Nutzerentscheidung): der Editor ist
-           * keine Einstellung mit zwei Zustaenden, sondern eine Seite, von
-           * der es zur Vorschau geht. Der Schalter stand fuer beide
-           * Richtungen und lud dazu ein, „Bearbeiten" anzuklicken, obwohl
-           * man laengst darin war. Zurueck fuehrt derselbe Schalter auf der
-           * oeffentlichen Seite; dort ist er richtig, denn dort gibt es
-           * beide Richtungen zu sehen.
+           * Ein Knopf mit wechselnder Beschriftung und kein Schiebeschalter
+           * (KAN-104, Entscheidung): auf der Schreibflaeche „Vorschau", in
+           * der Vorschau „Bearbeiten", an derselben Stelle. Er nennt, wohin
+           * der Druck fuehrt; ein Schalter nennt zwei Richtungen und lud
+           * dazu ein, „Bearbeiten" anzuklicken, obwohl man laengst darin
+           * war. Er steht in jedem Status, bei SUBMITTED also neben
+           * „Zurueckziehen".
+           *
+           * <p>Derselbe Knoten in beiden Modi, der Fokus bleibt nach dem
+           * Druck auf ihm (SC 2.4.3). Beschriftung und Symbol kommen aus
+           * derselben Komponente wie in der Reviewansicht.
            */}
-          <Button variant="link" size="sm" onClick={onPreview}>
-            <EyeIcon aria-hidden="true" />
-            {t("projectContent.sidebar.preview")}
-          </Button>
+          <PreviewModeButton
+            previewing={!editing}
+            counterpart="edit"
+            onToggle={onModeToggle}
+            variant="link"
+            size="sm"
+          />
           {mayRunWorkflow && canSubmit && (
             <Button onClick={onSubmit} disabled={busy}>
               {t("projectContent.header.submit")}
@@ -536,9 +589,11 @@ export function EditorHeader({
             <span className="sr-only">{t("projectContent.header.menu")}</span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem onClick={onPreview}>
-              <EyeIcon aria-hidden="true" />
-              {t("projectContent.sidebar.preview")}
+            {/* Dieselbe Beschriftung wie der breite Knopf (KAN-104). Das
+                Menue gibt den Fokus beim Schliessen an seinen Ausloeser
+                zurueck, und der steht in beiden Modi (SC 2.4.3). */}
+            <DropdownMenuItem onClick={onModeToggle}>
+              <PreviewModeLabel previewing={!editing} counterpart="edit" />
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onShowInfo}>
               <InfoIcon aria-hidden="true" />

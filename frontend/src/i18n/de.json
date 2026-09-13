@@ -881,18 +881,18 @@
         "label": "Semester"
       },
       "projectType": {
-        "label": "Typ"
+        "label": "Projekttyp"
       },
       "category": {
         "label": "Kategorie"
       },
       "module": {
-        "label": "Fach",
+        "label": "Fach / Modul",
         "needsStudyProgram": "Erst Studiengang wählen"
       },
       "cascade": {
-        "facultyChanged": "Die Fakultät wurde geändert. Studiengang und Fach wurden zurückgesetzt.",
-        "studyProgramChanged": "Der Studiengang wurde geändert. Das Fach wurde zurückgesetzt."
+        "facultyChanged": "Die Fakultät wurde geändert. Studiengang und Fach / Modul wurden zurückgesetzt.",
+        "studyProgramChanged": "Der Studiengang wurde geändert. Fach / Modul wurde zurückgesetzt."
       },
       "tags": {},
       "editors": {
@@ -1101,8 +1101,9 @@
   },
   "projectContent": {
     "intro": {
-      "regionLabel": "Titelbild, Titel und Kurzbeschreibung",
-      "notSaved": "Die Kopfangaben werden nicht gespeichert, solange die markierten Felder nicht stimmen."
+      "regionLabel": "Kopfbereich des Beitrags",
+      "notSaved": "Die Kopfangaben werden nicht gespeichert, solange der Titel nicht stimmt.",
+      "titleLimitReached": "Der Titel hat die Höchstlänge von {{max}} Zeichen erreicht."
     },
     "unknownBlock": {
       "title": "Dieser Abschnitt kann nicht angezeigt werden",
@@ -1374,10 +1375,15 @@
       "label": "Projektangaben",
       "preview": "Vorschau",
       "edit": "Bearbeiten",
-      "previewToggle": "Bearbeiten",
       "history": "Historie",
       "projectInfo": "Projektinformationen",
       "editMetadata": "Metadaten bearbeiten"
+    },
+    "mode": {
+      "announce": {
+        "preview": "Vorschau eingeschaltet: so erscheint der Beitrag veröffentlicht.",
+        "edit": "Bearbeiten eingeschaltet: die Schreibfläche ist wieder da."
+      }
     },
     "history": {
       "title": "Historie",
@@ -1393,7 +1399,7 @@
       "pending": "Wird eingereicht",
       "done": "Der Beitrag ist eingereicht.",
       "field": {
-        "projectType": "Art der Arbeit",
+        "projectType": "Projekttyp",
         "facultyId": "Fakultät",
         "studyProgramId": "Studiengang",
         "degree": "Abschluss",
@@ -1549,10 +1555,10 @@
       "filter": {
         "allStudyPrograms": "Studiengang (alle)",
         "allSemesters": "Semester (alle)",
-        "allModules": "Fach (alle)",
+        "allModules": "Fach / Modul (alle)",
         "studyProgramLabel": "Studiengang filtern",
         "semesterLabel": "Semester filtern",
-        "moduleLabel": "Fach oder Modul filtern"
+        "moduleLabel": "Fach / Modul filtern"
       },
       "column": {
         "project": "Projekt",
@@ -1635,7 +1641,10 @@
       "history": "Historie",
       "mode": {
         "review": "Review",
-        "toggle": "Zwischen Vorschau und Review wechseln"
+        "announce": {
+          "preview": "Vorschau eingeschaltet: so erscheint der Beitrag veröffentlicht.",
+          "review": "Review eingeschaltet: die redaktionelle Ansicht ist wieder da."
+        }
       },
       "forbidden": {
         "title": "Kein Zugriff auf dieses Review",
@@ -2316,7 +2325,7 @@
           "title": "Projekte finden und filtern",
           "text": "Der Eintrag „Projekte“ führt alle veröffentlichten studentischen Arbeiten. Das Suchfeld greift auf Titel, Kurzbeschreibung, den Namen der Autorin oder des Autors und die Schlagwörter; die Namen von Projektmitgliedern trifft es nicht. Die Filterspalte links grenzt die Liste weiter ein.",
           "steps": [
-            "Sechs Filtergruppen: Fakultät, Studiengang, Abschluss, Semester, Art der Arbeit und Kategorie. In jeder Gruppe lassen sich mehrere Werte gleichzeitig ankreuzen.",
+            "Sechs Filtergruppen: Fakultät, Studiengang, Abschluss, Semester, Projekttyp und Kategorie. In jeder Gruppe lassen sich mehrere Werte gleichzeitig ankreuzen.",
             "Suche, Filter und Seitenzahl stehen in der Adresse. Ein Ergebnis lässt sich damit weitergeben, und der Zurück-Knopf des Browsers führt in die vorige Auswahl.",
             "Über der Liste steht, wie viele Arbeiten die aktuelle Auswahl trifft."
           ],
@@ -2327,7 +2336,7 @@
           "title": "Eine Projektseite lesen",
           "text": "Die Detailseite zeigt den Beitrag so, wie die Autorin oder der Autor ihn gesetzt hat: Titelbild, Titel, Kurzbeschreibung und darunter die Inhaltsblöcke. Es gibt fünfzehn Arten: Überschrift, Absatz, Aufzählung, Zitat, Quelltext, Trenner, Tabelle, Bild, Galerie, Video, Audio, Dokument, Einbettung, Formel und Inhaltsverzeichnis.",
           "steps": [
-            "Neben dem Beitrag stehen die Angaben zur Arbeit: Studiengang, Semester, Kategorie, Fach und die Beteiligten.",
+            "Neben dem Beitrag stehen die Angaben zur Arbeit: Studiengang, Semester, Kategorie, Fach / Modul und die Beteiligten.",
             "Die Hand unter dem Beitrag ist die Reaktion, das Gegenstück zum Applaus. Sie steht angemeldeten Konten offen und lässt sich zurücknehmen.",
             "Das Druckersymbol am Titelbild erzeugt eine PDF-Fassung über den Druckdialog des Browsers."
           ],
@@ -2410,7 +2419,7 @@
           "title": "Angaben zum Projekt",
           "text": "Neben dem Inhalt trägt jede Arbeit Angaben, aus denen Auffindbarkeit und Zuständigkeit folgen. Sie stehen im Metadatenformular, erreichbar aus dem Editor über „Metadaten bearbeiten“.",
           "steps": [
-            "Sieben Angaben sind Pflicht, sobald eingereicht wird: Art der Arbeit, Fakultät, Studiengang, Abschluss, Kategorie, Semester und die zuständige Redaktion.",
+            "Sieben Angaben sind Pflicht, sobald eingereicht wird: Projekttyp, Fakultät, Studiengang, Abschluss, Kategorie, Semester und die zuständige Redaktion.",
             "Projektmitglieder kommen über die Personensuche hinzu; die Funktionsbezeichnung daneben ist freiwillig.",
             "Die zuständige Redaktion wählt die Projektseite selbst, also die Autorin oder der Autor und die Projektmitglieder, solange die Arbeit im Entwurf oder in der Überarbeitung steht. Ab dem Einreichen weist nur noch die Administration zu.",
             "Wer selbst zur Projektseite gehört, steht dabei nicht zur Auswahl: niemand weist sich die eigene Arbeit als Redaktion zu.",
@@ -2421,12 +2430,12 @@
         },
         "workspace": {
           "title": "Die Schreibfläche",
-          "text": "Der Editor öffnet sich über den Stift an einer Kachel. Oben liegt die Werkzeugleiste, in der Mitte der Beitrag mit Titelbild, Titel und Kurzbeschreibung, rechts die Angaben zum Projekt.",
+          "text": "Der Editor öffnet sich über den Stift an einer Kachel. Oben liegt die Werkzeugleiste, in der Mitte der Beitrag mit Titelbild und Titel darüber, rechts die Angaben zum Projekt. Die Kurzbeschreibung wird in den Metadaten eingetragen.",
           "steps": [
             "Bearbeitet wird nur in den Ständen Entwurf und Überarbeitung. In jedem anderen Stand ist die Fläche schreibgeschützt, und eine Meldung nennt den Grund.",
             "Es bearbeitet immer nur eine Person zugleich. Die Sperre gilt für jede Schreibansicht der Arbeit, also auch für das Metadatenformular: wer die Metadaten offen hat, hält damit zugleich den Editor. Hat jemand anderes die Arbeit offen, sagt die Seite das mit Namen und Uhrzeit.",
             "Gespeichert wird von selbst, gut eine Sekunde nach der letzten Eingabe. Der Stand steht in der Kopfzeile.",
-            "„Vorschau“ zeigt den Beitrag in der öffentlichen Ansicht, „Als PDF drucken“ erzeugt die Druckfassung, und die Schaltfläche daneben fügt ein Inhaltsverzeichnis ein oder bringt es auf den neuesten Stand."
+            "„Vorschau“ zeigt den Beitrag an Ort und Stelle so, wie er veröffentlicht erscheint, und „Bearbeiten“ führt zurück zur Schreibfläche. „Als PDF drucken“ erzeugt die Druckfassung, und die Schaltfläche daneben fügt ein Inhaltsverzeichnis ein oder bringt es auf den neuesten Stand."
           ],
           "imageAlt": "Die Schreibfläche des Editors: oben die Werkzeugleiste mit Zurück, Rückgängig, Wiederholen und den Auszeichnungen, darunter Titelbild, Titel und der Beitrag; rechts die Spalte mit Stand, Historie und den Projektangaben.",
           "imageCaption": "Der Editor mit einem Entwurf."
@@ -2489,7 +2498,7 @@
           "text": "„Meine Reviews“ führt genau die Arbeiten, für die Sie als Redaktion eingetragen sind. Entwürfe erscheinen dort nie: sichtbar wird eine Arbeit erst mit dem Einreichen.",
           "steps": [
             "Oben vier Zähler: Eingereicht, Genehmigt, Veröffentlicht, Überarbeitung.",
-            "Darunter das Suchfeld und drei Filter nach Studiengang, Semester und Fach, dazu die Standsleiste.",
+            "Darunter das Suchfeld und drei Filter nach Studiengang, Semester und Fach / Modul, dazu die Standsleiste.",
             "In der Tabelle führt das Menü am Zeilenende zu „Überprüfen“, „Top 10 nominieren“ und „Zuweisung abgeben“."
           ],
           "imageAlt": "Die Seite „Meine Reviews“: vier Zählerkacheln für Eingereicht, Genehmigt, Veröffentlicht und Überarbeitung, darunter Suchfeld und Filter, dann die Tabelle mit den Spalten Projekt, Studierende, Studiengang, Semester, Fach und Status.",
@@ -2499,7 +2508,7 @@
           "title": "Eine Arbeit prüfen",
           "text": "„Überprüfen“ öffnet den Beitrag im Review-Modus: links der Beitrag, wie ihn Leserinnen und Leser sehen, rechts die redaktionelle Spalte.",
           "steps": [
-            "Der Schalter oben wechselt zwischen Vorschau und Review.",
+            "Der Knopf oben in der rechten Spalte wechselt an Ort und Stelle zwischen Review und Vorschau. In der Vorschau steht der Beitrag ohne Rahmen und mit den Reaktionen darunter, wie auf der öffentlichen Seite.",
             "Darunter stehen der Stand als Pille und die Schaltfläche „Historie“ mit allen bisherigen Wechseln.",
             "Der Beitrag selbst wird hier nicht bearbeitet; Rückmeldungen laufen über die Kommentare."
           ],

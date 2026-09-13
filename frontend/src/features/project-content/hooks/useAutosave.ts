@@ -15,9 +15,10 @@ import type { ProjectDocument } from "@/features/project-content/blockTypes"
  *
  * <p><strong>Zwei Wege, ein Takt, eine Version.</strong> Der Editor
  * schreibt an zwei Stellen: den Inhalt ueber
- * {@code PUT /projects/{id}/blocks} und die Kopfangaben (Titelbild, Titel,
- * Kurzbeschreibung) ueber {@code PUT /projects/{id}}. Zusammengefasst wird
- * das nicht, §6.1 trennt Inhalt und Metadaten. Beide erhoehen aber
+ * {@code PUT /projects/{id}/blocks} und die Kopfangaben (Titelbild und Titel,
+ * seit KAN-104 ohne Kurzbeschreibung) ueber {@code PUT /projects/{id}}.
+ * Zusammengefasst wird das nicht, §6.1 trennt Inhalt und Metadaten. Beide
+ * erhoehen aber
  * dieselbe {@code Project.version} ({@code BlockService.replace} ruft
  * {@code project.touch()}), und deshalb duerfen sie nicht nebeneinander
  * laufen: der zweite ginge mit der Version los, die der erste gerade
@@ -410,8 +411,9 @@ export function useAutosave({
    * Ein offener Takt wird beim Abraeumen noch angestossen. Ob er den Server
    * erreicht, haengt daran, ob die Schreibflaeche zu diesem Zeitpunkt noch
    * steht; darauf verlaesst sich niemand. Die Wege aus der Seite heraus
-   * (Zurueck, Vorschau, Einreichen) rufen vorher ausdruecklich flush() und
-   * warten dessen Ergebnis ab.
+   * (Zurueck, Einreichen, Metadaten bearbeiten) rufen vorher ausdruecklich
+   * flush() und warten dessen Ergebnis ab. Die Vorschau bleibt seit KAN-104
+   * auf der Seite und leert den Takt nicht.
    *
    * <p><strong>Ohne Abhaengigkeiten, und {@code run} kommt ueber einen
    * Ref.</strong> Stuende {@code run} in der Liste, liefe die

@@ -223,7 +223,8 @@ describe("ProjectMetadataForm", () => {
       "Studiengang",
       "Abschluss",
       "Semester",
-      "Typ",
+      /* Seit KAN-104 wie in Projektinformationen, Filtern und Tabellen. */
+      "Projekttyp",
       "Kategorie",
       "Redakteur:in",
     ]) {
@@ -233,9 +234,9 @@ describe("ProjectMetadataForm", () => {
       ).toBeVisible()
     }
 
-    /* Das Fach traegt keinen Stern: §3.3 fuehrt es als dauerhaft
+    /* Fach / Modul traegt keinen Stern: §3.3 fuehrt es als dauerhaft
        freiwilligen Bezug. */
-    expect(screen.getByLabelText("Fach")).toBeVisible()
+    expect(screen.getByLabelText("Fach / Modul")).toBeVisible()
 
     /* Gespeichert wird trotzdem. */
     expect(

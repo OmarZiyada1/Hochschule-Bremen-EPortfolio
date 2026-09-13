@@ -242,8 +242,9 @@ function renderPage() {
   return renderWithProviders(
     <>
       <ProjectDetailPage />
-      {/* Die Adresse bleibt ablesbar, wenn die Seite weiterleitet
-          (Umschalter in den Editor, KAN-36). */}
+      {/* Die Adresse bleibt ablesbar: seit KAN-104 fuehrt von hier kein
+          Umschalter mehr weg, und die Tests belegen, dass sie stehen
+          bleibt. */}
       <LocationProbe />
     </>,
     `/projects/${PROJECT_ID}`
@@ -784,16 +785,32 @@ describe("Fehlerfaelle", () => {
   })
 })
 
-describe("Weg zurueck in den Editor (KAN-36)", () => {
+describe("Kein Umschalter auf der Detailseite (KAN-104)", () => {
   /*
-   * Die zweite Haelfte des Umschalters: im Editor fuehrt er auf diese
-   * Seite, hier zurueck. Eine Vorschau ohne Weg zurueck waere eine
-   * Sackgasse.
+   * Bis KAN-104 war diese Seite die Vorschau von Editor und Reviewansicht
+   * und fuehrte deshalb je einen Rueckweg als Schiebeschalter. Seitdem die
+   * Vorschau dort an Ort und Stelle entsteht, ist sie in jeder Rolle die
+   * oeffentliche Seite, und ein Schalter stuende hier ohne Ursprung, zu dem
+   * er zurueckfuehrt.
    */
   const SIGNED_IN_ID = "00000000-0000-0000-0000-000000000001"
 
-  it("zeigt der Autor:in im Entwurf den Schalter und fuehrt in den Editor", async () => {
-    const user = userEvent.setup()
+  /** Weder ein Schiebeschalter noch einer der Knoepfe, die ihn abloesen. */
+  function expectNoModeSwitch() {
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument()
+    for (const name of [
+      i18n.t("projectContent.sidebar.edit"),
+      i18n.t("projectContent.sidebar.preview"),
+      i18n.t("review.detail.mode.review"),
+    ]) {
+      expect(
+        screen.queryByRole("button", { name }),
+        name
+      ).not.toBeInTheDocument()
+    }
+  }
+
+  it("zeigt der Autor:in im Entwurf keinen Umschalter und bleibt auf der Adresse", async () => {
     server.use(
       fileBlobHandler(),
       detailHandler(
@@ -807,18 +824,13 @@ describe("Weg zurueck in den Editor (KAN-36)", () => {
     renderPage()
 
     await screen.findByRole("heading", { level: 1 })
-    await user.click(screen.getByRole("switch", { name: "Bearbeiten" }))
-
-    await waitFor(() =>
-      expect(screen.getByTestId("pathname")).toHaveTextContent(
-        `/projects/${PROJECT_ID}/editor`
-      )
+    expectNoModeSwitch()
+    expect(screen.getByTestId("pathname")).toHaveTextContent(
+      `/projects/${PROJECT_ID}`
     )
   })
 
-  it("zeigt ihn nicht bei einem veroeffentlichten Projekt", async () => {
-    /* Inhaltsbearbeitung gibt es nur in DRAFT und REVISION (§4.1); ein
-       Schalter „Bearbeiten" waere hier ein Weg, der mit 409 endet. */
+  it("zeigt ihn auch bei einem veroeffentlichten Projekt nicht", async () => {
     server.use(
       detailHandler(
         projectResponse({
@@ -831,9 +843,7 @@ describe("Weg zurueck in den Editor (KAN-36)", () => {
     renderPage()
 
     await screen.findByRole("heading", { level: 1 })
-    expect(
-      screen.queryByRole("switch", { name: "Bearbeiten" })
-    ).not.toBeInTheDocument()
+    expectNoModeSwitch()
   })
 
   it("zeigt ihn einer unbeteiligten Person nicht", async () => {
@@ -845,9 +855,7 @@ describe("Weg zurueck in den Editor (KAN-36)", () => {
     renderPage()
 
     await screen.findByRole("heading", { level: 1 })
-    expect(
-      screen.queryByRole("switch", { name: "Bearbeiten" })
-    ).not.toBeInTheDocument()
+    expectNoModeSwitch()
   })
 })
 
@@ -880,9 +888,9 @@ describe("Medien eines noch nicht veroeffentlichten Beitrags (KAN-36)", () => {
   })
 
   it("holt auch Video, Ton und Dokument eines Entwurfs mit Token", async () => {
-    /* Die Vorschau ist die echte Seite und keine Nachbildung: ein Beitrag,
-       in dem das Video fehlt, beantwortet die Frage nicht, um derentwillen
-       jemand sie oeffnet. */
+    /* Wer einen Entwurf auf seiner Seite oeffnet, soll den ganzen Beitrag
+       sehen: ein Beitrag, in dem das Video fehlt, beantwortet die Frage
+       nicht, um derentwillen jemand ihn oeffnet. */
     server.use(
       fileBlobHandler(),
       detailHandler(projectResponse({ status: "DRAFT" }))
@@ -924,7 +932,7 @@ describe("Medien eines noch nicht veroeffentlichten Beitrags (KAN-36)", () => {
     async () => {
       /*
        * Die Luecke, die dieser Fall schliesst: bei SUBMITTED erreicht die
-       * Autor:in weder den Editor (kein Stift, kein Umschalter) noch den
+       * Autor:in weder den Editor (kein Stift auf der Kachel) noch den
        * Review-Modus (rollengesperrt). Ihre Aenderungswuensche standen damit
        * an keiner Stelle, an die sie kommt, obwohl §2.3 sie jeder Person
        * zeigt, die das Projekt lesen darf.
@@ -1057,7 +1065,7 @@ describe("Die Projektinformationen", () => {
   it("laesst sie als Studierende auch bei SUBMITTED zu- und wieder aufklappen", async () => {
     /*
      * Der gemeldete Fall. Bei SUBMITTED erreicht die Autor:in weder den
-     * Editor (kein Stift auf der Kachel, kein Umschalter) noch den
+     * Editor (kein Stift auf der Kachel) noch den
      * Review-Modus (rollengesperrt); diese Seite ist der Ort, an den sie
      * gefuehrt wird, und dort blieb die Liste stehen.
      */
@@ -1091,8 +1099,8 @@ describe("Die Projektinformationen", () => {
      * Kein Akkordeon wie in Editor und Review-Modus: diese Seite ist fuer
      * die Autor:in eines eingereichten Projekts der einzige Ort mit ihren
      * Aenderungswuenschen, und die sollen nicht zugehen, weil jemand die
-     * Angaben einklappt. Zwischen beiden stehen ausserdem der Umschalter
-     * und die Reaktionen, sie sind also gar kein Paar.
+     * Angaben einklappt. Zwischen beiden stehen ausserdem die Reaktionen,
+     * sie sind also gar kein Paar.
      */
     const user = userEvent.setup()
     signInAs("STUDENT")
@@ -1117,7 +1125,6 @@ describe("Die Projektinformationen", () => {
     expect(comments).toHaveAttribute("aria-expanded", "true")
   })
 })
-
 
 /*
  * Die Nominierung von der Detailseite aus (§3.11.1; KAN-87). Bis dahin
@@ -1170,9 +1177,11 @@ describe("Nominierung", () => {
     renderPage()
     await screen.findByRole("heading", { level: 1 })
 
-    await user.click((await screen.findByRole("button", {
-      name: i18n.t("review.list.row.nominate"),
-    })) as HTMLElement)
+    await user.click(
+      (await screen.findByRole("button", {
+        name: i18n.t("review.list.row.nominate"),
+      })) as HTMLElement
+    )
 
     const dialog = await screen.findByRole("dialog")
     await user.click(within(dialog).getByRole("radio", { name: /Top 5/ }))
@@ -1237,7 +1246,9 @@ describe("Nominierung", () => {
       currentUserHandler({ role: "ADMIN" }),
       detailHandler(projectResponse()),
       ...nominationHandlers({
-        top10: [top10Entry({ position: 1, project: projectCard({ id: PROJECT_ID }) })],
+        top10: [
+          top10Entry({ position: 1, project: projectCard({ id: PROJECT_ID }) }),
+        ],
       })
     )
 

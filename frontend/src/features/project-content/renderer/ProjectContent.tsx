@@ -18,10 +18,10 @@ import { cn } from "@/lib/utils"
  * Der Einstieg des Read-Only-Renderers: eine gespeicherte Blockliste als
  * semantisches HTML.
  *
- * <p>Verwendet von der oeffentlichen Detailseite (KAN-32), der Vorschau im
- * Editor (KAN-36), dem Review-Modus (KAN-37) und der Druckausgabe
- * (KAN-41). Er ist statusfrei: was jemand sehen darf, entscheidet der
- * Server.
+ * <p>Verwendet von der oeffentlichen Detailseite (KAN-32), dem Review-Modus
+ * (KAN-37) samt seiner Vorschau, der Vorschau im Editor an Ort und Stelle
+ * (KAN-104) und der Druckausgabe (KAN-41). Er ist statusfrei: was jemand
+ * sehen darf, entscheidet der Server.
  *
  * <p><strong>Kein Tiptap im Lesepfad.</strong> Der Renderer laeuft ueber
  * das Typmodell und die Whitelist, nicht ueber ein ProseMirror-Dokument.

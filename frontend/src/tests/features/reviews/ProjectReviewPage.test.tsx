@@ -959,4 +959,181 @@ describe("ProjectReviewPage", () => {
 
     expect(screen.queryByText(i18n.t("review.detail.actions.none"))).toBeNull()
   })
+
+  /*
+   * KAN-104: die Reviewansicht schaltet an Ort und Stelle zwischen Review und
+   * Vorschau. Bis dahin fuehrte der Schalter auf die oeffentliche Detailseite
+   * und brauchte dort einen eigenen Rueckweg.
+   */
+  describe("Vorschau an Ort und Stelle (KAN-104)", () => {
+    const REACTIONS = () => i18n.t("project.detail.reactions.heading")
+
+    function commentsTrigger(): HTMLElement {
+      return screen.getByRole("button", {
+        name: new RegExp(`^${i18n.t("comment.panel.title")}(\\s|$)`),
+      })
+    }
+
+    function infoTrigger(): HTMLElement {
+      return screen.getByRole("button", {
+        name: i18n.t("projectContent.sidebar.projectInfo"),
+      })
+    }
+
+    it("zeigt den Beitrag ohne Karte und mit Reaktionen, die rechte Spalte vollstaendig", async () => {
+      const user = userEvent.setup()
+      server.use(...handlers(review()))
+
+      renderPage()
+
+      const title = await screen.findByRole("heading", {
+        level: 1,
+        name: "RoboNav",
+      })
+      expect(title.closest('[data-slot="card"]')).not.toBeNull()
+      expect(screen.queryByRole("heading", { name: REACTIONS() })).toBeNull()
+
+      await user.click(
+        screen.getByRole("button", {
+          name: i18n.t("projectContent.sidebar.preview"),
+        })
+      )
+
+      const previewTitle = await screen.findByRole("heading", {
+        level: 1,
+        name: "RoboNav",
+      })
+      /* Kein Kartenrahmen mehr um den Beitrag, und weiter genau eine h1. */
+      expect(previewTitle.closest('[data-slot="card"]')).toBeNull()
+      expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1)
+      expect(
+        screen.getByText(
+          "Ein mobiler Roboter navigiert durch das HSB-Gebaeude."
+        )
+      ).toBeInTheDocument()
+
+      /* Die Reaktionen wie auf der Detailseite; reagieren geht erst bei
+         PUBLISHED (§3.10), und die Komponente sagt es sichtbar. */
+      expect(
+        screen.getByRole("heading", { name: REACTIONS() })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(i18n.t("project.detail.reactions.publishedRequired"))
+      ).toBeInTheDocument()
+
+      /* Die rechte Spalte bleibt vollstaendig. */
+      expect(
+        screen.getByRole("button", {
+          name: new RegExp(i18n.t("review.detail.statusMenu.label")),
+        })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("button", { name: i18n.t("review.detail.history") })
+      ).toBeInTheDocument()
+      expect(infoTrigger()).toBeInTheDocument()
+      expect(
+        screen.getByRole("region", { name: i18n.t("comment.panel.label") })
+      ).toBeInTheDocument()
+      /* Und es bleibt bei einem Druckbereich. */
+      expect(document.querySelectorAll('[data-print="area"]')).toHaveLength(1)
+
+      await user.click(
+        screen.getByRole("button", {
+          name: i18n.t("review.detail.mode.review"),
+        })
+      )
+
+      const back = await screen.findByRole("heading", {
+        level: 1,
+        name: "RoboNav",
+      })
+      expect(back.closest('[data-slot="card"]')).not.toBeNull()
+      expect(screen.queryByRole("heading", { name: REACTIONS() })).toBeNull()
+    })
+
+    it("legt den Druckknopf in der Vorschau weiter auf das Titelbild", async () => {
+      const user = userEvent.setup()
+      server.use(
+        ...handlers(
+          review({
+            /* PUBLISHED, damit die Bildadresse ohne Token aufloest (§3.15). */
+            status: "PUBLISHED",
+            coverImageUrl: "/api/files/11111111-2222-4333-8444-555555555555",
+          })
+        )
+      )
+
+      const { container } = renderPage()
+      await screen.findByRole("heading", { level: 1, name: "RoboNav" })
+      await user.click(
+        screen.getByRole("button", {
+          name: i18n.t("projectContent.sidebar.preview"),
+        })
+      )
+
+      const trigger = await screen.findByRole("button", {
+        name: "Als PDF drucken",
+      })
+      expect(trigger).toHaveClass("absolute", "top-4", "right-4")
+      const image = container.querySelector("img")
+      expect(image).not.toBeNull()
+      /* Der positionierte Vorfahr traegt Bild und Knopf zugleich. */
+      const frame = image?.parentElement
+      expect(frame).toHaveClass("relative")
+      expect(frame).toContainElement(trigger)
+    })
+
+    it("sagt den Wechsel an und laesst den Fokus am Umschalter", async () => {
+      const user = userEvent.setup()
+      server.use(...handlers(review()))
+
+      renderPage()
+      await screen.findByRole("heading", { level: 1, name: "RoboNav" })
+
+      const toggle = screen.getByRole("button", {
+        name: i18n.t("projectContent.sidebar.preview"),
+      })
+      await user.click(toggle)
+
+      /* Derselbe Knoten mit neuer Beschriftung, und der Fokus bleibt darauf
+         (SC 2.4.3). Kein aria-pressed an einem Knopf, dessen Name wechselt. */
+      const reviewToggle = await screen.findByRole("button", {
+        name: i18n.t("review.detail.mode.review"),
+      })
+      expect(reviewToggle).toBe(toggle)
+      expect(reviewToggle).toHaveFocus()
+      expect(reviewToggle).not.toHaveAttribute("aria-pressed")
+
+      /* Eine polite Region, die dauerhaft steht und nur ihren Text wechselt. */
+      const notice = screen.getByText(
+        i18n.t("review.detail.mode.announce.preview")
+      )
+      expect(notice).toHaveAttribute("aria-live", "polite")
+
+      await user.click(reviewToggle)
+      expect(
+        screen.getByText(i18n.t("review.detail.mode.announce.review"))
+      ).toBe(notice)
+      expect(toggle).toHaveFocus()
+    })
+
+    it("oeffnet mit offener Kommentarspalte und zugeklappten Projektinformationen", async () => {
+      server.use(...handlers(review()))
+
+      renderPage()
+
+      await screen.findByRole("region", { name: i18n.t("comment.panel.label") })
+      expect(commentsTrigger()).toHaveAttribute("aria-expanded", "true")
+      expect(infoTrigger()).toHaveAttribute("aria-expanded", "false")
+    })
+
+    it("oeffnet bei PUBLISHED die Projektinformationen", async () => {
+      server.use(...handlers(review({ status: "PUBLISHED" })))
+
+      renderPage()
+
+      await screen.findByRole("heading", { level: 1, name: "RoboNav" })
+      expect(infoTrigger()).toHaveAttribute("aria-expanded", "true")
+    })
+  })
 })

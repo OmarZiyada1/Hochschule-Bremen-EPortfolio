@@ -7,7 +7,7 @@ import {
 } from "lucide-react"
 import { useId, useRef, useState, type RefObject } from "react"
 import { useTranslation } from "react-i18next"
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
+import { Link, useParams } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
 import { isApiError } from "@/api/errors"
@@ -24,7 +24,6 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ViewModeSwitch } from "@/features/project-content/components/ViewModeSwitch"
 import { useProjectFileUrls } from "@/features/project-content/hooks/useProjectFileUrls"
 import { useFileUrl } from "@/api/useFileUrl"
 import { PrintTrigger } from "@/features/project-content/print/PrintTrigger"
@@ -68,6 +67,11 @@ import { cn } from "@/lib/utils"
  * ihr Projekt PUBLISHED ist (§3.15). Nur die Vorschau eines Entwurfs
  * braucht eine eigene Aufloesung, und die liegt in KAN-36.
  *
+ * <p><strong>Kein Umschalter in Editor oder Reviewansicht</strong> (KAN-104).
+ * Bis dahin war diese Seite zugleich die Vorschau beider Arbeitsansichten und
+ * fuehrte dafuer je einen Rueckweg. Die Vorschau entsteht seitdem dort an Ort
+ * und Stelle; diese Seite ist in jeder Rolle die oeffentliche Seite.
+ *
  * <p><strong>Genau eine h1</strong>, der Projekttitel. Der Renderer gibt nie
  * eine h1 aus, Blockueberschriften stehen auf Ebene 2 und 3 (§2.5); ohne
  * diese Wurzel begaenne die Gliederung bei h2 (SC 1.3.1).
@@ -79,8 +83,8 @@ import { cn } from "@/lib/utils"
  * trotzdem stehen: der Beitrag ist der Hauptteil der Seite, und ohne sie
  * faende die Ueberschriftenliste eines Screenreaders zwischen der h1 und
  * der ersten Blockueberschrift keine Sprungmarke (SC 1.3.1, SC 2.4.6).
- * Dasselbe Mittel benutzt die Kurzbeschreibung im Editor
- * ({@code EditorIntro}, sr-only-Label).
+ * Dasselbe Mittel benutzt der Titel im Editor ({@code EditorIntro},
+ * sr-only-Label).
  *
  * <p>Sie benennt zugleich das {@code section} darum ueber
  * {@code aria-labelledby}. Eine Ueberschrift <em>in</em> einem Abschnitt
@@ -575,60 +579,19 @@ export default function ProjectDetailPage() {
  * Aufbaus liefen auseinander, sobald eine Zeile dazukommt.
  */
 function ProjectInfoPanel({ project }: { project: ProjectDetailResponse }) {
-  const navigate = useNavigate()
   const { user } = useAuth()
-  const [searchParams] = useSearchParams()
 
   /*
-   * Der Rueckweg in den Review-Modus (KAN-37). Die Redaktion kommt von dort
-   * ueber den Umschalter „Vorschau"; ohne diesen Zweig faende sie hier
-   * keinen Weg zurueck, obwohl der Schalter drueben einen zweiseitigen
-   * Wechsel verspricht. Der Herkunftsvermerk steht in der Adresse und nicht
-   * im Zustand: nur so uebersteht er einen Reload, und nur so bleibt die
-   * Seite fuer alle anderen unveraendert.
+   * Kein Umschalter mehr an dieser Stelle (KAN-104). Bis dahin stand hier
+   * der Rueckweg in den Editor und, mit einem Herkunftsvermerk in der
+   * Adresse, der Rueckweg in die Reviewansicht: beide Ansichten fuehrten
+   * ihre Vorschau als Weg auf diese Seite. Seitdem die Vorschau dort an Ort
+   * und Stelle entsteht, ist diese Seite in jeder Rolle die oeffentliche
+   * Seite, und ein Schalter „Bearbeiten" oder „Review" haette hier keinen
+   * Ursprung mehr, zu dem er zurueckfuehrt.
    */
-  const fromReview = searchParams.get("from") === "review"
-
-  /*
-   * Der Weg zurueck in den Editor, die zweite Haelfte des Umschalters aus
-   * KAN-36. Er erscheint nur, wenn diese Seite fuer die anfragende Person
-   * wirklich eine Vorschau ist: im Arbeitszustand des Projekts (§4.1) und
-   * fuer die Autor:in oder ein Projektmitglied (§5). Fuer alle anderen ist
-   * sie die Seite selbst, und ein Schalter „Bearbeiten" waere ein Weg, der
-   * mit 403 endet.
-   *
-   * Verbindlich bleibt der Server; diese Bedingung entscheidet nur, ob der
-   * Schalter sichtbar ist.
-   */
-  const editable = project.status === "DRAFT" || project.status === "REVISION"
-  const participates =
-    user !== null &&
-    (project.author?.id === user.id ||
-      (project.members ?? []).some((member) => member.userId === user.id))
-
   return (
     <div className="flex flex-col gap-6">
-      {fromReview && (
-        <ViewModeSwitch
-          mode="preview"
-          alternate="review"
-          onModeChange={(mode) => {
-            if (mode === "review") {
-              void navigate(`/projects/${project.id}/review`)
-            }
-          }}
-        />
-      )}
-      {!fromReview && editable && participates && (
-        <ViewModeSwitch
-          mode="preview"
-          onModeChange={(mode) => {
-            if (mode === "edit") {
-              void navigate(`/projects/${project.id}/editor`)
-            }
-          }}
-        />
-      )}
       {project.id !== undefined && (
         <>
           {/* key an der Projekt-ID: die Route rendert bei einem Wechsel
@@ -650,7 +613,7 @@ function ProjectInfoPanel({ project }: { project: ProjectDetailResponse }) {
        * Die Projektinformationen sind zu- und aufklappbar wie im Editor und
        * im Review-Modus (KAN-83, gemeldet aus der Sicht Studierender): wer
        * ein eingereichtes Projekt oeffnet, landet auf dieser Seite und nicht
-       * im Editor, denn Stift und Umschalter gibt es nur in DRAFT und
+       * im Editor, denn den Stift auf der Kachel gibt es nur in DRAFT und
        * REVISION und die Review-Seite ist rollengesperrt. Bis dahin stand
        * hier die nackte ProjectMetaSidebar, und die lange Liste liess sich
        * nicht wegklappen, obwohl der Kommentarkasten unmittelbar darunter
@@ -664,7 +627,7 @@ function ProjectInfoPanel({ project }: { project: ProjectDetailResponse }) {
        * <p><strong>ProjectInfoSection allein und nicht ProjectSidePanels.</strong>
        * Das Akkordeon dort ist eine Aussage ueber ein <em>Paar</em>: hoechstens
        * einer der beiden Kaesten steht offen. Hier stehen zwischen den beiden
-       * der Umschalter und die Reaktionen, und der Kommentarkasten bleibt
+       * die Reaktionen, und der Kommentarkasten bleibt
        * bewusst offen (siehe unten), weil diese Seite fuer die Autor:in eines
        * eingereichten Projekts der einzige Ort mit ihren Aenderungswuenschen
        * ist. Ausserdem haengt er hier zusaetzlich an der Anmeldung; diese
@@ -682,8 +645,8 @@ function ProjectInfoPanel({ project }: { project: ProjectDetailResponse }) {
        * Die Kommentarspalte gehoert auch hierher (Nacharbeit an KAN-37).
        * Bis dahin stand sie nur im Editor und im Review-Modus, und beide
        * sind fuer die Autor:in eines eingereichten oder genehmigten
-       * Projekts unerreichbar: der Stift auf der Kachel und der Umschalter
-       * oben erscheinen nur in DRAFT und REVISION, die Review-Seite ist
+       * Projekts unerreichbar: der Stift auf der Kachel erscheint nur in
+       * DRAFT und REVISION, die Review-Seite ist
        * rollengesperrt. Ihre Aenderungswuensche standen damit an keiner
        * Stelle, an die sie kam, obwohl §2.3 sie jeder Person zeigt, die das
        * Projekt lesen darf. Dasselbe galt fuer Projektmitglieder und fuer

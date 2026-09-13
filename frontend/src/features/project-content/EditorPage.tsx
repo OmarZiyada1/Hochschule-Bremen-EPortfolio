@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { EditorContent, useEditor } from "@tiptap/react"
-import { LockIcon, TriangleAlertIcon } from "lucide-react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { EditorContent, useEditor, type Editor } from "@tiptap/react"
+import { exitSuggestion } from "@tiptap/suggestion"
+import { FileTextIcon, LockIcon, TriangleAlertIcon } from "lucide-react"
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { flushSync } from "react-dom"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useParams } from "react-router-dom"
@@ -17,6 +18,7 @@ import type {
 } from "@/api/types"
 import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import { useFileUrl } from "@/api/useFileUrl"
+import { EmptyState } from "@/components/common/EmptyState"
 import { VersionConflictDialog } from "@/components/common/VersionConflictDialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
@@ -39,7 +41,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { EditorContextProvider } from "@/features/project-content/EditorContext"
 import { BlockDragHandle } from "@/features/project-content/components/BlockDragHandle"
 import { BlockKeyboardBar } from "@/features/project-content/components/BlockKeyboardBar"
-import { EditorHeader } from "@/features/project-content/components/EditorHeader"
+import {
+  EditorHeader,
+  type EditorMode,
+} from "@/features/project-content/components/EditorHeader"
 import { EditorIntro } from "@/features/project-content/components/EditorIntro"
 import { EditorSidebar } from "@/features/project-content/components/EditorSidebar"
 import { TableControlsLayer } from "@/features/project-content/components/TableControlsLayer"
@@ -47,10 +52,12 @@ import { blocksToDoc } from "@/features/project-content/blockSerialization"
 import { isProjectSide } from "@/features/projects/projectPermissions"
 import type { ProjectDocument } from "@/features/project-content/blockTypes"
 import { createEditorExtensions } from "@/features/project-content/editorSchema"
+import { slashCommandPluginKey } from "@/features/project-content/extensions/SlashCommand"
 import { useProjectFileUrls } from "@/features/project-content/hooks/useProjectFileUrls"
 import { printableBlocks } from "@/features/project-content/print/printableBlocks"
 import { ProjectPrintView } from "@/features/project-content/print/ProjectPrintView"
 import { usePrintProject } from "@/features/project-content/print/usePrintProject"
+import { ProjectContent } from "@/features/project-content/renderer/ProjectContent"
 import type { BreadcrumbOriginState } from "@/routes/useBreadcrumb"
 import { useAutosave } from "@/features/project-content/hooks/useAutosave"
 import {
@@ -91,6 +98,15 @@ const EMPTY_BLOCKS: readonly BlockResponse[] = []
  * <p><strong>Inhaltsbearbeitung nur in {@code DRAFT} und
  * {@code REVISION}</strong> (§4.1). In jedem anderen Status ist die Flaeche
  * read-only und sagt sichtbar, warum.
+ *
+ * <p><strong>Die Vorschau entsteht an Ort und Stelle</strong> (KAN-104). Der
+ * Umschalter der Kopfzeile wechselt einen lokalen Modus und keine Route: die
+ * Adresse bleibt {@code /projects/:projectId/editor}, nichts wird neu
+ * geladen, und die Scrollposition bleibt, wo sie war. Bis dahin fuehrte die
+ * Vorschau auf die oeffentliche Detailseite, mit eigenem Ladevorgang und
+ * einem Rueckweg, den es nur dort gab. Der Modus liegt neben
+ * {@code mayWrite} und ersetzt ihn nicht: ob geschrieben werden darf,
+ * entscheiden weiterhin Status und Rechte (§4.1, §5).
  */
 export default function EditorPage() {
   const { t } = useTranslation()
@@ -109,6 +125,16 @@ export default function EditorPage() {
   const [withdrawOpen, setWithdrawOpen] = useState(false)
   /* Die Projektinformationen als Schublade; nur schmal erreichbar. */
   const [infoOpen, setInfoOpen] = useState(false)
+  /*
+   * Schreibflaeche oder Vorschau (KAN-104). Lokal und nicht in der Adresse:
+   * die Vorschau ist ein Blick auf den Stand, den gerade nur diese Seite
+   * kennt, und kein teilbares Ziel. Ein Neuladen oeffnet wieder zum
+   * Schreiben.
+   */
+  const [mode, setMode] = useState<EditorMode>("edit")
+  const editing = mode === "edit"
+  /* Der Name des Vorschauabschnitts, wie auf der Detailseite. */
+  const previewHeadingId = useId()
   /* Der Konflikt wurde gezeigt und weggedrueckt; der Takt bleibt trotzdem
      angehalten, bis die Seite neu gelesen hat. */
   const [conflictSeen, setConflictSeen] = useState(false)
@@ -117,7 +143,7 @@ export default function EditorPage() {
    * Kopfpartie und damit ihr Ruecksetzer: „Serverstand laden" verspricht,
    * die eigenen Eingaben zu verwerfen, und der Inhalt tut das auch (der
    * Editor wird neu aufgebaut). Ohne diesen Zaehler blieben Titel und
-   * Abstract stehen und gingen beim naechsten Takt mit der jetzt wieder
+   * Titelbild stehen und gingen beim naechsten Takt mit der jetzt wieder
    * gueltigen Version hinaus: die fremde Aenderung waere ohne 409 und ohne
    * Meldung ueberschrieben (Befund des Frontend-Reviews).
    *
@@ -143,22 +169,45 @@ export default function EditorPage() {
    *
    * <p><strong>Der Stand kommt aus dem Dokument, nicht aus der
    * Abfrage.</strong> Der Speichertakt laeuft dem Tippen mit gut einer
-   * Sekunde hinterher; ohne {@code printBlocks} bekaeme man das Blatt von
+   * Sekunde hinterher; ohne {@code printSnapshot} bekaeme man das Blatt von
    * vorhin. Genommen wird er bei jedem Druck neu ({@code takePrintBlocks}),
    * auf beiden Wegen; vor dem ersten Druck steht der gelesene Stand darin.
    *
-   * <p>Die Dateien laufen ueber denselben angemeldeten Weg wie in der
-   * Vorschau (§3.15): ein Beitrag im Editor ist nicht veroeffentlicht, und
-   * ohne Token beantwortet der Server jede Medienanfrage mit 401. Dieselben
-   * Abfrageschluessel wie {@code useFileObjectUrl} der Knotenansichten, also
-   * kein zweiter Abruf.
+   * <p>Die Dateien laufen ueber den angemeldeten Weg (§3.15): ein Beitrag im
+   * Editor ist nicht veroeffentlicht, und ohne Token beantwortet der Server
+   * jede Medienanfrage mit 401. Dieselben Abfrageschluessel wie
+   * {@code useFileObjectUrl} der Knotenansichten, also kein zweiter Abruf.
+   *
+   * <p><strong>Derselbe Weg traegt die Vorschau</strong> (KAN-104). Beim
+   * Wechsel in die Vorschau nimmt {@code takePrintBlocks} den Stand aus dem
+   * Dokument, und {@code ProjectContent} rendert {@code printSource} mit
+   * {@code printFiles}, genau wie der Druckbereich. Ein zweiter Weg daneben
+   * liefe beim naechsten Blocktyp auseinander, und ein Druck aus der
+   * Vorschau heraus zeigt so denselben Beitrag wie der Bildschirm; Titel,
+   * Kurzbeschreibung und Titelbild des Ausdrucks bleiben beim gespeicherten
+   * Stand. Die Namen bleiben beim Ausdruck, weil er der erste Verwender war.
+   * Das Titelbild der Vorschau kommt dagegen aus der Kopfpartie
+   * ({@code EditorIntro}), also aus dem Formular und nicht aus
+   * {@code printCover}: dort steht der gespeicherte Stand.
+   *
+   * <p><strong>Der Stand gehoert zu genau einem Editor.</strong> Er wird mit
+   * der Instanz abgelegt, aus der er genommen wurde, und gilt nur, solange
+   * sie die Schreibflaeche ist ({@code printSource} unter
+   * {@code useEditor}). Nach „Serverstand laden" und bei jedem anderen
+   * Neuaufbau aus einer neu gelesenen Fassung entsteht ein neuer Editor aus
+   * {@code blocks.data}; ein Stand des alten zeigte in der Vorschau sonst die
+   * eben verworfenen eigenen Bloecke unter dem Titel vom Server (Befund des
+   * Reviews zu KAN-104). Ohne gueltigen Stand faellt die Quelle auf die
+   * gelesene Blockliste zurueck, und das ist genau der Inhalt des neuen
+   * Editors.
    */
-  const [printBlocks, setPrintBlocks] = useState<BlockResponse[] | null>(null)
+  const [printSnapshot, setPrintSnapshot] = useState<{
+    editor: Editor
+    blocks: BlockResponse[]
+  } | null>(null)
   const { print, printing } = usePrintProject()
   const printNeedsToken =
     project.data !== undefined && project.data.status !== "PUBLISHED"
-  const printSource = printBlocks ?? blocks.data?.blocks ?? EMPTY_BLOCKS
-  const printFiles = useProjectFileUrls(printSource, printNeedsToken)
   const printCover = useFileUrl(project.data?.coverImageUrl, printNeedsToken)
 
   const announce = useCallback((message: string) => {
@@ -183,8 +232,8 @@ export default function EditorPage() {
    * Die Kopfangaben haengen am Status und nicht an {@code canSave}: ein
    * Block, den diese Ansicht nicht lesen kann, ist ein Grund, den Inhalt
    * nicht zurueckzuschreiben (der PUT ersetzt die ganze Liste), aber
-   * keiner, Titelbild, Titel und Kurzbeschreibung festzuhalten. Sie laufen
-   * ueber einen anderen Endpoint (§6.1).
+   * keiner, Titelbild und Titel festzuhalten. Sie laufen ueber einen
+   * anderen Endpoint (§6.1).
    *
    * <p><strong>Zweistufig wie am Server</strong> (§6.1, Zeile
    * {@code PUT /projects/{id}}: „Autor:in und Mitglieder, in DRAFT und
@@ -240,6 +289,14 @@ export default function EditorPage() {
    * Vergleich schickte der erste Takt eines frisch geladenen Beitrags die
    * unveraenderte Karte los, und ein Entwurf bekaeme allein vom Ansehen
    * eine neue {@code version} (§6.4).
+   *
+   * <p><strong>Die Kurzbeschreibung laeuft unveraendert mit</strong>
+   * (KAN-104). Sie wird im Editor nicht bearbeitet, steht aber in der Karte,
+   * weil ein fehlendes Feld sie loeschte. Genommen wird sie aus
+   * {@code current}, also aus dem zuletzt vom Server bestaetigten Stand und
+   * nicht aus der Kopfpartie ({@code toProjectIntroUpdateRequest}); beide
+   * Seiten des Vergleichs tragen damit denselben Wert, und ihretwegen geht
+   * nie ein Request hinaus.
    */
   const readMetadata = useCallback((): Omit<
     ProjectUpdateRequest,
@@ -391,17 +448,31 @@ export default function EditorPage() {
     [editor]
   )
 
+  /* Nach dem Editor gerechnet: ein Stand gilt nur fuer die Instanz, aus der
+     er genommen wurde (siehe den Ausdruck oben). */
+  const printSource =
+    printSnapshot !== null && printSnapshot.editor === editor
+      ? printSnapshot.blocks
+      : (blocks.data?.blocks ?? EMPTY_BLOCKS)
+  const printFiles = useProjectFileUrls(printSource, printNeedsToken)
+
   /*
    * Der Stand, der gedruckt wird: das Dokument der Schreibflaeche, nicht
    * die zuletzt gespeicherte Blockliste. Genommen wird er bei jedem Druck
    * neu, und zwar auf beiden Wegen: die Schaltflaeche ruft ihn selbst,
    * Strg+P ueber {@code beforeprint} (Effekt darunter). Sonst druckte, wer
-   * einen Satz schreibt und sofort druckt, das Blatt von vorhin.
+   * einen Satz schreibt und sofort druckt, das Blatt von vorhin. Die
+   * Vorschau nimmt ihn beim Umschalten und danach bei jeder Aenderung des
+   * Dokuments (KAN-104).
    */
   const takePrintBlocks = useCallback(() => {
     const doc = readDocument()
-    setPrintBlocks(doc === null ? null : printableBlocks(doc))
-  }, [readDocument])
+    setPrintSnapshot(
+      editor === null || doc === null
+        ? null
+        : { editor, blocks: printableBlocks(doc) }
+    )
+  }, [editor, readDocument])
 
   useEffect(() => {
     /* flushSync, weil der Browser unmittelbar nach diesem Ereignis den
@@ -414,6 +485,27 @@ export default function EditorPage() {
       window.removeEventListener("beforeprint", refresh)
     }
   }, [takePrintBlocks])
+
+  /*
+   * Die Vorschau folgt dem Dokument, solange sie steht (KAN-104). Die
+   * Schreibflaeche ist darin nur ausgeblendet, ihre Knotenansichten laufen
+   * also weiter: ein Upload, der erst in der Vorschau fertig wird, traegt
+   * seine Datei per updateAttributes nach, und das Formelfeld schreibt
+   * seinen Entwurf entprellt an den Knoten. Ein nur beim Umschalten
+   * genommener Stand liesse beides aus, bis zweimal umgeschaltet wird, und
+   * ein Entwurf zeigte seine Medien nicht (Befund des Reviews). Der Editor
+   * meldet {@code update} nur bei geaendertem Dokument und nicht bei Auswahl
+   * oder Fokus; der Stand wird im Ereignis gesetzt und nicht im Effekt.
+   */
+  useEffect(() => {
+    if (editing || editor === null) {
+      return undefined
+    }
+    editor.on("update", takePrintBlocks)
+    return () => {
+      editor.off("update", takePrintBlocks)
+    }
+  }, [editing, editor, takePrintBlocks])
 
   const autosave = useAutosave({
     projectId,
@@ -491,6 +583,50 @@ export default function EditorPage() {
     void print()
   }
 
+  /*
+   * Wechselt zwischen Schreibflaeche und Vorschau (KAN-104).
+   *
+   * <p>Beim Wechsel in die Vorschau wird der Stand aus dem Dokument genommen,
+   * auf demselben Weg wie beim Drucken; beide Aenderungen landen in einem
+   * Rendern, die Vorschau steht also nie kurz mit dem Stand von vorhin da.
+   * Aendert sich das Dokument danach noch, etwa durch einen Upload oder einen
+   * Formelentwurf der ausgeblendeten Schreibflaeche, zieht der Effekt auf
+   * {@code update} den Stand nach. Gespeichert wird beim Umschalten nicht,
+   * und der Takt wird auch nicht geleert: was bis dahin getippt wurde,
+   * schreibt der laufende Takt ohnehin (Entscheidung im Ticket).
+   *
+   * <p><strong>Ein offenes Slash-Menue endet vor dem Wechsel.</strong> Es
+   * haengt ueber {@code props.mount} an body und nicht in der
+   * Schreibflaeche, {@code hidden} erreicht es also nicht, und von selbst
+   * schliesst es nur bei Escape oder einem Klick daneben. Per Tastatur ist
+   * der Umschalter bei offenem Menue erreichbar (Alt+F10, dann Tab): die
+   * Liste stuende in der Vorschau weiter da, lesbar fuer Hilfsmittel, und
+   * fuegte dort noch einen Block ein (Befund des Reviews zu KAN-104).
+   * {@code exitSuggestion} ist der Weg, den @tiptap/suggestion dafuer selbst
+   * mitbringt; die Transaktion traegt nur ein Merkmal, das Dokument bleibt
+   * unberuehrt, und der Speichertakt bekommt nichts zu tun.
+   *
+   * <p>Die Ansage laeuft ueber die Live-Region der Seite (SC 4.1.3). Der
+   * Fokus bleibt auf dem Umschalter; er ist in beiden Modi derselbe Knoten.
+   */
+  const toggleMode = () => {
+    if (editing) {
+      if (
+        editor !== null &&
+        !editor.isDestroyed &&
+        slashCommandPluginKey.getState(editor.state)?.active === true
+      ) {
+        exitSuggestion(editor.view, slashCommandPluginKey)
+      }
+      takePrintBlocks()
+      setMode("preview")
+      announce(t("projectContent.mode.announce.preview"))
+      return
+    }
+    setMode("edit")
+    announce(t("projectContent.mode.announce.edit"))
+  }
+
   if (project.isPending || blocks.isPending) {
     return (
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8">
@@ -562,7 +698,8 @@ export default function EditorPage() {
           }}
           onWithdraw={() => setWithdrawOpen(true)}
           onBack={() => void leaveTo("/my-portfolio")}
-          onPreview={() => void leaveTo(`/projects/${projectId}`)}
+          mode={mode}
+          onModeToggle={toggleMode}
           onPrint={handlePrint}
           printing={printing}
           onShowInfo={() => setInfoOpen(true)}
@@ -578,11 +715,13 @@ export default function EditorPage() {
            */}
           <div className="editor-content-column flex min-w-0 flex-1 flex-col gap-4">
             {/*
-             * Titelbild, Titel und Kurzbeschreibung stehen ueber dem
-             * Beitrag und sind dort aenderbar. Sie sind Metadaten und
-             * laufen ueber einen anderen Endpoint als der Inhalt (§6.1);
-             * derselbe Speichertakt fuehrt beide nacheinander, weil sie
-             * sich eine {@code Project.version} teilen (§6.4).
+             * Titelbild und Titel stehen ueber dem Beitrag und sind dort
+             * aenderbar. Sie sind Metadaten und laufen ueber einen anderen
+             * Endpoint als der Inhalt (§6.1); derselbe Speichertakt fuehrt
+             * beide nacheinander, weil sie sich eine
+             * {@code Project.version} teilen (§6.4). Die Kurzbeschreibung
+             * wird im Metadatenformular eingetragen und erscheint hier allein
+             * in der Vorschau (KAN-104, Entscheidung).
              *
              * <p><strong>Der key ist der Zaehler der Neuladevorgaenge</strong>
              * und nicht {@code id-version} wie im Metadatenformular: die
@@ -594,7 +733,24 @@ export default function EditorPage() {
             <EditorIntro
               key={reloadCount}
               project={detail}
-              editable={mayEditMetadata}
+              /*
+               * In der Vorschau als Text (KAN-104). Gewechselt wird nur die
+               * Anzeige: der key bleibt, das Formular bleibt montiert und mit
+               * ihm die eigene Eingabe, das Merkmal fuer Getipptes und die
+               * angemeldete Lesefunktion. Ob geschrieben werden darf, sagt
+               * weiter metadataRef mit mayEditMetadata; haengte das am Modus,
+               * ginge eine Aenderung von kurz vor dem Umschalten nicht mehr
+               * hinaus.
+               */
+              editable={editing && mayEditMetadata}
+              /*
+               * Die Kurzbeschreibung als grauer Vorspann, allein in der
+               * Vorschau (KAN-104, Entscheidung). Die Kopfpartie kann das
+               * aus editable nicht ablesen: das ist in der Vorschau und ohne
+               * Schreibrecht gleichermassen false, und beim Bearbeiten ohne
+               * Schreibrecht soll sie nicht erscheinen.
+               */
+              showSummary={!editing}
               onChange={scheduleFromIntro}
               onRegisterRead={registerIntroRead}
             />
@@ -654,7 +810,7 @@ export default function EditorPage() {
              * Sekunden. Wer im Streifen loslaesst, sah die Linie deshalb
              * noch sekundenlang stehen.
              */}
-            {editor !== null && mayWrite && (
+            {editor !== null && mayWrite && editing && (
               <BlockKeyboardBar
                 editor={editor}
                 disabled={!mayWrite}
@@ -663,8 +819,81 @@ export default function EditorPage() {
               />
             )}
 
-            <div ref={surfaceRef} className="project-content relative">
-              {editor !== null && mayWrite && (
+            {/*
+             * Die Vorschau (KAN-104) steht an der Stelle der Schreibflaeche,
+             * mit demselben Renderer und demselben Aufbau wie die
+             * Detailseite: ein benannter Abschnitt mit sr-only-Ueberschrift,
+             * und ein Beitrag ohne Bloecke zeigt den Leerzustand statt einer
+             * leeren Flaeche. Die Bloecke kommen aus dem Dokument und nicht
+             * aus der Abfrage (printSource, siehe oben); ohne das zeigte die
+             * Vorschau den Stand von vor dem letzten Takt.
+             *
+             * <p>Der Abschnitt ist mit Absicht kein unmittelbares Kind
+             * .project-content dieser Spalte: project-content.css zieht ein
+             * solches Kind um den Streifen der Blockbedienung nach links, und
+             * ohne den Innenabstand der Schreibflaeche stuende der Beitrag
+             * dann links neben dem Titel statt auf seiner Achse.
+             */}
+            {!editing && (
+              <section
+                aria-labelledby={previewHeadingId}
+                className="flex flex-col gap-3"
+              >
+                <h2 id={previewHeadingId} className="sr-only">
+                  {t("project.detail.content")}
+                </h2>
+                {printSource.length === 0 ? (
+                  <EmptyState
+                    headingLevel={3}
+                    icon={<FileTextIcon aria-hidden="true" />}
+                    title={t("project.detail.empty.title")}
+                    description={t("project.detail.empty.description")}
+                  />
+                ) : (
+                  <ProjectContent
+                    blocks={printSource}
+                    resolveFileUrl={printFiles.resolveFileUrl}
+                    fileState={printFiles.fileState}
+                  />
+                )}
+              </section>
+            )}
+
+            {/*
+             * <strong>In der Vorschau ausgeblendet und nicht abgebaut</strong>
+             * (KAN-104, Entscheidung nach Blick in den Quelltext).
+             *
+             * <p>Baut React {@code EditorContent} ab, setzt @tiptap/react im
+             * componentWillUnmount die Knotenansichten des Editors auf leer
+             * und haengt das DOM der Schreibflaeche in einen losen Rahmen; beim
+             * Wiedereinhaengen entstehen alle Knotenansichten neu
+             * (createNodeViews). Ihr eigener Zustand ginge dabei verloren,
+             * etwa ein laufender Upload in einem Medienblock oder ein offenes
+             * Formelfeld, dazu die Auswahl im DOM, und die Tabellenbedienung
+             * faende ihre Rahmen erst einen Bildaufbau spaeter wieder. Der
+             * Verlauf fuer Rueckgaengig liegt im Zustand des Editors und
+             * bliebe zwar erhalten, der Rest nicht.
+             *
+             * <p>Mit {@code hidden} bleibt alles stehen. Tailwind setzt fuer
+             * [hidden] display: none mit !important, und das nimmt die
+             * Flaeche samt allem darin aus der Tabulatorreihe und aus dem Baum
+             * der Hilfsmittel: nichts von der Schreibflaeche ist in der
+             * Vorschau per Tastatur erreichbar.
+             *
+             * <p>Ziehgriff, Tastaturleiste und Tabellenbedienung werden
+             * dagegen abgebaut, sie haengen an mayWrite und am Modus. Der
+             * Ziehgriff meldet sein Plugin dabei ab und beim Zurueckwechseln
+             * neu an (@tiptap/extension-drag-handle-react, unregisterPlugin
+             * und registerPlugin), und die Plugin-Ansicht entfernt ihren
+             * Rahmen. Das Dokument bleibt davon unberuehrt, der Speichertakt
+             * bekommt also nichts zu tun.
+             */}
+            <div
+              ref={surfaceRef}
+              className="project-content relative"
+              hidden={!editing}
+            >
+              {editor !== null && mayWrite && editing && (
                 <BlockDragHandle
                   editor={editor}
                   disabled={!mayWrite}
@@ -679,7 +908,7 @@ export default function EditorPage() {
                * ihre Bedienung als Portal in den Rahmen jeder Tabelle, und
                * den gibt es erst, wenn die Schreibflaeche im DOM steht.
                */}
-              {editor !== null && mayWrite && (
+              {editor !== null && mayWrite && editing && (
                 <TableControlsLayer editor={editor} />
               )}
             </div>
@@ -802,6 +1031,11 @@ export default function EditorPage() {
           /* Verwirft auch die Kopfangaben: der Dialog verspricht, die
              eigenen Eingaben zugunsten des Serverstands aufzugeben. */
           setReloadCount((count) => count + 1)
+          /* Ebenso den Stand von Vorschau und Druckbereich (KAN-104): er
+             stammt aus dem Dokument, das hier verworfen wird. Bis die neue
+             Fassung gelesen ist, steht die zuletzt gelesene Blockliste
+             darin, danach der Inhalt des neu aufgebauten Editors. */
+          setPrintSnapshot(null)
           /* Beide Schluessel ausdruecklich: der Inhalt liegt seit KAN-36
              bewusst nicht mehr unter ["projects", …], damit ihn eine
              fremde Invalidierung nicht mitreisst (api/queries/blocks.ts).

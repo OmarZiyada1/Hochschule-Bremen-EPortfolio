@@ -194,11 +194,12 @@ export function CommentPanel({
   const ordered = entries
 
   /*
-   * In REVISION aufgeklappt: dort sind die offenen Aenderungswuensche der
-   * Arbeitsauftrag, und eine zugeklappte Spalte verstuende sich als
-   * Nebensache. Sonst folgt die Spalte dem Template und beginnt offen im
-   * Review-Modus, im Editor dagegen zugeklappt, damit die Schreibflaeche
-   * die Seite behaelt.
+   * Die Vorgabe, solange die Spalte sich selbst verwaltet. In Editor und
+   * Reviewansicht gilt sie nicht: dort steht die Spalte im Akkordeon von
+   * ProjectSidePanels, und das oeffnet seit KAN-104 in jedem Status die
+   * Kommentare. Ohne Steuerung von aussen beginnt die Spalte in REVISION
+   * aufgeklappt, weil dort die offenen Aenderungswuensche der Arbeitsauftrag
+   * sind, und im Zusammenhang "review" ebenso.
    */
   const [ownOpen, setOwnOpen] = useState(
     defaultOpen ?? (project.status === "REVISION" || context === "review")

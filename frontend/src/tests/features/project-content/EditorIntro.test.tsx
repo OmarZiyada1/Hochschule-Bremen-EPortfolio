@@ -1,4 +1,4 @@
-import { act, screen } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
@@ -10,8 +10,8 @@ import { projectDetail } from "@/tests/fixtures"
 import { renderWithProviders } from "@/tests/render"
 
 /**
- * Die Kopfpartie des Editors (KAN-36): Titelbild, Titel und
- * Kurzbeschreibung ueber der Schreibflaeche.
+ * Die Kopfpartie des Editors (KAN-36): Titelbild und Titel ueber der
+ * Schreibflaeche, in der Vorschau dazu die Kurzbeschreibung (KAN-104).
  *
  * <p>Geprueft wird ueber die sichtbare Oberflaeche und ueber die beiden
  * Zusagen nach oben: dass jede Aenderung gemeldet wird und dass der
@@ -21,8 +21,49 @@ import { renderWithProviders } from "@/tests/render"
 
 const PROJECT_ID = "1f9d7a10-0000-0000-0000-000000000000"
 
-/** Die Rahmenflaeche um Titel und Kurzbeschreibung (KAN-105). */
-const FRAME = '[data-slot="editor-intro-frame"]'
+/** Der zugaengliche Name der Kopfpartie (seit KAN-104). */
+const REGION = "Kopfbereich des Beitrags"
+
+/** Beschriftung und Platzhalter des Feldes, das bis KAN-104 im Editor stand. */
+const SUMMARY_LABEL = "Kurzbeschreibung"
+const SUMMARY_PLACEHOLDER = "Kurz, was das Projekt ausmacht"
+
+/** Die Hoechstlaengenmeldung bei TITLE_MAX_LENGTH = 100. */
+const LIMIT_MESSAGE = "Der Titel hat die Höchstlänge von 100 Zeichen erreicht."
+
+/**
+ * Die Klassen der Registry-Primitive Textarea, die Rand, Ring oder Flaeche
+ * zeichnen. Keine davon darf am Titelfeld ankommen (KAN-104, Entscheidung).
+ */
+const PRIMITIVE_FRAME_CLASSES = [
+  "border",
+  "border-input",
+  "dark:bg-input/30",
+  "focus-visible:border-ring",
+  "focus-visible:ring-3",
+  "focus-visible:ring-ring/50",
+  "aria-invalid:border-destructive",
+  "aria-invalid:ring-3",
+  "aria-invalid:ring-destructive/20",
+  "dark:aria-invalid:border-destructive/50",
+  "dark:aria-invalid:ring-destructive/40",
+]
+
+/** Die Gegenklassen, jede mit dem Modifikator der Klasse, die sie aufhebt. */
+const BARE_CLASSES = [
+  "border-0",
+  "border-transparent",
+  "bg-transparent",
+  "dark:bg-transparent",
+  "focus-visible:ring-0",
+  "focus-visible:ring-transparent",
+  "focus-visible:border-transparent",
+  "aria-invalid:border-transparent",
+  "aria-invalid:ring-0",
+  "aria-invalid:ring-transparent",
+  "dark:aria-invalid:border-transparent",
+  "dark:aria-invalid:ring-transparent",
+]
 
 function draft(overrides: Partial<ProjectDetailResponse> = {}) {
   return projectDetail({
@@ -38,7 +79,13 @@ function draft(overrides: Partial<ProjectDetailResponse> = {}) {
  * Serverstand hereingeben kann: genau das passiert nach dem Neuladen im
  * Konfliktdialog und nach jeder eigenen Speicherung.
  */
-function setUp(project: Partial<ProjectDetailResponse> = {}, editable = true) {
+function setUp(
+  project: Partial<ProjectDetailResponse> = {},
+  {
+    editable = true,
+    showSummary = false,
+  }: { editable?: boolean; showSummary?: boolean } = {}
+) {
   const onChange = vi.fn()
   let read: () => ProjectIntroValues | null = () => null
   let setProject: (next: ProjectDetailResponse) => void = () => undefined
@@ -50,6 +97,7 @@ function setUp(project: Partial<ProjectDetailResponse> = {}, editable = true) {
       <EditorIntro
         project={current}
         editable={editable}
+        showSummary={showSummary}
         onChange={onChange}
         onRegisterRead={(next) => {
           read = next
@@ -70,7 +118,7 @@ function setUp(project: Partial<ProjectDetailResponse> = {}, editable = true) {
 }
 
 describe("EditorIntro", () => {
-  it("nimmt Titel und Kurzbeschreibung entgegen und meldet die Aenderung", async () => {
+  it("nimmt den Titel entgegen und meldet die Aenderung", async () => {
     const user = userEvent.setup()
     const { onChange, read } = setUp()
 
@@ -78,13 +126,10 @@ describe("EditorIntro", () => {
     await user.clear(title)
     await user.type(title, "Neuer Titel")
 
-    const summary = screen.getByLabelText("Kurzbeschreibung")
-    await user.type(summary, "Kurz gesagt")
-
     expect(onChange).toHaveBeenCalled()
+    /* Ohne Kurzbeschreibung: sie wird im Editor nicht bearbeitet (KAN-104). */
     expect(read()).toEqual({
       title: "Neuer Titel",
-      summary: "Kurz gesagt",
       coverImageUrl: "",
     })
   })
@@ -192,39 +237,11 @@ describe("EditorIntro", () => {
     expect(read()?.title).toBe("Erste Zeile Zweite Zeile")
   })
 
-  /* Wunsch aus der Sitzung: die Restanzahl steht nur am Feld, in dem
-     gerade geschrieben wird. */
-  it("zeigt den Zeichenzaehler nur am fokussierten Feld", async () => {
-    const user = userEvent.setup()
-    setUp()
-
-    const counter = () => screen.getByText(/Noch \d+ Zeichen/)
-
-    /*
-     * Dauerhaft im Baum, aber nur am fokussierten Feld sichtbar. Ausgebaut
-     * waere er nicht: aria-describedby zeigte beim Betreten sonst auf ein
-     * Element, das es noch nicht gibt.
-     */
-    expect(counter()).toHaveClass("sr-only")
-    expect(screen.getByLabelText("Projekttitel")).toHaveAttribute(
-      "aria-describedby"
-    )
-
-    await user.click(screen.getByLabelText("Projekttitel"))
-    expect(counter()).not.toHaveClass("sr-only")
-
-    /* Die Kurzbeschreibung hat gar keinen: sie ist Fliesstext ohne
-       Zeichengrenze ausser der des Servers. */
-    await user.click(screen.getByLabelText("Kurzbeschreibung"))
-    expect(counter()).toHaveClass("sr-only")
-    expect(screen.getByLabelText("Kurzbeschreibung")).not.toHaveAttribute(
-      "aria-describedby"
-    )
-  })
-
   /*
    * Ein stiller Fehlschlag waere Datenverlust mit Ansage: der
-   * Speicherzustand in der Kopfzeile weiss von diesem Fall nichts.
+   * Speicherzustand in der Kopfzeile weiss von diesem Fall nichts. Das gilt
+   * nach KAN-104 unveraendert; nur die Meldung nennt jetzt den Titel statt
+   * der markierten Felder.
    */
   it("liefert nichts zum Speichern, solange der Titel fehlt, und sagt es", async () => {
     const user = userEvent.setup()
@@ -238,178 +255,225 @@ describe("EditorIntro", () => {
     const alerts = await screen.findAllByRole("alert")
     expect(
       alerts.some((alert) =>
-        /nicht gespeichert, solange/i.test(alert.textContent ?? "")
+        /nicht gespeichert, solange der Titel/i.test(alert.textContent ?? "")
       )
     ).toBe(true)
   })
 
-  it("rahmt das Titelbild im Verhaeltnis 16:9", () => {
-    const { view } = setUp()
-
-    /* Ueber die Klasse geprueft, weil vitest ohne CSS laeuft (vite.config
-       test.css false) und ein berechneter Stil deshalb nichts hergibt. Das
-       Verhaeltnis ist eine ausdrueckliche Vorgabe und darf nicht
-       unbemerkt zurueckfallen. */
-    expect(view.container.querySelector(".aspect-video")).not.toBeNull()
-    expect(view.container.querySelector(".aspect-\\[7\\/4\\]")).toBeNull()
-  })
-
   /*
-   * Auch die Platzierung ist eine ausdrueckliche Vorgabe: die Bedienung des
-   * Titelbilds liegt im Editor auf der Bildflaeche und nicht darunter, und
-   * sie zeigt nur Zeichen. Der Standard von CoverImageField ist das
-   * Gegenteil ("below"), ein Rueckfall faellt also ohne diese Zusicherung
-   * nirgends auf: die Komponente selbst ist isoliert geprueft, die
-   * Uebersteuerung steht hier.
+   * Umgebaut mit KAN-104 (Entscheidung): bis dahin stand die Restanzahl
+   * am fokussierten Feld. Sie ist entfallen, weder beim Lesen noch beim
+   * Schreiben steht eine Zahl unter dem Titel.
    */
-  it("legt die Bedienung des Titelbilds als Zeichenleiste auf die Flaeche", () => {
-    const { view } = setUp()
-
-    const chooser = screen.getByLabelText("Titelbild wählen")
-    const preview = view.container.querySelector(
-      '[data-slot="cover-image-preview"]'
-    )
-
-    expect(preview).not.toBeNull()
-    expect(preview).toContainElement(chooser)
-    /* Nur Zeichen: der Name steht unsichtbar im Bedienelement. */
-    expect(screen.getByText("Titelbild wählen")).toHaveClass("sr-only")
-  })
-
-  /* Wunsch aus der Sitzung: kein Rahmen um die beiden Felder, und zwar
-     auch nicht im dunklen Modus, wo die Primitive eine Flaeche mitbringt. */
-  it("laesst die beiden Felder ohne Rahmen und ohne dunkle Flaeche", () => {
+  it("zeigt unter dem Titel keine Restzeichenanzeige, auch nicht im Fokus", async () => {
+    const user = userEvent.setup()
     setUp()
 
-    for (const label of ["Projekttitel", "Kurzbeschreibung"]) {
-      const field = screen.getByLabelText(label)
-      expect(field.className).toContain("border-0")
-      expect(field.className).toContain("dark:bg-transparent")
-      expect(field.className).not.toContain("dark:bg-input")
-      /* Auch im Fokus kein Rahmen: der Ring der Primitive ist genommen.
-         Sichtbar bleibt der Fokus ueber die Schreibmarke und die leichte
-         Flaeche, die beim Tastatursprung mit erscheint (SC 2.4.7). */
-      expect(field.className).toContain("focus-visible:ring-0")
-      expect(field.className).not.toContain("focus-visible:ring-3")
-      expect(field.className).toContain("focus:bg-muted/40")
-      /* Auch dunkel: dark:bg-transparent schlaegt sonst die Flaeche. */
-      expect(field.className).toContain("dark:focus:bg-muted/40")
-      expect(field.className).toContain("dark:hover:bg-muted/40")
-      /* Und kein Rollbalken: das Feld waechst mit dem Inhalt. */
-      expect(field.className).toContain("field-sizing-content")
-      expect(field.className).toContain("overflow-hidden")
-    }
+    expect(screen.queryByText(/Noch \d+ Zeichen/)).toBeNull()
+
+    const title = screen.getByLabelText("Projekttitel")
+    await user.click(title)
+    await user.type(title, " ergaenzt")
+
+    expect(title).toHaveFocus()
+    expect(screen.queryByText(/Noch \d+ Zeichen/)).toBeNull()
+    expect(screen.queryByText(/Zeichen zu viel/)).toBeNull()
   })
 
   /*
-   * KAN-105: beim Bearbeiten stehen Titel und Kurzbeschreibung gemeinsam in
-   * einem gestrichelten Rahmen. Das Titelbild darueber bleibt draussen, die
-   * Warnmeldung zum Speicherweg ebenso; Feldmeldung und Zeichenzaehler
-   * gehoeren zu ihren Feldern und stehen darin.
+   * KAN-104, Entscheidung: statt der Restanzahl eine Meldung, sobald der
+   * Titel die Hoechstlaenge erreicht hat und nichts mehr hineinpasst. Sie ist
+   * ein Hinweis und kein Fehler, steht in einer Live-Region, die dauerhaft im
+   * DOM ist (SC 4.1.3), und beschreibt das Feld.
    */
-  it("rahmt Titel und Kurzbeschreibung gemeinsam, ohne Titelbild und Warnmeldung", async () => {
+  it("meldet erst bei 100 Zeichen, dass nichts mehr hineinpasst, und sagt es an", async () => {
     const user = userEvent.setup()
-    const { view } = setUp()
+    const { read } = setUp()
 
-    const frames = view.container.querySelectorAll(FRAME)
-    expect(frames).toHaveLength(1)
-    const frame = frames[0]
+    const title = screen.getByLabelText("Projekttitel")
+    const hintId = title.getAttribute("aria-describedby") ?? ""
+    const hint = document.getElementById(hintId)
 
-    expect(frame).toContainElement(screen.getByLabelText("Projekttitel"))
-    expect(frame).toContainElement(screen.getByLabelText("Kurzbeschreibung"))
-    expect(frame).toContainElement(screen.getByText(/Noch \d+ Zeichen/))
-    expect(frame).not.toContainElement(
-      view.container.querySelector<HTMLElement>(
-        '[data-slot="cover-image-preview"]'
-      )
-    )
+    /* Von Anfang an im Baum, leer und dann ohne Platzbedarf. */
+    expect(hint).not.toBeNull()
+    expect(hint).toHaveAttribute("role", "status")
+    expect(hint).toBeEmptyDOMElement()
+    expect(hint).toHaveClass("empty:sr-only")
 
-    await user.clear(screen.getByLabelText("Projekttitel"))
+    await user.clear(title)
+    await user.click(title)
+    await user.paste("a".repeat(99))
+    expect(title).toHaveValue("a".repeat(99))
+    expect(hint).toBeEmptyDOMElement()
 
-    const alerts = await screen.findAllByRole("alert")
-    const notSaved = alerts.find((alert) =>
-      /nicht gespeichert, solange/i.test(alert.textContent ?? "")
-    )
-    expect(notSaved).toBeDefined()
-    expect(frame).not.toContainElement(notSaved ?? null)
+    await user.type(title, "b")
 
-    const fieldErrors = alerts.filter((alert) => alert !== notSaved)
-    expect(fieldErrors.length).toBeGreaterThan(0)
-    for (const fieldError of fieldErrors) {
-      expect(frame).toContainElement(fieldError)
-    }
-    /* Und es bleibt einer: die Meldung darunter oeffnet keinen zweiten. */
-    expect(view.container.querySelectorAll(FRAME)).toHaveLength(1)
+    await waitFor(() => expect(hint).toHaveTextContent(LIMIT_MESSAGE))
+    /* Derselbe Knoten: nur sein Text hat gewechselt. */
+    expect(document.getElementById(hintId)).toBe(hint)
+    /* Erreichbar und nicht nur vorhanden (Skill frontend-shadcn). */
+    expect(hint?.closest("[aria-hidden]")).toBeNull()
+    /* Ein Hinweis in gedaempfter Farbe, kein Fehler: der Titel ist gueltig. */
+    expect(hint).toHaveClass("text-muted-foreground")
+    expect(hint).not.toHaveClass("text-destructive")
+    expect(title).not.toHaveAttribute("aria-invalid")
+    expect(read()?.title).toHaveLength(100)
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(screen.queryByRole("alert")).toBeNull()
+
+    /* Mehr passt nicht hinein. */
+    await user.type(title, "c")
+    expect(title).toHaveValue(`${"a".repeat(99)}b`)
+
+    /* Und unter der Grenze ist die Meldung wieder fort. */
+    await user.keyboard("{Backspace}")
+    await waitFor(() => expect(hint).toBeEmptyDOMElement())
   })
 
   /*
-   * Lang gestrichelt geht mit border-style dashed nicht, deshalb eine
-   * SVG-Umrandung. Sie ist Schmuck: fuer Hilfsmittel verborgen, ohne
-   * Klickflaeche, und die Farbe kommt ueber die Rolle primary statt ueber
-   * einen eigenen Wert. Geprueft ueber Attribute und Klassen, weil vitest
-   * ohne CSS laeuft (vgl. den 16:9-Test).
+   * Der Server laesst 255 Zeichen zu (ProjectUpdateRequest), der Client 100.
+   * Ein so geladener Titel hat die Grenze nicht erreicht, sondern
+   * ueberschritten: statt des Hinweises steht sofort die Feldmeldung, die
+   * den Grund fuer die Warnung zum Speicherweg nennt. Tippen koennte sie
+   * nicht ausloesen, maxLength sperrt jede Eingabe (KAN-104, Befund aus dem
+   * Review).
    */
-  it("zeichnet den Rahmen als verborgene, gestrichelte Linie in der Primaerfarbe", () => {
-    const { view } = setUp()
+  it("zeigt einen zu langen Titel vom Server sofort als Fehler und nicht als Hinweis", async () => {
+    const { read, onChange } = setUp({ title: "a".repeat(101) })
 
-    const svg = view.container.querySelector(`${FRAME} > svg`)
-    expect(svg).toHaveAttribute("aria-hidden", "true")
-    expect(svg).toHaveClass(
-      "text-primary",
-      "pointer-events-none",
-      "absolute",
-      "inset-0",
-      "size-full",
-      "overflow-visible"
+    const title = screen.getByLabelText("Projekttitel")
+    const hint = document.getElementById(
+      title.getAttribute("aria-describedby") ?? ""
     )
 
-    const rect = svg?.querySelector("rect")
-    expect(rect).toHaveAttribute("fill", "none")
-    expect(rect).toHaveAttribute("stroke", "currentColor")
-    expect(rect).toHaveAttribute("stroke-width", "1")
-    expect(rect).toHaveAttribute("vector-effect", "non-scaling-stroke")
-    expect(rect).toHaveAttribute("width", "100%")
-    expect(rect).toHaveAttribute("height", "100%")
-    expect(rect).toHaveClass(
-      "[stroke-dasharray:0.75rem_0.5rem]",
-      "[rx:var(--radius-control)]"
-    )
-  })
-
-  /*
-   * Der Rahmen darf die Felder nicht verschieben: Innenabstand und
-   * negativer Aussenabstand sind gleich gross, Titel und Kurzbeschreibung
-   * bleiben buendig mit dem Blockinhalt. jsdom rechnet kein Layout, belegt
-   * wird es deshalb ueber die Klassen.
-   */
-  it("setzt den Rahmen nach aussen, damit Titel und Kurzbeschreibung stehen bleiben", () => {
-    const { view } = setUp()
-
-    const frame = view.container.querySelector(FRAME)
-    expect(frame).toHaveClass("relative", "-mx-3", "px-3", "-my-2", "py-2")
-    /* Derselbe Abstand zwischen den Feldern wie ohne Rahmen. */
-    expect(frame).toHaveClass("flex", "flex-col", "gap-4")
-  })
-
-  /* Wo die Kopfpartie nur gelesen wird, gibt es nichts zu umrahmen: nicht
-     ohne Schreibrecht und damit auch nicht in Vorschau und Ausdruck. */
-  it("zeigt ohne Schreibrecht keinen Rahmen", () => {
-    const { view } = setUp(
-      { title: "Veroeffentlicht", summary: "Kurzfassung", status: "PUBLISHED" },
-      false
-    )
-
-    expect(view.container.querySelector(FRAME)).toBeNull()
+    expect(hint).toBeEmptyDOMElement()
     expect(
-      view.container.querySelector('[class*="stroke-dasharray"]')
-    ).toBeNull()
+      await screen.findByText("Der Titel darf höchstens 100 Zeichen lang sein.")
+    ).toHaveAttribute("role", "alert")
+    expect(title).toHaveAttribute("aria-invalid", "true")
+    expect(hint).toBeEmptyDOMElement()
+    expect(
+      screen
+        .getAllByRole("alert")
+        .some((alert) =>
+          /nicht gespeichert, solange der Titel/i.test(alert.textContent ?? "")
+        )
+    ).toBe(true)
+    /* Die Pruefung ist keine Eingabe: nichts zu senden, kein Takt. */
+    expect(read()).toBeNull()
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  /* Dasselbe fuer einen Serverstand, den ein unberuehrtes Feld uebernimmt. */
+  it("zeigt auch einen uebernommenen zu langen Titel sofort als Fehler", async () => {
+    const { read, onChange, setProject } = setUp()
+
+    setProject(draft({ title: "b".repeat(120) }))
+
+    const title = screen.getByLabelText("Projekttitel")
+    expect(title).toHaveValue("b".repeat(120))
+    expect(
+      await screen.findByText("Der Titel darf höchstens 100 Zeichen lang sein.")
+    ).toHaveAttribute("role", "alert")
+    expect(title).toHaveAttribute("aria-invalid", "true")
+    expect(
+      document.getElementById(title.getAttribute("aria-describedby") ?? "")
+    ).toBeEmptyDOMElement()
+    expect(read()).toBeNull()
+    expect(onChange).not.toHaveBeenCalled()
   })
 
   /*
-   * Der Umschalter der Kopfzeile fuehrt unmittelbar zwischen Editor und
-   * oeffentlicher Detailseite. Wechselte der Titel dabei Groesse oder
-   * Farbe, saehe der Wechsel wie ein Seitenwechsel aus. Vorbild ist
-   * ProjectDetailPage mit "type-title min-w-0 text-primary".
+   * Umgebaut mit KAN-104 (Entscheidung): bis dahin kam beim Ueberfahren und
+   * im Fokus eine leichte Flaeche dazu. Jetzt traegt das Titelfeld weder
+   * Rand noch Ring noch Flaeche, auch nicht rot bei ungueltigem Titel, und
+   * zwar in hell und dunkel. Geprueft ueber die Klassen, weil vitest ohne
+   * CSS laeuft (vite.config test.css false).
+   */
+  it("laesst das Titelfeld ohne Rahmen und Flaeche, auch im Fokus und bei ungueltigem Titel", async () => {
+    const user = userEvent.setup()
+    setUp()
+
+    const title = screen.getByLabelText("Projekttitel")
+    const expectBare = () => {
+      const classes = [...title.classList]
+      for (const primitiveClass of PRIMITIVE_FRAME_CLASSES) {
+        expect(classes, primitiveClass).not.toContain(primitiveClass)
+      }
+      for (const bareClass of BARE_CLASSES) {
+        expect(classes, bareClass).toContain(bareClass)
+      }
+      /* Keine Flaeche beim Ueberfahren oder im Fokus, hell wie dunkel. */
+      expect(
+        classes.filter((name) =>
+          /(^|:)(hover|focus|focus-visible):bg-/.test(name)
+        )
+      ).toEqual([])
+      /* Und kein Rollbalken: das Feld waechst mit dem Inhalt. */
+      expect(classes).toContain("field-sizing-content")
+      expect(classes).toContain("overflow-hidden")
+    }
+
+    expectBare()
+
+    await user.clear(title)
+
+    await waitFor(() => expect(title).toHaveAttribute("aria-invalid", "true"))
+    expect(title).toHaveFocus()
+    expectBare()
+    /* Fort ist allein die Optik: die Meldung zum Titel bleibt als Text. */
+    expect(
+      await screen.findByText("Bitte geben Sie einen Projekttitel ein.")
+    ).toHaveAttribute("role", "alert")
+  })
+
+  /*
+   * Umgebaut mit KAN-104 (Entscheidung): der gestrichelte Rahmen aus KAN-105
+   * um Titel und Kurzbeschreibung ist entfallen. Das Titelfeld steht
+   * unmittelbar in der Kopfpartie, ohne Huelle, die einen Rahmen tragen oder
+   * nach aussen versetzt sein koennte, und ohne SVG-Umrandung.
+   */
+  it("stellt den Titel ohne gestrichelten Rahmen unmittelbar in die Kopfpartie", async () => {
+    const user = userEvent.setup()
+    setUp()
+
+    const region = screen.getByRole("region", { name: REGION })
+    const title = screen.getByLabelText("Projekttitel")
+    const expectUnframed = () => {
+      expect(title.closest('[data-slot="field"]')?.parentElement).toBe(region)
+      expect(region.querySelector('[class*="stroke-dasharray"]')).toBeNull()
+      expect(region.querySelector('rect[stroke="currentColor"]')).toBeNull()
+      expect(region.querySelector(".-mx-3")).toBeNull()
+    }
+
+    expectUnframed()
+
+    /* Auch nicht, sobald Feld- und Speichermeldung dazukommen. */
+    await user.clear(title)
+    await screen.findAllByRole("alert")
+    expectUnframed()
+  })
+
+  /* Wo die Kopfpartie nur gelesen wird, gab es den Rahmen schon vorher
+     nicht; dabei bleibt es, auch mit dem Vorspann der Vorschau. */
+  it("zeigt ohne Schreibrecht und in der Vorschau keinen Rahmen", () => {
+    setUp(
+      { title: "Veroeffentlicht", summary: "Kurzfassung", status: "PUBLISHED" },
+      { editable: false, showSummary: true }
+    )
+
+    const region = screen.getByRole("region", { name: REGION })
+    expect(region.querySelector('[class*="stroke-dasharray"]')).toBeNull()
+    expect(screen.getByRole("heading", { level: 1 }).parentElement).toBe(region)
+  })
+
+  /*
+   * Der Umschalter der Kopfzeile wechselt seit KAN-104 an Ort und Stelle
+   * zwischen Schreibflaeche und Vorschau, in der die Kopfpartie als Text
+   * steht. Wechselte der Titel dabei Groesse oder Farbe, sprang die Seite.
+   * Vorbild ist ProjectDetailPage mit "type-title min-w-0 text-primary".
    */
   it("traegt am Titel dieselbe Rolle und Farbe wie die Detailseite", () => {
     const { view } = setUp()
@@ -421,58 +485,79 @@ describe("EditorIntro", () => {
 
     /* Und ohne Schreibrecht ebenso, dort als sichtbare Ueberschrift. */
     view.unmount()
-    setUp({ title: "Veroeffentlicht", status: "PUBLISHED" }, false)
+    setUp(
+      { title: "Veroeffentlicht", status: "PUBLISHED" },
+      { editable: false }
+    )
     const heading = screen.getByRole("heading", { level: 1 })
     expect(heading.className).toContain("type-title")
     expect(heading.className).toContain("text-primary")
   })
 
-  it("zeigt ohne Schreibrecht Text statt Feldern", () => {
+  /*
+   * Ohne Schreibrecht steht die Kopfpartie auch beim Bearbeiten als Text da.
+   * Die Kurzbeschreibung erscheint dort seit KAN-104 nicht mehr (Entscheidung):
+   * sie gehoert allein in die Vorschau.
+   */
+  it("zeigt ohne Schreibrecht Text statt Feldern und beim Bearbeiten keine Kurzbeschreibung", () => {
     const { view } = setUp(
       { title: "Veroeffentlicht", summary: "Kurzfassung", status: "PUBLISHED" },
-      false
+      { editable: false }
     )
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "Veroeffentlicht"
     )
-    expect(screen.getByText("Kurzfassung")).toBeInTheDocument()
+    expect(screen.queryByText("Kurzfassung")).toBeNull()
     expect(screen.queryByLabelText("Projekttitel")).toBeNull()
-    expect(screen.queryByLabelText("Kurzbeschreibung")).toBeNull()
+    expect(screen.queryByLabelText(SUMMARY_LABEL)).toBeNull()
     /* Ohne Schreibrecht und ohne Bild bleibt auch die Bildflaeche fort. */
     expect(view.container.querySelector(".aspect-video")).toBeNull()
   })
 
   /*
-   * Umgedreht mit KAN-83: die Beschriftung „Abstract" stand sichtbar in
-   * Ueberschriftengroesse ueber dem Feld und wurde fuer eine
-   * Gliederungsebene des Beitrags gehalten. „Abstract" ist etwas anderes,
-   * den schreibt die Autor:in selbst als Inhaltsblock. Verschwinden darf
-   * die Beschriftung trotzdem nicht: ohne sie verlore das Feld seinen
-   * zugaenglichen Namen (SC 4.1.2).
+   * Umgebaut mit KAN-104 (Entscheidung): bis dahin stand die
+   * Kurzbeschreibung als Feld mit unsichtbarer Beschriftung unter dem Titel.
+   * Eingetragen wird sie jetzt allein im Metadatenformular; im Editor gibt
+   * es weder Feld noch Beschriftung noch Platzhalter, und beim Bearbeiten
+   * steht sie auch nicht als Text da, selbst wenn die Seite showSummary
+   * setzte.
    */
-  it("beschriftet die Kurzbeschreibung unsichtbar, aber zugaenglich", () => {
-    setUp()
+  it("bietet beim Bearbeiten weder Feld noch Text fuer die Kurzbeschreibung", () => {
+    setUp({ summary: "Gespeicherte Kurzfassung" }, { showSummary: true })
 
-    /* Sichtbar steht nichts mehr ueber dem Feld, gefuehrt wird es vom
-       Platzhalter. */
+    expect(screen.getByLabelText("Projekttitel")).toBeInTheDocument()
+    expect(screen.queryByLabelText(SUMMARY_LABEL)).toBeNull()
+    expect(screen.queryByText(SUMMARY_LABEL)).toBeNull()
+    expect(screen.queryByPlaceholderText(SUMMARY_PLACEHOLDER)).toBeNull()
     expect(screen.queryByText("Abstract")).toBeNull()
-
-    const label = screen.getByText("Kurzbeschreibung")
-    expect(label.tagName).toBe("LABEL")
-    expect(label.className).toContain("sr-only")
-    expect(screen.getByLabelText("Kurzbeschreibung")).toHaveAttribute(
-      "placeholder",
-      "Kurz, was das Projekt ausmacht"
-    )
+    expect(screen.queryByText("Gespeicherte Kurzfassung")).toBeNull()
   })
 
-  it("setzt der Kurzbeschreibung keine Zeichengrenze im Feld", () => {
-    setUp()
+  /*
+   * Umgebaut mit KAN-104: bis dahin trug das Feld der Kurzbeschreibung keine
+   * Zeichengrenze. Das Feld gibt es nicht mehr, und die Kurzbeschreibung vom
+   * Server wird hier clientseitig auch nicht mehr geprueft. Die Spalte
+   * zaehlt Zeichen, Server (@Size auf String.length()) und JavaScript
+   * zaehlen UTF-16-Einheiten: 600 Emoji sind dort 600 Zeichen, hier 1200
+   * und damit ueber der Grenze des Schemas. So etwas entsteht nur per SQL.
+   * Im Editor kann es niemand korrigieren, also zeigt die Kopfpartie keinen
+   * Hinweis darauf und reicht den Titel an den Takt weiter. Den PUT weist
+   * der Server dann trotzdem ab; das sichert dieser Test nicht zu.
+   */
+  it("zeigt keinen Hinweis und prueft clientseitig keine Kurzbeschreibung", async () => {
+    const user = userEvent.setup()
+    const { read } = setUp({ summary: "\u{1F600}".repeat(600) })
 
-    expect(screen.getByLabelText("Kurzbeschreibung")).not.toHaveAttribute(
-      "maxlength"
-    )
+    const title = screen.getByLabelText("Projekttitel")
+    await user.clear(title)
+    await user.type(title, "Neuer Titel")
+
+    expect(read()).toEqual({ title: "Neuer Titel", coverImageUrl: "" })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(screen.queryByRole("alert")).toBeNull()
   })
 
   /*
@@ -511,5 +596,161 @@ describe("EditorIntro", () => {
     setProject(draft({ title: "Mit Leerzeichen" }))
 
     expect(read()).toBeNull()
+  })
+
+  it("rahmt das Titelbild im Verhaeltnis 16:9", () => {
+    const { view } = setUp()
+
+    /* Ueber die Klasse geprueft, weil vitest ohne CSS laeuft (vite.config
+       test.css false) und ein berechneter Stil deshalb nichts hergibt. Das
+       Verhaeltnis ist eine ausdrueckliche Vorgabe und darf nicht
+       unbemerkt zurueckfallen. */
+    expect(view.container.querySelector(".aspect-video")).not.toBeNull()
+    expect(view.container.querySelector(".aspect-\\[7\\/4\\]")).toBeNull()
+  })
+
+  /*
+   * Auch die Platzierung ist eine ausdrueckliche Vorgabe: die Bedienung des
+   * Titelbilds liegt im Editor auf der Bildflaeche und nicht darunter, und
+   * sie zeigt nur Zeichen. Der Standard von CoverImageField ist das
+   * Gegenteil ("below"), ein Rueckfall faellt also ohne diese Zusicherung
+   * nirgends auf: die Komponente selbst ist isoliert geprueft, die
+   * Uebersteuerung steht hier.
+   */
+  it("legt die Bedienung des Titelbilds als Zeichenleiste auf die Flaeche", () => {
+    const { view } = setUp()
+
+    const chooser = screen.getByLabelText("Titelbild wählen")
+    const preview = view.container.querySelector(
+      '[data-slot="cover-image-preview"]'
+    )
+
+    expect(preview).not.toBeNull()
+    expect(preview).toContainElement(chooser)
+    /* Nur Zeichen: der Name steht unsichtbar im Bedienelement. */
+    expect(screen.getByText("Titelbild wählen")).toHaveClass("sr-only")
+  })
+})
+
+/*
+ * KAN-104: in der Vorschau des Editors steht die Kopfpartie mit
+ * editable=false da, und zwar im eingegebenen Stand. Das Formular bleibt
+ * dabei montiert: sonst waeren die Eingaben beim Zurueckwechseln fort, und
+ * der Speichertakt verloere seine Lesefunktion.
+ */
+describe("EditorIntro in der Vorschau (KAN-104)", () => {
+  function setUpToggle(project: Partial<ProjectDetailResponse> = {}) {
+    let setEditable: (next: boolean) => void = () => undefined
+    let read: () => ProjectIntroValues | null = () => null
+
+    function Harness() {
+      const [editable, set] = useState(true)
+      setEditable = set
+      return (
+        <EditorIntro
+          project={draft(project)}
+          editable={editable}
+          /* Wie EditorPage: die Kurzbeschreibung allein in der Vorschau. */
+          showSummary={!editable}
+          onChange={() => undefined}
+          onRegisterRead={(next) => {
+            read = next
+          }}
+        />
+      )
+    }
+
+    const view = renderWithProviders(<Harness />)
+    return {
+      view,
+      read: () => read(),
+      setEditable: (next: boolean) => {
+        act(() => setEditable(next))
+      },
+    }
+  }
+
+  it("zeigt den eingegebenen Titel und die gespeicherte Kurzbeschreibung als grauen Vorspann", async () => {
+    const user = userEvent.setup()
+    const { read, setEditable } = setUpToggle({
+      summary: "Gespeicherte Kurzfassung",
+    })
+
+    /* Beim Bearbeiten steht sie nicht unter dem Titel (Entscheidung). */
+    expect(screen.queryByText("Gespeicherte Kurzfassung")).toBeNull()
+
+    const title = screen.getByLabelText("Projekttitel")
+    await user.clear(title)
+    await user.type(title, "Neuer Titel")
+
+    setEditable(false)
+
+    /* Genau eine h1, jetzt sichtbar, mit dem getippten Titel. */
+    const headings = screen.getAllByRole("heading", { level: 1 })
+    expect(headings).toHaveLength(1)
+    expect(headings[0]).toHaveTextContent("Neuer Titel")
+    expect(headings[0]).not.toHaveClass("sr-only")
+    /* Der graue Vorspann wie auf der Detailseite. */
+    const lead = screen.getByText("Gespeicherte Kurzfassung")
+    expect(lead.tagName).toBe("P")
+    expect(lead).toHaveClass("type-body-lg", "text-muted-foreground")
+    expect(screen.queryByLabelText("Projekttitel")).toBeNull()
+
+    /* Die Lesefunktion des Takts gilt weiter und liefert die Eingabe. */
+    expect(read()).toEqual({
+      title: "Neuer Titel",
+      coverImageUrl: "",
+    })
+
+    /* Und zurueck: die Eingabe steht wieder im Feld, der Vorspann ist fort. */
+    setEditable(true)
+    expect(screen.getByLabelText("Projekttitel")).toHaveValue("Neuer Titel")
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1)
+    expect(screen.queryByText("Gespeicherte Kurzfassung")).toBeNull()
+  })
+
+  it("laesst den Vorspann ohne Kurzbeschreibung fort", () => {
+    const { view, setEditable } = setUpToggle({ summary: null })
+
+    setEditable(false)
+
+    expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument()
+    expect(view.container.querySelector("p.type-body-lg")).toBeNull()
+  })
+
+  it("laesst den Speicherhinweis bei ungueltiger Eingabe auch in der Vorschau stehen", async () => {
+    const user = userEvent.setup()
+    const { setEditable } = setUpToggle()
+
+    await user.clear(screen.getByLabelText("Projekttitel"))
+    await screen.findAllByRole("alert")
+
+    setEditable(false)
+
+    /* Ohne Titel steht der Platzhaltername da und nicht eine leere h1. */
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Unbenanntes Projekt"
+    )
+    expect(
+      screen
+        .getAllByRole("alert")
+        .some((alert) =>
+          /nicht gespeichert, solange der Titel/i.test(alert.textContent ?? "")
+        )
+    ).toBe(true)
+  })
+
+  it("zeigt ohne Eingabe keinen Speicherhinweis im Lesezweig", async () => {
+    /* Personen ohne Schreibrecht sehen den Serverstand; der hat die Pruefung
+       des Servers bestanden, eine Meldung dazu waere falsch. */
+    setUp({ title: "Eingereicht", status: "SUBMITTED" }, { editable: false })
+
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Eingereicht" })
+    ).toBeInTheDocument()
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(screen.queryByRole("alert")).toBeNull()
   })
 })

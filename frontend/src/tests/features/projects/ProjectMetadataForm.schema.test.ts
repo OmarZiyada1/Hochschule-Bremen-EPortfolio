@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  SUMMARY_MAX_LENGTH,
+  projectIntroSchema,
   projectMetadataSchema,
   toProjectIntroUpdateRequest,
   toProjectIntroValues,
@@ -210,8 +212,8 @@ describe("projectMetadataSchema", () => {
    * Die Grenze ist die des Servers (1024 Zeichen, @Size an
    * ProjectCreateRequest), nicht mehr die 200 aus dem Template. Die 200
    * waren eine Gestaltungsregel fuer die Kachel, und die kuerzt selbst
-   * (line-clamp-3); im Editor steht dasselbe Feld als Abstract und ist
-   * dort Fliesstext.
+   * (line-clamp-3); bis KAN-104 stand dasselbe Feld im Editor als Abstract
+   * und war dort Fliesstext.
    */
   it("laesst eine lange Kurzbeschreibung durch und beanstandet erst ueber 1024 Zeichen", () => {
     expect(
@@ -278,31 +280,34 @@ describe("projectMetadataSchema", () => {
  * ausdruecklich abgesichert.
  */
 describe("Kopfpartie des Editors", () => {
-  it("liest genau die drei Felder aus dem Projekt", () => {
+  /* Ohne Kurzbeschreibung: sie wird seit KAN-104 im Editor nicht mehr
+     bearbeitet. */
+  it("liest genau die beiden Felder aus dem Projekt", () => {
     expect(toProjectIntroValues(fullProject())).toEqual({
       title: "Campus-Garten",
-      summary: "Ein Beet auf dem Dach.",
       coverImageUrl: "/api/files/cover-1",
     })
   })
 
   /*
    * Der Body traegt die ganze Metadatenkarte: ProjectUpdateRequest hat
-   * ersetzende Semantik, ein PUT mit nur dem Titel loeschte Fakultaet,
-   * Studiengang, Abschluss, Kategorie, Semester, Typ und Modul (§3.3).
+   * ersetzende Semantik, ein PUT mit nur dem Titel loeschte Kurzbeschreibung,
+   * Fakultaet, Studiengang, Abschluss, Kategorie, Semester, Typ und Modul
+   * (§3.3).
    */
-  it("traegt die ganze Karte und tauscht nur die drei Felder aus", () => {
+  it("traegt die ganze Karte und tauscht nur Titel und Titelbild aus", () => {
     const project = fullProject()
     const card = toProjectIntroUpdateRequest(project, {
       title: "Anderer Titel",
-      summary: "",
       coverImageUrl: "",
     })
 
     expect(card.title).toBe("Anderer Titel")
     /* Leer heisst loeschen, und dafuer steht null. */
-    expect(card.summary).toBeNull()
     expect(card.coverImageUrl).toBeNull()
+    /* Die Kurzbeschreibung laeuft so mit, wie das Projekt sie fuehrt
+       (KAN-104): im Editor aendert sie niemand. */
+    expect(card.summary).toBe("Ein Beet auf dem Dach.")
     /* Und alles Uebrige bleibt unangetastet. */
     expect(card.facultyId).toBe("f-4")
     expect(card.studyProgramId).toBe("sp-1")
@@ -353,5 +358,48 @@ describe("Kopfpartie des Editors", () => {
     )
 
     expect(card.editorIds).toEqual((project.editors ?? []).map((e) => e.id))
+  })
+
+  /*
+   * KAN-104: die Kurzbeschreibung ist nicht Teil der Kopfpartie. Die Karte
+   * nimmt sie aus dem Projekt, gegen das geschrieben wird, und damit aus
+   * dem zuletzt vom Server bestaetigten Stand; ein PUT fuer den Titel darf
+   * sie weder leeren noch mit einem aelteren Wert ueberschreiben.
+   */
+  it("nimmt die Kurzbeschreibung aus dem Projekt, auch eine leere", () => {
+    const project = fullProject()
+    project.summary = null
+
+    const card = toProjectIntroUpdateRequest(project, {
+      title: "Anderer Titel",
+      coverImageUrl: "/api/files/cover-1",
+    })
+
+    expect(card.summary).toBeNull()
+  })
+
+  /*
+   * Die Spalte ist varchar(1024) und zaehlt Zeichen, Server (@Size auf
+   * String.length()) und JavaScript zaehlen UTF-16-Einheiten: 600 Emoji
+   * sind dort 600 Zeichen, hier und am Server 1200. Ueber die API kommt so
+   * etwas nicht an, per SQL geschrieben (Seeder) schon. Im Editor kann das
+   * niemand korrigieren; die Kopfpartie prueft die Kurzbeschreibung deshalb
+   * clientseitig nicht und zeigt keinen Hinweis darauf. Den PUT weist der
+   * Server in diesem Fall trotzdem ab, das sichert dieser Test nicht zu.
+   */
+  it("prueft die Kurzbeschreibung in der Kopfpartie clientseitig nicht und reicht sie unveraendert durch", () => {
+    const tooLong = "\u{1F600}".repeat(600)
+    expect(tooLong.length).toBeGreaterThan(SUMMARY_MAX_LENGTH)
+
+    const project = fullProject()
+    project.summary = tooLong
+
+    expect(
+      projectIntroSchema.safeParse(toProjectIntroValues(project)).success
+    ).toBe(true)
+    expect(
+      toProjectIntroUpdateRequest(project, toProjectIntroValues(project))
+        .summary
+    ).toBe(tooLong)
   })
 })

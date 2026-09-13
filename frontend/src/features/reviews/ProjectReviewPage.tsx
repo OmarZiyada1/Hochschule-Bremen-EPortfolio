@@ -7,9 +7,9 @@ import {
   HistoryIcon,
   LockIcon,
 } from "lucide-react"
-import { useId, useRef, useState, type RefObject } from "react"
+import { useId, useRef, useState, type ReactNode, type RefObject } from "react"
 import { useTranslation } from "react-i18next"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { Link, useParams } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
 import { isApiError } from "@/api/errors"
@@ -23,6 +23,7 @@ import type {
 import { ErrorState } from "@/components/common/ErrorState"
 import { useBreadcrumbTitle } from "@/routes/useBreadcrumb"
 import { EmptyState } from "@/components/common/EmptyState"
+import { PreviewModeButton } from "@/components/common/PreviewModeButton"
 import { ProjectSidePanels } from "@/components/common/ProjectSidePanels"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import {
@@ -45,12 +46,12 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
 import { HistoryDialog } from "@/features/project-content/components/HistoryDialog"
-import { ViewModeSwitch } from "@/features/project-content/components/ViewModeSwitch"
 import { useProjectFileUrls } from "@/features/project-content/hooks/useProjectFileUrls"
 import { PrintTrigger } from "@/features/project-content/print/PrintTrigger"
 import { ProjectPrintView } from "@/features/project-content/print/ProjectPrintView"
 import { usePrintProject } from "@/features/project-content/print/usePrintProject"
 import { ProjectContent } from "@/features/project-content/renderer/ProjectContent"
+import { ReactionPanel } from "@/features/projects/components/ReactionPanel"
 import { useProjectDetail } from "@/features/projects/hooks/useProjectDetail"
 import { RevisionDialog } from "@/features/reviews/components/RevisionDialog"
 import { useReviewWorkflow } from "@/features/reviews/hooks/useReviews"
@@ -61,8 +62,8 @@ const EMPTY_BLOCKS: readonly BlockResponse[] = []
 
 /**
  * Der Review-Modus nach Template „Editor (Review-Modus)" (Ticket KAN-37):
- * links der gelesene Beitrag, rechts Umschalter, Status samt Aktionen,
- * Projektdaten und die Kommentarspalte.
+ * links der gelesene Beitrag, rechts der Umschalter in die Vorschau, Status
+ * samt Aktionen, Projektdaten und die Kommentarspalte.
  *
  * <p><strong>Er bleibt im Anwendungsrahmen</strong> und nicht im rahmenlosen
  * {@code EditorLayout}: das Template zeichnet NavBar und Ruecksprungleiste.
@@ -71,11 +72,22 @@ const EMPTY_BLOCKS: readonly BlockResponse[] = []
  * {@code ProjectContent} aus KAN-10, den JSON-Renderer ohne Tiptap. Aus
  * {@code features/project-content/} darf diese Seite nur ziehen, was kein
  * {@code @tiptap/*} und kein {@code prosemirror-*} nachzieht: den Renderer,
- * {@code useProjectFileUrls}, {@code HistoryDialog} und
- * {@code ViewModeSwitch}. Der Importwaechter
+ * {@code useProjectFileUrls} und {@code HistoryDialog}; dazu seit KAN-104
+ * {@code PreviewModeButton} aus {@code components/common} und
+ * {@code ReactionPanel} aus {@code features/projects}. Der Importwaechter
  * ({@code src/tests/features/project-content/rendererImports.test.ts})
  * prueft genau das, sonst kaeme das ProseMirror-Buendel ueber eine
  * Zwischendatei ins Hauptbuendel zurueck.
+ *
+ * <p><strong>Die Vorschau entsteht an Ort und Stelle</strong> (KAN-104). Der
+ * Knopf oben in der rechten Spalte wechselt zwischen „Review" und
+ * „Vorschau", ohne die Route zu verlassen; bis dahin fuehrte er auf die
+ * oeffentliche Detailseite und brauchte dort einen eigenen Rueckweg. In der
+ * Vorschau faellt der Kartenrahmen um den Beitrag weg, und darunter stehen
+ * die Reaktionen wie auf der Detailseite: so sieht die Redaktion das Bild,
+ * das die Oeffentlichkeit spaeter sieht. Die rechte Spalte bleibt in beiden
+ * Modi vollstaendig stehen, denn die redaktionelle Arbeit endet nicht mit
+ * einem Blick auf die Vorschau (KAN-104, Entscheidung).
  *
  * <p><strong>Angeboten wird nur, was §4.1 im aktuellen Status
  * zulaesst</strong>, und nur, was das Vier-Augen-Prinzip nicht sperrt: wer
@@ -107,7 +119,6 @@ const EMPTY_BLOCKS: readonly BlockResponse[] = []
 export default function ProjectReviewPage() {
   const { t } = useTranslation()
   const { projectId } = useParams()
-  const navigate = useNavigate()
   const { data, isPending, error } = useProjectDetail(projectId ?? "")
 
   /*
@@ -143,6 +154,27 @@ export default function ProjectReviewPage() {
   /* Der Name des Beitragsabschnitts: er zeigt auf die sr-only-Ueberschrift
      darin (Javadoc oben). */
   const contentHeadingId = useId()
+
+  /*
+   * Review oder Vorschau (KAN-104). Lokal und nicht in der Adresse: die
+   * Vorschau ist ein anderer Blick auf dieselbe Arbeitsseite und kein
+   * eigenes Ziel. Ein Neuladen oeffnet wieder die Reviewansicht.
+   */
+  const [mode, setMode] = useState<"review" | "preview">("review")
+  const previewing = mode === "preview"
+  /*
+   * Die Ansage des Wechsels (SC 4.1.3). Eine eigene Region, die dauerhaft im
+   * DOM steht und nur ihren Text wechselt: eine Region, die erst mit ihrer
+   * Meldung entsteht, lesen manche Screenreader gar nicht vor. Die Region
+   * der Aktionskarte bleibt den Statuswechseln vorbehalten.
+   */
+  const [modeNotice, setModeNotice] = useState("")
+
+  const toggleMode = () => {
+    const next = previewing ? "review" : "preview"
+    setMode(next)
+    setModeNotice(t(`review.detail.mode.announce.${next}`))
+  }
 
   return (
     <>
@@ -211,121 +243,131 @@ export default function ProjectReviewPage() {
 
         {data !== undefined && (
           <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[1fr_21.25rem] lg:items-start lg:gap-12">
-            {/* relative wie auf der Detailseite: der schwebende Druckknopf
-                haengt am naechsten positionierten Vorfahren. */}
-            <Card className="relative min-w-0 [--card-spacing:--spacing(10)]">
-              {cover.url !== null && (
-                <img
-                  src={cover.url}
-                  alt=""
-                  className="h-60 w-full object-cover sm:h-110"
+            {/* Der Rahmen des Beitrags wechselt mit dem Modus, der Beitrag
+                selbst nicht (ContributionFrame, KAN-104). */}
+            <ContributionFrame
+              previewing={previewing}
+              coverUrl={cover.url}
+              footer={
+                /* key an der Projekt-ID wie auf der Detailseite: der
+                   Ausgangswert hasReacted wird nur beim ersten Rendern
+                   gelesen, und ohne key behauptete das Symbol fuer ein
+                   anderes Projekt, was fuer dieses galt. */
+                <ReactionPanel
+                  key={data.id}
+                  projectId={data.id}
+                  reactionCount={data.reactionCount}
+                  hasReacted={data.hasReacted}
+                  status={data.status}
                 />
-              )}
-              <CardContent>
-                <article className="flex min-w-0 flex-col gap-6">
-                  <div className="flex flex-col gap-3">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <p className="type-overline text-muted-foreground">
-                        {t("project.list.label")}
-                      </p>
-                      <StatusBadge status={data.status} />
-                      {/*
-                       * Der Ausdruck oben rechts, an derselben Stelle wie
-                       * auf der Detailseite. Er steht hier allein und nicht
-                       * wie dort einem Info-Knopf gegenueber: die
-                       * Reviewansicht fuehrt keine Schublade fuer die
-                       * Projektdaten, die stehen schmal ohnehin als eigene
-                       * Karte unter dem Beitrag. Ein zweiter Knopf entstuende
-                       * allein der Symmetrie wegen und oeffnete nichts.
-                       *
-                       * <strong>Genau ein Knopf, nur seine Lage wechselt.</strong>
-                       * Mit Titelbild schwebt er darauf (die Karte ist
-                       * relative), ohne steht er in dieser Zeile. Zwei
-                       * getrennte Zweige waeren zwei Stellen im Baum: sobald
-                       * die angemeldet nachgeladene Bildadresse eintrifft,
-                       * baute React den einen ab und den anderen auf, und ein
-                       * Knopf, der unter dem Fokus verschwindet, gibt ihn an
-                       * body zurueck (SC 2.4.3; Befund des
-                       * frontend-reviewers). So bleibt es derselbe Knoten.
-                       *
-                       * Die Huelle traegt ms-auto und schiebt ihn in dieser
-                       * Zeile nach rechts; schwebt er, ist sie leer und ohne
-                       * Wirkung, weil sie das letzte Kind der Zeile ist.
-                       */}
-                      <div className="ms-auto">
-                        <PrintTrigger
-                          onPrint={() => void print()}
-                          busy={printing}
-                          floating={cover.url !== null}
-                        />
-                      </div>
+              }
+            >
+              <article className="flex min-w-0 flex-col gap-6">
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="type-overline text-muted-foreground">
+                      {t("project.list.label")}
+                    </p>
+                    <StatusBadge status={data.status} />
+                    {/*
+                     * Der Ausdruck oben rechts, an derselben Stelle wie
+                     * auf der Detailseite. Er steht hier allein und nicht
+                     * wie dort einem Info-Knopf gegenueber: die
+                     * Reviewansicht fuehrt keine Schublade fuer die
+                     * Projektdaten, die stehen schmal ohnehin als eigene
+                     * Karte unter dem Beitrag. Ein zweiter Knopf entstuende
+                     * allein der Symmetrie wegen und oeffnete nichts.
+                     *
+                     * <strong>Genau ein Knopf, nur seine Lage wechselt.</strong>
+                     * Mit Titelbild schwebt er darauf (die Karte ist
+                     * relative), ohne steht er in dieser Zeile. Zwei
+                     * getrennte Zweige waeren zwei Stellen im Baum: sobald
+                     * die angemeldet nachgeladene Bildadresse eintrifft,
+                     * baute React den einen ab und den anderen auf, und ein
+                     * Knopf, der unter dem Fokus verschwindet, gibt ihn an
+                     * body zurueck (SC 2.4.3; Befund des
+                     * frontend-reviewers). So bleibt es derselbe Knoten.
+                     *
+                     * Die Huelle traegt ms-auto und schiebt ihn in dieser
+                     * Zeile nach rechts; schwebt er, ist sie leer und ohne
+                     * Wirkung, weil sie das letzte Kind der Zeile ist.
+                     */}
+                    <div className="ms-auto">
+                      <PrintTrigger
+                        onPrint={() => void print()}
+                        busy={printing}
+                        floating={cover.url !== null}
+                      />
                     </div>
-                    <h1 className="type-title min-w-0 text-primary">
-                      {data.title}
-                    </h1>
                   </div>
+                  <h1 className="type-title min-w-0 text-primary">
+                    {data.title}
+                  </h1>
+                </div>
 
-                  {/* Wie auf der Detailseite: grauer Vorspann ohne
+                {/* Wie auf der Detailseite: grauer Vorspann ohne
                       Ueberschrift, damit beide Lesepfade gleich aussehen
                       (KAN-83). */}
-                  {data.summary !== null && (
-                    <p className="type-body-lg text-muted-foreground">
-                      {data.summary}
-                    </p>
-                  )}
+                {data.summary !== null && (
+                  <p className="type-body-lg text-muted-foreground">
+                    {data.summary}
+                  </p>
+                )}
 
-                  {/* Kein Trennstrich und keine sichtbare Rubrik: der
+                {/* Kein Trennstrich und keine sichtbare Rubrik: der
                       Beitrag schliesst unmittelbar an die Kurzbeschreibung
                       an, und die Redaktion liest damit dasselbe Bild wie
                       die Oeffentlichkeit (KAN-83). Die Ueberschrift bleibt
                       sr-only und benennt den Abschnitt; Begruendung im
                       Javadoc oben. */}
-                  <section
-                    aria-labelledby={contentHeadingId}
-                    className="flex flex-col gap-3"
-                  >
-                    <h2 id={contentHeadingId} className="sr-only">
-                      {t("project.detail.content")}
-                    </h2>
-                    {(data.blocks ?? []).length === 0 ? (
-                      <EmptyState
-                        headingLevel={3}
-                        icon={<FileTextIcon aria-hidden="true" />}
-                        title={t("project.detail.empty.title")}
-                        description={t("project.detail.empty.description")}
-                      />
-                    ) : (
-                      <ProjectContent
-                        blocks={data.blocks ?? EMPTY_BLOCKS}
-                        resolveFileUrl={resolveFileUrl}
-                        fileState={fileState}
-                      />
-                    )}
-                  </section>
-                </article>
-              </CardContent>
-            </Card>
+                <section
+                  aria-labelledby={contentHeadingId}
+                  className="flex flex-col gap-3"
+                >
+                  <h2 id={contentHeadingId} className="sr-only">
+                    {t("project.detail.content")}
+                  </h2>
+                  {(data.blocks ?? []).length === 0 ? (
+                    <EmptyState
+                      headingLevel={3}
+                      icon={<FileTextIcon aria-hidden="true" />}
+                      title={t("project.detail.empty.title")}
+                      description={t("project.detail.empty.description")}
+                    />
+                  ) : (
+                    <ProjectContent
+                      blocks={data.blocks ?? EMPTY_BLOCKS}
+                      resolveFileUrl={resolveFileUrl}
+                      fileState={fileState}
+                    />
+                  )}
+                </section>
+              </article>
+            </ContributionFrame>
 
             <div className="flex flex-col gap-6">
-              <ViewModeSwitch
-                mode="review"
-                alternate="review"
-                onModeChange={(mode) => {
-                  if (mode === "preview") {
-                    /* from=review haengt der Detailseite den Rueckweg an:
-                       ohne ihn waere die Vorschau eine Sackgasse, weil der
-                       Umschalter dort nur fuer die Projektseite erscheint
-                       (Befund des frontend-reviewers). */
-                    void navigate(`/projects/${data.id}?from=review`)
-                  }
-                }}
+              {/*
+               * Der Umschalter oben in der rechten Spalte, an der Stelle des
+               * frueheren Schiebeschalters (KAN-104). Er wechselt an Ort und
+               * Stelle; keine sticky Kopfzeile wie im Editor, die Seite hat
+               * keine Werkzeuge, die beim Scrollen mitlaufen muessten.
+               *
+               * <p>Die Spalte steht in beiden Modi an derselben Stelle des
+               * Baums, und der Knopf in ihr bleibt derselbe Knoten: nach dem
+               * Druck bleibt der Fokus, wo er war (SC 2.4.3). Nur der Rahmen
+               * links wechselt.
+               */}
+              <PreviewModeButton
+                previewing={previewing}
+                counterpart="review"
+                onToggle={toggleMode}
+                className="w-full"
               />
 
               {/*
-               * Zwei Karten: der Umschalter und darunter alles, was zum
-               * Projekt gehoert. Statuszeile, Projektinformationen und
-               * Kommentare stehen in derselben Karte, die beiden
-               * Aufklapper als Akkordeon.
+               * Darunter alles, was zum Projekt gehoert: Statuszeile,
+               * Projektinformationen und Kommentare in einer Karte, die
+               * beiden Aufklapper als Akkordeon.
                */}
               <ReviewActionsCard project={data} />
             </div>
@@ -347,6 +389,12 @@ export default function ProjectReviewPage() {
             fileState={fileState}
           />
         )}
+
+        {/* Die Ansage des Moduswechsels (KAN-104). Dauerhaft im Baum, auch
+            waehrend des Ladens, und nur ihr Text wechselt. */}
+        <p aria-live="polite" className="sr-only">
+          {modeNotice}
+        </p>
       </div>
     </>
   )
@@ -699,14 +747,14 @@ function ReviewActionsCard({ project }: { project: ProjectDetailResponse }) {
          * bekommen hat und der gemeinsame Zustand sonst zweimal gefuehrt
          * wuerde.
          *
-         * Vorgabe hier sind die Kommentare: im Review-Modus sind sie die
-         * Arbeitsflaeche, die Angaben der Nachschlagefall.
+         * Offen stehen voreingestellt die Kommentare, bei PUBLISHED die
+         * Angaben. Beides entscheidet seit KAN-104 ProjectSidePanels selbst,
+         * fuer diese Ansicht wie fuer den Editor; das ausdrueckliche Setzen
+         * hier ist damit entfallen. Veroeffentlicht die Redaktion an Ort und
+         * Stelle, oeffnen sich die Angaben, statt eine Karte ohne offenen
+         * Kasten zu hinterlassen.
          */}
-        <ProjectSidePanels
-          project={project}
-          context="review"
-          defaultPanel="comments"
-        />
+        <ProjectSidePanels project={project} context="review" />
 
         <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
           <AlertDialogContent
@@ -789,6 +837,74 @@ function ReviewActionsCard({ project }: { project: ProjectDetailResponse }) {
           {notice}
         </span>
       </CardContent>
+    </Card>
+  )
+}
+
+/**
+ * Der Rahmen um den Beitrag, je nach Modus (KAN-104).
+ *
+ * <p><strong>In der Reviewansicht die Karte</strong>, wie seit KAN-37: das
+ * Titelbild laeuft als erstes Kind bis an deren Kante, und die Karte ist der
+ * positionierte Vorfahr des schwebenden Druckknopfs.
+ *
+ * <p><strong>In der Vorschau ohne Karte und mit den Reaktionen
+ * darunter</strong>, wie auf der Detailseite (KAN-104, Entscheidung): so
+ * sieht die Oeffentlichkeit den Beitrag. Das Titelbild traegt seine Rundung
+ * dann selbst, und {@code relative} bleibt am Rahmen, damit der Druckknopf
+ * weiter auf dem Bild schwebt. Die Reaktionen kommen mit dem Projektstatus:
+ * reagieren laesst sich erst bei PUBLISHED (§3.10), und genau das sagt die
+ * Komponente sichtbar. Das ist keine Attrappe, sondern das Bild, das die
+ * Vorschau zeigen soll.
+ *
+ * <p>Der Beitrag kommt als {@code children} und ist in beiden Faellen
+ * derselbe. Ein Wechsel baut ihn neu auf, weil sich der Rahmen um ihn
+ * aendert; Daten und Dateien liegen im Query-Cache, es wird also nichts neu
+ * geladen. Der Fokus liegt dabei auf dem Umschalter in der rechten Spalte,
+ * und die bleibt stehen.
+ */
+function ContributionFrame({
+  previewing,
+  coverUrl,
+  footer,
+  children,
+}: {
+  previewing: boolean
+  /** Die aufgeloeste Adresse des Titelbilds, ohne Bild {@code null}. */
+  coverUrl: string | null
+  /** Was in der Vorschau unter dem Beitrag steht: die Reaktionen. */
+  footer: ReactNode
+  children: ReactNode
+}) {
+  if (previewing) {
+    return (
+      <div className="relative flex min-w-0 flex-col gap-8">
+        {coverUrl !== null && (
+          <img
+            src={coverUrl}
+            alt=""
+            className="h-60 w-full rounded-card object-cover sm:h-110"
+          />
+        )}
+        {children}
+        <hr />
+        {footer}
+      </div>
+    )
+  }
+
+  return (
+    /* relative wie auf der Detailseite: der schwebende Druckknopf haengt am
+       naechsten positionierten Vorfahren. */
+    <Card className="relative min-w-0 [--card-spacing:--spacing(10)]">
+      {coverUrl !== null && (
+        <img
+          src={coverUrl}
+          alt=""
+          className="h-60 w-full object-cover sm:h-110"
+        />
+      )}
+      <CardContent>{children}</CardContent>
     </Card>
   )
 }
