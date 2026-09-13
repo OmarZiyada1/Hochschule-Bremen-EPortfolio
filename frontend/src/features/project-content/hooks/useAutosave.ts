@@ -410,8 +410,9 @@ export function useAutosave({
    * Ein offener Takt wird beim Abraeumen noch angestossen. Ob er den Server
    * erreicht, haengt daran, ob die Schreibflaeche zu diesem Zeitpunkt noch
    * steht; darauf verlaesst sich niemand. Die Wege aus der Seite heraus
-   * (Zurueck, Vorschau, Einreichen) rufen vorher ausdruecklich flush() und
-   * warten dessen Ergebnis ab.
+   * (Zurueck, Einreichen, Metadaten bearbeiten) rufen vorher ausdruecklich
+   * flush() und warten dessen Ergebnis ab. Die Vorschau bleibt seit KAN-104
+   * auf der Seite und leert den Takt nicht.
    *
    * <p><strong>Ohne Abhaengigkeiten, und {@code run} kommt ueber einen
    * Ref.</strong> Stuende {@code run} in der Liste, liefe die

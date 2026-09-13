@@ -871,7 +871,7 @@
         "label": "Faculty"
       },
       "studyProgram": {
-        "label": "Study programme",
+        "label": "Degree programme",
         "needsFaculty": "Choose a faculty first"
       },
       "degree": {
@@ -881,18 +881,18 @@
         "label": "Semester"
       },
       "projectType": {
-        "label": "Type"
+        "label": "Project type"
       },
       "category": {
         "label": "Category"
       },
       "module": {
-        "label": "Module",
-        "needsStudyProgram": "Choose a study programme first"
+        "label": "Subject / module",
+        "needsStudyProgram": "Choose a degree programme first"
       },
       "cascade": {
-        "facultyChanged": "The faculty has changed. Study programme and module have been reset.",
-        "studyProgramChanged": "The study programme has changed. The module has been reset."
+        "facultyChanged": "The faculty has changed. Degree programme and subject / module have been reset.",
+        "studyProgramChanged": "The degree programme has changed. The subject / module has been reset."
       },
       "tags": {},
       "editors": {
@@ -1353,7 +1353,7 @@
     "print": {
       "actionLabel": "Print as PDF",
       "author": "Author",
-      "studyProgram": "Study programme",
+      "studyProgram": "Degree programme",
       "semester": "Semester",
       "status": "Status",
       "printedAt": "Printed on",
@@ -1374,10 +1374,15 @@
       "label": "Project details",
       "preview": "Preview",
       "edit": "Edit",
-      "previewToggle": "Edit",
       "history": "History",
       "projectInfo": "Project information",
       "editMetadata": "Edit metadata"
+    },
+    "mode": {
+      "announce": {
+        "preview": "Preview on: this is how the contribution will appear once published.",
+        "edit": "Editing on: the writing area is back."
+      }
     },
     "history": {
       "title": "History",
@@ -1393,9 +1398,9 @@
       "pending": "Submitting",
       "done": "The contribution has been submitted.",
       "field": {
-        "projectType": "Type of work",
+        "projectType": "Project type",
         "facultyId": "Faculty",
-        "studyProgramId": "Study programme",
+        "studyProgramId": "Degree programme",
         "degree": "Degree",
         "categoryId": "Category",
         "semesterId": "Semester",
@@ -1547,12 +1552,12 @@
         "placeholder": "Search title or students …"
       },
       "filter": {
-        "allStudyPrograms": "Study programme (all)",
+        "allStudyPrograms": "Degree programme (all)",
         "allSemesters": "Semester (all)",
-        "allModules": "Module (all)",
-        "studyProgramLabel": "Filter by study program",
+        "allModules": "Subject / module (all)",
+        "studyProgramLabel": "Filter by degree programme",
         "semesterLabel": "Filter by semester",
-        "moduleLabel": "Filter by subject or module"
+        "moduleLabel": "Filter by subject / module"
       },
       "column": {
         "project": "Project",
@@ -1635,7 +1640,10 @@
       "history": "History",
       "mode": {
         "review": "Review",
-        "toggle": "Switch between preview and review"
+        "announce": {
+          "preview": "Preview on: this is how the contribution will appear once published.",
+          "review": "Review on: the editorial view is back."
+        }
       },
       "forbidden": {
         "title": "No access to this review",
@@ -2327,7 +2335,7 @@
           "title": "Reading a project page",
           "text": "The detail page shows the work as its author laid it out: cover image, title, summary and below them the content blocks. There are fifteen kinds: heading, paragraph, list, quote, source code, divider, table, image, gallery, video, audio, document, embed, formula and table of contents.",
           "steps": [
-            "Beside the content you find the details of the work: degree programme, semester, category, subject and the people involved.",
+            "Beside the content you find the details of the work: degree programme, semester, category, subject / module and the people involved.",
             "The hand below the content is the reaction, the counterpart of applause. It is open to signed-in accounts and can be taken back.",
             "The printer icon on the cover image produces a PDF version through the browser's print dialogue."
           ],
@@ -2426,7 +2434,7 @@
             "Editing is only possible in the states draft and revision. In any other state the surface is read-only and a message names the reason.",
             "Only one person edits at a time. The lock covers every writing view of the work, including the metadata form: whoever has the metadata open also holds the editor. If someone else has the work open, the page says so with their name and the time.",
             "Saving happens on its own, a little over a second after the last keystroke. The state is shown in the header.",
-            "“Preview” shows the work in its public view, “Print as PDF” produces the print version, and the button beside them inserts a table of contents or brings it up to date."
+            "“Preview” shows the work in place as it will appear once published, and “Edit” leads back to the writing surface. “Print as PDF” produces the print version, and the button beside them inserts a table of contents or brings it up to date."
           ],
           "imageAlt": "The writing surface of the editor: at the top the toolbar with back, undo, redo and the formatting controls, below it cover image, title and the content; on the right the column with state, history and the project details.",
           "imageCaption": "The editor with a draft."
@@ -2489,7 +2497,7 @@
           "text": "“My reviews” lists exactly those works for which you are entered as the editor. Drafts never appear there: a work becomes visible only when it is submitted.",
           "steps": [
             "Four counters at the top: submitted, approved, published, revision.",
-            "Below them the search field and three filters for degree programme, semester and subject, plus the state bar.",
+            "Below them the search field and three filters for degree programme, semester and subject / module, plus the state bar.",
             "In the table the menu at the end of a row leads to “Review”, “Nominate for top 10” and “Give up assignment”."
           ],
           "imageAlt": "The page “My reviews”: four counter tiles for submitted, approved, published and revision, below them search field and filters, then the table with the columns project, students, degree programme, semester, subject and status.",
@@ -2499,7 +2507,7 @@
           "title": "Reviewing a work",
           "text": "“Review” opens the work in review mode: on the left the content as readers see it, on the right the editorial column.",
           "steps": [
-            "The switch at the top toggles between preview and review.",
+            "The button at the top of the right column switches between review and preview in place. In preview the content stands without a frame and with the reactions below it, as on the public page.",
             "Below it sit the state badge and the “History” button with every change so far.",
             "The content itself is not edited here; feedback goes through the comments."
           ],

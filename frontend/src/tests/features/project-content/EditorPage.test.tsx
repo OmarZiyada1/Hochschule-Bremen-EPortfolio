@@ -1,8 +1,9 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react"
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { HttpResponse, http } from "msw"
+import type { Editor } from "@tiptap/react"
+import { HttpResponse, delay, http } from "msw"
 import { Route, Routes } from "react-router-dom"
-import { beforeEach, describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import type {
   BlockResponse,
@@ -10,9 +11,11 @@ import type {
   ProjectDetailResponse,
 } from "@/api/types"
 import EditorPage from "@/features/project-content/EditorPage"
+import { slashCommandPluginKey } from "@/features/project-content/extensions/SlashCommand"
 import i18n from "@/i18n"
 import { comment, person, projectDetail } from "@/tests/fixtures"
 import {
+  apiErrorResponse,
   currentUserHandler,
   projectBlocksHandler,
   projectCommentsHandler,
@@ -59,6 +62,66 @@ function unreadableBlock(): BlockResponse {
     orderIndex: 1,
     schemaVersion: 99,
     content: { type: "somethingNew" },
+  } as unknown as BlockResponse
+}
+
+/** Ein Absatz als Tabellenzelle; dieselbe Form wie im Lesepfad. */
+function cellParagraph(text: string) {
+  return {
+    type: "paragraph",
+    attrs: { textAlign: null },
+    content: [{ type: "text", text }],
+  }
+}
+
+/**
+ * Eine Tabelle an zweiter Stelle (KAN-104): an ihr haengt die
+ * Tabellenbedienung, die in der Vorschau nicht erreichbar sein darf.
+ * Schemaversion 2 wie in ProjectDetailPage.test.tsx, dort laeuft dieselbe
+ * Form bereits durch den Lesepfad.
+ */
+function tableBlock(): BlockResponse {
+  return {
+    id: "aaaaaaaa-bbbb-4ccc-8ddd-000000000007",
+    type: "TABLE",
+    orderIndex: 1,
+    schemaVersion: 2,
+    content: {
+      type: "table",
+      attrs: { caption: "Messreihe" },
+      content: [
+        {
+          type: "tableRow",
+          content: [
+            {
+              type: "tableHeader",
+              attrs: {},
+              content: [cellParagraph("Groesse")],
+            },
+            {
+              type: "tableHeader",
+              attrs: {},
+              content: [cellParagraph("Wert")],
+            },
+          ],
+        },
+        {
+          type: "tableRow",
+          content: [
+            {
+              type: "tableCell",
+              attrs: {},
+              content: [cellParagraph("Masse")],
+            },
+            {
+              type: "tableCell",
+              attrs: {},
+              content: [cellParagraph("12 kg")],
+            },
+          ],
+        },
+      ],
+    },
   } as unknown as BlockResponse
 }
 
@@ -320,7 +383,11 @@ describe("EditorPage", () => {
     renderEditor(ownDraft(), [textBlock("Ein Absatz.")])
 
     /* Die Karte zeigte die Angaben, bot aber keinen Weg, sie zu aendern:
-       dafuer musste man ins Portfolio zurueck. */
+       dafuer musste man ins Portfolio zurueck. Seit KAN-104 stehen die
+       Angaben voreingestellt zugeklappt, der Weg liegt darin. */
+    await user.click(
+      await screen.findByRole("button", { name: "Projektinformationen" }, WAIT)
+    )
     await user.click(
       await screen.findByRole("button", { name: "Metadaten bearbeiten" }, WAIT)
     )
@@ -365,9 +432,15 @@ describe("EditorPage", () => {
     expect(
       within(drawer).getByRole("heading", { name: "Projektinformationen" })
     ).toBeInTheDocument()
-    /* Derselbe Inhalt wie in der Leiste, einschliesslich ihrer Wege. */
+    /* Derselbe Inhalt wie in der Leiste, einschliesslich ihrer Wege. Die
+       Angaben stehen seit KAN-104 auch hier zugeklappt. */
+    await user.click(
+      within(drawer).getByRole("button", { name: "Projektinformationen" })
+    )
     expect(
-      within(drawer).getByRole("button", { name: "Metadaten bearbeiten" })
+      await within(drawer).findByRole("button", {
+        name: "Metadaten bearbeiten",
+      })
     ).toBeInTheDocument()
     expect(within(drawer).getByText("Entwurf")).toBeInTheDocument()
 
@@ -386,24 +459,356 @@ describe("EditorPage", () => {
     )
   })
 
-  it("fuehrt der Vorschau-Weg auf die oeffentliche Detailseite", async () => {
+  /*
+   * KAN-104: die Vorschau entsteht an Ort und Stelle. Bis dahin fuehrte
+   * „Vorschau" auf die oeffentliche Detailseite, mit eigenem Ladevorgang,
+   * eigener Scrollposition und einem Rueckweg, den es nur dort gab.
+   */
+  it("schaltet an Ort und Stelle in die Vorschau und zurueck, ohne die Route zu wechseln", async () => {
     const user = userEvent.setup()
+    const scrollTo = vi
+      .spyOn(window, "scrollTo")
+      .mockImplementation(() => undefined)
     renderEditor(ownDraft(), [textBlock("Ein Absatz.")])
 
-    /* Eine Schaltflaeche und kein Schalter: der Editor kennt nur die eine
-       Richtung (Nutzerentscheidung). Schmal fuehrt derselbe Weg als
-       Eintrag im Menue der Kopfzeile, das dafuer erst aufgeht. */
+    const toggle = await screen.findByRole("button", { name: "Vorschau" }, WAIT)
+    await screen.findByText("Ein Absatz.", undefined, WAIT)
+    const surface = document.querySelector<HTMLElement>(".ProseMirror")
+    expect(surface).not.toBeNull()
+
+    await user.click(toggle)
+
+    const region = await screen.findByRole(
+      "region",
+      { name: i18n.t("project.detail.content") },
+      WAIT
+    )
+    /* Der Beitrag durch den Renderer, nicht durch die Schreibflaeche. */
+    expect(within(region).getByText("Ein Absatz.")).toBeInTheDocument()
+    expect(region.querySelector("[contenteditable]")).toBeNull()
+
+    /* Dieselbe Route: die Sonde fuer jede andere Adresse erscheint nicht,
+       und gescrollt wird nicht. */
+    expect(screen.queryByTestId("pathname")).toBeNull()
+    expect(scrollTo).not.toHaveBeenCalled()
+
+    /* Die Schreibflaeche bleibt im Baum, ausgeblendet und nicht abgebaut. */
+    expect(document.querySelector(".ProseMirror")).toBe(surface)
+    expect(surface).not.toBeVisible()
+
+    await user.click(screen.getByRole("button", { name: "Bearbeiten" }))
+
+    await waitFor(() => expect(surface).toBeVisible(), WAIT)
+    expect(
+      screen.queryByRole("region", { name: i18n.t("project.detail.content") })
+    ).toBeNull()
+    expect(screen.queryByTestId("pathname")).toBeNull()
+    expect(scrollTo).not.toHaveBeenCalled()
+    scrollTo.mockRestore()
+  })
+
+  it("nimmt der Vorschau Formatierungsleiste, Blockbedienung und Tabellenbedienung, auch fuer die Tastatur", async () => {
+    const user = userEvent.setup()
+    renderEditor(ownDraft(), [textBlock("Ein Absatz."), tableBlock()])
+
+    /* Auf der Schreibflaeche stehen alle drei. */
+    await screen.findByRole(
+      "group",
+      { name: /Blockbedienung, Block 1 von/ },
+      WAIT
+    )
+    expect(document.querySelector("[data-selection-toolbar]")).not.toBeNull()
+    await waitFor(
+      () =>
+        expect(document.querySelector("[data-table-controls]")).not.toBeNull(),
+      WAIT
+    )
+
+    await user.click(screen.getByRole("button", { name: "Vorschau" }))
+    await screen.findByRole("button", { name: "Bearbeiten" }, WAIT)
+
+    expect(document.querySelector("[data-selection-toolbar]")).toBeNull()
+    expect(screen.queryByRole("button", { name: "Fett" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Rückgängig" })).toBeNull()
+    expect(screen.queryByRole("group", { name: /Blockbedienung/ })).toBeNull()
+    expect(document.querySelector("[data-table-controls]")).toBeNull()
+
+    /* Und kein Tabulatorschritt fuehrt in die ausgeblendete Schreibflaeche. */
+    const surface = document.querySelector<HTMLElement>(".ProseMirror")
+    for (let step = 0; step < 40; step++) {
+      await user.tab()
+      expect(surface?.contains(document.activeElement) ?? false).toBe(false)
+    }
+  })
+
+  it("laesst Zurueckziehen bei SUBMITTED in beiden Modi sichtbar und bedienbar", async () => {
+    const user = userEvent.setup()
+    renderEditor(ownDraft({ status: "SUBMITTED" }), [textBlock("Eingereicht.")])
+
+    expect(
+      await screen.findByRole("button", { name: "Zurückziehen" }, WAIT)
+    ).toBeVisible()
+
+    await user.click(screen.getByRole("button", { name: "Vorschau" }))
+    await screen.findByRole("button", { name: "Bearbeiten" }, WAIT)
+
+    const withdraw = screen.getByRole("button", { name: "Zurückziehen" })
+    expect(withdraw).toBeVisible()
+    await user.click(withdraw)
+    expect(await screen.findByRole("alertdialog", {}, WAIT)).toBeInTheDocument()
+    await user.keyboard("{Escape}")
+  })
+
+  it("zeigt in der Vorschau den ungespeicherten Stand von Beitrag und Titel", async () => {
+    const user = userEvent.setup()
+    renderEditor(ownDraft(), [])
+    /* Kein Takt kommt zurueck: was die Vorschau zeigt, kann dann nur aus
+       dem Dokument und dem Formular stammen und nicht aus einer Antwort. */
+    server.use(
+      http.put("*/api/projects/:projectId/blocks", async () => {
+        await delay("infinite")
+        return HttpResponse.json({})
+      }),
+      http.put("*/api/projects/:projectId", async () => {
+        await delay("infinite")
+        return HttpResponse.json({})
+      })
+    )
+
+    const title = await screen.findByLabelText("Projekttitel", {}, WAIT)
+    await user.clear(title)
+    await user.type(title, "Titel von eben")
+
+    const surface = document.querySelector<HTMLElement>(".ProseMirror")
+    expect(surface).not.toBeNull()
+    await user.click(surface as HTMLElement)
+    await user.keyboard("Frisch getippt")
+
+    await user.click(screen.getByRole("button", { name: "Vorschau" }))
+
+    const region = await screen.findByRole(
+      "region",
+      { name: i18n.t("project.detail.content") },
+      WAIT
+    )
+    expect(within(region).getByText("Frisch getippt")).toBeInTheDocument()
+    const headings = screen.getAllByRole("heading", { level: 1 })
+    expect(headings).toHaveLength(1)
+    expect(headings[0]).toHaveTextContent("Titel von eben")
+  })
+
+  /*
+   * Die Schreibflaeche ist in der Vorschau nur ausgeblendet, ihre
+   * Knotenansichten laufen weiter: ein Upload, der erst dort fertig wird,
+   * traegt seine Datei per updateAttributes nach. Nachgestellt mit einer
+   * Transaktion am Editor der ausgeblendeten Flaeche, denn bedienbar ist
+   * dort mit Absicht nichts.
+   */
+  it("zieht die Vorschau nach, wenn sich das Dokument dort noch aendert", async () => {
+    const user = userEvent.setup()
+    renderEditor(ownDraft(), [textBlock("Erster Absatz")])
+
+    await screen.findByText("Erster Absatz", undefined, WAIT)
+    await user.click(screen.getByRole("button", { name: "Vorschau" }))
+    const region = await screen.findByRole(
+      "region",
+      { name: i18n.t("project.detail.content") },
+      WAIT
+    )
+    expect(within(region).queryByText("Spaeter fertig")).toBeNull()
+
+    const surface = document.querySelector(".ProseMirror") as unknown as {
+      editor: Editor
+    }
+    act(() => {
+      const { editor } = surface
+      editor.commands.insertContentAt(editor.state.doc.content.size, {
+        type: "paragraph",
+        content: [{ type: "text", text: "Spaeter fertig" }],
+      })
+    })
+
+    expect(
+      await within(region).findByText("Spaeter fertig", undefined, WAIT)
+    ).toBeInTheDocument()
+  })
+
+  /*
+   * Der Takt laeuft in der Vorschau weiter und kann dort auf 409 stossen.
+   * „Serverstand laden" verwirft dann die eigenen Bloecke, und die Vorschau
+   * darf sie nicht weiter unter dem Titel vom Server zeigen (§6.4).
+   */
+  it("zeigt nach Serverstand laden aus der Vorschau den Serverinhalt und nicht den verworfenen", async () => {
+    const user = userEvent.setup()
+    renderEditor(ownDraft(), [textBlock("Erster Absatz")])
+    server.use(
+      http.put("*/api/projects/:projectId/blocks", () =>
+        apiErrorResponse(
+          409,
+          "PROJECT_VERSION_CONFLICT",
+          `/api/projects/${PROJECT_ID}/blocks`
+        )
+      )
+    )
+
+    await screen.findByText("Erster Absatz", undefined, WAIT)
+    const surface = document.querySelector<HTMLElement>(".ProseMirror")
+    expect(surface).not.toBeNull()
+    await user.click(surface as HTMLElement)
+    await user.keyboard("Verworfen")
+
+    /* Umgeschaltet, bevor der Takt gelaufen ist: er geht in der Vorschau
+       hinaus und kommt mit dem Konflikt zurueck. */
+    await user.click(screen.getByRole("button", { name: "Vorschau" }))
+    const region = await screen.findByRole(
+      "region",
+      { name: i18n.t("project.detail.content") },
+      WAIT
+    )
+    expect(within(region).getByText(/Verworfen/)).toBeInTheDocument()
+
+    /* Inzwischen steht auf dem Server eine fremde Fassung. */
+    server.use(projectBlocksHandler([textBlock("Fremde Fassung")], 2))
+    await user.click(
+      await screen.findByRole("button", { name: "Serverstand laden" }, WAIT)
+    )
+
+    /* hidden: true, damit die Pruefung allein den Inhalt der Vorschau
+       betrifft und nicht, ob der Dialog in diesem Augenblick noch ueber der
+       Seite steht und sie fuer Hilfsmittel verdeckt. */
+    await waitFor(() => {
+      const current = screen.getByRole("region", {
+        name: i18n.t("project.detail.content"),
+        hidden: true,
+      })
+      expect(within(current).getByText("Fremde Fassung")).toBeInTheDocument()
+      expect(within(current).queryByText(/Verworfen/)).toBeNull()
+    }, WAIT)
+    /* Der Modus bleibt die Vorschau. */
+    expect(
+      screen.getByRole("button", { name: "Bearbeiten", hidden: true })
+    ).toBeInTheDocument()
+  })
+
+  it("zeigt einen Beitrag ohne Bloecke in der Vorschau als Leerzustand", async () => {
+    const user = userEvent.setup()
+    renderEditor(ownDraft(), [])
+
     await user.click(
       await screen.findByRole("button", { name: "Vorschau" }, WAIT)
     )
 
+    expect(
+      await screen.findByRole(
+        "heading",
+        { level: 3, name: i18n.t("project.detail.empty.title") },
+        WAIT
+      )
+    ).toBeInTheDocument()
+  })
+
+  it("sagt den Wechsel an und laesst den Fokus am Umschalter", async () => {
+    const user = userEvent.setup()
+    renderEditor(ownDraft(), [textBlock("Ein Absatz.")])
+
+    const toggle = await screen.findByRole("button", { name: "Vorschau" }, WAIT)
+    await user.click(toggle)
+
+    /* Derselbe Knoten mit neuer Beschriftung, der Fokus bleibt darauf
+       (SC 2.4.3). Kein aria-pressed an einem Knopf, dessen Name wechselt. */
+    const edit = await screen.findByRole("button", { name: "Bearbeiten" }, WAIT)
+    expect(edit).toBe(toggle)
+    expect(edit).toHaveFocus()
+    expect(edit).not.toHaveAttribute("aria-pressed")
+
+    /* Die Live-Region der Seite, die dauerhaft steht (SC 4.1.3). */
+    const notice = screen.getByText(
+      i18n.t("projectContent.mode.announce.preview")
+    )
+    expect(notice).toHaveAttribute("aria-live", "polite")
+
+    await user.click(edit)
+    expect(screen.getByText(i18n.t("projectContent.mode.announce.edit"))).toBe(
+      notice
+    )
+    expect(toggle).toHaveFocus()
+  })
+
+  /*
+   * Das Slash-Menue haengt ueber props.mount an body und damit ausserhalb
+   * der ausgeblendeten Schreibflaeche. Per Tastatur ist der Umschalter
+   * erreichbar, waehrend es offen steht (Alt+F10 und weiter mit Tab); ein
+   * Klick daneben schloesse es dagegen von selbst. Ohne Abbruch beim
+   * Umschalten bliebe die Suche aktiv, die Liste stuende in der Vorschau
+   * weiter da und fuegte dort noch einen Block ein (Befund des Reviews zu
+   * KAN-104).
+   *
+   * <p>Geprueft wird der Zustand der Suche und nicht die Liste im DOM. Im
+   * Test nimmt schon das naechste Rendern des Ziehgriffs die Liste mit: er
+   * meldet sein Plugin dabei ab und wieder an, ProseMirror baut alle
+   * Plugin-Ansichten neu auf, und die Suche bleibt trotzdem aktiv. Die Liste
+   * haengt an genau diesem Zustand, und nur er sagt, ob der Wechsel sie
+   * beendet hat.
+   */
+  it("beendet beim Wechsel in die Vorschau ein offenes Slash-Menue", async () => {
+    const user = userEvent.setup()
+    renderEditor(ownDraft(), [])
+
+    const toggle = await screen.findByRole("button", { name: "Vorschau" }, WAIT)
+    const surface = document.querySelector<HTMLElement>(".ProseMirror")
+    expect(surface).not.toBeNull()
+    await user.click(surface as HTMLElement)
+    await user.keyboard("/")
+
+    const { editor } = surface as unknown as { editor: Editor }
     await waitFor(
       () =>
-        expect(screen.getByTestId("pathname")).toHaveTextContent(
-          `/projects/${PROJECT_ID}`
-        ),
+        expect(slashCommandPluginKey.getState(editor.state)?.active).toBe(true),
       WAIT
     )
+
+    /* Per Tastatur und nicht per Klick: ein pointerdown ausserhalb der Liste
+       schloesse sie schon selbst, und der Befund ginge im Test unter. */
+    act(() => toggle.focus())
+    await user.keyboard("{Enter}")
+
+    await screen.findByRole("button", { name: "Bearbeiten" }, WAIT)
+    expect(slashCommandPluginKey.getState(editor.state)?.active).toBe(false)
+    /* Beendet wird nur die Suche: der getippte Schraegstrich bleibt stehen,
+       am Dokument aendert der Wechsel nichts. */
+    expect(editor.state.doc.textContent).toBe("/")
+  })
+
+  it("oeffnet die Seitenleiste mit offener Kommentarspalte und zugeklappten Projektinformationen", async () => {
+    /* KAN-104: auch im Entwurf, nicht mehr nur in REVISION. */
+    renderEditor(
+      ownDraft(),
+      [],
+      [
+        comment({
+          id: "c-1",
+          type: "REPLY",
+          text: "Eine Rueckfrage im Entwurf.",
+        }),
+      ]
+    )
+
+    expect(
+      await screen.findByText("Eine Rueckfrage im Entwurf.", undefined, WAIT)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Projektinformationen" })
+    ).toHaveAttribute("aria-expanded", "false")
+  })
+
+  it("oeffnet bei PUBLISHED die Projektinformationen", async () => {
+    /* Dort gibt es keine Kommentarspalte, sonst stuende eine Karte ohne
+       offenen Kasten da. */
+    renderEditor(ownDraft({ status: "PUBLISHED" }), [textBlock("Fertig.")])
+
+    expect(
+      await screen.findByRole("button", { name: "Projektinformationen" }, WAIT)
+    ).toHaveAttribute("aria-expanded", "true")
   })
 
   it("traegt den Wechsel zwischen hellem und dunklem Modus im Editorkopf", async () => {
@@ -624,8 +1029,8 @@ describe("EditorPage", () => {
       ]
     )
 
-    /* In REVISION beginnt die Spalte aufgeklappt: dort sind die offenen
-       Aenderungswuensche der Arbeitsauftrag. */
+    /* Die Spalte beginnt aufgeklappt, seit KAN-104 in jedem Status; in
+       REVISION sind die offenen Aenderungswuensche der Arbeitsauftrag. */
     expect(
       await screen.findByText("Bitte die Quellen ergaenzen.")
     ).toBeInTheDocument()

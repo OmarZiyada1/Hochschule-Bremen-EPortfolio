@@ -272,7 +272,7 @@ describe("ProjectMetadataPage", () => {
        und das wird gemeldet statt still getan. */
     expect(
       screen.getByText(
-        "Die Fakultät wurde geändert. Studiengang und Fach wurden zurückgesetzt."
+        "Die Fakultät wurde geändert. Studiengang und Fach / Modul wurden zurückgesetzt."
       )
     ).toBeVisible()
   })

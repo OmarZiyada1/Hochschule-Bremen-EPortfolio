@@ -61,8 +61,9 @@ import { useUploadCoverImage } from "@/features/projects/hooks/useProjectMetadat
  * Gliederung traegt daneben eine {@code sr-only}-Ueberschrift mit dem
  * aktuellen Titel. Ein {@code h1}, das ein Eingabefeld umschliesst, haette
  * keinen zugaenglichen Namen: der Wert eines Feldes ist kein Textinhalt
- * der Ueberschrift. Ohne Schreibrecht steht der Titel als sichtbares
- * {@code h1} da, dann braucht es die verborgene Fassung nicht.
+ * der Ueberschrift. Ohne Schreibrecht und in der Vorschau (KAN-104) steht
+ * der Titel als sichtbares {@code h1} da, dann braucht es die verborgene
+ * Fassung nicht.
  *
  * <p><strong>Ueber dem Abstract steht seine Beschriftung sichtbar</strong>
  * und in Ueberschriftengroesse. Sie ist das {@code label} des Feldes und
@@ -79,7 +80,7 @@ import { useUploadCoverImage } from "@/features/projects/hooks/useProjectMetadat
  * Einer fuer beide und keiner je Feld: die Felder selbst bleiben ohne Rand
  * ({@code BARE_FIELD}), zwischen Titel und Kurzbeschreibung steht keine
  * Linie, und Titelbild wie Warnmeldung liegen ausserhalb. Ohne Schreibrecht
- * gibt es ihn nicht.
+ * und in der Vorschau (KAN-104) gibt es ihn nicht.
  */
 export function EditorIntro({
   project,
@@ -88,7 +89,11 @@ export function EditorIntro({
   onRegisterRead,
 }: {
   project: ProjectDetailResponse
-  /** Ob die Metadaten geaendert werden duerfen (§4.1, §6.1). */
+  /**
+   * Ob die Felder zum Bearbeiten stehen: false ohne Schreibrecht (§4.1,
+   * §6.1) und in der Vorschau des Editors (KAN-104). Ob gesendet werden
+   * darf, entscheidet die Seite ({@code metadataRef}).
+   */
   editable: boolean
   /**
    * Meldet, dass sich etwas geaendert hat. Wann daraus ein Request wird,
@@ -139,6 +144,14 @@ export function EditorIntro({
 
   const values = form.getValues()
   const valid = form.formState.isValid
+  /*
+   * Hier und ohne Bedingung gelesen, nicht erst in der Meldung unten:
+   * react-hook-form berechnet isDirty nur, wenn der Wert vor einer Aenderung
+   * schon gelesen wurde (Proxy des formState). Stuende er hinter
+   * „editable ||", waere er auf der Schreibflaeche nie abonniert gewesen und
+   * bliebe beim Wechsel in die Vorschau falsch (KAN-104).
+   */
+  const dirty = form.formState.isDirty
   /*
    * Abdruecke statt Objektvergleiche: an ihnen laesst sich eine echte
    * Aenderung von einem blossen Neurendern unterscheiden. Ohne das meldete
@@ -238,7 +251,19 @@ export function EditorIntro({
     next(oneLine(value))
   }
 
-  const hasCover = project.coverImageUrl != null && project.coverImageUrl !== ""
+  /*
+   * Aus dem Formular und nicht aus dem Projekt (KAN-104): in der Vorschau
+   * zeigt die Kopfpartie ein eben gewaehltes Titelbild schon, bevor der
+   * Speichertakt es geschrieben hat, und ein eben entferntes nicht mehr.
+   */
+  const hasCover = values.coverImageUrl !== ""
+
+  /* Derselbe Titel fuer beide Zweige; ein geleertes Feld ergaebe sonst eine
+     Ueberschrift ohne Namen (SC 2.4.6). */
+  const displayTitle =
+    values.title.trim() === ""
+      ? t("project.metadata.untitledTitle")
+      : values.title
 
   return (
     <section
@@ -284,11 +309,7 @@ export function EditorIntro({
            * darum: eine Ueberschrift, die ein Eingabefeld umschliesst,
            * haette keinen zugaenglichen Namen (SC 1.3.1, SC 4.1.2).
            */}
-          <h1 className="sr-only">
-            {values.title.trim() === ""
-              ? t("project.metadata.untitledTitle")
-              : values.title}
-          </h1>
+          <h1 className="sr-only">{displayTitle}</h1>
 
           {/* Titel und Kurzbeschreibung in einem gemeinsamen Rahmen
               (KAN-105, siehe IntroFrame). Feldmeldungen und Zeichenzaehler
@@ -393,35 +414,54 @@ export function EditorIntro({
             />
           </IntroFrame>
 
-          {/*
-           * Ein stiller Fehlschlag waere Datenverlust mit Ansage. Solange
-           * die Eingaben das Schema verletzen, sendet der Takt die
-           * Kopfangaben nicht; das steht hier und nicht nur als
-           * Feldmeldung, weil der Speicherzustand in der Kopfzeile davon
-           * nichts weiss. Ueber die Primitive und nicht als eigenes
-           * Markup: sie traegt role="alert" und wird beim Einfuegen
-           * verlaesslich angesagt (SC 4.1.3).
-           */}
-          {!valid && (
-            <Alert variant="destructive">
-              <AlertDescription>
-                {t("projectContent.intro.notSaved")}
-              </AlertDescription>
-            </Alert>
-          )}
+          {/* Die Meldung zum Speicherweg steht unter beiden Zweigen, siehe
+              dort (KAN-104). */}
         </>
       ) : (
         <>
-          <h1 className={`min-w-0 ${TITLE_ROLE}`}>{project.title}</h1>
+          {/*
+           * Der eingegebene Stand und nicht der gespeicherte (KAN-104). In
+           * der Vorschau des Editors steht die Kopfpartie mit editable=false
+           * da, und was seit dem letzten Speichertakt getippt wurde, soll
+           * dort schon zu sehen sein. Das Formular bleibt dafuer montiert,
+           * nur seine Felder treten ab. Fuer Personen ohne Schreibrecht
+           * aendert sich nichts: ein unberuehrtes Formular uebernimmt jeden
+           * neuen Serverstand (Effekt oben), die Werte sind dieselben.
+           */}
+          <h1 className={`min-w-0 ${TITLE_ROLE}`}>{displayTitle}</h1>
           {/* Ohne Beschriftung (KAN-83): der graue Absatz steht bereits
               richtig da, die Zeile darueber war die Ueberschrift
               „Abstract". */}
-          {project.summary != null && project.summary !== "" && (
+          {values.summary !== "" && (
             <p className="type-body-lg text-muted-foreground">
-              {project.summary}
+              {values.summary}
             </p>
           )}
         </>
+      )}
+
+      {/*
+       * Ein stiller Fehlschlag waere Datenverlust mit Ansage. Solange die
+       * Eingaben das Schema verletzen, sendet der Takt die Kopfangaben
+       * nicht; das steht hier und nicht nur als Feldmeldung, weil der
+       * Speicherzustand in der Kopfzeile davon nichts weiss. Ueber die
+       * Primitive und nicht als eigenes Markup: sie traegt role="alert" und
+       * wird beim Einfuegen verlaesslich angesagt (SC 4.1.3).
+       *
+       * <p><strong>Auch in der Vorschau</strong> (KAN-104): eine Auskunft
+       * ueber das Speichern verschwindet nicht mit einem Ansichtswechsel.
+       * Dort gilt sie nur fuer ein veraendertes Formular. Ein unveraendertes
+       * steht auf einem Serverstand, und der hat die Pruefung des Servers
+       * bestanden; ohne diese Bedingung blitzte die Meldung bei Personen
+       * ohne Schreibrecht auf, bis die erste Pruefung des Schemas
+       * zurueckkommt.
+       */}
+      {!valid && (editable || dirty) && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            {t("projectContent.intro.notSaved")}
+          </AlertDescription>
+        </Alert>
       )}
     </section>
   )
@@ -467,11 +507,11 @@ function oneLine(value: string): string {
  * Der Projekttitel sieht im Editor aus wie auf der oeffentlichen
  * Detailseite: dieselbe Rolle, dieselbe Farbe.
  *
- * <p>Er steht an beiden Stellen fuer dasselbe, und der Umschalter der
- * Kopfzeile fuehrt unmittelbar von einer in die andere. Ein Titel, der
- * dabei Groesse oder Farbe wechselt, liesse den Wechsel wie einen
- * Seitenwechsel aussehen. Vorbild ist {@code ProjectDetailPage}
- * ({@code type-title min-w-0 text-primary}).
+ * <p>Er steht an beiden Stellen fuer dasselbe, und seit KAN-104 wechselt der
+ * Umschalter der Kopfzeile an Ort und Stelle zwischen Schreibflaeche und
+ * Vorschau, in der diese Kopfpartie als Text steht. Ein Titel, der dabei
+ * Groesse oder Farbe wechselt, liesse den Wechsel springen. Vorbild ist
+ * {@code ProjectDetailPage} ({@code type-title min-w-0 text-primary}).
  */
 const TITLE_ROLE = "type-title text-primary"
 
@@ -541,8 +581,8 @@ const FIELD_FONT = {
  *
  * <p><strong>Nur beim Bearbeiten.</strong> Er steht allein im Zweig
  * {@code editable}. Wo die Kopfpartie nur gelesen wird (ohne Schreibrecht,
- * und kuenftig in der Vorschau aus KAN-104, die mit {@code editable=false}
- * rendert), gibt es ihn nicht. Im Ausdruck erscheint er ohnehin nicht:
+ * und in der Vorschau aus KAN-104, die mit {@code editable=false} rendert),
+ * gibt es ihn nicht. Im Ausdruck erscheint er ohnehin nicht:
  * gedruckt wird allein der Bereich aus {@code ProjectPrintView}, der
  * Kopfteil und Beitrag selbst rendert, und alle uebrigen Kinder von
  * {@code body} blendet project-content.css dort aus.

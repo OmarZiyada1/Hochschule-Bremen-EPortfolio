@@ -88,15 +88,15 @@ export function EditorSidebar({
          * Unterschied zwischen den beiden Ansichten; die Vorlage zeichnet
          * die rechte Spalte als einen Block (Frame 109:2).
          *
-         * Vorgabe sind beim Schreiben die Angaben: der haeufige Fall ist
-         * nachzusehen, was noch fehlt. In REVISION jedoch die Kommentare,
-         * denn dort sind die offenen Aenderungswuensche der Arbeitsauftrag
-         * (dieselbe Regel wie zuvor am CommentPanel selbst).
+         * Welcher Kasten beim Oeffnen offen steht, entscheidet seit KAN-104
+         * ProjectSidePanels selbst, fuer Editor und Reviewansicht gleich:
+         * die Kommentare, bei PUBLISHED die Angaben (KAN-104, Entscheidung).
+         * Bis dahin oeffnete der Editor die Angaben und nur in REVISION die
+         * Kommentare.
          */}
         <ProjectSidePanels
           project={project}
           context="editor"
-          defaultPanel={project.status === "REVISION" ? "comments" : "info"}
           showEmptyFields
           infoAction={
             <Button

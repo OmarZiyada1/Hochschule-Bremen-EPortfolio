@@ -406,10 +406,10 @@ describe("EditorIntro", () => {
   })
 
   /*
-   * Der Umschalter der Kopfzeile fuehrt unmittelbar zwischen Editor und
-   * oeffentlicher Detailseite. Wechselte der Titel dabei Groesse oder
-   * Farbe, saehe der Wechsel wie ein Seitenwechsel aus. Vorbild ist
-   * ProjectDetailPage mit "type-title min-w-0 text-primary".
+   * Der Umschalter der Kopfzeile wechselt seit KAN-104 an Ort und Stelle
+   * zwischen Schreibflaeche und Vorschau, in der die Kopfpartie als Text
+   * steht. Wechselte der Titel dabei Groesse oder Farbe, sprang die Seite.
+   * Vorbild ist ProjectDetailPage mit "type-title min-w-0 text-primary".
    */
   it("traegt am Titel dieselbe Rolle und Farbe wie die Detailseite", () => {
     const { view } = setUp()
@@ -511,5 +511,112 @@ describe("EditorIntro", () => {
     setProject(draft({ title: "Mit Leerzeichen" }))
 
     expect(read()).toBeNull()
+  })
+})
+
+/*
+ * KAN-104: in der Vorschau des Editors steht die Kopfpartie mit
+ * editable=false da, und zwar im eingegebenen Stand. Das Formular bleibt
+ * dabei montiert: sonst waeren die Eingaben beim Zurueckwechseln fort, und
+ * der Speichertakt verloere seine Lesefunktion.
+ */
+describe("EditorIntro in der Vorschau (KAN-104)", () => {
+  function setUpToggle(project: Partial<ProjectDetailResponse> = {}) {
+    let setEditable: (next: boolean) => void = () => undefined
+    let read: () => ProjectIntroValues | null = () => null
+
+    function Harness() {
+      const [editable, set] = useState(true)
+      setEditable = set
+      return (
+        <EditorIntro
+          project={draft(project)}
+          editable={editable}
+          onChange={() => undefined}
+          onRegisterRead={(next) => {
+            read = next
+          }}
+        />
+      )
+    }
+
+    renderWithProviders(<Harness />)
+    return {
+      read: () => read(),
+      setEditable: (next: boolean) => {
+        act(() => setEditable(next))
+      },
+    }
+  }
+
+  it("zeigt Titel und Kurzbeschreibung im eingegebenen und nicht im gespeicherten Stand", async () => {
+    const user = userEvent.setup()
+    const { read, setEditable } = setUpToggle({ summary: "Alte Kurzfassung" })
+
+    const title = screen.getByLabelText("Projekttitel")
+    await user.clear(title)
+    await user.type(title, "Neuer Titel")
+    const summary = screen.getByLabelText("Kurzbeschreibung")
+    await user.clear(summary)
+    await user.type(summary, "Neue Kurzfassung")
+
+    setEditable(false)
+
+    /* Genau eine h1, jetzt sichtbar, mit dem getippten Titel. */
+    const headings = screen.getAllByRole("heading", { level: 1 })
+    expect(headings).toHaveLength(1)
+    expect(headings[0]).toHaveTextContent("Neuer Titel")
+    expect(headings[0]).not.toHaveClass("sr-only")
+    expect(screen.getByText("Neue Kurzfassung")).toBeInTheDocument()
+    expect(screen.queryByText("Alte Kurzfassung")).toBeNull()
+    expect(screen.queryByLabelText("Projekttitel")).toBeNull()
+
+    /* Die Lesefunktion des Takts gilt weiter und liefert die Eingabe. */
+    expect(read()).toEqual({
+      title: "Neuer Titel",
+      summary: "Neue Kurzfassung",
+      coverImageUrl: "",
+    })
+
+    /* Und zurueck: die Eingabe steht wieder im Feld. */
+    setEditable(true)
+    expect(screen.getByLabelText("Projekttitel")).toHaveValue("Neuer Titel")
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1)
+  })
+
+  it("laesst den Speicherhinweis bei ungueltiger Eingabe auch in der Vorschau stehen", async () => {
+    const user = userEvent.setup()
+    const { setEditable } = setUpToggle()
+
+    await user.clear(screen.getByLabelText("Projekttitel"))
+    await screen.findAllByRole("alert")
+
+    setEditable(false)
+
+    /* Ohne Titel steht der Platzhaltername da und nicht eine leere h1. */
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Unbenanntes Projekt"
+    )
+    expect(
+      screen
+        .getAllByRole("alert")
+        .some((alert) =>
+          /nicht gespeichert, solange/i.test(alert.textContent ?? "")
+        )
+    ).toBe(true)
+  })
+
+  it("zeigt ohne Eingabe keinen Speicherhinweis im Lesezweig", async () => {
+    /* Personen ohne Schreibrecht sehen den Serverstand; der hat die Pruefung
+       des Servers bestanden, eine Meldung dazu waere falsch. */
+    setUp({ title: "Eingereicht", status: "SUBMITTED" }, false)
+
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Eingereicht" })
+    ).toBeInTheDocument()
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(screen.queryByRole("alert")).toBeNull()
   })
 })
