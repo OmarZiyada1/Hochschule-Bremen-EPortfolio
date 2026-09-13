@@ -143,7 +143,7 @@ export default function EditorPage() {
    * Kopfpartie und damit ihr Ruecksetzer: „Serverstand laden" verspricht,
    * die eigenen Eingaben zu verwerfen, und der Inhalt tut das auch (der
    * Editor wird neu aufgebaut). Ohne diesen Zaehler blieben Titel und
-   * Abstract stehen und gingen beim naechsten Takt mit der jetzt wieder
+   * Titelbild stehen und gingen beim naechsten Takt mit der jetzt wieder
    * gueltigen Version hinaus: die fremde Aenderung waere ohne 409 und ohne
    * Meldung ueberschrieben (Befund des Frontend-Reviews).
    *
@@ -232,8 +232,8 @@ export default function EditorPage() {
    * Die Kopfangaben haengen am Status und nicht an {@code canSave}: ein
    * Block, den diese Ansicht nicht lesen kann, ist ein Grund, den Inhalt
    * nicht zurueckzuschreiben (der PUT ersetzt die ganze Liste), aber
-   * keiner, Titelbild, Titel und Kurzbeschreibung festzuhalten. Sie laufen
-   * ueber einen anderen Endpoint (§6.1).
+   * keiner, Titelbild und Titel festzuhalten. Sie laufen ueber einen
+   * anderen Endpoint (§6.1).
    *
    * <p><strong>Zweistufig wie am Server</strong> (§6.1, Zeile
    * {@code PUT /projects/{id}}: „Autor:in und Mitglieder, in DRAFT und
@@ -289,6 +289,14 @@ export default function EditorPage() {
    * Vergleich schickte der erste Takt eines frisch geladenen Beitrags die
    * unveraenderte Karte los, und ein Entwurf bekaeme allein vom Ansehen
    * eine neue {@code version} (§6.4).
+   *
+   * <p><strong>Die Kurzbeschreibung laeuft unveraendert mit</strong>
+   * (KAN-104). Sie wird im Editor nicht bearbeitet, steht aber in der Karte,
+   * weil ein fehlendes Feld sie loeschte. Genommen wird sie aus
+   * {@code current}, also aus dem zuletzt vom Server bestaetigten Stand und
+   * nicht aus der Kopfpartie ({@code toProjectIntroUpdateRequest}); beide
+   * Seiten des Vergleichs tragen damit denselben Wert, und ihretwegen geht
+   * nie ein Request hinaus.
    */
   const readMetadata = useCallback((): Omit<
     ProjectUpdateRequest,
@@ -707,11 +715,13 @@ export default function EditorPage() {
            */}
           <div className="editor-content-column flex min-w-0 flex-1 flex-col gap-4">
             {/*
-             * Titelbild, Titel und Kurzbeschreibung stehen ueber dem
-             * Beitrag und sind dort aenderbar. Sie sind Metadaten und
-             * laufen ueber einen anderen Endpoint als der Inhalt (§6.1);
-             * derselbe Speichertakt fuehrt beide nacheinander, weil sie
-             * sich eine {@code Project.version} teilen (§6.4).
+             * Titelbild und Titel stehen ueber dem Beitrag und sind dort
+             * aenderbar. Sie sind Metadaten und laufen ueber einen anderen
+             * Endpoint als der Inhalt (§6.1); derselbe Speichertakt fuehrt
+             * beide nacheinander, weil sie sich eine
+             * {@code Project.version} teilen (§6.4). Die Kurzbeschreibung
+             * wird im Metadatenformular eingetragen und erscheint hier allein
+             * in der Vorschau (KAN-104, Entscheidung).
              *
              * <p><strong>Der key ist der Zaehler der Neuladevorgaenge</strong>
              * und nicht {@code id-version} wie im Metadatenformular: die
@@ -733,6 +743,14 @@ export default function EditorPage() {
                * hinaus.
                */
               editable={editing && mayEditMetadata}
+              /*
+               * Die Kurzbeschreibung als grauer Vorspann, allein in der
+               * Vorschau (KAN-104, Entscheidung). Die Kopfpartie kann das
+               * aus editable nicht ablesen: das ist in der Vorschau und ohne
+               * Schreibrecht gleichermassen false, und beim Bearbeiten ohne
+               * Schreibrecht soll sie nicht erscheinen.
+               */
+              showSummary={!editing}
               onChange={scheduleFromIntro}
               onRegisterRead={registerIntroRead}
             />

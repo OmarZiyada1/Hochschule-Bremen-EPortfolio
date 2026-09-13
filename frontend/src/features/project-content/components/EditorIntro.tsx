@@ -1,19 +1,21 @@
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useEffect, useId, useRef, type KeyboardEvent } from "react"
 import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type ReactNode,
-} from "react"
-import { Controller, useForm, useWatch } from "react-hook-form"
+  Controller,
+  useForm,
+  useWatch,
+  type UseFormReturn,
+} from "react-hook-form"
 import { useTranslation } from "react-i18next"
 
 import type { ProjectDetailResponse } from "@/api/types"
-import { CharacterCounter } from "@/components/common/CharacterCounter"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Field, FieldError, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Textarea } from "@/components/ui/textarea"
 import { CoverImageField } from "@/features/projects/components/CoverImageField"
 import {
@@ -25,15 +27,27 @@ import {
 import { useUploadCoverImage } from "@/features/projects/hooks/useProjectMetadataMutations"
 
 /**
- * Die Kopfpartie ueber der Schreibflaeche: Titelbild, Projekttitel und
- * Abstract, alle drei an Ort und Stelle aenderbar (KAN-36).
+ * Die Kopfpartie ueber der Schreibflaeche: Titelbild und Projekttitel, beide
+ * an Ort und Stelle aenderbar (KAN-36), in der Vorschau dazu die
+ * Kurzbeschreibung als Vorspann (KAN-104).
  *
  * <p><strong>Bewusst neben dem Template.</strong> Der Figma-Frame
  * {@code Template / Studierende · Editor} zeichnet oben allein den Titel,
- * und zwar als reine Anzeige. Titelbild und Abstract dort ebenfalls zu
- * fuehren, ist eine Nutzerentscheidung: beide erscheinen auf jeder Kachel
- * und in jeder Liste, und sie erst auf der Metadatenseite einzutragen
- * hiess, den Beitrag zu verlassen, um sein Aussehen zu bestimmen.
+ * und zwar als reine Anzeige. Das Titelbild dort ebenfalls zu fuehren, ist
+ * eine Nutzerentscheidung: es erscheint auf jeder Kachel und in jeder Liste,
+ * und es erst auf der Metadatenseite einzutragen hiess, den Beitrag zu
+ * verlassen, um sein Aussehen zu bestimmen.
+ *
+ * <p><strong>Die Kurzbeschreibung wird hier nicht bearbeitet</strong>
+ * (KAN-104, Entscheidung). Eingetragen wird sie allein im
+ * Metadatenformular. Beim Bearbeiten steht unter dem Titel keine
+ * Kurzbeschreibung, auch nicht fuer Personen ohne Schreibrecht; in der
+ * Vorschau erscheint sie als grauer Vorspann wie auf der Detailseite. Ob sie
+ * erscheint, sagt die Seite ({@code showSummary}), denn diese Komponente
+ * kennt den Modus nicht. Sie gehoert deshalb auch nicht zum Formular:
+ * angezeigt wird sie aus {@code project}, und der Speichertakt traegt den
+ * zuletzt vom Server bestaetigten Wert unveraendert mit
+ * ({@code toProjectIntroUpdateRequest}).
  *
  * <p><strong>Was hier steht, sind Metadaten und kein Inhalt</strong>
  * (§6.1): sie gehen ueber {@code PUT /api/projects/{id}} hinaus, die
@@ -65,26 +79,19 @@ import { useUploadCoverImage } from "@/features/projects/hooks/useProjectMetadat
  * der Titel als sichtbares {@code h1} da, dann braucht es die verborgene
  * Fassung nicht.
  *
- * <p><strong>Ueber dem Abstract steht seine Beschriftung sichtbar</strong>
- * und in Ueberschriftengroesse. Sie ist das {@code label} des Feldes und
- * keine eigene Ueberschrift daneben: ein Feld braucht einen zugaenglichen
- * Namen, und zwei Elemente fuer dieselbe Aufgabe liefen beim naechsten
- * Umbau auseinander.
- *
- * <p><strong>Zwei Felder und trotzdem ein Schema.</strong> Geprueft wird
- * mit {@code projectIntroSchema}, einem Ausschnitt des einen
+ * <p><strong>Ein Feld und ein Schema.</strong> Geprueft wird mit
+ * {@code projectIntroSchema}, einem Ausschnitt des einen
  * Metadaten-Schemas (Frontend-Regel 12).
  *
- * <p><strong>Beim Bearbeiten stehen Titel und Kurzbeschreibung in einem
- * gemeinsamen, gestrichelten Rahmen</strong> (KAN-105, {@code IntroFrame}).
- * Einer fuer beide und keiner je Feld: die Felder selbst bleiben ohne Rand
- * ({@code BARE_FIELD}), zwischen Titel und Kurzbeschreibung steht keine
- * Linie, und Titelbild wie Warnmeldung liegen ausserhalb. Ohne Schreibrecht
- * und in der Vorschau (KAN-104) gibt es ihn nicht.
+ * <p><strong>Ohne Rahmen</strong> (KAN-104, Entscheidung). Der gestrichelte
+ * Rahmen aus KAN-105 um Titel und Kurzbeschreibung ist entfallen, und auch
+ * das Titelfeld selbst traegt in keinem Zustand Rand oder Flaeche (siehe
+ * {@code BARE_FIELD}).
  */
 export function EditorIntro({
   project,
   editable,
+  showSummary,
   onChange,
   onRegisterRead,
 }: {
@@ -95,6 +102,15 @@ export function EditorIntro({
    * darf, entscheidet die Seite ({@code metadataRef}).
    */
   editable: boolean
+  /**
+   * Ob unter dem Titel die Kurzbeschreibung steht (KAN-104, Entscheidung):
+   * allein in der Vorschau des Editors. {@code editable} kann das nicht
+   * sagen, es ist in der Vorschau und ohne Schreibrecht gleichermassen
+   * false, und beim Bearbeiten ohne Schreibrecht soll sie gerade nicht
+   * erscheinen. Solange die Felder zum Bearbeiten stehen, bleibt der Wert
+   * ohne Wirkung.
+   */
+  showSummary: boolean
   /**
    * Meldet, dass sich etwas geaendert hat. Wann daraus ein Request wird,
    * entscheidet der Speichertakt der Seite und nicht diese Komponente.
@@ -114,13 +130,6 @@ export function EditorIntro({
   const { t } = useTranslation()
   const fieldId = useId()
   const upload = useUploadCoverImage(project.id)
-
-  /*
-   * Welches der beiden Felder gerade den Fokus hat. Der Zeichenzaehler ist
-   * nur dort sichtbar: dauerhaft eingeblendet stuende unter dem Titel eine
-   * Zahl, die beim Lesen des Beitrags niemand braucht.
-   */
-  const [focused, setFocused] = useState<"title" | "summary" | null>(null)
 
   const form = useForm<ProjectIntroValues>({
     resolver: zodResolver(projectIntroSchema),
@@ -232,7 +241,21 @@ export function EditorIntro({
     form.reset(JSON.parse(serverSnapshot) as ProjectIntroValues)
     /* Der Ruecksetzer ist keine Eingabe: er darf keinen Takt ausloesen. */
     lastRef.current = serverSnapshot
+    /* Und ein uebernommener Stand zeigt seinen Grund wie ein geladener. */
+    revealInvalidLoadedValues(form)
   }, [serverSnapshot, form])
+
+  /*
+   * Der geladene Stand, einmal beim Montieren (KAN-104). Auch wenn die
+   * Felder gerade nicht zum Bearbeiten stehen: wer in der Vorschau oeffnet
+   * und dann auf die Schreibflaeche wechselt, soll den Grund dort gleich
+   * sehen. Ohne Schreibrecht bleibt das folgenlos, die Feldmeldung steht
+   * nur am Feld, und die Warnung zum Speicherweg gilt dort erst einer
+   * Eingabe.
+   */
+  useEffect(() => {
+    revealInvalidLoadedValues(form)
+  }, [form])
 
   /*
    * Eine dauerhaft gueltige Lesefunktion. Sie haengt an einem Ref und
@@ -245,7 +268,7 @@ export function EditorIntro({
     onRegisterRead(readRef.current)
   }, [onRegisterRead])
 
-  /** Eine Eingabe, geglaettet: Zeilenumbrueche gehoeren in keines der Felder. */
+  /** Eine Eingabe, geglaettet: Zeilenumbrueche gehoeren nicht in den Titel. */
   const change = (next: (value: string) => void) => (value: string) => {
     touchedRef.current = true
     next(oneLine(value))
@@ -264,6 +287,14 @@ export function EditorIntro({
     values.title.trim() === ""
       ? t("project.metadata.untitledTitle")
       : values.title
+
+  /*
+   * Die Kurzbeschreibung aus dem Serverstand und nicht aus einer Eingabe
+   * (KAN-104): im Editor aendert sie niemand, und genau dieser Wert geht
+   * auch im Speichertakt mit. Leer bleibt der Vorspann fort, wie auf der
+   * Detailseite.
+   */
+  const summary = project.summary ?? ""
 
   return (
     <section
@@ -311,108 +342,70 @@ export function EditorIntro({
            */}
           <h1 className="sr-only">{displayTitle}</h1>
 
-          {/* Titel und Kurzbeschreibung in einem gemeinsamen Rahmen
-              (KAN-105, siehe IntroFrame). Feldmeldungen und Zeichenzaehler
-              gehoeren zu ihren Feldern und stehen darin; die Warnmeldung
-              zum Speicherweg gilt der ganzen Kopfpartie und steht darunter. */}
-          <IntroFrame>
-            <Controller
-              control={form.control}
-              name="title"
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid || undefined}>
-                  <FieldLabel htmlFor={`${fieldId}-title`} className="sr-only">
-                    {t("project.metadata.title.label")}
-                  </FieldLabel>
-                  <Textarea
-                    {...field}
-                    id={`${fieldId}-title`}
-                    rows={1}
-                    maxLength={TITLE_MAX_LENGTH}
-                    aria-invalid={fieldState.invalid || undefined}
-                    aria-describedby={`${fieldId}-title-counter`}
-                    placeholder={t("project.metadata.title.placeholder")}
-                    onKeyDown={preventNewline}
-                    onChange={(event) =>
-                      change(field.onChange)(event.target.value)
-                    }
-                    onFocus={() => setFocused("title")}
-                    onBlur={() => {
-                      setFocused(null)
-                      field.onBlur()
-                    }}
-                    className={FIELD_FONT.title}
-                  />
-                  {/*
-                   * Dauerhaft im Baum und nur verborgen, nicht ausgebaut:
-                   * aria-describedby zeigt sonst beim Betreten des Feldes auf
-                   * ein Element, das es in diesem Augenblick noch nicht gibt,
-                   * und die Restanzahl wird nie vorgelesen (Befund des
-                   * Frontend-Reviews).
-                   */}
-                  <CharacterCounter
-                    id={`${fieldId}-title-counter`}
-                    value={field.value}
-                    max={TITLE_MAX_LENGTH}
-                    className={focused === "title" ? undefined : "sr-only"}
-                  />
-                  <FieldError
-                    errors={[{ message: messageOf(fieldState.error, t) }]}
-                  />
-                </Field>
-              )}
-            />
-
-            <Controller
-              control={form.control}
-              name="summary"
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid || undefined}>
-                  {/*
-                   * Unsichtbar, aber im Baum (KAN-83): die Beschriftung
-                   * „Abstract" stand sichtbar in Ueberschriftengroesse ueber
-                   * dem Feld und wurde fuer eine Gliederungsebene gehalten.
-                   * Verschwinden darf sie trotzdem nicht, sonst verliert das
-                   * Feld seinen zugaenglichen Namen (WCAG 2.2, SC 4.1.2).
-                   * Sichtbar fuehrt jetzt der Platzhalter. Dasselbe Muster
-                   * haelt diese Datei schon fuer den Titel.
-                   */}
-                  <FieldLabel
-                    htmlFor={`${fieldId}-summary`}
-                    className="sr-only"
-                  >
-                    {t("project.metadata.summary.label")}
-                  </FieldLabel>
-                  <Textarea
-                    {...field}
-                    id={`${fieldId}-summary`}
-                    rows={3}
-                    aria-invalid={fieldState.invalid || undefined}
-                    placeholder={t("project.metadata.summary.placeholder")}
-                    onKeyDown={preventNewline}
-                    onChange={(event) =>
-                      change(field.onChange)(event.target.value)
-                    }
-                    onFocus={() => setFocused("summary")}
-                    onBlur={() => {
-                      setFocused(null)
-                      field.onBlur()
-                    }}
-                    className={FIELD_FONT.summary}
-                  />
-                  {/*
-                   * Ohne Zeichenzaehler: der Abstract ist Fliesstext, und die
-                   * Grenze ist die des Servers (1024 Zeichen), keine
-                   * Gestaltungsregel. Sie erscheint erst als Feldmeldung,
-                   * wenn sie wirklich erreicht ist.
-                   */}
-                  <FieldError
-                    errors={[{ message: messageOf(fieldState.error, t) }]}
-                  />
-                </Field>
-              )}
-            />
-          </IntroFrame>
+          {/* Nur der Titel und ohne Rahmen darum (KAN-104, Entscheidung).
+              Hoechstlaengenmeldung und Feldmeldung gehoeren zum Feld und
+              stehen darunter; die Warnmeldung zum Speicherweg gilt der
+              ganzen Kopfpartie und steht unter beiden Zweigen. */}
+          <Controller
+            control={form.control}
+            name="title"
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid || undefined}>
+                <FieldLabel htmlFor={`${fieldId}-title`} className="sr-only">
+                  {t("project.metadata.title.label")}
+                </FieldLabel>
+                <Textarea
+                  {...field}
+                  id={`${fieldId}-title`}
+                  rows={1}
+                  maxLength={TITLE_MAX_LENGTH}
+                  /* Bleibt, obwohl das Feld nicht mehr rot wird: Hilfsmittel
+                     melden den Fehlerzustand darueber (SC 3.3.1, SC 4.1.2). */
+                  aria-invalid={fieldState.invalid || undefined}
+                  aria-describedby={`${fieldId}-title-limit`}
+                  placeholder={t("project.metadata.title.placeholder")}
+                  onKeyDown={preventNewline}
+                  onChange={(event) =>
+                    change(field.onChange)(event.target.value)
+                  }
+                  className={TITLE_FIELD}
+                />
+                {/*
+                 * Die Hoechstlaengenmeldung (KAN-104, Entscheidung). Sie
+                 * ersetzt die Restzeichenanzeige unter dem Titel; gemeldet
+                 * wird erst, wenn nichts mehr hineinpasst.
+                 *
+                 * <p><strong>Ein Hinweis und kein Fehler:</strong> bei genau
+                 * 100 Zeichen ist der Titel gueltig. Deshalb die
+                 * Beschreibungsprimitive in ihrer eigenen gedaempften Farbe
+                 * und nicht FieldError, die destruktiv faerbt und als alert
+                 * dazwischenriefe.
+                 *
+                 * <p><strong>Dauerhaft im Baum, und nur der Text wechselt.</strong>
+                 * Eine Live-Region, die erst mit ihrer Meldung entsteht, wird
+                 * unter Umstaenden gar nicht angesagt (SC 4.1.3), und
+                 * aria-describedby zeigte beim Betreten des Feldes ins Leere.
+                 * Leer ist sie sr-only: so bleibt sie im Baum der Hilfsmittel,
+                 * nimmt aber keinen Platz und keinen Abstand unter dem Titel
+                 * ein.
+                 */}
+                <FieldDescription
+                  id={`${fieldId}-title-limit`}
+                  role="status"
+                  className="empty:sr-only"
+                >
+                  {titleLimitReached(field.value, fieldState.invalid)
+                    ? t("projectContent.intro.titleLimitReached", {
+                        max: TITLE_MAX_LENGTH,
+                      })
+                    : null}
+                </FieldDescription>
+                <FieldError
+                  errors={[{ message: messageOf(fieldState.error, t) }]}
+                />
+              </Field>
+            )}
+          />
 
           {/* Die Meldung zum Speicherweg steht unter beiden Zweigen, siehe
               dort (KAN-104). */}
@@ -429,13 +422,10 @@ export function EditorIntro({
            * neuen Serverstand (Effekt oben), die Werte sind dieselben.
            */}
           <h1 className={`min-w-0 ${TITLE_ROLE}`}>{displayTitle}</h1>
-          {/* Ohne Beschriftung (KAN-83): der graue Absatz steht bereits
-              richtig da, die Zeile darueber war die Ueberschrift
-              „Abstract". */}
-          {values.summary !== "" && (
-            <p className="type-body-lg text-muted-foreground">
-              {values.summary}
-            </p>
+          {/* Der graue Vorspann wie auf der Detailseite, ohne Beschriftung
+              (KAN-83), und nur in der Vorschau (KAN-104, Entscheidung). */}
+          {showSummary && summary !== "" && (
+            <p className="type-body-lg text-muted-foreground">{summary}</p>
           )}
         </>
       )}
@@ -483,11 +473,60 @@ function messageOf(
 }
 
 /**
- * Titel und Abstract sind Fliesstext ohne harte Umbrueche; ein
- * Zeilenumbruch darin waere im Beitrag, auf jeder Kachel und in jeder
- * Liste ein unerwarteter Sprung. Verhindert wird er an der Taste und nicht
- * erst beim Speichern, damit gar nicht erst entsteht, was danach still
- * verschwaende.
+ * Prueft einen geladenen Stand sichtbar, wenn das Schema ihn beanstandet
+ * (KAN-104).
+ *
+ * <p>react-hook-form berechnet beim Montieren und nach {@code reset} ueber
+ * den Resolver allein {@code isValid}; Feldfehler setzt es erst mit der
+ * ersten Eingabe. Ein Titel ueber {@code TITLE_MAX_LENGTH} Zeichen, wie ihn
+ * der Server zulaesst (255, {@code ProjectUpdateRequest}), stuende sonst
+ * ohne Feldmeldung da, und darunter allein die Warnung, dass nicht
+ * gespeichert wird, ohne den Grund. Weitertippen hilft dabei nicht: das
+ * native {@code maxLength} sperrt jede Eingabe, erst ein Loeschen loeste
+ * die Pruefung aus. Bis KAN-104 nannte die Restzeichenanzeige den
+ * Ueberhang; seit sie entfallen ist, nennt ihn die Feldmeldung.
+ *
+ * <p>Nur bei einem Verstoss und nicht bei jedem Stand: ein gueltiger
+ * braucht keine Meldung. {@code trigger} aendert keinen Wert, setzt kein
+ * {@code touchedRef} und nimmt keinen Fokus; der Speichertakt bleibt also
+ * unberuehrt, gesendet wird weiterhin nur, was hier getippt wurde.
+ */
+function revealInvalidLoadedValues(form: UseFormReturn<ProjectIntroValues>) {
+  if (!projectIntroSchema.safeParse(form.getValues()).success) {
+    void form.trigger()
+  }
+}
+
+/**
+ * Ob der Titel genau die Hoechstlaenge erreicht hat und nichts mehr
+ * hineinpasst (KAN-104, Entscheidung).
+ *
+ * <p>Gemessen am Feldwert und nicht am getrimmten Titel: das native
+ * {@code maxLength} zaehlt genauso, auch ein Randleerzeichen belegt also
+ * einen Platz. Das ist keine Pruefung neben dem Schema, sondern allein die
+ * Frage, ob der Hinweis steht.
+ *
+ * <p><strong>Genau an der Grenze und nicht darueber.</strong> Laenger als
+ * die Grenze wird ein Titel nur, wenn er so vom Server kommt (dort gelten
+ * 255 Zeichen). Dann ist die Grenze ueberschritten und nicht erreicht, und
+ * den Grund nennt die Feldmeldung, die {@code revealInvalidLoadedValues}
+ * beim Laden herstellt. Bis deren Pruefung zurueckkommt, ist
+ * {@code invalid} noch false; mit einem Vergleich auf „mindestens" stuende
+ * der Hinweis in dieser Zeit in der Live-Region und wuerde angesagt.
+ *
+ * <p><strong>Kein Hinweis, solange das Feld eine Meldung traegt</strong>,
+ * etwa bei einem Titel aus lauter Leerzeichen: ein gueltiger Hinweis ueber
+ * einer Fehlermeldung widerspraeche ihr.
+ */
+function titleLimitReached(value: string, invalid: boolean): boolean {
+  return value.length === TITLE_MAX_LENGTH && !invalid
+}
+
+/**
+ * Der Titel ist eine Zeile ohne harte Umbrueche; ein Zeilenumbruch darin
+ * waere im Beitrag, auf jeder Kachel und in jeder Liste ein unerwarteter
+ * Sprung. Verhindert wird er an der Taste und nicht erst beim Speichern,
+ * damit gar nicht erst entsteht, was danach still verschwaende.
  */
 function preventNewline(event: KeyboardEvent<HTMLTextAreaElement>) {
   if (event.key === "Enter") {
@@ -516,29 +555,45 @@ function oneLine(value: string): string {
 const TITLE_ROLE = "type-title text-primary"
 
 /**
- * Der Rahmen der beiden Felder: keiner, auch nicht im Fokus.
+ * Das Titelfeld traegt weder Rahmen noch Flaeche, in keinem Zustand und in
+ * hell wie dunkel (KAN-104, Entscheidung).
  *
- * <p>Titel und Abstract sollen wie der Beitrag aussehen und nicht wie ein
- * Formular daneben. Weggenommen werden muessen vier Dinge der
- * Registry-Primitive, und jedes einzeln, weil tailwind-merge nur innerhalb
- * derselben Gruppe <em>und</em> desselben Modifikators aufraeumt: der Rand
- * ({@code border-0}), die Mindesthoehe von 4rem ({@code min-h-0}), die
- * Flaeche im dunklen Modus ({@code dark:bg-transparent}) und der Fokusring
- * ({@code focus-visible:ring-0}).
+ * <p>Der Titel soll aussehen wie der Beitrag und nicht wie ein Formular
+ * daneben. Weggenommen wird, was die Registry-Primitive {@code Textarea}
+ * mitbringt, und zwar jede Klasse mit genau ihrem Modifikator:
+ * tailwind-merge raeumt nur innerhalb derselben Gruppe <em>und</em>
+ * desselben Modifikators auf. Ein {@code border-0} ohne Modifikator liesse
+ * etwa {@code aria-invalid:ring-3} stehen. Die Primitive selbst bleibt
+ * unveraendert (Frontend-Regel 11). Im Einzelnen:
  *
- * <p>Die gestrichelte Umrandung um beide Felder zusammen (KAN-105) bleibt
- * davon unberuehrt: sie liegt ausserhalb der Felder ({@code IntroFrame})
- * und verschiebt sie nicht.
+ * <ul>
+ *   <li>Rand, Randfarbe, Mindesthoehe von 4rem und Innenabstand
+ *       ({@code border-0}, {@code border-transparent}, {@code min-h-0},
+ *       {@code px-0}, {@code py-0});</li>
+ *   <li>die Flaeche, auch dunkel: {@code dark:bg-transparent} gegen
+ *       {@code dark:bg-input/30};</li>
+ *   <li>Fokusring und Randfarbe im Fokus ({@code focus-visible:ring-0},
+ *       {@code focus-visible:ring-transparent},
+ *       {@code focus-visible:border-transparent});</li>
+ *   <li>der rote Fehlerzustand, hell ({@code aria-invalid:border-transparent},
+ *       {@code aria-invalid:ring-0}, {@code aria-invalid:ring-transparent})
+ *       und dunkel ({@code dark:aria-invalid:border-transparent},
+ *       {@code dark:aria-invalid:ring-transparent}). Fort ist allein die
+ *       Optik: {@code aria-invalid} bleibt am Feld, und die Feldmeldung
+ *       darunter nennt den Fehler als Text.</li>
+ * </ul>
  *
- * <p><strong>Wie der Fokus trotzdem zu sehen ist.</strong> Bei einem
- * Textfeld traegt ihn die Schreibmarke; dazu kommt dieselbe leichte
- * Flaeche wie beim Ueberfahren. Sie steht ausdruecklich auch mit
- * {@code dark:}-Modifikator da: {@code dark:bg-transparent} und
- * {@code focus:bg-muted/40} haben dieselbe Spezifitaet, und im gebauten
- * CSS steht die dunkle Zeile spaeter, gewinnt also. Ohne
- * {@code dark:focus:bg-muted/40} blieb dunkel gar nichts uebrig (Befund
- * des Frontend-Reviews). Die Flaeche ist bewusst zurueckhaltend; ein
- * deutlicherer Anzeiger ohne Rahmen ist eine offene Gestaltungsfrage.
+ * <p><strong>Den Fokus zeigt allein die Schreibmarke</strong> (KAN-104,
+ * Entscheidung der Person; nicht wieder einbauen). Die leichte Flaeche beim
+ * Ueberfahren und im Fokus ({@code hover:bg-muted/40},
+ * {@code focus:bg-muted/40} und ihre {@code dark:}-Fassungen) ist
+ * entfallen, und den Umriss des Browsers nimmt die Primitive mit
+ * {@code outline-none} ohnehin. SC 2.4.7 verlangt fuer die
+ * Tastaturbedienung einen sichtbaren Fokusanzeiger, legt seine Form aber
+ * nicht fest. In einem Textfeld ist das die blinkende Schreibmarke: sie
+ * erscheint genau dann, wenn das Feld den Fokus hat, und zeigt, wo die
+ * Eingabe wirkt. Die Schreibmarke erbt die Textfarbe {@code text-primary}
+ * und steht damit in hell wie dunkel im Kontrast der Titelrolle.
  *
  * <p><strong>Und kein Rollbalken.</strong> Das Feld waechst mit seinem
  * Inhalt, das besorgt {@code field-sizing-content} der Primitive; es
@@ -548,15 +603,16 @@ const TITLE_ROLE = "type-title text-primary"
  * einer Ueberschrift waere ein Bedienelement ohne Zweck.
  */
 const BARE_FIELD = [
-  "resize-none overflow-hidden border-0 min-h-0 px-0 py-0",
+  "resize-none overflow-hidden border-0 border-transparent min-h-0 px-0 py-0",
   "bg-transparent dark:bg-transparent",
-  "hover:bg-muted/40 focus:bg-muted/40",
-  "dark:hover:bg-muted/40 dark:focus:bg-muted/40",
-  "focus-visible:ring-0",
+  "focus-visible:ring-0 focus-visible:ring-transparent focus-visible:border-transparent",
+  "aria-invalid:border-transparent aria-invalid:ring-0 aria-invalid:ring-transparent",
+  "dark:aria-invalid:border-transparent dark:aria-invalid:ring-transparent",
 ].join(" ")
 
 /**
- * Die Schriftrollen der beiden Felder.
+ * Die Klassen des Titelfeldes: ohne Rahmen ({@code BARE_FIELD}) und in der
+ * Schriftrolle des Titels.
  *
  * <p><strong>Warum nicht einfach die Rollen-Klasse allein.</strong> Die
  * Rollen-Klassen stehen in {@code @layer components}, die
@@ -570,76 +626,4 @@ const BARE_FIELD = [
  * ihre Groesse nimmt. Familie und Schnitt bleiben ihr ueberlassen, dort
  * gibt es keinen Konflikt.
  */
-const FIELD_FONT = {
-  title: `${BARE_FIELD} ${TITLE_ROLE} text-[length:var(--fs-title)] leading-[var(--lh-title)] md:text-[length:var(--fs-title)]`,
-  summary: `${BARE_FIELD} type-body-lg text-[length:var(--fs-body-lg)] leading-[var(--lh-body)] md:text-[length:var(--fs-body-lg)]`,
-} as const
-
-/**
- * Der gemeinsame Rahmen um Titel und Kurzbeschreibung (KAN-105): eine
- * Haarlinie, lang gestrichelt, in der Primaerfarbe.
- *
- * <p><strong>Nur beim Bearbeiten.</strong> Er steht allein im Zweig
- * {@code editable}. Wo die Kopfpartie nur gelesen wird (ohne Schreibrecht,
- * und in der Vorschau aus KAN-104, die mit {@code editable=false} rendert),
- * gibt es ihn nicht. Im Ausdruck erscheint er ohnehin nicht:
- * gedruckt wird allein der Bereich aus {@code ProjectPrintView}, der
- * Kopfteil und Beitrag selbst rendert, und alle uebrigen Kinder von
- * {@code body} blendet project-content.css dort aus.
- *
- * <p><strong>Warum ein SVG und kein gestrichelter Rand.</strong> Mit
- * {@code border-style: dashed} waehlt der Browser die Strichlaenge selbst,
- * kurz und je Engine verschieden; einstellen laesst sie sich nicht. Ein
- * {@code stroke-dasharray} nimmt dagegen feste Masse an, hier 0,75rem Strich
- * und 0,5rem Luecke. Breite und Hoehe des Rechtecks stehen als Attribute mit
- * 100 Prozent da, weil sie als CSS-Eigenschaft am {@code rect} nicht in jeder
- * Engine greifen. Die Ecke kommt dagegen ueber CSS, sonst stuende die
- * Radiusstufe {@code control} als Zahl im Code: {@code rx} als
- * CSS-Eigenschaft kennen Chromium ab 43, Firefox ab 69 und Safari ab 17.4
- * (MDN browser-compat-data). Ein aelteres Safari zeichnet die Ecken eckig,
- * sonst aendert sich nichts.
- *
- * <p>Der Strich liegt mittig auf der Kante, seine aeussere Haelfte also
- * ausserhalb der Zeichenflaeche; {@code overflow-visible} schneidet sie
- * nicht ab, und {@code vector-effect} haelt ihn bei einem Pixel. Die Farbe
- * erbt er ueber {@code currentColor} von {@code text-primary}: im dunklen
- * Modus wechselt die Nuance ueber die Tokenschicht, im Kontrastmodus von
- * Windows folgt sie der Systemfarbe. Das SVG ist {@code aria-hidden} und
- * laesst Klicks durch, denn es ist Schmuck und kein Bedienelement.
- *
- * <p><strong>Warum nach aussen versetzt.</strong> Der Rahmen bekommt
- * Innenabstand (0,75rem seitlich, 0,5rem oben und unten) und wird um
- * denselben Betrag mit negativem Aussenabstand hinausgeschoben. Titel und
- * Kurzbeschreibung bleiben damit, wo sie ohne Rahmen standen: buendig mit
- * der linken Kante des Blockinhalts, und auch in der Hoehe wandert nichts.
- * Platz dafuer ist in jeder Richtung. Oben und unten nimmt der Versatz die
- * Haelfte des Abstands {@code gap-4} zum Titelbild, zur Warnmeldung und zum
- * naechsten Element der Spalte in {@code EditorPage}; links liegt er im
- * Einzug der {@code editor-content-column} (5rem), rechts im Seitenrand
- * {@code px-4}, und kein Vorfahr schneidet ab. Auch bei 360px Breite laeuft
- * deshalb nichts ueber.
- */
-function IntroFrame({ children }: { children: ReactNode }) {
-  return (
-    <div
-      data-slot="editor-intro-frame"
-      className="relative -mx-3 -my-2 flex flex-col gap-4 px-3 py-2"
-    >
-      <svg
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 size-full overflow-visible text-primary"
-      >
-        <rect
-          width="100%"
-          height="100%"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1}
-          vectorEffect="non-scaling-stroke"
-          className="[rx:var(--radius-control)] [stroke-dasharray:0.75rem_0.5rem]"
-        />
-      </svg>
-      {children}
-    </div>
-  )
-}
+const TITLE_FIELD = `${BARE_FIELD} ${TITLE_ROLE} text-[length:var(--fs-title)] leading-[var(--lh-title)] md:text-[length:var(--fs-title)]`

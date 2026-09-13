@@ -598,6 +598,83 @@ describe("EditorPage", () => {
   })
 
   /*
+   * KAN-104, Entscheidung: die Kurzbeschreibung wird allein im
+   * Metadatenformular eingetragen. Beim Bearbeiten steht sie in der
+   * Kopfpartie weder als Feld noch als Text; in der Vorschau erscheint sie
+   * als grauer Vorspann wie auf der Detailseite. Gesucht wird in der
+   * Kopfpartie und nicht auf der ganzen Seite, damit die Seitenleiste nicht
+   * mitzaehlt.
+   */
+  it("zeigt die Kurzbeschreibung beim Bearbeiten nicht und in der Vorschau als grauen Vorspann", async () => {
+    const user = userEvent.setup()
+    renderEditor(ownDraft({ summary: "Gespeicherte Kurzfassung" }), [
+      textBlock("Ein Absatz."),
+    ])
+
+    const intro = await screen.findByRole(
+      "region",
+      { name: "Kopfbereich des Beitrags" },
+      WAIT
+    )
+    expect(
+      await within(intro).findByLabelText("Projekttitel", {}, WAIT)
+    ).toBeInTheDocument()
+    expect(within(intro).queryByLabelText("Kurzbeschreibung")).toBeNull()
+    expect(within(intro).queryByText("Gespeicherte Kurzfassung")).toBeNull()
+
+    await user.click(screen.getByRole("button", { name: "Vorschau" }))
+
+    const lead = await within(intro).findByText(
+      "Gespeicherte Kurzfassung",
+      undefined,
+      WAIT
+    )
+    expect(lead.tagName).toBe("P")
+    expect(lead).toHaveClass("type-body-lg", "text-muted-foreground")
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1)
+
+    await user.click(screen.getByRole("button", { name: "Bearbeiten" }))
+
+    await waitFor(
+      () =>
+        expect(
+          within(intro).queryByText("Gespeicherte Kurzfassung")
+        ).toBeNull(),
+      WAIT
+    )
+  })
+
+  it("zeigt die Kurzbeschreibung auch ohne Schreibrecht erst in der Vorschau", async () => {
+    const user = userEvent.setup()
+    renderEditor(
+      ownDraft({ status: "SUBMITTED", summary: "Gespeicherte Kurzfassung" }),
+      [textBlock("Eingereicht.")]
+    )
+
+    await screen.findByRole(
+      "heading",
+      { level: 1, name: "Beitrag im Entwurf" },
+      WAIT
+    )
+    const intro = screen.getByRole("region", {
+      name: "Kopfbereich des Beitrags",
+    })
+    expect(within(intro).queryByText("Gespeicherte Kurzfassung")).toBeNull()
+
+    await user.click(
+      await screen.findByRole("button", { name: "Vorschau" }, WAIT)
+    )
+
+    expect(
+      await within(intro).findByText(
+        "Gespeicherte Kurzfassung",
+        undefined,
+        WAIT
+      )
+    ).toHaveClass("type-body-lg", "text-muted-foreground")
+  })
+
+  /*
    * Die Schreibflaeche ist in der Vorschau nur ausgeblendet, ihre
    * Knotenansichten laufen weiter: ein Upload, der erst dort fertig wird,
    * traegt seine Datei per updateAttributes nach. Nachgestellt mit einer
@@ -903,10 +980,10 @@ describe("EditorPage", () => {
   })
 
   /*
-   * Titelbild, Titel und Kurzbeschreibung sind Metadaten und laufen ueber
-   * PUT /projects/{id}, der Inhalt ueber PUT /projects/{id}/blocks (§6.1).
-   * Beide erhoehen dieselbe Project.version (§6.4), deshalb fuehrt sie ein
-   * Takt nacheinander.
+   * Titelbild und Titel sind Metadaten und laufen ueber PUT /projects/{id},
+   * der Inhalt ueber PUT /projects/{id}/blocks (§6.1). Beide erhoehen
+   * dieselbe Project.version (§6.4), deshalb fuehrt sie ein Takt
+   * nacheinander.
    */
   it("schreibt eine Titelaenderung ueber den Metadatenweg und nicht ueber den Inhaltsweg", async () => {
     const user = userEvent.setup()
@@ -940,6 +1017,61 @@ describe("EditorPage", () => {
        Studiengang und alles Weitere. */
     expect(cards[0]).toHaveProperty("summary")
     expect(cards[0]).toHaveProperty("coverImageUrl")
+  })
+
+  /*
+   * KAN-104: die Kurzbeschreibung wird im Editor nicht bearbeitet, steht
+   * aber in der Karte, weil ProjectUpdateRequest ersetzende Semantik hat.
+   * Sie geht so hinaus, wie der Server sie zuletzt bestaetigt hat: beim
+   * ersten Titel-PUT der geladene Wert, danach der aus der letzten Antwort.
+   * Die Antwort mit anderer Kurzbeschreibung stellt einen inzwischen
+   * geaenderten Serverstand nach; ueber sie landet ein neuer Stand in
+   * metadataRef. Ein Formularwert von vorhin darf ihn nicht ueberschreiben.
+   */
+  it("laesst die gespeicherte Kurzbeschreibung beim Speichern des Titels unveraendert", async () => {
+    const user = userEvent.setup()
+    const cards: {
+      version: number
+      title?: string
+      summary?: string | null
+    }[] = []
+    const project = ownDraft({ summary: "Gespeicherte Kurzfassung" })
+
+    renderEditor(project, [textBlock("Erster Absatz")])
+    server.use(
+      http.put("*/api/projects/:projectId", async ({ request }) => {
+        const body = (await request.json()) as {
+          version: number
+          title?: string
+          summary?: string | null
+        }
+        cards.push(body)
+        return HttpResponse.json({
+          ...project,
+          title: body.title ?? project.title,
+          summary: "Inzwischen geaendert",
+          version: body.version + 1,
+        })
+      })
+    )
+
+    const title = await screen.findByLabelText("Projekttitel", {}, WAIT)
+    await user.clear(title)
+    await user.type(title, "Anderer Titel")
+
+    await waitFor(() => expect(cards).toHaveLength(1), WAIT)
+    expect(cards[0].title).toBe("Anderer Titel")
+    expect(cards[0].summary).toBe("Gespeicherte Kurzfassung")
+
+    await user.type(title, " zwei")
+
+    await waitFor(
+      () => expect(cards.at(-1)?.title).toBe("Anderer Titel zwei"),
+      WAIT
+    )
+    for (const card of cards.slice(1)) {
+      expect(card.summary).toBe("Inzwischen geaendert")
+    }
   })
 
   it("laesst die Kopfangaben auch dann schreiben, wenn ein Block nicht lesbar ist", async () => {

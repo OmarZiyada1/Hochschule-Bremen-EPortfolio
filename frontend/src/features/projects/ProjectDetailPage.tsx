@@ -83,8 +83,8 @@ import { cn } from "@/lib/utils"
  * trotzdem stehen: der Beitrag ist der Hauptteil der Seite, und ohne sie
  * faende die Ueberschriftenliste eines Screenreaders zwischen der h1 und
  * der ersten Blockueberschrift keine Sprungmarke (SC 1.3.1, SC 2.4.6).
- * Dasselbe Mittel benutzt die Kurzbeschreibung im Editor
- * ({@code EditorIntro}, sr-only-Label).
+ * Dasselbe Mittel benutzt der Titel im Editor ({@code EditorIntro},
+ * sr-only-Label).
  *
  * <p>Sie benennt zugleich das {@code section} darum ueber
  * {@code aria-labelledby}. Eine Ueberschrift <em>in</em> einem Abschnitt

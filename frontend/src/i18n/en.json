@@ -1101,8 +1101,9 @@
   },
   "projectContent": {
     "intro": {
-      "regionLabel": "Cover image, title and summary",
-      "notSaved": "The header details are not saved while the marked fields are invalid."
+      "regionLabel": "Header of the contribution",
+      "notSaved": "The header details are not saved while the title is invalid.",
+      "titleLimitReached": "The title has reached the maximum length of {{max}} characters."
     },
     "unknownBlock": {
       "title": "This section cannot be displayed",
@@ -2429,7 +2430,7 @@
         },
         "workspace": {
           "title": "The writing surface",
-          "text": "The editor opens through the pencil on a card. The toolbar sits at the top, the content in the middle with cover image, title and summary, and the details of the project on the right.",
+          "text": "The editor opens through the pencil on a card. The toolbar sits at the top, the content in the middle with cover image and title above it, and the details of the project on the right. The summary is entered in the metadata.",
           "steps": [
             "Editing is only possible in the states draft and revision. In any other state the surface is read-only and a message names the reason.",
             "Only one person edits at a time. The lock covers every writing view of the work, including the metadata form: whoever has the metadata open also holds the editor. If someone else has the work open, the page says so with their name and the time.",

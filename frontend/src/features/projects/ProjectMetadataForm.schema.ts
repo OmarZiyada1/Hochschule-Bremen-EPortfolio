@@ -53,13 +53,16 @@ export const TITLE_MAX_LENGTH = 100
  * was auf einer Kachel umbricht, ist unlesbar. Genau das loest die Kachel
  * aber selbst, sie kuerzt mit {@code line-clamp-3}
  * ({@code components/common/ProjectCard.tsx}). Was blieb, war eine Huerde
- * beim Schreiben: im Editor steht die Kurzbeschreibung als Abstract ueber
- * dem Beitrag und ist dort Fliesstext, kein Kachel-Teaser.
+ * beim Schreiben: bis KAN-104 stand die Kurzbeschreibung im Editor als
+ * Abstract ueber dem Beitrag und war dort Fliesstext, kein Kachel-Teaser.
+ * Seitdem wird sie allein im Metadatenformular eingetragen; an der Zahl
+ * aendert das nichts.
  *
  * <p>Client und Server sagen damit dasselbe. Eine engere Zahl im Client
  * waere eine zweite Wahrheit ueber dasselbe Feld, und sie schlaege genau
- * dort zu, wo jemand einen langen Abstract im Editor geschrieben hat und
- * ihn auf der Metadatenseite nicht mehr speichern koennte.
+ * bei einer gespeicherten langen Kurzbeschreibung zu, etwa aus der Zeit,
+ * als sie im Editor entstand: auf der Metadatenseite liesse sie sich dann
+ * nicht mehr speichern.
  */
 export const SUMMARY_MAX_LENGTH = 1024
 
@@ -306,8 +309,8 @@ export function toProjectUpdateRequest(
 }
 
 /**
- * Der Ausschnitt, den die Kopfpartie des Editors bearbeitet: Titelbild,
- * Titel und Kurzbeschreibung (KAN-36).
+ * Der Ausschnitt, den die Kopfpartie des Editors bearbeitet: Titelbild und
+ * Titel (KAN-36).
  *
  * <p><strong>Abgeleitet und nicht danebengeschrieben.</strong> Es gibt
  * genau ein Metadaten-Schema im Repository; ein zweites mit eigenen
@@ -316,10 +319,40 @@ export function toProjectUpdateRequest(
  * hier fehlt, ist nicht erlaubt-und-ungeprueft, sondern schlicht nicht
  * Gegenstand dieser Flaeche: die uebrigen Angaben stehen auf der
  * Metadatenseite.
+ *
+ * <p><strong>Ohne Kurzbeschreibung</strong> (KAN-104, Entscheidung). Sie
+ * wird im Editor nicht mehr bearbeitet, sondern allein im
+ * Metadatenformular, und gehoert deshalb auch nicht in diesen Ausschnitt.
+ * Zwei Gruende sprechen dagegen, sie trotzdem im Formular des Editors
+ * mitzufuehren:
+ *
+ * <ul>
+ *   <li><strong>Sie koennte die Pruefung verletzen, ohne dass sie hier
+ *       jemand korrigieren kann.</strong> Ueber die API entsteht das nicht:
+ *       der Server prueft {@code summary} mit {@code @Size(max = 1024)}
+ *       ({@code ProjectUpdateRequest}) und zaehlt dabei wie JavaScript
+ *       UTF-16-Einheiten ({@code String.length()}). Die Spalte ist aber
+ *       {@code varchar(1024)} und zaehlt Zeichen; per SQL geschrieben, etwa
+ *       von den Seeder-Skripten im Wurzelverzeichnis, passt dort eine
+ *       Kurzbeschreibung mit Emoji, die laenger als
+ *       {@link SUMMARY_MAX_LENGTH} Einheiten ist. Stuende sie im Formular
+ *       des Editors, zeigte er einen Hinweis auf ein Feld, das es dort nicht
+ *       gibt. Mehr leistet das Weglassen nicht: den Speichertakt haelt ein
+ *       solcher Datensatz trotzdem auf, denn die Karte traegt die
+ *       Kurzbeschreibung unveraendert mit, und der Server weist jeden PUT
+ *       mit 400 {@code VALIDATION_FAILED} ab. Das erscheint als Fehlschlag
+ *       des Takts ueber dem Beitrag ({@code EditorPage}); kuerzen laesst
+ *       sich die Kurzbeschreibung im Metadatenformular, dort beanstandet
+ *       das Schema sie am Feld.</li>
+ *   <li><strong>Sie koennte veralten.</strong> Ein Formular haelt seinen
+ *       Stand, solange darin getippt wurde; kaeme waehrenddessen eine andere
+ *       Kurzbeschreibung vom Server, schriebe der naechste Takt die alte
+ *       zurueck. {@link toProjectIntroUpdateRequest} nimmt sie deshalb aus
+ *       dem Projekt, gegen das geschrieben wird.</li>
+ * </ul>
  */
 export const projectIntroSchema = projectMetadataSchema.pick({
   title: true,
-  summary: true,
   coverImageUrl: true,
 })
 
@@ -332,22 +365,27 @@ export function toProjectIntroValues(
   const values = toProjectMetadataValues(project)
   return {
     title: values.title,
-    summary: values.summary,
     coverImageUrl: values.coverImageUrl,
   }
 }
 
 /**
- * Baut aus dem Projektstand und den drei Feldern der Kopfpartie die
+ * Baut aus dem Projektstand und den beiden Feldern der Kopfpartie die
  * vollstaendige Metadatenkarte fuer {@code PUT /api/projects/{id}},
  * <strong>ohne</strong> {@code version}.
  *
- * <p><strong>Die ganze Karte, nicht die drei Felder.</strong>
+ * <p><strong>Die ganze Karte, nicht die beiden Felder.</strong>
  * {@code ProjectUpdateRequest} hat ersetzende Semantik (siehe
- * {@link toProjectUpdateRequest}): ein PUT mit nur Titel und
- * Kurzbeschreibung loeschte Fakultaet, Studiengang, Abschluss, Kategorie,
+ * {@link toProjectUpdateRequest}): ein PUT mit nur Titel und Titelbild
+ * loeschte Kurzbeschreibung, Fakultaet, Studiengang, Abschluss, Kategorie,
  * Semester, Typ und Modul. Der Editor schreibt deshalb dieselbe Karte wie
- * das Formular und tauscht darin nur aus, was er zeigt.
+ * das Formular und tauscht darin nur aus, was er bearbeitet.
+ *
+ * <p><strong>Die Kurzbeschreibung kommt aus {@code project}</strong>
+ * (KAN-104). Sie steht in der Karte, weil ein fehlendes Feld sie loeschte,
+ * und zwar genau so, wie der Server sie zuletzt bestaetigt hat: im Editor
+ * aendert sie niemand, und ein PUT darf sie weder leeren noch mit einem
+ * aelteren Wert ueberschreiben (siehe {@link projectIntroSchema}).
  *
  * <p><strong>Ohne version, und das mit Absicht.</strong> Im Editor
  * schreiben zwei Wege gegen dasselbe Projekt, der Inhalt ueber

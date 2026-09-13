@@ -1101,8 +1101,9 @@
   },
   "projectContent": {
     "intro": {
-      "regionLabel": "Titelbild, Titel und Kurzbeschreibung",
-      "notSaved": "Die Kopfangaben werden nicht gespeichert, solange die markierten Felder nicht stimmen."
+      "regionLabel": "Kopfbereich des Beitrags",
+      "notSaved": "Die Kopfangaben werden nicht gespeichert, solange der Titel nicht stimmt.",
+      "titleLimitReached": "Der Titel hat die Höchstlänge von {{max}} Zeichen erreicht."
     },
     "unknownBlock": {
       "title": "Dieser Abschnitt kann nicht angezeigt werden",
@@ -2429,7 +2430,7 @@
         },
         "workspace": {
           "title": "Die Schreibfläche",
-          "text": "Der Editor öffnet sich über den Stift an einer Kachel. Oben liegt die Werkzeugleiste, in der Mitte der Beitrag mit Titelbild, Titel und Kurzbeschreibung, rechts die Angaben zum Projekt.",
+          "text": "Der Editor öffnet sich über den Stift an einer Kachel. Oben liegt die Werkzeugleiste, in der Mitte der Beitrag mit Titelbild und Titel darüber, rechts die Angaben zum Projekt. Die Kurzbeschreibung wird in den Metadaten eingetragen.",
           "steps": [
             "Bearbeitet wird nur in den Ständen Entwurf und Überarbeitung. In jedem anderen Stand ist die Fläche schreibgeschützt, und eine Meldung nennt den Grund.",
             "Es bearbeitet immer nur eine Person zugleich. Die Sperre gilt für jede Schreibansicht der Arbeit, also auch für das Metadatenformular: wer die Metadaten offen hat, hält damit zugleich den Editor. Hat jemand anderes die Arbeit offen, sagt die Seite das mit Namen und Uhrzeit.",

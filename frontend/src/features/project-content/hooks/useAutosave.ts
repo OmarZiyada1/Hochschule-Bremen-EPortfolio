@@ -15,9 +15,10 @@ import type { ProjectDocument } from "@/features/project-content/blockTypes"
  *
  * <p><strong>Zwei Wege, ein Takt, eine Version.</strong> Der Editor
  * schreibt an zwei Stellen: den Inhalt ueber
- * {@code PUT /projects/{id}/blocks} und die Kopfangaben (Titelbild, Titel,
- * Kurzbeschreibung) ueber {@code PUT /projects/{id}}. Zusammengefasst wird
- * das nicht, §6.1 trennt Inhalt und Metadaten. Beide erhoehen aber
+ * {@code PUT /projects/{id}/blocks} und die Kopfangaben (Titelbild und Titel,
+ * seit KAN-104 ohne Kurzbeschreibung) ueber {@code PUT /projects/{id}}.
+ * Zusammengefasst wird das nicht, §6.1 trennt Inhalt und Metadaten. Beide
+ * erhoehen aber
  * dieselbe {@code Project.version} ({@code BlockService.replace} ruft
  * {@code project.touch()}), und deshalb duerfen sie nicht nebeneinander
  * laufen: der zweite ginge mit der Version los, die der erste gerade
