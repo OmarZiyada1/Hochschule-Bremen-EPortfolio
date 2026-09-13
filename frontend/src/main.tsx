@@ -25,6 +25,7 @@ import { AuthProvider } from "@/api/auth/AuthContext"
 import { setAuthNavigate } from "@/api/auth/redirect"
 import { createQueryClient } from "@/api/queryClient"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/toast"
 import { router } from "@/routes"
 
 /*
@@ -41,7 +42,17 @@ createRoot(document.getElementById("root")!).render(
     <ThemeProvider>
       <AuthProvider>
         <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
+          {/*
+           * Der Toaster haengt global und nicht an einer Seite (KAN-105):
+           * ein Toast ueberdauert den Seitenwechsel. ProfileEditPage meldet
+           * ihren Erfolg und navigiert direkt danach weiter; an der Seite
+           * eingehaengt, verschwaende die Meldung mit ihr. Gerufen wird
+           * ueber den Manager, toast.add({ title, type: "success" }) aus
+           * @/components/ui/toast.
+           */}
+          <Toaster>
+            <RouterProvider router={router} />
+          </Toaster>
         </QueryClientProvider>
       </AuthProvider>
     </ThemeProvider>

@@ -215,6 +215,9 @@
       "cancel": "Abbrechen",
       "save": "Speichern"
     },
+    "toast": {
+      "regionLabel": "Benachrichtigungen"
+    },
     "breadcrumb": {
       "label": "Seitenpfad",
       "more": "Weitere Ebenen"
@@ -998,7 +1001,14 @@
     "profile": {
       "breadcrumb": "Profil bearbeiten",
       "title": "Profil bearbeiten",
-      "changeAvatar": "Foto ändern",
+      "avatar": {
+        "choose": "Profilbild wählen",
+        "replace": "Profilbild ersetzen",
+        "remove": "Profilbild entfernen",
+        "restore": "Profilbild wiederherstellen",
+        "removed": "Profilbild entfernt. Die Änderung wird mit dem Speichern wirksam.",
+        "restored": "Profilbild wiederhergestellt."
+      },
       "avatarPending": "Bild wird hochgeladen …",
       "firstName": "Vorname",
       "lastName": "Nachname",
@@ -1029,7 +1039,12 @@
         "resend": "Code erneut senden",
         "resendCountdown": "Code erneut senden in {{seconds}}s",
         "resendConfirmed": "Ein neuer Code wurde angefordert. Bitte prüfen Sie Ihr Postfach.",
-        "cancel": "Wechsel abbrechen"
+        "cancel": "Wechsel abbrechen",
+        "hint": "Der Wechsel zu {{address}} ist noch nicht bestätigt.",
+        "enterCode": "Code eingeben",
+        "dialogTitle": "Neue E-Mail-Adresse bestätigen",
+        "confirmSuccess": "Ihre neue E-Mail-Adresse ist bestätigt.",
+        "cancelSuccess": "Der E-Mail-Wechsel wurde abgebrochen."
       },
       "passwordChange": {
         "open": "Passwort ändern",

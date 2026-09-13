@@ -600,6 +600,42 @@ describe("ProjectListPage", () => {
     expect(options).not.toHaveClass("overscroll-contain")
   })
 
+  /*
+   * Punkt 4 aus KAN-105: Das Kaestchen einer Option fluchtet mit der ersten
+   * Textzeile und steht bei einem umbrechenden Namen nicht mehr zwischen den
+   * Zeilen.
+   */
+  it("stellt das Kaestchen einer Option auf die erste Textzeile", async () => {
+    server.use(http.get("*/api/projects", () => HttpResponse.json(pageOf([]))))
+    renderWithProviders(<ProjectListPage />)
+
+    const name = "Fakultät Architektur, Bau und Umwelt"
+    const checkbox = await screen.findByRole("checkbox", { name })
+    const row = checkbox.closest('[data-slot="label"]')
+    const text = screen.getByText(name)
+    expect(text.closest('[data-slot="label"]')).toBe(row)
+
+    /* jsdom rechnet kein Layout, eine Position laesst sich hier nicht
+       messen. Geprueft wird deshalb die Zusage ueber die Klassen, und zwar
+       vollstaendig: Fehlt eine, stimmt die Rechnung aus dem Kommentar an
+       FilterOption nicht mehr, und keine der uebrigen verraet es.
+       items-start stellt das Kaestchen an den Zeilenanfang, py-0.5 haelt die
+       Zeile trotz hoeherer Textzeile bei 1,5rem. */
+    expect(row).toHaveClass("items-start", "py-0.5")
+    /* Das items-center der Registry muss weichen und nicht bloss daneben
+       stehen: stuenden beide am Label, entschiede die Reihenfolge im
+       gebauten Stylesheet und nicht die im Klassennamen. Ebenso darf der
+       alte Rand py-1 nicht zurueckkehren, sonst waechst jede Zeile. */
+    expect(row).not.toHaveClass("items-center")
+    expect(row).not.toHaveClass("py-1")
+    /* Der Ausgleich am Kaestchen: halber Unterschied zwischen Zeilenhoehe
+       (1,25rem) und Kaestchen (1rem). */
+    expect(checkbox).toHaveClass("mt-0.5")
+    /* Die Zeilenhoehe am Text, gegen das leading-none des Labels. min-w-0
+       und break-words erzeugen den Umbruch erst, um den es hier geht. */
+    expect(text).toHaveClass("leading-5", "min-w-0", "break-words")
+  })
+
   it("entfernt bei der Abwahl einer Fakultaet deren unsichtbar werdende Studiengaenge", async () => {
     const requests: URLSearchParams[] = []
     server.use(

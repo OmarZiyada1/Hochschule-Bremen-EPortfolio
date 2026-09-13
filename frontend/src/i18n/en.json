@@ -215,6 +215,9 @@
       "cancel": "Cancel",
       "save": "Save"
     },
+    "toast": {
+      "regionLabel": "Notifications"
+    },
     "breadcrumb": {
       "label": "Breadcrumb",
       "more": "More levels"
@@ -998,7 +1001,14 @@
     "profile": {
       "breadcrumb": "Edit profile",
       "title": "Edit profile",
-      "changeAvatar": "Change photo",
+      "avatar": {
+        "choose": "Choose profile picture",
+        "replace": "Replace profile picture",
+        "remove": "Remove profile picture",
+        "restore": "Restore profile picture",
+        "removed": "Profile picture removed. The change takes effect when you save.",
+        "restored": "Profile picture restored."
+      },
       "avatarPending": "Uploading image …",
       "firstName": "First name",
       "lastName": "Last name",
@@ -1029,7 +1039,12 @@
         "resend": "Resend code",
         "resendCountdown": "Resend code in {{seconds}}s",
         "resendConfirmed": "A new code has been requested. Please check your inbox.",
-        "cancel": "Cancel the change"
+        "cancel": "Cancel the change",
+        "hint": "The change to {{address}} has not been confirmed yet.",
+        "enterCode": "Enter code",
+        "dialogTitle": "Confirm your new email address",
+        "confirmSuccess": "Your new email address is confirmed.",
+        "cancelSuccess": "The email change has been cancelled."
       },
       "passwordChange": {
         "open": "Change password",

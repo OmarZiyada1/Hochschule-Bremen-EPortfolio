@@ -46,15 +46,35 @@ export function useRegister() {
  * jedem Fall ungueltig. Dort gibt es keine Sitzung, die Query haengt nicht
  * ein, und die Invalidierung kostet nichts. Ein zweiter Hook nur fuer den
  * Wechsel waere doppelte Buchfuehrung.
+ *
+ * <p><strong>Beim Wechsel der privaten Adresse steht der neue Stand schon
+ * vor dem Neuabruf im Cache</strong> (KAN-105). Eingeloest wird gegen die
+ * Wunschadresse, und sie ist danach die Login-Kennung, ohne offenen Wechsel
+ * (§3.1, §6.1). Scheitert der Neuabruf, hielte der Cache sonst den alten
+ * Stand, und die Profilseite widerspraeche dem gerade gemeldeten Erfolg:
+ * Hinweiszeile "noch nicht bestaetigt" und ein Passwortfeld, weil die neue
+ * Adresse wie ein weiterer Wechsel aussaehe (Befund aus der Nachpruefung zu
+ * KAN-105). Die Invalidierung danach bleibt fuer alle Zwecke dieselbe.
  */
 export function useVerifyCode() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: verifyCode,
-    onSuccess: () =>
-      queryClient.invalidateQueries({
+    onSuccess: (_result, request) => {
+      /* email ist im generierten Typ optional; ohne Adresse gibt es nichts
+         nachzutragen, und der Neuabruf darunter bleibt die Quelle. */
+      const confirmedEmail = request.email
+      if (request.purpose === "EMAIL_CHANGE" && confirmedEmail !== undefined) {
+        queryClient.setQueryData(authQueries.me().queryKey, (current) =>
+          current === undefined
+            ? current
+            : { ...current, email: confirmedEmail, pendingEmail: null }
+        )
+      }
+      return queryClient.invalidateQueries({
         queryKey: authQueries.me().queryKey,
-      }),
+      })
+    },
   })
 }
 

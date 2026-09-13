@@ -409,7 +409,42 @@ function FilterGroup({
   )
 }
 
-/** Eine Checkbox-Zeile; das umschliessende Label macht die ganze Zeile klickbar. */
+/**
+ * Eine Checkbox-Zeile; das umschliessende Label macht die ganze Zeile klickbar.
+ *
+ * <p><strong>Das Kaestchen fluchtet mit der ersten Textzeile</strong> (Punkt 4
+ * aus KAN-105). Label aus der Registry zentriert seine Kinder
+ * (items-center). Einzeilig faellt das nicht auf; bricht ein langer Name wie
+ * „Wirtschaftsingenieurwesen" in der 16rem schmalen Leiste um, stand das
+ * Kaestchen zwischen den beiden Zeilen und gehoerte sichtbar zu keiner.
+ * items-start stellt es an den Anfang.
+ *
+ * <p>Oben buendig allein genuegt nicht, deshalb der Ausgleich. Das Label
+ * setzt text-sm mit leading-none, die Textzeile ist also 0,875rem hoch, und
+ * zwei Zeilen stuenden ohne Durchschuss aufeinander. Der Text bekommt darum
+ * eine eigene Zeilenhoehe, leading-5 (1,25rem); das Kaestchen ist size-4
+ * (1rem) und steht mit mt-0.5 um den halben Unterschied, 0,125rem, tiefer.
+ * Seine Mitte liegt dann auf 0,625rem, genau auf der Mitte der ersten
+ * Zeile. Die Rechnung setzt Tailwinds --spacing von 0,25rem voraus; die
+ * Tokenschicht schaltet nur --color-* und --radius-* ab.
+ *
+ * <p>Aus py-1 wird dafuer py-0.5. Die hoehere Textzeile machte die Zeile
+ * sonst um 0,25rem hoeher; mit dem halbierten Rand bleibt sie 1,5rem hoch
+ * (die 24 Pixel aus SC 2.5.8), das Kaestchen steht wie zuvor 0,25rem unter
+ * ihrer Oberkante und die Textmitte auf 0,75rem. Einzeilige Optionen sehen
+ * also aus wie vorher, die „rund vierzehn Zeilen" an FilterGroup bleiben
+ * richtig, und die unsichtbare Trefferflaeche der Checkbox
+ * (after:-inset-y-2) ragt ueber die erste und letzte Zeile genauso weit
+ * hinaus wie bisher, also nicht weiter, als das py-2 der Optionsliste
+ * auffaengt. Eine zweizeilige Zeile waechst nur nach unten, ihr Ueberstand
+ * dort wird kleiner.
+ *
+ * <p>Die Klassen stehen hier am Aufrufer und nicht in label.tsx: die
+ * erzeugte Datei bleibt unangetastet (Frontend-Regel 11), und dort traefe
+ * items-start jede andere Verwendung, deren Kinder mittig stehen sollen.
+ * cn() in der Primitive verwirft das items-center zugunsten der Klasse von
+ * hier, beide stehen also nicht nebeneinander im Klassennamen.
+ */
 function FilterOption({
   label,
   checked,
@@ -420,14 +455,18 @@ function FilterOption({
   onToggle: () => void
 }) {
   return (
-    <Label className="py-1 font-normal">
-      <Checkbox checked={checked} onCheckedChange={onToggle} />
+    <Label className="items-start py-0.5 font-normal">
+      <Checkbox
+        checked={checked}
+        onCheckedChange={onToggle}
+        className="mt-0.5"
+      />
       {/* Ein eigenes Element und nicht blosser Text: Ein anonymes Flex-Kind
           traegt min-width:auto und schrumpft nie unter sein laengstes Wort.
           „Wirtschaftsingenieurwesen" ist in der 16rem schmalen Leiste
           laenger als die Zeile und stuende sonst ueber den Rand hinaus, wo
           der Scrollrahmen ihn abschneidet. */}
-      <span className="min-w-0 break-words">{label}</span>
+      <span className="min-w-0 leading-5 break-words">{label}</span>
     </Label>
   )
 }

@@ -32,10 +32,14 @@ type EmailChangeCodeValues = z.infer<typeof emailChangeCodeSchema>
  * (§6.1): eingeloest wird der Code gegen die Wunschadresse, und erst damit
  * wird sie zur Login-Kennung (§3.1).
  *
- * <p>Bis dahin bleibt die alte Adresse gueltig. Das Banner nennt die neue,
- * das Formularfeld darueber zeigt weiter die bisherige; ein Client, der die
- * Wunschadresse schon als Kennung darstellt, verspricht einen Zustand, den
- * der Server nicht hat.
+ * <p>Bis zur Bestaetigung bleibt die alte Adresse gueltig. Das Banner nennt
+ * die neue, das E-Mail-Feld des Profilformulars zeigt weiter die bisherige;
+ * ein Client, der die Wunschadresse schon als Kennung darstellt, verspricht
+ * einen Zustand, den der Server nicht hat.
+ *
+ * <p>Seit KAN-105 steht die Komponente unveraendert im Dialog "Neue
+ * E-Mail-Adresse bestaetigen", den das Profilformular rendert; unter dem
+ * E-Mail-Feld bleibt nur die Hinweiszeile, die ihn oeffnet.
  *
  * <p>Ein 409 auf das Einloesen heisst, dass die Adresse inzwischen vergeben
  * ist (§6.1); wie jeder andere Fehlschlag laeuft er ueber die Meldung, weil
@@ -50,7 +54,11 @@ export function EmailChangeNotice({
 }: {
   /** Wunschadresse aus pendingEmail (§3.1); nie die aktuelle Kennung. */
   pendingEmail: string
-  /** Nach erfolgreichem Einloesen: die Seite zieht GET /auth/me nach. */
+  /**
+   * Nach erfolgreichem Einloesen. Das Profilformular zieht GET /auth/me und
+   * das E-Mail-Feld nach, die Seite entscheidet ueber Toast und
+   * Weiterleitung (KAN-105).
+   */
   onConfirmed: () => void
   /**
    * Nimmt den laufenden Wechsel zurueck (KAN-83). Der Contract sieht dafuer
@@ -157,13 +165,13 @@ export function EmailChangeNotice({
         )}
       />
 
-      {serverError !== null && (
-        <ErrorState message={serverError} />
-      )}
+      {serverError !== null && <ErrorState message={serverError} />}
 
       <div className="flex flex-wrap items-center gap-4">
-        {/* type=button: dieser Knopf liegt im Profilformular und darf es
-            nicht abschicken. Abgesetzt wird allein POST /auth/verify. */}
+        {/* type=button: bis KAN-105 lag dieser Knopf im Profilformular und
+            durfte es nicht abschicken. Seither steht er im Dialog ausserhalb
+            davon; type=button bleibt, damit kein umgebendes Formular ihn zum
+            Absenden macht. Abgesetzt wird allein POST /auth/verify. */}
         <Button
           type="button"
           variant="outline"
@@ -199,7 +207,7 @@ export function EmailChangeNotice({
         <Button
           type="button"
           variant="link"
-          className="type-body-sm h-auto p-0 font-semibold text-muted-foreground"
+          className="type-body-sm h-auto p-0 font-semibold text-muted-foreground aria-disabled:opacity-50"
           /* aria-disabled statt disabled, wie am PrintTrigger: eine
              Schaltflaeche, die im Augenblick des Klicks disabled wird,
              verliert den Fokus an den Seitenanfang (SC 2.4.3). Den zweiten
