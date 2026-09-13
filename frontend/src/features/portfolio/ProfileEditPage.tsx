@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
+import { useTranslation } from "react-i18next"
+import { useNavigate } from "react-router-dom"
 
 import { useAuth } from "@/api/auth/AuthContext"
 import { authQueries } from "@/api/queries/auth"
@@ -7,9 +9,13 @@ import { ErrorState } from "@/components/common/ErrorState"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "@/components/ui/toast"
 import { PasswordChangeSection } from "@/features/portfolio/components/PasswordChangeSection"
 import { ProfileForm } from "@/features/portfolio/components/ProfileForm"
 import { useOwnPortfolio } from "@/features/portfolio/hooks/usePortfolio"
+
+/** Wohin ein abgeschlossenes Speichern fuehrt: das eigene Portfolio (KAN-105). */
+const PORTFOLIO_PATH = "/my-portfolio"
 
 /**
  * "Profil bearbeiten" nach dem gleichnamigen Template (KAN-34, ueberarbeitet
@@ -38,15 +44,46 @@ import { useOwnPortfolio } from "@/features/portfolio/hooks/usePortfolio"
  * hatte, und das Feld blieb leer. Gelesen wird deshalb ueber
  * {@code authQueries.me()}; der gespeicherte Stand dient nur noch als
  * Rueckfalllinie, wenn die Abfrage scheitert.
+ *
+ * <p><strong>Wohin es nach dem Speichern geht, entscheidet diese
+ * Seite</strong> (KAN-105), nicht das Formular: {@code ProfileForm} meldet
+ * ueber Rueckrufe, was geschehen ist, und kennt keine Route. Ein
+ * vollstaendiges Speichern ohne offenen Adresswechsel fuehrt ins Portfolio.
+ * Bleibt ein Wechsel offen, bleibt auch die Seite stehen und oeffnet den
+ * Dialog "Neue E-Mail-Adresse bestaetigen": wer eben eine neue Adresse
+ * gespeichert hat, braucht als Naechstes den Code und nicht die
+ * Projektliste. Teilerfolg und Fehlschlag melden nichts nach oben, die
+ * Meldung dazu steht am Formular.
+ *
+ * <p>Die Rueckmeldung laeuft ueber den globalen Toaster und nicht ueber eine
+ * Zeile auf dieser Seite: nach der Weiterleitung ist die Seite fort und nach
+ * Bestaetigung oder Abbruch der Dialog, und eine Meldung darin verschwaende
+ * mit ihnen (Skill frontend-design, Abschnitt 5).
  */
 export default function ProfileEditPage() {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
   const { user } = useAuth()
   const { data, isPending, error } = useOwnPortfolio()
   const me = useQuery(authQueries.me())
   /* Ungespeicherte Eingaben des Formulars: der Weg "Passwort vergessen"
      verlaesst die Seite und fragt dann vorher nach (Skill frontend-design,
-     Abschnitt 5). */
+     Abschnitt 5). Seit KAN-105 entscheidet derselbe Zustand, ob eine
+     Bestaetigung des Adresswechsels ins Portfolio fuehren darf. */
   const [profileDirty, setProfileDirty] = useState(false)
+  /* Offen-Zustand des Dialogs "Neue E-Mail-Adresse bestaetigen". Er liegt
+     hier und nicht im Formular, weil die Seite ihn nach dem Speichern ohne
+     Klick oeffnet (KAN-105). */
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false)
+  /*
+   * Merker "in dieser Sitzung gespeichert, waehrend ein Wechsel offen ist"
+   * (Entscheidung aus der Klaerungsrunde zu KAN-105). Nur mit ihm fuehrt die
+   * spaetere Bestaetigung ins Portfolio: das Speichern war schon die
+   * Handlung, die dorthin fuehren sollte, der Code hat sie nur aufgehalten.
+   * Nach einem Neuladen fehlt der Merker, und die Bestaetigung ist dann eine
+   * Handlung fuer sich, nach der die Seite stehen bleibt.
+   */
+  const [savedDuringEmailChange, setSavedDuringEmailChange] = useState(false)
 
   /* RequireAuth laesst niemanden ohne Sitzung hierher; der Zweig deckt nur
      den Moment ab, in dem die Umleitung noch nicht gerendert ist. */
@@ -60,6 +97,48 @@ export default function ProfileEditPage() {
      trotzdem, zusammen mit dem des Portfolios. */
   const person = me.data ?? user
   const loadError = error ?? me.error
+
+  const onSaved = ({ pendingEmail }: { pendingEmail: string | null }) => {
+    if (pendingEmail === null) {
+      toast.add({ title: t("portfolio.profile.saved.all"), type: "success" })
+      void navigate(PORTFOLIO_PATH)
+      return
+    }
+    setSavedDuringEmailChange(true)
+    setEmailDialogOpen(true)
+  }
+
+  /**
+   * Ins Portfolio geht es nur, wenn der Merker steht und das Formular seit
+   * dem Speichern unveraendert ist; neue Eingaben verwarf die Weiterleitung
+   * sonst ohne Rueckfrage (Skill frontend-design, Abschnitt 5). Das gilt
+   * auch, wenn der Dialog ueber die Hinweiszeile erneut geoeffnet wurde. Der
+   * Toast steht in beiden Faellen.
+   */
+  const onEmailChangeConfirmed = () => {
+    setEmailDialogOpen(false)
+    toast.add({
+      title: t("portfolio.profile.emailChange.confirmSuccess"),
+      type: "success",
+    })
+    if (savedDuringEmailChange && !profileDirty) {
+      void navigate(PORTFOLIO_PATH)
+      return
+    }
+    setSavedDuringEmailChange(false)
+  }
+
+  /* Der Abbruch schliesst ein Speichern nicht ab, sondern nimmt einen Teil
+     davon zurueck; die Seite bleibt deshalb immer stehen. type info statt
+     success: zurueckgenommen ist der Wunsch, erreicht ist nichts Neues. */
+  const onEmailChangeCancelled = () => {
+    setEmailDialogOpen(false)
+    setSavedDuringEmailChange(false)
+    toast.add({
+      title: t("portfolio.profile.emailChange.cancelSuccess"),
+      type: "info",
+    })
+  }
 
   return (
     <>
@@ -84,6 +163,11 @@ export default function ProfileEditPage() {
                   user={person}
                   portfolio={data}
                   onDirtyChange={setProfileDirty}
+                  onSaved={onSaved}
+                  emailDialogOpen={emailDialogOpen}
+                  onEmailDialogOpenChange={setEmailDialogOpen}
+                  onEmailChangeConfirmed={onEmailChangeConfirmed}
+                  onEmailChangeCancelled={onEmailChangeCancelled}
                 />
 
                 <Separator />

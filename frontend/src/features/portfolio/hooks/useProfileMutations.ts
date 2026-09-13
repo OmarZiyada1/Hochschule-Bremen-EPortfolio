@@ -36,14 +36,21 @@ export function useUpdateOwnPortfolio() {
  * PUT /api/auth/me. Der Sitzungszustand wird nicht hier nachgezogen: die
  * Seite ruft dafuer refreshUser aus dem Auth-Kontext, der als einzige
  * Stelle den Store schreibt (KAN-30). Die gelesene Fassung derselben
- * Ressource wird dagegen hier invalidiert, sonst zeigte die Profilseite
+ * Ressource wird dagegen hier nachgezogen, sonst zeigte die Profilseite
  * nach dem Speichern noch den Stand von vor der Aenderung (KAN-69).
+ *
+ * <p>Die Antwort ist dieselbe Ressource wie GET /auth/me und steht deshalb
+ * sofort im Cache, bevor der Neuabruf laeuft (KAN-105). Hinweiszeile und
+ * Dialog zum Adresswechsel haengen an pendingEmail aus diesem Eintrag; mit
+ * der blossen Invalidierung erschienen sie erst nach einem zweiten Abruf,
+ * und scheiterte der, gar nicht (Befund aus dem Review zu KAN-105).
  */
 export function useUpdateOwnProfile() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: updateOwnProfile,
-    onSuccess: () => {
+    onSuccess: (updated) => {
+      queryClient.setQueryData(authQueries.me().queryKey, updated)
       void queryClient.invalidateQueries({
         queryKey: authQueries.me().queryKey,
       })

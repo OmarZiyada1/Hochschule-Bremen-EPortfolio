@@ -398,41 +398,56 @@ läuft. Generierte Komponenten benutzen aber `rounded-sm`, `rounded-md`,
 `rounded-lg` und `rounded-xl`.
 
 Die Brücke im `@theme static`-Block hängt shadcns Namen auf die
-Figma-Stufen (KAN-6, Abschnitt 3.3; `--radius-4xl` seit KAN-29; Zuordnung
-seit dem Review zu KAN-8 nach der tatsächlichen Verwendung statt nach
-Namensähnlichkeit):
+Figma-Stufen (KAN-6, Abschnitt 3.3; `--radius-4xl` seit KAN-29,
+`--radius-2xl` seit KAN-105; Zuordnung seit dem Review zu KAN-8 nach der
+tatsächlichen Verwendung statt nach Namensähnlichkeit):
 
 ```css
 --radius-sm: var(--radius-selection);   /*  4px */
 --radius-md: var(--radius-control);     /*  8px */
 --radius-lg: var(--radius-control);     /*  8px, Eingabefelder und Buttons */
 --radius-xl: var(--radius-card);        /* 12px, Karten */
+--radius-2xl: var(--radius-modal);      /* 16px, Toast */
 --radius-4xl: var(--radius-pill);       /* 9999px */
 ```
 
 `rounded-lg` sitzt in der Registry an Eingabefeldern und Buttons, die in
 Figma 8px tragen, `rounded-xl` an Karten mit 12px; deshalb zeigen `md` und
-`lg` beide auf `control`. Die Stufe `modal` (16px) hat keine Brückenzeile:
-eine modale Fläche setzt `rounded-modal` als `className` an der
-Verwendungsstelle, nicht in der generierten Datei.
+`lg` beide auf `control`. `2xl` zeigt seit KAN-105 auf `modal` (16px) und
+bedient die Registry-Datei `toast.tsx`: der Toast schwebt wie ein Modal, und
+Figma führt keinen Toast, an dem sich ein eigener Wert ablesen ließe. Eine
+modale Fläche setzt `rounded-modal` weiterhin als `className` an der
+Verwendungsstelle, nicht in der generierten Datei; die Brückenzeile ist kein
+Anlass, dort auf `rounded-2xl` umzustellen, denn `rounded-modal` benennt die
+Rolle und `2xl` nur die Adresse der Registry.
 
 ### Die Skala reicht weiter als die Brücke
 
 shadcn leitet seine Radien aus einem einzelnen `--radius` ab und kommt dabei
 auf **sieben** Stufen: `sm`, `md`, `lg`, `xl`, `2xl`, `3xl` und `4xl`. Unsere
-Brücke deckt die ersten vier, dazu seit KAN-29 `4xl` als Alias auf
+Brücke deckt sechs davon: die ersten vier, seit KAN-29 `4xl` als Alias auf
 `--radius-pill` (das Badge der Registry nutzt `rounded-4xl` und ist in
-Figma eine Pille). Für `rounded-2xl` und `rounded-3xl` gibt es weiterhin
-keine Adresse, und wegen `--radius-*: initial` verschwinden diese Klassen
+Figma eine Pille) und seit KAN-105 `2xl` als Alias auf `--radius-modal`
+(`toast.tsx` nutzt `rounded-2xl`). Für `rounded-3xl` gibt es weiterhin keine
+Adresse, und wegen `--radius-*: initial` verschwindet diese Klasse
 ersatzlos.
 
 **Das ist kein Grund, Stufen auf Vorrat anzulegen** (Abschnitt 8: keine
 Rolle ohne Verwendung). Es ist ein Grund, sie zu bemerken. Deshalb nach jedem
 `add` einmal über die neuen Dateien nach `rounded-` suchen. Taucht eine Stufe
-oberhalb von `xl` auf, ist das ein Befund in der Tokenschicht und wird wie in
-Abschnitt 8 aufgelöst: Stufe in `tokens.css` ergänzen, über `@theme inline`
-anbinden, in Figma und auf der Confluence-Seite „Foundation" nachziehen. Der
-Komponentencode wird auch hier nicht angefasst.
+oberhalb von `xl` auf, ist das ein Befund in der Tokenschicht und wird dort
+aufgelöst, auf einem von zwei Wegen:
+
+- **Passt eine vorhandene Figma-Stufe**, genügt eine Brückenzeile als Alias
+  darauf, so geschehen mit `4xl` auf `pill` (KAN-29) und `2xl` auf `modal`
+  (KAN-105). Ein neuer Wert entsteht dabei nicht, Figma bleibt unberührt;
+  nachgezogen werden `tokens.test.ts` und die Brückentabellen auf den
+  Confluence-Seiten „Foundation" und „Token-Verwendung".
+- **Passt keine**, wird wie in Abschnitt 8 eine Stufe in `tokens.css`
+  ergänzt, über `@theme inline` angebunden und in Figma sowie auf der
+  Confluence-Seite „Foundation" nachgezogen.
+
+Der Komponentencode wird in beiden Fällen nicht angefasst.
 
 **Eine Utility-Klasse ohne Wirkung erzeugt keinen Fehler.** Kein Compilerfehler,
 keine Lint-Warnung, kein roter Test. Die Komponente sieht nur falsch aus, und

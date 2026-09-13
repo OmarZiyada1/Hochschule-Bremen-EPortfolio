@@ -324,6 +324,7 @@ describe("Radien (Foundation, Abschnitt 7)", () => {
           "radius-md",
           "radius-lg",
           "radius-xl",
+          "radius-2xl",
           "radius-4xl",
         ].includes(name)
     )
@@ -342,16 +343,20 @@ describe("Radien (Foundation, Abschnitt 7)", () => {
     /* Zugeordnet nach der tatsaechlichen Verwendung in den erzeugten
        Dateien, nicht nach Namensaehnlichkeit (Review zu KAN-8): rounded-lg
        sitzt an Eingabefeldern und Buttons (Figma: 8px), rounded-xl an
-       Karten (Figma: 12px). modal hat keine Brueckenzeile; modale Flaechen
-       setzen rounded-modal an der Verwendungsstelle. */
+       Karten (Figma: 12px). Modale Dialoge setzen rounded-modal weiterhin
+       an der Verwendungsstelle; die Brueckenzeile auf modal bedient allein
+       die Registry (2xl, unten). */
     expect(radius.get("radius-sm")).toBe("var(--radius-selection)")
     expect(radius.get("radius-md")).toBe("var(--radius-control)")
     expect(radius.get("radius-lg")).toBe("var(--radius-control)")
     expect(radius.get("radius-xl")).toBe("var(--radius-card)")
+    /* Befund aus KAN-105: toast.tsx nutzt rounded-2xl. Der Toast schwebt
+       wie ein Modal, und Figma fuehrt keinen Toast; die Stufe zeigt deshalb
+       auf modal und nicht auf einen freien Wert. */
+    expect(radius.get("radius-2xl")).toBe("var(--radius-modal)")
     /* Befund aus KAN-29: badge.tsx nutzt rounded-4xl, das Badge ist in
-       Figma eine Pille. 2xl und 3xl bleiben bewusst ohne Bruecke. */
+       Figma eine Pille. 3xl bleibt bewusst ohne Bruecke. */
     expect(radius.get("radius-4xl")).toBe("var(--radius-pill)")
-    expect(radius.has("radius-2xl")).toBe(false)
     expect(radius.has("radius-3xl")).toBe(false)
   })
 
@@ -514,6 +519,34 @@ describe("Grenzen der Tokenschicht", () => {
     "transform-origin",
   ])
 
+  /*
+   * Dasselbe fuer die Toast-Primitive (KAN-105): Base UI schreibt Index,
+   * Versatz, gemessene Hoehe und Wischweg jedes Toasts als Inline-Stil an
+   * dessen Wurzel, die Hoehe des vordersten an den Viewport. Die Liste steht
+   * in node_modules/@base-ui/react/toast/root/ToastRootCssVars.js und
+   * toast/viewport/ToastViewportCssVars.js und ist von dort uebernommen.
+   *
+   * Nachgetragen werden duerfen sie nicht: Base UI laesst einzelne davon
+   * bewusst leer, --toast-frontmost-height etwa, solange kein Toast
+   * gemessen ist, und toast.tsx faengt genau das mit
+   * var(--toast-frontmost-height,var(--toast-height)) ab. Eine Definition in
+   * der Tokenschicht fuellte die Luecke mit einem festen Wert, der Rueckfall
+   * griffe nie, und der Stapel rechnete mit einer erfundenen Hoehe.
+   *
+   * Die Variablen, die toast.tsx selbst setzt ([--gap:0.75rem],
+   * [--offset-y:…]), stehen nicht hier: die Regel setInFile unten trifft
+   * auch Tailwinds Klammerschreibweise, weil dort ebenfalls Name und
+   * Doppelpunkt aufeinander folgen.
+   */
+  const BASE_UI_TOAST_VARS = new Set([
+    "toast-frontmost-height",
+    "toast-height",
+    "toast-index",
+    "toast-offset-y",
+    "toast-swipe-movement-x",
+    "toast-swipe-movement-y",
+  ])
+
   it("laesst keine Registry-Datei auf eine undefinierte Variable zeigen", () => {
     const indexCss = withoutComments(
       readFileSync(join(srcDir, "index.css"), "utf8")
@@ -543,7 +576,8 @@ describe("Grenzen der Tokenschicht", () => {
         if (
           setInFile ||
           name.startsWith("tw-") ||
-          BASE_UI_POSITIONER_VARS.has(name)
+          BASE_UI_POSITIONER_VARS.has(name) ||
+          BASE_UI_TOAST_VARS.has(name)
         )
           continue
 

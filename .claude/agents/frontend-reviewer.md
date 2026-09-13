@@ -95,7 +95,9 @@ Backend-Handwerk der `code-reviewer`; du prüfst das Frontend.
     auf, gegen den `@theme inline`-Block halten. Ein Befund hier gehört in die
     Tokenschicht, nicht in den Komponentencode. Drei Stellen sind bekannt
     und werden ausdrücklich geprüft: die Brücke deckt `rounded-sm` bis
-    `rounded-xl`, shadcns Skala reicht bis `rounded-4xl`; die
+    `rounded-xl` sowie `rounded-2xl` (auf `modal`, KAN-105) und
+    `rounded-4xl` (auf `pill`, KAN-29), ohne Brückenzeile bleibt allein
+    `rounded-3xl`; die
     Zustandsvarianten `data-open:` und `data-closed:` gibt es nur, solange
     `@import "shadcn/tailwind.css"` in `src/index.css` steht; und
     `calc(var(--x) - 3px)` mit undefiniertem `--x` fällt ersatzlos heraus

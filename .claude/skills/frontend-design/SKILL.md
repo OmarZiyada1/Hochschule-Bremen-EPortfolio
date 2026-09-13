@@ -84,28 +84,31 @@ Kommentare direkt in `tokens.css`). Das Figma-Design ist nur hell angelegt;
 neue dunkle Werte werden abgeleitet und auf Kontrast geprüft, nicht
 geschätzt (Confluence „Designentscheidungen", Abschnitt 2.8).
 
-**Die fünf Brückenzeilen sind kein Fremdkörper.** Im `@theme static`-Block
+**Die sechs Brückenzeilen sind kein Fremdkörper.** Im `@theme static`-Block
 stehen zusätzlich `--radius-sm`, `--radius-md`, `--radius-lg` und
 `--radius-xl` als Aliase auf die Figma-Stufen, seit KAN-29 dazu
 `--radius-4xl` als Alias auf `pill` (das Badge der Registry nutzt
-`rounded-4xl` und ist in Figma eine Pille). Zugeordnet wird nach der
-tatsächlichen Verwendung in den erzeugten Dateien, nicht nach
+`rounded-4xl` und ist in Figma eine Pille) und seit KAN-105 `--radius-2xl`
+als Alias auf `modal` (die Registry-Datei `toast.tsx` nutzt `rounded-2xl`;
+der Toast schwebt wie ein Modal, und Figma führt keinen Toast). Zugeordnet
+wird nach der tatsächlichen Verwendung in den erzeugten Dateien, nicht nach
 Namensähnlichkeit (Review zu KAN-8): `sm` auf `selection` (4px), `md`
 **und** `lg` auf `control` (8px, Eingabefelder und Buttons), `xl` auf
-`card` (12px, Karten). `modal` (16px) hat keine Brückenzeile; modale
-Flächen setzen `rounded-modal` an der Verwendungsstelle. Die Zeilen tragen
-keinen eigenen Wert und stehen nicht in Figma: sie sind die zweite Adresse
-der sechs Stufen, unter der die per CLI erzeugten Komponenten sie finden.
-Wer sie beim Abgleich gegen die Figma-Collection als überzähligen Token
-löscht, macht jede shadcn-Primitive still eckig, ohne dass ein Test, ein
-Lint oder ein Typecheck darauf anspringt
-(Skill `frontend-shadcn`, Abschnitt 7).
+`card` (12px, Karten), `2xl` auf `modal` (16px, Toast). Modale Dialoge
+setzen `rounded-modal` weiterhin an der Verwendungsstelle; die Brücke `2xl`
+bedient allein die Registry-Datei. Die Zeilen tragen keinen eigenen Wert und
+stehen nicht in Figma: sie sind die zweite Adresse der sechs Stufen, unter
+der die per CLI erzeugten Komponenten sie finden. Wer sie beim Abgleich
+gegen die Figma-Collection als überzähligen Token löscht, macht jede
+shadcn-Primitive still eckig, ohne dass ein Test, ein Lint oder ein
+Typecheck darauf anspringt (Skill `frontend-shadcn`, Abschnitt 7).
 
-**Fünf Zeilen, aber sieben Stufen auf der Gegenseite.** shadcns Skala führt
-zusätzlich `2xl` und `3xl`. Die bleiben bewusst ohne Brückenzeile, weil
+**Sechs Zeilen, aber sieben Stufen auf der Gegenseite.** shadcns Skala
+führt zusätzlich `3xl`. Die Stufe bleibt bewusst ohne Brückenzeile, weil
 keine erzeugte Komponente sie nutzt und kein Token auf Vorrat entsteht.
-Taucht eine solche Klasse in einer erzeugten Komponente auf, ist das ein
-Befund in der Tokenschicht und wird dort aufgelöst, nicht im Komponentencode.
+Taucht die Klasse in einer erzeugten Komponente auf, ist das ein Befund in
+der Tokenschicht und wird dort aufgelöst, nicht im Komponentencode; so
+geschehen mit `2xl` in KAN-105.
 
 ## 2. Wo eine Komponente wohnt
 

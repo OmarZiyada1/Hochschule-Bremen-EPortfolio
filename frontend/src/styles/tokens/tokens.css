@@ -667,7 +667,8 @@
   --radius-pill: 9999px;
 
   /* shadcn-Bruecke (KAN-6, Abschnitt 3.3). Die CLI erzeugt Komponenten mit
-     rounded-sm/md/lg/xl. Ohne diese vier Zeilen greifen die Klassen ins
+     rounded-sm/md/lg/xl, einzelne Registry-Dateien dazu mit rounded-2xl und
+     rounded-4xl. Ohne diese Zeilen greifen die Klassen ins
      Leere, weil --radius-*: initial die Tailwind-Standardskala abschaltet:
      der Button laeuft gruen durch typecheck, lint und build und hat eckige
      Ecken. Kein Fehler, keine Warnung, nur falsches Aussehen.
@@ -682,18 +683,26 @@
      tatsaechlich tragen, nicht nach der Namensaehnlichkeit der Skalen
      (Review zu KAN-8): rounded-lg sitzt in der Registry an Eingabefeldern
      und Buttons, die in Figma 8px haben, rounded-xl an Karten, die 12px
-     haben. md und lg zeigen deshalb beide auf control. Die Stufe modal
-     (16px) hat keine Brueckenzeile mehr; eine modale Flaeche setzt
-     rounded-modal an der Verwendungsstelle. */
+     haben. md und lg zeigen deshalb beide auf control. Eine modale Flaeche
+     setzt rounded-modal weiterhin an der Verwendungsstelle; die Zeile 2xl
+     weiter unten bedient allein die Registry-Datei toast.tsx (KAN-105). */
   --radius-sm: var(--radius-selection); /*  4px */
   --radius-md: var(--radius-control); /*  8px */
   --radius-lg: var(--radius-control); /*  8px */
   --radius-xl: var(--radius-card); /* 12px */
 
+  /* Befund aus KAN-105: toast.tsx nutzt rounded-2xl, und die Bruecke kannte
+     die Stufe nicht. Ohne diese Zeile griffe die Klasse ins Leere, und der
+     Toast staende mit eckigen Ecken da. Der Toast ist eine schwebende
+     Flaeche wie ein Modal, deshalb zeigt die Stufe auf radius-modal und
+     nicht auf einen neuen freien Wert; Figma fuehrt keinen Toast, an dem
+     sich ein eigener Wert ablesen liesse. */
+  --radius-2xl: var(--radius-modal); /* 16px */
+
   /* Befund aus KAN-29: badge.tsx nutzt rounded-4xl, und die Bruecke endete
      bei xl. Das Badge ist in Figma eine Pille, deshalb zeigt die Stufe auf
-     radius-pill und nicht auf einen neuen freien Wert. 2xl und 3xl bleiben
-     bewusst ohne Zeile: keine erzeugte Komponente nutzt sie, und ein Alias
+     radius-pill und nicht auf einen neuen freien Wert. 3xl bleibt bewusst
+     ohne Zeile: keine erzeugte Komponente nutzt die Stufe, und ein Alias
      ohne Verwendung fliegt nach derselben Regel raus wie eine Primitive
      ohne Semantic-Referenz. */
   --radius-4xl: var(--radius-pill); /* 9999px */

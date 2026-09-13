@@ -1,5 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react"
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { useTranslation } from "react-i18next"
 
@@ -66,6 +73,13 @@ import { useUploadCoverImage } from "@/features/projects/hooks/useProjectMetadat
  * <p><strong>Zwei Felder und trotzdem ein Schema.</strong> Geprueft wird
  * mit {@code projectIntroSchema}, einem Ausschnitt des einen
  * Metadaten-Schemas (Frontend-Regel 12).
+ *
+ * <p><strong>Beim Bearbeiten stehen Titel und Kurzbeschreibung in einem
+ * gemeinsamen, gestrichelten Rahmen</strong> (KAN-105, {@code IntroFrame}).
+ * Einer fuer beide und keiner je Feld: die Felder selbst bleiben ohne Rand
+ * ({@code BARE_FIELD}), zwischen Titel und Kurzbeschreibung steht keine
+ * Linie, und Titelbild wie Warnmeldung liegen ausserhalb. Ohne Schreibrecht
+ * gibt es ihn nicht.
  */
 export function EditorIntro({
   project,
@@ -276,99 +290,108 @@ export function EditorIntro({
               : values.title}
           </h1>
 
-          <Controller
-            control={form.control}
-            name="title"
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid || undefined}>
-                <FieldLabel htmlFor={`${fieldId}-title`} className="sr-only">
-                  {t("project.metadata.title.label")}
-                </FieldLabel>
-                <Textarea
-                  {...field}
-                  id={`${fieldId}-title`}
-                  rows={1}
-                  maxLength={TITLE_MAX_LENGTH}
-                  aria-invalid={fieldState.invalid || undefined}
-                  aria-describedby={`${fieldId}-title-counter`}
-                  placeholder={t("project.metadata.title.placeholder")}
-                  onKeyDown={preventNewline}
-                  onChange={(event) =>
-                    change(field.onChange)(event.target.value)
-                  }
-                  onFocus={() => setFocused("title")}
-                  onBlur={() => {
-                    setFocused(null)
-                    field.onBlur()
-                  }}
-                  className={FIELD_FONT.title}
-                />
-                {/*
-                 * Dauerhaft im Baum und nur verborgen, nicht ausgebaut:
-                 * aria-describedby zeigt sonst beim Betreten des Feldes auf
-                 * ein Element, das es in diesem Augenblick noch nicht gibt,
-                 * und die Restanzahl wird nie vorgelesen (Befund des
-                 * Frontend-Reviews).
-                 */}
-                <CharacterCounter
-                  id={`${fieldId}-title-counter`}
-                  value={field.value}
-                  max={TITLE_MAX_LENGTH}
-                  className={focused === "title" ? undefined : "sr-only"}
-                />
-                <FieldError
-                  errors={[{ message: messageOf(fieldState.error, t) }]}
-                />
-              </Field>
-            )}
-          />
+          {/* Titel und Kurzbeschreibung in einem gemeinsamen Rahmen
+              (KAN-105, siehe IntroFrame). Feldmeldungen und Zeichenzaehler
+              gehoeren zu ihren Feldern und stehen darin; die Warnmeldung
+              zum Speicherweg gilt der ganzen Kopfpartie und steht darunter. */}
+          <IntroFrame>
+            <Controller
+              control={form.control}
+              name="title"
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid || undefined}>
+                  <FieldLabel htmlFor={`${fieldId}-title`} className="sr-only">
+                    {t("project.metadata.title.label")}
+                  </FieldLabel>
+                  <Textarea
+                    {...field}
+                    id={`${fieldId}-title`}
+                    rows={1}
+                    maxLength={TITLE_MAX_LENGTH}
+                    aria-invalid={fieldState.invalid || undefined}
+                    aria-describedby={`${fieldId}-title-counter`}
+                    placeholder={t("project.metadata.title.placeholder")}
+                    onKeyDown={preventNewline}
+                    onChange={(event) =>
+                      change(field.onChange)(event.target.value)
+                    }
+                    onFocus={() => setFocused("title")}
+                    onBlur={() => {
+                      setFocused(null)
+                      field.onBlur()
+                    }}
+                    className={FIELD_FONT.title}
+                  />
+                  {/*
+                   * Dauerhaft im Baum und nur verborgen, nicht ausgebaut:
+                   * aria-describedby zeigt sonst beim Betreten des Feldes auf
+                   * ein Element, das es in diesem Augenblick noch nicht gibt,
+                   * und die Restanzahl wird nie vorgelesen (Befund des
+                   * Frontend-Reviews).
+                   */}
+                  <CharacterCounter
+                    id={`${fieldId}-title-counter`}
+                    value={field.value}
+                    max={TITLE_MAX_LENGTH}
+                    className={focused === "title" ? undefined : "sr-only"}
+                  />
+                  <FieldError
+                    errors={[{ message: messageOf(fieldState.error, t) }]}
+                  />
+                </Field>
+              )}
+            />
 
-          <Controller
-            control={form.control}
-            name="summary"
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid || undefined}>
-                {/*
-                 * Unsichtbar, aber im Baum (KAN-83): die Beschriftung
-                 * „Abstract" stand sichtbar in Ueberschriftengroesse ueber
-                 * dem Feld und wurde fuer eine Gliederungsebene gehalten.
-                 * Verschwinden darf sie trotzdem nicht, sonst verliert das
-                 * Feld seinen zugaenglichen Namen (WCAG 2.2, SC 4.1.2).
-                 * Sichtbar fuehrt jetzt der Platzhalter. Dasselbe Muster
-                 * haelt diese Datei schon fuer den Titel.
-                 */}
-                <FieldLabel htmlFor={`${fieldId}-summary`} className="sr-only">
-                  {t("project.metadata.summary.label")}
-                </FieldLabel>
-                <Textarea
-                  {...field}
-                  id={`${fieldId}-summary`}
-                  rows={3}
-                  aria-invalid={fieldState.invalid || undefined}
-                  placeholder={t("project.metadata.summary.placeholder")}
-                  onKeyDown={preventNewline}
-                  onChange={(event) =>
-                    change(field.onChange)(event.target.value)
-                  }
-                  onFocus={() => setFocused("summary")}
-                  onBlur={() => {
-                    setFocused(null)
-                    field.onBlur()
-                  }}
-                  className={FIELD_FONT.summary}
-                />
-                {/*
-                 * Ohne Zeichenzaehler: der Abstract ist Fliesstext, und die
-                 * Grenze ist die des Servers (1024 Zeichen), keine
-                 * Gestaltungsregel. Sie erscheint erst als Feldmeldung,
-                 * wenn sie wirklich erreicht ist.
-                 */}
-                <FieldError
-                  errors={[{ message: messageOf(fieldState.error, t) }]}
-                />
-              </Field>
-            )}
-          />
+            <Controller
+              control={form.control}
+              name="summary"
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid || undefined}>
+                  {/*
+                   * Unsichtbar, aber im Baum (KAN-83): die Beschriftung
+                   * „Abstract" stand sichtbar in Ueberschriftengroesse ueber
+                   * dem Feld und wurde fuer eine Gliederungsebene gehalten.
+                   * Verschwinden darf sie trotzdem nicht, sonst verliert das
+                   * Feld seinen zugaenglichen Namen (WCAG 2.2, SC 4.1.2).
+                   * Sichtbar fuehrt jetzt der Platzhalter. Dasselbe Muster
+                   * haelt diese Datei schon fuer den Titel.
+                   */}
+                  <FieldLabel
+                    htmlFor={`${fieldId}-summary`}
+                    className="sr-only"
+                  >
+                    {t("project.metadata.summary.label")}
+                  </FieldLabel>
+                  <Textarea
+                    {...field}
+                    id={`${fieldId}-summary`}
+                    rows={3}
+                    aria-invalid={fieldState.invalid || undefined}
+                    placeholder={t("project.metadata.summary.placeholder")}
+                    onKeyDown={preventNewline}
+                    onChange={(event) =>
+                      change(field.onChange)(event.target.value)
+                    }
+                    onFocus={() => setFocused("summary")}
+                    onBlur={() => {
+                      setFocused(null)
+                      field.onBlur()
+                    }}
+                    className={FIELD_FONT.summary}
+                  />
+                  {/*
+                   * Ohne Zeichenzaehler: der Abstract ist Fliesstext, und die
+                   * Grenze ist die des Servers (1024 Zeichen), keine
+                   * Gestaltungsregel. Sie erscheint erst als Feldmeldung,
+                   * wenn sie wirklich erreicht ist.
+                   */}
+                  <FieldError
+                    errors={[{ message: messageOf(fieldState.error, t) }]}
+                  />
+                </Field>
+              )}
+            />
+          </IntroFrame>
 
           {/*
            * Ein stiller Fehlschlag waere Datenverlust mit Ansage. Solange
@@ -463,6 +486,10 @@ const TITLE_ROLE = "type-title text-primary"
  * Flaeche im dunklen Modus ({@code dark:bg-transparent}) und der Fokusring
  * ({@code focus-visible:ring-0}).
  *
+ * <p>Die gestrichelte Umrandung um beide Felder zusammen (KAN-105) bleibt
+ * davon unberuehrt: sie liegt ausserhalb der Felder ({@code IntroFrame})
+ * und verschiebt sie nicht.
+ *
  * <p><strong>Wie der Fokus trotzdem zu sehen ist.</strong> Bei einem
  * Textfeld traegt ihn die Schreibmarke; dazu kommt dieselbe leichte
  * Flaeche wie beim Ueberfahren. Sie steht ausdruecklich auch mit
@@ -507,3 +534,72 @@ const FIELD_FONT = {
   title: `${BARE_FIELD} ${TITLE_ROLE} text-[length:var(--fs-title)] leading-[var(--lh-title)] md:text-[length:var(--fs-title)]`,
   summary: `${BARE_FIELD} type-body-lg text-[length:var(--fs-body-lg)] leading-[var(--lh-body)] md:text-[length:var(--fs-body-lg)]`,
 } as const
+
+/**
+ * Der gemeinsame Rahmen um Titel und Kurzbeschreibung (KAN-105): eine
+ * Haarlinie, lang gestrichelt, in der Primaerfarbe.
+ *
+ * <p><strong>Nur beim Bearbeiten.</strong> Er steht allein im Zweig
+ * {@code editable}. Wo die Kopfpartie nur gelesen wird (ohne Schreibrecht,
+ * und kuenftig in der Vorschau aus KAN-104, die mit {@code editable=false}
+ * rendert), gibt es ihn nicht. Im Ausdruck erscheint er ohnehin nicht:
+ * gedruckt wird allein der Bereich aus {@code ProjectPrintView}, der
+ * Kopfteil und Beitrag selbst rendert, und alle uebrigen Kinder von
+ * {@code body} blendet project-content.css dort aus.
+ *
+ * <p><strong>Warum ein SVG und kein gestrichelter Rand.</strong> Mit
+ * {@code border-style: dashed} waehlt der Browser die Strichlaenge selbst,
+ * kurz und je Engine verschieden; einstellen laesst sie sich nicht. Ein
+ * {@code stroke-dasharray} nimmt dagegen feste Masse an, hier 0,75rem Strich
+ * und 0,5rem Luecke. Breite und Hoehe des Rechtecks stehen als Attribute mit
+ * 100 Prozent da, weil sie als CSS-Eigenschaft am {@code rect} nicht in jeder
+ * Engine greifen. Die Ecke kommt dagegen ueber CSS, sonst stuende die
+ * Radiusstufe {@code control} als Zahl im Code: {@code rx} als
+ * CSS-Eigenschaft kennen Chromium ab 43, Firefox ab 69 und Safari ab 17.4
+ * (MDN browser-compat-data). Ein aelteres Safari zeichnet die Ecken eckig,
+ * sonst aendert sich nichts.
+ *
+ * <p>Der Strich liegt mittig auf der Kante, seine aeussere Haelfte also
+ * ausserhalb der Zeichenflaeche; {@code overflow-visible} schneidet sie
+ * nicht ab, und {@code vector-effect} haelt ihn bei einem Pixel. Die Farbe
+ * erbt er ueber {@code currentColor} von {@code text-primary}: im dunklen
+ * Modus wechselt die Nuance ueber die Tokenschicht, im Kontrastmodus von
+ * Windows folgt sie der Systemfarbe. Das SVG ist {@code aria-hidden} und
+ * laesst Klicks durch, denn es ist Schmuck und kein Bedienelement.
+ *
+ * <p><strong>Warum nach aussen versetzt.</strong> Der Rahmen bekommt
+ * Innenabstand (0,75rem seitlich, 0,5rem oben und unten) und wird um
+ * denselben Betrag mit negativem Aussenabstand hinausgeschoben. Titel und
+ * Kurzbeschreibung bleiben damit, wo sie ohne Rahmen standen: buendig mit
+ * der linken Kante des Blockinhalts, und auch in der Hoehe wandert nichts.
+ * Platz dafuer ist in jeder Richtung. Oben und unten nimmt der Versatz die
+ * Haelfte des Abstands {@code gap-4} zum Titelbild, zur Warnmeldung und zum
+ * naechsten Element der Spalte in {@code EditorPage}; links liegt er im
+ * Einzug der {@code editor-content-column} (5rem), rechts im Seitenrand
+ * {@code px-4}, und kein Vorfahr schneidet ab. Auch bei 360px Breite laeuft
+ * deshalb nichts ueber.
+ */
+function IntroFrame({ children }: { children: ReactNode }) {
+  return (
+    <div
+      data-slot="editor-intro-frame"
+      className="relative -mx-3 -my-2 flex flex-col gap-4 px-3 py-2"
+    >
+      <svg
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 size-full overflow-visible text-primary"
+      >
+        <rect
+          width="100%"
+          height="100%"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1}
+          vectorEffect="non-scaling-stroke"
+          className="[rx:var(--radius-control)] [stroke-dasharray:0.75rem_0.5rem]"
+        />
+      </svg>
+      {children}
+    </div>
+  )
+}

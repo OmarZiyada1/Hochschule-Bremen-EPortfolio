@@ -21,6 +21,9 @@ import { renderWithProviders } from "@/tests/render"
 
 const PROJECT_ID = "1f9d7a10-0000-0000-0000-000000000000"
 
+/** Die Rahmenflaeche um Titel und Kurzbeschreibung (KAN-105). */
+const FRAME = '[data-slot="editor-intro-frame"]'
+
 function draft(overrides: Partial<ProjectDetailResponse> = {}) {
   return projectDetail({
     id: PROJECT_ID,
@@ -296,6 +299,110 @@ describe("EditorIntro", () => {
       expect(field.className).toContain("field-sizing-content")
       expect(field.className).toContain("overflow-hidden")
     }
+  })
+
+  /*
+   * KAN-105: beim Bearbeiten stehen Titel und Kurzbeschreibung gemeinsam in
+   * einem gestrichelten Rahmen. Das Titelbild darueber bleibt draussen, die
+   * Warnmeldung zum Speicherweg ebenso; Feldmeldung und Zeichenzaehler
+   * gehoeren zu ihren Feldern und stehen darin.
+   */
+  it("rahmt Titel und Kurzbeschreibung gemeinsam, ohne Titelbild und Warnmeldung", async () => {
+    const user = userEvent.setup()
+    const { view } = setUp()
+
+    const frames = view.container.querySelectorAll(FRAME)
+    expect(frames).toHaveLength(1)
+    const frame = frames[0]
+
+    expect(frame).toContainElement(screen.getByLabelText("Projekttitel"))
+    expect(frame).toContainElement(screen.getByLabelText("Kurzbeschreibung"))
+    expect(frame).toContainElement(screen.getByText(/Noch \d+ Zeichen/))
+    expect(frame).not.toContainElement(
+      view.container.querySelector<HTMLElement>(
+        '[data-slot="cover-image-preview"]'
+      )
+    )
+
+    await user.clear(screen.getByLabelText("Projekttitel"))
+
+    const alerts = await screen.findAllByRole("alert")
+    const notSaved = alerts.find((alert) =>
+      /nicht gespeichert, solange/i.test(alert.textContent ?? "")
+    )
+    expect(notSaved).toBeDefined()
+    expect(frame).not.toContainElement(notSaved ?? null)
+
+    const fieldErrors = alerts.filter((alert) => alert !== notSaved)
+    expect(fieldErrors.length).toBeGreaterThan(0)
+    for (const fieldError of fieldErrors) {
+      expect(frame).toContainElement(fieldError)
+    }
+    /* Und es bleibt einer: die Meldung darunter oeffnet keinen zweiten. */
+    expect(view.container.querySelectorAll(FRAME)).toHaveLength(1)
+  })
+
+  /*
+   * Lang gestrichelt geht mit border-style dashed nicht, deshalb eine
+   * SVG-Umrandung. Sie ist Schmuck: fuer Hilfsmittel verborgen, ohne
+   * Klickflaeche, und die Farbe kommt ueber die Rolle primary statt ueber
+   * einen eigenen Wert. Geprueft ueber Attribute und Klassen, weil vitest
+   * ohne CSS laeuft (vgl. den 16:9-Test).
+   */
+  it("zeichnet den Rahmen als verborgene, gestrichelte Linie in der Primaerfarbe", () => {
+    const { view } = setUp()
+
+    const svg = view.container.querySelector(`${FRAME} > svg`)
+    expect(svg).toHaveAttribute("aria-hidden", "true")
+    expect(svg).toHaveClass(
+      "text-primary",
+      "pointer-events-none",
+      "absolute",
+      "inset-0",
+      "size-full",
+      "overflow-visible"
+    )
+
+    const rect = svg?.querySelector("rect")
+    expect(rect).toHaveAttribute("fill", "none")
+    expect(rect).toHaveAttribute("stroke", "currentColor")
+    expect(rect).toHaveAttribute("stroke-width", "1")
+    expect(rect).toHaveAttribute("vector-effect", "non-scaling-stroke")
+    expect(rect).toHaveAttribute("width", "100%")
+    expect(rect).toHaveAttribute("height", "100%")
+    expect(rect).toHaveClass(
+      "[stroke-dasharray:0.75rem_0.5rem]",
+      "[rx:var(--radius-control)]"
+    )
+  })
+
+  /*
+   * Der Rahmen darf die Felder nicht verschieben: Innenabstand und
+   * negativer Aussenabstand sind gleich gross, Titel und Kurzbeschreibung
+   * bleiben buendig mit dem Blockinhalt. jsdom rechnet kein Layout, belegt
+   * wird es deshalb ueber die Klassen.
+   */
+  it("setzt den Rahmen nach aussen, damit Titel und Kurzbeschreibung stehen bleiben", () => {
+    const { view } = setUp()
+
+    const frame = view.container.querySelector(FRAME)
+    expect(frame).toHaveClass("relative", "-mx-3", "px-3", "-my-2", "py-2")
+    /* Derselbe Abstand zwischen den Feldern wie ohne Rahmen. */
+    expect(frame).toHaveClass("flex", "flex-col", "gap-4")
+  })
+
+  /* Wo die Kopfpartie nur gelesen wird, gibt es nichts zu umrahmen: nicht
+     ohne Schreibrecht und damit auch nicht in Vorschau und Ausdruck. */
+  it("zeigt ohne Schreibrecht keinen Rahmen", () => {
+    const { view } = setUp(
+      { title: "Veroeffentlicht", summary: "Kurzfassung", status: "PUBLISHED" },
+      false
+    )
+
+    expect(view.container.querySelector(FRAME)).toBeNull()
+    expect(
+      view.container.querySelector('[class*="stroke-dasharray"]')
+    ).toBeNull()
   })
 
   /*
