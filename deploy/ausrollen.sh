@@ -265,6 +265,11 @@ Ansehen mit 'git diff', dann 'git stash' oder 'git checkout -- <datei>' als depl
 	# ankaeme. Ein pg_dump dieses Bestands kostet Sekunden. Flyway-
 	# Migrationen laufen beim Start des Backends und haben keinen Rueckweg.
 	schritt "1. Datenbank sichern"
+	# Nur fuer deploy lesbar. Die umask von deploy ist 002, damit entstanden
+	# die Sicherungen bisher mit 664: ein Datenbankabzug mit Passwort-Hashes
+	# und Adressen, lesbar fuer jeden Nutzer auf dem Server. Gilt fuer den
+	# Rest des Laufs; die .env-Tempdatei (mktemp, 600) ist davon unberuehrt.
+	umask 077
 	ziel="$SICHERUNGEN/vor-${IMAGE_TAG}-$(date +%F-%H%M).sql.gz"
 	# Benutzername und Datenbank kommen aus der Umgebung DES CONTAINERS und
 	# nicht aus der .env auf dem Wirt: so muss dieser Ablauf die Datei mit
