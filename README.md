@@ -215,9 +215,14 @@ Konfiguration: Mail-Adapter=smtp, Absender=...
 nach GHCR, und der Server zieht sie und startet neu. **Ein fehlgeschlagener
 Test oder Build erreicht den Server nie.** Auf `dev` laufen nur die Tests.
 
-Auf dem Server ist im Normalbetrieb nichts mehr zu tun, insbesondere kein
-`git pull`. Ausgerollt wird über `sha-<kurzer commit-hash>`, ein Rollback ist
-deshalb ein geänderter `IMAGE_TAG` in der `.env` plus `pull` und `up -d`.
+Auf dem Server ist im Normalbetrieb nichts mehr zu tun, auch kein `git pull`:
+die Ausrollung (`deploy/ausrollen.sh`, seit KAN-106) zieht den Checkout auf
+dem Server selbst auf den Merge-Commit, damit Compose-Dateien und Caddyfile
+dort immer die des ausgerollten Standes sind, und sie ist erst grün, wenn
+beide Container nachweislich das neue Image tragen (Marke, Image-ID, Digest)
+und die Seite über HTTPS antwortet. Ausgerollt wird über
+`sha-<kurzer commit-hash>`; ein Rollback ist ein von Hand gestarteter Lauf
+desselben Workflows mit der alten Marke.
 
 Einrichtung, Secrets, Rollback und die Fehlerbilder der Action stehen in
 [docs/SETUP.md](docs/SETUP.md), Abschnitt 10.
