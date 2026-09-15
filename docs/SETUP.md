@@ -1362,9 +1362,22 @@ Projekte und Personen erfunden sind.
 ### Ausrollen: der automatische Weg (KAN-101)
 
 Seit KAN-101 rollt ein Merge nach `main` sich selbst aus. Auf dem Server ist
-im Normalbetrieb **nichts mehr zu tun**, insbesondere kein `git pull`: das
-Repository unter `/opt/eportfolio` wird nur noch für die Compose-Dateien und
-die `.env` gebraucht, der Code kommt als fertiges Image.
+im Normalbetrieb **nichts mehr zu tun**, auch kein `git pull` von Hand: der
+Code kommt als fertiges Image, und die drei Dateien, die der Server aus dem
+Repository braucht (`compose.base.yml`, `compose.prod.yml`, `Caddyfile`),
+zieht die Ausrollung seit KAN-106 selbst nach. Sie holt den Merge-Commit als
+`deploy` per `git fetch` und `git merge --ff-only` in den Checkout unter
+`/opt/eportfolio` und weist nach, dass die drei Dateien dem Commit gleichen,
+bevor irgendein Container angefasst wird.
+
+**Warum das nötig war.** Bis KAN-106 holte der Deploy-Job keinen Quellcode.
+Vier Läufe im September 2026 waren grün, ohne etwas auszurollen: das Checkout
+auf dem Server stand noch vor dem Commit, der die `image:`-Schlüssel in
+`compose.base.yml` eingeführt hat, Compose meldete `Skipped No image to be
+pulled`, `up -d` ließ die alten Container stehen, und die Prüfung druckte nur
+den Namen des laufenden Images, statt ihn mit der Marke zu vergleichen. Beides
+ist seitdem ausgeschlossen: die Dateien werden nachgezogen, und die Ausrollung
+vergleicht Marke, Image-ID und Digest, statt sie nur zu drucken.
 
 `.github/workflows/deploy.yml` führt sieben Jobs aus, teils nebeneinander
 (Zuschnitt aus KAN-102):
@@ -1383,15 +1396,18 @@ build-backend, build-frontend und deploy.
 | `marke` | immer | bestimmt `sha-<kurzer commit-hash>`; ohne Abhängigkeit, läuft parallel zu den Tests |
 | `backend-tests` | jeder Pull Request, jeder Push auf `main` oder `dev` | `./mvnw test` gegen Postgres 16 und Azurite |
 | `frontend-tests` | wie oben | `pnpm test`, `typecheck`, `lint`, `build`; **ohne** Dienst-Container, MSW beantwortet die Requests |
-| `tests` | nach beiden Testjobs, immer | das Gate: fasst beide zu einem Ergebnis zusammen. Dieser Check heißt `Tests` und ist der, auf den der Branch-Schutz zeigt |
+| `tests` | nach beiden Testjobs, immer (außer beim von Hand gestarteten Lauf) | das Gate: fasst beide zu einem Ergebnis zusammen. Dieser Check heißt `Tests` und ist der, auf den der Branch-Schutz zeigt |
 | `build-backend` | nur Push auf `main`, nur nach grünem `tests` | Backend-Image bauen und nach GHCR schieben, zweifach markiert |
 | `build-frontend` | wie oben | Frontend-Image, dazu die vier Impressumswerte als build-args |
-| `deploy` | nur wenn **beide** Build-Jobs grün sind (und `marke`, sonst wäre die Marke nicht zu erreichen) | über SSH als `deploy`: sichern, ziehen, neu starten, auf die Gesundheitsprüfung warten |
+| `deploy` | Push auf `main`, nur wenn **beide** Build-Jobs grün sind; oder ein von Hand gestarteter Lauf (Rollback), nur auf `main` | über SSH als `deploy`: `deploy/ausrollen.sh`, die acht Schritte stehen unten |
 
 Der Riegel liegt in der Abhängigkeit der Jobs: **ein roter Test erreicht den
 Server nie**, und der Server bleibt dabei unverändert stehen. Auf `dev` laufen
 die beiden Testjobs, das Gate und `marke`; gebaut und ausgerollt wird nichts.
-Für einen Pull Request gilt dasselbe.
+Für einen Pull Request gilt dasselbe. Ein von Hand gestarteter Lauf
+(*Actions → CI/CD → Run workflow*, Eingabe `image_tag`) überspringt Tests,
+Gate und Bau und rollt eine früher gebaute Marke aus; das ist der Rollback,
+siehe unten.
 
 **Warum es den Gate-Job `tests` gibt und warum er `if: always()` trägt.** Ein
 Job mit `needs` läuft nach Vorgabe nur, wenn alle Abhängigkeiten erfolgreich
@@ -1399,11 +1415,67 @@ waren. Ohne `always()` würde das Gate bei einem roten Teiljob deshalb nicht
 rot, sondern **übersprungen**, und ein übersprungener Pflicht-Check gilt dem
 Branch-Schutz als bestanden. Ein roter Pull Request wäre dann mergefähig. Der
 Job prüft deshalb selbst und akzeptiert ausschließlich `success`; `skipped` und
-`cancelled` sind Fehlschläge.
+`cancelled` sind Fehlschläge. Beim von Hand gestarteten Lauf läuft das Gate
+gar nicht (`github.event_name != 'workflow_dispatch'`): dort gibt es keinen
+Pull Request zu schützen, und ein Gate über zwei übersprungenen Testjobs wäre
+rot, obwohl der Rollback gelungen ist.
 
 Die Ausrollung dauert Sekunden statt der fünf bis zehn Minuten, die ein Bau
 auf den zwei vCPU des VPS gekostet hat. **Ein Ausfall bleibt es trotzdem:**
 auch mit fertigen Images ist ein `up -d` ein Stop-Start.
+
+#### Was die Ausrollung auf dem Server tut, und woran sie scheitert
+
+Der Fernteil steht seit KAN-106 nicht mehr im Workflow, sondern in
+`deploy/ausrollen.sh`. Die Action holt die Datei aus dem Checkout des
+Merge-Commits (beim Rollback: des Standes von `main`) und schickt sie per SSH
+an `deploy`. Neun Schritte, 0 bis 8, in dieser Reihenfolge, und jeder bricht
+bei einem Fehler ab:
+
+| Schritt | Was | Bricht ab, wenn |
+| --- | --- | --- |
+| 0 Vorbedingungen | Nutzer, Eingaben, Eigentum an `/opt/eportfolio` und jeder Datei darunter, Docker, `curl`, `.env` (vorhanden, schreibbar, Profil `edge`), Sicherungsordner, Registry, GitHub, Checkout, `git fetch origin main` mit Zugehörigkeitsproben | das Skript als `root` läuft; `/opt/eportfolio` oder eine Datei darunter nicht `deploy` gehört; die `.env` nicht schreibbar ist oder `edge` nicht schaltet; die Marke in GHCR nicht lesbar ist (fehlt, oder das PAT ist abgelaufen); `deploy` GitHub nicht lesen kann; nicht `main` ausgecheckt ist; der Checkout lokale Änderungen an verfolgten Dateien hat; der Commit nicht auf `origin/main` liegt; beim Rollback die Marke keinen Commit auf `main` nennt; `db` nicht läuft |
+| 1 Sichern | `pg_dump` nach `/var/backups/eportfolio/vor-<marke>-<datum>.sql.gz`, Aufbewahrung 14 Tage | die Sicherung leer oder beschädigt ist |
+| 2 Checkout | `git merge --ff-only <merge-commit>` auf den in Schritt 0 geholten Stand, danach `HEAD` gleich Commit und die drei Deployment-Dateien gleich Commit | kein Fast-Forward möglich ist (eigene Commits auf dem Server); `HEAD` danach nicht der Commit ist, etwa bei einem erneut gestarteten **alten** Lauf (siehe Rollback) |
+| 3 Konfiguration | `docker compose config` mit der `.env` des Servers, Auflösung der beiden `image:`-Zeilen auf die Marke | die Compose-Dateien mit der `.env` ungültig sind; Compose nicht auf `ghcr.io/…:<marke>` auflöst |
+| 4 Ziehen | `compose pull backend frontend`, danach Vergleich der `RepoDigests` mit dem Digest, den der Build-Job geschoben hat | das Ziehen scheitert (Anmeldung, PAT, Netz); das Image keinen Registry-Digest trägt (auf dem Server gebaut); der Digest nicht der des Build-Jobs ist |
+| 5 `.env` | `IMAGE_TAG=<marke>` über eine temporäre Datei, drei Riegel wie seit KAN-101, danach genau eine solche Zeile | die `.env` fehlt, kürzer würde oder ihr `POSTGRES_PASSWORD` verlöre |
+| 6 Starten | `up -d --no-build --pull never --wait --wait-timeout 300` | ein Dienst nach fünf Minuten nicht `healthy` (Backend, Frontend, db) beziehungsweise `running` (caddy) ist; die Action hängt dann `ps` und die letzten 80 Logzeilen an |
+| 7 Nachweis | je Container: genau einer, `running`, `healthy`, `Config.Image` gleich Marke, Image-ID gleich der ID hinter der Marke; die `.env` allein löst auf die Marke auf; caddy läuft, `caddy reload` übernimmt das Caddyfile, `https://<APP_DOMAIN>/` und `/api/site-content` antworten 200 (bis zu zwei Minuten Geduld je Pfad) | ein Container den neuen Namen, aber eine andere Image-ID trägt; caddy das Caddyfile nicht annimmt (dann läuft die alte Konfiguration weiter); die Seite von außen nicht mit 200 antwortet. Ab hier hängt jede Meldung den Rückweg an |
+| 8 Aufräumen | `docker image prune`, danach je Image alle `sha-*`-Marken bis auf die fünf jüngsten und die in Benutzung | nie; ein nicht löschbares Image ist ein Hinweis, kein Fehler |
+
+Erst nach Schritt 7 ist der Lauf grün. Ein Abbruch vor Schritt 6 lässt den
+Server unverändert laufen, die `.env` eingeschlossen. Der Frontend-Container
+trägt seit KAN-106 einen eigenen Healthcheck (`compose.prod.yml`), damit
+Schritt 6 auch auf ihn warten kann; vorher galt er als fertig, sobald der
+nginx-Prozess lief.
+
+**Das Caddyfile wird nach jeder Ausrollung neu geladen.** Es liegt als
+Bind-Mount im Container, und ein geänderter Dateiinhalt ändert für Compose
+nichts an der Containerkonfiguration: `up -d` erstellt caddy nicht neu, und
+ohne das `caddy reload` liefe die alte Konfiguration weiter, solange der
+Container lebt. Der Aufruf ist unterbrechungsfrei und bei unverändertem
+Caddyfile folgenlos; ein fehlerhaftes Caddyfile lehnt er ab, caddy behält
+dann die bisherige Konfiguration, und die Ausrollung ist rot.
+
+**Änderungen an `compose.prod.yml` oder `compose.base.yml` an `db` oder
+`caddy`** (Ports, Logging, Volumes) wirken mit der nächsten Ausrollung und
+erstellen den betroffenen Container neu, die Datenbank eingeschlossen. Das
+ist gewollt, denn sonst käme eine solche Änderung nie auf den Server; es
+gehört nur gewusst, dass ein solcher Merge die Datenbank kurz neu startet.
+
+Ob der Server alle Voraussetzungen erfüllt, sagt `deploy/vps-pruefen.sh`,
+als `root` aufgerufen. Es verändert weder Arbeitsverzeichnis noch `HEAD`
+noch die `.env`; das Einzige, was es schreibt, ist ein `git fetch` als
+`deploy` nach `.git/`, wie die Ausrollung selbst:
+
+```bash
+sudo bash /opt/eportfolio/deploy/vps-pruefen.sh
+```
+
+Je Punkt eine Zeile `OK`, `FEHLT` (mit dem Befehl, der es behebt) oder
+`HINWEIS` (eine Entscheidung für einen Menschen, etwa die SSH-Härtung).
+Jedes `FEHLT` ist eine Stelle, an der die nächste Ausrollung abbräche.
 
 #### Einmalige Einrichtung auf dem Server
 
@@ -1464,6 +1536,13 @@ chown -R deploy:deploy /opt/eportfolio
 install -d -o deploy -g deploy /var/backups/eportfolio
 ```
 
+Der erste Befehl ist seit KAN-106 mehr als eine Ordnungsfrage: die Ausrollung
+schreibt als `deploy` in diesen Checkout (`git merge --ff-only`) und bricht
+ab, bevor sie etwas anfasst, wenn das Verzeichnis jemand anderem gehört. Eine
+einzelne Datei, die `root` gehört (typisch nach einem `git pull` als `root`),
+genügt dafür. Nach jedem Handgriff als `root` in diesem Verzeichnis den Befehl
+wiederholen; `deploy/vps-pruefen.sh` zählt solche Dateien.
+
 Der zweite Befehl ist keine Feinheit: der Deploy-Schritt zieht vor **jeder**
 Ausrollung einen `pg_dump` genau dorthin, und zwar ohne Fallunterscheidung.
 Fehlt das Verzeichnis, **bricht die Ausrollung ab** und sagt warum.
@@ -1500,6 +1579,60 @@ sudo -u deploy docker pull ghcr.io/omarziyada1/eportfolio-backend:main
 Auf dem Server liegt damit **kein Token mit Schreibrechten**. Geschoben wird
 ausschließlich aus der Action, und zwar mit deren eingebautem `GITHUB_TOKEN`,
 das nur für den einzelnen Lauf gilt.
+
+**5b. Lesezugang zu GitHub für `deploy` (KAN-106)**
+
+Die Ausrollung zieht den Checkout als `deploy` nach. Dafür braucht dieser
+Nutzer einen eigenen Schlüssel, den GitHub als Deploy-Key **ohne**
+Schreibrecht kennt. Der Schlüssel von `root`, mit dem der Server einmal
+geklont wurde, ist dafür der falsche: er ist bei GitHub mit Schreibrecht
+hinterlegt, und an `/root/.ssh` kommt `deploy` ohnehin nicht heran.
+
+```bash
+install -d -m 700 -o deploy -g deploy /home/deploy/.ssh
+sudo -u deploy -H ssh-keygen -t ed25519 -N '' -C 'eportfolio-vps-deploy-lesend' \
+  -f /home/deploy/.ssh/id_ed25519_github
+cat /home/deploy/.ssh/id_ed25519_github.pub
+# -> GitHub: Settings, Deploy keys, Add deploy key, OHNE "Allow write access"
+sudo -u deploy -H tee /home/deploy/.ssh/config > /dev/null <<'EOF'
+Host github.com
+  IdentityFile ~/.ssh/id_ed25519_github
+  IdentitiesOnly yes
+EOF
+chmod 600 /home/deploy/.ssh/config
+# Wirtsschluessel von GitHub aus der veroeffentlichten Liste, nicht per ssh-keyscan:
+# https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints
+sudo -u deploy -H tee -a /home/deploy/.ssh/known_hosts > /dev/null <<'EOF'
+github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+EOF
+sudo -u deploy -H git -C /opt/eportfolio remote set-url origin \
+  git@github.com:OmarZiyada1/Hochschule-Bremen-EPortfolio.git
+sudo -u deploy -H git -C /opt/eportfolio ls-remote --exit-code --heads origin main
+```
+
+Fehlt `/opt/eportfolio` auf einem neuen Server noch ganz, entsteht es erst
+jetzt, mit diesem Schlüssel und als `deploy`:
+`sudo -u deploy -H git clone git@github.com:OmarZiyada1/Hochschule-Bremen-EPortfolio.git /opt/eportfolio`.
+
+Der letzte Befehl muss genau eine Zeile liefern. Die `~/.ssh/config` ist
+keine Feinheit: der Dateiname ist keiner der Standardnamen, und ohne die
+Zeile `IdentityFile` scheitert jeder Aufruf mit `Permission denied
+(publickey)`, obwohl der Schlüssel daneben liegt.
+
+Danach hat der Schlüssel von `root` keine Aufgabe mehr:
+`rm /root/.ssh/id_ed25519_eportfolio /root/.ssh/id_ed25519_eportfolio.pub`,
+den Eintrag für `github.com` aus `/root/.ssh/config` streichen und bei GitHub
+den Deploy-Key mit Schreibrecht löschen. Ein Schreibschlüssel auf einem
+Server, der nur lesen muss, ist ein Risiko ohne Nutzen.
+
+**5c. Prüfen, bevor die erste Ausrollung läuft**
+
+```bash
+sudo bash /opt/eportfolio/deploy/vps-pruefen.sh
+```
+
+Kein `FEHLT` in der Ausgabe, dann findet die Ausrollung alles vor, was
+Schritt 0 von `deploy/ausrollen.sh` verlangt.
 
 **6. SSH härten**
 
@@ -1539,7 +1672,6 @@ Unter *Settings → Secrets and variables → Actions*:
 | Secret | Inhalt | woher |
 | --- | --- | --- |
 | `VPS_HOST` | Hostname oder IP des Servers | bekannt |
-| `VPS_USER` | `deploy` | fest |
 | `VPS_SSH_KEY` | privater Schlüssel aus Schritt 3 | vollständig, mit Kopf- und Fußzeile |
 | `VPS_SSH_KNOWN_HOSTS` | öffentlicher Wirtsschlüssel des Servers | siehe unten |
 | `VITE_IMPRINT_OPERATOR` | Betreiber laut Impressum | wie in der `.env` |
@@ -1549,6 +1681,13 @@ Unter *Settings → Secrets and variables → Actions*:
 
 **Der Hostname steht ausdrücklich als Secret** und nicht im Workflow: ein
 öffentlich gewordener Workflow soll nicht die Serveradresse mitliefern.
+
+**Der Nutzername ist seit KAN-106 kein Secret mehr.** Bis dahin gab es ein
+Secret `VPS_USER` mit dem Wert `deploy`, und GitHub ersetzt jeden Wert eines
+benutzten Secrets im Protokoll durch `***`: in jeder Meldung des Fernteils
+stand `***` statt `deploy`, auch in den Behebungsbefehlen (`chown -R ***:***`)
+und im Pfad `***/ausrollen.sh`. Der Workflow trägt den Namen jetzt fest; das
+Secret wird nicht mehr gelesen und kann gelöscht werden.
 
 **`VPS_SSH_KNOWN_HOSTS` auf dem Server erzeugen**, nicht mit `ssh-keyscan`
 von außen. Ein Scan von außen glaubt dem, der antwortet, und genau das soll
@@ -1599,6 +1738,25 @@ der Unterschied zwischen „wir haben irgendwas Neues" und „auf dem Server lä
 Commit abc1234": ohne den SHA gibt es keinen definierten Punkt, auf den ein
 Rollback zurückgeht.
 
+**Der vorgesehene Weg ist der Workflow selbst (KAN-106).** Unter *Actions →
+CI/CD → Run workflow* den Zweig `main` wählen und als `image_tag` die Marke
+eintragen, die zurückkommen soll, etwa `sha-9f67fac`. Auf jedem anderen Zweig
+bricht schon der Job `marke` rot ab, damit ein Fehlgriff im Zweig-Menü nicht
+als grüner Lauf ohne Wirkung endet. Tests und Bau laufen
+dabei nicht; die Ausrollung ist dieselbe wie nach einem Merge, mit denselben
+Prüfungen (Sicherung, Checkout, Digest, Gesundheit, HTTPS), nur dass der
+Digest gegen die Registry statt gegen einen Bau dieses Laufs geprüft wird.
+Die Marke muss zu einem Commit auf `main` gehören und in GHCR liegen; beides
+prüft das Skript, bevor es etwas anfasst. Der Checkout auf dem Server bleibt
+dabei auf dem Stand von `main`, die Compose-Dateien sind also die aktuellen;
+brachte ausgerechnet die letzte Änderung an ihnen den Fehler, bleibt der
+Notweg unten.
+
+Ein alter Lauf lässt sich dafür **nicht** über *Re-run* wiederholen: Schritt 2
+verlangt, dass `HEAD` nach dem Fast-Forward genau der Commit des Laufs ist,
+und der Server steht dann schon weiter. Die Meldung nennt den Weg über *Run
+workflow*.
+
 Welcher Stand gerade läuft:
 
 ```bash
@@ -1606,9 +1764,13 @@ docker inspect --format '{{.Config.Image}}' \
   $(docker compose -f compose.base.yml -f compose.prod.yml ps -q backend frontend)
 ```
 
-Zurück auf einen älteren Stand:
+Zurück auf einen älteren Stand **von Hand**, nur wenn GitHub Actions nicht
+erreichbar ist, und als `deploy`, nicht als `root`: nur `deploy` ist an GHCR
+angemeldet, als `root` scheitert das Ziehen, und was `root` anlegt, hält die
+nächste automatische Ausrollung an:
 
 ```bash
+sudo -iu deploy
 cd /opt/eportfolio
 sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=sha-<alt>/' .env
 docker compose -f compose.base.yml -f compose.prod.yml pull backend frontend
@@ -1646,13 +1808,33 @@ Auf dem Server wird deshalb im Normalbetrieb überhaupt nicht gebaut.
 | Meldung | Ursache |
 | --- | --- |
 | `Host key verification failed` | `VPS_SSH_KNOWN_HOSTS` passt nicht zu `VPS_HOST` (Hostname gegen IP) |
-| `Permission denied (publickey)` | Schlüssel nicht in `~deploy/.ssh/authorized_keys`, oder `VPS_SSH_KEY` unvollständig kopiert |
-| `denied: requested access to the resource is denied` beim `pull` | `docker login` fehlt für den Nutzer `deploy` (siehe `-H` in Schritt 5) |
+| `Permission denied (publickey)` beim `ssh` der Action | Schlüssel nicht in `~deploy/.ssh/authorized_keys`, oder `VPS_SSH_KEY` unvollständig kopiert |
+| `Dieses Skript laeuft als root` | `VPS_USER` steht nicht auf `deploy` |
+| `/opt/eportfolio gehoert root, nicht deploy` | Schritt 4 nicht ausgeführt, oder nach einem Handgriff als `root` nicht wiederholt |
+| `Unter /opt/eportfolio gehoeren Dateien nicht deploy` | ein `git pull` oder Editieren als `root`; `chown -R deploy:deploy /opt/eportfolio` |
+| `.env ist fuer deploy nicht schreibbar` | die `.env` wurde als `root` neu angelegt; `chown deploy:deploy` und `chmod 600` |
+| `COMPOSE_PROFILES in der .env schaltet das Profil edge nicht` | die Zeile fehlt oder wurde geändert; ohne caddy ist die Seite von außen weg |
+| `Commit ... liegt nicht auf origin/main` | der Lauf gehört zu einem Commit, der nicht (mehr) auf `main` liegt, etwa nach einem Force-Push |
+| `Die Marke ... nennt keinen Commit auf main` | Rollback mit einer Marke, die nie über `main` gebaut wurde, oder Tippfehler |
+| `Rollback nur von main aus` (Job `marke`) | *Run workflow* wurde auf einem anderen Zweig gestartet |
+| `ist in GHCR nicht lesbar` | Marke falsch (Rollback mit Tippfehler), oder das PAT ist abgelaufen: Schritt 5 wiederholen; die Docker-Meldung dahinter sagt, welches von beiden |
+| `git erreicht origin nicht` | Schritt 5b fehlt, oder der Deploy-Key wurde bei GitHub gelöscht |
+| `ausgecheckt, erwartet main` | auf dem Server ist ein anderer Zweig oder ein einzelner Commit ausgecheckt |
+| `hat lokale Aenderungen an verfolgten Dateien` | jemand hat auf dem Server eine verfolgte Datei bearbeitet; als `deploy` ansehen (`git diff`), dann `git stash` oder `git checkout -- <datei>` |
+| `Der Dienst db laeuft nicht` | der Stapel steht; die Erstausrollung ist Handarbeit (oben) |
 | `Kein beschreibbares /var/backups/eportfolio` | Schritt 4 nicht ausgeführt |
 | `Keine .env in /opt/eportfolio` | die Datei fehlt oder liegt woanders; sie wird nicht neu erzeugt, das wäre geraten |
-| `.env unvollständig, nicht ersetzt` | die Datei trägt kein `POSTGRES_PASSWORD` mehr; die alte bleibt unangetastet stehen |
-| `Backend wurde nicht gesund` | die Action hängt die letzten 80 Zeilen des Backend-Logs an; meist ein fehlender Wert in der `.env` |
-| `Profil edge ist gesetzt, aber caddy läuft nicht` | der TLS-Terminierer ist nicht hochgekommen; die Seite wäre von außen weg, obwohl das Backend gesund meldet |
+| `Fast-Forward ... nicht moeglich` | der Server hat eigene Commits; `git log --oneline origin/main..HEAD` zeigt sie |
+| `HEAD ist ..., erwartet ...` | ein alter Lauf wurde erneut gestartet, der Server steht schon weiter; Rollback über *Run workflow* |
+| `Compose loest nicht auf` | `compose.base.yml` ohne `image:`-Zeile, oder ein Overlay überschreibt sie |
+| `Ziehen fehlgeschlagen` | Anmeldung, PAT, Netz oder Marke; die Docker-Meldung darüber sagt, was |
+| `ist nicht das Image, das die Action geschoben hat` | unter der Marke liegt ein anderes Image: auf dem Server gebaut, oder die Marke in GHCR überschrieben |
+| `.env unvollstaendig, nicht ersetzt` | die Datei trägt kein `POSTGRES_PASSWORD` mehr; die alte bleibt unangetastet stehen |
+| `Der Stapel ist nicht vollstaendig hochgekommen` | ein Dienst wurde nach fünf Minuten nicht gesund; die Action hängt `ps` und die letzten 80 Zeilen der Logs an, meist ein fehlender Wert in der `.env` |
+| `traegt den neuen Namen, aber nicht das neue Image` | Compose hat den Container nicht neu erstellt; `docker compose ps -a` und `docker images` ansehen |
+| `Profil edge ist gesetzt, aber caddy laeuft nicht` | der TLS-Terminierer ist nicht hochgekommen; die Seite wäre von außen weg, obwohl das Backend gesund meldet |
+| `caddy hat das Caddyfile ... nicht uebernommen` | das Caddyfile des Commits ist fehlerhaft; caddy läuft mit der alten Konfiguration weiter, die Seite bleibt oben |
+| `antwortet mit ... statt 200` | der Stapel läuft, ist aber von außen nicht erreichbar: DNS, Zertifikat, Firewall des Anbieters, caddy |
 
 **Ein gescheiterter Deploy rollt nicht automatisch zurück, und die Seite ist
 dann unten.** Der Riegel in den Jobs schützt davor, dass ein roter *Test* auf
@@ -1676,12 +1858,18 @@ Actions oder GHCR nicht erreichbar sind. Im Normalbetrieb ersetzt ihn der
 Abschnitt darüber.
 
 ```bash
+sudo -iu deploy
 cd /opt/eportfolio
-git pull
+git pull --ff-only
 docker compose -f compose.base.yml -f compose.prod.yml up -d --build
 ```
 
-Zwei Dinge dazu, beide unangenehm und beide besser vorher gewusst:
+Als `deploy` und nicht als `root`: das Verzeichnis gehört `deploy`, und ein
+`git pull` als `root` hinterließe Dateien, die `deploy` nicht mehr schreiben
+kann; die nächste automatische Ausrollung bräche daran ab (Schritt 0). Ist es
+doch einmal als `root` passiert: `chown -R deploy:deploy /opt/eportfolio`.
+
+Drei Dinge dazu, alle unangenehm und alle besser vorher gewusst:
 
 * **Das ist ein Stop-Start mit echtem Ausfall.** Bei diesem Stapel gibt es
   keinen unterbrechungsfreien Weg. Für ein Vorführsystem ist das vertretbar,

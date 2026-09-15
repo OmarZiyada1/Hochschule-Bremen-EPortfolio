@@ -17,11 +17,27 @@
 #                   zeigt, und fasst die beiden Testjobs zu einem Ergebnis.
 #   build-backend   je ein Image, parallel, nur bei push auf main.
 #   build-frontend
-#   deploy          zieht beide auf dem VPS und startet neu.
+#   deploy          zieht auf dem VPS den Checkout nach, holt beide
+#                   Images, startet neu und weist nach, dass genau dieser
+#                   Stand laeuft (deploy/ausrollen.sh, KAN-106).
 #
 # DER RIEGEL LIEGT IN "needs". Seit KAN-101 ist main gleich prod; ohne diese
 # Reihenfolge ginge jeder fehlerhafte Merge sofort live. Ein roter Test
 # erreicht den Server nie, und der Server bleibt dabei unveraendert stehen.
+#
+# ZWEI AUSLOESER (KAN-106). Ein Push nach main durchlaeuft den ganzen Graphen.
+# Ein von Hand gestarteter Lauf (workflow_dispatch, Eingabe image_tag)
+# ueberspringt Tests und Bau und rollt eine frueher ueber main gebaute Marke
+# aus: das ist der Rollback, mit denselben Pruefungen wie jede Ausrollung.
+# Er laeuft nur auf main; auf jedem anderen Zweig bricht schon der Job marke
+# rot ab, damit ein Fehlgriff im Zweig-Menue nicht als gruener Lauf ohne
+# Wirkung endet.
+#
+# WARUM DER FERNTEIL EINE DATEI IST (KAN-106). Bis dahin stand er als
+# Heredoc im Job deploy. Als deploy/ausrollen.sh laesst er sich lesen,
+# mit "bash -n" pruefen und im Notfall von Hand aufrufen; der Job holt ihn
+# aus dem Checkout zu github.sha (Merge-Commit, beim Rollback der Stand von
+# main) und schickt ihn per SSH an den Server.
 #
 # WARUM GETRENNTE JOBS UND NICHT EIN GROSSER (KAN-102). Zwei Gruende, und der
 # erste ist der wichtigere: in der Pruefliste eines Pull Requests steht dann
@@ -55,6 +71,18 @@ on:
       - main
       - dev
   pull_request:
+  # Von Hand, fuer Rollback und erneutes Ausrollen (KAN-106). Die Marke wird
+  # im Job marke auf ihre Form geprueft; alles Weitere prueft das Skript auf
+  # dem Server (liegt sie in GHCR, gehoert sie zu einem Commit auf main).
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: >-
+          Marke, die ausgerollt werden soll: sha-<kurzer commit-hash> eines
+          Standes, der frueher ueber main gebaut wurde. Tests und Bau laufen
+          dabei nicht.
+        required: true
+        type: string
 
 # Lesend als Grundausstattung. Nur die beiden Build-Jobs heben sich
 # "packages: write" selbst an, und nur fuer sich. Ohne diese Zeile traegt jeder
@@ -101,7 +129,8 @@ jobs:
     # sonst nichts. Die Bedingung ein drittes Mal hinzuschreiben waere der
     # schlechtere Tausch: sie steht schon an build-backend und build-frontend,
     # und drei Kopien laufen mit der Zeit auseinander. Ausgerollt wird davon
-    # nichts, deploy haengt an den beiden Build-Jobs.
+    # nichts: deploy prueft die Ergebnisse der beiden Build-Jobs selbst und
+    # laeuft ohne sie nur beim von Hand gestarteten Rollback auf main.
     #
     # WARUM UEBERHAUPT EIN EIGENER JOB fuer eine einzige Zeile. build-backend,
     # build-frontend und deploy brauchen denselben Wert. Drei Stellen, die ihn
@@ -114,6 +143,9 @@ jobs:
     steps:
       - name: Marke setzen
         id: setzen
+        env:
+          # Nur beim von Hand gestarteten Lauf gesetzt, sonst leer.
+          GEWUENSCHT: ${{ inputs.image_tag }}
         run: |
           # Zwei Marken je Image: sha-<kurzer hash> als eindeutiger Stand und
           # :main als beweglicher Zeiger.
@@ -122,13 +154,38 @@ jobs:
           # Unterschied zwischen "wir haben irgendwas Neues" und "auf dem
           # Server laeuft Commit abc1234": ohne den SHA gibt es keinen
           # definierten Punkt, auf den ein Rollback zurueckgeht.
-          echo "image_tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          #
+          # Beim von Hand gestarteten Lauf (KAN-106) kommt die Marke aus der
+          # Eingabe. Sie wird HIER auf ihre Form geprueft und nirgends sonst:
+          # deploy reicht sie in einer Befehlszeile an den Server weiter, und
+          # dort soll nur ankommen, was wie eine Marke aussieht.
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            # Nur auf main. Auf jedem anderen Zweig wuerde deploy uebersprungen
+            # und der Lauf stuende GRUEN da, ohne etwas getan zu haben: ein
+            # Fehlgriff im Zweig-Menue saehe aus wie ein gelungener Rollback.
+            if [ "$GITHUB_REF" != refs/heads/main ]; then
+              echo "Rollback nur von main aus, gestartet auf $GITHUB_REF." >&2
+              exit 1
+            fi
+            if ! [[ "$GEWUENSCHT" =~ ^sha-[0-9a-f]{7,40}$ ]]; then
+              echo "image_tag '$GEWUENSCHT' hat nicht die Form sha-<kurzer commit-hash>." >&2
+              exit 1
+            fi
+            marke="$GEWUENSCHT"
+          else
+            marke="sha-${GITHUB_SHA::7}"
+          fi
+          echo "image_tag=$marke" >> "$GITHUB_OUTPUT"
+          echo "Marke: $marke"
 
   # ======================================================================
   # backend-tests
   # ======================================================================
   backend-tests:
     name: Backend-Tests
+    # Nicht beim von Hand gestarteten Rollback (KAN-106): dort wird eine
+    # Marke ausgerollt, die beim Bau schon durch diese Tests gegangen ist.
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     # Erwartet rund 3:15 einschliesslich Container und Aufsetzen, abgeleitet
     # aus den Schrittzeiten von Lauf 34700332110 (siehe Kopf der Datei). Die
@@ -259,6 +316,8 @@ jobs:
   # ======================================================================
   frontend-tests:
     name: Frontend-Tests
+    # Wie bei backend-tests: nicht beim Rollback.
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     # Erwartet rund 8:40, abgeleitet wie oben. Der laengste Ast des Graphen
     # und damit der kritische Pfad; wer die Gesamtzeit druecken will, setzt
@@ -356,7 +415,11 @@ jobs:
   tests:
     name: Tests
     needs: [backend-tests, frontend-tests]
-    if: always()
+    # Beim Rollback sind beide Testjobs uebersprungen, und uebersprungen ist
+    # hier ausdruecklich kein Erfolg. Damit der Rollback-Lauf nicht an seinem
+    # eigenen Gate rot wird, laeuft das Gate dort gar nicht; einen Pull
+    # Request, den es schuetzen muesste, gibt es bei workflow_dispatch nicht.
+    if: always() && github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -398,6 +461,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    # Der Digest des geschobenen Images geht an deploy (KAN-106): auf dem
+    # Server wird nach dem Ziehen geprueft, dass unter der Marke genau dieses
+    # Image liegt, und nicht irgendeines, das zufaellig denselben Namen traegt.
+    outputs:
+      digest: ${{ steps.bauen.outputs.digest }}
+
     permissions:
       contents: read
       # Nur hier und in build-frontend: allein diese beiden Jobs schreiben in
@@ -423,6 +492,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Bauen und schieben
+        id: bauen
         uses: docker/build-push-action@v7
         with:
           context: ./backend
@@ -441,6 +511,16 @@ jobs:
           # davon nicht ab, er waere nur jedes Mal wieder kalt.
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
+          # Keine Provenance- und SBOM-Anhaenge (KAN-106). Mit ihnen schiebt
+          # buildx statt eines einzelnen Manifests einen Index, und der
+          # Digest, den diese Action meldet, ist dann der des Index. Ohne sie
+          # ist er der des Manifests, also genau der Eintrag, den das Image
+          # nach "docker pull" in RepoDigests traegt. deploy/ausrollen.sh
+          # vergleicht beide; der Vergleich soll nicht daran haengen, wie
+          # Docker einen Index verbucht. Gebraucht werden die Anhaenge hier
+          # nicht.
+          provenance: false
+          sbom: false
 
   build-frontend:
     name: Frontend-Image bauen und schieben
@@ -448,6 +528,10 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
+    # Siehe build-backend.
+    outputs:
+      digest: ${{ steps.bauen.outputs.digest }}
 
     permissions:
       contents: read
@@ -468,6 +552,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Bauen und schieben
+        id: bauen
         uses: docker/build-push-action@v7
         with:
           context: ./frontend
@@ -478,6 +563,9 @@ jobs:
             ${{ env.IMAGE_NAMESPACE }}/eportfolio-frontend:main
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
+          # Siehe build-backend.
+          provenance: false
+          sbom: false
           # DIE VIER ANGABEN DES IMPRESSUMS (KAN-100) MUESSEN HIER STEHEN.
           #
           # Vite backt sie beim Buendeln in die JS-Dateien ein; die Stufe
@@ -505,27 +593,55 @@ jobs:
   # ======================================================================
   deploy:
     name: Auf dem VPS ausrollen
-    # Bewusst ohne eigenes "if". Die Bedingung erben wir ueber "needs": auf
-    # einem Pull Request und auf dev werden build-backend und build-frontend
-    # uebersprungen, und ein uebersprungener Vorgaenger ueberspringt jeden Job,
-    # der ihn braucht und selbst kein "if" traegt. Dass marke dort gruen ist,
-    # aendert daran nichts, es genuegt ein uebersprungener Vorgaenger.
-    #
-    # Eine zweite, gleichlautende if-Zeile koennte mit der Zeit von den beiden
-    # an den Build-Jobs abweichen.
     needs: [marke, build-backend, build-frontend]
+    # Zwei Wege hinein, und keiner davon fuehrt an den Tests vorbei:
+    #
+    #   push auf main       beide Build-Jobs muessen gruen sein, und die
+    #                       laufen nur nach gruenem Gate.
+    #   workflow_dispatch   von Hand gestartet, mit einer frueher ueber main
+    #                       gebauten Marke (Rollback). Tests und Bau sind
+    #                       uebersprungen; ausgerollt wird nur auf main.
+    #
+    # "!cancelled()" statt einer Zeile ohne Statusfunktion: ohne eine solche
+    # ergaenzt GitHub success(), und der Job liefe nach uebersprungenen
+    # Build-Jobs gar nicht, also nie beim Rollback. "always()" liefe dagegen
+    # auch nach einem Abbruch des Laufs noch los; "!cancelled()" nicht. Die
+    # Ergebnisse der Vorgaenger werden deshalb ausdruecklich geprueft, und
+    # "skipped" oder "failure" sind kein Erfolg.
+    if: >-
+      ${{ !cancelled()
+          && needs.marke.result == 'success'
+          && (
+            (github.event_name == 'push'
+              && needs.build-backend.result == 'success'
+              && needs.build-frontend.result == 'success')
+            || (github.event_name == 'workflow_dispatch'
+              && github.ref == 'refs/heads/main')
+          ) }}
     runs-on: ubuntu-latest
-    # Knapper als bei den anderen beiden: der eigentliche Ausfall auf dem
-    # Server dauert Sekunden, und die Gesundheitsschleife gibt nach fuenf
-    # Minuten von selbst auf. Bleibt der Job darueber hinaus stehen, haengt
-    # die SSH-Verbindung, und dann ist Abbrechen besser als Warten.
-    timeout-minutes: 20
-
-    # KEIN actions/checkout. Dieser Job braucht den Quellcode nicht: er setzt
-    # eine Marke, zieht zwei Images und startet neu. Alles, was er dazu wissen
-    # muss, steht in den Secrets und in needs.marke.outputs.
+    # Der Fernteil wartet bis zu fuenf Minuten auf die Gesundheitspruefungen
+    # und danach bis zu zwei Minuten je Probe auf die Seite von aussen (zwei
+    # Proben); Sicherung, Fetch und Ziehen kosten Sekunden bis wenige Minuten.
+    # Bleibt der Job darueber hinaus stehen, haengt die SSH-Verbindung, und
+    # dann ist Abbrechen besser als Warten.
+    timeout-minutes: 25
 
     steps:
+      # Nur das Verzeichnis deploy/, nicht das ganze Repository: der Job
+      # braucht allein das Skript, das er an den Server schickt. Es kommt
+      # aus dem Checkout zu github.sha: nach einem Merge ist das der Commit,
+      # dessen Images gebaut wurden; beim Rollback der Stand von main beim
+      # Start, waehrend die Images aelter sind (docs/SETUP.md Abschnitt 10,
+      # Rollback). Welche Fassung im Checkout auf dem Server liegt, spielt
+      # keine Rolle, das Skript zieht ihn selbst auf denselben Commit.
+      - name: Ausroll-Skript holen
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: deploy
+
+      - name: Ausroll-Skript auf Syntaxfehler pruefen
+        run: bash -n deploy/ausrollen.sh
+
       - name: SSH-Zugang einrichten
         env:
           SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
@@ -546,8 +662,26 @@ jobs:
       - name: Ausrollen
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
+          # Fest und KEIN Secret mehr (KAN-106). GitHub ersetzt jeden Wert eines
+          # benutzten Secrets im Protokoll durch ***, und mit "deploy" als Secret
+          # stand in jeder Meldung des Fernteils *** statt deploy: in "chown -R
+          # ***:*** /opt/eportfolio", in "gehoert root, nicht ***", sogar im
+          # Pfad ***/ausrollen.sh. Die Behebungsbefehle, die das Skript
+          # absichtlich in seine Meldungen schreibt, waren damit unlesbar. Der
+          # Name ist kein Geheimnis: das Skript verlangt ohnehin einen
+          # Nicht-root-Nutzer, und die Einrichtung legt ihn auf deploy fest.
+          # Geheim bleibt allein der Hostname.
+          VPS_USER: deploy
           IMAGE_TAG: ${{ needs.marke.outputs.image_tag }}
+          # Der Commit, dessen compose.*.yml und Caddyfile auf dem Server
+          # liegen muessen: bei push der Merge-Commit, beim Rollback der
+          # Stand von main, von dem aus der Lauf gestartet wurde.
+          COMMIT: ${{ github.sha }}
+          TRIGGER: ${{ github.event_name == 'workflow_dispatch' && 'dispatch' || 'push' }}
+          # Leer beim Rollback, dort gab es keinen Bau; das Skript prueft
+          # dann gegen die Registry statt gegen den Bau dieses Laufs.
+          BACKEND_DIGEST: ${{ needs.build-backend.outputs.digest }}
+          FRONTEND_DIGEST: ${{ needs.build-frontend.outputs.digest }}
         run: |
           # Der Hostname steht ausdruecklich als Secret und nicht im Workflow:
           # ein oeffentlich gewordener Workflow soll nicht die Serveradresse
@@ -559,10 +693,12 @@ jobs:
           # aus ist, wartet jeder folgende Merge in derselben
           # Concurrency-Gruppe mit.
           #
-          # Der Fernteil kommt als Heredoc ueber die Standardeingabe. Das
-          # einfache Anfuehrungszeichen an FERN ist wichtig: es haelt die
-          # lokale Shell davon ab, den Text zu ersetzen. Die eine Angabe, die
-          # drueben gebraucht wird, geht ueber die Befehlszeile mit.
+          # Das Skript geht ueber die Standardeingabe ("bash -s"), die fuenf
+          # Werte ueber die Befehlszeile davor. Sie sind vorher geprueft (die
+          # Marke im Job marke, der Rest sind Hashes der Actions und feste
+          # Woerter); die einfachen Anfuehrungszeichen halten sie trotzdem
+          # zusammen. Was das Skript auf dem Server tut und warum in dieser
+          # Reihenfolge, steht im Kopf von deploy/ausrollen.sh.
           ssh -i ~/.ssh/deploy_key \
               -o BatchMode=yes \
               -o StrictHostKeyChecking=yes \
@@ -570,279 +706,8 @@ jobs:
               -o ServerAliveInterval=30 \
               -o ServerAliveCountMax=6 \
               "${VPS_USER}@${VPS_HOST}" \
-              "IMAGE_TAG='${IMAGE_TAG}' bash -s" <<'FERN'
-          set -euo pipefail
-
-          # ==============================================================
-          # WARUM DER GANZE RUMPF IN EINER FUNKTION STEHT
-          # ==============================================================
-          # Dieses Skript kommt ueber die STANDARDEINGABE (bash -s mit
-          # Heredoc). Und "docker compose exec -T" haengt die Standardeingabe
-          # an den Container weiter, genau deshalb funktioniert sonst
-          # "exec -T db psql < dump.sql".
-          #
-          # Hier ist die Standardeingabe aber dieses Skript selbst. Ein
-          # "exec -T" mitten im Ablauf liest deshalb den REST DES SKRIPTS weg:
-          # die Sicherung wird geschrieben, alles danach verschwindet
-          # stillschweigend, und die Shell endet mit Rueckgabewert 0. Auf dem
-          # Server waere nichts ausgerollt, und die Action meldete gruen.
-          # Nachgestellt und bestaetigt, bevor diese Fassung entstand.
-          #
-          # Als Funktion liest bash zuerst den vollstaendigen Rumpf ein und
-          # fuehrt ihn danach aus. Der Aufruf am Ende klemmt die
-          # Standardeingabe mit </dev/null ab, und zwar fuer JEDEN Befehl
-          # darin, nicht nur fuer den einen, an dem es aufgefallen ist. Ein
-          # "</dev/null" an einer einzelnen Zeile genuegte nicht: der naechste
-          # Befehl, der die Standardeingabe liest, braechte den Fehler zurueck.
-          ausrollen() {
-            cd /opt/eportfolio
-
-            compose() {
-              docker compose -f compose.base.yml -f compose.prod.yml "$@"
-            }
-
-            # ------------------------------------------------------------
-            # 1. Sichern, immer
-            # ------------------------------------------------------------
-            # Ohne Fallunterscheidung, und das ist eine bewusste Verschaerfung
-            # gegenueber "nur wenn eine Migration dabei ist".
-            #
-            # Eine Erkennung ueber den Commit-Vergleich beantwortet die
-            # falsche Frage: sie vergleicht Push gegen Push, waehrend es auf
-            # den Abstand zwischen SERVERSTAND und neuem Stand ankaeme.
-            # Scheitert ein Lauf in einem der Build-Jobs oder in deploy,
-            # bleibt der Server zurueck; der naechste Push vergleicht ab dem gescheiterten
-            # Commit, saehe keine Migration mehr und rollte sie ungesichert
-            # aus. Genau der Fall, gegen den die Sicherung da ist.
-            #
-            # Der Preis ist ein pg_dump je Ausrollung, also Sekunden bei
-            # diesem Datenbestand. Flyway-Migrationen laufen beim Start des
-            # Backends und haben keinen Rueckweg: ein Rollback auf ein
-            # aelteres Image bringt das Schema NICHT zurueck.
-            if [ ! -w /var/backups/eportfolio ]; then
-              echo "Kein beschreibbares /var/backups/eportfolio." >&2
-              echo "Anlegen mit: sudo install -d -o deploy -g deploy /var/backups/eportfolio" >&2
-              exit 1
-            fi
-            ziel="/var/backups/eportfolio/vor-${IMAGE_TAG}-$(date +%F-%H%M).sql.gz"
-
-            # Benutzername und Datenbank kommen aus der Umgebung DES
-            # CONTAINERS und nicht aus der .env auf dem Wirt: dort stehen sie
-            # ohnehin, und so muss dieser Ablauf die Datei mit den
-            # Geheimnissen nicht anfassen.
-            compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
-              | gzip > "$ziel"
-            echo "Sicherung geschrieben: $ziel ($(du -h "$ziel" | cut -f1))"
-            # Dieselbe Frist wie beim taeglichen Timer aus KAN-98.
-            find /var/backups/eportfolio -name 'vor-*.sql.gz' -mtime +14 -delete
-
-            # ------------------------------------------------------------
-            # 2. Ziehen, VOR dem Schreiben der .env
-            # ------------------------------------------------------------
-            # Die Reihenfolge ist Absicht. Stuende die neue Marke schon in der
-            # .env und das Ziehen scheiterte, zeigte die Datei auf ein Image,
-            # das es auf dem Server nicht gibt; der naechste Handgriff eines
-            # Menschen ("up -d") liefe dann ins Leere. So bleibt die .env bis
-            # zuletzt auf dem laufenden Stand.
-            #
-            # IMAGE_TAG kommt hier aus der Umgebung und nicht aus der Datei:
-            # Compose bevorzugt die Umgebung gegenueber der .env.
-            #
-            # Nur backend und frontend, nicht der ganze Stapel: ein pauschales
-            # "pull" holte auch postgres:16 und caddy:2-alpine neu und wuerde
-            # bei jeder Ausrollung ungefragt die Datenbank neu starten. Das
-            # gehoert entschieden und nicht nebenbei getan.
-            IMAGE_TAG="$IMAGE_TAG" compose pull backend frontend
-
-            # ------------------------------------------------------------
-            # 3. IMAGE_TAG in die .env schreiben
-            # ------------------------------------------------------------
-            # DIESE DATEI IST DIE EMPFINDLICHSTE STELLE DES GANZEN ABLAUFS.
-            # Sie liegt nicht im Repository und ist die einzige Quelle aller
-            # Betriebswerte: Azure-Kontoschluessel, Mailpasswort, JWT_SECRET,
-            # das Datenbankpasswort, die fuenf BOOTSTRAP_ADMIN_-Werte,
-            # APP_DOMAIN, ACME_EMAIL, COMPOSE_PROFILES. Fuer das
-            # Datenbankpasswort gibt es keine zweite Quelle, es haengt im
-            # Volume fest. Deshalb drei Riegel statt eines Einzeilers.
-            if [ ! -f .env ]; then
-              echo "Keine .env in /opt/eportfolio. Ohne sie fehlt jeder Betriebswert." >&2
-              exit 1
-            fi
-
-            vorher="$(wc -l < .env)"
-            tmp="$(mktemp -p /opt/eportfolio .env.XXXXXX)"
-
-            # NICHT "|| true". grep endet mit 1, wenn keine Zeile passt (der
-            # Regelfall bei der ersten Ausrollung), und ab 2 bei einem echten
-            # Fehler: Datei unlesbar, Platte voll. Ein pauschales "true"
-            # schluckte beides, und die .env bestuende danach nur noch aus der
-            # einen Zeile, die gleich angehaengt wird.
-            grep -v '^IMAGE_TAG=' .env > "$tmp"; rc=$?
-            if [ "$rc" -gt 1 ]; then
-              echo "Konnte .env nicht lesen (grep $rc), nichts geaendert." >&2
-              rm -f "$tmp"
-              exit 1
-            fi
-
-            # Inhaltsprobe neben der Laengenprobe: die eine erkennt eine
-            # abgeschnittene Datei, die andere eine, die zwar Zeilen hat, aber
-            # nicht mehr die richtigen.
-            if ! grep -q '^POSTGRES_PASSWORD=' "$tmp"; then
-              echo ".env unvollstaendig, nicht ersetzt." >&2
-              rm -f "$tmp"
-              exit 1
-            fi
-
-            printf 'IMAGE_TAG=%s\n' "$IMAGE_TAG" >> "$tmp"
-
-            # Die neue Fassung kann nie kuerzer sein als die alte: entweder
-            # ersetzt sie eine vorhandene IMAGE_TAG-Zeile, oder sie kommt
-            # dazu.
-            nachher="$(wc -l < "$tmp")"
-            if [ "$nachher" -lt "$vorher" ]; then
-              echo "Die neue .env waere kuerzer als die alte ($nachher statt $vorher Zeilen)." >&2
-              rm -f "$tmp"
-              exit 1
-            fi
-
-            # Ueber eine temporaere Datei und "cat >" statt "sed -i": so
-            # bleibt die .env dieselbe Datei und behaelt Eigentuemer und
-            # Rechte. "sed -i" legt eine neue an und setzt die Rechte nach der
-            # umask.
-            cat "$tmp" > .env
-            rm -f "$tmp"
-            echo "IMAGE_TAG=$IMAGE_TAG"
-
-            # ------------------------------------------------------------
-            # 4. Starten
-            # ------------------------------------------------------------
-            # --no-build ist der eigentliche Schalter dieses Tickets: ohne ihn
-            # versuchte Compose bei einem fehlenden Image zu bauen, und genau
-            # das soll auf dem Server nicht mehr passieren.
-            #
-            # Beide Dienste werden dabei immer neu erstellt, weil beide eine
-            # neue Marke tragen. Das ist wichtig: wuerde allein das Backend
-            # ersetzt, bekaeme es eine neue Adresse im Compose-Netz, und der
-            # nginx des Frontends hielte die alte fest. Die API antwortete
-            # danach dauerhaft mit 502, obwohl beide Container laufen.
-            compose up -d --no-build
-
-            # ------------------------------------------------------------
-            # 5. Warten, bis das Backend gesund ist
-            # ------------------------------------------------------------
-            # ps -aq und nicht ps -q: startet der Container gar nicht erst
-            # durch, etwa wegen eines fehlenden Werts in der .env, waere die
-            # Liste der LAUFENDEN Container leer, und die Ausrollung braeche
-            # ohne eine einzige Logzeile ab. Genau dieser Fall ist der
-            # haeufigste.
-            cid="$(compose ps -aq backend)"
-            if [ -z "$cid" ]; then
-              echo "Nach dem Start gibt es keinen Backend-Container." >&2
-              compose ps -a >&2 || true
-              exit 1
-            fi
-
-            # Gefragt wird der Healthcheck des Containers und nicht mit curl
-            # ein Port: der Check aus compose.base.yml ruft /actuator/health
-            # im Container selbst auf, und nur er kennt das groessere
-            # Zeitfenster aus compose.prod.yml, das im Profil prod am
-            # Mailserver haengt.
-            #
-            # Der Rueckfall auf "fehlt" haelt set -e aus der Schleife heraus:
-            # ohne ihn braeche ein Container ohne Healthcheck oder ein
-            # zwischenzeitlich verschwundener das Skript mit einer Meldung des
-            # Go-Templates ab, die niemand deutet.
-            zustand="unbekannt"
-            for _ in $(seq 1 60); do
-              zustand="$(docker inspect --format '{{.State.Health.Status}}' "$cid" 2>/dev/null || echo fehlt)"
-              if [ "$zustand" = "healthy" ]; then
-                break
-              fi
-              sleep 5
-            done
-
-            if [ "$zustand" != "healthy" ]; then
-              echo "Backend wurde nicht gesund (Zustand: $zustand)." >&2
-              compose logs --tail=80 backend >&2 || true
-              echo "" >&2
-              # ES WIRD NICHT AUTOMATISCH ZURUECKGEROLLT, und das gehoert
-              # hierhin und nicht allein in eine Doku, die im Ernstfall
-              # niemand aufschlaegt. Ein automatischer Rueckweg waere hier
-              # auch die falsche Zusage: eine Flyway-Migration dieses Standes
-              # kann bereits gelaufen sein, und ein aelteres Image traefe dann
-              # auf ein neueres Schema. Das kann schlimmer sein als der
-              # Stillstand.
-              echo "Die Seite ist ab hier unten. Es wird NICHT automatisch zurueckgerollt," >&2
-              echo "weil eine Migration dieses Standes bereits gelaufen sein kann." >&2
-              echo "Zurueck auf den vorigen Stand (docs/SETUP.md, Abschnitt 10):" >&2
-              echo "  cd /opt/eportfolio" >&2
-              echo "  sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=sha-<alt>/' .env" >&2
-              echo "  docker compose -f compose.base.yml -f compose.prod.yml pull backend frontend" >&2
-              echo "  docker compose -f compose.base.yml -f compose.prod.yml up -d --no-build" >&2
-              echo "Die Sicherung von eben liegt unter $ziel" >&2
-              exit 1
-            fi
-
-            # Caddy mitpruefen, sobald die .env das Profil edge fuehrt.
-            #
-            # Der Healthcheck oben fragt das Backend IM COMPOSE-NETZ. Faellt
-            # caddy aus, meldet das Backend weiter munter "healthy", waehrend
-            # die Seite von aussen weg ist: ein gruener Lauf ueber einer toten
-            # Seite, und niemand erfaehrt es. Caddy ist das einzige nach
-            # aussen geoeffnete Tor und hat keinen eigenen Healthcheck,
-            # deshalb genuegt hier die Frage, ob er ueberhaupt laeuft.
-            if grep -q '^COMPOSE_PROFILES=.*edge' .env; then
-              caddy_id="$(compose ps -aq caddy)"
-              if [ -z "$caddy_id" ] \
-                 || [ "$(docker inspect --format '{{.State.Running}}' "$caddy_id" 2>/dev/null || echo false)" != "true" ]; then
-                echo "Profil edge ist gesetzt, aber caddy laeuft nicht." >&2
-                compose logs --tail=40 caddy >&2 || true
-                exit 1
-              fi
-            fi
-
-            # ------------------------------------------------------------
-            # 6. Melden, was jetzt laeuft
-            # ------------------------------------------------------------
-            # Die Zeilen der DoD: docker inspect nennt fuer beide Container
-            # ein Image mit sha-<hash>, und der Hash entspricht dem
-            # Merge-Commit.
-            for dienst in backend frontend; do
-              id="$(compose ps -aq "$dienst")"
-              printf '%-9s %s\n' "$dienst" \
-                "$(docker inspect --format '{{.Config.Image}}' "$id")"
-            done
-
-            # ------------------------------------------------------------
-            # 7. Aufraeumen
-            # ------------------------------------------------------------
-            # Schichten ohne Marke, und darueber hinaus die alten Staende.
-            #
-            # "image prune" allein genuegt NICHT: jede Ausrollung legt ein
-            # Backend- und ein Frontend-Image unter sha-<hash> ab, zusammen
-            # rund 800 MB, und markierte Images raeumt prune nie ab. Nach etwa
-            # zwanzig Merges waeren das ueber 16 GB auf einem Server, auf dem
-            # eine volle Platte zuerst Postgres trifft. Gegen genau das steht
-            # in compose.prod.yml schon die Log-Rotation.
-            #
-            # Die letzten fuenf Staende bleiben liegen, denn genau sie braucht
-            # ein Rollback. Ein noch aelterer Stand laesst sich jederzeit neu
-            # aus GHCR ziehen, dort wird nichts geloescht.
-            docker image prune -f > /dev/null
-            for name in eportfolio-backend eportfolio-frontend; do
-              docker images \
-                --filter "reference=ghcr.io/omarziyada1/${name}:sha-*" \
-                --format '{{.CreatedAt}}\t{{.ID}}' \
-                | sort -r | tail -n +6 | cut -f2 \
-                | xargs -r docker rmi > /dev/null 2>&1 || true
-            done
-          }
-
-          # HIER klemmt </dev/null die Standardeingabe ab, siehe den Block
-          # ueber der Funktion. Ohne diese Umleitung liest der erste
-          # "compose exec -T" den Rest dieses Skripts weg.
-          ausrollen </dev/null
-          FERN
+              "IMAGE_TAG='${IMAGE_TAG}' COMMIT='${COMMIT}' TRIGGER='${TRIGGER}' BACKEND_DIGEST='${BACKEND_DIGEST}' FRONTEND_DIGEST='${FRONTEND_DIGEST}' bash -s" \
+              < deploy/ausrollen.sh
 
       - name: Schluessel entfernen
         if: always()

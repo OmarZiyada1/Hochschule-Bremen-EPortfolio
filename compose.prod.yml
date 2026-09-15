@@ -155,6 +155,24 @@ services:
     # Anwendung kommt.
     ports:
       - "127.0.0.1:${PROD_FRONTEND_PORT:-5373}:80"
+    # Gesundheitspruefung des Frontends (KAN-106).
+    #
+    # Bis dahin galt der Container als fertig, sobald der nginx-Prozess
+    # lief; die Ausrollung konnte nur auf das Backend warten. Mit dieser
+    # Pruefung wartet "up -d --wait" auch auf das Frontend, und
+    # deploy/ausrollen.sh verlangt fuer beide Dienste "healthy".
+    #
+    # busybox-wget aus nginx:alpine, kein curl: das Image hat keins, und
+    # ein weiteres Paket allein fuer die Pruefung lohnt nicht. Gefragt wird
+    # die index.html, also genau das, was die Seite ausliefert. Nur hier
+    # und nicht in compose.base.yml: die Betriebsart DEV faehrt den
+    # Vite-Dev-Server auf einem Debian-Image ohne wget.
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
 
   # --------------------------------------------------------------------
   # TLS-Terminierer (KAN-98)
