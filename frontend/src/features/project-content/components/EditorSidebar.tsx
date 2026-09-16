@@ -97,7 +97,6 @@ export function EditorSidebar({
         <ProjectSidePanels
           project={project}
           context="editor"
-          showEmptyFields
           infoAction={
             <Button
               type="button"

@@ -722,7 +722,8 @@
       "limitReached": "Mehr als {{max}} Schlagwörter sind nicht möglich. Entfernen Sie eines, um ein anderes hinzuzufügen.",
       "remove": "{{name}} entfernen",
       "hits_one": "{{count}} Vorschlag",
-      "hits_other": "{{count}} Vorschläge"
+      "hits_other": "{{count}} Vorschläge",
+      "maxLabel": "Wie viele Schlagwörter sind erlaubt?"
     },
     "card": {
       "reactions_one": "{{count}} Reaktion",
@@ -825,7 +826,7 @@
       "heading": "Projekt-Metadaten",
       "backToPortfolio": "Zurück zum Portfolio",
       "authorRole": {
-        "label": "Funktion der Autor:in",
+        "label": "Rolle der Autor:in",
         "placeholder": "z. B. Konzept"
       },
       "submit": "Speichern & weiter zum Editor",
@@ -840,7 +841,8 @@
       "readOnlyForeign": "Dieses Projekt gehört Ihnen nicht: Änderungen an den Metadaten nehmen nur die Autor:in und die Projektmitglieder vor. Als zugewiesene Redaktion geben Sie Ihre Rückmeldung über den Review-Modus.",
       "preview": {
         "heading": "Vorschau",
-        "hint": "Diese Angaben bestimmen, wie das Projekt in Listen und auf Karten erscheint, nicht den Projektinhalt selbst."
+        "hint": "Diese Angaben bestimmen, wie das Projekt in Listen und auf Karten erscheint, nicht den Projektinhalt selbst.",
+        "hintLabel": "Wofür ist die Vorschau?"
       },
       "title": {
         "label": "Projekttitel",
@@ -861,7 +863,6 @@
         "tooLarge": "Die Datei ist größer als {{max}} MB."
       },
       "requiredForSubmit": {
-        "legend": "Mit * markierte Angaben brauchen Sie erst zum Einreichen, nicht zum Speichern.",
         "marker": "erforderlich zum Einreichen"
       },
       "select": {
@@ -911,10 +912,12 @@
         "remove": "{{name}} aus den Projektmitgliedern entfernen",
         "chosen": "Aufgenommene Projektmitglieder",
         "invalid": "Bitte prüfen Sie die Angaben zu den Projektmitgliedern.",
-        "required": "Pflichtangabe",
         "addButton": "Mitglied aufnehmen",
         "added": "{{name}} aufgenommen.",
-        "none": "Noch keine Mitglieder aufgenommen."
+        "none": "Noch keine Mitglieder aufgenommen.",
+        "group": "Projektmitglieder",
+        "infoLabel": "Was sind Projektmitglieder?",
+        "info": "Co-Autor:innen und Mitwirkende. Sobald eine Person gewählt ist, lässt sich der Eintrag aufnehmen; die Rolle ist freiwillig."
       },
       "notFound": {
         "title": "Projekt nicht gefunden",
@@ -935,7 +938,22 @@
       },
       "untitledTitle": "Unbenanntes Projekt",
       "creating": "Das Projekt wird angelegt …",
-      "changeRequestsOpenAction": "Zu den offenen Änderungswünschen im Editor"
+      "changeRequestsOpenAction": "Zu den offenen Änderungswünschen im Editor",
+      "steps": {
+        "hint": "Zum Speichern muss keiner der drei Schritte ausgefüllt sein. Mit * markierte Angaben brauchen Sie erst zum Einreichen.",
+        "eyebrow": "Schritt {{number}}",
+        "flagged": "Bitte prüfen",
+        "editorial": {
+          "title": "Redaktion & Mitglieder"
+        },
+        "classification": {
+          "title": "Klassifikation"
+        },
+        "topics": {
+          "title": "Projekttyp & Themen"
+        },
+        "hintLabel": "Was bedeutet der Stern?"
+      }
     }
   },
   "portfolio": {
@@ -1406,7 +1424,8 @@
         "categoryId": "Kategorie",
         "semesterId": "Semester",
         "editorIds": "Redaktionszuweisung"
-      }
+      },
+      "descriptionLabel": "Was passiert beim Einreichen?"
     },
     "withdraw": {
       "title": "Einreichung zurückziehen?",

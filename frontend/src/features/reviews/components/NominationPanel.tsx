@@ -42,6 +42,7 @@ import {
   type NominationFilterValue,
 } from "@/features/reviews/nominations"
 import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
+import { projectHref } from "@/features/projects/projectRoutes"
 
 /** Zahl der Plaetze, die die kuratierte Liste hoechstens fuehrt (§3.11). */
 const TOP10_SIZE = 10
@@ -252,7 +253,11 @@ function NominationRow({
       <ItemContent>
         <ItemTitle>
           <Link
-            to={`/projects/${nomination.project.id}`}
+            to={projectHref(
+              nomination.project.id,
+              nomination.project.status,
+              "review"
+            )}
             state={origin}
             className="type-body-sm font-semibold hover:underline focus-visible:underline"
           >

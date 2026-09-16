@@ -1,11 +1,10 @@
 import { PlusIcon, Trash2Icon } from "lucide-react"
-import type { ReactNode } from "react"
 import { useId, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import type { UserLookupResponse } from "@/api/types"
 import { Button } from "@/components/ui/button"
-import { Field, FieldLabel } from "@/components/ui/field"
+import { Field, FieldLabel, FieldTitle } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import {
   Item,
@@ -20,6 +19,7 @@ import {
   type MemberValue,
 } from "@/features/projects/ProjectMetadataForm.schema"
 import { fullNameOf } from "@/lib/name"
+import { InfoHint } from "@/components/common/InfoHint"
 
 /* Modulweit und nicht als Literal im Default: ein frisches [] je Render wuerde
    die Abhaengigkeit von excludedIds bei jedem Durchlauf wechseln lassen. */
@@ -47,9 +47,22 @@ const NO_IDS: readonly string[] = []
  * ({@code NameCreateForm}). Aus demselben Grund wie dort scheidet
  * {@code input-group} aus: es legte den Knopf in das Feld statt daneben.
  *
- * <p><strong>Abschnittsueberschriften braucht das Feld keine</strong>, die
- * sichtbaren Beschriftungen "Mitglied" und "Rolle" tragen alles, was eine
- * Ueberschrift sagen wuerde.
+ * <p><strong>Eine Ueberschrift braucht das Feld keine, eine Beschriftung
+ * schon</strong> (KAN-103). "Mitglied" und "Rolle" benennen die beiden
+ * Eingaben, aber nicht den Block als ganzen; im Stepper steht er zwischen
+ * der Redaktion und dem naechsten Schritt und braucht einen eigenen Namen.
+ * Der steht als {@code FieldTitle}, nicht als {@code h3}: eine zweite
+ * Ueberschriftenebene in einem Formular gliedert nichts, was die
+ * Beschriftungen nicht schon gliedern (Entscheidung zu KAN-103).
+ *
+ * <p><strong>Kein Stern mehr an "Mitglied"</strong> (KAN-103). Er stand
+ * hier fuer etwas anderes als in der Klassifikation: dort heisst er
+ * "erforderlich zum Einreichen" (§3.3), hier hiess er "ohne Person kein
+ * Eintrag". Dasselbe Zeichen fuer zwei Regeln im selben Formular ist eine
+ * Regel zu viel, zumal Mitglieder weder zum Speichern noch zum Einreichen
+ * Pflicht sind ({@code REQUIRED_FOR_SUBMIT} fuehrt sie nicht). Was der
+ * Stern sagen sollte, sagt jetzt der Satz unter der Eingabezeile, und der
+ * gesperrte Knopf zeigt es ohnehin.
  *
  * <p><strong>Die gewaehlte Person bleibt im Feld stehen</strong>, bis sie
  * aufgenommen ist. Vorher wanderte sie sofort als Pille nach unten, und der
@@ -130,15 +143,23 @@ const NO_IDS: readonly string[] = []
 export function ProjectMembersField({
   value,
   onChange,
+  id,
   authorId,
   editorIds = NO_IDS,
   disabled = false,
   invalid = false,
   describedBy,
-  labelSuffix,
 }: {
   value: MemberValue[]
   onChange: (next: MemberValue[]) => void
+  /**
+   * ID der Personensuche, also des Bedienelements, das den Fokus bekommt.
+   * Der Stepper braucht sie: schlaegt das Absenden fehl, springt der Fokus
+   * in das erste beanstandete Feld des aufgeklappten Schrittes, und dafuer
+   * muss die aufrufende Stelle das Feld benennen koennen (KAN-103). Ohne
+   * Angabe wie bisher eine erzeugte, wie in der {@code TagCombobox}.
+   */
+  id?: string
   /** Die Autor:in, sie wird aus der Vorschlagsliste ausgeblendet (§3.13.1). */
   authorId?: string
   /** Die zugewiesene Redaktion, aus demselben Grund (§5 Fussnote 3). */
@@ -147,18 +168,24 @@ export function ProjectMembersField({
   /** Reicht {@code aria-invalid} und die Fehler-ID an die Personensuche durch. */
   invalid?: boolean
   describedBy?: string
-  /**
-   * Pflichtkennzeichnung hinter der Personenauswahl. Die
-   * Funktionsbezeichnung traegt sie nicht: sie ist seit Contract v65
-   * freiwillig.
-   */
-  labelSuffix?: ReactNode
 }) {
   const { t } = useTranslation()
   const fieldId = useId()
-  const personInputId = `${fieldId}-person`
+  const personInputId = id ?? `${fieldId}-person`
   const roleInputId = `${fieldId}-role`
   const listLabelId = `${fieldId}-chosen`
+  const groupLabelId = `${fieldId}-group`
+  const entryHintId = `${fieldId}-entry-hint`
+
+  /*
+   * Beides an der Personensuche: der Satz, der sagt, wann ein Eintrag
+   * entsteht, und die Fehlermeldung des Feldes. aria-describedby nimmt
+   * mehrere IDs, getrennt durch Leerzeichen; nur anbinden, was auch
+   * dasteht, sonst zeigt der Verweis ins Leere.
+   */
+  const personDescribedBy = [entryHintId, describedBy]
+    .filter((entry) => entry !== undefined)
+    .join(" ")
 
   const [pending, setPending] = useState<UserLookupResponse | null>(null)
   const [pendingRole, setPendingRole] = useState("")
@@ -215,21 +242,42 @@ export function ProjectMembersField({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div
+      role="group"
+      aria-labelledby={groupLabelId}
+      className="flex flex-col gap-4"
+    >
+      {/* Name des Blocks, nicht der beiden Eingaben darin. Siehe
+          Klassenkopf: Beschriftung ja, Ueberschrift nein. */}
+      <div className="flex items-center gap-1">
+        <FieldTitle id={groupLabelId}>
+          {t("project.metadata.members.group")}
+        </FieldTitle>
+        {/* Was der Block ist und wann ein Eintrag zustande kommt, hinter
+            einem „i". Der Text haengt trotzdem am Feld: er ist eine
+            Anweisung zur Eingabe und darf nicht allein hinter einem Knopf
+            liegen (SC 3.3.2), deshalb steht er zusaetzlich unsichtbar da
+            und wird unten ueber aria-describedby verbunden. */}
+        <InfoHint
+          label={t("project.metadata.members.infoLabel")}
+          text={t("project.metadata.members.info")}
+          descriptionId={entryHintId}
+        />
+      </div>
+
       {/* Oben: Person, Bezeichnung und Knopf in einer Zeile. */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-2">
         <PersonCombobox
           className="flex-1"
           id={personInputId}
           label={t("project.metadata.members.person")}
-          labelSuffix={labelSuffix}
           value={pending}
           onChange={setPending}
           excludedIds={excludedIds}
           placeholder={t("project.metadata.members.personPlaceholder")}
           disabled={disabled}
           invalid={invalid}
-          describedBy={describedBy}
+          describedBy={personDescribedBy}
         />
 
         <Field className="flex-1">

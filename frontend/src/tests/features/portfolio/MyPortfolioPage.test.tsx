@@ -476,6 +476,33 @@ describe("MyPortfolioPage", () => {
     expect(
       screen.getAllByRole("button", { name: /^Zurückziehen:/ })
     ).toHaveLength(1)
+    /*
+     * Und die Kachel selbst fuehrt dorthin, wo sich etwas tun laesst: in
+     * den Editor, solange das Projekt nicht veroeffentlicht ist.
+     *
+     * <p>Bis dahin zielte jede Kachel auf die oeffentliche Seite, und die
+     * traegt seit KAN-104 keinen Weg mehr in den Editor oder in die
+     * Metadaten. Wer ein eingereichtes Projekt oeffnete, sah eine Vorschau,
+     * in der sich nichts tun liess, nicht einmal das Zurueckziehen; der
+     * Stift daneben gibt es nur in DRAFT und REVISION.
+     */
+    for (const project of [
+      DRAFT_PROJECT,
+      REVISION_PROJECT,
+      SUBMITTED_PROJECT,
+    ]) {
+      expect(
+        screen.getByRole("link", { name: project.title }),
+        project.title
+      ).toHaveAttribute("href", `/projects/${project.id}/editor`)
+    }
+    /* Die veroeffentlichte Kachel bleibt auf der oeffentlichen Seite: dort
+       ist sie die richtige Ansicht, und der Editor haette nichts zu
+       bearbeiten (§4.1). */
+    expect(
+      screen.getByRole("link", { name: PUBLISHED_PROJECT.title })
+    ).toHaveAttribute("href", `/projects/${PUBLISHED_PROJECT.id}`)
+
     /* Die veroeffentlichte Karte behaelt ihre Reaktionszahl. */
     expect(screen.getByText("58 Reaktionen")).toBeInTheDocument()
   })

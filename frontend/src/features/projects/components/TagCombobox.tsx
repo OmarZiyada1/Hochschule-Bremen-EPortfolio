@@ -7,6 +7,7 @@ import { tagQueries } from "@/api/queries/tags"
 import { useApiErrorMessage } from "@/api/useApiErrorMessage"
 import { Tag } from "@/components/common/Tag"
 import { Button } from "@/components/ui/button"
+import { InfoHint } from "@/components/common/InfoHint"
 import {
   Combobox,
   ComboboxContent,
@@ -171,11 +172,22 @@ export function TagCombobox({
   )
 
   const typed = normalized(query)
-  const creatable =
+
+  /*
+   * Laesst sich das Getippte ueberhaupt aufnehmen? Die Frage ist nicht
+   * dieselbe wie „gehoert ein Anlege-Eintrag in die Liste": ein Wort, das
+   * genauso schon als Vorschlag dasteht, ist aufnehmbar, aber nicht neu
+   * anzulegen. Die Eingabetaste braucht die erste Fassung, die Liste die
+   * zweite.
+   */
+  const addableTyped =
     !limitReached &&
     typed !== "" &&
     typed.length <= MAX_TAG_LENGTH &&
-    !chosen.has(comparable(typed)) &&
+    !chosen.has(comparable(typed))
+
+  const creatable =
+    addableTyped &&
     !options.some((name) => comparable(name) === comparable(typed))
 
   const items = useMemo(
@@ -211,12 +223,22 @@ export function TagCombobox({
 
   return (
     <Field className={className}>
-      <FieldLabel
-        htmlFor={inputId}
-        className="type-label-xs text-muted-foreground uppercase"
-      >
-        {label ?? t("project.tags.label")}
-      </FieldLabel>
+      <div className="flex items-center gap-1">
+        <FieldLabel
+          htmlFor={inputId}
+          className="type-label-xs text-muted-foreground uppercase"
+        >
+          {label ?? t("project.tags.label")}
+        </FieldLabel>
+        {/* Die Obergrenze hinter einem „i": sie gilt immer und aendert sich
+            nie, stand aber als eigene Zeile unter jedem Feld. Erreicht ist
+            sie dagegen eine Nachricht und bleibt sichtbar (unten). */}
+        <InfoHint
+          label={t("project.tags.maxLabel")}
+          text={t("project.tags.max", { max: MAX_TAGS })}
+          descriptionId={hintId}
+        />
+      </div>
 
       <Combobox
         items={items}
@@ -236,9 +258,52 @@ export function TagCombobox({
       >
         <ComboboxInput
           id={inputId}
+          /* Dieselbe Hoehe wie Personensuche und Auswahlfelder. InputGroup
+             steht auf h-8, und ohne diese Zeile sass das Schlagwortfeld
+             sichtbar niedriger als jedes andere Feld daneben. Gesetzt wie
+             in der PersonCombobox. */
+          className="h-11"
           aria-describedby={hintId}
           disabled={disabled}
           placeholder={t("project.tags.placeholder")}
+          onKeyDown={(event) => {
+            /*
+             * Die Eingabetaste nimmt auf, statt das Formular abzuschicken.
+             *
+             * <p>Base UI laesst die implizite Absendung ausdruecklich zu,
+             * solange kein Vorschlag hervorgehoben ist („Allow form
+             * submission when no item is highlighted", ComboboxInput). Im
+             * Metadatenformular hiess das: wer ein Schlagwort tippt und
+             * Enter drueckt, loest „Speichern & weiter zum Editor" aus, und
+             * das Getippte ist weg, ohne je aufgenommen worden zu sein.
+             * Derselbe Befund wie am Rollenfeld der Projektmitglieder.
+             *
+             * <p>Ein hervorgehobener Vorschlag gehoert dagegen der
+             * Primitive: sie waehlt ihn und unterdrueckt die Absendung
+             * dabei selbst. Erkennbar ist er an aria-activedescendant, das
+             * die virtuelle Fokusfuehrung am Eingabefeld setzt.
+             *
+             * <p>Ist nichts aufzunehmen (leeres Feld, Obergrenze erreicht,
+             * Schlagwort steht schon da), bleibt es bei der Absendung:
+             * ein Enter, das gar nichts tut, waere die schlechtere Antwort.
+             */
+            if (event.key !== "Enter") {
+              return
+            }
+            if (event.currentTarget.getAttribute("aria-activedescendant")) {
+              return
+            }
+            if (!addableTyped) {
+              return
+            }
+            event.preventDefault()
+            /* Steht dasselbe Wort schon als Vorschlag da, wird dessen
+               Schreibweise aufgenommen und nicht die getippte. */
+            const exact = options.find(
+              (name) => comparable(name) === comparable(typed)
+            )
+            add(exact ?? typed)
+          }}
         />
         <ComboboxContent>
           <ComboboxList>
@@ -265,11 +330,14 @@ export function TagCombobox({
        * Sichtbar und zugleich Live-Region: Wer die Obergrenze erreicht,
        * soll den Grund lesen koennen und nicht nur ein Feld vorfinden, das
        * nichts mehr annimmt (SC 4.1.3, Ticket KAN-75).
+       *
+       * <p>Immer gerendert und nicht bedingt: eine Live-Region, die erst
+       * mit ihrer Nachricht entsteht, sagt sie nicht zuverlaessig an.
+       * {@code empty:hidden} nimmt ihr dafuer den Platz, solange sie
+       * schweigt.
        */}
-      <FieldDescription id={hintId} aria-live="polite">
-        {limitReached
-          ? t("project.tags.limitReached", { max: MAX_TAGS })
-          : t("project.tags.max", { max: MAX_TAGS })}
+      <FieldDescription aria-live="polite" className="empty:hidden">
+        {limitReached ? t("project.tags.limitReached", { max: MAX_TAGS }) : ""}
       </FieldDescription>
 
       {/*

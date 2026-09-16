@@ -112,6 +112,10 @@ export function Top10AuditList({
                        eines Abschnitts der Top-10-Verwaltung steht und
                        deshalb bei Ebene 3 bleibt. */
                     <h2 className="type-body font-semibold">
+                      {/* Ohne projectHref: der Protokolleintrag fuehrt das
+                          Projekt nur mit id und title, den Status kennt er
+                          nicht. Ein Weg nach Status liesse sich hier nur
+                          raten, und der Endpoint gibt ihn nicht her. */}
                       <Link
                         to={`/projects/${entry.project.id}`}
                         state={origin}

@@ -34,7 +34,6 @@ import { cn } from "@/lib/utils"
  */
 export function ProjectInfoSection({
   project,
-  showEmptyFields = false,
   defaultOpen = false,
   open,
   onOpenChange,
@@ -42,12 +41,6 @@ export function ProjectInfoSection({
   className,
 }: {
   project: ProjectDetailResponse
-  /**
-   * Auch leere Felder zeigen. Beim Schreiben sagt die vollstaendige Liste,
-   * was eingetragen ist und was nicht, und sie springt nicht, sobald ein
-   * Feld gefuellt wird; beim Lesen bleibt es beim Weglassen.
-   */
-  showEmptyFields?: boolean
   defaultOpen?: boolean
   /**
    * Gesteuert statt selbst verwaltet. Gesetzt, wo der Aufklapper zu einem
@@ -88,10 +81,11 @@ export function ProjectInfoSection({
         </CollapsibleTrigger>
       </h2>
       <CollapsibleContent className="flex flex-col gap-4 pt-4">
-        <ProjectMetaSidebar
-          project={project}
-          showEmptyFields={showEmptyFields}
-        />
+        {/* Ob leere Felder als Strichzeile stehenbleiben, entscheidet
+            die Sidebar selbst am Status des Projekts. Ein Schalter je
+            Verwendungsstelle beantwortete dieselbe Frage dreimal
+            verschieden. */}
+        <ProjectMetaSidebar project={project} />
         {action}
       </CollapsibleContent>
     </Collapsible>

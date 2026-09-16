@@ -23,11 +23,24 @@ export function CharacterCounter({
   value,
   max,
   id,
+  quiet = false,
   className,
 }: {
   value: string
   max: number
   id?: string
+  /**
+   * Sichtbar erst, wenn es knapp wird.
+   *
+   * <p>Eine Zahl, die von Anfang an dasteht und fast nie stimmt („noch 827
+   * Zeichen"), ist eine Zeile Text je Feld, ohne dass jemand danach gefragt
+   * haette. Mit {@code quiet} erscheint sie an derselben Schwelle, an der
+   * auch die Ansage einsetzt, also im letzten Zehntel; die Ansage selbst
+   * bleibt unveraendert. Dieselbe Ueberlegung wie an der Kopfpartie des
+   * Editors (KAN-104), nur ohne die Grenze bis ganz nach hinten zu
+   * schieben: wer die letzten Zeichen tippt, will die Zahl sehen.
+   */
+  quiet?: boolean
   className?: string
 }) {
   const { t } = useTranslation()
@@ -42,9 +55,21 @@ export function CharacterCounter({
 
   return (
     <>
+      {/*
+       * Immer gerendert, im stillen Zustand nur unsichtbar. Wuerde das
+       * Element wegfallen, zeigte das aria-describedby des Feldes daneben
+       * ins Leere, und die Hoechstlaenge waere fuer Hilfsmittel bis zehn
+       * Zeichen vor Schluss nirgends zu erfahren (Befund des
+       * frontend-reviewers). Aus dem Blickfeld ist sie trotzdem.
+       */}
       <FieldDescription
         id={id}
-        className={cn("tabular-nums", over && "text-destructive", className)}
+        className={cn(
+          "tabular-nums",
+          quiet && remaining > threshold && "sr-only",
+          over && "text-destructive",
+          className
+        )}
       >
         {label}
       </FieldDescription>

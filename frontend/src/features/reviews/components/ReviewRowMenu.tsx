@@ -101,19 +101,30 @@ export function ReviewRowMenu({
 
         <DropdownMenuContent align="end">
           {/* Kein Eintrag „Anzeigen": der Projektname der Zeile ist bereits
-              der Weg auf die Detailseite, und ein zweiter daneben sagt
-              dasselbe ein zweites Mal. */}
-          <DropdownMenuItem
-            render={
-              <Link to={`/projects/${project.id}/review`} state={origin} />
-            }
-            nativeButton={false}
-          >
-            <MessageSquareIcon aria-hidden="true" />
-            {t("review.list.row.review")}
-          </DropdownMenuItem>
+              der Weg ins Projekt, und ein zweiter daneben sagt dasselbe ein
+              zweites Mal.
 
-          <DropdownMenuSeparator />
+              Aus demselben Grund steht „Ueberpruefen" nur noch bei einem
+              veroeffentlichten Projekt: in jedem anderen Status fuehrt der
+              Zeilentitel selbst in die Reviewansicht (siehe
+              {@code projectHref}), und der Eintrag waere der zweite Weg an
+              dieselbe Adresse. Bei PUBLISHED traegt er, dort fuehrt der
+              Titel auf die oeffentliche Seite. */}
+          {project.status === "PUBLISHED" && (
+            <>
+              <DropdownMenuItem
+                render={
+                  <Link to={`/projects/${project.id}/review`} state={origin} />
+                }
+                nativeButton={false}
+              >
+                <MessageSquareIcon aria-hidden="true" />
+                {t("review.list.row.review")}
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+            </>
+          )}
 
           <NominateMenuItem
             blocked={blocked}

@@ -582,6 +582,30 @@ function ProjectInfoPanel({ project }: { project: ProjectDetailResponse }) {
   const { user } = useAuth()
 
   /*
+   * Welcher der beiden Kaesten offen ist. Ein einziger Wert fuer beide, wie
+   * in {@code ProjectSidePanels}: ein Akkordeon ist eine Aussage ueber das
+   * Paar und nicht ueber ein Glied.
+   *
+   * <p>Voreingestellt die Kommentare, wo es sie gibt. Sie sind der Grund,
+   * aus dem eine Autor:in diese Seite in einem nicht veroeffentlichten
+   * Status oeffnet; die Angaben daneben stehen ohnehin auch im Editor. Bei
+   * {@code PUBLISHED} gibt es keinen Kommentarkasten, dort bleiben die
+   * Angaben offen, sonst staende eine Karte da, in der nichts offen ist.
+   */
+  const hasComments = user !== null && project.status !== "PUBLISHED"
+  const [panel, setPanel] = useState<"info" | "comments" | null>("comments")
+  /*
+   * Abgeleitet und nicht beim Montieren einmal gesetzt: der Status kann
+   * waehrend der Anzeige nach PUBLISHED wechseln (ein Refetch beim
+   * Fensterwechsel genuegt), und ebenso kann die Sitzung ablaufen. Dann
+   * faellt der Kommentarkasten weg, und ein festgeschriebenes "comments"
+   * liesse genau die Karte stehen, in der nichts offen ist. Dieselbe
+   * Ableitung wie in {@code ProjectSidePanels} (Befund des
+   * frontend-reviewers).
+   */
+  const open = panel === "comments" && !hasComments ? "info" : panel
+
+  /*
    * Kein Umschalter mehr an dieser Stelle (KAN-104). Bis dahin stand hier
    * der Rueckweg in den Editor und, mit einem Herkunftsvermerk in der
    * Adresse, der Rueckweg in die Reviewansicht: beide Ansichten fuehrten
@@ -619,27 +643,36 @@ function ProjectInfoPanel({ project }: { project: ProjectDetailResponse }) {
        * nicht wegklappen, obwohl der Kommentarkasten unmittelbar darunter
        * es konnte.
        *
-       * <p>Aufgeklappt als Vorgabe: auf dieser Seite sind die Angaben Teil
-       * der Auskunft ueber das Projekt und keine Nachschlagesache wie im
-       * Review-Modus. Der Anblick bleibt damit derselbe wie zuvor, nur laesst
-       * er sich jetzt einklappen.
+       * <p>Aufgeklappt, wo es keinen Kommentarkasten gibt, also bei einem
+       * veroeffentlichten Projekt und ohne Anmeldung: dort sind die Angaben
+       * die Auskunft ueber das Projekt, und eine Karte, in der nichts offen
+       * ist, waere die schlechtere Antwort. Sonst stehen die Kommentare
+       * offen, siehe unten.
        *
-       * <p><strong>ProjectInfoSection allein und nicht ProjectSidePanels.</strong>
-       * Das Akkordeon dort ist eine Aussage ueber ein <em>Paar</em>: hoechstens
-       * einer der beiden Kaesten steht offen. Hier stehen zwischen den beiden
-       * die Reaktionen, und der Kommentarkasten bleibt
-       * bewusst offen (siehe unten), weil diese Seite fuer die Autor:in eines
-       * eingereichten Projekts der einzige Ort mit ihren Aenderungswuenschen
-       * ist. Ausserdem haengt er hier zusaetzlich an der Anmeldung; diese
-       * Bedingung in ProjectSidePanels hineinzureichen hiesse, eine Regel zu
-       * fuehren, die nur einer von drei Verwendungsstellen gehoert.
+       * <p><strong>Hoechstens einer der beiden Kaesten steht offen</strong>,
+       * wie im Editor und in der Reviewansicht. Bis dahin standen hier beide
+       * offen, und zwar mit Grund: diese Seite war fuer die Autor:in eines
+       * eingereichten Projekts der einzige Ort mit ihren Aenderungswuenschen,
+       * weil weder Editor noch Reviewansicht erreichbar waren. Dieser Grund
+       * ist entfallen, seit die eigene Kachel eines nicht veroeffentlichten
+       * Projekts in den Editor fuehrt (siehe {@code projectHref}).
+       *
+       * <p><strong>Der Zustand liegt hier und nicht in ProjectSidePanels.</strong>
+       * Zwischen den beiden Kaesten stehen auf dieser Seite die Reaktionen,
+       * und der Kommentarkasten haengt zusaetzlich an der Anmeldung; diese
+       * Bedingung dorthin hineinzureichen hiesse, eine Regel zu fuehren, die
+       * nur einer von drei Verwendungsstellen gehoert.
        *
        * <p>Zwei Instanzen, zwei Zustaende: die Karte ab lg und die Schublade
        * darunter fuehren je einen eigenen Aufklapper. Das ist gewollt, denn
        * sichtbar ist immer nur eine von beiden, und ein geteilter Zustand
        * verknuepfte zwei Flaechen, die einander nie begegnen.
        */}
-      <ProjectInfoSection project={project} defaultOpen />
+      <ProjectInfoSection
+        project={project}
+        open={open === "info"}
+        onOpenChange={(next) => setPanel(next ? "info" : null)}
+      />
 
       {/*
        * Die Kommentarspalte gehoert auch hierher (Nacharbeit an KAN-37).
@@ -661,12 +694,15 @@ function ProjectInfoPanel({ project }: { project: ProjectDetailResponse }) {
        * gar keiner. Was innerhalb davon sichtbar ist, entscheidet ohnehin
        * der Server (§6.1).
        */}
-      {user !== null && project.status !== "PUBLISHED" && (
+      {hasComments && (
         <>
           <hr />
-          {/* Aufgeklappt: hier ist die Spalte der einzige Ort, an dem die
-              Autor:in ihre Aenderungswuensche sieht. */}
-          <CommentPanel project={project} context="editor" defaultOpen />
+          <CommentPanel
+            project={project}
+            context="editor"
+            open={open === "comments"}
+            onOpenChange={(next) => setPanel(next ? "comments" : null)}
+          />
         </>
       )}
     </div>

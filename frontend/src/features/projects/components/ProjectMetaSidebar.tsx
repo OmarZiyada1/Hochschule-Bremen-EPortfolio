@@ -101,7 +101,7 @@ function MetaRow({
  * Contract v55), sonst nur fuer Beteiligte. Die Seite raet daran nichts
  * anhand der Rolle: {@code null} heisst „nicht sichtbar", eine leere Liste
  * dagegen „keine zugewiesen". Der Unterschied bleibt auch mit
- * {@code showEmptyFields} bestehen: eine leere Liste wird zur Strichzeile,
+ * der Statusregel bestehen: eine leere Liste wird zur Strichzeile,
  * ein {@code null} entfaellt weiterhin ganz, denn ein Strich behauptete
  * „keine zugewiesen", wo in Wahrheit nur die Sicht fehlt.
  *
@@ -112,19 +112,28 @@ function MetaRow({
  */
 export function ProjectMetaSidebar({
   project,
-  showEmptyFields = false,
 }: {
   project: ProjectDetailResponse
-  /**
-   * Ob Felder ohne Wert als Strichzeile stehenbleiben statt zu entfallen.
-   *
-   * <p>Standard ist die oeffentliche Lesart (entfallen). Der Editor setzt
-   * es, weil dort die vollstaendige Feldliste zeigt, was zum Einreichen noch
-   * fehlt.
-   */
-  showEmptyFields?: boolean
 }) {
   const { t, i18n } = useTranslation()
+
+  /*
+   * Ob Felder ohne Wert als Strichzeile stehenbleiben statt zu entfallen.
+   *
+   * <p><strong>Die Antwort haengt am Status und nicht am Ort.</strong> Bis
+   * dahin setzte allein der Editor einen Schalter dafuer, und dieselbe
+   * Angabe war im Editor eine Luecke und auf der Detailseite gar nicht da.
+   * Wer einen Entwurf oeffnete, sah nur die Felder, die schon gefuellt
+   * waren, und erfuhr an der Stelle, an der es zaehlt, gerade nicht, was zum
+   * Einreichen noch fehlt.
+   *
+   * <p>Ein nicht veroeffentlichtes Projekt bekommt ohnehin nur zu sehen, wer
+   * daran beteiligt ist oder es prueft (§5); die Statusbedingung trifft also
+   * genau die Leute, denen die Luecken etwas sagen. Ab {@code PUBLISHED}
+   * ist die Ansicht die oeffentliche, und dort sagt ein Strich nichts, was
+   * das Weglassen nicht auch sagt.
+   */
+  const showEmptyFields = project.status !== "PUBLISHED"
 
   /* Nur Monat und Jahr, wie im Template ("10/2025"): der Tag der
      Veroeffentlichung ist fuer die Einordnung einer Arbeit ohne Belang. */

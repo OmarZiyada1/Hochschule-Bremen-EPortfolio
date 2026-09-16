@@ -132,10 +132,16 @@ export type PersonValue = z.infer<typeof personValueSchema>
  * (§3.13).
  *
  * <p><strong>Die Bezeichnung ist seit Contract v65 freiwillig.</strong> Sie
- * kann spaeter eingetragen werden und ist keine Huerde beim Anlegen; die
- * Autor:in, die seit derselben Version als Zeile in dieser Liste steht,
- * traegt anfangs gar keine. Leerraum gilt als keine Angabe und wird zu
- * einer leeren Zeichenkette getrimmt; der Server macht daraus {@code null}.
+ * kann spaeter eingetragen werden und ist keine Huerde beim Anlegen.
+ * Leerraum gilt als keine Angabe und wird zu einer leeren Zeichenkette
+ * getrimmt; der Server macht daraus {@code null}.
+ *
+ * <p><strong>Die Autor:in steht nicht in dieser Liste.</strong> Mit v65 war
+ * sie kurzzeitig eine Mitgliedszeile, damit sie eine Bezeichnung tragen
+ * kann; v66 hat das zurueckgenommen (§3.13.1), weil §5 seine Rechte an der
+ * Unterscheidung zwischen Autor:in und Mitgliedern aufhaengt. Ihre ID in
+ * {@code members} ergibt weiterhin 400; ihre eigene Bezeichnung steht in
+ * {@code Project.authorRole} (§3.3).
  */
 const memberValueSchema = personValueSchema.extend({
   projectRole: z

@@ -30,9 +30,9 @@ describe("ProjectMetaSidebar", () => {
     expect(screen.queryByText("Fach / Modul")).not.toBeInTheDocument()
   })
 
-  it("zeigt mit showEmptyFields jedes Feld, leere mit einem Strich", () => {
+  it("zeigt an einem Entwurf jedes Feld, leere mit einem Strich", () => {
     renderWithProviders(
-      <ProjectMetaSidebar project={projectDetail()} showEmptyFields />
+      <ProjectMetaSidebar project={projectDetail({ status: "DRAFT" })} />
     )
 
     for (const label of [
@@ -55,10 +55,10 @@ describe("ProjectMetaSidebar", () => {
     renderWithProviders(
       <ProjectMetaSidebar
         project={projectDetail({
+          status: "DRAFT",
           semester: reference({ name: "WiSe 2025/26" }),
           author: person({ firstName: "Dev", lastName: "Studierende" }),
         })}
-        showEmptyFields
       />
     )
 
@@ -72,27 +72,52 @@ describe("ProjectMetaSidebar", () => {
        behauptete das Zweite (§3.3). */
     renderWithProviders(
       <ProjectMetaSidebar
-        project={projectDetail({ editors: null })}
-        showEmptyFields
+        project={projectDetail({ status: "DRAFT", editors: null })}
       />
     )
     expect(screen.queryByText("Redakteur:innen")).not.toBeInTheDocument()
 
     renderWithProviders(
       <ProjectMetaSidebar
-        project={projectDetail({ editors: [] })}
-        showEmptyFields
+        project={projectDetail({ status: "DRAFT", editors: [] })}
       />
     )
     expect(screen.getByText("Redakteur:innen")).toBeInTheDocument()
+  })
+
+  it("entscheidet am Status und nicht am Ort, ob Luecken sichtbar sind", () => {
+    /*
+     * Bis dahin setzte allein der Editor einen Schalter dafuer, und dieselbe
+     * Angabe war dort eine Luecke und auf der Detailseite gar nicht da. Wer
+     * einen Entwurf oeffnete, erfuhr an der Stelle, an der es zaehlt, gerade
+     * nicht, was zum Einreichen noch fehlt. Ein nicht veroeffentlichtes
+     * Projekt sieht ohnehin nur, wer beteiligt ist oder es prueft (§5).
+     */
+    for (const status of [
+      "DRAFT",
+      "SUBMITTED",
+      "APPROVED",
+      "REVISION",
+    ] as const) {
+      const { unmount } = renderWithProviders(
+        <ProjectMetaSidebar project={projectDetail({ status })} />
+      )
+      expect(screen.getByText("Studiengang"), status).toBeInTheDocument()
+      expect(valueUnder("Studiengang"), status).toBe("-Keine Angabe")
+      unmount()
+    }
+
+    renderWithProviders(
+      <ProjectMetaSidebar project={projectDetail({ status: "PUBLISHED" })} />
+    )
+    expect(screen.queryByText("Studiengang")).not.toBeInTheDocument()
   })
 
   it("zeigt kein leeres Veroeffentlichungsdatum", () => {
     /* Kein Metadatum, sondern ein Ergebnis des Zustandsautomaten (§4.1). */
     renderWithProviders(
       <ProjectMetaSidebar
-        project={projectDetail({ publishedAt: null })}
-        showEmptyFields
+        project={projectDetail({ status: "DRAFT", publishedAt: null })}
       />
     )
     expect(screen.queryByText("Veröffentlicht")).not.toBeInTheDocument()

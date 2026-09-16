@@ -34,6 +34,8 @@ import { submitProject } from "@/api/queries/projects"
 import { EditLockGate } from "@/features/project-content/components/EditLockGate"
 import { missingForSubmit } from "@/features/project-content/submitRequirements"
 import { useBreadcrumbTitle } from "@/routes/useBreadcrumb"
+import { projectHref } from "@/features/projects/projectRoutes"
+import { InfoHint } from "@/components/common/InfoHint"
 
 /** Wohin "Abbrechen" fuehrt: die eigene Projektliste. */
 const PORTFOLIO_PATH = "/my-portfolio"
@@ -196,7 +198,15 @@ export default function ProjectMetadataPage() {
        * die Meldung dazu zeigt das Formular an sich selbst.
        */
       const submitted = await submitProject(updated.id)
-      void navigate(`/projects/${submitted.id}`)
+      /*
+       * Nicht auf die oeffentliche Seite: das ist der haeufigste Weg zu
+       * einem frisch eingereichten eigenen Projekt, und dort gibt es seit
+       * KAN-104 keine Handlung mehr, nicht einmal das Zurueckziehen. Der
+       * Editor traegt beides, den Umschalter zwischen Vorschau und
+       * Bearbeiten und die Handlungen des Zustandsautomaten (Befund des
+       * frontend-reviewers).
+       */
+      void navigate(projectHref(submitted.id, submitted.status, "own"))
       return submitted
     } catch (saveError) {
       if (
@@ -269,39 +279,60 @@ export default function ProjectMetadataPage() {
           />
         ) : (
           <>
-            <h1 className="type-h2 font-semibold text-primary">
-              {submitting
-                ? t("projectContent.submit.title")
-                : t("project.metadata.heading")}
-            </h1>
+            <div className="flex items-center gap-1">
+              <h1 className="type-h2 font-semibold text-primary">
+                {submitting
+                  ? t("projectContent.submit.title")
+                  : t("project.metadata.heading")}
+              </h1>
+              {/*
+               * Was das Einreichen ausloest, steht hinter einem „i" neben
+               * der Ueberschrift. Der Kasten darunter sagte es bis dahin
+               * mit, erscheint aber nur noch, wenn Angaben fehlen: der
+               * Satz waere damit ausgerechnet im Regelfall verschwunden,
+               * also genau dann, wenn jemand wirklich einreicht. Eingereicht
+               * ist nicht mehr bearbeitbar (§4.1), und eine Rueckfrage gibt
+               * es nicht (Befund des frontend-reviewers).
+               */}
+              {submitting && (
+                <InfoHint
+                  label={t("projectContent.submit.descriptionLabel")}
+                  text={t("projectContent.submit.description")}
+                />
+              )}
+            </div>
 
             {/*
              * Was zum Einreichen noch fehlt, steht ueber dem Formular und
              * nicht erst in der Serverantwort. Der Server bleibt
              * verbindlich mit 400 PROJECT_INCOMPLETE; diese Liste sagt es
              * vorher, statt die Autor:in mit Feldnamen zurueckzuschicken.
+             *
+             * <p><strong>Nur, wenn wirklich etwas fehlt.</strong> Sonst
+             * stand hier ein Kasten, dessen Titel die Ueberschrift darueber
+             * Wort fuer Wort wiederholte und dessen Satz sagte, was die
+             * Schaltflaeche unten ohnehin sagt. Zwei Zeilen Text fuer eine
+             * Auskunft, die niemand gesucht hat.
              */}
-            {submitting && project !== undefined && (
-              <Alert>
-                <InfoIcon aria-hidden="true" />
-                <AlertTitle>
-                  {missingForSubmit(project).length > 0
-                    ? t("projectContent.submit.missingTitle")
-                    : t("projectContent.submit.title")}
-                </AlertTitle>
-                <AlertDescription>
-                  {missingForSubmit(project).length > 0
-                    ? t("projectContent.submit.missingDescription", {
-                        fields: missingForSubmit(project)
-                          .map((field) =>
-                            t(`projectContent.submit.field.${field}`)
-                          )
-                          .join(", "),
-                      })
-                    : t("projectContent.submit.description")}
-                </AlertDescription>
-              </Alert>
-            )}
+            {submitting &&
+              project !== undefined &&
+              missingForSubmit(project).length > 0 && (
+                <Alert>
+                  <InfoIcon aria-hidden="true" />
+                  <AlertTitle>
+                    {t("projectContent.submit.missingTitle")}
+                  </AlertTitle>
+                  <AlertDescription>
+                    {t("projectContent.submit.missingDescription", {
+                      fields: missingForSubmit(project)
+                        .map((field) =>
+                          t(`projectContent.submit.field.${field}`)
+                        )
+                        .join(", "),
+                    })}
+                  </AlertDescription>
+                </Alert>
+              )}
 
             {detail.isPending ? (
               <div className="grid gap-8 lg:grid-cols-[3fr_4fr]">
@@ -345,6 +376,12 @@ export default function ProjectMetadataPage() {
                   key={`${project.id}-${project.version}`}
                   project={project}
                   disabled={!isEditable(project.status)}
+                  /* Auf dem Einreichweg markiert das Formular die Schritte,
+                     in denen eine Pflichtangabe aus §3.3 fehlt, und haelt
+                     den obersten davon offen. Der Hinweis darueber zaehlt
+                     sie auf; ohne die Markierung naennte er Felder, die in
+                     zugeklappten Schritten stehen. */
+                  highlightMissingForSubmit={submitting}
                   onUploadCoverImage={async (file) => {
                     const stored = await uploadCover.mutateAsync(file)
                     return stored.url

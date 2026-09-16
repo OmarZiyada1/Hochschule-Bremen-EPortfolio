@@ -362,6 +362,35 @@ describe("ReviewListPage", () => {
     expect(sent).toHaveLength(1)
   })
 
+  it("fuehrt die Zeile nach Status: Reviewansicht, veroeffentlicht auf die oeffentliche Seite", async () => {
+    /*
+     * Bis dahin zielte der Zeilentitel immer auf die oeffentliche Seite,
+     * und die traegt seit KAN-104 keine Redaktionswerkzeuge mehr. Wer eine
+     * Zeile anklickte, landete auf einer Ansicht, in der sich nichts
+     * pruefen liess, waehrend der Menueintrag daneben an die richtige
+     * Adresse fuehrte.
+     */
+    const published = projectCard({
+      ...ASSIGNED,
+      id: "pr-published",
+      title: "SolarLab",
+      status: "PUBLISHED",
+    })
+    server.use(...baseHandlers({ projects: [ASSIGNED, published] }))
+
+    renderWithProviders(<ReviewListPage />, "/reviews")
+
+    expect(
+      await screen.findByRole("link", { name: "RoboNav" })
+    ).toHaveAttribute("href", `/projects/${ASSIGNED.id}/review`)
+    /* Ein veroeffentlichtes Projekt bleibt auf der oeffentlichen Seite:
+       dort ist sie die richtige Ansicht. */
+    expect(screen.getByRole("link", { name: "SolarLab" })).toHaveAttribute(
+      "href",
+      "/projects/pr-published"
+    )
+  })
+
   it("fuehrt im Zeilenmenue keinen Eintrag Anzeigen mehr", async () => {
     server.use(...baseHandlers({ projects: [ASSIGNED] }))
 
@@ -374,11 +403,16 @@ describe("ReviewListPage", () => {
       })
     )
 
-    /* Der Projektname der Zeile ist bereits der Weg auf die Detailseite
-       (Nutzerentscheidung zur Nacharbeit an KAN-37). */
+    /*
+     * Der Projektname der Zeile ist bereits der Weg ins Projekt
+     * (Nutzerentscheidung zur Nacharbeit an KAN-37), und solange es nicht
+     * veroeffentlicht ist, fuehrt er in die Reviewansicht. Deshalb steht
+     * dort auch kein Eintrag „Ueberpruefen" mehr: er fuehrte an dieselbe
+     * Adresse (Befund des frontend-reviewers).
+     */
     expect(
-      await screen.findByText(i18n.t("review.list.row.review"))
-    ).toBeInTheDocument()
+      screen.queryByText(i18n.t("review.list.row.review"))
+    ).not.toBeInTheDocument()
     /* Woertlich und nicht ueber einen i18n-Schluessel: der Schluessel ist
        mit dem Eintrag entfallen, und t() gaebe sonst den Schluesselnamen
        zurueck, den die Seite nie rendert. Der Test waere stumm gruen. */

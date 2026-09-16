@@ -150,15 +150,21 @@ export function AdminProjectRowMenu({
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            render={
-              <Link to={`/projects/${project.id}/review`} state={origin} />
-            }
-            nativeButton={false}
-          >
-            <MessageSquareIcon aria-hidden="true" />
-            {t("administration.projects.row.open")}
-          </DropdownMenuItem>
+          {/* Nur bei einem veroeffentlichten Projekt: in jedem anderen
+              Status fuehrt der Zeilentitel selbst in die Reviewansicht
+              (siehe {@code projectHref}), und der Eintrag waere der zweite
+              Weg an dieselbe Adresse. */}
+          {project.status === "PUBLISHED" && (
+            <DropdownMenuItem
+              render={
+                <Link to={`/projects/${project.id}/review`} state={origin} />
+              }
+              nativeButton={false}
+            >
+              <MessageSquareIcon aria-hidden="true" />
+              {t("administration.projects.row.open")}
+            </DropdownMenuItem>
+          )}
 
           <DropdownMenuItem
             onClick={() => onAssignEditors(triggerRef)}

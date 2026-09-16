@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils"
  */
 export function ProjectCard({
   project,
+  href,
   showStatus = false,
   headingLevel = 3,
   action,
@@ -45,6 +46,16 @@ export function ProjectCard({
 }: {
   /** Kacheldaten, unveraendert aus der Listen- oder Top-10-Antwort (§6.1). */
   project: ProjectCardResponse
+  /**
+   * Wohin die Kachel fuehrt. Ohne Angabe die oeffentliche Seite.
+   *
+   * <p>Entschieden wird das von der Seite und nicht hier: die Kachel weiss
+   * nicht, aus welcher Liste sie kommt, und genau daran haengt die Antwort
+   * (siehe {@code projectHref}). Unter „Mein Portfolio" fuehrt ein nicht
+   * veroeffentlichtes Projekt in den Editor, in der Projektliste gibt es
+   * ohnehin nur Veroeffentlichtes.
+   */
+  href?: string
   /** Status-Badge zeigen? Entscheidet die Seite nach §5, nicht die Kachel. */
   showStatus?: boolean
   /** Ebene der Titel-Ueberschrift, passend zur Seite darum herum. */
@@ -60,6 +71,10 @@ export function ProjectCard({
   action?: ReactNode
   className?: string
 }) {
+  /* Ohne Angabe die oeffentliche Seite: das ist das Ziel jeder Liste, in
+     der ohnehin nur Veroeffentlichtes steht. */
+  const target = href ?? `/projects/${project.id}`
+
   const { t } = useTranslation()
   const Heading = `h${headingLevel}` as "h2" | "h3"
 
@@ -158,10 +173,7 @@ export function ProjectCard({
           {/* Router-Link statt rohem Anker: ein roher href laedt die ganze
               Anwendung neu und wirft Query-Cache und Scrollposition weg
               (Review zu KAN-31, analog Top10Card). */}
-          <Link
-            to={`/projects/${project.id}`}
-            className="hover:underline focus-visible:underline"
-          >
+          <Link to={target} className="hover:underline focus-visible:underline">
             {project.title}
           </Link>
         </Heading>
@@ -226,7 +238,7 @@ export function ProjectCard({
       </CardContent>
 
       {/* Die ganze Kachel fuehrt ins Projekt, nicht nur der Titel (KAN-80). */}
-      <CardLinkOverlay to={`/projects/${project.id}`} />
+      <CardLinkOverlay to={target} />
     </Card>
   )
 }

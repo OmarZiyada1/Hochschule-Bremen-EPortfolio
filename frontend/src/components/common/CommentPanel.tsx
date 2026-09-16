@@ -157,10 +157,13 @@ export function CommentPanel({
    */
   context?: "review" | "editor"
   /**
-   * Aufgeklappt starten, unabhaengig von Ort und Status. Gesetzt von der
-   * Projektdetailseite: dort ist die Spalte der einzige Ort, an dem die
-   * Autor:in ihre Aenderungswuensche sieht, und ein zugeklappter Kasten
-   * verstuende sich als Nebensache. Ohne Angabe gilt die Regel unten.
+   * Aufgeklappt starten, unabhaengig von Ort und Status. Ohne Angabe gilt
+   * die Regel unten.
+   *
+   * <p>Zurzeit setzt es niemand: die Projektdetailseite hat es benutzt und
+   * steuert die Spalte inzwischen ueber {@code open} und
+   * {@code onOpenChange}, weil sie mit den Projektinformationen ein
+   * Akkordeon bildet.
    */
   defaultOpen?: boolean
   /**

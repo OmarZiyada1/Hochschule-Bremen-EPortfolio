@@ -74,6 +74,7 @@ import {
   statusQueryValue,
 } from "@/features/portfolio/ownProjectStatus"
 import { paginationItems } from "@/features/projects/paginationItems"
+import { projectHref } from "@/features/projects/projectRoutes"
 
 /* Entprellzeit der Suche: kein Request je Tastenanschlag (Skill frontend-api). */
 const SEARCH_DEBOUNCE_MS = 300
@@ -411,9 +412,7 @@ export default function AdminProjectListPage() {
 
       {list.error !== null && <ErrorState error={list.error} />}
 
-      {rowError !== null && (
-        <ErrorState message={rowError} />
-      )}
+      {rowError !== null && <ErrorState message={rowError} />}
 
       {list.isPending && (
         <Card>
@@ -496,7 +495,12 @@ export default function AdminProjectListPage() {
                   <ProjectTableRow
                     key={project.id}
                     title={project.title}
-                    href={`/projects/${project.id}`}
+                    /* Wie in der Reviewliste: solange nicht veroeffentlicht,
+                       in die Reviewansicht. Ein Admin darf jedes Projekt
+                       lesen (§5), landet dort also nie auf einer
+                       Fehlermeldung; bei einem fremden Entwurf steht das
+                       Statusmenue mit begruendet gesperrten Eintraegen. */
+                    href={projectHref(project.id, project.status, "review")}
                     author={project.author}
                     studyProgram={project.studyProgram}
                     semester={project.semester?.name}

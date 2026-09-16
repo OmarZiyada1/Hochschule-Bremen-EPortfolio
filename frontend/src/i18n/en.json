@@ -722,7 +722,8 @@
       "limitReached": "More than {{max}} tags are not possible. Remove one to add another.",
       "remove": "Remove {{name}}",
       "hits_one": "{{count}} suggestion",
-      "hits_other": "{{count}} suggestions"
+      "hits_other": "{{count}} suggestions",
+      "maxLabel": "How many tags are allowed?"
     },
     "card": {
       "reactions_one": "{{count}} reaction",
@@ -840,7 +841,8 @@
       "readOnlyForeign": "This project is not yours: only the author and the project members can change its metadata. As assigned editorial staff, use the review mode to give feedback.",
       "preview": {
         "heading": "Preview",
-        "hint": "These entries determine how the project appears in lists and on cards, not the project content itself."
+        "hint": "These entries determine how the project appears in lists and on cards, not the project content itself.",
+        "hintLabel": "What is the preview for?"
       },
       "title": {
         "label": "Project title",
@@ -861,7 +863,6 @@
         "tooLarge": "The file is larger than {{max}} MB."
       },
       "requiredForSubmit": {
-        "legend": "Entries marked with * are only needed for submission, not for saving.",
         "marker": "required for submission"
       },
       "select": {
@@ -911,10 +912,12 @@
         "remove": "Remove {{name}} from the project members",
         "chosen": "Added project members",
         "invalid": "Please check the project member entries.",
-        "required": "required",
         "addButton": "Add member",
         "added": "{{name}} added.",
-        "none": "No members added yet."
+        "none": "No members added yet.",
+        "group": "Project members",
+        "infoLabel": "What are project members?",
+        "info": "Co-authors and contributors. Once a person is selected, the entry can be added; the role is optional."
       },
       "notFound": {
         "title": "Project not found",
@@ -935,7 +938,22 @@
       },
       "untitledTitle": "Untitled project",
       "creating": "The project is being created …",
-      "changeRequestsOpenAction": "Go to the open change requests in the editor"
+      "changeRequestsOpenAction": "Go to the open change requests in the editor",
+      "steps": {
+        "hint": "None of the three steps has to be filled in before saving. Entries marked with * are only needed for submission.",
+        "eyebrow": "Step {{number}}",
+        "flagged": "Please check",
+        "editorial": {
+          "title": "Editorial & members"
+        },
+        "classification": {
+          "title": "Classification"
+        },
+        "topics": {
+          "title": "Project type & topics"
+        },
+        "hintLabel": "What does the asterisk mean?"
+      }
     }
   },
   "portfolio": {
@@ -1406,7 +1424,8 @@
         "categoryId": "Category",
         "semesterId": "Semester",
         "editorIds": "Editorial assignment"
-      }
+      },
+      "descriptionLabel": "What happens when submitting?"
     },
     "withdraw": {
       "title": "Withdraw submission?",

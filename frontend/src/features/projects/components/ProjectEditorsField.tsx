@@ -62,6 +62,7 @@ const ASSIGNABLE_ROLES: readonly Role[] = ["EDITOR", "ADMIN"]
 export function ProjectEditorsField({
   value,
   onChange,
+  id,
   currentUserId,
   authorId,
   memberIds = NO_IDS,
@@ -73,6 +74,14 @@ export function ProjectEditorsField({
 }: {
   value: PersonValue[]
   onChange: (next: PersonValue[]) => void
+  /**
+   * ID des Suchfeldes, also des Bedienelements, das den Fokus bekommt.
+   * Der Stepper braucht sie: schlaegt das Absenden fehl, springt der Fokus
+   * in das erste beanstandete Feld des aufgeklappten Schrittes, und dafuer
+   * muss die aufrufende Stelle das Feld benennen koennen (KAN-103). Ohne
+   * Angabe wie bisher eine erzeugte, wie in der {@code TagCombobox}.
+   */
+  id?: string
   /** Eigenes Konto, wird aus der Vorschlagsliste ausgeblendet. */
   currentUserId?: string
   /** Die Autor:in; sie gehoert zur Projektseite und steht nicht zur Wahl. */
@@ -92,7 +101,8 @@ export function ProjectEditorsField({
   labelSuffix?: ReactNode
 }) {
   const { t } = useTranslation()
-  const inputId = useId()
+  const generatedId = useId()
+  const inputId = id ?? generatedId
   const listLabelId = `${inputId}-chosen`
 
   const locked = disabled || readOnlyReason !== undefined

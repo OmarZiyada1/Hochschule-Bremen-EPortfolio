@@ -25,6 +25,7 @@ import {
   type StatusFilterValue,
 } from "@/features/portfolio/ownProjectStatus"
 import { cn } from "@/lib/utils"
+import { projectHref } from "@/features/projects/projectRoutes"
 
 /**
  * "My Portfolio" nach dem gleichnamigen Template (KAN-34): eigene Projekte
@@ -215,6 +216,14 @@ export default function MyPortfolioPage() {
                         Status: das Verlassen (KAN-83). */}
                       <ProjectCard
                         project={project}
+                        /* Solange nicht veroeffentlicht, fuehrt die eigene
+                           Kachel in den Editor: dort stehen der Umschalter
+                           zwischen Vorschau und Bearbeiten und die
+                           Handlungen des Zustandsautomaten. Die oeffentliche
+                           Seite traegt seit KAN-104 keinen Weg mehr dorthin,
+                           und ein eingereichtes Projekt liess sich von ihr
+                           aus nicht einmal zurueckziehen. */
+                        href={projectHref(project.id, project.status, "own")}
                         showStatus
                         headingLevel={2}
                         action={

@@ -55,6 +55,7 @@ import {
   useTop10ProjectIds,
 } from "@/features/reviews/hooks/useReviews"
 import { useReviewWorkflow } from "@/features/reviews/hooks/useReviews"
+import { projectHref } from "@/features/projects/projectRoutes"
 import {
   readReviewState,
   REVIEW_STATUSES,
@@ -331,9 +332,7 @@ export default function ReviewListPage() {
         </Card>
       )}
 
-      {rowError !== null && (
-        <ErrorState message={rowError} />
-      )}
+      {rowError !== null && <ErrorState message={rowError} />}
 
       {list.data !== undefined && rows.length === 0 && (
         <EmptyState
@@ -522,7 +521,12 @@ function ReviewRow({
   return (
     <ProjectTableRow
       title={project.title}
-      href={`/projects/${project.id}`}
+      /* Solange nicht veroeffentlicht, in die Reviewansicht: dort steht,
+         wofuer die Zeile in dieser Liste da ist. Bis dahin fuehrte der
+         Zeilentitel auf die oeffentliche Seite und das Zeilenmenue
+         daneben in die Reviewansicht, also zwei Wege aus einer Zeile an
+         zwei verschiedene Orte. */
+      href={projectHref(project.id, project.status, "review")}
       author={project.author}
       studyProgram={project.studyProgram}
       semester={project.semester?.name}

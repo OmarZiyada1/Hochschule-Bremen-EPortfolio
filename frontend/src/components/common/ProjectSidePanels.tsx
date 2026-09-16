@@ -46,7 +46,6 @@ export function ProjectSidePanels({
   context,
   defaultPanel = "comments",
   infoAction,
-  showEmptyFields = false,
 }: {
   project: ProjectDetailResponse
   /** Kommentarzusammenhang (§2.4): bestimmt die anbietbaren Kommentararten. */
@@ -61,8 +60,6 @@ export function ProjectSidePanels({
   defaultPanel?: Panel
   /** Zusatzhandlung im Kopf der Projektinformationen, etwa „Angaben aendern". */
   infoAction?: ReactNode
-  /** Auch leere Felder zeigen; im Editor der Hinweis, was noch fehlt. */
-  showEmptyFields?: boolean
 }) {
   const [panel, setPanel] = useState<Panel>(defaultPanel)
 
@@ -83,7 +80,6 @@ export function ProjectSidePanels({
         open={open === "info"}
         onOpenChange={(next) => setPanel(next ? "info" : null)}
         action={infoAction}
-        showEmptyFields={showEmptyFields}
       />
 
       {hasComments && (

@@ -17,6 +17,7 @@ import {
 } from "@/features/reviews/nominations"
 import { fullNameOf } from "@/lib/name"
 import { useBreadcrumbOrigin } from "@/routes/useBreadcrumb"
+import { projectHref } from "@/features/projects/projectRoutes"
 
 /**
  * Die Nominierungen der Top-10-Verwaltung (Frame {@code Admin · Top 10},
@@ -128,7 +129,11 @@ function NominationRow({
 
           <h3 className="type-body font-semibold">
             <Link
-              to={`/projects/${nomination.project.id}`}
+              to={projectHref(
+                nomination.project.id,
+                nomination.project.status,
+                "review"
+              )}
               state={origin}
               className="text-primary hover:underline focus-visible:underline"
             >

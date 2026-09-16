@@ -378,23 +378,61 @@ describe("AdminProjectListPage", () => {
     })
   })
 
-  it("fuehrt die Zeilenaktion Oeffnen in den Review-Modus, nicht in den Editor", async () => {
+  it("behaelt den Menueintrag bei einem veroeffentlichten Projekt", async () => {
+    /*
+     * Dort fuehrt der Zeilentitel auf die oeffentliche Seite, der Eintrag
+     * ist also kein zweiter Weg an dieselbe Adresse, sondern der einzige in
+     * die Reviewansicht.
+     */
+    const published = {
+      ...DRAFT,
+      id: "pr-pub",
+      title: "SolarLab",
+      status: "PUBLISHED" as const,
+    }
+    server.use(...baseHandlers({ projects: [published] }))
+
+    const user = userEvent.setup()
+    renderWithProviders(<AdminProjectListPage />, "/administration/projects")
+
+    expect(
+      await screen.findByRole("link", { name: "SolarLab" })
+    ).toHaveAttribute("href", "/projects/pr-pub")
+
+    await user.click(
+      screen.getByRole("button", { name: "Aktionen für SolarLab" })
+    )
+    expect(
+      await screen.findByRole("menuitem", { name: "Im Review-Modus öffnen" })
+    ).toHaveAttribute("href", "/projects/pr-pub/review")
+  })
+
+  it("fuehrt die Zeile eines Entwurfs in den Review-Modus, nicht in den Editor", async () => {
     server.use(...baseHandlers({ projects: [DRAFT] }))
 
     const user = userEvent.setup()
     renderWithProviders(<AdminProjectListPage />, "/administration/projects")
 
-    await screen.findByText("AITutor")
+    /*
+     * Der Zeilentitel selbst traegt das Ziel, solange das Projekt nicht
+     * veroeffentlicht ist. Der Admin darf Inhalte fremder Projekte nicht
+     * bearbeiten, nur lesen und den Status wechseln (§7, offener Punkt 2).
+     */
+    expect(
+      await screen.findByRole("link", { name: "AITutor" })
+    ).toHaveAttribute("href", "/projects/pr-1/review")
+
+    /*
+     * Und der Menueintrag daneben entfaellt: er fuehrte an dieselbe
+     * Adresse wie der Titel und sagte damit dasselbe ein zweites Mal
+     * (Befund des frontend-reviewers).
+     */
     await user.click(
       screen.getByRole("button", { name: "Aktionen für AITutor" })
     )
-
-    /* Der Admin darf Inhalte fremder Projekte nicht bearbeiten, nur lesen
-       und den Status wechseln (§7, offener Punkt 2). */
-    const open = await screen.findByRole("menuitem", {
-      name: "Im Review-Modus öffnen",
-    })
-    expect(open).toHaveAttribute("href", "/projects/pr-1/review")
+    expect(
+      screen.queryByRole("menuitem", { name: "Im Review-Modus öffnen" })
+    ).not.toBeInTheDocument()
   })
 
   it("loescht erst nach Rueckfrage und meldet einen Fehler sichtbar", async () => {

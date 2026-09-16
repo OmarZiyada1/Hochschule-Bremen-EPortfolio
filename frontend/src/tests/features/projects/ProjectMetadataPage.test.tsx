@@ -254,6 +254,12 @@ describe("ProjectMetadataPage", () => {
       })
     )
 
+    /* Die Klassifikation steht seit KAN-103 in Schritt 2 und ist beim
+       Oeffnen der Seite zugeklappt. */
+    await user.click(
+      await screen.findByRole("button", { name: /Klassifikation/ })
+    )
+
     const studyProgram = await screen.findByLabelText(/Studiengang/)
     await waitFor(() => expect(studyProgram).toHaveTextContent("Informatik"))
 
@@ -338,7 +344,9 @@ describe("ProjectMetadataPage", () => {
 
     await user.click(await screen.findByLabelText(/^Mitglied/))
     await user.click(await screen.findByRole("option", { name: "Tom Busch" }))
-    await user.type(screen.getByLabelText(/^Rolle/), "Frontend")
+    /* Genau "Rolle" und nicht /^Rolle/: seit KAN-103 steht am Ende von
+       Schritt 1 zusaetzlich "Rolle der Autor:in". */
+    await user.type(screen.getByLabelText("Rolle"), "Frontend")
     await user.click(screen.getByRole("button", { name: "Mitglied aufnehmen" }))
 
     await waitFor(() =>
@@ -665,14 +673,17 @@ describe("ProjectMetadataPage", () => {
     await waitFor(() => expect(add).toBeEnabled())
 
     /*
-     * Nur die Person traegt die Pflichtkennzeichnung, und zwar als Text und
-     * nicht nur als Zeichen (SC 1.4.1). Der Text muss erreichbar sein: ein
-     * sr-only unter aria-hidden besteht getByText und wird trotzdem nie
-     * vorgelesen (Befund aus KAN-29).
+     * Kein Stern mehr an "Mitglied" (KAN-103). Er stand hier fuer etwas
+     * anderes als in der Klassifikation ("ohne Person kein Eintrag" statt
+     * "erforderlich zum Einreichen"), und Mitglieder sind weder zum
+     * Speichern noch zum Einreichen Pflicht. Was er sagen sollte, sagt
+     * jetzt ein Satz am Feld, sichtbar und nicht nur fuer Hilfsmittel.
      */
-    const markers = screen.getAllByText("Pflichtangabe")
-    expect(markers).toHaveLength(1)
-    expect(markers[0].closest("[aria-hidden]")).toBeNull()
+    expect(screen.queryByText("Pflichtangabe")).not.toBeInTheDocument()
+    /* Der Satz steht hinter dem „i", unsichtbar aber am Feld angebunden. */
+    expect(
+      screen.getByRole("button", { name: "Was sind Projektmitglieder?" })
+    ).toBeVisible()
   })
 
   it("oeffnet die Redaktionszuweisung auch fuer eine Autor:in mit der Rolle EDITOR (§5, Fussnote 3 seit v60)", async () => {
@@ -772,6 +783,107 @@ describe("ProjectMetadataPage auf dem Einreichweg (?submit=1)", () => {
       })
     ).toBeInTheDocument()
     expect(screen.getByText(/Redaktionszuweisung/)).toBeInTheDocument()
+  })
+
+  it("markiert nach 400 PROJECT_INCOMPLETE die Schritte, obwohl der geglueckte PUT das Formular neu aufbaut", async () => {
+    const user = userEvent.setup()
+    /*
+     * Der Fall, den nur ein Seitentest zeigt. Der Einreichweg macht zwei
+     * Aufrufe: erst PUT, dann POST /submit. Der PUT glueckt und erhoeht die
+     * version; die Seite haengt das Formular an key={id-version} (Ruecksetzen
+     * nach 409, §6.4), also wird die Instanz ausgehaengt und neu gebaut,
+     * bevor die Einreich-Antwort da ist. Alles, was der Fehlerzweig in den
+     * State schriebe, traefe eine weggeworfene Komponente.
+     *
+     * Deshalb rechnet das Formular die fehlenden Pflichtangaben aus seinem
+     * eigenen Stand statt sie sich zu merken. Genau das prueft dieser Test:
+     * ein Komponententest mit ablehnendem onSubmit kann es nicht, dort gibt
+     * es keinen key und damit keinen Neuaufbau (Befund des
+     * frontend-reviewers und des contract-pruefers).
+     */
+    const project = draft()
+    server.use(
+      detailHandler(project),
+      ...masterDataHandlers(),
+      http.put(`*/api/projects/${PROJECT_ID}`, () =>
+        HttpResponse.json({ ...project, version: project.version + 1 })
+      ),
+      http.post(`*/api/projects/${PROJECT_ID}/submit`, () =>
+        apiErrorResponse(
+          400,
+          "PROJECT_INCOMPLETE",
+          `/api/projects/${PROJECT_ID}/submit`
+        )
+      )
+    )
+    signInAs("STUDENT")
+    renderPage(`/projects/${PROJECT_ID}/metadata?submit=1`)
+
+    await user.click(
+      await screen.findByRole(
+        "button",
+        { name: "Speichern und einreichen" },
+        { timeout: 20000 }
+      )
+    )
+
+    /*
+     * Nach dem Neuaufbau: alle drei Schritte tragen die Markierung, und
+     * zwar als Text im Kopf und nicht allein ueber Farbe (SC 1.4.1). Am
+     * Entwurf fehlt jede der sieben Pflichtangaben aus §3.3.
+     */
+    for (const step of [
+      "Redaktion & Mitglieder",
+      "Klassifikation",
+      "Projekttyp & Themen",
+    ]) {
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: new RegExp(step) }),
+          step
+        ).toHaveAccessibleName(/Bitte prüfen/)
+      )
+    }
+
+    /* Und der oberste betroffene Schritt steht offen. */
+    expect(screen.getByLabelText(/^Redakteur:in/)).toBeVisible()
+    expect(screen.queryByLabelText(/^Fakultät/)).not.toBeInTheDocument()
+
+    /* Die Seite nennt daneben weiterhin, welche Angaben es sind. */
+    expect(screen.getByText(/Es fehlen noch Angaben/i)).toBeInTheDocument()
+  })
+
+  it("zeigt den Kasten nicht, wenn alle Pflichtangaben da sind", async () => {
+    /*
+     * Sonst stand dort ein Kasten, dessen Titel die Ueberschrift darueber
+     * Wort fuer Wort wiederholte. Was das Einreichen ausloest, steht
+     * stattdessen hinter dem „i" neben der Ueberschrift, und zwar in jedem
+     * Fall.
+     */
+    renderSubmitRoute(
+      draft({
+        projectType: "REGULAR",
+        faculty: reference({ id: "f-4", name: "Fakultät 4" }),
+        studyProgram: reference({ id: "sp-1", name: "Informatik" }),
+        degree: "BACHELOR",
+        category: reference({ id: "c-1", name: "Lehrveranstaltung" }),
+        semester: reference({ id: "s-1", name: "SoSe 2026" }),
+        editors: [
+          { id: "e-1", firstName: "Rana", lastName: "Adler", avatarUrl: null },
+        ],
+      })
+    )
+
+    expect(
+      await screen.findByRole(
+        "button",
+        { name: "Was passiert beim Einreichen?" },
+        { timeout: 20000 }
+      )
+    ).toBeVisible()
+    expect(
+      screen.queryByText(/Es fehlen noch Angaben/i)
+    ).not.toBeInTheDocument()
   })
 
   it("bietet drei Enden und benennt sie unterscheidbar", async () => {

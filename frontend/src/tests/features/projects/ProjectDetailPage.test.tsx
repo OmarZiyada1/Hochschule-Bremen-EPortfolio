@@ -1064,10 +1064,9 @@ describe("Die Projektinformationen", () => {
 
   it("laesst sie als Studierende auch bei SUBMITTED zu- und wieder aufklappen", async () => {
     /*
-     * Der gemeldete Fall. Bei SUBMITTED erreicht die Autor:in weder den
-     * Editor (kein Stift auf der Kachel) noch den
-     * Review-Modus (rollengesperrt); diese Seite ist der Ort, an den sie
-     * gefuehrt wird, und dort blieb die Liste stehen.
+     * Die lange Feldliste laesst sich wegklappen, wie im Editor und in der
+     * Reviewansicht. Bis KAN-83 stand sie hier als nackte Sidebar und blieb
+     * stehen, obwohl der Kommentarkasten unmittelbar darunter es konnte.
      */
     const user = userEvent.setup()
     signInAs("STUDENT")
@@ -1081,26 +1080,30 @@ describe("Die Projektinformationen", () => {
     renderPage()
     await screen.findByRole("heading", { level: 1 })
 
+    await user.click(infoTrigger())
     expect(infoTrigger()).toHaveAttribute("aria-expanded", "true")
+    expect(await screen.findByText("Digitalisierung")).toBeInTheDocument()
 
     await user.click(infoTrigger())
     expect(infoTrigger()).toHaveAttribute("aria-expanded", "false")
     await waitFor(() => {
       expect(screen.queryByText("Digitalisierung")).toBeNull()
     })
-
-    await user.click(infoTrigger())
-    expect(infoTrigger()).toHaveAttribute("aria-expanded", "true")
-    expect(await screen.findByText("Digitalisierung")).toBeInTheDocument()
   })
 
-  it("laesst den Kommentarkasten dabei offen", async () => {
+  it("haelt hoechstens einen der beiden Kaesten offen", async () => {
     /*
-     * Kein Akkordeon wie in Editor und Review-Modus: diese Seite ist fuer
-     * die Autor:in eines eingereichten Projekts der einzige Ort mit ihren
-     * Aenderungswuenschen, und die sollen nicht zugehen, weil jemand die
-     * Angaben einklappt. Zwischen beiden stehen ausserdem die Reaktionen,
-     * sie sind also gar kein Paar.
+     * Dieselbe Regel wie im Editor und in der Reviewansicht: ein Akkordeon
+     * ist eine Aussage ueber das Paar.
+     *
+     * <p>Bis dahin standen hier beide offen, und zwar mit Grund: diese Seite
+     * war fuer die Autor:in eines eingereichten Projekts der einzige Ort mit
+     * ihren Aenderungswuenschen, weil weder Editor noch Reviewansicht
+     * erreichbar waren. Der Grund ist entfallen, seit die eigene Kachel eines
+     * nicht veroeffentlichten Projekts in den Editor fuehrt.
+     *
+     * <p>Voreingestellt sind die Kommentare: sie sind der Grund, aus dem
+     * jemand diese Seite in einem nicht veroeffentlichten Status oeffnet.
      */
     const user = userEvent.setup()
     signInAs("STUDENT")
@@ -1118,11 +1121,32 @@ describe("Die Projektinformationen", () => {
       name: new RegExp(i18n.t("comment.panel.title")),
     })
     expect(comments).toHaveAttribute("aria-expanded", "true")
+    expect(infoTrigger()).toHaveAttribute("aria-expanded", "false")
 
     await user.click(infoTrigger())
 
-    expect(infoTrigger()).toHaveAttribute("aria-expanded", "false")
-    expect(comments).toHaveAttribute("aria-expanded", "true")
+    expect(infoTrigger()).toHaveAttribute("aria-expanded", "true")
+    expect(comments).toHaveAttribute("aria-expanded", "false")
+  })
+
+  it("laesst bei einem veroeffentlichten Projekt die Angaben offen", async () => {
+    /*
+     * Dort gibt es keinen Kommentarkasten (die Rueckmeldungen der Redaktion
+     * gehen die Oeffentlichkeit nichts an), und eine Karte, in der nichts
+     * offen ist, waere die schlechtere Antwort.
+     */
+    signInAs("STUDENT")
+    server.use(detailHandler(projectResponse({ status: "PUBLISHED" })))
+
+    renderPage()
+    await screen.findByRole("heading", { level: 1 })
+
+    expect(infoTrigger()).toHaveAttribute("aria-expanded", "true")
+    expect(
+      screen.queryByRole("button", {
+        name: new RegExp(i18n.t("comment.panel.title")),
+      })
+    ).not.toBeInTheDocument()
   })
 })
 
