@@ -160,6 +160,23 @@ else
 	fehlt "Docker startet nicht beim Hochfahren" "systemctl enable docker"
 fi
 
+# Der Aufraeum-Auftrag des Anbieters (KAN-106).
+#
+# Hostinger legt beim Aufsetzen /etc/cron.d/docker-image-prune an, im Original
+# mit "-af": das entfernt auch markierte Images und raeumte damit jede Nacht
+# die Rollback-Reserve ab, die die Ausrollung absichtlich liegen laesst.
+# Geprueft wird hier, dass kein "-a" mehr drinsteht; ein Update des Anbieters
+# koennte die Datei ersetzen, und das faellt sonst erst auf, wenn ein Rollback
+# das Image neu ziehen muss.
+PRUNE_AUFTRAG=/etc/cron.d/docker-image-prune
+if [ -f "$PRUNE_AUFTRAG" ]; then
+	if grep -vE '^\s*#' "$PRUNE_AUFTRAG" | grep -q 'image prune[^>]*-[a-z]*a'; then
+		hinweis "$PRUNE_AUFTRAG raeumt mit '-a' auch markierte Images ab und entfernt damit nachts die Rollback-Reserve. Behebung: das 'a' streichen, also 'docker image prune -f --filter \"until=24h\"'. Original des Anbieters unter /root/docker-image-prune.hostinger-original."
+	else
+		ok "$PRUNE_AUFTRAG laesst markierte Images in Ruhe (kein -a)"
+	fi
+fi
+
 echo
 echo "== Git als $NUTZER =="
 if [ -d "$VERZEICHNIS/.git" ] && id -u "$NUTZER" >/dev/null 2>&1; then
