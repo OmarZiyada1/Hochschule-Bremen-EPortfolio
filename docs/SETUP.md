@@ -1791,6 +1791,30 @@ zuerst Postgres trifft, wäre das nach etwa zwanzig Merges ein echtes Problem.
 Ein älterer Stand ist damit nicht verloren, er wird nur nachgeladen: in GHCR
 bleibt jede Marke liegen, und `pull` holt sie zurück.
 
+**Ein Aufräum-Auftrag des Anbieters redet dabei mit.** Hostinger legt beim
+Aufsetzen des VPS `/etc/cron.d/docker-image-prune` an, im Original mit
+
+```text
+57 0 * * * root docker image prune -af --filter "until=24h"
+```
+
+Das `-a` entfernt auch **markierte** Images, sobald sie älter als 24 Stunden
+sind und kein Container sie benutzt. Damit war die Reserve aus dem Absatz
+darüber jede Nacht um 00:57 verschwunden, nachgewiesen am 16.09.2026: nach dem
+Ausrollen von `sha-56f34e3` lagen beide Stände bereit, zwölf Stunden später nur
+noch der laufende. Schlimmer ist der zweite Fall: `until` zählt ab dem **Bau**
+des Images, nicht ab dem Ziehen, und so kann der Auftrag eine gerade gezogene
+ältere Marke zwischen Schritt 4 und Schritt 6 entfernen; die Ausrollung
+scheitert dann an `--pull never`.
+
+Die Datei auf dem Server trägt deshalb seit KAN-106 ein `-f` statt `-af`,
+räumt also weiter jede Nacht die unmarkierten Schichten ab und lässt die
+Stände in Ruhe. Das Original liegt unter
+`/root/docker-image-prune.hostinger-original`. Ein Update des Anbieters könnte
+die Datei ersetzen; `deploy/vps-pruefen.sh` prüft sie deshalb und meldet ein
+zurückgekehrtes `-a` als HINWEIS. Verloren wäre auch dann nichts, ein Rollback
+zieht die Marke neu aus GHCR.
+
 **Zwei Wege, auf denen ein ausgerollter Stand versehentlich überschrieben
 wird.** Beide enden damit, dass `sha-<hash>` auf dem Server nicht mehr das
 zeigt, was der Commit `<hash>` enthält:

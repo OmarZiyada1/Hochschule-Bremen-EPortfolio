@@ -524,6 +524,18 @@ Ansehen mit 'git diff', dann 'git stash' oder 'git checkout -- <datei>' als depl
 	# bleiben liegen, denn genau sie braucht ein Rollback; was ein Container
 	# gerade benutzt, bleibt immer. Ein aelterer Stand ist nicht verloren,
 	# in GHCR bleibt jede Marke liegen.
+	#
+	# EIN FREMDER AUFTRAG REDET HIER MIT (nachgewiesen am 16.09.2026).
+	# Hostinger legt beim Aufsetzen des VPS /etc/cron.d/docker-image-prune an,
+	# im Original mit "docker image prune -af --filter until=24h". Das "-a"
+	# entfernt auch MARKIERTE Images, sobald sie aelter als 24 Stunden sind
+	# und kein Container sie benutzt: die Reserve hier unten war jede Nacht um
+	# 00:57 weg, und weil "until" ab dem BAU zaehlt und nicht ab dem Ziehen,
+	# konnte der Auftrag sogar eine gerade gezogene aeltere Marke zwischen
+	# Schritt 4 und Schritt 6 entfernen. Die Datei auf dem Server traegt
+	# deshalb ein "-f" statt "-af"; deploy/vps-pruefen.sh prueft das, damit
+	# ein Update des Anbieters nicht still das Alte zurueckbringt. Verloren
+	# waere auch dann nichts, ein Rollback zieht die Marke neu aus GHCR.
 	schritt "8. Alte Images abraeumen"
 	docker image prune -f > /dev/null
 	in_benutzung="$(docker ps -a --format '{{.Image}}' || true)"
