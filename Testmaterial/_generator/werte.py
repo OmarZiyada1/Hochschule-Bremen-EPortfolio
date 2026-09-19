@@ -17,8 +17,10 @@ THEMA_A2 = "Baustoffbörse"                 # Projekt "Baustoffbörse am Neustad
 FAKULTAET_A3 = "Elektrotechnik und Informatik"   # der Name, nicht das Kuerzel FK4
 SEMESTER_A3 = "WiSe 2025/26"
 PROJEKT_A5 = "Mehrwegpfand in der Bremer Gastronomie"
-TITEL_C2 = "Zahlungsbereitschaft für regionale Milch in Bremen"
-TITEL_C3 = "Wiederverwendung von Ziegeln aus einem Abbruch in Walle"
+TITEL_C3 = "Zahlungsbereitschaft für regionale Milch in Bremen"       # wird zurueckgegeben
+TITEL_C4 = "Wiederverwendung von Ziegeln aus einem Abbruch in Walle"  # wird veroeffentlicht,
+                                                                      # in C5 nominiert
+TITEL_C6 = "Audiowalk zur Werftgeschichte in Gröpelingen"             # bekommt die Notiz
 NAME_D2 = "Nele Ostermann"
 
 # --- frei gewaehlt -----------------------------------------------------------
@@ -28,16 +30,21 @@ NAME_D2 = "Nele Ostermann"
 TITEL_B2 = "Lastenrad-Verleih im Bremer Westen"
 
 # --- Zugangsdaten je Sitzung -------------------------------------------------
-# Das Adressmuster stammt aus test-sitzung.sh: die Kennung ist die private
-# Adresse, die Hochschuladresse ist die Verwechslungsgefahr, um die es in B1
-# geht. Block B haben TN00 bis TN05, alle mit der Rolle STUDENT.
+# Das Adressmuster stammt aus test-sitzung.sh. Auf der Karte steht allein die
+# Anmeldeadresse, also die private Adresse des Kontos; die Hochschuladresse
+# wird zum Anmelden nicht gebraucht und steht deshalb nicht darauf. Block B
+# haben TN00 bis TN05 mit der Rolle STUDENT, Block C haben TN06 und TN07 mit
+# der Rolle EDITOR.
 PSEUDONYME_BLOCK_B = ["TN00", "TN01", "TN02", "TN03", "TN04", "TN05"]
+PSEUDONYME_BLOCK_C = ["TN06", "TN07"]
+
+# Welche Karte in welchem Block die Anmeldung ist, und wer sie bekommt.
+ANMELDEKARTEN = [("B1", PSEUDONYME_BLOCK_B), ("C1", PSEUDONYME_BLOCK_C)]
 
 
-def adressen(pseudonym):
-    """Beide Adressen eines Sitzungskontos, in der Reihenfolge der Karte."""
-    nummer = pseudonym[-2:]
-    return ("tn%s@test.invalid" % nummer, "tn%s@stud.hs-bremen.de" % nummer)
+def anmeldeadresse(pseudonym):
+    """Die Adresse, mit der sich das Sitzungskonto anmeldet."""
+    return "tn%s@test.invalid" % pseudonym[-2:]
 
 
 # --- Ersetzungen -------------------------------------------------------------
@@ -48,8 +55,9 @@ KARTE = {
     "A2": [("[Seed-Thema einsetzen]", THEMA_A2)],
     "A3": [("[X]", FAKULTAET_A3), ("[Y]", SEMESTER_A3)],
     "B2": [("[Titel]", "‚%s‘" % TITEL_B2)],
-    "C2": [("[Titel]", "‚%s‘" % TITEL_C2)],
     "C3": [("[Titel]", "‚%s‘" % TITEL_C3)],
+    "C4": [("[Titel]", "‚%s‘" % TITEL_C4)],
+    "C6": [("[Titel]", "‚%s‘" % TITEL_C6)],
     "D2": [("[Name aus dem Seed]", NAME_D2)],
 }
 
@@ -58,8 +66,10 @@ KARTE = {
 START = {
     "A5": [("Ein inhaltsreiches Projekt aus A2 oder A4",
             "Das Projekt „%s“ (aus A2 oder A4)" % PROJEKT_A5)],
-    "C2": [("[Titel]", "„%s“" % TITEL_C2)],
     "C3": [("[Titel]", "„%s“" % TITEL_C3)],
+    "C4": [("[Titel]", "„%s“" % TITEL_C4)],
+    "C5": [("[Titel]", "„%s“" % TITEL_C4)],
+    "C6": [("[Titel]", "„%s“" % TITEL_C6)],
 }
 
 

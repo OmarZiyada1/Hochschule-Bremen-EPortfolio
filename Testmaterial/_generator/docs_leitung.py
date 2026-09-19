@@ -16,9 +16,9 @@ ROLLENBLOCK = {
     "B": ("Studierende", ["B1 Anmelden", "B2 Projekt anlegen", "B3 Inhalt mit Blocktypen",
                           "B4 Metadaten pflegen", "B5 Einreichen",
                           "B6 Wieder bearbeitbar machen", "B7 Profil ergänzen"]),
-    "C": ("Redaktion", ["C1 Arbeitsvorrat überblicken", "C2 Prüfen und zurückgeben",
-                        "C3 Genehmigen und veröffentlichen", "C4 Interne Anmerkung",
-                        "C5 Für die Top 10 vorschlagen"]),
+    "C": ("Redaktion", ["C1 Anmelden", "C2 Arbeitsvorrat überblicken",
+                        "C3 Prüfen und zurückgeben", "C4 Genehmigen und veröffentlichen",
+                        "C5 Für die Top 10 vorschlagen", "C6 Interne Anmerkung"]),
     "D": ("Administration", ["D1 Lagebild verschaffen", "D2 Prüfen erlauben",
                              "D3 Doppelte Kategorie aufräumen", "D4 Mehrere Projekte auf einmal",
                              "D5 Top 10 festlegen", "D6 Änderung nachvollziehen"]),
@@ -65,8 +65,9 @@ def moderation():
          "8 min", "3 und 4"],
         ["2", "Einweisung ins laute Denken vorlesen, Übungsaufgabe", "4 min", "5"],
         ["3", "Block A, abgemeldet, Aufgaben A1 bis A5", "18 min", "6 bis 9"],
-        ["4", "Kurze Unterbrechung, Anmeldung vorbereiten. In Block B nur bereitlegen, das Anmelden "
-              "ist Aufgabe B1; in C und D melde ich an", "2 min", "Zugangsdatenblatt"],
+        ["4", "Kurze Unterbrechung, Anmeldung vorbereiten. In den Blöcken B und C nur bereitlegen, "
+              "das Anmelden ist Aufgabe B1 bzw. C1; in D melde ich an", "2 min",
+         "Zugangsdatenblatt"],
         ["5", "Rollenblock B, C oder D", "30 min", "6 bis 9"],
         ["6", "SUS-Bogen, allein ausgefüllt, ich trete zurück", "5 min", "11"],
         ["7", "Pause. SUS-Bogen entgegennehmen und weglegen", "1 min", "12"],
@@ -153,11 +154,19 @@ def moderation():
               "Erfolgskriterium halte ich die Stoppuhr an.", 10.5, nach=4)
     zeilen = [[a["kennung"], werte.start(a["kennung"], txt(a["start"])), txt(a["erfolg"]),
                a["budget"], a["abbruch"]] for a in AUFGABEN]
-    tabelle(d, ["Aufg.", "Startzustand", "Erfolgskriterium", "Budget", "Abbruch"],
-            zeilen, breiten=[1.3, 6.0, 6.4, 1.6, 1.7], groesse=8)
+    t = tabelle(d, ["Aufg.", "Startzustand", "Erfolgskriterium", "Budget", "Abbruch"],
+                zeilen, breiten=[1.3, 6.0, 6.4, 1.6, 1.7], groesse=7.5)
+    # Die Tabelle soll auf eine Seite passen, auch mit 24 Aufgaben: kein
+    # Absatzabstand in den Zellen, einfacher Zeilenabstand.
+    for r in t.rows:
+        for c in r.cells:
+            for p in c.paragraphs:
+                p.paragraph_format.space_before = Pt(0)
+                p.paragraph_format.space_after = Pt(0)
+                p.paragraph_format.line_spacing = 1.0
     absatz(d, "Baut eine spätere Aufgabe auf einer abgebrochenen auf (A4 auf A3, A5 auf A2 oder A4, "
-              "B4 auf B3, B5 auf B4, B6 auf B5, D6 auf D5), stelle ich den Zustand schweigend selbst "
-              "her und lasse das im Protokoll vermerken.", 10, vor=6)
+              "B4 auf B3, B5 auf B4, B6 auf B5, C5 auf C4, D6 auf D5), stelle ich den Zustand "
+              "schweigend selbst her und lasse das im Protokoll vermerken.", 10, vor=6)
 
     zwischentitel(d, "10 Abbruch der Sitzung")
     absatz(d, "Jederzeit auf Wunsch der Testperson, ohne Nachfrage. Teilprotokoll auswerten, Abbruch "
@@ -378,7 +387,8 @@ def vor_der_sitzung():
         ["2", "Kurzbogen zur Person", "1", "Moderation"],
         ["3", "Aufgabenkarten Block A, A1 bis A5", "1 Satz", "Moderation"],
         ["4", "Aufgabenkarten des Rollenblocks", "1 Satz, entfällt bei TN08 und TN11", "Moderation"],
-        ["4a", "Karte B1 der Sitzung, aus Testmaterial/_sitzung", "1, nur Block B", "Moderation"],
+        ["4a", "Anmeldekarte der Sitzung (B1 oder C1), aus Testmaterial/_sitzung",
+         "1, nur Blöcke B und C", "Moderation"],
         ["5", "Beobachtungsprotokoll, passende Fassung", "1", "Protokoll"],
         ["6", "SUS-Bogen", "1", "Moderation"],
         ["7", "TAM-Bogen in der richtigen Fassung", "1", "Moderation"],
@@ -425,8 +435,8 @@ def vor_der_sitzung():
               "Aufzeichnung vorbereitet, Tonpegel geprüft, Aufnahme noch nicht gestartet",
               "Stoppuhr bereit, Stift und Ersatzstift, Wasser für die Testperson",
               "Zugangsdatenblatt für die heutigen Sitzungen ausgefüllt",
-              "Bei Block B: Karte B1 der Sitzung gedruckt. Sie entsteht mit "
-              "„python make_docs.py --passwort“ und liegt in Testmaterial/_sitzung",
+              "Bei Block B und C: Anmeldekarte der Sitzung gedruckt (B1 bzw. C1). Sie entsteht "
+              "mit „python make_docs.py --passwort“ und liegt in Testmaterial/_sitzung",
               "Erste Zeile im Rücksetzprotokoll ausgefüllt"]:
         kaestchen(d, t, 10.5)
 
@@ -446,8 +456,9 @@ def vor_der_sitzung():
               "Top 10 belegt, je nach Rollenblock der anstehenden Sitzung: 10 Plätze in den "
               "Blöcken A und B, 6 in Block C, keiner in Block D. Gesetzt von Menüpunkt s5, "
               "gezählt mit bash test-seeder-pruefen.sh TN01",
-              "Block C: 4 Projekte im Status Eingereicht, davon 2 aus fremder Feder, dazu "
-              "1 veröffentlichtes Projekt für C5",
+              "Block C: 4 Projekte im Status Eingereicht, davon 2 aus fremder Feder, keine "
+              "Nominierung auf ihnen; nominiert wird in C5 das Projekt, das die Testperson in C4 "
+              "veröffentlicht",
               "Block D: 2 gleichbedeutende Kategorien mit je mindestens 3 Projekten, 5 Projekte im "
               "Status Genehmigt, mindestens 12 offene Nominierungen ohne gesetzte Top 10, "
               "Änderungsprotokoll mit mehreren Einträgen verschiedener Personen",
@@ -495,8 +506,8 @@ def zugangsdaten():
             c.paragraphs[0].paragraph_format.space_after = Pt(14)
     absatz(d, "Nach der letzten Sitzung des Tages werden Konto und Passwort auf diesem Blatt "
               "geschwärzt und das Blatt vernichtet. Es wird nicht aufbewahrt, nicht abgetippt und "
-              "nicht in Confluence eingetragen. Dasselbe gilt für die Aufgabenkarte B1, auf der die "
-              "Zugangsdaten ebenfalls stehen.", 11, fett=True, farbe=ROT, vor=14)
+              "nicht in Confluence eingetragen. Dasselbe gilt für die Anmeldekarten B1 und C1, auf "
+              "denen die Zugangsdaten ebenfalls stehen.", 11, fett=True, farbe=ROT, vor=14)
     kaestchen(d, "Geschwärzt und vernichtet am ________________, durch ________________", 11)
     return d, "18_Zugangsdatenblatt.docx"
 
@@ -517,7 +528,7 @@ def nach_der_sitzung():
               "Alle Papiere einsammeln: Einwilligung (ein Exemplar), Kurzbogen, "
               "Beobachtungsprotokoll, SUS-Bogen, TAM-Bogen, alle Aufgabenkarten",
               "Auf jedem Blatt prüfen: nur Pseudonym, kein Klarname",
-              "Karte B1 vernichten, weil das Passwort darauf steht",
+              "Karte B1 bzw. C1 vernichten, weil das Passwort darauf steht",
               "Protokoll sofort durchgehen und ergänzen, solange die Sitzung frisch ist; "
               "Besonderheiten im Protokollkopf eintragen"]:
         kaestchen(d, t, 10.5)

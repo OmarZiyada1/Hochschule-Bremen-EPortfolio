@@ -29,8 +29,11 @@
 #            legt das erste Projekt an, B7 schreibt die erste Biografie;
 #            beides waere sonst schon da.
 #   Block C  Vier Projekte im Status Eingereicht sind diesem Konto als
-#            Redaktion zugewiesen, zwei davon aus fremder Feder. Dazu
-#            ein veroeffentlichtes Projekt fuer die Nominierung in C5.
+#            Redaktion zugewiesen, zwei davon aus fremder Feder, ohne
+#            Nominierung. Nominiert wird in C5 das Projekt, das die
+#            Testperson in C4 veroeffentlicht; nominierbar ist nur, was
+#            veroeffentlicht ist. Anmelden ist wie in Block B eine eigene
+#            Aufgabe (C1).
 #   Block D  Das Zusatzkonto aus D2 steht wieder auf STUDENT, die zwei
 #            gleichbedeutenden Kategorien tragen wieder je mindestens
 #            drei Projekte, die fuenf Projekte aus D4 stehen wieder auf
@@ -288,7 +291,7 @@ C)
 begin;
 
 -- Die vier Projekte des Arbeitsvorrats zurueck auf Eingereicht. Eine
--- vorige Sitzung kann C2 (Ueberarbeitung) und C3 (Veroeffentlicht)
+-- vorige Sitzung kann C3 (Ueberarbeitung) und C4 (Veroeffentlicht)
 -- schon durchlaufen haben.
 update project
 set status = 'SUBMITTED', published_at = null, version = version + 1, updated_at = now()
@@ -299,8 +302,18 @@ where id::text like '7e570011-%'
              '7e570011-0000-4000-8000-000000000054'::uuid);
 
 -- Aenderungsaufforderungen und Notizen der vorigen Sitzung entfernen,
--- sonst steht die Begruendung aus C2 schon da.
+-- sonst steht die Begruendung aus C3 oder die Notiz aus C6 schon da.
 delete from comment
+where project_id in ('7e570011-0000-4000-8000-000000000051'::uuid,
+                     '7e570011-0000-4000-8000-000000000052'::uuid,
+                     '7e570011-0000-4000-8000-000000000053'::uuid,
+                     '7e570011-0000-4000-8000-000000000054'::uuid);
+
+-- Nominierungen auf diesen Projekten entfernen, gleich von wem. C5
+-- nominiert das in C4 veroeffentlichte Projekt; stuende dort noch die
+-- Nominierung einer vorigen Redaktionssitzung (TN06 vor TN07), waere die
+-- Aktion gesperrt ("Bereits nominiert").
+delete from top10_nomination
 where project_id in ('7e570011-0000-4000-8000-000000000051'::uuid,
                      '7e570011-0000-4000-8000-000000000052'::uuid,
                      '7e570011-0000-4000-8000-000000000053'::uuid,
@@ -322,7 +335,8 @@ ENDE_SQL_SITZUNG_C
 	        from project
 	        where id::text like '7e570011-0000-4000-8000-00000000005%'
 	        order by id;"
-	echo "  Fuer die Aufgabenkarten: C2 nimmt den ersten, C3 den zweiten Titel."
+	echo "  Fuer die Aufgabenkarten: C3 nimmt den ersten, C4 den zweiten,"
+	echo "  C6 den dritten Titel. C5 nominiert das in C4 veroeffentlichte Projekt."
 	;;
 D)
 	echo "== Block D vorbereiten =="
@@ -389,22 +403,21 @@ echo "== Fuer die Testleitung =="
 if [ -n "$ROLLE" ]; then
 	echo "  Zugangsdatenblatt, Zeile $TN:"
 	echo "    Testkonto (Kennung)   $EMAIL"
-	echo "    Hochschuladresse      $HSB_EMAIL"
 	echo "    Passwort              der Wert von DEV_TEST_PASSWORD aus der .env"
 	echo
-	if [ "$BLOCK" = "B" ]; then
-		# Nur in Block B meldet sich die Testperson selbst an: das ist
-		# Aufgabe B1. In C und D meldet die Moderation vorher an
-		# (Testmaterial/12_Moderation.docx, Ablaufschritt 4).
-		echo "  Aufgabenkarte B1 nennt BEIDE Adressen und das Passwort, ohne zu"
-		echo "  verraten, welche die Kennung ist. Die Kennung ist $EMAIL."
+	if [ "$BLOCK" = "B" ] || [ "$BLOCK" = "C" ]; then
+		# In den Bloecken B und C meldet sich die Testperson selbst an:
+		# das sind die Aufgaben B1 und C1. In D meldet die Moderation
+		# vorher an (Testmaterial/12_Moderation.docx, Ablaufschritt 4).
+		echo "  Aufgabenkarte ${BLOCK}1 nennt die Anmeldeadresse $EMAIL und das"
+		echo "  Passwort; die Hochschuladresse steht nicht darauf."
 		echo "  Die Karte wird nach der Sitzung vernichtet."
 	else
 		echo "  In Block $BLOCK meldet die Moderation vor dem Rollenblock an."
-		echo "  Es gibt hier keine Karte B1; die Anmeldung ist keine Aufgabe."
+		echo "  Es gibt hier keine Anmeldekarte; die Anmeldung ist keine Aufgabe."
 	fi
 else
-	echo "  Kein Zugangsdatenblatt und keine Karte B1: $TN meldet sich nicht an."
+	echo "  Kein Zugangsdatenblatt und keine Anmeldekarte: $TN meldet sich nicht an."
 fi
 echo
 echo "  Nicht vergessen (Blatt \"Vor der Sitzung\", Abschnitt 4):"

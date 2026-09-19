@@ -147,13 +147,17 @@ echo
 c_offen=$(zahl "select count(*) from project
                 where id::text like '7e570011-0000-4000-8000-00000000005%'
                   and status = 'SUBMITTED';")
-pruefe "Projekte im Arbeitsvorrat, Status Eingereicht (C1)" "$c_offen" \
+pruefe "Projekte im Arbeitsvorrat, Status Eingereicht (C2)" "$c_offen" \
 	"$(genau "$c_offen" 4)" "4"
 
-c_veroeffentlicht=$(zahl "select count(*) from project
-                          where status = 'PUBLISHED' and id::text like '7e570011-%';")
-pruefe "veroeffentlichtes Projekt fuer die Nominierung (C5)" "$c_veroeffentlicht" \
-	"$(mindestens "$c_veroeffentlicht" 1)" "mindestens 1"
+# C5 nominiert das Projekt, das die Testperson in C4 veroeffentlicht. Eine
+# offene Nominierung aus einer vorigen Redaktionssitzung sperrt die Aktion
+# ("Bereits nominiert"); test-sitzung.sh raeumt sie weg.
+c_nominiert=$(zahl "select count(*) from top10_nomination
+                    where project_id::text like '7e570011-0000-4000-8000-00000000005%'
+                      and status = 'PENDING';")
+pruefe "offene Nominierungen im Arbeitsvorrat (C5)" "$c_nominiert" \
+	"$(genau "$c_nominiert" 0)" "0"
 
 echo
 

@@ -30,12 +30,14 @@
 #   A2  Thema des Zielprojekts: Baustoffbörse
 #       (Projekt "Baustoffbörse am Neustadtswall")
 #   A5  inhaltsreiches Projekt: "Mehrwegpfand in der Bremer Gastronomie"
-#   C2  Titel: "Zahlungsbereitschaft für regionale Milch in Bremen"
-#   C3  Titel: "Wiederverwendung von Ziegeln aus einem Abbruch in Walle"
+#   C3  Titel: "Zahlungsbereitschaft für regionale Milch in Bremen"
+#   C4  Titel: "Wiederverwendung von Ziegeln aus einem Abbruch in Walle"
+#   C6  Titel: "Audiowalk zur Werftgeschichte in Gröpelingen"
 #   D2  Name des Zusatzkontos: Nele Ostermann
 #   A3  Fakultaet Elektrotechnik und Informatik, Semester WiSe 2025/26,
 #       Abschluss Bachelor: fuenf Treffer
 #   B1  Zugangsdaten je Sitzung, siehe test-sitzung.sh
+#   C1  Zugangsdaten je Sitzung, siehe test-sitzung.sh
 #   B2  Projekttitel frei waehlbar
 #
 # ES LOESCHT DIE TOP 10. Aufgabe D5 verlangt "keine Top 10 gesetzt".
@@ -2160,10 +2162,12 @@ echo "      Zielprojekt: Baustoffbörse am Neustadtswall"
 echo "  A3  Fakultaet Elektrotechnik und Informatik, Semester WiSe 2025/26,"
 echo "      Abschluss Bachelor. Fuenf Treffer."
 echo "  A5  inhaltsreiches Projekt: Mehrwegpfand in der Bremer Gastronomie"
-echo "  C2  Titel: Zahlungsbereitschaft für regionale Milch in Bremen"
-echo "  C3  Titel: Wiederverwendung von Ziegeln aus einem Abbruch in Walle"
+echo "  C3  Titel: Zahlungsbereitschaft für regionale Milch in Bremen"
+echo "  C4  Titel: Wiederverwendung von Ziegeln aus einem Abbruch in Walle"
+echo "  C6  Titel: Audiowalk zur Werftgeschichte in Gröpelingen"
 echo "  D2  Name des Zusatzkontos: Nele Ostermann"
 echo "  B1  Zugangsdaten entstehen je Sitzung: bash test-sitzung.sh TN.."
+echo "  C1  ebenso, fuer TN06 und TN07"
 echo
 echo "Fertig. Naechster Schritt: bash test-seeder-pruefen.sh, danach je"
 echo "Sitzung bash test-sitzung.sh TN.."

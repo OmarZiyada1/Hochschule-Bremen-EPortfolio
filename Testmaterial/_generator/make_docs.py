@@ -2,9 +2,10 @@
 """Erzeugt alle Word-Druckvorlagen der Testphase.
 
     python make_docs.py                  die 20 Dateien in Testmaterial/
-    python make_docs.py --passwort       zusaetzlich die ausgefuellten Karten B1
-                                         je Pseudonym in Testmaterial/_sitzung,
-                                         Passwort aus DEV_TEST_PASSWORD der .env
+    python make_docs.py --passwort       zusaetzlich die ausgefuellten Anmeldekarten
+                                         B1 und C1 je Pseudonym in
+                                         Testmaterial/_sitzung, Passwort aus
+                                         DEV_TEST_PASSWORD der .env
     python make_docs.py --passwort <wert>  dasselbe mit einem Wert von Hand
 """
 import io, os, sys
@@ -59,7 +60,8 @@ def anleitung():
         ["03 Aufgabenkarten Block A", "einmal für die Woche", "1 Satz (5 Blätter)", "Moderation"],
         ["04 Aufgabenkarten Block B", "einmal, Karte B1 je Sitzung neu",
          "1 Satz (7 Blätter)", "Moderation"],
-        ["05 Aufgabenkarten Block C", "einmal für die Woche", "1 Satz (5 Blätter)", "Moderation"],
+        ["05 Aufgabenkarten Block C", "einmal, Karte C1 je Sitzung neu",
+         "1 Satz (6 Blätter)", "Moderation"],
         ["06 Aufgabenkarten Block D", "einmal für die Woche", "1 Satz (6 Blätter)", "Moderation"],
         ["07 SUS-Bogen", "je Sitzung", "1", "Moderation"],
         ["08 bis 11 TAM-Bogen", "je Sitzung einer, in der passenden Fassung", "1",
@@ -99,20 +101,23 @@ def anleitung():
     tabelle(d, ["Karte", "Was dort steht", "Wert"], [
         ["A2", "Thema des Zielprojekts", werte.THEMA_A2],
         ["A3", "Fakultät und Semester", "%s, %s" % (werte.FAKULTAET_A3, werte.SEMESTER_A3)],
-        ["B1", "Beide Adressen und das Passwort", "je Sitzung neu, siehe unten"],
+        ["B1", "Anmeldeadresse und Passwort", "je Sitzung neu, siehe unten"],
         ["B2", "Titel, den die Testperson eintippt", werte.TITEL_B2],
-        ["C2", "Projekttitel, der zurückgegeben wird", werte.TITEL_C2],
-        ["C3", "Projekttitel, der veröffentlicht wird", werte.TITEL_C3],
+        ["C1", "Anmeldeadresse und Passwort", "je Sitzung neu, siehe unten"],
+        ["C3", "Projekttitel, der zurückgegeben wird", werte.TITEL_C3],
+        ["C4", "Projekttitel, der veröffentlicht wird", werte.TITEL_C4],
+        ["C6", "Projekttitel, an den die Notiz kommt", werte.TITEL_C6],
         ["D2", "Name des Zusatzkontos", werte.NAME_D2],
     ], breiten=[1.8, 6.2, 8.8])
     absatz(d, "Die Werte legt der Seed-Bestand fest; Menüpunkt s3 gibt sie am Ende jedes Laufs "
               "aus. Weicht seine Ausgabe von dieser Tabelle ab, gilt das Skript: dann wird "
               "_generator/werte.py nachgezogen und neu erzeugt. Auf A3 steht der Name der "
               "Fakultät und nicht FK4, weil in der Filterleiste der Name steht.", 10, vor=4)
-    absatz(d, "Offen bleibt allein B1: die Karte trägt das Passwort und liegt im Satz Block B "
-              "nur als Vorlage. Die ausgefüllten Karten für TN00 bis TN05 entstehen mit "
-              "„python make_docs.py --passwort“ in Testmaterial/_sitzung. Je Sitzung wird "
-              "eine gedruckt und danach vernichtet.", 10, vor=6)
+    absatz(d, "Offen bleiben allein die beiden Anmeldekarten B1 und C1: sie tragen das Passwort "
+              "und liegen in den Sätzen Block B und Block C nur als Vorlage. Die ausgefüllten "
+              "Karten entstehen mit „python make_docs.py --passwort“ in Testmaterial/_sitzung, "
+              "B1 für TN00 bis TN05, C1 für TN06 und TN07. Je Sitzung wird eine gedruckt und "
+              "danach vernichtet.", 10, vor=6)
 
     zwischentitel(d, "5 Reihenfolge in der Sitzung")
     for i, t in enumerate([
@@ -130,7 +135,7 @@ def anleitung():
 
     zwischentitel(d, "6 Nach der Sitzung")
     for t in ["Alle Blätter einsammeln und prüfen: nur Pseudonym, kein Klarname",
-              "Karte B1 vernichten, weil das Passwort darauf steht",
+              "Karte B1 bzw. C1 vernichten, weil das Passwort darauf steht",
               "Zweites Exemplar der Einwilligung bleibt bei der Testperson"]:
         kaestchen(d, t, 10.5)
     absatz(d, "Bei den externen Sitzungen TN08 und TN11 entfällt der Rollenblock. Sie bekommen nur "
@@ -245,7 +250,7 @@ def _kartenkopf(d, block, nummer, gesamt, kennung):
 
 def _kartenkasten(d, text):
     """Der Szenariotext in seinem Rahmen. Gibt die Zelle zurueck, weil die
-    Karte B1 ihre Zugangsdaten in denselben Kasten setzt."""
+    Anmeldekarten B1 und C1 ihre Zugangsdaten in denselben Kasten setzen."""
     t = d.add_table(rows=1, cols=1)
     t.style = "Table Grid"
     zelle = t.rows[0].cells[0]
@@ -259,8 +264,9 @@ def _kartenkasten(d, text):
 
 
 def _zugangszeilen(zelle, paare):
-    """Die drei Zeilen unter dem Szenario der Karte B1. Ein leerer Wert wird
-    zur Linie: so ist dieselbe Karte einmal Vorlage und einmal fertig."""
+    """Die Zeilen unter dem Szenario einer Anmeldekarte: Anmeldeadresse und
+    Passwort. Ein leerer Wert wird zur Linie: so ist dieselbe Karte einmal
+    Vorlage und einmal fertig."""
     erste = zelle.add_paragraph()
     erste.paragraph_format.space_before = Pt(18)
     for label, wert in paare:
@@ -279,30 +285,29 @@ def karten(block, nummer):
         _kartenkopf(d, block, n + 1, len(liste), a["kennung"])
         zelle = _kartenkasten(d, werte.einsetzen(txt(a["szenario"]),
                                                  werte.KARTE.get(a["kennung"])))
-        if a["kennung"] == "B1":
-            _zugangszeilen(zelle, [("Adresse 1:", ""), ("Adresse 2:", ""),
-                                   ("Passwort:", "")])
-            absatz(d, "Nur diese eine Karte bleibt offen, weil das Passwort darauf steht. Die "
+        if a["kennung"] in [k for k, _ in werte.ANMELDEKARTEN]:
+            _zugangszeilen(zelle, [("E-Mail:", ""), ("Passwort:", "")])
+            absatz(d, "Diese Karte bleibt offen, weil das Passwort darauf steht. Die "
                       "ausgefüllte Fassung je Pseudonym entsteht mit "
                       "„python make_docs.py --passwort“ in Testmaterial/_sitzung.",
                    9, kursiv=True, farbe=ROT, vor=10)
     return d, "%02d_Aufgabenkarten_Block_%s.docx" % (nummer, block)
 
 
-def karte_b1(pseudonym, passwort):
-    """Die fertige Karte B1 einer einzelnen Sitzung: beide Adressen und das
-    Passwort stehen darauf, ohne zu verraten, welche Adresse die Kennung ist.
-    Sie traegt ein Geheimnis, gehoert deshalb nicht in die Versionsverwaltung
-    und wird nach der Sitzung vernichtet."""
-    a = [x for x in AUFGABEN if x["kennung"] == "B1"][0]
-    gesamt = len([x for x in AUFGABEN if x["block"] == "B"])
+def karte_anmeldung(kennung, pseudonym, passwort):
+    """Die fertige Anmeldekarte (B1 oder C1) einer einzelnen Sitzung: die
+    Anmeldeadresse und das Passwort stehen darauf. Sie traegt ein Geheimnis,
+    gehoert deshalb nicht in die Versionsverwaltung und wird nach der Sitzung
+    vernichtet."""
+    a = [x for x in AUFGABEN if x["kennung"] == kennung][0]
+    block = a["block"]
+    liste = [x["kennung"] for x in AUFGABEN if x["block"] == block]
     d = neues_dokument()
-    _kartenkopf(d, "B", 1, gesamt, "B1")
+    _kartenkopf(d, block, liste.index(kennung) + 1, len(liste), kennung)
     zelle = _kartenkasten(d, txt(a["szenario"]))
-    adresse, hochschuladresse = werte.adressen(pseudonym)
-    _zugangszeilen(zelle, [("Adresse 1:", adresse), ("Adresse 2:", hochschuladresse),
+    _zugangszeilen(zelle, [("E-Mail:", werte.anmeldeadresse(pseudonym)),
                            ("Passwort:", passwort)])
-    return d, "B1_%s.docx" % pseudonym
+    return d, "%s_%s.docx" % (kennung, pseudonym)
 
 
 # --------------------------------------------------------------- 07 SUS-Bogen
@@ -448,17 +453,21 @@ def _passwort_aus_env():
 
 
 def sitzungskarten(passwort):
-    """Die Karten B1 fuer alle Pseudonyme mit Block B. Getrennter Ordner, weil
-    das Passwort darauf steht: _sitzung ist von der Versionsverwaltung
-    ausgenommen, und die Blaetter werden nach der Sitzung vernichtet."""
+    """Die Anmeldekarten fuer alle Pseudonyme mit eigener Anmeldung: B1 fuer
+    Block B, C1 fuer Block C. Getrennter Ordner, weil das Passwort darauf
+    steht: _sitzung ist von der Versionsverwaltung ausgenommen, und die
+    Blaetter werden nach der Sitzung vernichtet."""
     os.makedirs(SITZUNG, exist_ok=True)
-    for tn in werte.PSEUDONYME_BLOCK_B:
-        d, name = karte_b1(tn, passwort)
-        pfad = os.path.join(SITZUNG, name)
-        d.save(pfad)
-        print("_sitzung/%-32s %6d Bytes" % (name, os.path.getsize(pfad)))
+    anzahl = 0
+    for kennung, pseudonyme in werte.ANMELDEKARTEN:
+        for tn in pseudonyme:
+            d, name = karte_anmeldung(kennung, tn, passwort)
+            pfad = os.path.join(SITZUNG, name)
+            d.save(pfad)
+            anzahl += 1
+            print("_sitzung/%-32s %6d Bytes" % (name, os.path.getsize(pfad)))
     print()
-    print("Diese sechs Karten tragen das Passwort im Klartext. Es wird je Sitzung")
+    print("Diese %d Karten tragen das Passwort im Klartext. Es wird je Sitzung" % anzahl)
     print("genau eine gedruckt, und sie wird danach vernichtet (Blatt „Nach der")
     print("Sitzung“, Abschnitt 1).")
 

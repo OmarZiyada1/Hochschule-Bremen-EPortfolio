@@ -13,7 +13,8 @@ die sie beschreibt, damit beide Beteiligten sie haben.
 | `03_Aufgabenkarten_Block_A.docx` | einmal für die Woche | 5 | 4 Druckvorlagen |
 | `04_Aufgabenkarten_Block_B.docx` | einmal für die Woche, Karte B1 nur als Vorlage | 7 | 4 Druckvorlagen |
 | `_sitzung/B1_TN..docx` | je Sitzung eine, danach vernichten | 1 | entsteht auf Aufruf |
-| `05_Aufgabenkarten_Block_C.docx` | einmal für die Woche | 5 | 4 Druckvorlagen |
+| `05_Aufgabenkarten_Block_C.docx` | einmal für die Woche, Karte C1 nur als Vorlage | 6 | 4 Druckvorlagen |
+| `_sitzung/C1_TN..docx` | je Sitzung eine, danach vernichten | 1 | entsteht auf Aufruf |
 | `06_Aufgabenkarten_Block_D.docx` | einmal für die Woche | 6 | 4 Druckvorlagen |
 | `07_SUS-Bogen.docx` | je Sitzung | 1 | 4 Druckvorlagen |
 | `08_TAM-Bogen_Fassung_A.docx` | TN08 und TN11 | 4 | 4 Druckvorlagen |
@@ -54,25 +55,29 @@ damit sich das nach einem neu aufgesetzten Bestand nachprüfen lässt.
 | `A2` | Baustoffbörse |
 | `A3` | Elektrotechnik und Informatik, WiSe 2025/26 |
 | `B2` | Lastenrad-Verleih im Bremer Westen |
-| `C2` | Zahlungsbereitschaft für regionale Milch in Bremen |
-| `C3` | Wiederverwendung von Ziegeln aus einem Abbruch in Walle |
+| `C3` | Zahlungsbereitschaft für regionale Milch in Bremen |
+| `C4` | Wiederverwendung von Ziegeln aus einem Abbruch in Walle |
+| `C6` | Audiowalk zur Werftgeschichte in Gröpelingen |
 | `D2` | Nele Ostermann |
 
-Dieselben Werte stehen im Moderationsblatt, Abschnitt 9, als Startzustand von `A5`, `C2`
-und `C3`. Gepflegt werden sie an einer einzigen Stelle: `_generator/werte.py`. Der
+Dieselben Werte stehen im Moderationsblatt, Abschnitt 9, als Startzustand von `A5`, `C3`,
+`C4`, `C5` und `C6`. Gepflegt werden sie an einer einzigen Stelle: `_generator/werte.py`. Der
 Aufgabenkatalog in `_generator/aufgaben.py` bleibt allgemein, wortgleich mit Confluence,
 und behält seine Platzhalter.
 
 Menüpunkt `s3` in `eportfolio.ps1` gibt diese Werte am Ende jedes Laufs aus, die Titel für
-`C2` und `C3` auch `s5`. Weicht die Ausgabe des Skripts von der Tabelle ab, gilt das
+`C3`, `C4` und `C6` auch `s5`. Weicht die Ausgabe des Skripts von der Tabelle ab, gilt das
 Skript: dann wird `werte.py` nachgezogen und neu erzeugt. Auf der Karte `A3` steht der Name
 der Fakultät und nicht das Kürzel FK4, weil in der Filterleiste der Name steht.
 
-## Die einzige Karte, die offen bleibt: `B1`
+## Die beiden Karten, die offen bleiben: `B1` und `C1`
 
-Auf `B1` stehen beide Adressen des Testkontos und das Passwort. Das Passwort gehört nicht
-ins Repository, deshalb liegt die Karte in `04_Aufgabenkarten_Block_B.docx` nur als Vorlage
-mit drei Linien. Die ausgefüllten Karten für `TN00` bis `TN05` entstehen auf Aufruf:
+Auf den Anmeldekarten `B1` und `C1` stehen die Anmeldeadresse des Testkontos und das
+Passwort; die Hochschuladresse steht nicht darauf, weil sie zum Anmelden nicht gebraucht
+wird. Das Passwort gehört nicht ins Repository, deshalb liegen die Karten in
+`04_Aufgabenkarten_Block_B.docx` und `05_Aufgabenkarten_Block_C.docx` nur als Vorlage mit
+zwei Linien. Die ausgefüllten Karten, `B1` für `TN00` bis `TN05` und `C1` für `TN06` und
+`TN07`, entstehen auf Aufruf:
 
 ```bash
 cd Testmaterial/_generator
@@ -80,8 +85,8 @@ python make_docs.py --passwort            # Wert aus DEV_TEST_PASSWORD der .env
 python make_docs.py --passwort geheim123  # oder ein Wert von Hand
 ```
 
-Sie landen in `Testmaterial/_sitzung/` als `B1_TN00.docx` bis `B1_TN05.docx`, einzeln,
-damit je Sitzung genau eine gedruckt wird. Der Ordner ist von der Versionsverwaltung
+Sie landen in `Testmaterial/_sitzung/` als `B1_TN00.docx` bis `B1_TN05.docx` sowie
+`C1_TN06.docx` und `C1_TN07.docx`, einzeln, damit je Sitzung genau eine gedruckt wird. Der Ordner ist von der Versionsverwaltung
 ausgenommen. Die gedruckte Karte wird nach der Sitzung vernichtet, wie das Blatt
 „Nach der Sitzung“ es in Abschnitt 1 verlangt.
 

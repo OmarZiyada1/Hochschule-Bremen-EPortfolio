@@ -128,17 +128,17 @@ def build():
                + pagelink("Aufgabenkatalog A bis D") + " und wird von dort gedruckt; er wird hier nicht "
                "wiederholt, damit es keine zweite Fassung gibt."))
     s.append(table(["Auf der Karte steht", "Auf der Karte steht nicht"],
-        [["Der Szenariotext w&ouml;rtlich, dazu die Aufgabenkennung klein in einer Ecke. Bei B1 "
-          "zus&auml;tzlich beide Adressen (private und Hochschuladresse) und das Passwort, ohne Hinweis "
-          "darauf, welche die Kennung ist",
+        [["Der Szenariotext w&ouml;rtlich, dazu die Aufgabenkennung klein in einer Ecke. Bei B1 und "
+          "C1 zus&auml;tzlich die Anmeldeadresse und das Passwort",
           "Zeitbudget, Startzustand, Erfolgskriterium und Beobachtungsfokus. Wer das Erfolgskriterium "
           "liest, arbeitet darauf hin statt auf das Ziel"]]))
     s.append(tasks([
         "Klammern gef&uuml;llt: Seed-Thema in A2, Fakult&auml;t und Semester in A3, Titel in B2, "
-        "Projekttitel in C2 und C3, Name in D2",
+        "Projekttitel in C3, C4 und C6, Name in D2",
         "Karten in Blockreihenfolge gestapelt, Block A oben",
         "Karten des Rollenblocks getrennt danebengelegt; bei TN08 und TN11 entfallen sie",
-        "Karte B1 nach der Sitzung einsammeln und vernichten, weil das Passwort darauf steht",
+        "Karte B1 bzw. C1 nach der Sitzung einsammeln und vernichten, weil das Passwort darauf "
+        "steht",
     ]))
 
     # 4 SUS
