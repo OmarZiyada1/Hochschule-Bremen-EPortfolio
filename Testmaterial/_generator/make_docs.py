@@ -3,7 +3,7 @@
 
     python make_docs.py                  die 20 Dateien in Testmaterial/
     python make_docs.py --passwort       zusaetzlich die ausgefuellten Anmeldekarten
-                                         B1 und C1 je Pseudonym in
+                                         B1, C1 und D1 je Pseudonym in
                                          Testmaterial/_sitzung, Passwort aus
                                          DEV_TEST_PASSWORD der .env
     python make_docs.py --passwort <wert>  dasselbe mit einem Wert von Hand
@@ -62,7 +62,8 @@ def anleitung():
          "1 Satz (7 Blätter)", "Moderation"],
         ["05 Aufgabenkarten Block C", "einmal, Karte C1 je Sitzung neu",
          "1 Satz (6 Blätter)", "Moderation"],
-        ["06 Aufgabenkarten Block D", "einmal für die Woche", "1 Satz (6 Blätter)", "Moderation"],
+        ["06 Aufgabenkarten Block D", "einmal, Karte D1 je Sitzung neu",
+         "1 Satz (7 Blätter)", "Moderation"],
         ["07 SUS-Bogen", "je Sitzung", "1", "Moderation"],
         ["08 bis 11 TAM-Bogen", "je Sitzung einer, in der passenden Fassung", "1",
          "Moderation"],
@@ -107,17 +108,20 @@ def anleitung():
         ["C3", "Projekttitel, der zurückgegeben wird", werte.TITEL_C3],
         ["C4", "Projekttitel, der veröffentlicht wird", werte.TITEL_C4],
         ["C6", "Projekttitel, an den die Notiz kommt", werte.TITEL_C6],
-        ["D2", "Name des Zusatzkontos", werte.NAME_D2],
+        ["D1", "Anmeldeadresse und Passwort", "je Sitzung neu, siehe unten"],
+        ["D3", "Name des Zusatzkontos", werte.NAME_D3],
+        ["D4", "Die zwei gleichbedeutenden Kategorien",
+         "%s, %s" % (werte.KATEGORIE_D4_A, werte.KATEGORIE_D4_B)],
     ], breiten=[1.8, 6.2, 8.8])
     absatz(d, "Die Werte legt der Seed-Bestand fest; Menüpunkt s3 gibt sie am Ende jedes Laufs "
               "aus. Weicht seine Ausgabe von dieser Tabelle ab, gilt das Skript: dann wird "
               "_generator/werte.py nachgezogen und neu erzeugt. Auf A3 steht der Name der "
               "Fakultät und nicht FK4, weil in der Filterleiste der Name steht.", 10, vor=4)
-    absatz(d, "Offen bleiben allein die beiden Anmeldekarten B1 und C1: sie tragen das Passwort "
-              "und liegen in den Sätzen Block B und Block C nur als Vorlage. Die ausgefüllten "
-              "Karten entstehen mit „python make_docs.py --passwort“ in Testmaterial/_sitzung, "
-              "B1 für TN00 bis TN05, C1 für TN06 und TN07. Je Sitzung wird eine gedruckt und "
-              "danach vernichtet.", 10, vor=6)
+    absatz(d, "Offen bleiben allein die drei Anmeldekarten B1, C1 und D1: sie tragen das "
+              "Passwort und liegen in den Sätzen der Blöcke B, C und D nur als Vorlage. Die "
+              "ausgefüllten Karten entstehen mit „python make_docs.py --passwort“ in "
+              "Testmaterial/_sitzung, B1 für TN00 bis TN05, C1 für TN06 und TN07, D1 für TN09 "
+              "und TN10. Je Sitzung wird eine gedruckt und danach vernichtet.", 10, vor=6)
 
     zwischentitel(d, "5 Reihenfolge in der Sitzung")
     for i, t in enumerate([
@@ -135,7 +139,7 @@ def anleitung():
 
     zwischentitel(d, "6 Nach der Sitzung")
     for t in ["Alle Blätter einsammeln und prüfen: nur Pseudonym, kein Klarname",
-              "Karte B1 bzw. C1 vernichten, weil das Passwort darauf steht",
+              "Anmeldekarte (B1, C1 oder D1) vernichten, weil das Passwort darauf steht",
               "Zweites Exemplar der Einwilligung bleibt bei der Testperson"]:
         kaestchen(d, t, 10.5)
     absatz(d, "Bei den externen Sitzungen TN08 und TN11 entfällt der Rollenblock. Sie bekommen nur "
@@ -250,7 +254,7 @@ def _kartenkopf(d, block, nummer, gesamt, kennung):
 
 def _kartenkasten(d, text):
     """Der Szenariotext in seinem Rahmen. Gibt die Zelle zurueck, weil die
-    Anmeldekarten B1 und C1 ihre Zugangsdaten in denselben Kasten setzen."""
+    Anmeldekarten B1, C1 und D1 ihre Zugangsdaten in denselben Kasten setzen."""
     t = d.add_table(rows=1, cols=1)
     t.style = "Table Grid"
     zelle = t.rows[0].cells[0]
@@ -295,7 +299,7 @@ def karten(block, nummer):
 
 
 def karte_anmeldung(kennung, pseudonym, passwort):
-    """Die fertige Anmeldekarte (B1 oder C1) einer einzelnen Sitzung: die
+    """Die fertige Anmeldekarte (B1, C1 oder D1) einer einzelnen Sitzung: die
     Anmeldeadresse und das Passwort stehen darauf. Sie traegt ein Geheimnis,
     gehoert deshalb nicht in die Versionsverwaltung und wird nach der Sitzung
     vernichtet."""
@@ -454,7 +458,7 @@ def _passwort_aus_env():
 
 def sitzungskarten(passwort):
     """Die Anmeldekarten fuer alle Pseudonyme mit eigener Anmeldung: B1 fuer
-    Block B, C1 fuer Block C. Getrennter Ordner, weil das Passwort darauf
+    Block B, C1 fuer Block C, D1 fuer Block D. Getrennter Ordner, weil das Passwort darauf
     steht: _sitzung ist von der Versionsverwaltung ausgenommen, und die
     Blaetter werden nach der Sitzung vernichtet."""
     os.makedirs(SITZUNG, exist_ok=True)

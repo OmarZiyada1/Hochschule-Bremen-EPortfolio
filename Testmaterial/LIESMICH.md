@@ -15,7 +15,8 @@ die sie beschreibt, damit beide Beteiligten sie haben.
 | `_sitzung/B1_TN..docx` | je Sitzung eine, danach vernichten | 1 | entsteht auf Aufruf |
 | `05_Aufgabenkarten_Block_C.docx` | einmal für die Woche, Karte C1 nur als Vorlage | 6 | 4 Druckvorlagen |
 | `_sitzung/C1_TN..docx` | je Sitzung eine, danach vernichten | 1 | entsteht auf Aufruf |
-| `06_Aufgabenkarten_Block_D.docx` | einmal für die Woche | 6 | 4 Druckvorlagen |
+| `06_Aufgabenkarten_Block_D.docx` | einmal für die Woche, Karte D1 nur als Vorlage | 7 | 4 Druckvorlagen |
+| `_sitzung/D1_TN..docx` | je Sitzung eine, danach vernichten | 1 | entsteht auf Aufruf |
 | `07_SUS-Bogen.docx` | je Sitzung | 1 | 4 Druckvorlagen |
 | `08_TAM-Bogen_Fassung_A.docx` | TN08 und TN11 | 4 | 4 Druckvorlagen |
 | `09_TAM-Bogen_Fassung_B.docx` | TN00 bis TN05 | 4 | 4 Druckvorlagen |
@@ -58,10 +59,11 @@ damit sich das nach einem neu aufgesetzten Bestand nachprüfen lässt.
 | `C3` | Zahlungsbereitschaft für regionale Milch in Bremen |
 | `C4` | Wiederverwendung von Ziegeln aus einem Abbruch in Walle |
 | `C6` | Audiowalk zur Werftgeschichte in Gröpelingen |
-| `D2` | Nele Ostermann |
+| `D3` | Nele Ostermann |
+| `D4` | Studienprojekt, Studentisches Projekt |
 
 Dieselben Werte stehen im Moderationsblatt, Abschnitt 9, als Startzustand von `A5`, `C3`,
-`C4`, `C5` und `C6`. Gepflegt werden sie an einer einzigen Stelle: `_generator/werte.py`. Der
+`C4`, `C5`, `C6` und `D4`. Gepflegt werden sie an einer einzigen Stelle: `_generator/werte.py`. Der
 Aufgabenkatalog in `_generator/aufgaben.py` bleibt allgemein, wortgleich mit Confluence,
 und behält seine Platzhalter.
 
@@ -70,14 +72,15 @@ Menüpunkt `s3` in `eportfolio.ps1` gibt diese Werte am Ende jedes Laufs aus, di
 Skript: dann wird `werte.py` nachgezogen und neu erzeugt. Auf der Karte `A3` steht der Name
 der Fakultät und nicht das Kürzel FK4, weil in der Filterleiste der Name steht.
 
-## Die beiden Karten, die offen bleiben: `B1` und `C1`
+## Die drei Karten, die offen bleiben: `B1`, `C1` und `D1`
 
-Auf den Anmeldekarten `B1` und `C1` stehen die Anmeldeadresse des Testkontos und das
+Auf den Anmeldekarten `B1`, `C1` und `D1` stehen die Anmeldeadresse des Testkontos und das
 Passwort; die Hochschuladresse steht nicht darauf, weil sie zum Anmelden nicht gebraucht
 wird. Das Passwort gehört nicht ins Repository, deshalb liegen die Karten in
-`04_Aufgabenkarten_Block_B.docx` und `05_Aufgabenkarten_Block_C.docx` nur als Vorlage mit
-zwei Linien. Die ausgefüllten Karten, `B1` für `TN00` bis `TN05` und `C1` für `TN06` und
-`TN07`, entstehen auf Aufruf:
+`04_Aufgabenkarten_Block_B.docx`, `05_Aufgabenkarten_Block_C.docx` und
+`06_Aufgabenkarten_Block_D.docx` nur als Vorlage mit zwei Linien. Die ausgefüllten Karten,
+`B1` für `TN00` bis `TN05`, `C1` für `TN06` und `TN07`, `D1` für `TN09` und `TN10`,
+entstehen auf Aufruf:
 
 ```bash
 cd Testmaterial/_generator
@@ -86,7 +89,7 @@ python make_docs.py --passwort geheim123  # oder ein Wert von Hand
 ```
 
 Sie landen in `Testmaterial/_sitzung/` als `B1_TN00.docx` bis `B1_TN05.docx` sowie
-`C1_TN06.docx` und `C1_TN07.docx`, einzeln, damit je Sitzung genau eine gedruckt wird. Der Ordner ist von der Versionsverwaltung
+`C1_TN06.docx`, `C1_TN07.docx`, `D1_TN09.docx` und `D1_TN10.docx`, einzeln, damit je Sitzung genau eine gedruckt wird. Der Ordner ist von der Versionsverwaltung
 ausgenommen. Die gedruckte Karte wird nach der Sitzung vernichtet, wie das Blatt
 „Nach der Sitzung“ es in Abschnitt 1 verlangt.
 

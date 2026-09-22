@@ -166,24 +166,24 @@ d3_a=$(zahl "select count(*) from project
              where category_id = '7e570015-0000-4000-8000-000000000001'::uuid;")
 d3_b=$(zahl "select count(*) from project
              where category_id = '7e570015-0000-4000-8000-000000000002'::uuid;")
-pruefe "Projekte an der ersten gleichbedeutenden Kategorie (D3)" "$d3_a" \
+pruefe "Projekte an der ersten gleichbedeutenden Kategorie (D4)" "$d3_a" \
 	"$(mindestens "$d3_a" 3)" "mindestens 3"
-pruefe "Projekte an der zweiten gleichbedeutenden Kategorie (D3)" "$d3_b" \
+pruefe "Projekte an der zweiten gleichbedeutenden Kategorie (D4)" "$d3_b" \
 	"$(mindestens "$d3_b" 3)" "mindestens 3"
 
 d4=$(zahl "select count(*) from project
            where id::text like '7e570011-0000-4000-8000-00000000006%'
              and status = 'APPROVED';")
-pruefe "Projekte im Status Genehmigt (D4)" "$d4" "$(genau "$d4" 5)" "5"
+pruefe "Projekte im Status Genehmigt (D5)" "$d4" "$(genau "$d4" 5)" "5"
 
 d5_nom=$(zahl "select count(*) from top10_nomination where status = 'PENDING';")
-pruefe "offene Nominierungen (D5)" "$d5_nom" "$(mindestens "$d5_nom" 12)" "mindestens 12"
+pruefe "offene Nominierungen (D6)" "$d5_nom" "$(mindestens "$d5_nom" 12)" "mindestens 12"
 
 # Die belegten Plaetze gehoeren nicht zu Block D allein: test-sitzung.sh
 # setzt sie je Rollenblock, weil der Beobachtungsfokus zu A1 nach der
 # Top-10-Flaeche fragt und C5 an einer teilweise gefuellten Liste zeigt,
 # dass eine Nominierung noch keine Aufnahme ist. Nur Block D braucht die
-# leere Liste, die D5 als Startzustand verlangt.
+# leere Liste, die D6 als Startzustand verlangt.
 d5_top=$(zahl "select count(*) from top10_entry;")
 if [ -n "$TOP10_SOLL" ]; then
 	pruefe "belegte Top-10-Plaetze (Sitzung $TN)" "$d5_top" \
@@ -207,15 +207,15 @@ fi
 
 d6_zeilen=$(zahl "select count(*) from top10_audit_entry;")
 d6_personen=$(zahl "select count(distinct admin_id) from top10_audit_entry;")
-pruefe "Zeilen im Aenderungsprotokoll (D6)" "$d6_zeilen" \
+pruefe "Zeilen im Aenderungsprotokoll (D7)" "$d6_zeilen" \
 	"$(mindestens "$d6_zeilen" 3)" "mindestens 3"
-pruefe "davon verschiedene Personen (D6)" "$d6_personen" \
+pruefe "davon verschiedene Personen (D7)" "$d6_personen" \
 	"$(mindestens "$d6_personen" 2)" "mindestens 2"
 
 d2=$(zahl "select count(*) from app_user
            where id = '7e570010-0000-4000-8000-000000000040'::uuid
              and role = 'STUDENT' and status = 'ACTIVE';")
-pruefe "Zusatzkonto fuer D2 vorhanden, Rolle STUDENT" "$d2" "$(genau "$d2" 1)" "1"
+pruefe "Zusatzkonto fuer D3 vorhanden, Rolle STUDENT" "$d2" "$(genau "$d2" 1)" "1"
 
 echo
 echo "== Nicht aus der Datenbank pruefbar =="

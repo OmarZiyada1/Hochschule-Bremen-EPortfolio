@@ -21,7 +21,9 @@ TITEL_C3 = "Zahlungsbereitschaft für regionale Milch in Bremen"       # wird zu
 TITEL_C4 = "Wiederverwendung von Ziegeln aus einem Abbruch in Walle"  # wird veroeffentlicht,
                                                                       # in C5 nominiert
 TITEL_C6 = "Audiowalk zur Werftgeschichte in Gröpelingen"             # bekommt die Notiz
-NAME_D2 = "Nele Ostermann"
+NAME_D3 = "Nele Ostermann"
+KATEGORIE_D4_A = "Studienprojekt"           # die zwei gleichbedeutenden Kategorien
+KATEGORIE_D4_B = "Studentisches Projekt"   # aus test-seeder.sh, Abschnitt 2
 
 # --- frei gewaehlt -----------------------------------------------------------
 # B2 legt kein Seed-Bestand fest: die Testperson tippt den Titel selbst ein.
@@ -34,12 +36,14 @@ TITEL_B2 = "Lastenrad-Verleih im Bremer Westen"
 # Anmeldeadresse, also die private Adresse des Kontos; die Hochschuladresse
 # wird zum Anmelden nicht gebraucht und steht deshalb nicht darauf. Block B
 # haben TN00 bis TN05 mit der Rolle STUDENT, Block C haben TN06 und TN07 mit
-# der Rolle EDITOR.
+# der Rolle EDITOR, Block D haben TN09 und TN10 mit der Rolle ADMIN.
 PSEUDONYME_BLOCK_B = ["TN00", "TN01", "TN02", "TN03", "TN04", "TN05"]
 PSEUDONYME_BLOCK_C = ["TN06", "TN07"]
+PSEUDONYME_BLOCK_D = ["TN09", "TN10"]
 
 # Welche Karte in welchem Block die Anmeldung ist, und wer sie bekommt.
-ANMELDEKARTEN = [("B1", PSEUDONYME_BLOCK_B), ("C1", PSEUDONYME_BLOCK_C)]
+ANMELDEKARTEN = [("B1", PSEUDONYME_BLOCK_B), ("C1", PSEUDONYME_BLOCK_C),
+                 ("D1", PSEUDONYME_BLOCK_D)]
 
 
 def anmeldeadresse(pseudonym):
@@ -58,7 +62,9 @@ KARTE = {
     "C3": [("[Titel]", "‚%s‘" % TITEL_C3)],
     "C4": [("[Titel]", "‚%s‘" % TITEL_C4)],
     "C6": [("[Titel]", "‚%s‘" % TITEL_C6)],
-    "D2": [("[Name aus dem Seed]", NAME_D2)],
+    "D3": [("[Name aus dem Seed]", NAME_D3)],
+    "D4": [("[Kategorie 1]", "‚%s‘" % KATEGORIE_D4_A),
+           ("[Kategorie 2]", "‚%s‘" % KATEGORIE_D4_B)],
 }
 
 # Im Startzustand, also in Abschnitt 9 des Moderationsblatts. A5 nennt dort
@@ -70,6 +76,8 @@ START = {
     "C4": [("[Titel]", "„%s“" % TITEL_C4)],
     "C5": [("[Titel]", "„%s“" % TITEL_C4)],
     "C6": [("[Titel]", "„%s“" % TITEL_C6)],
+    "D4": [("[Kategorie 1]", "„%s“" % KATEGORIE_D4_A),
+           ("[Kategorie 2]", "„%s“" % KATEGORIE_D4_B)],
 }
 
 

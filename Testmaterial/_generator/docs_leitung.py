@@ -19,9 +19,9 @@ ROLLENBLOCK = {
     "C": ("Redaktion", ["C1 Anmelden", "C2 Arbeitsvorrat überblicken",
                         "C3 Prüfen und zurückgeben", "C4 Genehmigen und veröffentlichen",
                         "C5 Für die Top 10 vorschlagen", "C6 Interne Anmerkung"]),
-    "D": ("Administration", ["D1 Lagebild verschaffen", "D2 Prüfen erlauben",
-                             "D3 Doppelte Kategorie aufräumen", "D4 Mehrere Projekte auf einmal",
-                             "D5 Top 10 festlegen", "D6 Änderung nachvollziehen"]),
+    "D": ("Administration", ["D1 Anmelden", "D2 Lagebild verschaffen", "D3 Prüfen erlauben",
+                             "D4 Doppelte Kategorie aufräumen", "D5 Mehrere Projekte auf einmal",
+                             "D6 Top 10 festlegen", "D7 Änderung nachvollziehen"]),
 }
 BLOCK_A = ["A1 Orientierung", "A2 Projekt finden", "A3 Facettiert einschränken",
            "A4 Zurücknehmen, Profil", "A5 Für später sichern"]
@@ -65,8 +65,8 @@ def moderation():
          "8 min", "3 und 4"],
         ["2", "Einweisung ins laute Denken vorlesen, Übungsaufgabe", "4 min", "5"],
         ["3", "Block A, abgemeldet, Aufgaben A1 bis A5", "18 min", "6 bis 9"],
-        ["4", "Kurze Unterbrechung, Anmeldung vorbereiten. In den Blöcken B und C nur bereitlegen, "
-              "das Anmelden ist Aufgabe B1 bzw. C1; in D melde ich an", "2 min",
+        ["4", "Kurze Unterbrechung, Anmeldung vorbereiten. Nur bereitlegen: das Anmelden ist in "
+              "jedem Rollenblock die erste Aufgabe (B1, C1 bzw. D1)", "2 min",
          "Zugangsdatenblatt"],
         ["5", "Rollenblock B, C oder D", "30 min", "6 bis 9"],
         ["6", "SUS-Bogen, allein ausgefüllt, ich trete zurück", "5 min", "11"],
@@ -155,8 +155,8 @@ def moderation():
     zeilen = [[a["kennung"], werte.start(a["kennung"], txt(a["start"])), txt(a["erfolg"]),
                a["budget"], a["abbruch"]] for a in AUFGABEN]
     t = tabelle(d, ["Aufg.", "Startzustand", "Erfolgskriterium", "Budget", "Abbruch"],
-                zeilen, breiten=[1.3, 6.0, 6.4, 1.6, 1.7], groesse=7.5)
-    # Die Tabelle soll auf eine Seite passen, auch mit 24 Aufgaben: kein
+                zeilen, breiten=[1.1, 6.4, 6.8, 1.3, 1.4], groesse=7.5)
+    # Die Tabelle soll auf eine Seite passen, auch mit 25 Aufgaben: kein
     # Absatzabstand in den Zellen, einfacher Zeilenabstand.
     for r in t.rows:
         for c in r.cells:
@@ -165,7 +165,7 @@ def moderation():
                 p.paragraph_format.space_after = Pt(0)
                 p.paragraph_format.line_spacing = 1.0
     absatz(d, "Baut eine spätere Aufgabe auf einer abgebrochenen auf (A4 auf A3, A5 auf A2 oder A4, "
-              "B4 auf B3, B5 auf B4, B6 auf B5, C5 auf C4, D6 auf D5), stelle ich den Zustand "
+              "B4 auf B3, B5 auf B4, B6 auf B5, C5 auf C4, D7 auf D6), stelle ich den Zustand "
               "schweigend selbst her und lasse das im Protokoll vermerken.", 10, vor=6)
 
     zwischentitel(d, "10 Abbruch der Sitzung")
@@ -387,8 +387,8 @@ def vor_der_sitzung():
         ["2", "Kurzbogen zur Person", "1", "Moderation"],
         ["3", "Aufgabenkarten Block A, A1 bis A5", "1 Satz", "Moderation"],
         ["4", "Aufgabenkarten des Rollenblocks", "1 Satz, entfällt bei TN08 und TN11", "Moderation"],
-        ["4a", "Anmeldekarte der Sitzung (B1 oder C1), aus Testmaterial/_sitzung",
-         "1, nur Blöcke B und C", "Moderation"],
+        ["4a", "Anmeldekarte der Sitzung (B1, C1 oder D1), aus Testmaterial/_sitzung",
+         "1, entfällt bei TN08 und TN11", "Moderation"],
         ["5", "Beobachtungsprotokoll, passende Fassung", "1", "Protokoll"],
         ["6", "SUS-Bogen", "1", "Moderation"],
         ["7", "TAM-Bogen in der richtigen Fassung", "1", "Moderation"],
@@ -435,7 +435,7 @@ def vor_der_sitzung():
               "Aufzeichnung vorbereitet, Tonpegel geprüft, Aufnahme noch nicht gestartet",
               "Stoppuhr bereit, Stift und Ersatzstift, Wasser für die Testperson",
               "Zugangsdatenblatt für die heutigen Sitzungen ausgefüllt",
-              "Bei Block B und C: Anmeldekarte der Sitzung gedruckt (B1 bzw. C1). Sie entsteht "
+              "Bei Block B, C und D: Anmeldekarte der Sitzung gedruckt (B1, C1 bzw. D1). Sie entsteht "
               "mit „python make_docs.py --passwort“ und liegt in Testmaterial/_sitzung",
               "Erste Zeile im Rücksetzprotokoll ausgefüllt"]:
         kaestchen(d, t, 10.5)
@@ -462,7 +462,7 @@ def vor_der_sitzung():
               "Block D: 2 gleichbedeutende Kategorien mit je mindestens 3 Projekten, 5 Projekte im "
               "Status Genehmigt, mindestens 12 offene Nominierungen ohne gesetzte Top 10, "
               "Änderungsprotokoll mit mehreren Einträgen verschiedener Personen",
-              "Zusatzkonto für D2 vorhanden, Rolle STUDENT",
+              "Zusatzkonto für D3 vorhanden, Rolle STUDENT",
               "Grenzwert für Login-Fehlversuche angehoben: "
               "APP_SECURITY_LOGINATTEMPTS_MAXFAILEDATTEMPTS=50 in der Umgebung des Backends, "
               "danach Backend neu starten. Sonst sperren fünf Fehlversuche 15 Minuten, "
@@ -476,12 +476,12 @@ def vor_der_sitzung():
               "vollständig. Die Liste wird trotzdem abgehakt: sie ist die Kontrolle, dass der "
               "Lauf stattgefunden hat. Der fünfte Punkt ist keine Handlung, sondern eine "
               "Warnung, was nicht angefasst wird.", 10.5, nach=6)
-    for t in ["Zusatzkonto aus D2 wieder auf Rolle STUDENT zurückgesetzt",
-              "Kategorien aus D3 wiederhergestellt: wieder 2 gleichbedeutende mit je mindestens "
+    for t in ["Zusatzkonto aus D3 wieder auf Rolle STUDENT zurückgesetzt",
+              "Kategorien aus D4 wiederhergestellt: wieder 2 gleichbedeutende mit je mindestens "
               "3 Projekten",
-              "die 5 Projekte aus D4 wieder im Status Genehmigt",
+              "die 5 Projekte aus D5 wieder im Status Genehmigt",
               "Top 10 geleert und die mindestens 12 Nominierungen wieder auf offen gesetzt",
-              "Änderungsprotokoll bleibt stehen: D6 braucht mehrere Einträge verschiedener Personen"]:
+              "Änderungsprotokoll bleibt stehen: D7 braucht mehrere Einträge verschiedener Personen"]:
         kaestchen(d, t, 10.5)
     return d, "17_Vor_der_Sitzung.docx"
 
@@ -506,7 +506,7 @@ def zugangsdaten():
             c.paragraphs[0].paragraph_format.space_after = Pt(14)
     absatz(d, "Nach der letzten Sitzung des Tages werden Konto und Passwort auf diesem Blatt "
               "geschwärzt und das Blatt vernichtet. Es wird nicht aufbewahrt, nicht abgetippt und "
-              "nicht in Confluence eingetragen. Dasselbe gilt für die Anmeldekarten B1 und C1, auf "
+              "nicht in Confluence eingetragen. Dasselbe gilt für die Anmeldekarten B1, C1 und D1, auf "
               "denen die Zugangsdaten ebenfalls stehen.", 11, fett=True, farbe=ROT, vor=14)
     kaestchen(d, "Geschwärzt und vernichtet am ________________, durch ________________", 11)
     return d, "18_Zugangsdatenblatt.docx"
@@ -528,7 +528,7 @@ def nach_der_sitzung():
               "Alle Papiere einsammeln: Einwilligung (ein Exemplar), Kurzbogen, "
               "Beobachtungsprotokoll, SUS-Bogen, TAM-Bogen, alle Aufgabenkarten",
               "Auf jedem Blatt prüfen: nur Pseudonym, kein Klarname",
-              "Karte B1 bzw. C1 vernichten, weil das Passwort darauf steht",
+              "Anmeldekarte (B1, C1 oder D1) vernichten, weil das Passwort darauf steht",
               "Protokoll sofort durchgehen und ergänzen, solange die Sitzung frisch ist; "
               "Besonderheiten im Protokollkopf eintragen"]:
         kaestchen(d, t, 10.5)
@@ -553,7 +553,7 @@ def nach_der_sitzung():
     t = tabelle(d, ["Pseudo-\nnym", "Daten zurück-\ngesetzt", "Seed gezählt",
                     "Browser-\nprofil frisch", "Testkonto\nangelegt",
                     "TAM-Bogen bereit, Fassung",
-                    "Nur Admin: D2, Kategorien, Top 10, Nominierungen", "Wer"],
+                    "Nur Admin: D3, Kategorien, Top 10, Nominierungen", "Wer"],
                 [["", "", "", "", "", "", "", ""] for _ in range(4)],
                 breiten=[1.8, 2.2, 1.8, 2.0, 2.2, 2.6, 3.4, 1.6], groesse=8.5)
     for r in t.rows[1:]:
@@ -608,7 +608,7 @@ def ruecksetzprotokoll():
     t = tabelle(d, ["Datum", "Vor Sitzung", "Daten zurück-\ngesetzt", "Seed gezählt",
                     "Browser-\nprofil frisch", "Testkonto angelegt",
                     "SUS und TAM bereit, Fassung",
-                    "Admin-Tage: D2, Kategorien, Top 10, Nominierungen", "Wer"],
+                    "Admin-Tage: D3, Kategorien, Top 10, Nominierungen", "Wer"],
                 zeilen, breiten=[2.2, 2.4, 2.6, 2.2, 2.4, 3.0, 3.4, 5.2, 2.4], groesse=9)
     for r in t.rows[1:]:
         for c in r.cells:

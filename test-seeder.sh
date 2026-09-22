@@ -10,16 +10,16 @@
 #
 # WAS ENTSTEHT
 #    13 Konten       8 Studierende, 2 Redaktionen, 2 Administrationen
-#                    und das Zusatzkonto aus Aufgabe D2
+#                    und das Zusatzkonto aus Aufgabe D3
 #    57 Projekte     davon 48 veroeffentlicht, 4 eingereicht (Block C),
-#                    5 genehmigt (Aufgabe D4)
+#                    5 genehmigt (Aufgabe D5)
 #   747 Bloecke      Inhaltsverzeichnis, Ueberschriften, Text, Bild,
 #                    Listen und Zitate
 #    65 Dateien      Titelbilder und Profilbilder, echte Bytes im
 #                    Objektspeicher
-#        2 Kategorien  die zwei erkennbar gleichbedeutenden aus D3
-#       14 Nominierungen, alle offen, ohne gesetzte Top 10 (D5)
-#        6 Zeilen im Top-10-Aenderungsprotokoll, von zwei Personen (D6)
+#        2 Kategorien  die zwei erkennbar gleichbedeutenden aus D4
+#       14 Nominierungen, alle offen, ohne gesetzte Top 10 (D6)
+#        6 Zeilen im Top-10-Aenderungsprotokoll, von zwei Personen (D7)
 #
 # WOHER DIE VORGABEN STAMMEN. Aus der Seed-Pruefliste auf dem Blatt
 # "Vor der Sitzung" (Testmaterial/17_Vor_der_Sitzung.docx, Abschnitt 5).
@@ -33,16 +33,19 @@
 #   C3  Titel: "Zahlungsbereitschaft für regionale Milch in Bremen"
 #   C4  Titel: "Wiederverwendung von Ziegeln aus einem Abbruch in Walle"
 #   C6  Titel: "Audiowalk zur Werftgeschichte in Gröpelingen"
-#   D2  Name des Zusatzkontos: Nele Ostermann
+#   D3  Name des Zusatzkontos: Nele Ostermann
+#   D4  Die zwei gleichbedeutenden Kategorien: Studienprojekt,
+#       Studentisches Projekt
 #   A3  Fakultaet Elektrotechnik und Informatik, Semester WiSe 2025/26,
 #       Abschluss Bachelor: fuenf Treffer
 #   B1  Zugangsdaten je Sitzung, siehe test-sitzung.sh
 #   C1  Zugangsdaten je Sitzung, siehe test-sitzung.sh
+#   D1  Zugangsdaten je Sitzung, siehe test-sitzung.sh
 #   B2  Projekttitel frei waehlbar
 #
-# ES LOESCHT DIE TOP 10. Aufgabe D5 verlangt "keine Top 10 gesetzt".
+# ES LOESCHT DIE TOP 10. Aufgabe D6 verlangt "keine Top 10 gesetzt".
 # Steht in der Datenbank eine, etwa aus den Demodaten, wird sie geleert.
-# Die Nominierungen der Demodaten bleiben stehen; sie zaehlen fuer D5
+# Die Nominierungen der Demodaten bleiben stehen; sie zaehlen fuer D6
 # mit, solange sie offen sind.
 #
 # VORAUSSETZUNGEN
@@ -59,7 +62,7 @@
 # WIEDERHOLBAR ueber feste ID-Praefixe. Ein zweiter Lauf raeumt seinen
 # eigenen vorigen ab und ersetzt ihn:
 #     7e570010-...  Konten            7e570014-...  Kommentare
-#     7e570011-...  Projekte          7e570015-...  Kategorien (D3)
+#     7e570011-...  Projekte          7e570015-...  Kategorien (D4)
 #     7e570012-...  Dateizeilen       7e570017-...  Nominierungen
 #     7e570013-...  Portfolios        7e57001a-...  Pruefspur
 #     7e5700f0-...  Sitzungskonten (test-sitzung.sh)
@@ -252,7 +255,7 @@ from (values
 ) as v(id, user_id, biography);
 
 -- -------------------------------------------------------------------
--- 2) Die zwei erkennbar gleichbedeutenden Kategorien aus Aufgabe D3.
+-- 2) Die zwei erkennbar gleichbedeutenden Kategorien aus Aufgabe D4.
 --    Sie stehen absichtlich nebeneinander: die Aufgabe verlangt, sie
 --    zusammenzufuehren, ohne dass Projekte verloren gehen.
 -- -------------------------------------------------------------------
@@ -1885,7 +1888,7 @@ join tag t on lower(t.name) = lower(v.name)
 on conflict do nothing;
 
 -- -------------------------------------------------------------------
--- 8) Aufgabe D3: je drei Projekte an die zwei gleichbedeutenden
+-- 8) Aufgabe D4: je drei Projekte an die zwei gleichbedeutenden
 --    Kategorien. Sie stehen hier und nicht oben, weil die Kategorie
 --    dort ueber den Namen gesucht wird und diese beiden erst in
 --    Schritt 2 entstanden sind.
@@ -1900,7 +1903,7 @@ where id in ('7e570011-0000-4000-8000-000000000044'::uuid,
              '7e570011-0000-4000-8000-000000000046'::uuid);
 
 -- -------------------------------------------------------------------
--- 9) Aufgabe D5: vierzehn offene Nominierungen und KEINE gesetzte
+-- 9) Aufgabe D6: vierzehn offene Nominierungen und KEINE gesetzte
 --    Top 10. Geleert wird die ganze Tabelle: die Aufgabe verlangt einen
 --    leeren Stand, und ein Rest aus den Demodaten waere einer.
 -- -------------------------------------------------------------------
@@ -1929,7 +1932,7 @@ from (values
 ) as v(id, project_id, nominated_by, tier, tage);
 
 -- -------------------------------------------------------------------
--- 10) Aufgabe D6: ein Aenderungsprotokoll mit Eintraegen von zwei
+-- 10) Aufgabe D7: ein Aenderungsprotokoll mit Eintraegen von zwei
 --     verschiedenen Administrationen. Es bezieht sich auf Plaetze, die
 --     es heute nicht mehr gibt; genau so sieht ein Protokoll aus.
 -- -------------------------------------------------------------------
@@ -2165,9 +2168,11 @@ echo "  A5  inhaltsreiches Projekt: Mehrwegpfand in der Bremer Gastronomie"
 echo "  C3  Titel: Zahlungsbereitschaft für regionale Milch in Bremen"
 echo "  C4  Titel: Wiederverwendung von Ziegeln aus einem Abbruch in Walle"
 echo "  C6  Titel: Audiowalk zur Werftgeschichte in Gröpelingen"
-echo "  D2  Name des Zusatzkontos: Nele Ostermann"
+echo "  D3  Name des Zusatzkontos: Nele Ostermann"
+echo "  D4  Kategorien: Studienprojekt, Studentisches Projekt"
 echo "  B1  Zugangsdaten entstehen je Sitzung: bash test-sitzung.sh TN.."
 echo "  C1  ebenso, fuer TN06 und TN07"
+echo "  D1  ebenso, fuer TN09 und TN10"
 echo
 echo "Fertig. Naechster Schritt: bash test-seeder-pruefen.sh, danach je"
 echo "Sitzung bash test-sitzung.sh TN.."

@@ -34,12 +34,13 @@
 #            Testperson in C4 veroeffentlicht; nominierbar ist nur, was
 #            veroeffentlicht ist. Anmelden ist wie in Block B eine eigene
 #            Aufgabe (C1).
-#   Block D  Das Zusatzkonto aus D2 steht wieder auf STUDENT, die zwei
+#   Block D  Das Zusatzkonto aus D3 steht wieder auf STUDENT, die zwei
 #            gleichbedeutenden Kategorien tragen wieder je mindestens
-#            drei Projekte, die fuenf Projekte aus D4 stehen wieder auf
+#            drei Projekte, die fuenf Projekte aus D5 stehen wieder auf
 #            Genehmigt, die Top 10 ist leer und die Nominierungen stehen
-#            wieder offen. Das Aenderungsprotokoll bleibt stehen: D6
-#            braucht Eintraege verschiedener Personen.
+#            wieder offen. Das Aenderungsprotokoll bleibt stehen: D7
+#            braucht Eintraege verschiedener Personen. Anmelden ist wie in
+#            den Bloecken B und C eine eigene Aufgabe (D1).
 #   TN08, TN11  Kein Konto und keine Rollenvorbereitung. Sie bearbeiten
 #            nur Block A und melden sich nie an; das Zugangsdatenblatt
 #            entfaellt fuer sie.
@@ -54,12 +55,12 @@
 #   Block C  sechs Plaetze belegt. C5 schlaegt nur vor und entscheidet
 #            nicht; an einer teilweise gefuellten Liste ist zu sehen,
 #            dass die Nominierung noch keine Aufnahme ist.
-#   Block D  kein Platz belegt. D5 verlangt als Startzustand
+#   Block D  kein Platz belegt. D6 verlangt als Startzustand
 #            ausdruecklich "keine Top 10 gesetzt" und laesst die ganze
 #            Liste erst entstehen (Aufgabenkatalog, Abschnitt 3).
 # Belegt werden die Projekte ...0015 bis ...0024 auf den Plaetzen 1 bis
 # 10. Sie liegen ausserhalb der vierzehn Nominierungen (...0001 bis
-# ...0014), damit in D5 kein Projekt zugleich vorgeschlagen und schon
+# ...0014), damit in D6 kein Projekt zugleich vorgeschlagen und schon
 # platziert ist.
 #
 # DAS PASSWORT kommt aus dem Konto dev-studi@dev.invalid: bcrypt laesst
@@ -238,7 +239,7 @@ begin;
 delete from top10_entry;
 
 -- Die zehn Projekte liegen ausserhalb der vierzehn Nominierungen, damit
--- in D5 kein Projekt zugleich vorgeschlagen und schon platziert ist.
+-- in D6 kein Projekt zugleich vorgeschlagen und schon platziert ist.
 -- Platz 1 traegt das aelteste Aufnahmedatum; sichtbar ist ohnehin die
 -- Reihenfolge, das Datum ist nur Beiwerk.
 insert into top10_entry (id, project_id, position, added_at)
@@ -263,7 +264,7 @@ where v.position <= ${TOP10_PLAETZE}
 commit;
 ENDE_SQL_SITZUNG_TOP10
 if [ "$TOP10_PLAETZE" -eq 0 ]; then
-	echo "  Kein Platz belegt: D5 verlangt eine leere Liste als Startzustand."
+	echo "  Kein Platz belegt: D6 verlangt eine leere Liste als Startzustand."
 else
 	gesetzt=$(sql -tAc "select count(*) from top10_entry;" | tr -d '[:space:]')
 	echo "  $gesetzt von zehn Plaetzen belegt (Block $BLOCK verlangt $TOP10_PLAETZE)."
@@ -343,11 +344,11 @@ D)
 	sql <<'ENDE_SQL_SITZUNG_D'
 begin;
 
--- D2: das Zusatzkonto zurueck auf STUDENT.
+-- D3: das Zusatzkonto zurueck auf STUDENT.
 update app_user set role = 'STUDENT', updated_at = now()
 where id = '7e570010-0000-4000-8000-000000000040'::uuid;
 
--- D3: die zwei gleichbedeutenden Kategorien wiederherstellen. Eine
+-- D4: die zwei gleichbedeutenden Kategorien wiederherstellen. Eine
 -- vorige Sitzung hat eine davon in die andere zusammengefuehrt; dabei
 -- verschwindet die Zeile und die Projekte haengen an der anderen.
 insert into category (id, name)
@@ -367,14 +368,14 @@ where id in ('7e570011-0000-4000-8000-000000000044'::uuid,
              '7e570011-0000-4000-8000-000000000045'::uuid,
              '7e570011-0000-4000-8000-000000000046'::uuid);
 
--- D4: die fuenf Projekte zurueck auf Genehmigt.
+-- D5: die fuenf Projekte zurueck auf Genehmigt.
 update project
 set status = 'APPROVED', published_at = null, version = version + 1, updated_at = now()
 where id::text like '7e570011-0000-4000-8000-00000000006%';
 
--- D5: die Nominierungen wieder auf offen setzen. Die Top 10 selbst hat
+-- D6: die Nominierungen wieder auf offen setzen. Die Top 10 selbst hat
 -- Abschnitt 4 schon geleert, fuer Block D auf null Plaetze. Das
--- Aenderungsprotokoll bleibt ausdruecklich stehen: D6 sucht darin
+-- Aenderungsprotokoll bleibt ausdruecklich stehen: D7 sucht darin
 -- Eintraege verschiedener Personen, und die entstehen nur ueber die
 -- Zeit.
 update top10_nomination
@@ -385,7 +386,7 @@ commit;
 ENDE_SQL_SITZUNG_D
 	echo "  Zusatzkonto auf STUDENT, Kategorien wiederhergestellt,"
 	echo "  fuenf Projekte auf Genehmigt, Top 10 leer, Nominierungen offen."
-	sql -c "select first_name || ' ' || last_name as \"Name fuer Aufgabe D2\",
+	sql -c "select first_name || ' ' || last_name as \"Name fuer Aufgabe D3\",
 	               hsb_email as \"Hochschuladresse\"
 	        from app_user where id = '7e570010-0000-4000-8000-000000000040'::uuid;"
 	;;
@@ -405,17 +406,12 @@ if [ -n "$ROLLE" ]; then
 	echo "    Testkonto (Kennung)   $EMAIL"
 	echo "    Passwort              der Wert von DEV_TEST_PASSWORD aus der .env"
 	echo
-	if [ "$BLOCK" = "B" ] || [ "$BLOCK" = "C" ]; then
-		# In den Bloecken B und C meldet sich die Testperson selbst an:
-		# das sind die Aufgaben B1 und C1. In D meldet die Moderation
-		# vorher an (Testmaterial/12_Moderation.docx, Ablaufschritt 4).
-		echo "  Aufgabenkarte ${BLOCK}1 nennt die Anmeldeadresse $EMAIL und das"
-		echo "  Passwort; die Hochschuladresse steht nicht darauf."
-		echo "  Die Karte wird nach der Sitzung vernichtet."
-	else
-		echo "  In Block $BLOCK meldet die Moderation vor dem Rollenblock an."
-		echo "  Es gibt hier keine Anmeldekarte; die Anmeldung ist keine Aufgabe."
-	fi
+	# In jedem Rollenblock meldet sich die Testperson selbst an: das sind
+	# die Aufgaben B1, C1 und D1 (Testmaterial/12_Moderation.docx,
+	# Ablaufschritt 4).
+	echo "  Aufgabenkarte ${BLOCK}1 nennt die Anmeldeadresse $EMAIL und das"
+	echo "  Passwort; die Hochschuladresse steht nicht darauf."
+	echo "  Die Karte wird nach der Sitzung vernichtet."
 else
 	echo "  Kein Zugangsdatenblatt und keine Anmeldekarte: $TN meldet sich nicht an."
 fi
