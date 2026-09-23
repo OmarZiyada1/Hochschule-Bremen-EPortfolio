@@ -79,9 +79,8 @@ def build():
                "Person."))
     s.append(p(b("Was passiert.") + " Du bearbeitest etwa 48 Minuten lang Aufgaben am Rechner (bei "
                "reiner Besucherperspektive etwa 18 Minuten) und denkst dabei laut mit. "
-               "Anschlie&szlig;end f&uuml;llst du zwei kurze Frageb&ouml;gen aus und beantwortest "
-               "f&uuml;nf offene Fragen. Der Termin dauert insgesamt etwa 90 Minuten (bei reiner "
-               "Besucherperspektive etwa 60 Minuten)."))
+               "Anschlie&szlig;end f&uuml;llst du zwei kurze Frageb&ouml;gen aus. Der Termin dauert "
+               "insgesamt etwa 80 Minuten (bei reiner Besucherperspektive etwa 50 Minuten)."))
     s.append(p(b("Was erhoben wird.") + " Ein schriftliches Beobachtungsprotokoll (bearbeitete Aufgaben, "
                "ben&ouml;tigte Zeit, Auff&auml;lligkeiten, w&ouml;rtliche &Auml;u&szlig;erungen), die "
                "beiden ausgef&uuml;llten Frageb&ouml;gen und ein Kurzbogen zur Person (Studiengang, "

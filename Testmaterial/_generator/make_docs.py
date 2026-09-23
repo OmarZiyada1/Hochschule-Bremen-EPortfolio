@@ -133,7 +133,6 @@ def anleitung():
         "SUS-Bogen, allein ausgefüllt",
         "Eine Minute Pause",
         "TAM-Bogen in der passenden Fassung, allein ausgefüllt",
-        "Abschlussgespräch, fünf Fragen",
     ], 1):
         absatz(d, "%d.  %s" % (i, t), 10.5, nach=3)
 
@@ -161,8 +160,8 @@ def einwilligung():
          "bedienen lässt. Getestet wird das System, nicht die teilnehmende Person."),
         ("Was passiert.", "Du bearbeitest etwa 48 Minuten lang Aufgaben am Rechner (bei reiner "
          "Besucherperspektive etwa 18 Minuten) und denkst dabei laut mit. Anschließend füllst du "
-         "zwei kurze Fragebögen aus und beantwortest fünf offene Fragen. Der Termin dauert "
-         "insgesamt etwa 90 Minuten (bei reiner Besucherperspektive etwa 60 Minuten)."),
+         "zwei kurze Fragebögen aus. Der Termin dauert insgesamt etwa 80 Minuten (bei reiner "
+         "Besucherperspektive etwa 50 Minuten)."),
         ("Was erhoben wird.", "Ein schriftliches Beobachtungsprotokoll (bearbeitete Aufgaben, "
          "benötigte Zeit, Auffälligkeiten, wörtliche Äußerungen), die beiden ausgefüllten "
          "Fragebögen und ein Kurzbogen zur Person (Studiengang, Semester, Selbsteinschätzung zur "

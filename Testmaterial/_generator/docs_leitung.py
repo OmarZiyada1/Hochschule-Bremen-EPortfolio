@@ -59,7 +59,7 @@ def moderation():
            10, fett=True, vor=6)
 
     zwischentitel(d, "2 Ablauf im Minutenraster")
-    absatz(d, "Vollsitzung, 86 Minuten", 10.5, fett=True, nach=3)
+    absatz(d, "Vollsitzung, 76 Minuten", 10.5, fett=True, nach=3)
     tabelle(d, ["Nr.", "Schritt", "Dauer", "Abschnitt"], [
         ["1", "Begrüßung vorlesen, Einwilligung unterschreiben lassen, Kurzbogen ausfüllen lassen",
          "8 min", "3 und 4"],
@@ -72,11 +72,11 @@ def moderation():
         ["6", "SUS-Bogen, allein ausgefüllt, ich trete zurück", "5 min", "11"],
         ["7", "Pause. SUS-Bogen entgegennehmen und weglegen", "1 min", "12"],
         ["8", "TAM-Bogen, allein ausgefüllt, ich bin außer Sichtweite", "5 min", "13"],
-        ["9", "Abschlussgespräch, fünf feste Fragen", "10 min", "14"],
-        ["10", "Dank, weiterer Ablauf, Verabschiedung", "3 min", "15"],
+        ["9", "Dank, weiterer Ablauf, Verabschiedung", "3 min", "14"],
     ], breiten=[1.0, 11.0, 2.0, 3.0], groesse=9.5)
-    absatz(d, "Externe Kurzsitzung, 56 Minuten: die Schritte 4 und 5 entfallen, der TAM-Bogen ist "
-              "die Fassung A. Alles übrige bleibt gleich.", 10, vor=6)
+    absatz(d, "Externe Kurzsitzung: die Schritte 4 und 5 entfallen, das ergibt 44 Minuten "
+              "Programm, geplant mit 46 Minuten. Der TAM-Bogen ist die Fassung A, alles übrige "
+              "bleibt gleich.", 10, vor=6)
 
     zwischentitel(d, "3 Vorlesetext: Begrüßung")
     _vorlesen(d, "„Danke, dass du dir die Zeit nimmst. Wir haben im Rahmen unserer Bachelorarbeit "
@@ -209,25 +209,15 @@ def moderation():
         "Bogen entgegennehmen und ausschließlich auf Vollständigkeit prüfen: Kopf ausgefüllt, "
         "14 Markierungen. Fehlt eine, darauf hinweisen ohne den Inhalt zu besprechen."], 1):
         absatz(d, "%d.  %s" % (i, t), 10.5, nach=3)
+    absatz(d, "Beim Piloten TN00 wird nach dem Bogen zusätzlich gefragt, wie die Items PEOU4 "
+              "(„flexibel“) und PU3 („Produktivität“) verstanden wurden.", 10, kursiv=True,
+           farbe=GRAU)
 
-    zwischentitel(d, "14 Abschlussgespräch: die fünf Fragen")
-    absatz(d, "Erst die beiden Bögen, dann das Gespräch. Offen gestellt, in dieser Reihenfolge. "
-              "Das Protokoll notiert im Wortlaut.", 10.5, nach=4)
-    for i, f in enumerate([
-        "Was ist dir am deutlichsten in Erinnerung geblieben, im Guten wie im Schlechten?",
-        "Gab es eine Stelle, an der du etwas anderes erwartet hast als das, was passiert ist?",
-        "Wenn du eine Sache ändern dürftest, welche wäre das?",
-        "Hättest du dieses Portal von dir aus benutzt, um ein Projekt zu suchen?",
-        "Ist dir etwas aufgefallen, wonach wir nicht gefragt haben?"], 1):
-        absatz(d, "%d.  %s" % (i, f), 11, nach=4)
-    absatz(d, "Beim Piloten TN00 kommen zwei Fragen dazu: wie die Items PEOU4 („flexibel“) und PU3 "
-              "(„Produktivität“) verstanden wurden.", 10, kursiv=True, farbe=GRAU)
-
-    zwischentitel(d, "15 Dank und Verabschiedung")
+    zwischentitel(d, "14 Dank und Verabschiedung")
     absatz(d, "Danken, den weiteren Ablauf in zwei Sätzen nennen, verabschieden. Danach die "
               "Nachbereitung nach dem Blatt „Nach der Sitzung“.", 10.5)
 
-    zwischentitel(d, "16 Wenn etwas schiefgeht")
+    zwischentitel(d, "15 Wenn etwas schiefgeht")
     tabelle(d, ["Fall", "Was sofort zu tun ist"], [
         ["Technik fällt aus", "Uhr anhalten, sachlich sagen, dass es an uns liegt. Bis zu fünf "
          "Minuten reparieren; gelingt es nicht, die Sitzung hier beenden, das Teilprotokoll werten, "
@@ -354,23 +344,6 @@ def protokoll(block, nummer):
         ["TAM vollständig, vierzehn Markierungen", "ja  /  nein"],
     ], breiten=[8.0, 9.0], groesse=10)
 
-    seitenumbruch(d)
-    zwischentitel(d, "%d Abschlussgespräch, Antworten im Wortlaut" % (nr + 3))
-    fragen = ["Was ist am deutlichsten in Erinnerung geblieben?",
-              "Wo wurde etwas anderes erwartet als das, was passierte?",
-              "Wenn eine Sache geändert werden dürfte, welche?",
-              "Von sich aus benutzt, um ein Projekt zu suchen?",
-              "Etwas aufgefallen, wonach nicht gefragt wurde?"]
-    for i, f in enumerate(fragen, 1):
-        absatz(d, "%d.  %s" % (i, f), 10.5, fett=True, vor=8, nach=4)
-        for _ in range(3):
-            linie(d, "", 88, 10.5, nach=7)
-
-    zwischentitel(d, "%d Auffälligkeiten am Testaufbau" % (nr + 4))
-    absatz(d, "Was an Karten, Bögen, Zeitbudgets oder am Ablauf gestört hat. Nicht in die "
-              "Aufgabenzeilen, sondern hierher.", 9.5, kursiv=True, farbe=GRAU, nach=4)
-    tabelle(d, ["Was auffiel", "Wo", "Vorschlag"], [["", "", ""] for _ in range(3)],
-            breiten=[6.4, 3.4, 7.2], groesse=10)
     return d, dateiname
 
 
@@ -571,11 +544,12 @@ def nach_der_sitzung():
               "Unsicheres als unsicher markiert",
               "Zitate im Wortlaut übernehmen, mit Zeitmarke",
               "Angekreuzte Rohwerte von SUS- und TAM-Bogen eintragen, ohne zu rechnen",
-              "PDF-Datei aus Aufgabe A5 vom Testrechner löschen",
-              "Auffälligkeiten am Testaufbau notieren, getrennt von den Systembefunden"]:
+              "PDF-Datei aus Aufgabe A5 vom Testrechner löschen"]:
         kaestchen(d, t, 10.5)
-    absatz(d, "Am Sitzungstag wird nicht gerechnet. SUS-Summe und Score, die drei TAM-Kennwerte und "
-              "die Umpolung von BI2 entstehen erst im Nachlauf.", 10, fett=True, vor=4)
+    absatz(d, "Am Sitzungstag wird nicht gerechnet. SUS-Summe und Score sowie die drei "
+              "TAM-Kennwerte entstehen erst im Nachlauf, dort wird auch BI2 umgepolt; eingetragen "
+              "werden sie dann in den Fragebogenabschnitt derselben Sitzungsseite.",
+           10, fett=True, vor=4)
 
     zwischentitel(d, "5 Am Ende des Testtags")
     for t in ["Zugangsdatenblatt schwärzen und vernichten",
