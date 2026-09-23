@@ -32,3 +32,11 @@ dist-ssr
 playwright-report
 test-results
 blob-report
+
+
+
+
+heuristik-lauf/
+heuristik-out/
+playwright.heuristik.config.ts
+playwright.he-a11y.config.ts
