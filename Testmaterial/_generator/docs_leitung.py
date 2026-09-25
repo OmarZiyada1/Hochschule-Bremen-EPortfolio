@@ -209,9 +209,6 @@ def moderation():
         "Bogen entgegennehmen und ausschließlich auf Vollständigkeit prüfen: Kopf ausgefüllt, "
         "14 Markierungen. Fehlt eine, darauf hinweisen ohne den Inhalt zu besprechen."], 1):
         absatz(d, "%d.  %s" % (i, t), 10.5, nach=3)
-    absatz(d, "Beim Piloten TN00 wird nach dem Bogen zusätzlich gefragt, wie die Items PEOU4 "
-              "(„flexibel“) und PU3 („Produktivität“) verstanden wurden.", 10, kursiv=True,
-           farbe=GRAU)
 
     zwischentitel(d, "14 Dank und Verabschiedung")
     absatz(d, "Danken, den weiteren Ablauf in zwei Sätzen nennen, verabschieden. Danach die "
@@ -378,7 +375,6 @@ def vor_der_sitzung():
               "ausgegebene Fassung lässt sich hinterher nicht heilen.",
            10.5, fett=True, farbe=ROT, nach=6)
     tabelle(d, ["Sitzung", "Gruppe", "Blöcke", "TAM-Fassung"], [
-        ["TN00 (Pilot)", "Pilot, zählt nicht", "A, dann B", "Fassung B"],
         ["TN01 bis TN05", "Studierende", "A, dann B", "Fassung B"],
         ["TN06, TN07", "Redaktion", "A, dann C", "Fassung C"],
         ["TN08, TN11", "Extern", "nur A", "Fassung A"],

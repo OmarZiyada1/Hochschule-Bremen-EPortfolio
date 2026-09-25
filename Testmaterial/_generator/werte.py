@@ -35,9 +35,9 @@ TITEL_B2 = "Lastenrad-Verleih im Bremer Westen"
 # Das Adressmuster stammt aus test-sitzung.sh. Auf der Karte steht allein die
 # Anmeldeadresse, also die private Adresse des Kontos; die Hochschuladresse
 # wird zum Anmelden nicht gebraucht und steht deshalb nicht darauf. Block B
-# haben TN00 bis TN05 mit der Rolle STUDENT, Block C haben TN06 und TN07 mit
+# haben TN01 bis TN05 mit der Rolle STUDENT, Block C haben TN06 und TN07 mit
 # der Rolle EDITOR, Block D haben TN09 und TN10 mit der Rolle ADMIN.
-PSEUDONYME_BLOCK_B = ["TN00", "TN01", "TN02", "TN03", "TN04", "TN05"]
+PSEUDONYME_BLOCK_B = ["TN01", "TN02", "TN03", "TN04", "TN05"]
 PSEUDONYME_BLOCK_C = ["TN06", "TN07"]
 PSEUDONYME_BLOCK_D = ["TN09", "TN10"]
 

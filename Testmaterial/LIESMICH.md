@@ -19,7 +19,7 @@ die sie beschreibt, damit beide Beteiligten sie haben.
 | `_sitzung/D1_TN..docx` | je Sitzung eine, danach vernichten | 1 | entsteht auf Aufruf |
 | `07_SUS-Bogen.docx` | je Sitzung | 1 | 4 Druckvorlagen |
 | `08_TAM-Bogen_Fassung_A.docx` | TN08 und TN11 | 4 | 4 Druckvorlagen |
-| `09_TAM-Bogen_Fassung_B.docx` | TN00 bis TN05 | 4 | 4 Druckvorlagen |
+| `09_TAM-Bogen_Fassung_B.docx` | TN01 bis TN05 | 4 | 4 Druckvorlagen |
 | `10_TAM-Bogen_Fassung_C.docx` | TN06 und TN07 | 4 | 4 Druckvorlagen |
 | `11_TAM-Bogen_Fassung_D.docx` | TN09 und TN10 | 4 | 4 Druckvorlagen |
 
@@ -30,7 +30,7 @@ Eine Aufgabenkarte ist eine ganze Seite. Es wird nichts ausgeschnitten.
 | Datei | Wie oft | Seiten | Wer hält es |
 | --- | --- | --- | --- |
 | `12_Moderation.docx` | je Sitzung | 7 | Moderation |
-| `13_Protokoll_Block_A_und_B.docx` | TN00 bis TN05 | 4 | Protokoll |
+| `13_Protokoll_Block_A_und_B.docx` | TN01 bis TN05 | 4 | Protokoll |
 | `14_Protokoll_Block_A_und_C.docx` | TN06 und TN07 | 3 | Protokoll |
 | `15_Protokoll_Block_A_und_D.docx` | TN09 und TN10 | 4 | Protokoll |
 | `16_Protokoll_nur_Block_A_extern.docx` | TN08 und TN11 | 3 | Protokoll |
@@ -79,7 +79,7 @@ Passwort; die Hochschuladresse steht nicht darauf, weil sie zum Anmelden nicht g
 wird. Das Passwort gehört nicht ins Repository, deshalb liegen die Karten in
 `04_Aufgabenkarten_Block_B.docx`, `05_Aufgabenkarten_Block_C.docx` und
 `06_Aufgabenkarten_Block_D.docx` nur als Vorlage mit zwei Linien. Die ausgefüllten Karten,
-`B1` für `TN00` bis `TN05`, `C1` für `TN06` und `TN07`, `D1` für `TN09` und `TN10`,
+`B1` für `TN01` bis `TN05`, `C1` für `TN06` und `TN07`, `D1` für `TN09` und `TN10`,
 entstehen auf Aufruf:
 
 ```bash
@@ -88,14 +88,14 @@ python make_docs.py --passwort            # Wert aus DEV_TEST_PASSWORD der .env
 python make_docs.py --passwort geheim123  # oder ein Wert von Hand
 ```
 
-Sie landen in `Testmaterial/_sitzung/` als `B1_TN00.docx` bis `B1_TN05.docx` sowie
+Sie landen in `Testmaterial/_sitzung/` als `B1_TN01.docx` bis `B1_TN05.docx` sowie
 `C1_TN06.docx`, `C1_TN07.docx`, `D1_TN09.docx` und `D1_TN10.docx`, einzeln, damit je Sitzung genau eine gedruckt wird. Der Ordner ist von der Versionsverwaltung
 ausgenommen. Die gedruckte Karte wird nach der Sitzung vernichtet, wie das Blatt
 „Nach der Sitzung“ es in Abschnitt 1 verlangt.
 
-## Nach dem Pilottest neu erzeugen
+## Neu erzeugen
 
-Ändert der Pilottest an Tag 2 einen Wortlaut oder ein Zeitbudget, wird zuerst der
+Ändert sich ein Wortlaut oder ein Zeitbudget, wird zuerst der
 Aufgabenkatalog in Confluence geändert. Danach lassen sich die Dateien neu erzeugen:
 
 ```bash

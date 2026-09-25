@@ -80,7 +80,7 @@ def anleitung():
          "Moderation"],
         ["19 Nach der Sitzung", "je Testtag, enthält das Rücksetzprotokoll", "1", "beide Rollen"],
     ], breiten=[5.2, 5.0, 3.6, 3.0])
-    absatz(d, "Welches Beobachtungsprotokoll: Fassung „A und B“ für TN00 bis TN05, „A und C“ für "
+    absatz(d, "Welches Beobachtungsprotokoll: Fassung „A und B“ für TN01 bis TN05, „A und C“ für "
               "TN06 und TN07, „A und D“ für TN09 und TN10, „nur Block A“ für TN08 und TN11.",
            10.5, vor=4)
 
@@ -88,7 +88,6 @@ def anleitung():
     absatz(d, "Maßgeblich ist der Rollenblock, nicht der zuerst bearbeitete Block A. Eine falsch "
               "ausgegebene Fassung lässt sich hinterher nicht heilen.", 10.5)
     tabelle(d, ["Sitzung", "Gruppe", "Blöcke", "TAM-Fassung"], [
-        ["TN00 (Pilot)", "Pilot, zählt nicht", "A, dann B", "Fassung B"],
         ["TN01 bis TN05", "Studierende", "A, dann B", "Fassung B"],
         ["TN06, TN07", "Redaktion", "A, dann C", "Fassung C"],
         ["TN08, TN11", "Extern", "nur A", "Fassung A"],
@@ -120,7 +119,7 @@ def anleitung():
     absatz(d, "Offen bleiben allein die drei Anmeldekarten B1, C1 und D1: sie tragen das "
               "Passwort und liegen in den Sätzen der Blöcke B, C und D nur als Vorlage. Die "
               "ausgefüllten Karten entstehen mit „python make_docs.py --passwort“ in "
-              "Testmaterial/_sitzung, B1 für TN00 bis TN05, C1 für TN06 und TN07, D1 für TN09 "
+              "Testmaterial/_sitzung, B1 für TN01 bis TN05, C1 für TN06 und TN07, D1 für TN09 "
               "und TN10. Je Sitzung wird eine gedruckt und danach vernichtet.", 10, vor=6)
 
     zwischentitel(d, "5 Reihenfolge in der Sitzung")
