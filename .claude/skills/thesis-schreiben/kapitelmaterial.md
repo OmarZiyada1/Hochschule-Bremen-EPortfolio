@@ -313,9 +313,13 @@ den Systemstand geprüft; ein Abgleich ohne Beleg im Code ist wertlos.
 
 ## Kapitel 8: Zusammenfassung und Ausblick
 
-Seite `58097676`, Korridor 1150 bis 1400 Wörter, Register: ohne Technik.
-Beantwortet in 8.1 die übergeordnete Forschungsfrage, indem die drei
-Teilantworten aus 2.6, 3.5, 4.7, 5.4 und 7.2 zusammengeführt werden.
+Seite `58097676`, Korridor 1700 bis 2100 Wörter, Register: ohne Technik.
+Beantwortet in 8.1 die drei Teilfragen und die übergeordnete Forschungsfrage.
+Seit dem 23.09.2026 schließen die Kapitel 1 bis 7 ohne eigene Zusammenfassung
+(Vermerk auf der Gliederungsseite); die Antworten auf TF 1 und TF 3 stehen
+deshalb allein hier, die auf TF 2 verdichtet aus 7.2. Der Korridor ist am
+26.09.2026 dafür angehoben worden; die Korridore der übrigen Kapitel bleiben
+unverändert.
 
 Abschnitte: 8.1 Zusammenfassung, 8.2 Ausblick. Der Entwurf enthält bereits
 Teilantworten auf TF 1 und TF 3 und den Ausblick; die Teilantwort auf TF 2 und

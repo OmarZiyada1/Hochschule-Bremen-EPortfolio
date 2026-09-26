@@ -203,8 +203,10 @@ prüfbar sind; der Rest liegt beim Lesen.
    Kapitel beschäftigt sich mit“. Der Absatz beginnt mit der Sache.
 7. **Kein Floskel-Abschluss.** Kein „Zusammenfassend lässt sich sagen“. Die
    Abschnitte „Zusammenfassung“ sind echte Abschnitte mit eigenem Inhalt und
-   fangen nicht mit dieser Wendung an. Jeder von ihnen schließt mit dem Absatz
-   „Beitrag zur Teilfrage“.
+   fangen nicht mit dieser Wendung an. Seit dem 23.09.2026 schließen die
+   Kapitel 1 bis 7 ohne eigene Zusammenfassung (Vermerk auf der
+   Gliederungsseite); einen solchen Abschnitt trägt allein Kapitel 8, und 8.1
+   beantwortet dort jede Teilfrage und die Forschungsfrage ausdrücklich.
 8. **Keine starren Dreiergruppen.** Nicht jede Aufzählung hat drei Glieder; zwei
    oder vier sind oft die ehrlichere Zahl.
 
@@ -268,15 +270,16 @@ Kapitel 4 und 5, und dort einmal bei der Einführung.
 
 ## Bindung an die Forschungsfrage
 
-Jede Kapitelzusammenfassung schließt mit einem Absatz „Beitrag zur Teilfrage“,
-der benennt, was das Kapitel zu welcher Teilfrage beigetragen hat. Die Zuordnung
-ist verbindlich und stammt von Seite `2424870`:
+Jedes Kapitel arbeitet einer Teilfrage zu. Seit dem 23.09.2026 schließen die
+Kapitel 1 bis 7 ohne eigene Zusammenfassung; die Antworten stehen gebündelt in
+8.1, die auf TF 2 zusätzlich ausführlich in 7.2. Die Zuordnung ist verbindlich
+und stammt von Seite `2424870`:
 
 | Teilfrage | bearbeitet in | beantwortet in |
 | --- | --- | --- |
-| TF 1: Anforderungen aus der Forschungsliteratur | Kapitel 3 (Herleitung), Kapitel 2 (Übersetzung) | 2.6 und 3.5 |
-| TF 2: Merkmale für Auffindbarkeit und Benutzerfreundlichkeit | 3.3, 4.5, Kapitel 6 | 7.2 |
-| TF 3: Blockbasiertes Inhaltsmodell mit Redaktionsworkflow | 4.3 und 4.4, Kapitel 5 | 4.7 und 5.4 |
+| TF 1: Anforderungen aus der Forschungsliteratur | Kapitel 3 (Herleitung), Kapitel 2 (Übersetzung) | 8.1 |
+| TF 2: Merkmale für Auffindbarkeit und Benutzerfreundlichkeit | 3.3, 4.5, Kapitel 6 | 7.2, verdichtet in 8.1 |
+| TF 3: Blockbasiertes Inhaltsmodell mit Redaktionsworkflow | 4.3 und 4.4, Kapitel 5 | 8.1 |
 | Übergeordnete Forschungsfrage | alle Kapitel | 8.1 |
 
 Ein Kapitel, das keiner Teilfrage zuarbeitet, ist entweder falsch geschnitten
@@ -462,7 +465,8 @@ und Ticketschlüssel gilt allein für die Contract-Seite und hier nicht.
 - Jede Aussage über das System ist im Repository, im Contract oder auf einer
   Materialseite belegt; jede Aussage aus der Literatur trägt eine Quelle aus der
   Literaturübersicht, die im Kapitel mit dem eigenen Projekt verbunden ist.
-- Die Zusammenfassung endet mit dem Absatz „Beitrag zur Teilfrage“.
+- Die Kapitel 1 bis 7 schließen ohne eigene Zusammenfassung; Kapitel 8.1
+  beantwortet jede Teilfrage und die Forschungsfrage ausdrücklich.
 - Jede Abbildung ist angekündigt und ausgewertet, trägt Nummer, Titel und
   Herkunft, hängt als Anhang an derselben Seite und steht im Bildverzeichnis
   (`2064410`).
@@ -488,4 +492,7 @@ Diese Punkte werden nicht je Kapitel geprüft, sondern vor der Abgabe am
 - Abschnitt 1.4 (Aufbau der Arbeit) ist geschrieben; er entsteht zuletzt.
 - Jedes Kapitel ist durch eine Rechtschreibprüfung gelaufen und von einem
   Menschen gelesen worden.
-- `thesis.py korridore` ist grün, und der Gesamtumfang liegt im Ziel.
+- `thesis.py korridore` ist grün, und der Gesamtumfang liegt im Ziel. Ausnahme
+  seit dem 26.09.2026: Mit dem angehobenen Korridor von Kapitel 8 liegt die
+  Summe der Korridore bewusst über dem Seitenziel (Kopf von `thesis.py`); dann
+  zählt allein der gemessene Gesamtumfang.

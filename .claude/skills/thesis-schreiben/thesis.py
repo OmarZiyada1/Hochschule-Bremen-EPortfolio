@@ -49,6 +49,14 @@ SEITENZIEL = (70, 85)
 # unterschriebenen Exposes v3 und der Vorgabe des Zweitpruefers, dass die
 # Ergebnisse der Kern der Forschung sind: Kapitel 6 und 7 tragen zusammen so
 # viel wie Kapitel 4 und 5. Die Summen treffen SEITENZIEL, `korridore` prueft es.
+#
+# Seit dem 26.09.2026 traegt Kapitel 8 einen groesseren Korridor: Die Kapitel 1
+# bis 7 schliessen seit dem 23.09.2026 ohne eigene Zusammenfassung (Vermerk auf
+# der Gliederungsseite), die Antworten auf alle Teilfragen stehen allein in 8.1.
+# Die Korridore der uebrigen Kapitel bleiben bewusst unveraendert. Ihre Summe
+# liegt damit bei 72,2 bis 87,0 Seiten und ueber SEITENZIEL; `korridore` meldet
+# das mit Absicht als Befund, entschieden am 26.09.2026. Massgeblich ist der
+# gemessene Umfang der Kapitel, an diesem Tag rund 82 Seiten.
 KORRIDOR = {
 	1: (1550, 1800),
 	2: (2700, 3200),
@@ -57,7 +65,7 @@ KORRIDOR = {
 	5: (2850, 3450),
 	6: (2700, 3300),
 	7: (3500, 4250),
-	8: (1150, 1400),
+	8: (1700, 2100),
 }
 
 # Nachnamen, die als Beleg auftreten duerfen. Alles andere ist entweder ein
