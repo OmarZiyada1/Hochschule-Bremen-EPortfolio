@@ -84,6 +84,8 @@ KERNQUELLEN = {
 	"Brooke",
 	"McKenney",
 	"Bosch",
+	# Die Namenserkennung liest bei "Van den Bosch et al." nur das erste Wort.
+	"Van",
 	"W3C",
 	"WCAG",
 	"Sauro",
@@ -97,6 +99,14 @@ KERNQUELLEN = {
 	# "(Hochschule Bremen, 2026)" lautet.
 	"Hochschule",
 	"Bremen",
+	# Primaerquellen der drei Sekundaerzitate, seit 02.10.2026 in der
+	# Literaturuebersicht gefuehrt (Kuerzel Kah01, ePo03, SL16). Im Text stehen
+	# sie nur mit "zitiert nach" Lorenzo und Ittelson (2005) bzw. Lewis und
+	# Sauro (2018). "PortConsortium" deckt ab, dass die Namenserkennung des
+	# Linters erst ab dem ersten Grossbuchstaben liest.
+	"Kahn",
+	"ePortConsortium",
+	"PortConsortium",
 }
 # Belegt, aber noch nicht in der Literaturuebersicht gefuehrt. Erlaubt, mit
 # Hinweis, damit die Tabelle in Confluence nachgezogen wird. Bangor, Kortum,
