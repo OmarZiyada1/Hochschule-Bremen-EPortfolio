@@ -178,9 +178,9 @@ Gegenstand. Erprobt TF 3 und beantwortet sie in 5.4.
 Abschnitte: 5.1 Wahl der Realisierungsplattform, 5.2 Ausgewählte
 Realisierungsaspekte, 5.3 Qualitätssicherung, 5.4 Zusammenfassung.
 
-Der Kapiteltitel im Exposé lautet „Realisierung“, die Confluence-Seite heißt
-„Prototypische Realisierung“. Verbindlich ist das Exposé; die Abweichung im
-Seitentitel bleibt bestehen und ist kein Inhaltsfehler. Der vorhandene
+Der Kapiteltitel im Exposé lautet „Realisierung“. Die Confluence-Seite hieß bis
+zum 02.10.2026 „Prototypische Realisierung“ und trägt seit dem 03.10.2026
+denselben Titel wie das Exposé („Kapitel 5: Realisierung (Teilentwurf)“). Der vorhandene
 Teilentwurf nennt im Kopf den Umsetzungsstand vom 08.08.2026 und ist damit
 überholt: seither sind unter anderem KAN-40 bis KAN-96 hinzugekommen.
 

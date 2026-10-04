@@ -131,20 +131,33 @@ Unter Windows heißt der Aufruf `py`, nicht `python`. Die Arbeitskopien liegen i
 | Forschungsfrage & Ziele | `2424870` | Wortlaut von FF, TF 1 bis TF 3 |
 | Literaturübersicht | `2097153` | zitierbare Quellen, Kürzel, Sekundärzitat |
 | Eckdaten | `2129939` | Titel, Prüfer, Abgabe 08.10.2026 |
-| Bildverzeichnis / eigene Abbildungen | `2064410` | leer, wird beim Schreiben gefüllt |
+| Bildverzeichnis / eigene Abbildungen | `2064410` | jede Abbildung mit Herkunft und Dateiname, Stand-Vermerke je Änderung |
 | Status: Schreibfähigkeit der Kapitel | `34471937` | veraltet, nur Hinweis |
 | Kapitel 1: Einleitung | `34504705` | Entwurf |
 | Kapitel 2: Anforderungsanalyse | `34701325` | Entwurf |
 | Kapitel 3: Grundlagen und verwandte Arbeiten | `34373645` | Entwurf |
 | Kapitel 4: Konzeption | `51740676` | Entwurf, umfangreichster Stand |
-| Kapitel 5: Prototypische Realisierung | `51642372` | Teilentwurf |
-| Kapitel 6: Test | `51642395` | leer; Grundlage ist der Testplan |
-| Kapitel 7: Evaluation | `51642418` | leer, dito |
+| Kapitel 5: Realisierung | `51642372` | Teilentwurf |
+| Kapitel 6: Test | `51642395` | Teilentwurf |
+| Kapitel 7: Evaluation | `51642418` | Teilentwurf |
 | Kapitel 8: Zusammenfassung und Ausblick | `58097676` | Teilentwurf |
+| Anhang | `101220353` | A User Stories und Use Cases, B Problemliste P1 bis P30, C TAM-Werte je Block |
+| Literaturverzeichnis | `101351425` | APA 7, aus der Literaturübersicht erzeugt |
+| Abbildungs- und Tabellenverzeichnis | `101351445` | aus den Unterschriften der Kapitel erzeugt |
+| Abkürzungsverzeichnis | `101384193` | |
+| Zusammenfassung / Abstract | `101416961` | deutsch und englisch |
+| Eigenständigkeitserklärung, KI-Angabe und Einzelbeiträge | `101482498` | Entwurf, von den Verfassenden zu prüfen und zu unterschreiben |
+
+Die sechs Rahmenteile ab „Anhang“ liegen wie die Kapitel unter
+„Kapitelentwürfe“ (`1343491`) und tragen im Titel den Zusatz „(Entwurf)“. Eine
+neue Abbildung, Tabelle, Quelle oder Abkürzung in einem Kapitel wird dort
+nachgezogen.
 
 Seitentitel bleiben unverändert. `contract.py push` übernimmt den bestehenden
 Titel; der Zusatz „(Entwurf)“ wird erst entfernt, wenn die Prüfer den Stand
-abgenommen haben, und dann von Hand.
+abgenommen haben, und dann von Hand. Einzige Ausnahme bisher: Die Seite von
+Kapitel 5 hieß bis zum 02.10.2026 „Prototypische Realisierung“ und trägt seit
+dem 03.10.2026 den Kapiteltitel des Exposés.
 
 ## Ablauf je Kapitel
 
