@@ -1,0 +1,135 @@
+% ---------------------------------------------------------------------------
+% Kapitel 5: Realisierung
+% Wortgleich uebernommen aus der Confluence-Seite
+% "Kapitel 5: Realisierung (Teilentwurf)" (Space BEH, Seiten-ID 51642372),
+% Stand 04.10.2026. Abschnitt 5.4 Zusammenfassung steht dort noch nicht.
+% Kapiteltitel nach Expose "Realisierung"; die Confluence-Seite heisst
+% "Prototypische Realisierung". Verbindlich ist das Expose.
+% ---------------------------------------------------------------------------
+
+\chapter{Realisierung}
+\label{kap:realisierung}
+
+Ob sich ein blockbasiertes Inhaltsmodell mit integriertem Redaktionsworkflow realisieren lässt, entscheidet sich nicht am Entwurf, sondern daran, ob der Entwurf einer Umsetzung standhält. Die Realisierung dient hier deshalb als methodisches Werkzeug zur Prüfung der konzeptionellen Annahmen aus Kapitel 4 und nicht als Selbstzweck (Abschnitt 1.2). Beschrieben werden die Wahl der Plattform (Abschnitt 5.1), sechs Stellen, an denen die Umsetzung über eine Übersetzung des Entwurfs hinausging (Abschnitt 5.2), und die Sicherungen, die das Ergebnis an den API-Contract binden (Abschnitt 5.3). Dargestellt ist der eingefrorene Stand des Repositorys, auf dem auch der Test lief (Abschnitt 6.3): 22 Endpunktklassen, 28 Schemamigrationen und 35 Routen der Oberfläche. Technische Bezeichner erscheinen englisch, weil Datenmodell und API-Contract sie so führen; die Darstellung bleibt deutsch.
+
+\section{Wahl der Realisierungsplattform}
+\label{sec:plattformwahl}
+
+Drei Forderungen des Entwurfs bestimmen die Plattformwahl, und keine von ihnen ist Geschmackssache. Regeln müssen serverseitig erzwingbar sein und nicht bloß in der Oberfläche verborgen werden (Abschnitt 4.1). Der Inhalt braucht ein Dokumentmodell, das sich unverändert ablegen lässt, daneben aber eine abfragbare Projektion (Abschnitt 4.3). Und die beiden Fremddienste müssen austauschbar bleiben, ohne dass Programmtext angefasst wird.
+
+Das Backend läuft auf Java 21 mit Spring Boot 3.5.9. Ausschlaggebend war ein geschlossenes Ökosystem für genau die Bausteine, die der Entwurf verlangt: Steuerung, Sicherheit, Persistenz und Eingabeprüfung aus einer Hand statt vier einzeln zusammengefügter Bibliotheken. Records bilden die Übertragungsobjekte ohne Beiwerk ab. Die zweistufige Autorisierung aus Abschnitt 4.2 verteilt sich dabei notwendigerweise auf zwei Techniken. Die Rollenebene setzen die Pfadregeln der Sicherheitskonfiguration durch, etwa für den gesamten Verwaltungsbereich; die Ressourcenebene bleibt eigener Programmtext, weil sie Autorschaft, Mitwirkung und Redaktionszuweisung auswertet und sich nicht als Pfadregel ausdrücken lässt. Die Anmeldung arbeitet mit signierten Token nach dem HS512-Verfahren, ohne Sitzung auf dem Server. Der Preis dieser Wahl ist bekannt und festgehalten: Ein ausgegebenes Token lässt sich nicht zurückziehen, das Abmelden besteht im Verwerfen durch den Client.
+
+Als Datenbank dient PostgreSQL 16, und sie löst den scheinbaren Widerspruch aus Abschnitt 4.6. Die fachlichen Invarianten sollen als Bedingungen in der Datenbank liegen, während die Bausteine ein bewegliches Dokumentmodell brauchen. PostgreSQL leistet beides: relationale Integrität für die Struktur und den Spaltentyp \texttt{jsonb} für die Knoten des Editors. Schemaänderungen laufen ausschließlich über versionierte Migrationen, deren Ergebnis beim Start gegen die Entitäten geprüft wird. Die maschinenlesbare Beschreibung der Schnittstelle entsteht zur Laufzeit aus dem Programmtext selbst; eine von Hand gepflegte zweite Fassung könnte vom Verhalten abweichen, ohne dass es jemand bemerkt. Im Betrieb ist dieser Zugang abgeschaltet.
+
+Die Oberfläche ist eine Einseitenanwendung aus React 19, TypeScript und Vite. Die Antworttypen werden aus der Beschreibung des Servers erzeugt und nicht geschrieben, womit Server und Oberfläche eine Quelle teilen; die Deckung mit dem API-Contract sichert der Abgleich aus Abschnitt 5.3. Die Tokenschicht des Gestaltungskonzepts liegt im Stylesheet, weshalb Tailwind CSS 4 ohne eigene Konfigurationsdatei auskommt. Die interaktiven Grundkomponenten stammen aus shadcn/ui, das auf der Verhaltensbibliothek Base UI aufsetzt und als Quelltext in das Repository erzeugt wird. Der Grund steht in Abschnitt 4.5: Tastaturbedienung und Rollenauszeichnung sind Verhalten und nicht Farbe, und dieses Verhalten im Rahmen einer Bachelorarbeit vollständig selbst zu bauen, wäre nicht zu leisten. Der Editor beruht auf Tiptap 3 und damit auf ProseMirror, weil das Inhaltsmodell aus Abschnitt 4.3 an genau dieses Dokumentmodell gebunden ist.
+
+Zwei Festlegungen gelten quer zu beiden Seiten. Jede Fehlerantwort verlässt den Server im selben Umschlag mit maschinenlesbarem Fehlercode, und auch die vom Sicherheitsrahmen selbst erzeugten Antworten für fehlende Anmeldung und fehlende Berechtigung sind ausdrücklich darauf verdrahtet; andernfalls hätte die Schnittstelle zwei Formate. Und die Konfiguration scheitert laut statt still: Fehlt ein Pflichtwert, startet die Anwendung nicht. Dazu gehört eine Feinheit, die erst beim Ausprobieren auffiel. Ein Platzhalter ohne Ersatzwert ist für sich genommen kein Netz, denn die Bindung der Konfigurationswerte in Spring Boot lässt eine nicht auflösbare Zeichenfolge als Wert stehen, statt zu scheitern. Eine Prüfung auf „nicht leer“ greift dann nicht, und die Anwendung liefe gegen einen Container im Azure Blob Storage, der so heißt wie seine eigene Umgebungsvariable. Ein nicht aufgelöster Platzhalter zählt deshalb ausdrücklich als fehlender Wert.
+
+\section{Ausgewählte Realisierungsaspekte}
+\label{sec:realisierungsaspekte}
+
+\subsection{Der Baustein in der Datenbank}
+
+Ein Baustein ist eine Zeile, und diese Zeile trägt den Knoten der obersten Ebene unverändert als \texttt{jsonb} sowie seine Art als eigene Spalte. Die Doppelung war in Abschnitt 4.3 eine Behauptung; in der Persistenz erweist sie sich als Bedingung. Über eine Spalte lassen sich eine Integritätsbedingung, ein Filter und eine Auswertung wartbar formulieren; dieselbe Regel als Ausdruck über das JSON-Dokument wäre in SQL schwer zu warten. Die Spalte trägt deshalb eine Aufzählung der fünfzehn zulässigen Arten als Bedingung.
+
+Die Reihenfolge sichert eine Eindeutigkeitsbedingung über Projekt und Sortierindex, angelegt mit aufgeschobener Prüfung. Innerhalb einer Transaktion sind Zwischenzustände damit zulässig, geprüft wird erst beim Abschluss, und der Tausch zweier Bausteine gelingt ohne Platzhalterwerte. Der Preis ist ebenfalls festgehalten: Das Einfügen mit Konfliktbehandlung arbeitet mit aufgeschobenen Bedingungen nicht zusammen.
+
+Nicht jede Regel gehört ins Schema. Die von der Art abhängige Prüfung, also Pflichtattribute je Baustein, die Übereinstimmung von Spalte und Knotenart sowie die Positivliste der Einbettungsanbieter, liegt in einem eigenen Dienst. Eine Angabe zur Schemafassung hält fest, gegen welche Fassung ein Baustein geschrieben wurde; überführt wird beim Lesen und nicht durch eine Schemaänderung, weshalb ein alter Bestand ohne Migration weiterläuft. Sichtbar wird das an den Überschriften: Sechs Ebenen erscheinen um eine Stufe versetzt, und die sechste wird als Element mit ausgewiesener Rolle und Ebene ausgezeichnet, weil es kein siebtes Überschriftenelement gibt. Die lückenlose Gliederung, wie sie die Techniken zu den Richtlinien des W3C (2023) empfehlen, bleibt so erhalten.
+
+\abbildung{abb-5-1-blocktabelle.png}{0.95}{abb:blocktabelle}%
+{Die Blocktabelle: Inhalt als jsonb, Art als geprüfte Spalte}%
+{Die Blocktabelle: Inhalt als \texttt{jsonb}, Art als geprüfte Spalte, aufgeschobene Eindeutigkeit der Reihenfolge (eigene Darstellung nach den Migrationen 6, 9 und 24)}
+
+Abbildung 5.1 zeigt die Tabelle in dem Zustand, den die Migrationen zusammen ergeben. Zwei Zeilen tragen die Entwurfsentscheidung aus Abschnitt 4.3: Die eine hält den Knoten unverändert, die andere zieht seine Art heraus und macht sie prüfbar. Die aufgeschobene Bedingung darunter setzt um, was Abschnitt 4.6 für das Umsortieren vorsieht.
+
+\subsection{Autosave, Versionsfeld und Bearbeitungssperre}
+
+Das automatische Speichern ist der Grund, weshalb das Inhaltsmodell ein Nebenläufigkeitskonzept braucht. Der Speicherpfad ersetzt die gesamte Bausteinliste in einem Aufruf und arbeitet dabei als Verschmelzung: Bekannte Kennungen werden aktualisiert, unbekannte angelegt, fehlende gelöscht. Die Antwort liefert die vom Server vergebenen Kennungen und die neue Fassungsnummer zurück. Ohne diese Rückgabe schickte der nächste Takt dieselben Bausteine erneut ohne Kennung, und der Server legte sie ein zweites Mal an.
+
+Der Takt selbst ist entprellt und zusätzlich nach oben begrenzt. Eine reine Entprellung hat eine Lücke, die beim Schreiben besonders leicht auftritt: Jeder Tastendruck setzt die Frist zurück, und wer zehn Minuten ohne Pause tippt, hat zehn Minuten nichts gespeichert. Die Obergrenze sendet spätestens nach zehn Sekunden. Darunter liegt das Versionsfeld aus Abschnitt 4.3. Weicht die mitgeschickte Fassung ab, antwortet der Server mit einem Konflikt, und dieser Konflikt wird niemals selbsttätig wiederholt: Ein zweiter Versuch mit der neuen Fassungsnummer überschriebe genau die fremde Änderung, vor der die Prüfung schützt.
+
+Zwei Befunde gehören dazu, weil beide erst im Betrieb sichtbar wurden. Inhalt und Kopfangaben laufen über getrennte Schreibwege, erhöhen aber dieselbe Fassungsnummer; sie laufen deshalb nacheinander, mit der Fassung aus der jeweils vorigen Antwort. Und ein Takt ohne gemeldete Änderung schreibt nichts mehr zurück: Bis dahin erhöhte der erste Takt nach jedem Lesen die Fassungsnummer ohne Anlass und erzeugte in jeder anderen offenen Sitzung genau den Konflikt, den das Verfahren abfedern soll.
+
+Über beidem steht die Bearbeitungssperre aus Abschnitt 4.3. Sie liegt im Arbeitsspeicher und nicht in der Datenbank, denn eine Sperre lebt Sekunden und ist nach einem Neustart gegenstandslos; sie zu speichern hieße, einen Zustand dauerhaft zu führen, der seine Bedeutung mit dem Prozess verliert. Ihr Preis steht im API-Contract und wird bewusst getragen: Sie gilt je Instanz, und nach einem Neustart sind kurzzeitig zwei Sitzungen schreibberechtigt. Aufgefangen wird das vom Versionsfeld darunter. Die Sperre ersetzt es nicht, sie macht den Konflikt selten. Dass der Speicherzustand dabei durchgehend sichtbar ist, folgt dem in Tabelle 3.1 abgeleiteten Kriterium zur Sichtbarkeit des Systemzustands (Nielsen, 2024); ein stiller Fehlschlag wäre Datenverlust mit Ansage, weil weiterschreibt, wer sich gespeichert glaubt. Die Rolle der Benutzerfreundlichkeit, die Abschnitt 3.2 nach Davis (1989) als Vorbedingung der wahrgenommenen Nützlichkeit beschreibt, wirkt hier in beide Richtungen: Die Bequemlichkeitsfunktion erzeugt das Risiko, das drei Vorkehrungen wieder einfangen müssen.
+
+\abbildung{abb-5-2-editor.png}{0.95}{abb:editor-gebaut}%
+{Editor mit Bausteinen verschiedener Art und dem Kommentarbereich der Prüfung}%
+{Editor mit Bausteinen verschiedener Art und dem Kommentarbereich der Prüfung (Screenshot der laufenden Anwendung)}
+
+Abbildung 5.2 zeigt den Arbeitsplatz im gebauten Stand. Bild, Galerie, Formel, Quelltext, Tabelle, Video und Zitat hängen an derselben Bausteinliste, und der Zustandshinweis oben rechts weist das Projekt als in Überarbeitung aus. Daneben steht der Kommentarbereich mit zwei offenen Änderungsaufforderungen und einer Antwort. Gebaut ist beides wie im Entwurf in einer Ansicht, weil eine Rückfrage neben ihren Gegenstand gehört (Abschnitt 4.5).
+
+\subsection{Der Editor als zweite Hälfte des Inhaltsmodells}
+
+Ein Baustein entspricht einem Knoten der obersten Ebene des Editordokuments, und diese Bindung hat sich als tragfähig erwiesen: Zwischen Editor und Speicherung genügt eine schmale Zuordnung, die Knoten und Bausteinzeilen ineinander überführt. Was das Ökosystem des Editors mitbringt, wird bezogen und nicht nachgebaut, namentlich der Ziehgriff am Baustein, der Platzhalter im leeren Absatz und der Vorschlagsmechanismus hinter dem Schrägstrichbefehl; am getesteten Stand öffnet der getippte Schrägstrich das Menü allerdings nicht (P30, Abschnitt 6.3). Ein Eigenbau daneben funktioniert zwar, weicht aber mit der Zeit ab, und die Zusagen an Tastaturbedienung und Fokusführung sind in der bezogenen Fassung vollständiger.
+
+Eigene Erweiterungen entstehen deshalb nur dort, wo Fachwissen dahintersteht: bei den Medienarten mit ihrem Weg über Hochladen oder geprüfte Einbettung, bei der Formel und beim Inhaltsverzeichnis. Letzteres ist ein Baustein mit gespeicherter Momentaufnahme und keine Ableitung beim Lesen. Der Grund liegt im Lesepfad, und er führt zugleich zum stärksten Beleg dieses Abschnitts: Öffentliche Detailseite, Prüfansicht und Druckansicht rendern gespeicherte Bausteine ohne laufenden Editor. Eine Ableitung wäre dort dreimal getrennt zu bauen und liefe auseinander. Alle drei Ansichten benutzen stattdessen denselben schreibgeschützten Renderer.
+
+\abbildung{abb-5-3-einfuegen.png}{0.9}{abb:medienbausteine}%
+{Einfügeleiste für Medienbausteine und der Griff am Baustein}%
+{Einfügeleiste für Medienbausteine und der Griff am Baustein (Screenshot der laufenden Anwendung, Ausschnitt)}
+
+\abbildung{abb-5-4-projektseite.png}{0.95}{abb:oeffentliche-projektseite}%
+{Öffentliche Projektseite: derselbe Bausteinbestand schreibgeschützt}%
+{Öffentliche Projektseite: derselbe Bausteinbestand schreibgeschützt, daneben die beschreibenden Angaben (Screenshot der laufenden Anwendung)}
+
+Abbildung 5.3 zeigt die beiden Bedienelemente aus dem Ökosystem: links den Griff mit Hinzufügen, Ziehen und Löschen, unten die Leiste der Medienarten. Beide hängen am einzelnen Baustein und nicht am Seitenrand, weil sie sich auf ihn beziehen. Abbildung 5.4 zeigt dieselbe Struktur ohne Editor. Das Inhaltsverzeichnis führt als Sprungliste in denselben Text, die beschreibenden Angaben stehen als eigene Spalte daneben, und die Mitwirkenden erscheinen mit ihrer frei benannten Funktion, wie Abschnitt 4.6 es getrennt geführt hat.
+
+\subsection{Der Workflow als serverseitige Schranke}
+
+Der Freigabeweg ist nicht dem Inhalt nachgelagert, sondern liegt als Schranke im Schreibpfad. Die Bearbeitung des Inhalts ist auf Entwurf und Überarbeitung beschränkt, jeder andere Zustand ergibt einen Konflikt. Dieselbe Schranke gilt für das Hochladen und das Löschen von Dateien durch die Beteiligten, denn ohne sie entstünde an einem veröffentlichten Projekt am Freigabeweg vorbei eine öffentlich abrufbare Datei, oder es verschwände still eine, auf die ein Baustein verweist. Ausgenommen ist allein die Administration, die Dateien in jedem Zustand entfernen kann (Abschnitt 4.2; zur Bewertung Abschnitt 7.3).
+
+Zwei Schranken, die der Entwurf vorsah, sind erst in der Umsetzung serverseitig verbindlich geworden. Das Einreichen ist gesperrt, solange eine Änderungsaufforderung offen ist; im Entwurf bereitet das die Zahl offener Aufforderungen über dem Kommentarbereich vor (Abschnitt 4.5). Ohne die Sperre ginge ein Projekt zurück, dessen Anlass unbearbeitet ist, und die Redaktion prüfte ein zweites Mal dasselbe. Und die Zuweisung einer Redaktion, für die der Entwurf ein Feld vorsah, ist Pflichtangabe des Einreichens geworden, weil ein eingereichtes Projekt ohne Zuständige in keiner Arbeitsliste erscheint und damit genau den Stillstand erzeugt, den Abschnitt 4.4 vermeiden wollte. Das Vier-Augen-Prinzip bleibt dagegen abschaltbar: Bei einer einzigen verwaltenden Person könnte sonst niemand deren eigenes Projekt freigeben.
+
+\abbildung{abb-5-5-pruefansicht.png}{0.95}{abb:pruefansicht}%
+{Prüfansicht mit den drei Kommentararten, dem Statusmenü und dem Umschalter}%
+{Prüfansicht mit den drei Kommentararten, dem Statusmenü und dem Umschalter zwischen Vorschau und Prüfung (Screenshot der laufenden Anwendung)}
+
+Abbildung 5.5 zeigt die Prüfansicht. Der Zustand steht als Schaltfläche über dem Kommentarbereich und ist zugleich der Ort, an dem der Übergang ausgelöst wird; ein getrenntes Formular gibt es nicht. Damit steht die Zustandsangabe auch für die prüfende Seite dort, wo gehandelt wird, und löst dasselbe Kriterium ein wie der Speicherzustand im Editor (Nielsen, 2024). Darunter stehen die drei Kommentararten aus Abschnitt 4.4 zur Auswahl, hier mit einer für die einreichende Seite unsichtbaren Notiz.
+
+\subsection{Vom Designsystem zur Tokenschicht}
+
+Die zweistufige Tokenschicht aus Abschnitt 4.5 musste technisch erzwungen und nicht bloß vereinbart werden. Die mitgelieferten Farb- und Radienpaletten von Tailwind CSS sind deshalb abgeschaltet: Klassen für Rohfarben existieren im Projekt schlicht nicht. Ohne diese Sperre wäre die Regel eine Konvention, an die sich unter Zeitdruck niemand hält, und der dunkle Anzeigemodus wäre nach wenigen Komponenten unbrauchbar.
+
+Die Sperre selbst hat allerdings Nebenwirkungen, die niemand meldet, und das ist der Realisierungsaspekt an dieser Stelle. Erstens entfernt das Abschalten nicht nur die Farbrampen, sondern auch Schlüsselwerte wie „durchsichtig“; eine bezogene Komponente, die einen durchsichtigen Rahmen setzt, erhält zusammen mit der Grundregel für Rahmenfarben einen sichtbaren Rahmen. Zweitens belegen zwei Namensräume denselben Namen: Die sechs Radien des Gestaltungssystems tragen Namen aus dem Namensraum \texttt{-{}-radius-*} von Tailwind CSS. Eine Zuweisung nach dem Muster der Farben, etwa \texttt{-{}-radius-card: var(-{}-radius-card)}, wird dadurch zu einem Verweis auf sich selbst; im gebauten Ergebnis fehlten vier der sechs Stufen. Drittens verweist die Rolle des Fokusrings auf denselben Wert wie die Markenfarbe. Ohne einen Versatz, der einen Zwischenraum in Hintergrundfarbe stehen lässt, ist der Fokusring auf einer Schaltfläche dieser Farbe unsichtbar, und die in Abschnitt 4.5 vorgesehene Erfüllung des Erfolgskriteriums zur Fokussichtbarkeit scheitert an einer Stelle, die kein Vergleich von Farbwerten findet (W3C, 2023).
+
+Keiner dieser drei Fälle erzeugt einen Fehler, eine Warnung oder einen fehlschlagenden Test. Sichtbar sind sie allein am gebauten Stylesheet, gefunden wurden sie durch den Abgleich jeder einzelnen Klasse der erzeugten Komponenten gegen dieses Ergebnis. Eine Regel, die eine andere Regel erzwingt, verlangt also eine eigene Prüfung, und diese Prüfung sieht auf das Erzeugnis und nicht auf den Quelltext.
+
+\abbildung{abb-5-6-projektliste.png}{0.95}{abb:projektliste-gebaut}%
+{Projektliste mit den sechs Facettengruppen, Trefferzahl und Suchfeld}%
+{Projektliste mit den sechs Facettengruppen, Trefferzahl und Suchfeld im gebauten Stand (Screenshot der laufenden Anwendung)}
+
+Abbildung 5.6 zeigt, was daraus in der Fläche wird, und zugleich das Facettenmodell aus Abschnitt 4.5 im gebauten Stand. Die sechs Merkmalsgruppen stehen als dauerhafte Seitenleiste, die Trefferzahl über der Liste, das Suchfeld daneben. Jede Farbe darin, von der Fakultätsmarkierung bis zur Kachelfläche, hängt an einer Rolle und nicht an einem Rohwert. Am oberen Rand ist außerdem das Fragezeichen der Kopfleiste zu sehen, das der nächste Abschnitt betrifft.
+
+\subsection{Als die Umsetzung dem Entwurf vorauslief}
+
+Die Hilfeseite ist das siebenundzwanzigste Template des Projekts und das erste ohne Entsprechung im Prototyp. Der Entwurf hatte sie nicht vorgesehen. Gebaut wurde sie in der Formensprache der bestehenden Textseiten, und die Vorlage in der Projektdokumentation ist anschließend nachgezogen worden. Dazu kamen zwei Ergänzungen an Stellen, die der Prototyp bereits zeichnete: das Fragezeichen in der Kopfleiste und ein Eintrag in der Fußzeile.
+
+Als Gegenprobe zum übrigen Kapitel ist der Fall aufschlussreich. Ein Entwurf, der einer Umsetzung standhält, ist nicht dasselbe wie ein Entwurf, der sie vollständig vorwegnimmt. Wo die Reihenfolge sich umkehrt, ist eine nachgezogene Vorlage die ehrliche Antwort und keine, die nachträglich so aussieht, als hätte sie das Ergebnis geplant.
+
+\section{Qualitätssicherung}
+\label{sec:qualitaetssicherung}
+
+Die Qualitätssicherung folgt einem Grundsatz: Eine sicherheitsrelevante Zusage des API-Contracts gilt erst, wenn sie ausführbar ist. Drei Beispiele stehen für die Bauart. Ein Test belegt, dass der Passworthashwert in keiner Antwort erscheint. Ein zweiter prüft, dass die Hochschuladresse den Server ausschließlich über zwei benannte Wege verlässt. Ein dritter hält das dokumentierte Verhalten des Abmeldens fest, nämlich dass ein zustandsloses Token danach technisch weiter gültig ist; auch eine bewusst getragene Grenze ist eine Zusage und wird als solche geprüft.
+
+Die 71 Testklassen des Servers laufen gegen dieselbe Datenbank wie die Anwendung und nicht gegen eine eingebettete. Das ist keine Bequemlichkeit, sondern folgt aus Abschnitt 5.2: Eine aufgeschobene Eindeutigkeitsbedingung, ein Ausdrucksindex über die Kleinschreibung eines Schlagworts und ein teilweiser Eindeutigkeitsindex existieren in einer anderen Datenbank nicht, und ein Test gegen einen Ersatz bestätigte eine Regel, die im Betrieb niemand durchsetzt. Zwei weitere Sicherungen kommen ohne Testcode aus. Die Prüfung des Schemas beim Start erzwingt über alle 28 Migrationen hinweg die Deckung zwischen Datenbank und Entitäten. Und die Deckungsgleichheit zwischen den Fehlercodes im Programmtext und der Tabelle des API-Contracts wird bei jeder Ergänzung mitgeführt; dass diese Regel nicht selbstverständlich ist, zeigte ein Code, der zunächst nur im Programmtext bestand und erst später nachgetragen wurde.
+
+Auf der Seite der Oberfläche liegen 140 Testdateien, die Serverantworten über abgefangene HTTP-Aufrufe stellen statt über nachgebaute Funktionen. Strukturelle Tests zählen die Rohwertstufen, die Rollen und die Radien unmittelbar gegen die Stylesheet-Datei und halten fest, dass kein Farbwert außerhalb der Wertedateien steht, dass keine Komponente an einer Rohwertstufe hängt und dass beide Sprachdateien denselben Schlüsselbestand tragen. Eine unerreichbare Stufe fällt damit auf, bevor jemand sie doch verwendet.
+
+Ein eigener Lauf prüft die gebaute Anwendung auf Barrierefreiheit, und zwar in 37 Prüffällen über die Routen der Oberfläche mit je sieben Prüfungen, davon 36 in hellem und dunklem Modus. Neben der regelbasierten Prüfung stehen eigene Prüfungen für Überschriftenstruktur, Sprunglink, Tastaturdurchgang, Fokussichtbarkeit und die Darstellung auf 320 Bildpunkten Breite (W3C, 2023). Drei davon gibt es nur, weil die naheliegende Fassung falsch gemessen hat. Eine Prüfung auf eine gesetzte Schatteneigenschaft bestätigt jeden Fokusring, den es nicht gibt, weshalb im Zweifel zwei Bildausschnitte mit und ohne Fokus verglichen werden. Die Überschriftenprüfung muss die über Rolle und Ebene ausgezeichnete siebte Stufe mitzählen, also genau den Sonderfall, den Abschnitt 5.2 beschreibt. Und der Lauf muss zusichern, dass er die gemeinte Seite misst: Drei Schritte der Registrierung führen ohne Sitzungszustand auf denselben Anfang zurück und wurden in der ersten Fassung viermal gemessen, während der Lauf grün blieb. Der erste vollständige Durchgang ergab Befunde in mehreren Klassen, darunter keinen Verstoß gegen den Textkontrast; Kontraste von Bedienelementen und Text über Bildern misst der Lauf nicht, und die Zielgröße der Beteiligtenbilder führt er als benannte Ausnahme (Abschnitt 7.4).
+
+\abbildung{abb-5-7-administration.png}{0.95}{abb:administrationsseite}%
+{Übersicht der Administrationsseite mit Kennzahlen je Zustand}%
+{Übersicht der Administrationsseite mit Kennzahlen je Zustand, Nutzerstatistik und Verteilung nach Fakultäten (Screenshot der laufenden Anwendung)}
+
+Abbildung 5.7 zeigt die Übersicht der Administrationsseite, und sie steht hier, weil zwei dieser Befunde auf genau dieser Seite lagen. Das Ringdiagramm blieb mit der Tastatur erreichbar, obwohl es für Vorlesesoftware ausgeblendet ist; und eine allein für Vorlesesoftware bestimmte Tabelle nahm ihre natürliche Breite von 474 Bildpunkten an und schob die Seite quer. Beide Befunde teilen dieselbe Eigenschaft: Etwas Unsichtbares wirkt auf die Darstellung. Wer nur nach sichtbaren Elementen jenseits des Randes sucht, findet nichts und hält den Befund für einen Messfehler.
+
+Eine Sammlung von 101 Aufrufen fährt die Endpunkte in einem Durchlauf ab, von den öffentlichen Listen über den Freigabeweg bis zur Administration, und räumt ihre Testdaten am Ende selbst weg. Zwei Prüfungen entziehen sich dagegen jeder Automatisierung im Repository und sind als Handgriff festgehalten: Ob eine bezogene Datei unverändert ist, beantwortet allein der Vergleich gegen die auswärtige Registry, und ob eine Klasse überhaupt Wirkung hat, ist nur am gebauten Stylesheet zu sehen.
+
+Vor jedem Zusammenführen läuft zusätzlich ein Review-Schritt aus drei im Repository festgeschriebenen Prüfrollen: der Abgleich gegen den API-Contract, eine Konventionsprüfung des Servers und eine Konventions- und Barrierefreiheitsprüfung der Oberfläche. Sie sind durch Sprachmodelle gestützt und ersetzen weder die Tests noch das Lesen durch die Bearbeitenden; ihr Beitrag liegt in der Vollständigkeit der Durchsicht und nicht im Urteil. Jeder Befund wird behandelt oder ausdrücklich vertagt.
+
+Was diese Sicherungen nicht leisten, gehört dazu. Ein Durchgang mit einer Vorlesesoftware steht aus, geprüft ist bislang nur der Ausgangszustand jeder Seite, und Kontraste über Verläufen und Bildflächen bleiben der bekannte blinde Fleck automatischer Messung. Diese Grenzen sind benannt und stehen zusammen mit den übrigen in Kapitel 8.
+
+\section{Zusammenfassung}
+\label{sec:zusammenfassung-realisierung}
+
+\platzhalter{Abschnitt 5.4 steht auf der Confluence-Seite 51642372 noch nicht. Er beantwortet die dritte Teilfrage an der Realisierung und fasst zusammen, welche Entwurfsentscheidungen der Umsetzung standgehalten haben und welche sie verändert hat.}

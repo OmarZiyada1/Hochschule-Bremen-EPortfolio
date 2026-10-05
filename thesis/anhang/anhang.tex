@@ -1,0 +1,224 @@
+% ---------------------------------------------------------------------------
+% Anhang
+% Uebernommen aus der Confluence-Seite "Anhang (Entwurf)"
+% (Space BEH, Seiten-ID 101220353), Stand 04.10.2026.
+% Angepasst wurden allein Verweise: Tabellen- und Abschnittsnummern laufen
+% ueber \ref, der Verweis auf die entfallene Abbildung 2.2 zeigt auf
+% Abschnitt 2.5. In Tabelle B.1 sind Quelle und Haeufigkeit abgekuerzt.
+% ---------------------------------------------------------------------------
+
+\chapter{User Stories und Use Cases}
+\label{anh:user-stories}
+
+Jede User Story folgt dem Format „Als [Gruppe] möchte ich [Ziel], damit [Nutzen]“ und nennt die funktionale Anforderung aus Tabelle~\ref{tab:fa}, die sie einlöst. Die Nummern stehen in Blöcken je Akteurgruppe. 34 der 36 funktionalen Anforderungen tragen eine Story; ohne Story bleiben FA-04 und FA-35, weil beide eine Eigenschaft des Systems beschreiben und keine Handlung einer Person. User Stories und Use Cases beschreiben den Sollzustand aus Kapitel~\ref{kap:anforderungsanalyse}. Wo der gebaute Stand davon abweicht, führt Abschnitt~\ref{sec:pruefung-fa} es aus; das betrifft den Studiengang auf der Profilseite (US-04, US-16, UC-05) und die Löschbefugnisse der Administration, die über US-34 hinausgehen.
+
+\newcommand{\usTabelle}[3]{%
+\begingroup
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.08}
+\setlength{\LTcapwidth}{\textwidth}
+\begin{longtable}{@{}L{1.0cm}L{11.3cm}L{2.2cm}@{}}
+	\caption[#1]{#1 (eigene Darstellung)}
+	\label{#2}\\
+	\toprule
+	\textbf{ID} & \textbf{User Story} & \textbf{Bezug} \\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{ID} & \textbf{User Story} & \textbf{Bezug} \\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	#3
+\end{longtable}
+\endgroup}
+
+\usTabelle{User Stories der externen Nutzenden}{tab:us-extern}{%
+	US-01 & Als externe Person möchte ich veröffentlichte Projekte über mehrere verbindbare Filtergruppen und ein Suchfeld eingrenzen, meine Auswahl sehen, einzeln zurücknehmen und als Adresse weitergeben können, damit ich schnell zu den Arbeiten eines bestimmten Studiengangs finde und den Fund teilen kann. & FA-10, FA-12, FA-14, FA-15 \\
+	US-02 & Als externe Person möchte ich ein Projekt mit allen seinen Bausteinen und beschreibenden Angaben ansehen, damit ich mir ein Bild von der studentischen Arbeit machen kann. & FA-11 \\
+	US-03 & Als studieninteressierte Person möchte ich Studiengänge und ihre Module einsehen können, damit ich verstehe, in welchem Zusammenhang ein Projekt entstanden ist. & FA-18 \\
+	US-04 & Als externe Person, etwa eine Arbeitgeberin, möchte ich die Profilseite einer studierenden Person mit Biografie, Studiengang und allen ihren veröffentlichten Projekten ansehen, damit ich einen Gesamteindruck bekomme, statt einzelne Projekte getrennt suchen zu müssen. & FA-16, FA-29 \\
+	US-05 & Als externe Person möchte ich eine Rückfrage oder eine Meldung an die Hochschule senden können, ohne mich anzumelden, damit ich auf einen Fehler hinweisen oder Kontakt aufnehmen kann. & FA-06 \\
+	US-06 & Als externe Person möchte ich auf der Startseite eine kuratierte Auswahl veröffentlichter Projekte finden, damit ich einen Einstieg habe, ohne die Systematik des Portals zu kennen. & FA-17 \\
+}
+
+\usTabelle{User Stories der Studierenden}{tab:us-studierende}{%
+	US-10 & Als studierende Person möchte ich ein Projekt in einem blockbasierten Editor aus Bausteinen für Text und multimediale Inhalte aufbauen, damit ich meine Arbeit flexibel darstellen kann, ohne technisches Vorwissen zu brauchen. & FA-20 \\
+	US-11 & Als studierende Person möchte ich mein Projekt als Entwurf anlegen, zwischenspeichern, weiter bearbeiten und wieder löschen können, damit ich in mehreren Sitzungen daran arbeiten kann, ohne etwas zu verlieren. & FA-21 \\
+	US-12 & Als studierende Person möchte ich die beschreibenden Angaben meines Projekts pflegen, die zuständige Redaktion wählen und das Projekt anschließend zur Prüfung einreichen, damit es von den richtigen Personen geprüft wird. & FA-22, FA-23 \\
+	US-13 & Als studierende Person möchte ich jederzeit den Zustand meiner Projekte sehen, damit ich weiß, ob ich noch handeln muss. & FA-25 \\
+	US-14 & Als studierende Person möchte ich die Änderungsaufforderungen der Redaktion lesen, einzeln als erledigt kennzeichnen und danach erneut einreichen, damit nachvollziehbar bleibt, welcher Punkt behandelt ist. & FA-26 \\
+	US-15 & Als studierende Person möchte ich mein Projekt bearbeiten können, solange es im Entwurf oder in der Überarbeitung ist, damit ein bereits geprüfter Stand nicht unbemerkt verändert wird. & FA-21 \\
+	US-16 & Als studierende Person möchte ich meine Profilseite mit Biografie, Studiengang, Kontaktangaben und Bild pflegen, damit sich Besuchende einen persönlichen Eindruck verschaffen können. & FA-28 \\
+	US-17 & Als studierende Person möchte ich, dass jedes veröffentlichte Projekt, an dem ich beteiligt bin, ohne mein Zutun auf meiner Profilseite erscheint, damit ich nichts einzeln verlinken oder pflegen muss. & FA-29 \\
+	US-18 & Als studierende Person möchte ich eine Einreichung zurückziehen können, solange die Redaktion nicht entschieden hat, damit ich einen Fehler bemerken und beheben kann, ohne die Redaktion damit zu befassen. & FA-24 \\
+	US-19 & Als studierende Person möchte ich eine Gruppenarbeit als gemeinsames Projekt führen, Mitwirkende aufnehmen und ihre Funktion benennen, damit die Arbeit im Portfolio aller Beteiligten erscheint und niemand sie doppelt anlegen muss. & FA-30 \\
+}
+
+\usTabelle{User Stories der Redaktion}{tab:us-redaktion}{%
+	US-20 & Als Mitglied der Redaktion möchte ich in „Meine Reviews“ die Projekte sehen, für die ich als zuständige Redaktion eingetragen bin, damit ich meine Arbeit ordnen kann, ohne die Einreichungen anderer mitzuführen. & FA-31 \\
+	US-21 & Als Mitglied der Redaktion möchte ich ein geprüftes Projekt genehmigen können, damit festgestellt ist, dass es inhaltlich in Ordnung geht. & FA-32 \\
+	US-22 & Als Mitglied der Redaktion möchte ich ein Projekt mit einer Begründung zur Überarbeitung zurückgeben können, damit die einreichende Person weiß, was zu ändern ist. & FA-34 \\
+	US-23 & Als Mitglied der Redaktion möchte ich ein genehmigtes Projekt in einem zweiten Schritt veröffentlichen können, damit sich geprüfte Arbeiten gebündelt freischalten lassen, etwa zum Semesterbeginn. & FA-33 \\
+	US-24 & Als Mitglied der Redaktion möchte ich zwischen einer Antwort, einer für Studierende unsichtbaren internen Notiz und einer Änderungsaufforderung mit Erledigungsstand wählen, damit ich mich mit anderen Mitgliedern der Redaktion abstimmen kann, ohne die einreichende Person zu verwirren. & FA-36 \\
+	US-25 & Als Mitglied der Redaktion möchte ich ein veröffentlichtes Projekt für die Top 10 der Startseite vorschlagen können, damit gute Arbeiten sichtbar werden, ohne dass ich selbst über die Startseite entscheide. & FA-37 \\
+}
+
+\usTabelle{User Stories der Administration}{tab:us-administration}{%
+	US-30 & Als Mitglied der Administration möchte ich Konten anlegen, Rollen ändern, Konten deaktivieren und Passwörter zurücksetzen, damit ich Ausnahmefälle bearbeiten kann, für die die Selbstregistrierung nicht greift. & FA-40 \\
+	US-31 & Als Mitglied der Administration möchte ich alle Projekte unabhängig von ihrem Zustand einsehen können, damit ich bei Rückfragen auskunftsfähig bin. & FA-41 \\
+	US-32 & Als Mitglied der Administration möchte ich die Stammdaten pflegen, also Kategorien, Fakultäten, Studiengänge, Module und Semester, damit die Einordnung der Projekte aktuell bleibt. & FA-43 \\
+	US-33 & Als Mitglied der Administration möchte ich die Top 10 der Startseite kuratieren, Vorschläge annehmen oder ablehnen und die Reihenfolge festlegen, wobei jede Änderung unveränderlich protokolliert wird, damit die Außendarstellung verantwortet und nachvollziehbar bleibt. & FA-44 \\
+	US-34 & Als Mitglied der Administration möchte ich fremde Projektinhalte lesen, aber nicht verändern können, damit die ausgewiesene Autorschaft eines Textes belastbar bleibt und ein Eingriff nur über die regulären Zustandsentscheidungen möglich ist. & FA-42 \\
+}
+
+\usTabelle{User Stories aller angemeldeten Personen}{tab:us-angemeldet}{%
+	US-40 & Als Mitglied der Hochschule möchte ich mich mit einer privaten Adresse als dauerhafter Kennung und einer bestätigten Hochschuladresse registrieren, damit mein Portfolio auch nach der Exmatrikulation erreichbar bleibt und meine Zugehörigkeit trotzdem belegt ist. & FA-01, FA-02 \\
+	US-41 & Als angemeldete Person möchte ich mich anmelden, mein Passwort zurücksetzen und ein von der Administration gesetztes Initialpasswort beim ersten Zugang wechseln, damit mein Konto mir gehört und nicht der Person, die es angelegt hat. & FA-03 \\
+	US-42 & Als angemeldete Person möchte ich auf ein veröffentlichtes Projekt reagieren können, höchstens einmal je Projekt und rücknehmbar, damit Zuspruch sichtbar wird, ohne dass eine Kommentarspalte moderiert werden müsste. & FA-05 \\
+}
+
+Die fünf Use Cases fassen zusammenhängende User Stories zu einem durchgängigen Ablauf zusammen; ihre Kennungen und Titel entsprechen Abschnitt~\ref{sec:user-stories}. Einstufige Vorgänge wie das Zurückziehen (US-18), die Reaktion (US-42), die Rückfrage ohne Anmeldung (US-05) und die Stammdatenpflege (US-32) tragen keinen eigenen Use Case. Die Kuratierung der Top 10 (US-25, US-33) ist mehrstufig, wird aber im Workflow (Abschnitt~\ref{sec:workflow}) behandelt und nicht als eigener Use Case geführt.
+
+\newenvironment{usecase}[1]{%
+	\par\medskip\noindent\textbf{#1}\par\smallskip
+	\begin{description}[leftmargin=0pt, itemsep=0.15em, topsep=0.2em, font=\normalfont\itshape]}
+	{\end{description}}
+
+\begin{usecase}{UC-01: Projekt erstellen und einreichen}
+	\item[Akteur:] studierende Person, ebenso eine mitwirkende Person einer Gruppenarbeit
+	\item[Bezug:] US-10, US-11, US-12, US-19
+	\item[Vorbedingung:] Die Person ist angemeldet.
+	\item[Auslöser:] Die Person möchte eine abgeschlossene Arbeit veröffentlichen lassen.
+	\item[Ablauf:] (1) Die Person legt ein neues Projekt an; es entsteht mit einem vorläufigen Titel im Zustand Entwurf (US-11). (2) Sie füllt die Projektseite im Editor mit Bausteinen (US-10) und speichert beliebig oft zwischen. (3) Sie pflegt die beschreibenden Angaben und wählt die zuständige Redaktion; bei einer Gruppenarbeit nimmt sie hier die Mitwirkenden auf und benennt deren Funktion (US-12, US-19). (4) Sie reicht ein. Der Zustand wechselt auf Eingereicht.
+	\item[Nachbedingung:] Das Projekt erscheint in „Meine Reviews“ der gewählten Redaktion. Eine Benachrichtigung gibt es nicht; das System versendet nur Nachrichten rund um das Konto.
+	\item[Alternativablauf:] Die Person bricht ab; das Projekt bleibt als Entwurf gespeichert.
+	\item[Fehlerfall:] Fehlt eine Pflichtangabe oder ist keine Redaktion gewählt, weist der Server das Einreichen ab und benennt, was fehlt.
+\end{usecase}
+
+\begin{usecase}{UC-02: Projekt-Review durch Redaktion}
+	\item[Akteur:] die dem Projekt zugewiesene Redaktion, ebenso die Administration, die dafür keine Zuweisung braucht
+	\item[Bezug:] US-20, US-21, US-22, US-23, US-24
+	\item[Vorbedingung:] Mindestens ein zugewiesenes Projekt steht auf Eingereicht.
+	\item[Ablauf:] (1) Die Redaktion öffnet „Meine Reviews“ und wählt ein eingereichtes Projekt (US-20). Die Liste führt die zugewiesenen Projekte in vier Zuständen; Entwürfe erscheinen dort nicht. (2) Sie öffnet die Prüfansicht des Projekts und sieht Inhalt, beschreibende Angaben und die bisherige Kommunikation. (3) Sie entscheidet: Genehmigen führt auf Genehmigt (US-21), das Projekt ist damit noch nicht öffentlich. Veröffentlichen führt ein genehmigtes Projekt in einem zweiten, eigenen Schritt auf Veröffentlicht (US-23). Zur Überarbeitung zurückgeben verlangt eine Änderungsaufforderung und führt auf Überarbeitung (US-22, US-24); derselbe Übergang entsteht, wenn die Redaktion am Projekt eine Änderungsaufforderung hinterlässt.
+	\item[Nachbedingung:] Der Zustandswechsel steht in der Historie des Projekts; eine Rückgabe hinterlässt zusätzlich die Änderungsaufforderung.
+	\item[Einschränkung:] Das Vier-Augen-Prinzip sperrt Genehmigen und Veröffentlichen für jede Person, die an dem Projekt beteiligt ist, gleich welcher Rolle (FA-35). Die Rückgabe zur Überarbeitung ist davon nicht betroffen.
+\end{usecase}
+
+\begin{usecase}{UC-03: Überarbeitung und erneute Einreichung}
+	\item[Akteur:] studierende Person, ebenso eine mitwirkende Person
+	\item[Bezug:] US-14, US-15
+	\item[Vorbedingung:] Das Projekt steht auf Überarbeitung und trägt mindestens eine offene Änderungsaufforderung.
+	\item[Ablauf:] (1) Die Person öffnet das Projekt und liest die Änderungsaufforderungen der Redaktion (US-14). (2) Sie passt die betroffenen Stellen im Editor an (US-15). (3) Sie kennzeichnet jede umgesetzte Änderungsaufforderung als erledigt (US-14). (4) Sie reicht erneut ein; der Zustand wechselt zurück auf Eingereicht.
+	\item[Nachbedingung:] Das Projekt durchläuft erneut UC-02.
+	\item[Fehlerfall:] Solange eine Änderungsaufforderung offen ist, weist der Server das erneute Einreichen ab; Schritt 3 ist die Bedingung für Schritt 4.
+	\item[Alternativablauf:] Die zuständige Redaktion oder die Administration kann ein Projekt selbst aus der Überarbeitung zurück in die Prüfung holen, etwa wenn sich die Rückgabe als gegenstandslos erweist.
+\end{usecase}
+
+\begin{usecase}{UC-04: Externe Projektsuche}
+	\item[Akteur:] externe Person ohne Konto
+	\item[Bezug:] US-01, US-02, US-06
+	\item[Vorbedingung:] keine; eine Anmeldung ist an keiner Stelle nötig.
+	\item[Ablauf:] (1) Die Person ruft die Startseite auf und findet dort die Top 10, oder sie geht unmittelbar zur Projektübersicht (US-06). (2) Sie grenzt die Übersicht über die sechs Filtergruppen Fakultät, Studiengang, Abschluss, Semester, Projekttyp und Kategorie ein. Innerhalb einer Gruppe wirken mehrere Werte als Oder, zwischen den Gruppen als Und. Daneben steht ein Suchfeld über Titel, Kurzbeschreibung, Personennamen und Schlagworte (US-01). (3) Die Auswahl bleibt sichtbar, lässt sich einzeln oder gesammelt zurücknehmen und steht in der Adresse (US-01). (4) Die Person öffnet ein Projekt und sieht alle seine Bausteine (US-02).
+	\item[Nachbedingung:] Sichtbar sind ausschließlich veröffentlichte Projekte. Entwürfe, Einreichungen, genehmigte Projekte und Überarbeitungen bleiben ohne Anmeldung unerreichbar.
+\end{usecase}
+
+\begin{usecase}{UC-05: Portfolio-Profil pflegen und extern einsehen}
+	\item[Akteure:] studierende Person für die Pflege, externe Person für die Einsicht
+	\item[Bezug:] US-16, US-17, US-04
+	\item[Vorbedingung:] für die Pflege ein Konto, für die Einsicht keine
+	\item[Ablauf:] (1) Die studierende Person pflegt ihre Profilseite mit Biografie, Studiengang, Kontaktangaben und Bild (US-16). (2) Sie lässt im Lauf der Zeit Projekte über UC-01 und UC-02 veröffentlichen. (3) Jedes veröffentlichte Projekt, an dem sie beteiligt ist, erscheint ohne weiteres Zutun auf ihrer Profilseite; eine Gruppenarbeit steht im Portfolio aller Mitwirkenden (US-17). (4) Eine externe Person ruft die Profilseite auf, etwa von einer Projektseite aus, und sieht Biografie und alle veröffentlichten Projekte dieser Person (US-04).
+	\item[Nachbedingung:] Die Profilseite bleibt aktuell, sobald ein weiteres Projekt veröffentlicht wird.
+	\item[Abgrenzung:] Die Profilseite selbst durchläuft keinen Freigabeweg; nur die Projektliste darauf hängt vom Zustand der einzelnen Projekte ab.
+\end{usecase}
+
+\chapter{Problemliste}
+\label{anh:problemliste}
+
+Die Liste führt alle 30 Usability-Probleme aus Abschnitt~\ref{sec:durchfuehrung}. P1 bis P12 stammen aus den Sitzungen, P13 bis P30 allein aus der heuristischen Evaluation. Die Häufigkeit steht bei Problemen aus den Sitzungen mit dem Nenner des jeweiligen Blocks, bei Befunden der heuristischen Evaluation als Zahl der Begutachtenden, die den Befund fanden (1 Beg. oder 2 Beg.). Der Schweregrad folgt Tabelle~\ref{tab:schweregrad}, die Heuristik den Bezeichnungen aus Tabelle~\ref{tab:heuristiken}; die Quelle unterscheidet lautes Denken (LD), heuristische Evaluation (HE) und beide.
+
+\begingroup
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.1}
+\setlength{\LTcapwidth}{\textwidth}
+\begin{longtable}{@{}L{0.6cm}L{0.8cm}L{4.9cm}L{4.0cm}L{1.2cm}L{0.7cm}L{0.7cm}L{0.8cm}@{}}
+	\caption[Usability-Probleme P1 bis P30]{Usability-Probleme P1 bis P30 (eigene Erhebung)}
+	\label{tab:problemliste}\\
+	\toprule
+	\textbf{ID} & \textbf{Aufg.} & \textbf{Beobachtung} & \textbf{Auswirkung} & \textbf{Häufigk.} & \textbf{Grad} & \textbf{Heur.} & \textbf{Quelle} \\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{ID} & \textbf{Aufg.} & \textbf{Beobachtung} & \textbf{Auswirkung} & \textbf{Häufigk.} & \textbf{Grad} & \textbf{Heur.} & \textbf{Quelle} \\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	P1 & A5 & Die Export- beziehungsweise Druckfunktion auf der Projektseite wurde nicht auf Anhieb gefunden; eine Person wollte mit Strg+P drucken, eine übersah die Schaltfläche auf dem Bild. & Die Aufgabe gelang bei drei Personen nur mit Mühe, bei zwei mit Umweg. & 5 von 11 & 3 & H6 & LD \\
+	P2 & B4 & Nach Auswahl eines Mitglieds wurde nicht erkannt, dass es erst mit „+“ übernommen wird; eine Person erwartete das Verhalten der Redaktionsauswahl. & Kurzes Stocken beim Hinzufügen von Mitgliedern. & 3 von 5 & 2 & H6 & beide \\
+	P3 & B4 & Welche Metadaten Pflichtfelder sind und was die Sternchen bedeuten, wurde nicht erkannt; eine Person fragte nach der Bedeutung der Sternchen. & Die Aufgabe dauerte bei einer Person 8:00 Minuten bei 6 Minuten Budget. & 2 von 5 & 3 & H4 & beide \\
+	P4 & B3 & Die Bausteinarten Überschrift und Aufzählung wurden nicht schnell gefunden; zunächst wurde ein Bild für das ganze Projekt gesucht. & Die Aufgabe gelang nur mit Mühe. & 1 von 5 & 2 & H6 & LD \\
+	P5 & C2 & Der Arbeitsvorrat wurde zunächst unter „Mein Portfolio“ gesucht, bevor „Meine Reviews“ geöffnet wurde. & Die Aufgabe gelang nur mit Mühe. & 1 von 2 & 2 & H6 & LD \\
+	P6 & C4 & Dass ein Projekt erst genehmigt und dann veröffentlicht wird, wurde nicht verstanden; die Schaltfläche zum Genehmigen wurde nicht gefunden. & Die Aufgabe wurde nach 3:00 Minuten nicht gelöst. & 1 von 2 & 3 & H6 & beide \\
+	P7 & C5 & Das Symbol zum Nominieren auf dem Projektbild wurde nicht erkannt; beim Überfahren erscheint kein Tooltip. & Eine Person brauchte einen Umweg über die Review-Seite, eine gelangte nur mit Mühe ans Ziel. & 2 von 2 & 3 & H6 & LD \\
+	P8 & A4 & Zum Zurücknehmen einer Einschränkung wurde der Weg über die Startseite und erneut zu den Projekten gewählt. & Umweg bei einer an sich gelösten Aufgabe. & 1 von 11 & 2 & H3 & LD \\
+	P9 & A1 & Dass die Startseite weiter nach unten reicht, wurde nicht bemerkt. & Inhalte unterhalb des ersten Bildschirms blieben zunächst unbeachtet. & 1 von 11 & 1 & H1 & LD \\
+	P10 & D4 & Beim Aufräumen der doppelten Kategorie war unklar, was mit den zugeordneten Projekten geschieht; erwartet wurde ein Zusammenführen. & Die Aufgabe gelang mit zwei Fehlversuchen nur mit Mühe. & 1 von 2 & 2 & H5 & LD \\
+	P11 & D4 & Für die Kategorien wurde zuerst die Projektliste geöffnet. & Ein Fehlversuch vor dem richtigen Bereich. & 1 von 2 & 2 & H6 & LD \\
+	P12 & D5 & Nach der Sammelaktion erschien keine Rückmeldung, dass sie ausgeführt wurde. & Die Aufgabe gelang mit einem Fehlversuch nur mit Mühe. & 1 von 2 & 2 & H1 & LD \\
+	P13 & keine & Startseite und Platzhalter des Editors duzen, die jeweils benachbarte Seite (Projektbibliothek, Metadatenformular) siezt; die deutsche Sprachdatei enthält 2 Stellen mit Du gegen 101 mit Sie. & Wer ein Projekt anlegt, wird in zwei aufeinanderfolgenden Schritten desselben Vorgangs verschieden angesprochen. & 1 Beg. & 2 & H4 & HE \\
+	P14 & keine & Dasselbe Feld heißt im Formular „Typ“, im Einreichdialog „Art der Arbeit“ und im Filter „Projekttyp“; ebenso „Redakteur:in“ gegen „Redaktionszuweisung“. & Die Meldung beim Einreichen nennt Felder, die im Formular unter diesem Namen nicht stehen. & 1 Beg. & 2 & H4 & HE \\
+	P15 & keine & Die Überschrift lautet „My Portfolio“, Navigation und Seitenpfad nennen den Bereich „Mein Portfolio“. & Auf der Seite steht ein anderer Name als auf dem Weg, der zu ihr führt. & 1 Beg. & 1 & H2 & HE \\
+	P16 & keine & Titel und Studiengangszeile der Projektkarten stehen in heller Schrift auf dem Titelbild; auf hellen Bildern fällt der Kontrast bis auf 1,05:1 (Titel) und 1,22:1 (Studiengang), gefordert sind 4,5:1 beziehungsweise 3:1. & Auf Karten mit hellem Titelbild sind Titel und Studiengang nicht lesbar; die Karte ist nur über das Bild zu unterscheiden. & 2 Beg. & 3 & H4 & HE \\
+	P17 & keine & Die wirkende Einschränkung steht nur in der Filterspalte; über der Trefferliste steht allein die Trefferzahl, in der schmalen Ansicht liegt die Filterspalte vollständig über der Liste. & Beim Durchsehen der Treffer ist nicht mehr zu sehen, worauf eingeschränkt wurde. & 1 Beg. & 2 & H1 & HE \\
+	P18 & keine & Die Adresse einer gefilterten Liste führt vier der sechs Filtergruppen als technische Kennung, zwei als lesbaren Wert. & Ein geteilter Link lässt für vier Gruppen nicht erkennen, welche Einschränkung er enthält. & 1 Beg. & 1 & H2 & HE \\
+	P19 & keine & Eine Liste einzuschränken geht über drei Bedienmuster: Ankreuzfelder in einer Spalte, eine Segmentleiste, Segmentleiste mit Auswahlliste. & Was an einer Liste gelernt wurde, gilt an der nächsten nicht. & 1 Beg. & 2 & H4 & HE \\
+	P20 & keine & In der Kontenliste sind die E-Mail-Adressen abgeschnitten, rechts der Tabelle bleibt Fläche frei. & Die Adresse, über die ein Konto gesucht wird, ist in der Liste nicht vollständig lesbar. & 1 Beg. & 2 & H8 & HE \\
+	P21 & keine & Unbesetzte Ränge der Top 10 erscheinen auch ohne Anmeldung als Kachel „PLATZ FREI“; im Bestand sind sechs von zehn Rängen so belegt. & Der Bestenliste sieht man den Verwaltungszustand der Redaktion an. & 1 Beg. & 2 & H2 & HE \\
+	P22 & keine & Die Zahl der Reaktionen steht als Symbol mit Ziffer ohne Wort. & Beim Überfliegen bleibt offen, worauf sich die Zahl bezieht. & 1 Beg. & 1 & H6 & HE \\
+	P23 & keine & Derselbe Leerzustand ist zweimal verschieden formuliert, einmal mit Sie, einmal im Infinitiv. & Zwei Listen beantworten dieselbe Lage mit zwei verschiedenen Sätzen. & 1 Beg. & 1 & H4 & HE \\
+	P24 & keine & Projekttypen heißen in der deutschen Oberfläche teils englisch („Paper“, „Thesis“), teils deutsch („Reguläres Projekt“). & Wem die englischen Begriffe nicht geläufig sind, der muss den Projekttyp erschließen. & 1 Beg. & 2 & H2 & HE \\
+	P25 & keine & Löschsymbole reagieren verschieden: auf der Metadaten- und Editorseite ohne rote Hervorhebung, anderswo rot; nur manche tragen einen Tooltip. & Dieselbe Aktion gibt verschiedene Rückmeldungen. & 1 Beg. & 1 & H4 & HE \\
+	P26 & keine & Hinzufügen erscheint bei Kategorien und Semestern als alleinstehendes „+“, in der Studienstruktur als beschriftete englische Schaltfläche („Add faculty“). & Gleich aufgebaute Verwaltungsseiten zeigen dieselbe Aktion verschieden. & 1 Beg. & 2 & H4 & HE \\
+	P27 & keine & Nach einer ungültigen Datumseingabe verschiebt die Fehlermeldung das Feld „To“ gegenüber den übrigen Filterelementen. & Die Filterzeile verliert im Fehlerzustand ihre Ausrichtung. & 1 Beg. & 1 & H8 & HE \\
+	P28 & keine & Wer das Metadatenformular über den Seitenpfad oder die Zurück-Taste verlässt, erhält keine Warnung und verliert ungespeicherte Änderungen; über „Abbrechen“ erscheint eine Warnung. & Eingegebene Metadaten gehen unbeabsichtigt verloren, je nach Weg aus der Seite. & 1 Beg. & 3 & H5 & HE \\
+	P29 & keine & Eine Projektadresse mit ungültiger Kennung zeigt „Die Eingaben sind unvollständig oder ungültig. Bitte prüfen Sie die markierten Felder.“, obwohl die Seite keine Felder hat. & Die Meldung sagt nicht, dass die Adresse zu keinem Projekt führt, und schlägt eine unmögliche Handlung vor. & 1 Beg. & 2 & H9 & HE \\
+	P30 & keine & Der Platzhalter im Editor nennt den Schrägstrich als Weg zum Auswahlmenü der Bausteinarten; ein getippter Schrägstrich öffnet kein Menü, erst ein Umweg über ein Leerzeichen, und das Menü schließt sich von selbst. & Der angekündigte Weg zum Einfügen von Bausteinen ist nicht benutzbar. & 1 Beg. & 3 & H7 & HE \\
+\end{longtable}
+\endgroup
+
+\chapter{Kennwerte des TAM-Bogens je Block}
+\label{anh:tam-bloecke}
+
+Der TAM-Bogen lag in vier Fassungen vor, eine je zuletzt bearbeiteten Block (Abschnitt~\ref{sec:testkonzept}). Block A steht hier für die beiden externen Personen, die allein Block A bearbeiteten; alle übrigen Personen füllten den Bogen nach ihrem Rollenblock aus. Die Werte beruhen auf zwei bis fünf Personen und dienen der Orientierung, nicht dem Vergleich zwischen Rollen. NFA-10 und NFA-11 werden an Block B gemessen (Abschnitt~\ref{sec:bewertungsrahmen}).
+
+\begin{table}[htbp]
+	\centering
+	\footnotesize
+	\caption[Kennwerte des TAM-Bogens je Block]{Kennwerte des TAM-Bogens je Block; SD ist die Stichproben-Standardabweichung (eigene Erhebung)}
+	\label{tab:tam-bloecke}
+	\begin{tabular}{@{}llrrrrrr@{}}
+		\toprule
+		\textbf{Block} & \textbf{Konstrukt} & \textbf{n} & \textbf{Median} & \textbf{Mittelwert} & \textbf{Min} & \textbf{Max} & \textbf{SD} \\
+		\midrule
+		A, nur extern & PU & 2 & 6,92 & 6,92 & 6,83 & 7,00 & 0,12 \\
+		 & PEOU & 2 & 6,92 & 6,92 & 6,83 & 7,00 & 0,12 \\
+		 & BI & 2 & 7,00 & 7,00 & 7,00 & 7,00 & 0,00 \\
+		\midrule
+		B, Studierende & PU & 5 & 5,17 & 5,27 & 4,50 & 6,33 & 0,81 \\
+		 & PEOU & 5 & 6,17 & 5,80 & 4,17 & 6,67 & 1,02 \\
+		 & BI & 5 & 6,00 & 5,90 & 4,00 & 7,00 & 1,14 \\
+		\midrule
+		C, Redaktion & PU & 2 & 6,50 & 6,50 & 6,00 & 7,00 & 0,71 \\
+		 & PEOU & 2 & 5,75 & 5,75 & 5,33 & 6,17 & 0,59 \\
+		 & BI & 2 & 7,00 & 7,00 & 7,00 & 7,00 & 0,00 \\
+		\midrule
+		D, Administration & PU & 2 & 6,25 & 6,25 & 6,00 & 6,50 & 0,35 \\
+		 & PEOU & 2 & 5,42 & 5,42 & 5,17 & 5,67 & 0,35 \\
+		 & BI & 2 & 6,50 & 6,50 & 6,00 & 7,00 & 0,71 \\
+		\bottomrule
+	\end{tabular}
+\end{table}

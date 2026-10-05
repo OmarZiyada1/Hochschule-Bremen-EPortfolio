@@ -1,0 +1,178 @@
+% ---------------------------------------------------------------------------
+% Kapitel 4: Konzeption
+% Wortgleich uebernommen aus der Confluence-Seite
+% "Kapitel 4: Konzeption (Entwurf)" (Space BEH, Seiten-ID 51740676),
+% Stand 04.10.2026. Abschnitt 4.7 Zusammenfassung steht dort noch nicht.
+% ---------------------------------------------------------------------------
+
+\chapter{Konzeption}
+\label{kap:konzeption}
+
+Zwischen einer Anforderung und einer Zeile Programmtext liegt eine Entscheidung, und sie fällt hier. Der Entwurf schneidet das System in Komponenten (Abschnitt 4.1), legt die Zugriffsrechte fest (Abschnitt 4.2), bestimmt, woraus ein Projekt besteht (Abschnitt 4.3) und welche Zustände es durchläuft (Abschnitt 4.4), gestaltet die Oberfläche (Abschnitt 4.5) und bindet alles an ein relationales Modell (Abschnitt 4.6). Die Abschnitte 4.3 und 4.4 tragen die dritte Teilfrage, Abschnitt 4.5 den gestalterischen Teil der zweiten. Englisch erscheinen allein die technischen Bezeichner, weil das Datenmodell sie so führt; die Prosa bleibt deutsch. Folgt eine Festlegung aus einer Anforderung des Katalogs in Abschnitt 2.3 oder 2.4, steht deren Kennung dabei.
+
+\section{Systemarchitektur}
+\label{sec:systemarchitektur}
+
+Die Forderung, Rechte auf dem Server durchzusetzen und nicht in der Oberfläche zu verbergen (NFA-60), ist eine Architekturaussage, bevor sie eine Umsetzungsfrage wird: Sie entscheidet, ob die in Abschnitt 4.2 entworfene Rechtematrix etwas über das System aussagt oder nur über eine seiner Ansichten. Zusammen mit dem Schutz nicht veröffentlichter Inhalte (NFA-61) ergibt sich der Schnitt: eine im Browser laufende Oberfläche ohne eigene Wahrheit über Sichtbarkeit und ein Anwendungsserver, der jede Anfrage gegen dieselbe Datenhaltung prüft. Beide sprechen über eine Schnittstelle nach dem Muster von REST, die keine Sitzung auf dem Server hinterlegt.
+
+Diese Schnittstelle ist nicht das Ergebnis der Umsetzung, sondern ihre Voraussetzung. In einer schriftlichen Schnittstellenbeschreibung, im Folgenden API-Contract genannt, werden Entitäten und Aufzählungstypen, die Rechtematrix, der Zustandsautomat sowie die Endpunkte vor ihrer Umsetzung festgelegt und begründet; was die Umsetzung anders ergab, wird als neue Fassung nachgetragen. Der Anlass ist arbeitsorganisatorisch und gehört dennoch hierher: Zwei Personen bauen die beiden Seiten gleichzeitig, und ohne eine vorab entschiedene Beschreibung entstünde die Schnittstelle zweimal, mit Abweichungen, die erst beim Zusammenführen aufflögen. Die maschinenlesbare Fassung wird deshalb zur Laufzeit aus dem Server selbst erzeugt: Eine von Hand gepflegte zweite Fassung wäre eine Beschreibung, die vom tatsächlichen Verhalten abweichen kann, ohne dass es jemand bemerkt.
+
+Der Server ist nach Fachlichkeit geschnitten und nicht nach technischer Schicht: Steuerung, Fachlogik sowie Datenzugriff eines Gegenstandsbereichs liegen beieinander. Quer dazu stehen zwei Festlegungen für alle Bereiche. Jede Fehlerantwort trägt dasselbe Format mit einem maschinenlesbaren Fehlercode, sodass die Oberfläche über diesen Code entscheidet und nicht über einen Meldungstext; das ist die Bedingung für die in NFA-02 geforderte Einheitlichkeit. Und jede Schemaänderung läuft über eine versionierte, nachträglich unveränderliche Migration, deren Ergebnis beim Start gegen das erwartete Schema geprüft wird.
+
+Zwei Dienste stehen bewusst außerhalb des Kerns: die Ablage hochgeladener Dateien und der Versand der Bestätigungsnachrichten. Beide hängen an einer schmalen Schnittstelle und sind austauschbar. Die Trennung gehört zum Entwurf, weil sie eine nach außen sichtbare Zusage begründet: In keiner Antwort erscheint eine Adresse des Speichers. Die Sichtbarkeit einer Datei hängt am Zustand ihres Projekts, und eine öffentlich abrufbare Speicheradresse kennt diesen Zustand nicht (FA-04, NFA-61). Zugangsdaten und die anerkannten Endungen der Hochschuladressen liegen in der Konfiguration; fehlt ein Pflichtwert, startet die Anwendung nicht, statt mit einem stillen Ersatzwert weiterzulaufen.
+
+\abbildung{abb-4-1-architektur.png}{0.95}{abb:systemarchitektur}%
+{Schnitt des Systems, seine fachlichen Bereiche und die beiden austauschbaren Fremddienste}%
+{Schnitt des Systems, seine fachlichen Bereiche und die beiden austauschbaren Fremddienste (eigene Darstellung)}
+
+Abbildung 4.1 zeigt diesen Aufbau. Zwei Einzelheiten sind daran wichtiger als die Kästen selbst. Die Schnittstelle steht als eigenes Element zwischen den Seiten und nicht als bloßer Pfeil, weil sie ein vorab entschiedenes Dokument ist. Die beiden Fremddienste hängen außen an gestrichelten Linien: Was dort steckt, ist eine Frage des Betriebs und keine des Entwurfs.
+
+\section{Benutzerrollen und Rechtemodell}
+\label{sec:rechtemodell}
+
+Das Rechtemodell setzt die in Abschnitt 2.1 beschriebene Schachtelung der Akteurgruppen um. Drei Rollen sind an ein Konto gebunden und als Merkmal eines Personendatensatzes gespeichert: \texttt{STUDENT}, \texttt{EDITOR} sowie \texttt{ADMIN}. Die vierte Gruppe erscheint dort nicht, weil für eine Person ohne Konto kein Datensatz existiert, an dem ein solches Merkmal hängen könnte. Geprüft wird bei ihr allein, ob überhaupt eine Anmeldung vorliegt; andernfalls gelten die öffentlichen Leserechte. Da diese Gruppe zugleich die Hauptzielgruppe ist, hat ihr Ausschnitt das größte Gewicht. Jedes veröffentlichte Projekt und jede Profilseite sind ohne Anmeldung lesbar (FA-10, FA-16). Schreibrechte an Inhalten bestehen nicht; die einzige schreibende Handlung ohne Konto ist der Rückkanal aus Abschnitt 4.4, und die Reaktion setzt ein Konto voraus, damit der angezeigte Zähler nicht beliebig erhöht werden kann (FA-05).
+
+Der Zugang beruht auf den beiden getrennten Adressen aus FA-01: Die private ist dauerhaft die Kennung, die Hochschuladresse belegt einmalig die Zugehörigkeit. Beide werden über befristete Einmalcodes bestätigt, die nur als Hashwert gespeichert werden (NFA-62). Aus der Endung der bestätigten Hochschuladresse folgt die Rolle (FA-02). Eine Rollenauswahl im Formular gibt es nicht, denn sonst genügte das Umstellen eines Feldes, um redaktionelle Rechte zu erhalten. Studierende, die redaktionell tätig sind, werden von der Administration hochgestuft (FA-40); die verwaltende Rolle entsteht nie aus einer Registrierung. Für administrativ angelegte Konten erzwingt der Server den Wechsel des Initialpassworts vor jeder anderen Handlung.
+
+Autorisiert wird auf zwei Ebenen, und diese Trennung ist der Kern des Entwurfs (FA-04). Die Rollenebene beantwortet, ob eine Rolle eine Handlung ausführen darf; die Ressourcenebene, ob diese Person bei diesem Projekt handeln darf, und wertet dafür Autorschaft, Mitwirkung sowie die zugewiesene Redaktion aus. Beide Prüfungen liegen an einer Stelle und nicht verstreut in den Endpunkten. Rolle und Kontozustand werden bei jedem Zugriff frisch aus der Datenbank gelesen und nicht dem mitgeführten Zugriffstoken entnommen, damit eine Deaktivierung sofort wirkt und nicht erst mit dessen Ablauf.
+
+Eine Regel entzieht sich der Schachtelung: Über die eigene Arbeit entscheidet niemand (FA-35). Die Sperre hängt an der Beteiligung am Projekt und nicht an der Rolle, gilt für Autorschaft wie Mitwirkende und schließt die Administration ein. Abschaltbar bleibt sie über die Konfiguration, weil bei einer einzigen verwaltenden Person sonst niemand deren eigenes Projekt freigeben könnte. Der Zugriff der Administration auf fremde Inhalte ist im Grundsatz lesend (FA-42): Sie sieht jedes Projekt in jedem Zustand (FA-41), ändert aber weder dessen beschreibende Angaben noch seine Bausteine, denn ein stiller Eingriff in einen fremden Text wäre in einem System, das Autorschaft ausweist, widersprüchlich. Eingreifen kann sie über die Zustandsentscheidungen aus Abschnitt 4.4. Davon ausgenommen sind Befugnisse, die der API-Contract der Administration in jedem Zustand einräumt: Sie kann Projekte, Dateien und Kommentare löschen, die zuständige Redaktion neu verteilen und doppelte Kategorien zusammenführen. Abschnitt 7.3 prüft, wie weit diese Ausnahme vom Wortlaut von FA-42 abweicht.
+
+Die Fehlerpolitik unterscheidet drei Fälle und maskiert keinen: eine fehlende Anmeldung, eine fehlende Berechtigung trotz Anmeldung, einen nicht vorhandenen Gegenstand. Ein fehlendes Leserecht als Nichtvorhandensein auszugeben, verbirgt die Existenz eines Projekts, macht aber jede Fehlersuche mehrdeutig. Getragen wird das, weil die Kennungen nicht erratbar sind (Abschnitt 4.6).
+
+\abbildung{abb-4-2-rechtemodell.png}{0.95}{abb:rechtemodell}%
+{Ableitung der Rolle, die beiden Prüfebenen und die rollenunabhängige Freigabesperre}%
+{Ableitung der Rolle, die beiden Prüfebenen und die rollenunabhängige Freigabesperre (eigene Darstellung)}
+
+Abbildung 4.2 stellt die Ableitung der Rolle, die zweistufige Prüfung und die Freigabesperre nebeneinander. Erkennbar ist daran, dass die Sperre quer zu den Rollenkästen liegt: Sie gilt unabhängig von der Rolle, und keine Hochstufung hebt sie auf.
+
+\section{Blockbasiertes Inhaltsmodell}
+\label{sec:inhaltsmodell}
+
+Ein Projekt besteht aus beschreibenden Angaben und einer geordneten Liste von Bausteinen. Der Titel gehört zu den Angaben, weil er in Kacheln, Suchergebnissen sowie Seitentiteln erscheint, also überall dort, wo das Inhaltsdokument gar nicht geladen wird. Die übrigen Angaben, nämlich Kurzbeschreibung, Projekttyp, Fakultät, Studiengang, Modul, Abschluss, Kategorie, Semester sowie bis zu fünf Schlagwörter, ordnen das Projekt fachlich ein und bilden zum größten Teil die Merkmale, über die der Bestand später erschlossen wird (Abschnitt 4.5). Im Entwurfszustand dürfen sie fehlen; beim Einreichen geprüft werden Projekttyp, Fakultät, Studiengang, Abschluss, Kategorie, Semester und die zuständige Redaktion (FA-21, FA-22), denn Vollständigkeit schon beim ersten Speichern zu verlangen hieße, dass niemand zu schreiben beginnen kann, bevor alle Rahmendaten feststehen. Das Semester ist eine eigene Stammdatenzeile und kein freier Text, denn ein Filter vergleicht mit der gespeicherten Schreibweise, und drei Schreibweisen desselben Semesters wären drei Facettenwerte, von denen jeder einen Teil des Bestandes verbirgt. Schlagwörter werden frei eingegeben, aber ohne Rücksicht auf die Schreibweise zu einer Zeile zusammengeführt, damit kein Wort doppelt geführt wird (Abschnitt 4.6).
+
+Das Inhaltsmodell ist an das Dokumentmodell des Editors gebunden, statt daneben ein eigenes zu erfinden. Ein Baustein entspricht genau einem Knoten der obersten Ebene dieses Dokuments; sein Inhalt wird unverändert als Dokument gespeichert, seine Art zusätzlich als eigene Spalte geführt. Diese Doppelung ist beabsichtigt, weil sich Integritätsregeln, Filter sowie Auswertungen über eine eigene Spalte wartbar formulieren lassen, über das Dokument dagegen nur als schwer wartbare Ausdrücke. Eine Angabe zur Schemafassung hält je Baustein fest, gegen welche Fassung er geschrieben wurde, damit er bei einer späteren Änderung gezielt überführbar bleibt.
+
+Fünfzehn Bausteinarten stehen zur Verfügung: Überschrift, Fließtext, Liste, Zitat, Quelltext, Formel, Tabelle, Trennlinie, Bild, Galerie, Video, Audio, Dokument, Einbettung sowie ein Inhaltsverzeichnis (FA-20). Die Bandbreite folgt dem Komponentenmodell von Mahasneh (2020), das multimediale Inhalte und Leistungsbelege als Bestandteile eines hochschulischen Portfolios ausweist (Abschnitt 3.1). Aufgabenlisten gehören bewusst nicht dazu: Ein Präsentationsportfolio, als das die vorliegende Arbeit das Portal einordnet (Abschnitt 3.1), zeigt fertige Ergebnisse und keine prozessbegleitenden Artefakte. Ein Verweis ist keine eigene Bausteinart, sondern eine Auszeichnung im Text, weil eine eigene Art zwei Ebenen des Dokumentmodells vermischte. Überschriften kennen sechs Ebenen und erscheinen um eine Stufe versetzt, denn die oberste bleibt dem Titel vorbehalten; die lückenlose Gliederung, die W3C (2023) zur Auszeichnung von Struktur empfiehlt, bleibt so erhalten (zur Auszeichnung der sechsten Ebene Abschnitt 5.2).
+
+Hochgeladene Dateien liegen niemals im Dokument selbst, sondern sind eine eigene Entität, auf die ein Baustein allein über eine Kennung verweist; andernfalls steckte eine Datei von zehn Megabyte in codierter Form in jeder Antwort der Schnittstelle. Serverseitig gelten eine Liste erlaubter Dateitypen und Größengrenzen je Verwendung, wobei auch die ersten Bytes zum gemeldeten Typ passen müssen. Ein Video ist entweder eine hochgeladene Datei oder eine Einbettung bei einem geprüften Anbieter; dann wird die Adresse serverseitig abgeleitet, damit keine fremde Adresse ungeprüft in einen Rahmen gelangt. Ausgeliefert wird jede Datei über einen eigenen Endpunkt, weil ihre Sichtbarkeit am Zustand ihres Projekts hängt.
+
+An einem Projekt arbeiten mehrere Personen (FA-30), und daraus folgen zwei Vorkehrungen zu verschiedenen Zeitpunkten. Beim Speichern schützt ein Versionsfeld vor stillem Datenverlust: Weicht die mitgeschickte Fassung ab, meldet der Server einen Konflikt. Das wirkt allerdings erst, nachdem beide Seiten geschrieben haben. Eine Bearbeitungssperre je Projekt setzt die Reihenfolge deshalb vorher fest: Wer den Editor öffnet, während jemand anders darin arbeitet, sieht dessen Namen. Sie lebt von einem regelmäßigen Lebenszeichen und verfällt ohne dieses, denn sonst bliebe ein Projekt nach jedem geschlossenen Fenster gesperrt. Gebrochen wird sie von niemandem, auch nicht von der Administration; eine Sperre, die sich von außen aufheben lässt, ist keine. Das automatische Zwischenspeichern folgt der in Abschnitt 3.2 gezogenen Folgerung, dass die wahrgenommene Benutzerfreundlichkeit als Vorbedingung der wahrgenommenen Nützlichkeit wirkt (Davis, 1989; Shroff et al., 2011), und damit der Anforderung NFA-11. Der Verlust ungesicherter Arbeit ist ein Fehlerfall, der die Bereitschaft zur weiteren Nutzung unmittelbar beschädigen kann.
+
+\abbildung{abb-4-3-blockmodell.png}{0.95}{abb:projektaufbau}%
+{Aufbau eines Projekts: Angaben, Bausteinliste und der Verweis auf getrennt abgelegte Dateien}%
+{Aufbau eines Projekts: Angaben, Bausteinliste und der Verweis auf getrennt abgelegte Dateien (eigene Darstellung)}
+
+Abbildung 4.3 macht die beiden tragenden Entscheidungen sichtbar. In der Mitte hat ein gespeicherter Baustein zwei Gesichter: das unveränderte Dokument und die daraus gezogene Art als abfragbares Merkmal. Rechts steht die Grenze zu den Dateien, über die nur eine Kennung führt. Beide verlaufen dort, wo eine Auswertung nötig wird: Was abgefragt werden muss, verlässt das Dokument.
+
+\section{Workflow- und Statussystem}
+\label{sec:workflow}
+
+Ein Projekt durchläuft fünf Zustände, im Datenmodell \texttt{DRAFT}, \texttt{SUBMITTED}, \texttt{APPROVED}, \texttt{PUBLISHED} sowie \texttt{REVISION}, in der Oberfläche als Entwurf, Eingereicht, Genehmigt, Veröffentlicht sowie Überarbeitung beschriftet. Dass zwischen dem Schreiben und dem öffentlichen Sichtbarwerden überhaupt eine Prüfung liegt, folgt aus der Bestimmung des institutionellen Portfolios als fokussierter Auswahl (Kahn, 2001, zitiert nach Lorenzo \& Ittelson, 2005): Eine Auswahl verlangt einen Auswahlschritt. Getrennt sind zwei Entscheidungen, die häufig zusammenfallen, aber nicht dasselbe sind. Die Genehmigung stellt fest, dass ein Inhalt geprüft ist (FA-32); die Veröffentlichung entscheidet, dass er jetzt öffentlich wird (FA-33). Erst das erlaubt es, geprüfte Arbeiten gebündelt zum Semesterbeginn freizuschalten.
+
+Die Menge der zulässigen Übergänge ist abschließend festgelegt; jeder nicht aufgeführte Wechsel wird serverseitig abgewiesen. Die Bearbeitung des Inhalts ist allein im Entwurf und in der Überarbeitung möglich, weil ein geprüfter Text sonst nach der Freigabe verändert werden könnte und die Prüfung wertlos wäre.
+
+Die konkrete Ausgestaltung folgt dagegen aus dem Akzeptanzrahmen. Bei Shroff et al. (2011) ist der Pfad von der wahrgenommenen Benutzerfreundlichkeit zur wahrgenommenen Nützlichkeit der stärkste abgesicherte Zusammenhang (Abschnitt 3.2). Folgt man der dort gezogenen Folgerung, senkt ein Freigabeweg, der als Hürde erlebt wird, die Bereitschaft, das Portfolio überhaupt zu pflegen. Der Entwurf verkürzt deshalb genau den Pfad, der wiederholt durchlaufen wird. Eine Einreichung lässt sich bis zur redaktionellen Entscheidung zurückziehen (FA-24), und aus der Überarbeitung wird erneut eingereicht, ohne dass ein Projekt neu entsteht (FA-26). Den Erledigungsstand einer Änderungsaufforderung schaltet die Seite um, die sie umsetzt, und die Redaktion kann einen zu früh gesetzten Stand wieder öffnen. Zwei Wege verhindern zudem, dass ein Vorgang liegen bleibt: Die zugewiesene Redaktion holt ein Projekt aus der Überarbeitung selbst zurück in die Prüfung, und sie gibt eine Zuweisung ab, die sie nicht bearbeiten kann.
+
+Dass der Zustand an jeder Darstellung eines Projekts sichtbar ist, folgt aus dem in Tabelle 3.1 abgeleiteten Kriterium zur Sichtbarkeit des Systemzustands (Nielsen, 2024) und aus NFA-04: Die einreichende Seite muss erkennen können, ob ihre Arbeit gerade bei ihr oder bei der Redaktion liegt. Jeder Übergang wird protokolliert, einsehbar ist das Protokoll aber nur für die Beteiligten, für die zugewiesene Redaktion sowie für die Administration. Wie oft ein Projekt zurückgewiesen wurde, ist eine Aussage über den Arbeitsprozess einer Person und gehört nicht in die öffentliche Darstellung ihres Ergebnisses.
+
+Die redaktionelle Verständigung läuft über drei Kommentararten (FA-36): eine Antwort für alle Beteiligten, eine für die einreichende Seite unsichtbare Notiz und eine Änderungsaufforderung mit Erledigungsstand, die den Wechsel in die Überarbeitung auslöst. Eine öffentliche Kommentarfunktion für Unbeteiligte gibt es nicht, weil sie eine Moderation verlangte, die das Portal nicht leistet. Als einziger Rückkanal nach außen dient ein Formular ohne Anmeldung, dessen Eingang allein die Administration liest (FA-06); beantwortet wird außerhalb der Anwendung, damit kein zweiter Nachrichtenkanal entsteht, den niemand pflegt.
+
+Die Startseite ist redaktionell gepflegt und nicht algorithmisch bestückt. Sie zeigt eine kuratierte Auswahl von zehn Projekten, in der Oberfläche „Top 10“ genannt. Die Redaktion schlägt veröffentlichte Projekte vor (FA-37) und gibt dabei eine Stufe an, wie weit oben ein Projekt stehen sollte, statt eines Platzes, weil ein Platzvorschlag die Kenntnis der gesamten Liste voraussetzte. Über Aufnahme und Reihenfolge entscheidet die Administration (FA-17, FA-44), und weil dies die einzige rein kuratorische Einzelentscheidung des Portals ist, hält ein unveränderliches Protokoll jede Änderung fest. Auch die Texte der Startseite werden gepflegt und nicht ausgeliefert: Eine geänderte Überschrift soll keine neue Programmfassung verlangen.
+
+\abbildung{abb-4-4-zustandsautomat.png}{0.95}{abb:zustandsautomat}%
+{Zustandsautomat des Projekts mit den zulässigen Übergängen und der handelnden Gruppe}%
+{Zustandsautomat des Projekts mit den zulässigen Übergängen und der handelnden Gruppe (eigene Darstellung nach API-Contract, §4.1)}
+
+Abbildung 4.4 zeigt die Zustände mit ihren Übergängen und markiert je Übergang die handelnde Gruppe. Eine Eigenschaft tritt dabei hervor: Die Überarbeitung ist kein Endpunkt, sondern ein Knoten mit Rückwegen in beide Richtungen, erreichbar aus drei Zuständen und damit auch aus der Veröffentlichung. Darin liegt die Antwort auf den in Abschnitt 2.1 benannten Interessengegensatz, denn eine Veröffentlichung ist widerrufbar, ohne dass ein Projekt verloren geht.
+
+\section{Design des User Interfaces (Figma-Prototyp)}
+\label{sec:ui-design}
+
+Der Prototyp bildet den Entwurfsstand ab und nicht das gebaute System; wo beides auseinanderfällt, zeigt Kapitel 5 den Unterschied. Seine Entscheidungen sind aus der heuristischen Analyse der Referenzplattform abgeleitet (Abschnitt 3.4) und in drei Klassen geführt: Übernommen wurden das einheitliche Aufbauschema der Projektseiten und die Erschließung über Studiengang und Person, eigenständig entworfen ist alles hinter der Anmeldung. Die zweite Klasse, die gezielte Verbesserung, betrifft fast ausschließlich die Auffindbarkeit.
+
+\subsection{Auffindbarkeit veröffentlichter Projekte}
+
+Für die Hauptzielgruppe entscheidet sich der Wert des Portals hier, und hier lag der einzige nicht erfüllte Befund der Referenzanalyse. Das Konzept setzt dem ein Facettenmodell entgegen: Sechs Merkmalsgruppen erschließen den Bestand, und sie entsprechen sechs der beschreibenden Angaben aus Abschnitt 4.3, also Fakultät, Studiengang, Abschluss, Semester, Projekttyp sowie Kategorie (FA-12); Schlagwörter erreicht das Suchfeld. Jede Gruppe erlaubt mehrere Werte, und die Verknüpfung folgt der Erwartung, die Suchende mitbringen: Werte innerhalb einer Gruppe gelten als Oder, weil die Auswahl zweier Fakultäten die Vereinigung beider Bestände meint, verschiedene Gruppen dagegen als Und. Sind Fakultäten gewählt, bietet die Studiengangsgruppe nur noch die zugehörigen Studiengänge an, damit keine zwangsläufig leere Kombination entsteht.
+
+Damit adressiert der Entwurf drei Kriterien aus Tabelle 3.1 (Nielsen, 2024); ob er sie einlöst, prüft Kapitel 6, bewertet wird es in Abschnitt 7.2. Dem Wiedererkennen statt Erinnern entspricht, dass die Ordnungsmerkmale sichtbar zur Auswahl stehen; externe Nutzende kennen die Studiengangssystematik der Hochschule Bremen meist nicht und könnten sie in einem Suchfeld nicht formulieren. Der Kontrolle und Freiheit entspricht, dass jede Einschränkung einzeln entfernbar bleibt und daneben ein vollständiges Zurücksetzen steht (FA-15). Der Sichtbarkeit des Systemzustands entspricht, dass die wirkenden Einschränkungen ablesbar sind; ohne sie wäre ein leeres Ergebnis von einem leeren Bestand nicht zu unterscheiden. Ergänzend erlaubt ein Suchfeld den Einstieg ohne Kenntnis der Systematik (FA-14).
+
+Eine vierte Festlegung betrifft den Zustand der Suche selbst: Er wird in der Adresse der Seite geführt. Eine eingegrenzte Ansicht ist damit zitierfähig und weitergebbar, und das ist keine technische Feinheit: Ein Verweis auf die Arbeiten eines Studiengangs in einem Semester lässt sich etwa in eine Bewerbung übernehmen. Als zweiter Zugang tritt die Profilseite daneben. Sie folgt der personenbezogenen Ebene, welche die vorliegende Arbeit aus dem Komponentenmodell von Mahasneh (2020) gewinnt (Abschnitt 3.1), und beantwortet eine andere Frage als der Filter: nicht, welche Arbeiten es zu einem Thema gibt, sondern was eine Person gemacht hat (FA-16). Für potenzielle Arbeitgebende dürfte das der näherliegende Einstieg sein, weshalb jedes Projekt sichtbar auf die Profilseiten der Beteiligten verweist und umgekehrt.
+
+\abbildung{abb-4-5-projektuebersicht.png}{0.9}{abb:facettenfilter-prototyp}%
+{Facettenfilter der Projektübersicht mit Trefferzahl und Zurücksetzen}%
+{Facettenfilter der Projektübersicht mit Trefferzahl und Zurücksetzen (eigene Darstellung, Ausschnitt aus dem Figma-Prototyp)}
+
+Abbildung 4.5 zeigt den Ausschnitt, in dem diese Festlegungen zusammenkommen. Die Merkmalsgruppen stehen dauerhaft in der Seitenleiste und sind damit selbst die Übersicht über die Ordnung des Bestandes; eine Ziffer am Gruppenkopf nennt die Zahl der dort wirkenden Werte, sodass auch eine eingeklappte Gruppe zeigt, ob sie die Auswahl einschränkt. Beide Formen der Rücknahme aus FA-15 liegen nebeneinander: die einzelne im Auswahlfeld, die vollständige im Verweis über den Gruppen. Die Trefferzahl über der Ergebnisliste macht die Wirkung der Auswahl ablesbar.
+
+\subsection{Arbeitsplatz und Redaktionsansicht}
+
+Die Ansicht für das Schreiben zeigt das Projekt so, wie es später erscheint. Wo der Inhalt aus frei anordenbaren Bausteinen besteht (Abschnitt 4.3), wäre ein Formular mit festen Feldern eine engere Beschreibung desselben Gegenstands.
+
+\abbildung{abb-4-6-editor.png}{0.9}{abb:editor-prototyp}%
+{Editor mit der Werkzeugleiste eines Bausteins und den Einfügehilfen für Medien}%
+{Editor mit der Werkzeugleiste eines Bausteins und den Einfügehilfen für Medien (eigene Darstellung, Ausschnitt aus dem Figma-Prototyp)}
+
+Abbildung 4.6 zeigt diesen Arbeitsplatz. Der Titel steht als Überschrift über dem Dokument, obwohl er im Modell eine beschreibende Angabe ist und kein Baustein (Abschnitt 4.3). Die Werkzeugleiste hängt am Baustein und nicht am Seitenrand, weil sie die Arten anbietet, in die sich dieser eine Baustein verwandeln lässt. Die Medienarten führen nicht unmittelbar zu einer Datei, sondern zu einer Einfügehilfe, die den Weg über den Upload und den über eine geprüfte Einbettung nebeneinanderstellt. Der Prototyp führt in der Werkzeugleiste noch einen Baustein für Aufgabenlisten und beim Audiobaustein eine freie Adresse; beide sind mit den Festlegungen aus Abschnitt 4.3 entfallen.
+
+\abbildung{abb-4-7-review.png}{0.9}{abb:kommentarbereich-prototyp}%
+{Kommentarbereich der Prüfansicht mit den drei Kommentararten}%
+{Kommentarbereich der Prüfansicht mit den drei Kommentararten (eigene Darstellung, Ausschnitt aus dem Figma-Prototyp)}
+
+Abbildung 4.7 zeigt den Kommentarbereich, der in derselben Ansicht neben dem Projekt steht. Die drei Kommentararten aus Abschnitt 4.4 sind unterscheidbar ausgezeichnet, und die Änderungsaufforderung trägt ihren Erledigungsstand am Eintrag. Über der Liste steht die Zahl der offenen Aufforderungen, weil sie darüber entscheidet, ob erneut eingereicht werden kann. Ausschlaggebend ist der Ort: Ein getrennter Kanal löste die Rückfrage von ihrem Gegenstand.
+
+\subsection{Farbe, Typografie und Herkunft der Komponenten}
+
+Das Farbkonzept kennt eine einzige Markenfarbe, das Blau der Hochschule als abgestufte Rampe (NFA-50). Eine konsequent angewandte visuelle Identität stützt die Reputation einer Einrichtung (Van den Bosch et al., 2005, zitiert nach McKenney, 2020), und Blau gehört unter US-amerikanischen Hochschulen zu den häufigsten Primärfarben (McKenney, 2020). Auf Fakultätsfarben wird verzichtet, weil eine Information nach W3C (2023) ohnehin nicht allein über Farbe transportiert werden darf (NFA-21). Die Gestaltungswerte (Design-Token) sind zweistufig abgelegt, im Folgenden Tokenschicht genannt: Eine untere Ebene hält Rohwerte, eine obere vergibt Rollenbezeichnungen, und Komponenten binden allein an die obere, was zugleich den dunklen Farbmodus trägt (NFA-26). Jeder Zustand und jede Rolle erhalten ein geprüftes Farbpaar, dessen Bezeichner die Werte des Datenmodells trägt, damit eine Zustandsmarkierung ihre Farbe ohne Übersetzungstabelle ableiten kann.
+
+Die Schrift kombiniert eine Serifenschrift für Überschriften mit einer Groteskschrift für Fließtext und Bedienelemente. Große Anzeigerollen wachsen mit der Breite der Ansicht, während Fließtext wie Bedienelemente ihre feste Größe behalten, um die nutzerseitige Vergrößerung nicht zu unterlaufen (NFA-23). Alle Textknoten des Prototyps wurden am 07.08.2026 skriptgestützt gegen ihren sichtbaren Untergrund nach der Kontrastformel von W3C (2023) geprüft; die Kontraste nicht-textueller Bedienelemente erfasste diese Prüfung nicht (NFA-20; zur Bewertung, auch von Text über Bildern, Abschnitt 7.4). Vorgesehen sind für jedes bedienbare Element eine sichtbare Fokusmarkierung (NFA-22) und eine Zielfläche von mindestens 24 mal 24 CSS-Pixeln (NFA-24); ausgenommen ist bewusst die überlappende Beteiligtengruppe an der Projektkarte, deren verdeckte Bilder im Ruhezustand 16 Pixel breit sind.
+
+Eine letzte Festlegung betrifft die Herkunft der Bedienkomponenten. Die interaktiven Grundkomponenten werden bezogen und nicht selbst gebaut; von Hand entsteht allein, was fachliches Wissen trägt. Der Grund liegt in der Zweiteilung der Barrierefreiheit: Kontrast ist ein Farbwert und über die Tokenschicht abgedeckt, die Fokussichtbarkeit weitgehend; Tastaturbedienung und die Auszeichnung von Rollen dagegen sind Verhalten (NFA-22, NFA-25). Ein selbst gebautes Auswahlmenü erfüllt den ersten Teil mühelos und scheitert am zweiten, ohne dass es mit der Maus auffiele.
+
+\subsection{Vom Wireframe zum Prototyp}
+
+Vor dem Prototyp stehen Handskizzen und Wireframes auf einem gemeinsamen Board, und ihr Wert liegt darin, dass sich an ihnen ablesen lässt, welche Festlegung aus einer verworfenen Vorstufe hervorging. Am stärksten verändert hat sich der Zugang.
+
+\abbildung{abb-4-8-handskizze-registrierung.png}{0.8}{abb:handskizze-registrierung}%
+{Handskizze der Registrierung mit der frühen Rollenbenennung}%
+{Handskizze der Registrierung mit der frühen Rollenbenennung (eigene Darstellung, Skizze Mai 2026)}
+
+Abbildung 4.8 zeigt die früheste Fassung. Neben der privaten Adresse steht dort bereits eine zweite mit dem Vermerk einer Verifizierung; die Trennung aus FA-01 ist also von Beginn an da. Die Rollen dagegen heißen „Student“ und „Betreuer“, benannt nach Personen im Lehrbetrieb statt nach Aufgaben im Portal. Aus dieser Benennung ist das Modell aus Abschnitt 4.2 geworden, in dem eine betreuende Person nicht betreut, sondern entscheidet, und in dem die größte Gruppe gar keine Rolle trägt.
+
+\abbildung{abb-4-9-wireframes-registrierung.png}{0.9}{abb:wireframe-registrierungswege}%
+{Wireframes der getrennten Registrierungswege für Studierende und Lehrende}%
+{Wireframes der getrennten Registrierungswege für Studierende und Lehrende (eigene Darstellung, Wireframe Mai 2026)}
+
+Abbildung 4.9 zeigt den nächsten Stand. Die Registrierung führt zwei getrennte Wege, einen für Studierende und einen für Lehrende; die Rolle wird also gewählt. Der spätere Entwurf leitet sie aus der bestätigten Adresse ab und streicht den Auswahlschritt (FA-02), denn eine gewählte Rolle ist eine Angabe, eine abgeleitete ein Nachweis.
+
+\abbildung{abb-4-10-wireframe-freischaltung.png}{0.85}{abb:wireframe-freischaltung}%
+{Wireframe des Zwischenstands mit ausstehender Freischaltung durch die Administration}%
+{Wireframe des Zwischenstands mit ausstehender Freischaltung durch die Administration (eigene Darstellung, Wireframe Mai 2026)}
+
+Abbildung 4.10 zeigt, was diese Wahl nach sich zog: Wer sich als lehrende Person registrierte, landete in einem Wartezustand, den die Administration auflösen musste. Mit der Ableitung aus der Adresse entfällt dieser Schritt. Damit erhält jedes Mitglied der Hochschule mit einer Mitarbeitendenadresse unmittelbar redaktionelle Rechte, ohne dass eine zusätzliche Freigabe dazwischentritt. Eine solche Freigabe war einmal vorgesehen; soll sie wieder gelten, genügt es, die Liste der Mitarbeitendenendungen leer zu lassen, sodass redaktionelle Rechte allein die Administration vergibt.
+
+\abbildung{abb-4-11-wireframe-startseite.png}{0.85}{abb:wireframe-startseite}%
+{Wireframe der öffentlichen Startseite mit der kuratierten Auswahl}%
+{Wireframe der öffentlichen Startseite mit der kuratierten Auswahl (eigene Darstellung, Wireframe Mai 2026)}
+
+Abbildung 4.11 zeigt dagegen, was blieb: Die öffentliche Startseite trägt die kuratierte Auswahl und die Zahl der veröffentlichten Arbeiten schon an derselben Stelle. Der Weg vom Wireframe zum Prototyp hat den öffentlichen Einstieg also bestätigt und den Zugang umgebaut.
+
+\section{Datenbankmodell}
+\label{sec:datenbankmodell}
+
+Das relationale Modell führt die Personen mit ihrem Portfolio, die Projekte mit ihren Bausteinen und Kommentaren, die Reaktionen, die kuratierte Auswahl mit Vorschlägen und Protokoll, die Zustandshistorie, die abgelegten Dateien, die Bestätigungscodes, die Anfragen des Rückkanals sowie die Texte der Startseite. Daneben stehen die Stammdaten aus Fakultät, Studiengang, Modul, Kategorie, Semester sowie Schlagwort. Fakultät, Studiengang, Kategorie und Semester sind zugleich vier der sechs Merkmalsgruppen des Facettenmodells aus Abschnitt 4.5; Abschluss und Projekttyp sind feste Aufzählungen, Modul und Schlagwort gehen nicht in die Facetten ein. Die Stammdaten außer den Schlagwörtern pflegt die Administration (FA-43). Nur weil Fakultät und Studiengang eigene Zeilen mit einem stabilen Bezug zueinander sind, lässt sich die Studiengangsauswahl auf die gewählten Fakultäten einschränken (FA-12). Am Projekt sind zwei Zugehörigkeiten bewusst getrennt geführt: Die zugewiesene Redaktion speist die Arbeitsliste der Prüfenden (FA-31), während die Mitwirkenden eine frei benennbare Funktion tragen und keine Systemrolle (FA-30).
+
+Mehrere Entscheidungen folgen demselben Grundsatz: Was eine fachliche Invariante ist, sichert die Datenbank selbst und nicht allein der Programmtext. Alle Primärschlüssel sind zufällige Kennungen, weil sie in öffentlichen Adressen erscheinen und fortlaufende Zahlen ein Durchprobieren fremder Projekte erlaubten; erst diese Nichterratbarkeit trägt die in Abschnitt 4.2 begründete Fehlerpolitik. Die Reihenfolge der Bausteine sichert eine Eindeutigkeitsbedingung, deren Prüfung ans Ende der Transaktion verschoben ist, damit beim Umsortieren Zwischenzustände zulässig bleiben. Ein Schlagwort ist ohne Rücksicht auf Groß- und Kleinschreibung eindeutig, denn eine gewöhnliche Bedingung ließe genau die Dubletten zu, wegen derer es diese Tabelle gibt.
+
+Zwei Abwesenheiten sind ebenso Entscheidungen. Die Projektliste eines Portfolios wird nicht gespeichert, sondern bei jedem Zugriff aus Autorschaft, Mitwirkung und Zustand ermittelt (FA-29), denn eine gespeicherte Liste veraltete bei jedem übersehenen Zustandswechsel. Und das Löschen eines Kontos ist als Deaktivierung ausgeführt, weil Projekte, Kommentare sowie Protokolleinträge über Fremdschlüssel an der Person hängen und ein echtes Löschen fremde Projekte zerstörte; ein datenschutzrechtlich vollständiges Löschen über die Anonymisierung der Autorschaft ist als Ausblick vermerkt.
+
+\abbildung{abb-4-12-datenmodell.png}{0.98}{abb:datenmodell}%
+{Entitäten des Datenmodells und ihre Beziehungen}%
+{Entitäten des Datenmodells und ihre Beziehungen (eigene Darstellung)}
+
+Abbildung 4.12 stellt die Entitäten mit ihren Beziehungen dar. Ablesbar ist daran die zentrale Stellung des Projekts: Die Ordnungsdaten zeigen ebenso auf das Projekt wie die Personen, und von ihm gehen die Bausteine, die Kommentare sowie die Historie aus. Die Stammdaten stehen abgesetzt; Fakultät, Studiengang und Modul bilden die Struktur der Hochschule ab, Kategorie und Semester pflegt die Administration, und Schlagwörter entstehen beim Speichern eines Projekts.
+
+\section{Zusammenfassung}
+\label{sec:zusammenfassung-konzeption}
+
+\platzhalter{Abschnitt 4.7 steht auf der Confluence-Seite 51740676 noch nicht. Er beantwortet die dritte Teilfrage auf Konzeptebene und fasst zusammen, welche Entwurfsentscheidungen aus welcher Anforderung folgen.}

@@ -1,0 +1,331 @@
+% ---------------------------------------------------------------------------
+% Kapitel 6: Test
+% Wortgleich uebernommen aus der Confluence-Seite
+% "Kapitel 6: Test (Teilentwurf)" (Space BEH, Seiten-ID 51642395),
+% Stand 03.10.2026. Abschnitt 6.4 Zusammenfassung steht dort noch nicht.
+% ---------------------------------------------------------------------------
+
+\chapter{Test}
+\label{kap:test}
+
+Die Kriterien aus Abschnitt 3.3 und der Entwurf aus Abschnitt 4.5 sind begründet, aber nicht geprüft. Die zweite Teilfrage (TF 2, Abschnitt 1.2) verlangt diese Prüfung am gebauten Portal, der Akzeptanzteil der Forschungsfrage zusätzlich das Urteil künftiger Nutzender. Bewertet wird erst in Abschnitt 7.2.
+
+\section{Testkonzept und Methodik}
+\label{sec:testkonzept}
+
+Gebrauchstauglichkeit und Akzeptanz werden mit vier Methoden erhoben: lautem Denken, heuristischer Evaluation, dem Fragebogen der System Usability Scale (SUS-Bogen) und einem Fragebogen zu den Konstrukten des Technologieakzeptanzmodells (TAM-Bogen). Weil jede Methode bei den Fragen der anderen blind ist, werden sie kombiniert (Methodentriangulation, Tabelle 6.1).
+
+\begingroup
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{@{}L{2.5cm}L{3.6cm}L{3.6cm}L{4.2cm}@{}}
+	\caption[Vier Erhebungsmethoden, ihre Frage und ihr blinder Fleck]{Vier Erhebungsmethoden, ihre Frage und ihr blinder Fleck (eigene Darstellung)}
+	\label{tab:methoden}\\
+	\toprule
+	\textbf{Methode} & \textbf{beantwortet} & \textbf{beantwortet nicht} & \textbf{Ergebnis} \\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{Methode} & \textbf{beantwortet} & \textbf{beantwortet nicht} & \textbf{Ergebnis} \\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	Lautes Denken & woran eine Person scheitert, welchen Weg sie erwartet & Gesamturteil; ob ein Problem repräsentativ ist & Probleme mit Ursache, Wertung und Zeit je Aufgabe \\
+	Heuristische Evaluation & Regelverstöße, auch wo keine Aufgabe hinführt & ob Nutzende darüber stolpern und wie oft & Befunde mit Schweregrad, gezählt je Heuristik \\
+	SUS-Bogen & wahrgenommene Gebrauchstauglichkeit, vergleichbar skaliert & welche Stelle den Wert senkt & ein Wert je Person von 0 bis 100 \\
+	TAM-Bogen & wahrgenommene Nützlichkeit und Benutzerfreundlichkeit, Nutzungsabsicht & Ursache eines niedrigen Werts; ob aus der Absicht Nutzung wird & drei getrennte Werte je Person von 1,00 bis 7,00 \\
+\end{longtable}
+\endgroup
+
+Die ersten drei Methoden erfassen den Aufwand der Benutzung, erst die Skala der wahrgenommenen Nützlichkeit ihren Wert. Ein Problem, das lautes Denken und heuristische Evaluation melden, wiegt in Abschnitt 7.2 mehr als eines aus nur einer Quelle, daher führt die Problemliste die Quelle.
+
+Abbildung 6.1 ordnet die Methoden zeitlich und zeigt, welche Daten jede weitergibt.
+
+\abbildung{abb-6-1-testaufbau.png}{0.95}{abb:aufbau-erhebung}%
+{Aufbau der Erhebung: Reihenfolge der vier Methoden und ihre Ergebnisse}%
+{Aufbau der Erhebung: Reihenfolge der vier Methoden und ihre Ergebnisse (eigene Darstellung)}
+
+Die heuristische Evaluation läuft zuerst, damit ein Verstoß, der jede Person aufhielte, nicht alle elf Sitzungen belastet; Befunde ab Schweregrad 3 („schwerwiegend“, Tabelle 6.2) werden vorher behoben oder dokumentiert. Die Datenflüsse bleiben bis Abschnitt 7.2 getrennt: Beobachtungen und Befunde münden in die Problemliste, die Bögen in eigene Kennwerte.
+
+Die heuristische Evaluation folgt Nielsen und Molich (1990), mit den zehn Heuristiken nach Nielsen (2024) in den Bezeichnungen der Tabelle 3.1. Bei der Prüfung der Referenzplattform (Abschnitt 3.4) erhielt jede Heuristik einen Erfüllungsstatus statt Schweregraden; damit Abschnitt 7.2 vergleichen kann, vergibt jede begutachtende Person diesen Status auch für das eigene System. Die Befunde werden zusätzlich je Heuristik gezählt. Die beiden Verfasser prüfen als Begutachtende getrennt in zwei Durchgängen, erst im Überblick, dann Bildschirm für Bildschirm gegen die Regeln, und notieren je Befund Beobachtung und Auswirkung. Zusammengeführt wird nur, was am selben Bildschirm dieselbe Ursache hat; weichen die Grade um eine Stufe ab, gilt der höhere. Vorrangig, nicht allein geprüft werden H6, H3 und H1, aus denen Abschnitt 3.3 die Kriterien der Auffindbarkeit ableitet. Die Erfolgskriterien der Barrierefreiheit prüft daneben der automatisierte Lauf aus Abschnitt 5.3.
+
+Den Schweregrad setzt Nielsen (1994c) aus Häufigkeit, Auswirkung und Persistenz zusammen und stuft ihn von 0 bis 4. Damit zwei Begutachtende zum selben Wert kommen, übersetzt die vorliegende Arbeit das in die Regel der Tabelle 6.2 mit den Stufen 1 kosmetisch, 2 gering, 3 schwerwiegend und 4 katastrophal; die 0 für „kein Problem“ entfällt. Anders als Nielsen (1994c) empfiehlt, bewertet nicht jede Person die vollständige Liste unabhängig; die Grade entstehen in der Zusammenführung.
+
+\begin{table}[htbp]
+	\centering
+	\small
+	\caption[Schweregrad aus Auswirkung und Häufigkeit]{Schweregrad aus Auswirkung und Häufigkeit (eigene Darstellung nach Nielsen (1994c))}
+	\label{tab:schweregrad}
+	\begin{tabularx}{\textwidth}{@{}L{4.6cm}YYY@{}}
+		\toprule
+		\textbf{Auswirkung auf die Aufgabe} & \textbf{genau eine Person} & \textbf{mehr als eine, höchstens die Hälfte} & \textbf{mehr als die Hälfte} \\
+		\midrule
+		hoch: Aufgabe scheitert & 3 & 3 & 4 \\
+		mittel: deutlicher Umweg & 2 & 3 & 3 \\
+		gering: kurzes Stocken & 1 & 2 & 2 \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+Die Häufigkeit steht als Anteil, weil die Blöcke verschieden groß sind. Kehrt ein Problem bei jedem Versuch unumgehbar wieder, steigt sein Grad um eine Stufe, höchstens bis 4. Ein Befund beider Begutachtenden zählt wie „mehr als eine Person“, ein Befund nur einer der beiden wie „genau eine Person“; wird er im Test beobachtet, zählt stattdessen die dort gemessene Häufigkeit.
+
+Für das laute Denken ist Nielsen (1994b) die methodische Referenz, wie Abschnitt 3.3 ankündigt. Was eine Person vor dem Finden oder Verfehlen sagt, zeigt ihr Verständnis der Ordnung des Systems. Getestet wird moderiert und in Präsenz. Vorgelesener Moderationstext und getrennte Rollen für Moderation und Protokoll sind Messbedingungen: Hilft eine Testleitung, wo die andere schweigt, messen die Sitzungen nicht mehr dasselbe.
+
+Der SUS-Bogen nach Brooke (1996), vorgelegt als deutsche Übersetzung neben dem englischen Original, ergibt aus zehn Aussagen auf fünfstufiger Skala einen Wert von 0 bis 100 in Schritten von 2,5, der keine Prozentzahl ist. Der Zielwert 68 liegt in der Mitte der Note C einer Notenskala aus 241 Untersuchungen (Sauro \& Lewis, 2016, zitiert nach Lewis \& Sauro, 2018); Abschnitt 2.4 hat ihn vorab als NFA-06 festgelegt.
+
+Der TAM-Bogen erhebt nach Davis (1989) auf einem siebenstufigen semantischen Differenzial die wahrgenommene Nützlichkeit (PU) und Benutzerfreundlichkeit (PEOU) sowie die Nutzungsabsicht (BI). Die je sechs Aussagen zu PU und PEOU sind übersetzt, aber nicht umformuliert, weil ihr Wert in ihrer dokumentierten Herleitung liegt. Als zwei Items zur Nutzungsabsicht kommen die beiden Antwortskalen hinzu, mit denen Davis (1989) in seiner zweiten Untersuchung die künftige Nutzung erfragt, die zweite umgekehrt gepolt. Eingegriffen wurde an drei Stellen: „das Portal“ statt des Systemnamens, deutscher Text über dem Original, „diese Aufgaben“ statt der Erwerbsarbeit. Itemzahl, Reihenfolge, Antwortformat und die gleichsinnige Polung der zwölf Skalenitems bleiben. Der Bogen liegt in vier Fassungen vor, eine je Block; sie unterscheiden sich allein im Bezugssatz zu den eben bearbeiteten Aufgaben. Shroff et al. (2011) haben das Modell an einem E-Portfolio-System erprobt; das stützt die Übertragung, ersetzt aber keine Validierung der deutschen Fassung.
+
+Die drei Skalen werden weder verrechnet noch in SUS-Werte umgerechnet. Da Davis (1989) keine Normwerte berichtet, ist der Orientierungspunkt aus Abschnitt 1.2, der Skalenmittelpunkt 4,00, eine Festlegung der vorliegenden Arbeit und kein Literaturwert. Die Reliabilität wird als Cronbachs Alpha berichtet, mit der Untergrenze 0,80 aus derselben Quelle und bei elf Personen nur als Anhaltspunkt.
+
+Block A bearbeiten alle elf Personen, Block B fünf, die Blöcke C und D je zwei. Nach Nielsen (2000) finden $n$ Personen $N \cdot (1 - (1 - L)^n)$ der $N$ vorhandenen Probleme, wobei $L$ der Anteil ist, den eine einzelne aufdeckt; beim typischen $L$ von 31 Prozent finden fünf Personen rund 85 Prozent davon. Für deutlich verschiedene Nutzergruppen empfiehlt er bei zwei Gruppen drei bis vier Personen je Gruppe, ab drei Gruppen drei; Block B erreicht diese Untergrenze.
+
+Elf Personen und Blöcke mit zwei Personen tragen keine inferenzstatistische Aussage. Ausgewertet wird deshalb deskriptiv, Erfolgsquoten stets mit dem Nenner ihres Blocks; Signifikanztests und Gruppenvergleiche entfallen, Rangkorrelationen nach Spearman gelten als explorativ.
+
+Grenzen setzt zuerst die Zahl der Begutachtenden: zwei statt der drei bis fünf, die Nielsen und Molich (1990) empfehlen; da eine einzelne Person in ihren Experimenten im Mittel 20 bis 51 Prozent der bekannten Probleme fand, ist die Befundliste eine Untergrenze. Da die Begutachtenden das System selbst gebaut haben und nicht unbefangen sind, ist der Nutzertest Gegenprobe und nicht Bestätigung ihrer Liste. Statt mehrerer kleiner Runden mit Überarbeitung, wie Nielsen (2000) sie empfiehlt, gibt es eine; die Blöcke C und D mit je zwei Personen und die in Block A mit zwei Personen vertretenen externen Nutzenden bleiben unter den drei, die er je Gruppe verlangt. Aufbauende Aufgaben lassen sich nicht ausbalancieren, Reihenfolge- und Lerneffekte bleiben möglich. Da die Karten in C und D den Ablauf erklären (Abschnitt 6.2), prüfen diese Blöcke, ob die Oberfläche einen bekannten Ablauf trägt, nicht ob er erraten wird. Beide übersetzten Bögen sind nicht eigens validiert; zudem wussten die Teilnehmenden aus der Begrüßung, dass die Testleitenden das Portal entwickelt haben, was sozial erwünschte Antworten begünstigt. Der TAM-Bogen erhebt zudem eine prospektive Selbstauskunft nach einer einzigen Sitzung; Shroff et al. (2011) erfragten die Nutzungsabsicht ebenfalls, aber nach einem Semester Nutzung.
+
+\section{Testdesign (Teilnehmende, Aufgaben, Ablauf)}
+\label{sec:testdesign}
+
+Geplant waren fünf Studierende für Block B, zwei Lehrende in der Rolle der Redaktion für Block C, zwei Hochschulangehörige für Block D und zwei Externe ohne Hochschulbezug nur für Block A. Block C können ersatzweise Studierende übernehmen, welche die Rolle der Redaktion nur für den Test einnehmen (Rollenaufgabe). Für Block D soll mindestens eine Person aus dem Umfeld der Rolle kommen, etwa aus Studiengangskoordination oder Webredaktion, damit die tägliche Bedienung und nicht nur die Erlernbarkeit durch Laien gemessen wird. Vorausgesetzt werden Erfahrung mit Webanwendungen und Deutschkenntnisse; ausgeschlossen ist, wer am Projekt beteiligt ist, den Prototyp gesehen hat, die Arbeit betreut oder den Datenbestand kennt. Eine Aufwandsentschädigung entfiel, weil ein Lohn für das Durchhalten die Stellen verfälscht, an denen jemand sonst abbräche.
+
+Jede Person beginnt mit Block A ohne Anmeldung, weil sich Auffindbarkeit nur aus der Sicht der externen Nutzenden als Hauptzielgruppe prüfen lässt. So entstehen elf Beobachtungen zur Auffindbarkeit statt zwei.
+
+Block A umfasst fünf Aufgaben in 18 Minuten, die Rollenblöcke sieben (B), sechs (C) und sieben Aufgaben (D) in je 30 Minuten, einschließlich der Übergänge von zwei beziehungsweise drei Minuten. Jede Aufgabe hat ein vorgelesenes Szenario auf einer Karte, einen vorab hergestellten Startzustand sowie Erfolgskriterium und Zeitbudget, beide nicht auf der Karte. Das Budget ist kein Abbruchzeitpunkt: Danach greift die Moderation nach der unten beschriebenen Leiter ein, abgebrochen wird bei Budget plus 50 Prozent.
+
+Den Wortlaut bestimmen zwei Regeln des Aufgabenkatalogs: Die Karte nennt ein Ziel statt eines Weges und meidet das Vokabular der Oberfläche, denn mit dem Wort der Schaltfläche prüft eine Aufgabe nur noch das Lesen. Die Karte zu B6 sagt deshalb „Sorge dafür, dass du wieder weiterschreiben kannst“ und nicht „Ziehe die Einreichung zurück“; in A5 fehlt das Wort PDF. Die Karten C2 bis C6 und D2 bis D7 weichen von der zweiten Regel ab und erklären den Ablauf mit den Wörtern der Oberfläche. Tabelle 6.3 nennt alle Aufgaben.
+
+\begingroup
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{@{}L{1.4cm}L{4.3cm}L{1.5cm}L{6.6cm}@{}}
+	\caption[Die 25 Testaufgaben mit Zeitbudget und Erfolgskriterium]{Die 25 Testaufgaben mit Zeitbudget und Erfolgskriterium (eigene Darstellung)}
+	\label{tab:testaufgaben}\\
+	\toprule
+	\textbf{Kennung} & \textbf{Aufgabe} & \textbf{Budget (min)} & \textbf{Erfolgskriterium} \\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{Kennung} & \textbf{Aufgabe} & \textbf{Budget (min)} & \textbf{Erfolgskriterium} \\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	A1 & Orientierung & 2 & keine Erfolgswertung \\
+	A2 & Ein bestimmtes Projekt finden & 3 & Detailseite des Zielprojekts geöffnet \\
+	A3 & Facettiert einschränken & 4 & Abschluss, Fakultät und Semester zugleich eingeschränkt \\
+	A4 & Zurücknehmen und zum Profil & 4 & Einschränkung ohne Neuladen und ohne Umweg über die Startseite entfernt, dann Profilseite geöffnet \\
+	A5 & Ein Projekt für später sichern & 3 & PDF-Datei erzeugt und gespeichert \\
+	B1 & Anmelden & 2 & angemeldet, höchstens zwei Fehlversuche \\
+	B2 & Projekt anlegen & 3 & Projekt mit vorgegebenem Titel im Status „Entwurf“ \\
+	B3 & Inhalt mit mehreren Bausteinarten & 8 & Überschrift, Absatz, Bild und Aufzählung gespeichert \\
+	B4 & Metadaten vollständig pflegen & 6 & alle sieben Pflichtangaben gesetzt \\
+	B5 & Einreichen & 2 & Status „Eingereicht“ \\
+	B6 & Wieder bearbeitbar machen & 3 & Status wieder „Entwurf“, Editor geöffnet \\
+	B7 & Eigenes Profil ergänzen & 3 & Kurzbiografie gespeichert \\
+	C1 & Anmelden & 2 & wie B1 \\
+	C2 & Arbeitsvorrat überblicken & 2 & eigene Reviews geöffnet, ein wartendes Projekt benannt \\
+	C3 & Prüfen und zurückgeben & 8 & Status „Überarbeitung“, Begründung gespeichert \\
+	C4 & Genehmigen und veröffentlichen & 6 & Status „Veröffentlicht“ \\
+	C5 & Für die Top 10 vorschlagen & 5 & Nominierung mit Stufe abgegeben \\
+	C6 & Interne Anmerkung hinterlassen & 4 & interne Notiz angelegt, kein anderer Kommentar \\
+	D1 & Anmelden & 2 & wie B1 \\
+	D2 & Lagebild verschaffen & 3 & Administrationsseite geöffnet, zwei Zustandsaussagen genannt \\
+	D3 & Jemandem das Prüfen erlauben & 3 & Konto trägt die Rolle „Redakteur:in“ \\
+	D4 & Doppelte Kategorie aufräumen & 5 & eine Kategorie übrig, alle betroffenen Projekte daran \\
+	D5 & Mehrere Projekte auf einmal & 4 & alle fünf Projekte „Veröffentlicht“ \\
+	D6 & Die Top 10 festlegen & 7 & alle zehn Plätze belegt \\
+	D7 & Eine Änderung nachvollziehen & 3 & jüngster fremder Eintrag mit Person und Zeitpunkt genannt \\
+\end{longtable}
+\endgroup
+
+A3 und A4 prüfen die Auswahl entlang der Systematik und die Rücknahme einer einzelnen Einschränkung, also zwei der drei Kriterien der Auffindbarkeit aus Abschnitt 3.3; das dritte, die Sichtbarkeit der wirkenden Einschränkungen (H1), prüft vorrangig die heuristische Evaluation. Wie A4 und A5 in Block A bauen B3 bis B6, C5 und D7 auf der jeweils vorigen Aufgabe auf. Wurde die vorige abgebrochen, stellt die Moderation deren Ergebnis schweigend her.
+
+Abbildung 6.2 zeigt, wie sich Aufgaben und Fragebögen in einer Sitzung anordnen.
+
+\abbildung{abb-6-2-sitzungsablauf.png}{0.95}{abb:ablauf-sitzung}%
+{Ablauf einer Vollsitzung von 76 Minuten}%
+{Ablauf einer Vollsitzung von 76 Minuten (eigene Darstellung)}
+
+Darunter steht die externe Kurzsitzung ohne Übergang und Rollenblock mit 44 Minuten. Von den 76 Minuten erhalten die Aufgaben 48. Beide Fragebögen folgen erst auf die letzte Aufgabe, damit der Bezugssatz des TAM-Bogens auf eben Bearbeitetes verweist. Eine Minute Pause trennt die Skalen, damit der TAM-Bogen zum Nutzen nicht als Fortsetzung des SUS-Bogens zur Bedienung gelesen wird.
+
+Moderation und Protokoll liegen in jeder Sitzung bei verschiedenen Personen und sollen zwischen den Sitzungen wechseln, damit kein Einfluss der Testleitung an einer Person hängt. Die Moderation liest vom Blatt, erklärt das System nicht und greift nach einer festen Leiter ein, die zugleich die Wertung bestimmt. Auf etwa zehn Sekunden Schweigen fragt sie: „Was denkst du gerade?“, die Aufgabe bleibt „erfolgreich“. Nach etwa einer Minute Ratlosigkeit verweist sie auf die Aufgabenkarte („mit Mühe“). Bei überschrittenem Budget oder Bitte um Hilfe weist sie auf den Bereich, nie auf das Bedienelement, und die Aufgabe gilt als „nicht gelöst“, auch wenn sie noch gelingt; ohne Fortschritt folgt der Abbruch. Das Protokoll kreuzt die angesagte Wertung an und notiert Äußerungen im Wortlaut, die Codes N (falscher Weg) und E (Überraschung) sowie Fehlversuche, also wirkungslose oder sofort zurückgenommene Aktionen. Die Zeit läuft vom Aufgabenbeginn bis zum sichtbar erfüllten Kriterium; maßgeblich ist das Protokoll, die Aufzeichnung ergänzt es.
+
+Getestet wird auf einer eigenen Testinstanz des Auslieferungsstands mit eigener Datenbank. Der Datenbestand gehört zum Messaufbau: 48 veröffentlichte Projekte über mehrere Fakultäten und Semester sowie alle drei Abschlussarten, damit in A3 jede Einschränkung die Trefferliste verkleinert. Jede Sitzung beginnt mit frischem Browserprofil und, außer bei Externen, mit frischem Testkonto; dazwischen liegen mindestens 30 Minuten Rücksetzzeit.
+
+Die Einwilligung trägt für die Aufzeichnung ein eigenes Kreuz; alle übrigen Unterlagen führen allein die Pseudonyme TN01 bis TN11, die Zuordnungsliste liegt außerhalb der Projektablage. Aufzeichnungen und Zuordnungsliste werden nach Abgabe und Bewertung der Arbeit gelöscht.
+
+\section{Durchführung des Usability-Tests}
+\label{sec:durchfuehrung}
+
+Keine der elf Sitzungen wurde abgebrochen, alle liefen auf demselben Stand. Gegenüber dem Stand, an dem der erste Begutachtende prüfte, kamen ein in drei Schritte gegliedertes Metadatenformular, vereinheitlichte Feldnamen sowie überarbeitete Filterzeile und Editorkopf hinzu; der zweite prüfte überwiegend am getesteten Stand (Abschnitt 7.1). Keine davon ist als Behebung eines heuristischen Befunds geführt, doch die Vereinheitlichung behob den Befund zu uneinheitlichen Feldnamen (P14) zur Hälfte: Der Projekttyp heißt seither überall gleich, „Redakteur:in“ und „Redaktionszuweisung“ bestehen fort. Als behoben geführt ist vor den Sitzungen keiner der 21 heuristischen Befunde; die drei mit Schweregrad 3 (P16, P28, P30) liefen dokumentiert als bekannte Probleme mit. Ungeprüft blieben Impressum und Datenschutzerklärung; Semesterverwaltung und Studienstruktur prüfte allein die heuristische Evaluation. Bei TN10 fiel während D5 kurz die Netzverbindung aus; die Seite wurde neu geladen und die Uhr angehalten. Dieselbe Bearbeitung ist „mit Mühe“ gewertet und liegt P12 zugrunde.
+
+Teilgenommen haben neun Studierende und zwei externe Berufstätige: eine Apothekerin und eine Person aus der Cybersecurity. Von den Studierenden kamen fünf aus dem Bauingenieurwesen, zwei aus dem Internationalen Studiengang Medieninformatik, je eine aus Pharmazie und Wirtschaftsinformatik (Bremerhaven); sieben standen im achten Fachsemester, eine im vierten, bei einer fehlt die Angabe. Ihre Erfahrung mit Webanwendungen schätzten die elf im Median auf 4 (Skala 1 bis 5, Werte 2 bis 5), sechs von elf hatten schon ein Portfolio-Portal benutzt. Block C beruht vollständig auf Rollenaufgaben zweier Studierender, da keine Lehrenden teilnahmen und die Ersatzregel aus Abschnitt 6.2 griff. Block D bearbeiteten zwei Studierende; der Protokollkopf vermerkt beide ohne nähere Angabe als aus dem Umfeld der Rolle. Die Rollen wechselten nicht von Sitzung zu Sitzung: Von den beiden Verfassern moderierte einer sieben Sitzungen, darunter beide des Blocks C, der andere vier. Moderation und Protokoll lagen nie bei derselben Person.
+
+Tabelle 6.4 führt je Aufgabe Wertungen und Zeiten in Minuten und Sekunden; als gelöst zählen „erfolgreich“ und „mit Mühe“. Die Zeiten schließen nicht gelöste Bearbeitungen ein; bei $n = 2$ ist der Median das auf volle Sekunden abgerundete Mittel.
+
+\begingroup
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{@{}L{1.5cm}rrrrrrr@{}}
+	\caption[Kennzahlen je Aufgabe]{Kennzahlen je Aufgabe (eigene Erhebung, elf Sitzungen)}
+	\label{tab:kennzahlen-aufgaben}\\
+	\toprule
+	\textbf{Aufgabe} & \textbf{n} & \textbf{erf.} & \textbf{m. Mühe} & \textbf{n. gelöst} & \textbf{Median} & \textbf{Min} & \textbf{Max} \\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{Aufgabe} & \textbf{n} & \textbf{erf.} & \textbf{m. Mühe} & \textbf{n. gelöst} & \textbf{Median} & \textbf{Min} & \textbf{Max} \\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	A1 & 11 & \multicolumn{3}{c}{entfällt} & 01:30 & 00:40 & 02:47 \\
+	A2 & 11 & 11 & 0 & 0 & 00:45 & 00:10 & 01:10 \\
+	A3 & 11 & 11 & 0 & 0 & 00:59 & 00:24 & 01:50 \\
+	A4 & 11 & 10 & 1 & 0 & 00:55 & 00:10 & 01:47 \\
+	A5 & 11 & 8 & 3 & 0 & 01:14 & 00:20 & 02:40 \\
+	B1 & 5 & 5 & 0 & 0 & 00:40 & 00:14 & 00:46 \\
+	B2 & 5 & 4 & 0 & 1 & 02:33 & 00:39 & 03:04 \\
+	B3 & 5 & 4 & 1 & 0 & 02:48 & 01:12 & 03:11 \\
+	B4 & 5 & 5 & 0 & 0 & 02:32 & 00:10 & 08:00 \\
+	B5 & 5 & 5 & 0 & 0 & 00:20 & 00:09 & 00:23 \\
+	B6 & 5 & 5 & 0 & 0 & 00:25 & 00:15 & 01:27 \\
+	B7 & 5 & 5 & 0 & 0 & 00:45 & 00:23 & 01:58 \\
+	C1 & 2 & 2 & 0 & 0 & 00:41 & 00:39 & 00:44 \\
+	C2 & 2 & 1 & 1 & 0 & 02:03 & 01:37 & 02:30 \\
+	C3 & 2 & 2 & 0 & 0 & 01:06 & 00:39 & 01:33 \\
+	C4 & 2 & 1 & 0 & 1 & 01:50 & 00:40 & 03:00 \\
+	C5 & 2 & 1 & 1 & 0 & 01:27 & 01:04 & 01:50 \\
+	C6 & 2 & 2 & 0 & 0 & 01:06 & 01:00 & 01:12 \\
+	D1 & 2 & 2 & 0 & 0 & 00:42 & 00:40 & 00:45 \\
+	D2 & 2 & 2 & 0 & 0 & 01:20 & 01:10 & 01:30 \\
+	D3 & 2 & 2 & 0 & 0 & 01:55 & 01:45 & 02:05 \\
+	D4 & 2 & 1 & 1 & 0 & 02:55 & 02:30 & 03:20 \\
+	D5 & 2 & 1 & 1 & 0 & 02:52 & 02:40 & 03:05 \\
+	D6 & 2 & 2 & 0 & 0 & 02:05 & 01:55 & 02:15 \\
+	D7 & 2 & 2 & 0 & 0 & 01:42 & 01:35 & 01:50 \\
+\end{longtable}
+\endgroup
+
+In Block A wurden alle 44 Bearbeitungen von A2 bis A5 gelöst, vier „mit Mühe“ (A4 einmal, A5 dreimal). Block B kommt auf 34 von 35, eine „mit Mühe“ (B3), Block C auf 11 von 12, zwei „mit Mühe“ (C2, C5), Block D auf 14 von 14, zwei „mit Mühe“ (D4, D5). Nicht gelöst wurden C4 bei TN07 nach 03:00 und B2 bei TN02. TN02 verstand B2 als Auftrag, ein Projekt anzuzeigen statt anzulegen; diese Wertung und „mit Mühe“ bei TN07 in A4 gehen auf das Aufgabenverständnis zurück und zählen nicht als Usability-Problem. Vier Wertungen weichen von den Regeln aus Abschnitt 6.2 ab und stehen wie protokolliert. B2 bei TN05 (03:04 bei drei Minuten), B4 bei TN03 (08:00 bei sechs) und C2 bei TN06 (02:30 bei zwei, „mit Mühe“) überschritten ihr Budget, ohne als „nicht gelöst“ zu gelten. A4 bei TN06 gilt trotz des vom Kriterium ausgeschlossenen Umwegs über die Startseite als erfolgreich (P8). Fehlversuche wurden nicht durchgängig erfasst; belastbar sind allein D4 mit drei und D5 mit einem.
+
+Die elf SUS-Werte nach Brooke (1996), alle aus vollständigen Bögen, lauten aufsteigend 67,5; 72,5; 85,0; 85,0; 87,5; 90,0; 92,5; 95,0; 95,0; 95,0; 95,0. Daraus folgen ein Mittelwert von 87,3, ein Median von 90,0 und eine Stichproben-Standardabweichung von 9,5. Der Mittelwert liegt 19,3 Punkte über dem in Abschnitt 2.4 vorab gesetzten Zielwert von 68.
+
+Tabelle 6.5 enthält je Konstrukt die Kennwerte der elf Personen, gebildet aus dem Mittel ihrer Items, BI2 zuvor gedreht; die Werte je Block stehen in Anhang C.
+
+\begin{table}[htbp]
+	\centering
+	\small
+	\caption[Kennwerte des TAM-Bogens]{Kennwerte des TAM-Bogens (eigene Erhebung, elf Sitzungen)}
+	\label{tab:tam-kennwerte}
+	\begin{tabularx}{\textwidth}{@{}lrrrrrrY@{}}
+		\toprule
+		\textbf{Konstrukt} & \textbf{n} & \textbf{Median} & \textbf{Mittelw.} & \textbf{Min} & \textbf{Max} & \textbf{SD} & \textbf{Cronbachs Alpha} \\
+		\midrule
+		PU & 11 & 6,00 & 5,97 & 4,50 & 7,00 & 0,91 & 0,92 \\
+		PEOU & 11 & 6,17 & 5,92 & 4,17 & 7,00 & 0,85 & 0,89 \\
+		BI & 11 & 7,00 & 6,41 & 4,00 & 7,00 & 0,92 & entfällt (zwei Items) \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+Davis (1989) berichtet in seiner zweiten Untersuchung ein Alpha von 0,98 für PU und 0,94 für PEOU; die Untergrenze liegt bei 0,80 (Abschnitt 6.1). Die explorative Rangkorrelation nach Spearman beträgt für PU mit BI 0,84, für PEOU mit BI 0,41, für PEOU mit PU 0,39 und für SUS mit PEOU 0,73.
+
+Die Problemliste in Anhang B umfasst 30 Usability-Probleme: zwölf aus den Sitzungen, davon drei auch heuristisch gefunden, und 18 allein aus der heuristischen Evaluation. Tabelle 6.6 verteilt sie auf die Schweregrade nach Tabelle 6.2.
+
+\begin{table}[htbp]
+	\centering
+	\small
+	\caption[Verteilung der Schweregrade nach Quelle]{Verteilung der Schweregrade nach Quelle (eigene Erhebung)}
+	\label{tab:schweregrad-verteilung}
+	\begin{tabularx}{\textwidth}{@{}L{4.2cm}YYYr@{}}
+		\toprule
+		\textbf{Schweregrad} & \textbf{nur lautes Denken} & \textbf{nur heuristische Evaluation} & \textbf{beide} & \textbf{gesamt} \\
+		\midrule
+		4 katastrophal & 0 & 0 & 0 & 0 \\
+		3 schwerwiegend & 2 & 3 & 2 & 7 \\
+		2 gering & 6 & 9 & 1 & 16 \\
+		1 kosmetisch & 1 & 6 & 0 & 7 \\
+		\midrule
+		Summe & 9 & 18 & 3 & 30 \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+Grad 4 trägt keines, Grad 3 tragen sieben aus allen drei Quellen. Tabelle 6.7 führt die zwölf Probleme aus den Sitzungen mit dem Nenner ihres Blocks.
+
+\begingroup
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{@{}L{0.9cm}L{1.2cm}L{4.9cm}L{1.9cm}L{1.1cm}L{0.9cm}L{1.6cm}@{}}
+	\caption[Usability-Probleme aus den Sitzungen]{Usability-Probleme aus den Sitzungen (eigene Erhebung)}
+	\label{tab:probleme-sitzungen}\\
+	\toprule
+	\textbf{ID} & \textbf{Aufgabe} & \textbf{Beobachtung} & \textbf{Häufigkeit} & \textbf{Grad} & \textbf{Heur.} & \textbf{Quelle} \\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{ID} & \textbf{Aufgabe} & \textbf{Beobachtung} & \textbf{Häufigkeit} & \textbf{Grad} & \textbf{Heur.} & \textbf{Quelle} \\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	P1 & A5 & Export- und Druckfunktion nicht auf Anhieb gefunden & 5 von 11 & 3 & H6 & lautes Denken \\
+	P2 & B4 & Übernahme eines Mitglieds erst mit „+“ nicht erkannt & 3 von 5 & 2 & H6 & beide \\
+	P3 & B4 & Pflichtfelder und Bedeutung der Sternchen nicht erkannt & 2 von 5 & 3 & H4 & beide \\
+	P4 & B3 & Bausteinarten Überschrift und Aufzählung nicht schnell gefunden & 1 von 5 & 2 & H6 & lautes Denken \\
+	P5 & C2 & Arbeitsvorrat zuerst unter „Mein Portfolio“ gesucht & 1 von 2 & 2 & H6 & lautes Denken \\
+	P6 & C4 & Abfolge von Genehmigen und Veröffentlichen unklar, Schaltfläche zum Genehmigen nicht gefunden & 1 von 2 & 3 & H6 & beide \\
+	P7 & C5 & Nominiersymbol auf dem Projektbild nicht erkannt, kein Tooltip & 2 von 2 & 3 & H6 & lautes Denken \\
+	P8 & A4 & Einschränkung über einen Umweg zur Startseite zurückgenommen & 1 von 11 & 2 & H3 & lautes Denken \\
+	P9 & A1 & Fortsetzung der Startseite nach unten nicht bemerkt & 1 von 11 & 1 & H1 & lautes Denken \\
+	P10 & D4 & Folgen für zugeordnete Projekte unklar, Zusammenführen erwartet & 1 von 2 & 2 & H5 & lautes Denken \\
+	P11 & D4 & Zuerst die Projektliste statt der Kategorien geöffnet & 1 von 2 & 2 & H6 & lautes Denken \\
+	P12 & D5 & Keine Rückmeldung nach der Sammelaktion & 1 von 2 & 2 & H1 & lautes Denken \\
+\end{longtable}
+\endgroup
+
+Acht der zwölf Probleme traten bei genau einer Person auf, sieben ordnet die Problemliste H6 zu. Zu drei der zwölf ist eine wörtliche Äußerung protokolliert. TN09 fragte bei A5: „Wo ist denn hier der Download?“ (P1) und bei D4: „Was passiert mit den Projekten darin?“ (P10), TN10 in D5: „Hat das jetzt geklappt?“ (P12). Vorgeschlagen wurden das Zuschneiden von Bildern (TN02) und eine Top 10 nach Fakultäten (TN11).
+
+Tabelle 6.8 ordnet die 21 heuristischen Befunde den Heuristiken nach Nielsen (2024) zu; die rechte Spalte zählt jene mit Schweregrad 3 oder 4 vor dem Test.
+
+\begingroup
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{@{}L{8.6cm}rr@{}}
+	\caption[Befunde der heuristischen Evaluation je Heuristik]{Befunde der heuristischen Evaluation je Heuristik (eigene Erhebung)}
+	\label{tab:heuristische-befunde}\\
+	\toprule
+	\textbf{Heuristik} & \textbf{Befunde} & \textbf{davon Grad 3 oder 4} \\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{Heuristik} & \textbf{Befunde} & \textbf{davon Grad 3 oder 4} \\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	H1 Sichtbarkeit des Systemzustands & 0 & 0 \\
+	H2 Übereinstimmung von System und realer Welt & 4 & 0 \\
+	H3 Kontrolle und Freiheit der Nutzenden & 0 & 0 \\
+	H4 Konsistenz und Standards & 8 & 1 \\
+	H5 Fehlervermeidung & 1 & 1 \\
+	H6 Wiedererkennen statt Erinnern & 4 & 0 \\
+	H7 Flexibilität und Effizienz der Nutzung & 1 & 1 \\
+	H8 Ästhetisches und minimalistisches Design & 2 & 0 \\
+	H9 Unterstützung beim Erkennen, Verstehen und Beheben von Fehlern & 1 & 0 \\
+	H10 Hilfe und Dokumentation & 0 & 0 \\
+	\midrule
+	Summe & 21 & 3 \\
+\end{longtable}
+\endgroup
+
+H4 trägt acht Befunde, H1, H3 und H10 keinen; den Befund, dass die wirkende Einschränkung allein in der Filterspalte steht (P17), führt die Problemliste unter H6. Grad 3 haben drei Befunde. Auf Projektkarten mit hellem Titelbild sinkt der Kontrast von Titel und Studiengang bis auf 1,05:1 beziehungsweise 1,22:1, die Kontrastkriterien aus Abschnitt 3.3 fordern 4,5:1 beziehungsweise 3:1 (P16). Ungespeicherte Metadaten gehen beim Verlassen über Seitenpfad oder Zurück-Taste ohne Warnung verloren (P28). Der Platzhalter im Editor nennt den Schrägstrich als Weg zum Auswahlmenü der Bausteinarten, getippt öffnet er es nicht (P30). Mit der im Test gezählten Häufigkeit stiegen zwei weitere Befunde auf Grad 3: die allein über die Statusmarke erreichbare Entscheidung der Redaktion (P6) und die Kennzeichnung der Pflichtfelder (P3).
+
+Abschnitt 7.2 hält Block A und die Probleme zu H1, H3 und H6 gegen die Kriterien der Auffindbarkeit aus Abschnitt 3.3, den Erfüllungsstatus je Heuristik gegen die Referenzplattform aus Abschnitt 3.4 und die Fragebogenwerte gegen Zielwert und Orientierungspunkt aus den Abschnitten 2.4 und 1.2.
+
+\section{Zusammenfassung}
+\label{sec:zusammenfassung-test}
+
+\platzhalter{Abschnitt 6.4 steht auf der Confluence-Seite 51642395 noch nicht. Er fasst die Rohdaten der vier Erhebungen deskriptiv zusammen, ohne sie zu bewerten; die Bewertung folgt in Abschnitt 7.2.}

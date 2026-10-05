@@ -1,0 +1,19 @@
+[0] Config.pm:328> INFO - This is Biber 2.21
+[0] Config.pm:331> INFO - Logfile is 'Thesis.blg'
+[302] biber-MSWIN64:342> INFO - === 
+[443] Biber.pm:421> INFO - Reading 'Thesis.bcf'
+[628] Biber.pm:999> INFO - Using all citekeys in bib section 0
+[657] Biber.pm:4487> INFO - Processing section 0
+[683] Biber.pm:4678> INFO - Looking for bibtex file 'literatur/literatur.bib' for section 0
+[848] bibtex.pm:1713> INFO - LaTeX decoding ...
+[890] bibtex.pm:1519> INFO - Found BibTeX data source 'literatur/literatur.bib'
+[1097] UCollate.pm:68> INFO - Overriding locale 'de_DE' defaults 'variable = shifted' with 'variable = non-ignorable'
+[1097] UCollate.pm:68> INFO - Overriding locale 'de_DE' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[1097] Biber.pm:4307> INFO - Sorting list 'apa/apasortcite//global/global/global' of type 'entry' with template 'apa' and locale 'de_DE'
+[1097] Biber.pm:4313> INFO - No sort tailoring available for locale 'de_DE'
+[1145] UCollate.pm:68> INFO - Overriding locale 'de_DE' defaults 'variable = shifted' with 'variable = non-ignorable'
+[1145] UCollate.pm:68> INFO - Overriding locale 'de_DE' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[1145] Biber.pm:4307> INFO - Sorting list 'apa/global//global/global/global' of type 'entry' with template 'apa' and locale 'de_DE'
+[1145] Biber.pm:4313> INFO - No sort tailoring available for locale 'de_DE'
+[1215] bbl.pm:676> INFO - Writing 'Thesis.bbl' with encoding 'UTF-8'
+[1244] bbl.pm:779> INFO - Output to Thesis.bbl

@@ -1,0 +1,66 @@
+% ---------------------------------------------------------------------------
+% Kapitel 5: Realisierung
+% Kurzfassung vom 04.10.2026, neu geschrieben aus der Langfassung
+% (thesis/langfassung/kapitel05.tex, Confluence-Seite 51642372).
+% Entfallen: Abbildungen Blocktabelle, Einfuegeleiste, Projektseite,
+% Projektliste und Administration; Abschnitt 5.2.6 ist in 5.2.4 aufgegangen.
+% ---------------------------------------------------------------------------
+
+\chapter{Realisierung}
+\label{kap:realisierung}
+
+Ob sich ein blockbasiertes Inhaltsmodell mit integriertem Redaktionsworkflow realisieren lässt, entscheidet sich daran, ob der Entwurf einer Umsetzung standhält. Die Realisierung dient deshalb als Werkzeug zur Prüfung der Annahmen aus Kapitel~\ref{kap:konzeption}. Dargestellt ist der eingefrorene Stand, auf dem auch der Test lief: 22 Endpunktklassen, 28 Schemamigrationen und 35 Routen der Oberfläche.
+
+\section{Wahl der Realisierungsplattform}
+\label{sec:plattform}
+
+Drei Forderungen des Entwurfs bestimmen die Wahl: serverseitig erzwingbare Regeln, ein unverändert ablegbares Dokumentmodell mit abfragbarer Projektion und austauschbare Fremddienste. Das Backend läuft auf Java 21 mit Spring Boot 3.5, weil Steuerung, Sicherheit, Persistenz und Eingabeprüfung aus einem Ökosystem kommen. Die Rollenebene der Autorisierung setzen Pfadregeln der Sicherheitskonfiguration durch, die Ressourcenebene bleibt eigener Programmtext, weil Autorschaft, Mitwirkung und Redaktionszuweisung sich nicht als Pfadregel ausdrücken lassen. Angemeldet wird mit signierten Token ohne Sitzung auf dem Server; der bekannte Preis ist, dass sich ein ausgegebenes Token nicht zurückziehen lässt.
+
+PostgreSQL 16 löst den scheinbaren Widerspruch aus Abschnitt~\ref{sec:datenmodell}: relationale Integrität für die Struktur und der Spaltentyp \texttt{jsonb} für die Knoten des Editors. Schemaänderungen laufen über versionierte Migrationen, deren Ergebnis beim Start gegen die Entitäten geprüft wird. Die Oberfläche ist eine Einseitenanwendung aus React 19, TypeScript und Vite; ihre Antworttypen werden aus der Schnittstellenbeschreibung des Servers erzeugt. Die Grundkomponenten stammen aus shadcn/ui auf der Verhaltensbibliothek Base UI, der Editor beruht auf Tiptap 3 und damit auf ProseMirror, an dessen Dokumentmodell das Inhaltsmodell gebunden ist. Quer zu beiden Seiten gilt: Jede Fehlerantwort trägt denselben Umschlag mit Fehlercode, und fehlt ein Pflichtwert der Konfiguration, startet die Anwendung nicht.
+
+\section{Ausgewählte Realisierungsaspekte}
+\label{sec:realisierungsaspekte}
+
+\subsection{Der Baustein in der Datenbank}
+\label{subsec:baustein-db}
+
+Ein Baustein ist eine Zeile, die den Knoten unverändert als \texttt{jsonb} und seine Art als eigene Spalte trägt. Was in Abschnitt~\ref{sec:inhaltsmodell} Behauptung war, erweist sich hier als Bedingung: Über die Spalte lässt sich die Aufzählung der fünfzehn zulässigen Arten als Datenbankbedingung formulieren, über das Dokument nur als schwer wartbarer Ausdruck. Die Reihenfolge sichert eine Eindeutigkeitsbedingung über Projekt und Sortierindex mit aufgeschobener Prüfung, sodass der Tausch zweier Bausteine ohne Platzhalterwerte gelingt. Die von der Art abhängigen Regeln, etwa Pflichtattribute und die Liste zulässiger Einbettungsanbieter, liegen in einem eigenen Dienst. Die Schemafassung wird beim Lesen überführt, sodass ein alter Bestand ohne Migration weiterläuft.
+
+\subsection{Autosave, Versionsfeld und Bearbeitungssperre}
+\label{subsec:autosave}
+
+Das automatische Speichern ersetzt die Bausteinliste in einem Aufruf als Verschmelzung: Bekannte Kennungen werden aktualisiert, unbekannte angelegt, fehlende gelöscht, und die Antwort liefert die neuen Kennungen zurück, sonst legte der nächste Takt dieselben Bausteine doppelt an. Der Takt ist entprellt und nach oben auf zehn Sekunden begrenzt, denn eine reine Entprellung speichert bei ununterbrochenem Tippen nie. Weicht die mitgeschickte Fassung ab, meldet der Server einen Konflikt, der nie selbsttätig wiederholt wird, weil ein zweiter Versuch genau die fremde Änderung überschriebe. Zwei Befunde wurden erst im Betrieb sichtbar: Inhalt und Kopfangaben erhöhen dieselbe Fassungsnummer und laufen deshalb nacheinander, und ein Takt ohne Änderung schreibt nichts mehr, nachdem er zuvor in jeder anderen Sitzung grundlos Konflikte erzeugt hatte. Die Bearbeitungssperre liegt im Arbeitsspeicher, weil sie Sekunden lebt; ihr Preis, dass sie nur je Instanz gilt, ist im API-Contract festgehalten und wird vom Versionsfeld aufgefangen.
+
+\abbildung{abb-5-2-editor.jpg}{1.0}{abb:editor}%
+{Editor mit Werkzeugleiste, Bausteinen und dem Kommentarbereich der Prüfung}%
+{Editor mit Werkzeugleiste, Bausteinen und dem Kommentarbereich der Prüfung (Bildschirmaufnahme der laufenden Anwendung, Ausschnitt)}
+
+\subsection{Der Editor als zweite Hälfte des Inhaltsmodells}
+\label{subsec:editor}
+
+Abbildung~\ref{abb:editor} zeigt einen Ausschnitt des gebauten Arbeitsplatzes: oben die Werkzeugleiste, darunter ein Bildbaustein, Titel und Kurzbeschreibung sowie das Inhaltsverzeichnis als eigener Baustein; rechts steht der Zustand Überarbeitung, daneben der Kommentarbereich mit zwei offenen Änderungsaufforderungen und einer Antwort. Zwischen Editor und Speicherung genügt eine schmale Zuordnung von Knoten zu Bausteinzeilen. Was das Ökosystem des Editors mitbringt, wird bezogen statt nachgebaut, darunter der Ziehgriff, der Platzhalter und der Vorschlagsmechanismus hinter dem Schrägstrichbefehl; am getesteten Stand öffnet der getippte Schrägstrich das Menü allerdings nicht (P30, Abschnitt~\ref{sec:durchfuehrung}). Eigene Erweiterungen entstehen nur, wo Fachwissen dahintersteht, etwa für Medien, Formel und Inhaltsverzeichnis. Öffentliche Detailseite, Prüfansicht und Druckansicht rendern gespeicherte Bausteine mit demselben schreibgeschützten Renderer, sodass dieselbe Struktur nicht dreimal getrennt gebaut werden muss.
+
+\subsection{Der Workflow als serverseitige Schranke}
+\label{subsec:workflow-schranke}
+
+Der Freigabeweg liegt als Schranke im Schreibpfad: Inhalt ist nur im Entwurf und in der Überarbeitung bearbeitbar, jeder andere Zustand ergibt einen Konflikt. Dieselbe Schranke gilt für Hochladen und Löschen von Dateien, sonst entstünde an einem veröffentlichten Projekt am Freigabeweg vorbei eine öffentlich abrufbare Datei; ausgenommen ist allein die Administration. Zwei Schranken hat erst die Umsetzung verbindlich gemacht: Eingereicht wird nur mit zugewiesener Redaktion, weil ein Projekt sonst in keiner Arbeitsliste erscheint, und erneut eingereicht erst, wenn keine Änderungsaufforderung mehr offen ist.
+
+\abbildung{abb-5-5-pruefansicht.jpg}{1.0}{abb:pruefansicht}%
+{Prüfansicht mit den drei Kommentararten, dem Statusmenü und der Vorschau}%
+{Prüfansicht mit den drei Kommentararten, dem Statusmenü und der Schaltfläche zur Vorschau (Bildschirmaufnahme der laufenden Anwendung, Ausschnitt)}
+
+Abbildung~\ref{abb:pruefansicht} zeigt die Prüfansicht. Der Zustand steht als Schaltfläche über dem Kommentarbereich und ist zugleich der Ort, an dem der Übergang ausgelöst wird. Diese Bündelung erfüllt das Kriterium zur Sichtbarkeit des Systemzustands, hat sich im Test aber als schwer auffindbar erwiesen (P6, Abschnitt~\ref{sec:bewertung-test}). Umgekehrt lief die Umsetzung an einer Stelle dem Entwurf voraus: Die Hilfeseite hatte der Prototyp nicht vorgesehen, und ihre Vorlage wurde nachträglich ergänzt.
+
+\subsection{Vom Designsystem zur Tokenschicht}
+\label{subsec:tokenschicht}
+
+Die zweistufige Tokenschicht aus Abschnitt~\ref{sec:ui-design} ist technisch erzwungen: Die mitgelieferten Farbpaletten von Tailwind CSS sind abgeschaltet, Klassen für Rohfarben existieren nicht. Die Sperre hat Nebenwirkungen, die kein Fehler und kein Test meldet. Sie entfernt auch den Wert „durchsichtig“, sodass bezogene Komponenten sichtbare Rahmen erhielten; sechs Radien kollidierten mit einem gleichnamigen Namensraum und verwiesen auf sich selbst; und ein Fokusring in der Markenfarbe war auf einer Schaltfläche derselben Farbe unsichtbar, bis ein Versatz in Hintergrundfarbe ergänzt wurde (W3C, 2023). Gefunden wurden alle drei erst durch den Abgleich jeder Klasse gegen das gebaute Stylesheet: Eine Regel, die eine andere erzwingt, verlangt eine eigene Prüfung am Erzeugnis.
+
+\section{Qualitätssicherung}
+\label{sec:qualitaetssicherung}
+
+Eine sicherheitsrelevante Zusage des API-Contracts gilt erst, wenn sie ausführbar geprüft ist. Tests belegen etwa, dass der Passworthash in keiner Antwort erscheint und die Hochschuladresse den Server nur über zwei benannte Wege verlässt. Die 71 Testklassen des Servers laufen gegen dieselbe PostgreSQL-Datenbank wie die Anwendung, weil aufgeschobene Bedingungen und Ausdrucksindizes in einer eingebetteten Ersatzdatenbank nicht existieren. Die Schemaprüfung beim Start sichert die Deckung über alle 28 Migrationen, und die Fehlercodes werden mit der Tabelle des API-Contracts deckungsgleich geführt.
+
+Auf der Seite der Oberfläche stellen 140 Testdateien Serverantworten über abgefangene HTTP-Aufrufe. Strukturelle Tests halten fest, dass kein Farbwert außerhalb der Wertedateien steht und beide Sprachdateien denselben Schlüsselbestand tragen. Ein eigener Lauf prüft die gebaute Anwendung in 37 Prüffällen auf Barrierefreiheit; protokolliert ist er zuletzt an dem Stand, den der erste Begutachtende prüfte, nicht am getesteten Stand (Abschnitt~\ref{sec:pruefung-nfa}). Er prüft je Route regelbasiert und mit eigenen Prüfungen für Überschriftenstruktur, Tastaturdurchgang, Fokussichtbarkeit und die Darstellung bei 320 Bildpunkten, die meisten in hellem und dunklem Modus. Eine Sammlung von 101 Aufrufen fährt die Endpunkte vom öffentlichen Lesen bis zur Administration ab. Vor jedem Zusammenführen prüfen zusätzlich drei im Repository festgelegte, durch Sprachmodelle gestützte Prüfrollen gegen API-Contract und Konventionen; sie ersetzen weder Tests noch Lesen.
+
+Grenzen bleiben: Ein Durchgang mit Vorlesesoftware steht aus, geprüft ist nur der Ausgangszustand jeder Seite, und Kontraste von Bedienelementen und über Bildflächen misst der Lauf nicht. Diese Lücken greift Abschnitt~\ref{sec:pruefung-nfa} wieder auf.

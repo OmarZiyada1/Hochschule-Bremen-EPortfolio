@@ -1,0 +1,41 @@
+Alle Abbildungen der Thesis gehoeren in diesen Ordner, sonst nirgendwo hin.
+Die Datei muss exakt so heissen wie unten angegeben, dann erscheint sie beim
+naechsten Kompilieren von selbst. Fehlt eine, steht an ihrer Stelle im PDF ein
+Rahmen mit dem erwarteten Dateinamen.
+
+hsb-logo.png liegt schon hier und gehoert auf das Deckblatt.
+
+Benoetigt werden diese 29 Dateien:
+
+ 1. abb-2-1-akteure.png
+ 2. abb-2-2-usecases.png
+ 3. abb-3-1-tam.png
+ 4. abb-3-2-hfg-filter.png
+ 5. abb-4-1-architektur.png
+ 6. abb-4-2-rechtemodell.png
+ 7. abb-4-3-blockmodell.png
+ 8. abb-4-4-zustandsautomat.png
+ 9. abb-4-5-projektuebersicht.png
+10. abb-4-6-editor.png
+11. abb-4-7-review.png
+12. abb-4-8-handskizze-registrierung.png
+13. abb-4-9-wireframes-registrierung.png
+14. abb-4-10-wireframe-freischaltung.png
+15. abb-4-11-wireframe-startseite.png
+16. abb-4-12-datenmodell.png
+17. abb-5-1-blocktabelle.png
+18. abb-5-2-editor.png
+19. abb-5-3-einfuegen.png
+20. abb-5-4-projektseite.png
+21. abb-5-5-pruefansicht.png
+22. abb-5-6-projektliste.png
+23. abb-5-7-administration.png
+24. abb-6-1-testaufbau.png
+25. abb-6-2-sitzungsablauf.png
+26. abb-7-1-sus-notenskala.png
+27. abb-7-2-tam-werte.png
+28. abb-7-3-heuristikvergleich.png
+29. abb-7-4-status-anforderungen.png
+
+Alle als .png eingetragen. Hat eine deiner Dateien eine andere Endung,
+im jeweiligen Kapitel die Endung im \abbildung{...} anpassen.

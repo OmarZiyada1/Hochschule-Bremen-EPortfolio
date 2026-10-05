@@ -1,0 +1,162 @@
+% ---------------------------------------------------------------------------
+% Kapitel 7: Evaluation
+% Kurzfassung vom 04.10.2026, neu geschrieben aus der Langfassung
+% (thesis/langfassung/kapitel07.tex, Confluence-Seite 51642418).
+% Tabelle 7.4 ersetzt die frueheren Abgleichtabellen 7.4 und 7.6 und die
+% Abbildung 7.4; Tabelle 7.3 nimmt die Befundzahlen der Abbildung 7.3 auf.
+% Entfallen: Abbildungen TAM-Werte je Person und Heuristikvergleich.
+% ---------------------------------------------------------------------------
+
+\chapter{Evaluation}
+\label{kap:evaluation}
+
+Ob das Portal leistet, was es soll, entscheidet sich an Maßstäben, die seit den Abschnitten~\ref{sec:ziele}, \ref{sec:nichtfunktionale-anforderungen} und~\ref{sec:usability} feststehen.
+
+\section{Bewertungsrahmen auf Basis der Forschungsliteratur}
+\label{sec:bewertungsrahmen}
+
+Ein Maßstab, der erst nach der Messung gewählt wird, lässt sich dem Ergebnis anpassen. Bewertet wird deshalb an vorab gesetzten Zielwerten und Kriterien (Tabelle~\ref{tab:bewertungsrahmen}), wobei Literaturwerte eine Einordnung über das eigene System hinaus erlauben und Festlegungen der Arbeit nur eine Richtung angeben. Für die TAM-Skalen gibt es keine Norm; die Rangkorrelationen werden an der Anordnung gemessen, die Davis (1989) und Shroff et al. (2011) berichten, nicht an deren Beträgen.
+
+\begin{table}[htbp]
+	\centering
+	\footnotesize
+	\caption[Bewertungsfragen, Maßstab und Herkunft]{Bewertungsfragen, Maßstab und Herkunft (eigene Darstellung)}
+	\label{tab:bewertungsrahmen}
+	\begin{tabularx}{\textwidth}{@{}L{3.6cm}YL{4.4cm}@{}}
+		\toprule
+		\textbf{Frage} & \textbf{Maßstab} & \textbf{Herkunft} \\
+		\midrule
+		Gebrauchstauglichkeit & SUS-Wert mindestens 68, Einordnung auf der Notenskala & Brooke (1996), Lewis und Sauro (2018) \\
+		Nützlichkeit, Benutzerfreundlichkeit, Nutzungsabsicht & Skalenwert über 4,00 & Festlegung der Arbeit, Konstrukte nach Davis (1989) \\
+		Auffindbarkeit & Systematik als Auswahl (H6), Rücknahme (H3), sichtbare Einschränkung (H1) & Ableitung aus Nielsen (2024) \\
+		Heuristische Qualität im Vergleich & Erfüllungsstatus je Heuristik & Nielsen und Molich (1990), Nielsen (2024) \\
+		Inhaltlicher Zuschnitt & zehn Komponenten & Mahasneh (2020) \\
+		Funktionsumfang und Qualität & Wortlaut der Anforderung & Tabellen~\ref{tab:fa} und~\ref{tab:nfa} \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+Drei Anwendungsregeln sind nachträglich festgelegt und als solche ausgewiesen. Weichen die Erfüllungsurteile der beiden Begutachtenden ab, was bei H5, H7 und H9 der Fall ist, gilt wie bei den Schweregraden das strengere. Zusätzlich gilt eine Heuristik nur als erfüllt, wenn die zusammengeführte Liste keinen Befund zu ihr führt; nach dieser Regel steht H1 auf teilweise erfüllt, seit P17 dort und nicht mehr unter H6 geführt wird (Abschnitt~\ref{sec:durchfuehrung}). Probleme aus den Sitzungen gehen in diesen Status nicht ein, damit der Vergleich mit der allein begutachteten Referenzplattform methodengleich bleibt. NFA-10 und NFA-11 werden an Block B gemessen, weil allein diese Personen eigene Arbeiten angelegt und eingereicht haben. Eine Anforderung gilt als erfüllt, wenn jedes Glied ihres Wortlauts belegt ist, als teilweise erfüllt, wenn ein Glied fehlt oder nur für einen Teil belegt ist, und als nicht geprüft, wenn für sie kein Verfahren vorlag. Als Nachweis zählen Nutzertest, Fragebogen, heuristische Evaluation, automatisierte Tests und die Inspektion von Programmtext und API-Contract. Aussagen aus den Blöcken C und D gelten als Hinweis auf eine Stelle, nicht als Quote.
+
+\section{Bewertung der Testergebnisse}
+\label{sec:bewertung-test}
+
+\subsection{Erfolgsquoten und Auffindbarkeit}
+\label{subsec:erfolg-auffindbarkeit}
+
+Vier Wertungen stehen anders, als die Regeln aus Abschnitt~\ref{sec:testdesign} verlangt hätten. Tabelle~\ref{tab:lesarten} zeigt, dass die Bewertung nicht an ihnen hängt: Auch in der strengen Lesart wurde jede Aufgabe mindestens einmal gelöst, und an keinem Kernpfad blieb eine Stelle, die niemand überwand. Die ungelösten Bearbeitungen in Block C, C4 und C2, decken sich mit P6 und P5.
+
+\begin{table}[htbp]
+	\centering
+	\footnotesize
+	\caption[Gelöste Bearbeitungen je Block in zwei Lesarten]{Gelöste Bearbeitungen je Block in zwei Lesarten; nach Regel zählen Budgetüberschreitungen und der Umweg in A4 als nicht gelöst (eigene Auswertung nach Tabelle~\ref{tab:aufgaben})}
+	\label{tab:lesarten}
+	\begin{tabular}{@{}lrrrr@{}}
+		\toprule
+		\textbf{Block} & \textbf{Personen} & \textbf{Bearbeitungen} & \textbf{gelöst wie protokolliert} & \textbf{gelöst nach Regel} \\
+		\midrule
+		A, ohne Anmeldung & 11 & 44 & 44 & 43 \\
+		B, Studierende & 5 & 35 & 34 & 32 \\
+		C, Redaktion & 2 & 12 & 11 & 10 \\
+		D, Administration & 2 & 14 & 14 & 14 \\
+		\midrule
+		Summe & 11 & 105 & 103 & 99 \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+Das erste Kriterium der Auffindbarkeit, die Systematik als auswählbare Merkmale (H6), trägt A3: Alle elf Personen schränkten Abschluss, Fakultät und Semester zugleich ein, im Median in 59 Sekunden bei einem Budget von vier Minuten, auch die beiden ohne Hochschulbezug. Das zweite, die Rücknahme (H3), trägt A4 mit elf Lösungen, eine davon über einen Umweg (P8); die vollständige Rücknahme ist über das Zurücksetzen belegt, und die heuristische Evaluation fand unter H3 keinen Befund. Beide Kriterien sind eingelöst.
+
+Das dritte, die Sichtbarkeit der wirkenden Einschränkung (H1), trägt der Entwurf nur zum Teil. Die Zählmarke am Gruppenkopf zeigt, dass eingeschränkt ist, aber nicht worauf, und die gewählten Werte stehen allein in der Filterspalte, die in der schmalen Ansicht vollständig über der Liste liegt (P17). Wer die Treffer durchsieht, kann eine unerwartete Trefferliste nicht mehr auf die eigene Auswahl zurückführen. Mittelbar berühren zwei weitere Probleme die Auffindbarkeit: Titel über hellen Bildern sind kaum lesbar (P16), und die Sicherungsfunktion fanden fünf von elf nicht auf Anhieb (P1). Nicht gesondert belegt ist der Anteil des Suchfelds am Erfolg in A2, weil der gewählte Weg nicht protokolliert wurde. Die Profilseite als zweiter Zugang erreichten in A4 alle elf.
+
+\subsection{Benutzerfreundlichkeit}
+\label{subsec:benutzerfreundlichkeit}
+
+Der SUS-Mittelwert von 87,3 liegt 19,3 Punkte über dem Zielwert, und der Median von 90,0 zeigt, dass nicht einzelne Höchstwerte das Ergebnis tragen. Abbildung~\ref{abb:sus} ordnet die Werte ein: Neun Werte und der Mittelwert liegen in der Note A+, die ab 84,1 beginnt und dem 96.\ bis 100.\ Perzentil der Vergleichsstudien entspricht. Die beiden niedrigsten Werte, 72,5 und 67,5, gehören zu Personen, deren Rollenblock Schwierigkeiten zeigte (TN07 mit C4, TN05 mit B2 und B3); die Gegenrichtung gilt nicht, sodass nur ein Zusammentreffen belegt ist, kein Gleichlauf.
+
+\abbildung{abb-7-1-sus-notenskala.png}{0.85}{abb:sus}%
+{SUS-Werte der elf Personen auf der Notenskala}%
+{SUS-Werte der elf Personen auf der Notenskala (eigene Darstellung, Notenskala wiedergegeben nach Lewis \& Sauro, 2018)}
+
+Bei PU und PEOU liegen alle elf Personen über dem Orientierungspunkt 4,00, bei BI zehn, TN05 genau darauf. Das Urteil fällt damit auf allen drei Skalen eher zustimmend aus. Die fünf Studierenden aus Block B, deren Projekte den Bestand füllen sollen, schätzen die Nützlichkeit mit 5,27 niedriger ein als alle elf (5,97); bei fünf Personen ist das ein Hinweis. Wie bei Davis (1989) hängt die Nutzungsabsicht stärker mit der Nützlichkeit (0,84) als mit der Benutzerfreundlichkeit (0,41) zusammen. Den Pfad von PEOU zu PU, den Shroff et al. (2011) stützen, zeigt diese Stichprobe dagegen nicht (0,39); bei elf Personen ist das ein Befund über die Stichprobe und kein Widerspruch zum Modell.
+
+Gegen die hohen Urteile stehen 30 Probleme, sieben mit Grad 3, mit zwei Schwerpunkten. Unter H6 stehen sieben der zwölf Sitzungsprobleme, durchweg Handlungen hinter unbeschrifteten Symbolen oder an unerwarteten Orten: die Entscheidung der Redaktion hinter der Statusmarke (P6), das Nominiersymbol (P7), das Pluszeichen für Mitglieder (P2). Unter H4 stehen acht heuristische Befunde, etwa wechselnde Anrede und zwei Namen für dieselbe Zuweisung. Vier der sieben schweren Probleme gehen auf den Nutzertest zurück; P1 und P7 kannte die Befundliste nicht, P3 und P6 führte sie niedriger. Die drei übrigen (P16, P28, P30) fand allein die heuristische Evaluation. Die Methoden haben sich damit ergänzt, wie Abschnitt~\ref{sec:testkonzept} erwartet.
+
+\subsection{Vergleich mit der Referenzplattform}
+\label{subsec:vergleich}
+
+Tabelle~\ref{tab:heuristikvergleich} stellt beide Systeme je Heuristik nebeneinander. Bei H7 lag der einzige Negativbefund der Referenzplattform; das eigene System führt dort im öffentlichen Bereich keinen Befund, sein einziger (P30) liegt im Editor. Suchfeld und verbindbare Filter sind vorhanden, das aus H7 abgeleitete Kriterium ist im öffentlichen Bereich eingelöst. H3 und H10 steigen auf erfüllt. H1 bleibt wie bei der Referenzplattform teilweise erfüllt: In beiden Systemen zeigt allein das Bedienelement, welche Einschränkung wirkt (P17). Umgekehrt verliert das eigene System bei H2 und H4: Es zeigt mehr Funktionen als die Referenzplattform, aber nicht überall mit demselben Wort und Muster. H8 ist allein wegen zweier Befunde in der Administration teilweise erfüllt.
+
+\begin{table}[htbp]
+	\centering
+	\footnotesize
+	\caption[Erfüllungsstatus je Heuristik: Referenzplattform und eigenes System]{Erfüllungsstatus je Heuristik: Referenzplattform und eigenes System, Befunde der heuristischen Evaluation und Probleme aus den Sitzungen (eigene Darstellung nach Tabelle~\ref{tab:heuristiken} und den Einzelurteilen der Begutachtenden)}
+	\label{tab:heuristikvergleich}
+	\begin{tabular}{@{}llllrr@{}}
+		\toprule
+		\textbf{Nr.} & \textbf{Referenzplattform} & \textbf{eigenes System} & \textbf{Befunde} & \textbf{davon öffentl.} & \textbf{Sitzungen} \\
+		\midrule
+		H1 & teilweise & teilweise & 1 & 1 & 2 \\
+		H2 & erfüllt & teilweise & 4 & 3 & 0 \\
+		H3 & teilweise & erfüllt & 0 & 0 & 1 \\
+		H4 & erfüllt & teilweise & 8 & 5 & 1 \\
+		H5 & nicht beurteilbar & teilweise & 1 & 0 & 1 \\
+		H6 & teilweise & teilweise & 3 & 1 & 7 \\
+		H7 & nicht erfüllt & teilweise & 1 & 0 & 0 \\
+		H8 & erfüllt & teilweise & 2 & 0 & 0 \\
+		H9 & nicht beurteilbar & teilweise & 1 & 1 & 0 \\
+		H10 & teilweise & erfüllt & 0 & 0 & 0 \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+Der Vergleich ist qualitativ zu lesen. Beide Prüfungen stammen von denselben zwei Personen, die Referenzplattform wurde vier Monate früher und stichprobenartig begutachtet, und beim eigenen System urteilten die Begutachtenden über ihren eigenen Entwurf, was eine Verzerrung zu dessen Gunsten wahrscheinlicher macht als die umgekehrte.
+
+\subsection{Antwort auf die zweite Teilfrage}
+\label{subsec:antwort-tf2}
+
+Die zweite Teilfrage lautet: „Welche funktionalen und gestalterischen Merkmale fördern die Auffindbarkeit und Benutzerfreundlichkeit eines institutionellen Portfolio-Portals?“ Bewährt haben sich verbindbare Facettenfilter entlang der Ordnung der Hochschule, eine einzeln rücknehmbare Einschränkung, die Profilseite als zweiter Zugang, ein kurzer Einreichweg und ein ohne Einweisung bedienbarer Editor; Einreichen und Zurückziehen dauerten im Median 20 und 25 Sekunden. Nicht bestätigt hat sich die Annahme, Trefferzahl und Zählmarken zeigten den Zustand der Suche ausreichend: Die wirkende Einschränkung muss bei den Treffern stehen. Neu ist eine Bedingung, unter der die Merkmale wirken: Handlungen und Zustände müssen beschriftet sichtbar sein, und dasselbe muss überall gleich heißen. Die Antwort beruht auf elf Personen und einer Testrunde, in mehreren Gruppen auf weniger als drei Personen.
+
+\section{Überprüfung funktionaler Anforderungen}
+\label{sec:pruefung-fa}
+
+Jede der 36 funktionalen Anforderungen wurde gegen Programmtext, API-Contract, automatisierte Tests und Testaufgaben gehalten; 23 kamen zusätzlich in Aufgaben vor. Tabelle~\ref{tab:status} fasst das Ergebnis nach Bereichen zusammen: 30 sind erfüllt, sechs teilweise, keine ist nicht erfüllt. Die sechs Einschränkungen haben vier Ursachen. Das Suchfeld durchsucht nur den Namen der Autorin oder des Autors, nicht den von Mitwirkenden (FA-14). Der Auswahlzustand ist nur in der Filterspalte sichtbar (FA-15, P17). Einen Studiengang der Person führt das Datenmodell nicht (FA-16), und eine eigene Übersicht der Studiengänge und Module fehlt (FA-18); in beiden Fällen hat die Umsetzung den Einordnungskontext auf das beschränkt, was der Filter braucht. Schließlich kann die Administration fremde Projekte und Dateien löschen und beim Zusammenführen die Kategorie veröffentlichter Projekte ändern, was der API-Contract einräumt, der Wortlaut von FA-42 aber ausschließt; beim Löschen eines Projekts verliert zudem das Protokoll der Startseitenauswahl seinen Verweis darauf (FA-44).
+
+\begin{table}[htbp]
+	\centering
+	\footnotesize
+	\caption[Status der Anforderungen nach Bereich]{Status der funktionalen und nicht-funktionalen Anforderungen nach Bereich; aufgeführt sind die nicht vollständig erfüllten Kennungen (eigene Auswertung)}
+	\label{tab:status}
+	\begin{tabularx}{\textwidth}{@{}L{4.2cm}rYY@{}}
+		\toprule
+		\textbf{Bereich} & \textbf{erfüllt} & \textbf{teilweise erfüllt} & \textbf{nicht geprüft} \\
+		\midrule
+		FA rollenübergreifend & 6 von 6 & & \\
+		FA ohne Anmeldung & 4 von 8 & FA-14, FA-15, FA-16, FA-18 & \\
+		FA Studierende & 10 von 10 & & \\
+		FA Redaktion & 7 von 7 & & \\
+		FA Administration & 3 von 5 & FA-42, FA-44 & \\
+		\midrule
+		NFA Gebrauchstauglichkeit & 3 von 6 & NFA-02, NFA-03, NFA-05 & \\
+		NFA Akzeptanz & 2 von 2 & & \\
+		NFA Barrierefreiheit & 1 von 7 & NFA-20, NFA-22 bis NFA-26 & \\
+		NFA Antwortzeiten & 0 von 3 & & NFA-30, NFA-31, NFA-32 \\
+		NFA Geräte und Browser & 0 von 2 & NFA-40, NFA-41 & \\
+		NFA Corporate Design & 1 von 1 & & \\
+		NFA Sicherheit & 3 von 3 & & \\
+		\midrule
+		Summe & 40 von 60 & 17 & 3 \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+Den inhaltlichen Zuschnitt prüft das Komponentenmodell von Mahasneh (2020). Sieben der zehn Komponenten deckt das Portal ab: die Biografie über die Profilseite, Berichte und Forschungsarbeiten über die Projekttypen „Paper“ und „Thesis“, Projekte als Grundeinheit, Zusammenfassungen über Kurzbeschreibung und Textbausteine, wissenschaftliches Material über Formel, Quelltext, Tabelle und Dokument, Audio- und Videoclips über eigene Bausteine sowie Leistungsproben über veröffentlichte Projekte mit Bild und Galerie. Kursplan, Hausaufgaben und Aktivitäten setzen eine laufende Lehrveranstaltung voraus und entfallen mit der Abgrenzung aus Abschnitt~\ref{sec:ziele}; die Auslassung ist eine Entscheidung und keine Lücke. Untertitel und Transkripte für Audio und Video fehlen allerdings.
+
+\section{Überprüfung nicht-funktionaler Anforderungen}
+\label{sec:pruefung-nfa}
+
+Von den 24 nicht-funktionalen Anforderungen sind zehn erfüllt, elf teilweise und drei nicht geprüft (Tabelle~\ref{tab:status}). Erfüllt sind sie vor allem dort, wo ein Fragebogen einen vorab gesetzten Zielwert prüft oder ein Test eine Regel vollständig abdeckt. NFA-06 ist mit 87,3 gegenüber dem Literaturwert 68 erfüllt (Lewis \& Sauro, 2018), NFA-10 und NFA-11 mit PU 5,27 und PEOU 5,80 in Block B, wobei alle fünf Personen über dem Orientierungspunkt liegen. NFA-01 belegt Aufgabe B3, die alle fünf ohne Einweisung in höchstens 3:11 Minuten lösten. Die Sicherheitsanforderungen NFA-60 bis NFA-62 belegen Integrationstests, die unberechtigte Zugriffe abweisen, Entwürfe und interne Notizen verbergen und den Passworthash nie ausliefern.
+
+Von den Anforderungen, die Regeln nach Nielsen (2024) übersetzen, sind Einheitlichkeit (NFA-02) und Wiedererkennen (NFA-05) genau an den beiden Schwerpunkten aus Abschnitt~\ref{subsec:benutzerfreundlichkeit} nur teilweise erfüllt, Fehlervermeidung (NFA-03) vor allem wegen des Datenverlusts beim Verlassen des Formulars (P28). Dem hohen SUS-Wert widerspricht das nicht, denn Brooke (1996) ordnet den Bogen als grobes Verfahren ein.
+
+Die Barrierefreiheit nach W3C (2023) ist nur teilweise belegt. Der automatisierte Lauf prüft nur den Ausgangszustand jeder Seite, misst Kontraste von Bedienelementen und Text über Bildern nicht, kam ohne Vorlesesoftware aus und ist am getesteten Stand nicht protokolliert. Belegt sind zudem drei Verstöße: Kartentitel über hellen Bildern erreichen 1,05:1 statt 4,5:1 (P16), Ränder von Ankreuz- und Eingabefeldern 1,4:1 bis 1,8:1 statt 3:1, und verdeckte Bilder der Beteiligtengruppe bieten 16 statt 24 Pixel Zielbreite (NFA-24). Belegt ist damit der Textkontrast der Tokenschicht in beiden Modi, nicht die Barrierefreiheit insgesamt. Antwortzeiten und Tragfähigkeit (NFA-30 bis NFA-32) sind wie vorab festgehalten nicht geprüft; die Darstellung ist nur in einem Chromium-Browser, für die Desktopbreite und zwei schmale Breiten belegt (NFA-40, NFA-41). Was hier nicht geprüft oder nur teilweise belegt ist, geht als Grenze in Kapitel~\ref{kap:zusammenfassung} ein.

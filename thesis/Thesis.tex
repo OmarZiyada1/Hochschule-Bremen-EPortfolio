@@ -1,19 +1,21 @@
 % !TeX program  = pdflatex
 % !TeX encoding = UTF-8
 % !TeX spellcheck = de_DE
+% !TeX root     = Thesis.tex
 %
+% ===========================================================================
 % E-Portfolio Hochschule Bremen
 % Bachelorthesis, Omar Ziyada und Mohamad Alaskari
-% Uebersetzung nach LaTeX: Deckblatt, Inhaltsverzeichnis, Kapitel 1
+% Hauptdatei: Praeambel, Layout und Reihenfolge der Bestandteile
+% ===========================================================================
 %
-% EINZELDATEI: Deckblatt, Inhaltsverzeichnis und Kapitel 1 stehen alle hier drin.
-% In TeXstudio oeffnen oder den gesamten Inhalt in ein leeres Dokument kopieren
-% und als main.tex speichern. Das Logo hsb-logo.png gehoert in denselben Ordner;
-% fehlt es, kompiliert die Datei trotzdem und laesst die Stelle frei.
-%
-% Kompilieren: zweimal pdflatex main.tex laufen lassen,
-% damit das Inhaltsverzeichnis stimmt. Mit latexmk in einem Schritt:
-%   latexmk -pdf main.tex
+% Kompilieren in TeXstudio:
+%   F5  (pdflatex)             -> Text und Struktur
+%   F8  (Bibliographie, biber) -> Literaturverzeichnis
+%   F5, F5                     -> Seitenzahlen in den Verzeichnissen
+% Oder in einem Schritt auf der Kommandozeile:
+%   latexmk -pdf Thesis.tex
+% ===========================================================================
 
 \documentclass[
 a4paper,
@@ -22,7 +24,7 @@ oneside,
 parskip=false,       % Absaetze durch Einzug, nicht durch Leerzeile
 numbers=noenddot,    % 1.1 statt 1.1.
 chapterprefix=false, % Ueberschrift "1 Einleitung", nicht "Kapitel 1"
-listof=totoc,        % Abbildungsverzeichnis erscheint im Inhaltsverzeichnis
+listof=totoc,        % Abbildungs- und Tabellenverzeichnis ins Inhaltsverzeichnis
 bibliography=totoc   % Literaturverzeichnis ebenso
 ]{scrreprt}
 
@@ -44,7 +46,7 @@ bibliography=totoc   % Literaturverzeichnis ebenso
 \newcommand{\Erstpruefer}{Prof. Andreas Teufel}
 \newcommand{\Zweitpruefer}{M.Sc. Jendrik Bulk}
 \newcommand{\AbgabeOrt}{Bremen}
-\newcommand{\AbgabeDatum}{8. Oktober 2026}
+\newcommand{\AbgabeDatum}{6. Oktober 2026}
 
 % ---------------------------------------------------------------------------
 % Sprache, Zeichensatz, Schrift
@@ -54,7 +56,7 @@ bibliography=totoc   % Literaturverzeichnis ebenso
 \usepackage[ngerman]{babel}
 \usepackage{mathptmx}                 % Times als Brotschrift, wie in der Beispielarbeit
 \usepackage[scaled=0.90]{helvet}      % Helvetica als serifenlose Schrift
-\usepackage{courier}                  % Courier fuer Codeauszuege
+\usepackage{courier}                  % Courier fuer technische Bezeichner
 \usepackage{microtype}                % ruhigerer Blocksatz
 
 % ---------------------------------------------------------------------------
@@ -73,7 +75,7 @@ footskip=1.2cm
 \usepackage{setspace}
 \onehalfspacing
 
-\setlength{\emergencystretch}{2em}    % verhindert ueberstehende Zeilen im Blocksatz
+\setlength{\emergencystretch}{3em}    % verhindert ueberstehende Zeilen im Blocksatz
 \clubpenalty=10000                    % keine Schusterjungen
 \widowpenalty=10000                   % keine Hurenkinder
 \displaywidowpenalty=10000
@@ -81,12 +83,52 @@ footskip=1.2cm
 % ---------------------------------------------------------------------------
 % Weitere Pakete
 % ---------------------------------------------------------------------------
+\usepackage{amsmath}
+\usepackage{amssymb}                  % \square fuer die Ankreuzfelder in Anhang D
 \usepackage{graphicx}
+\graphicspath{{bilder/}}              % alle Abbildungen liegen in bilder/
 \usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
 \usepackage{csquotes}
 \usepackage{enumitem}
+\usepackage{xcolor}
 \usepackage{caption}
 \captionsetup{font=small, labelfont=bf, justification=raggedright, singlelinecheck=false}
+
+% Tabellen: etwas Luft zwischen den Zeilen, linksbuendige Umbruchspalten
+\renewcommand{\arraystretch}{1.15}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}X}
+
+% ---------------------------------------------------------------------------
+% Literaturverwaltung: biblatex im APA-Stil, Backend biber
+% ---------------------------------------------------------------------------
+\usepackage[
+backend=biber,
+style=apa,
+language=ngerman,
+sortlocale=de_DE,
+uniquename=init,
+backref=false
+]{biblatex}
+\addbibresource{literatur/literatur.bib}
+\DeclareLanguageMapping{ngerman}{german-apa}
+% "o. J." wie im Text und auf der Confluence-Seite Literaturverzeichnis,
+% nicht das "o. D." von biblatex-apa
+\DefineBibliographyStrings{ngerman}{nodate = {o.\,J\adddot}}
+% Literaturverzeichnis linksbuendig, damit lange URLs nicht mit Leerraum
+% im Blocksatz auseinandergezogen werden
+\AtBeginBibliography{\raggedright}
+
+% Abbildungen duerfen mehr Platz auf Textseiten einnehmen, damit seltener
+% eine Seite mit nur einer Abbildung oder eine halbleere Seite entsteht
+\renewcommand{\topfraction}{0.85}
+\renewcommand{\bottomfraction}{0.7}
+\renewcommand{\textfraction}{0.12}
+\renewcommand{\floatpagefraction}{0.8}
 
 % ---------------------------------------------------------------------------
 % Ueberschriften: serif und fett, wie in der Beispielarbeit
@@ -96,8 +138,7 @@ footskip=1.2cm
 \setcounter{tocdepth}{2}      % Inhaltsverzeichnis bis 1.1.1
 
 % ---------------------------------------------------------------------------
-% Kopf- und Fusszeile: links die Kapitelangabe, Linie darunter,
-% Seitenzahl mittig im Fuss
+% Kopf- und Fusszeile
 % ---------------------------------------------------------------------------
 \usepackage[automark]{scrlayer-scrpage}
 \clearpairofpagestyles
@@ -107,6 +148,42 @@ footskip=1.2cm
 \KOMAoptions{headsepline=true}
 \setkomafont{pageheadfoot}{\normalfont\small}
 \setkomafont{pagenumber}{\normalfont}
+
+% ---------------------------------------------------------------------------
+% Eigene Befehle
+% ---------------------------------------------------------------------------
+% Sichtbarer Platzhalter fuer noch nicht geschriebene Stellen.
+% Vor der Abgabe darf kein einziger mehr im PDF stehen.
+% Zum Ausblenden: die naechste Zeile auskommentieren.
+\newcommand{\platzhalterAn}{}
+\newcommand{\platzhalter}[1]{%
+	\ifdefined\platzhalterAn
+	\par\medskip
+	\noindent\fcolorbox{gray!50}{gray!10}{%
+		\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{%
+			\small\itshape\textbf{Platzhalter:} #1}}%
+	\par\medskip
+	\fi}
+
+% Abbildung mit reserviertem Platz.
+% Die Datei wird in bilder/ gesucht; fehlt sie, erscheint ein Rahmen
+% mit dem erwarteten Dateinamen, und der Umbruch stimmt schon jetzt.
+% #1 Dateiname   #2 Breite als Faktor von \textwidth   #3 Label
+% #4 Kurztitel fuer das Abbildungsverzeichnis          #5 vollstaendige Bildunterschrift
+\newcommand{\abbildung}[5]{%
+	\begin{figure}[htbp]
+		\centering
+		\IfFileExists{bilder/#1}{%
+			\includegraphics[width=#2\textwidth,height=0.62\textheight,keepaspectratio]{#1}%
+		}{%
+			\fcolorbox{gray!50}{gray!08}{%
+				\parbox[c][4.2cm][c]{\dimexpr#2\textwidth-2\fboxsep-2\fboxrule\relax}{%
+					\centering\small\itshape Abbildung noch nicht abgelegt\\[0.5em]
+					\normalfont\small\texttt{bilder/#1}}}%
+		}
+		\caption[#4]{#5}
+		\label{#3}
+	\end{figure}}
 
 % ---------------------------------------------------------------------------
 % hyperref immer zuletzt laden
@@ -122,168 +199,51 @@ footskip=1.2cm
 
 % ===========================================================================
 \begin{document}
-	
-	% --- Deckblatt (ohne Seitenzahl) -------------------------------------------
+
+	% =======================================================================
+	% VORSPANN
+	% =======================================================================
 	\hypersetup{pageanchor=false}
-	% ---------------------------------------------------------------------------
-	% Deckblatt
-	% Aufbau nach der Beispielarbeit BAThesis_2025_ISMI_Erol.
-	% Alle Angaben kommen aus den Makros in main.tex und werden nur dort geaendert.
-	% ---------------------------------------------------------------------------
-	\begin{titlepage}
-		\centering
-		\singlespacing
-		
-		\vspace*{0.2cm}
-		
-		\IfFileExists{hsb-logo.png}{%
-			\includegraphics[width=0.35\textwidth]{hsb-logo.png}%
-		}{%
-			\rule{0pt}{2.1cm}% Platzhalter, solange hsb-logo.png noch nicht daneben liegt
-		}
-		
-		\vspace{1.2cm}
-		
-		{\bfseries \Hochschule\par}
-		\vspace{0.5cm}
-		{\Fakultaet\par}
-		\vspace{0.5cm}
-		{\Abteilung\par}
-		\vspace{0.5cm}
-		{\Studiengang\par}
-		
-		\vspace{1.6cm}
-		
-		{\bfseries\large \ThesisTitel\par}
-		
-		\vspace{1.5cm}
-		
-		{\bfseries \ThesisArt\par}
-		
-		\vspace{1.5cm}
-		
-		{Vorgelegt von:\par}
-		\vspace{0.5cm}
-		{\AutorEins\par}
-		{Matrikelnummer: \MatrikelEins\par}
-		\vspace{0.5cm}
-		{\AutorZwei\par}
-		{Matrikelnummer: \MatrikelZwei\par}
-		
-		\vspace{1.2cm}
-		
-		{Erstprüfer: \Erstpruefer\par}
-		\vspace{0.5cm}
-		{Zweitprüfer: \Zweitpruefer\par}
-		
-		\vfill
-		
-		{\AbgabeOrt, \AbgabeDatum\par}
-		
-		\vspace{0.5cm}
-	\end{titlepage}
+	\input{vorlagen/titelseite}
 	\hypersetup{pageanchor=true}
-	
-	% --- Vorspann: roemische Seitenzahlen --------------------------------------
+
 	\pagenumbering{roman}
 	\pagestyle{scrheadings}
-	
-	% Hier kommen spaeter Eigenstaendigkeitserklaerung und Zusammenfassung hin.
-	
+
+	\input{vorlagen/eigenstaendigkeitserklaerung}
+	\input{vorlagen/zusammenfassung}
+
 	\tableofcontents
-	
-	% \listoffigures     % einschalten, sobald die erste Abbildung im Text steht
-	% \listoftables      % einschalten, sobald die erste Tabelle im Text steht
-	
-	% --- Hauptteil: arabische Seitenzahlen, Neustart bei 1 ---------------------
+	\listoffigures
+	\listoftables
+	\input{vorlagen/abkuerzungsverzeichnis}
+
+	% =======================================================================
+	% HAUPTTEIL
+	% =======================================================================
 	\clearpage
 	\pagenumbering{arabic}
-	
-	% ---------------------------------------------------------------------------
-	% Kapitel 1: Einleitung
-	% Wortgleich uebernommen aus der Confluence-Seite
-	% "Kapitel 1: Einleitung (Entwurf)" (Space BEH, Seiten-ID 34504705),
-	% Version 7 vom 02.09.2026. Am Text wurde nichts geaendert.
-	%
-	% Die beiden redaktionellen Vorbemerkungen der Confluence-Seite gehoeren nicht
-	% in die Arbeit und stehen deshalb hier als Kommentar:
-	%
-	%   Entwurfstext, neu geschrieben am 01.09.2026 gegen das unterschriebene
-	%   Expose v3, die Literaturuebersicht sowie den Stand des Repositorys.
-	%   Abschnitt 1.4 entsteht zuletzt. Vor Einreichung mit Prof. Teufel und
-	%   J. Bulk abstimmen.
-	%
-	%   Die Abschnitte 1.2 und 1.3 wurden am 01.09.2026 an die Entscheidungen D7
-	%   und D8 angeglichen: Die Arbeit fuehrt eine eigene empirische Erhebung
-	%   durch, und das Technologieakzeptanzmodell wird darin als vierte Erhebung
-	%   mit eigenem Fragebogen angewandt, nicht als nachtraegliches Deutungsraster.
-	% ---------------------------------------------------------------------------
-	
-	\chapter{Einleitung}
-	\label{kap:einleitung}
-	
-	\section{Problemfeld}
-	\label{sec:problemfeld}
-	
-	An der Hochschule Bremen entstehen in jedem Semester studentische Projektarbeiten in großer Zahl. Ihr Verbleib nach der Bewertung ist ungeregelt: Ein Teil liegt auf den privaten Laufwerken der Bearbeitenden, ein anderer in einem Lernmanagementsystem, das auf den Kursbetrieb ausgelegt ist und nicht auf die Darstellung nach außen. Beide Ablagen sind an den Zweck der Benotung gebunden und enden mit ihm. Ein Ort, an dem abgeschlossene Projekte dauerhaft und öffentlich einsehbar wären, besteht nicht. Diese Ausgangslage wurde für die vorliegende Arbeit im fachlichen Austausch mit der Fakultät 4 erhoben und wird als eigene Bestandsaufnahme geführt; nach APA 7 handelt es sich um eine persönliche Mitteilung, die im Literaturverzeichnis nicht erscheint.
-	
-	Aus dieser Lage folgt ein Verlust auf mehreren Seiten. Studierenden fehlt ein Beleg der eigenen Arbeit, auf den sich in einer Bewerbung verweisen ließe. Der Hochschule entgeht eine Außendarstellung, die aus der Lehre selbst hervorgeht und nicht eigens hergestellt werden müsste. Arbeitgeber:innen und die fachlich interessierte Öffentlichkeit haben keinen niedrigschwelligen Zugang zu dem, was in den Studiengängen bearbeitet wird. Kommiliton:innen späterer Jahrgänge sehen nicht, was vor ihnen entstanden ist, und damit fehlt ihnen ein Maßstab für die eigene Arbeit.
-	
-	Für diese Lücke hält die Forschungsliteratur einen ausgearbeiteten Begriff bereit. Lorenzo und Ittelson (2005) beschreiben ein E-Portfolio als digitalisierte Sammlung von Artefakten, die eine Einzelperson, eine Gruppe oder eine Institution repräsentiert, und sie unterscheiden studentische Portfolios, Portfolios der Lehrenden sowie institutionelle Portfolios. Einschlägig ist hier die dritte Kategorie, denn Träger wäre die Hochschule selbst. Aus dem Anspruch, etwas zu repräsentieren, folgt für das vorliegende Vorhaben eine erste Festlegung: Eine geordnete Dateiablage genügt nicht. Ein Bestand, der die Einrichtung vertreten soll, muss gepflegt werden, bevor er dargestellt werden kann, und beides gehört in dasselbe System.
-	
-	Die Kategorien von Lorenzo und Ittelson (2005) sind im vorliegenden Fall überdies verschränkt. Das Portal ist institutionell, die darin eingestellten Artefakte stammen jedoch aus der studentischen Kategorie. Es unterscheidet deshalb zwei Gegenstände: das einzelne Projekt, das eine Prüfung durchläuft und danach öffentlich wird, und die Profilseite einer Person, auf der die veröffentlichten Projekte zusammenlaufen und die über die Studienzeit hinweg wächst.
-	
-	Für die einreichende Seite liegen dazu erhobene Daten vor. Mahasneh (2020) befragt Studierende zu ihrer Einstellung gegenüber E-Portfolios; sie fällt mit einem Mittelwert von 4,58 auf einer fünfstufigen Skala positiv aus. Daneben legt die Untersuchung ein Modell aus zehn Komponenten vor, das von der Biografie über Berichte und Projekte bis zu Lernmaterial und Leistungsproben reicht. Als Verfahren, die im regulären Unterricht kaum vorkommen, nennt sie Selbstbewertung, Kreativitätsnachweis sowie Leistungsdokumentation. Welche Bestandteile ein hochschulisches Portfolio enthalten sollte, lässt sich demnach aus vorhandener Forschung ableiten und muss nicht aus Vermutungen über die Zielgruppe gewonnen werden.
-	
-	Eine positive Einstellung bedeutet noch nicht, dass ein System auch benutzt wird. Davis (1989) führt die Akzeptanz einer Technologie auf zwei Wahrnehmungen zurück, die wahrgenommene Nützlichkeit und die wahrgenommene Benutzerfreundlichkeit. Shroff et al. (2011) haben dieses Modell auf E-Portfolio-Systeme übertragen und damit die Brücke von der allgemeinen Akzeptanzforschung zu dem hier betrachteten Gegenstand geschlagen. Für ein Portal, dessen Inhalte freiwillig eingestellt und vor der Veröffentlichung geprüft werden, ist Akzeptanz deshalb keine nachgelagerte Frage der Oberfläche. Bleibt das Einreichen mühsam oder sein Nutzen unklar, füllt sich der Bestand nicht, und die Sichtbarkeitslücke besteht fort.
-	
-	\section{Ziele der Arbeit}
-	\label{sec:ziele}
-	
-	Ziel der vorliegenden Arbeit ist die Konzeption und die prototypische Realisierung eines institutionellen E-Portfolio-Portals für die Hochschule Bremen, das studentische Projekte strukturiert darstellt und sie über Suche und Filter auffindbar macht. Studierende sollen einzelne Projekte in einem blockbasierten Editor aufbauen und zur Prüfung einreichen; über die Veröffentlichung entscheidet die Redaktion. Daneben sollen sie eine Profilseite pflegen, auf der die eigenen veröffentlichten Projekte gebündelt erscheinen. Für die Öffentlichkeit entsteht ein Zugang ohne Anmeldung. Der redaktionelle Freigabeprozess richtet sich dabei nicht gegen die Studierenden, sondern hält die Verantwortung für veröffentlichte Inhalte bei der Hochschule.
-	
-	Die Arbeit grenzt sich in mehrere Richtungen ab. Das Portal tritt nicht an die Stelle des Lernmanagementsystems und bildet weder Kursbetrieb noch Bewertung ab; Gegenstand ist die Darstellung abgeschlossener Arbeiten. Ebenso wenig zielt die Untersuchung auf einen Vergleich fertiger Portfolio-Produkte, auf die Einbindung in die Verwaltungsinfrastruktur der Hochschule oder auf die organisatorische Einführung im Hochschulbetrieb. Der Bearbeitungszeitraum von neun Wochen begrenzt zusätzlich den Funktionsumfang: Umgesetzt wird, was zur Beantwortung der Teilfragen erforderlich ist, während weitergehende Funktionen dem Ausblick vorbehalten bleiben.
-	
-	Die übergeordnete Forschungsfrage dieser Arbeit lautet:
-	
-	Welche funktionalen und gestalterischen Anforderungen muss ein hochschulisches E-Portfolio-Portal erfüllen, um studentische Projekte strukturiert zu präsentieren, auffindbar zu machen und von den beteiligten Nutzergruppen akzeptiert zu werden?
-	
-	Diese Frage wird durch drei Teilfragen operationalisiert:
-	
-	\begin{itemize}[topsep=0.4em, itemsep=0.4em]
-		\item TF 1: Welche Anforderungen an Struktur, Inhalt und Workflow lassen sich aus der bestehenden Forschungsliteratur zu E-Portfolios ableiten?
-		\item TF 2: Welche funktionalen und gestalterischen Merkmale fördern die Auffindbarkeit und Benutzerfreundlichkeit eines institutionellen Portfolio-Portals?
-		\item TF 3: Wie lässt sich ein blockbasiertes Inhaltsmodell mit integriertem Redaktionsworkflow realisieren, das Studierenden eine flexible und medienreiche Projektpräsentation ermöglicht?
-	\end{itemize}
-	
-	Beantwortet werden die Teilfragen über vier Wege: die Auswertung der Forschungsliteratur, die heuristische Analyse einer bestehenden Referenzplattform, die Entwicklung des Systems und eine eigene empirische Erhebung am fertigen Prototyp. Die Entwicklungsarbeit ist methodisches Mittel zur Überprüfung dessen, was aus der Literatur gewonnen wurde, und kein Selbstzweck; die Erhebung prüft anschließend, ob das Gebaute die vorab gesetzten Kriterien einlöst. Jede Teilfrage hat dabei einen festen Ort, an dem sie bearbeitet wird, und einen weiteren, an dem sie beantwortet wird.
-	
-	TF 1 richtet sich auf vorhandenes Wissen und beugt der Gefahr vor, Anforderungen aus dem eigenen Vorverständnis zu schöpfen. Sie wird in Kapitel 3 aus der Forschungsliteratur hergeleitet und in Kapitel 2 in überprüfbare funktionale und nicht-funktionale Anforderungen übersetzt; ihre Antwort steht in den Abschnitten 2.6 und 3.5. TF 2 erhält ihre Kriterien in Abschnitt 3.3, ihre gestalterische Ausarbeitung in Abschnitt 4.5 und ihre empirische Prüfung in Kapitel 6. Beantwortet wird sie in Abschnitt 7.2, wo die Beobachtungen aus dem Test gegen die zuvor gesetzten Kriterien gehalten werden. TF 3 betrifft die Machbarkeit; ihr Gegenstand wird in den Abschnitten 4.3 und 4.4 konzipiert und in Kapitel 5 an der Realisierung erprobt. Die Antwort darauf steht in den Abschnitten 4.7 und 5.4. Die übergeordnete Forschungsfrage führt Abschnitt 8.1 aus den drei Teilantworten zusammen.
-	
-	Damit die Antworten überprüfbar bleiben, sind die Maßstäbe vorab festgelegt und nicht erst aus dem Ergebnis gewonnen. Die Akzeptanz misst sich an den beiden Konstrukten des Technologieakzeptanzmodells, der wahrgenommenen Nützlichkeit und der wahrgenommenen Benutzerfreundlichkeit (Davis, 1989); erhoben werden sie mit den zwölf Items der beiden zugehörigen Skalen, ergänzt um zwei Items zur Nutzungsabsicht. Für diese Skalen berichtet Davis (1989) Reliabilitäten und Korrelationen, aber keine Normwerte. Als Orientierungspunkt dient deshalb der Skalenmittelpunkt von 4,00: Werte darüber gelten als eher zustimmend, Werte darunter als eher ablehnend. Dieser Punkt ist eine Festlegung der vorliegenden Arbeit und kein Literaturwert; er wird im Methodenteil als solche ausgewiesen. Den inhaltlichen Zuschnitt prüft das Komponentenmodell von Mahasneh (2020): An ihm zeigt sich, welche Bestandteile eines universitären E-Portfolios das Portal abdeckt und welche es bewusst auslässt. Für die Gebrauchstauglichkeit stehen zwei Maßstäbe nebeneinander, das Urteil Begutachtender anhand der zehn Usability-Heuristiken (Nielsen, 2024) und der Summenwert eines standardisierten Fragebogens (Brooke, 1996), für den ein Zielwert von 68 Punkten gilt (Sauro, 2011). Ein Maßstab, der erst nach der Messung bestimmt wird, lässt sich immer so ansetzen, dass das eigene Ergebnis günstig ausfällt; die Festlegung vorab schließt das aus.
-	
-	\section{Lösungsansatz}
-	\label{sec:loesungsansatz}
-	
-	Der Weg zur Beantwortung beginnt bei der Literatur und endet bei der Messung am gebauten System. Die Anforderungen an Struktur und Freigabe der Inhalte leiten sich aus der Forschungsliteratur ab: Lorenzo und Ittelson (2005) liefern die institutionelle Perspektive, Mahasneh (2020) den Blick auf die Bestandteile. Den zweiten Weg bildet die heuristische Analyse einer bestehenden Referenzplattform, des öffentlich zugänglichen Bachelor-Portfolios der Hochschule für Gestaltung Schwäbisch Gmünd. Das Verfahren geht auf Nielsen und Molich (1990) zurück: Mehrere Begutachtende prüfen eine Oberfläche anhand einer kleinen Zahl etablierter Prinzipien. Als Bewertungsraster dient die heute kanonische Liste der zehn Heuristiken (Nielsen, 2024).
-	
-	Untersucht wurde ausschließlich die Sicht nicht angemeldeter Besucher:innen, weil nur der öffentliche Bereich zugänglich war. Drei Heuristiken sind ohne Einschränkung erfüllt: Die Sprache bleibt am Hochschulkontext, alle Projektseiten folgen demselben Schema, und die Gestaltung ordnet sich den Projekten unter. Vier weitere sind nur teilweise erfüllt, darunter die Sichtbarkeit des Systemstatus, der eine Brotkrumennavigation und eine Anzeige der aktiven Filter fehlen. Zwei betreffen schreibende Vorgänge und waren von außen nicht beurteilbar. Nicht erfüllt ist allein die siebte Heuristik zu Flexibilität und Effizienz der Nutzung: Eine Volltextsuche fehlt, und die vorhandenen Filter lassen sich nicht miteinander verbinden. Wer Studiengang, Semester und Thema zugleich einschränken möchte, muss sich durch Einzelfilter klicken.
-	
-	Aus diesen Befunden entsteht die eigene Anforderung an die Auffindbarkeit, und sie geht über das hinaus, was die Referenzplattform bietet: eine Volltextsuche über Projekte, Schlagworte, Personen und Module; kombinierbare Facettenfilter; eine sichtbare Anzeige der aktiven Auswahl; ein Weg, diese Auswahl in einem Schritt zurückzunehmen. Übernommen wird dagegen die mehrachsige Erschließung über Semester, Studiengang, Modul sowie Person. Die Reichweite der Analyse bleibt begrenzt: Sie wurde von zwei Personen durchgeführt, während Nielsen und Molich (1990) drei bis fünf Begutachtende empfehlen, weil eine einzelne Person nur einen Teil der vorhandenen Probleme entdeckt. Die Befunde gelten deshalb als Hinweise und nicht als vollständige Mängelliste. Nielsen und Molich (1990) halten überdies fest, dass die heuristische Evaluation nicht allein stehen, sondern durch andere Verfahren ergänzt werden soll; für diese Verfahren ist Nielsen (1994) die methodische Referenz, auf der das Testkonzept in Kapitel 6 aufsetzt.
-	
-	Bevor gebaut wird, entsteht der Entwurf zunächst als Handskizzen und Wireframes in Miro, anschließend als Prototyp in Figma. Er legt Informationsarchitektur und Benutzerführung fest, sodass Gestaltungsentscheidungen vor der ersten Codezeile verhandelbar werden. Das Portal unterscheidet vier Akteurgruppen: Studierende, Redakteur:innen, Administrator:innen und externe Nutzer:innen. Das unterschriebene Exposé bezeichnet die zweite Gruppe als Betreuende beziehungsweise Lehrende, während die vorliegende Arbeit durchgehend die Systembezeichnung verwendet. Drei dieser Gruppen sind an ein Konto gebunden. Die externen Nutzer:innen haben dagegen keines und sind zugleich die Hauptzielgruppe. Diese Gewichtung folgt aus der Kategorie: Ein Portfolio, das nach Lorenzo und Ittelson (2005) die Institution repräsentiert, wirkt erst, wenn es außerhalb der Institution gelesen wird. Was ohne Konto sichtbar wird, ist deshalb keine Nebenfrage der Rechtevergabe, sondern bestimmt den Zuschnitt des öffentlichen Bereichs.
-	
-	Die Projektinhalte entstehen in einem blockbasierten Editor, der eine Seite in einzeln anordenbare Bausteine zerlegt, darunter Text, Bilder, Galerien, Video und Audio. Damit lässt sich eine erzählende Projektseite ebenso aufbauen wie eine knappe technische Darstellung, ohne dass die Darstellung einem festen Formular folgt. Der redaktionelle Ablauf kennt fünf Zustände. Der reguläre Weg führt vom Entwurf über die Einreichung und die Genehmigung zur Veröffentlichung; den fünften Zustand, die Überarbeitung, erreicht ein Projekt nur, wenn die Redaktion es zurückgibt. Eine solche Rückgabe enthält die Hinweise, die für eine erneute Einreichung nötig sind. Bearbeiten lässt sich ein Projekt allein im Entwurf und in der Überarbeitung, damit ein geprüfter Stand nicht unbemerkt verändert wird.
-	
-	Das fertige System wird mit Personen aus den Zielgruppen erprobt. Vier Erhebungen greifen dabei ineinander, und jede beantwortet eine Frage, bei der die übrigen blind sind. Nach der Methode des lauten Denkens bearbeiten die Teilnehmenden Aufgaben entlang der Kernpfade des Portals, etwa ein Projekt anzulegen oder eine Einreichung zu prüfen; daraus werden die konkreten Bedienprobleme und ihre Ursachen sichtbar. Vor dem Nutzertest prüfen beide Begutachtende die Oberfläche getrennt voneinander gegen die zehn Heuristiken und erfassen damit auch Bereiche, zu denen keine Aufgabe führt. Zwei Fragebögen ergänzen die Beobachtung um vergleichbare Zahlen. Die System Usability Scale erfasst die wahrgenommene Gebrauchstauglichkeit; ihre zehn Aussagen ergeben nach Brooke (1996) einen Wert zwischen 0 und 100, der über Systemgrenzen hinweg vergleichbar bleibt. Die zwölf Items der beiden Skalen von Davis (1989) erfassen daneben die wahrgenommene Nützlichkeit und die wahrgenommene Benutzerfreundlichkeit, ergänzt um zwei Items zur Nutzungsabsicht; für E-Portfolio-Systeme haben Shroff et al. (2011) dieses Vorgehen bereits erprobt.
-	
-	Die vierte Erhebung ist dabei keine Wiederholung der dritten. Lautes Denken, Heuristiken und die System Usability Scale liegen sämtlich auf der Seite des Aufwands: Sie sagen, wie mühsam die Benutzung ist. Ob das Ergebnis der Benutzung den Beteiligten etwas wert ist, sagt keine von ihnen, denn ein Portal kann leicht zu bedienen und zugleich entbehrlich sein. Genau diese Lücke schließt die Skala zur wahrgenommenen Nützlichkeit. Beide Fragebögen werden deshalb getrennt ausgewertet und nicht ineinander umgerechnet: Sie sind eigenständige Instrumente mit eigenen Kennwerten. Geprüft wird zusätzlich die inhaltliche Abdeckung an den Komponenten von Mahasneh (2020).
-	
-	\section{Aufbau der Arbeit}
-	\label{sec:aufbau}
-	
-	[Dieser Abschnitt entsteht zuletzt, sobald die Kapitelstruktur endgültig feststeht. ]
-	
-	% Hier folgen die Kapitel 2 bis 8, sobald sie uebernommen sind.
-	
+
+	\input{kapitel/kapitel01}
+	\input{kapitel/kapitel02}
+	\input{kapitel/kapitel03}
+	\input{kapitel/kapitel04}
+	\input{kapitel/kapitel05}
+	\input{kapitel/kapitel06}
+	\input{kapitel/kapitel07}
+	\input{kapitel/kapitel08}
+
+	% =======================================================================
+	% NACHSPANN
+	% =======================================================================
+	% Solange die Belege im Text als reiner Text stehen, sorgt \nocite dafuer,
+	% dass alle Eintraege aus literatur.bib im Verzeichnis erscheinen.
+	% Sobald im Text \textcite und \parencite benutzt werden, kann die Zeile weg.
+	\nocite{*}
+	\printbibliography[title={Literaturverzeichnis}]
+
+	\appendix
+	\input{anhang/anhang}
+	\input{anhang/anhang_d}
+
 \end{document}

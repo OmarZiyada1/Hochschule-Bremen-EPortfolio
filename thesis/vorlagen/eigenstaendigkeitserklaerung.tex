@@ -1,0 +1,102 @@
+% ---------------------------------------------------------------------------
+% Eigenstaendigkeitserklaerung, KI-Angabe und Nachweis der Einzelbeitraege
+% Uebernommen aus der Confluence-Seite "Eigenstaendigkeitserklaerung,
+% KI-Angabe und Einzelbeitraege (Entwurf)" (Space BEH, Seiten-ID 101482498),
+% Stand 05.10.2026, mit drei Korrekturen:
+%   - Titel nach der Genehmigung des Pruefungsamtes vom 17.06.2026 (\ThesisTitel)
+%   - KI-Angabe auf Wunsch der Verfassenden (05.10.2026) auf zwei Bereiche
+%     beschraenkt: Softwareentwicklung nach eigenen Regeln, Skills und Agents
+%     sowie Ausformulieren und grammatische Korrektur beim Schreiben
+%   - Einzelbeitraege nach Angabe der Verfassenden (05.10.2026), ohne
+%     Verweise auf Jira, Confluence, Commits oder Fassungen
+% Blockierend: fehlt die Erklaerung bei der Abgabe, gilt die Thesis als nicht
+% bestanden. Vor der Unterschrift gegen das Formblatt der Fakultaet 4 pruefen;
+% die mit "zu bestätigen" markierten Angaben sind von den Verfassenden zu
+% pruefen.
+% ---------------------------------------------------------------------------
+\addchap{Eigenständigkeitserklärung}
+
+Hiermit versichern wir, \AutorEins{} (Matrikelnummer \MatrikelEins) und \AutorZwei{} (Matrikelnummer \MatrikelZwei), dass wir die vorliegende Bachelorarbeit mit dem Titel „\ThesisTitel“ selbstständig verfasst und keine anderen als die angegebenen Quellen und Hilfsmittel benutzt haben. Alle Stellen, die wörtlich oder sinngemäß aus veröffentlichten oder unveröffentlichten Schriften entnommen sind, haben wir als solche kenntlich gemacht. Die eingesetzten KI-gestützten Hilfsmittel sind mit Art und Umfang ihres Einsatzes im folgenden Abschnitt angegeben; für den Inhalt der Arbeit übernehmen wir die Verantwortung. Die Arbeit hat in gleicher oder ähnlicher Form noch keiner anderen Prüfungsbehörde vorgelegen. Die als Einzelleistung zu bewertenden Beiträge sind im Nachweis der Einzelbeiträge gekennzeichnet.
+
+\vspace{1.5cm}
+
+\noindent
+\begin{minipage}[t]{0.45\textwidth}
+	\rule{\linewidth}{0.4pt}\\
+	\AbgabeOrt, \AbgabeDatum
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.45\textwidth}
+	\rule{\linewidth}{0.4pt}\\
+	\AutorEins
+\end{minipage}
+
+\vspace{1.5cm}
+
+\noindent
+\begin{minipage}[t]{0.45\textwidth}
+	\rule{\linewidth}{0.4pt}\\
+	\AbgabeOrt, \AbgabeDatum
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.45\textwidth}
+	\rule{\linewidth}{0.4pt}\\
+	\AutorZwei
+\end{minipage}
+
+\section*{Angabe der KI-gestützten Hilfsmittel}
+
+Eingesetzt wurde das Sprachmodell Claude des Anbieters Anthropic in zwei Bereichen: bei der Softwareentwicklung über das Werkzeug Claude Code, nach selbst aufgestellten Regeln, Skills und Agents, die im Repository stehen (CLAUDE.md, Ordner .claude), und beim Schreiben der Arbeit. Die Texte haben die Verfassenden geschrieben und alle Entscheidungen selbst getroffen; das Sprachmodell hat beim Umformulieren und Korrigieren geholfen und Änderungen nach ihren Vorgaben eingearbeitet. Die Tabelle nennt je Bereich die Art des Einsatzes und das, was bei den Verfassenden lag.
+
+\begingroup
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\setlength{\LTcapwidth}{\textwidth}
+\begin{longtable}{@{}L{2.6cm}L{6.2cm}L{5.8cm}@{}}
+	\toprule
+	\textbf{Bereich} & \textbf{Art des Einsatzes} & \textbf{Bei den Verfassenden} \\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{Bereich} & \textbf{Art des Einsatzes} & \textbf{Bei den Verfassenden} \\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	Software\-entwicklung & Erzeugen und Überarbeiten von Programmcode nach selbst aufgestellten Regeln, Skills und Agents; KI-gestützte Prüfrollen vor dem Zusammenführen (Abschnitt~\ref{sec:qualitaetssicherung}) & Anforderungen, Regeln, Skills und Agents, fachliche Entscheidungen, Prüfung und Abnahme \\
+	Schreiben der Arbeit & Umformulieren und Korrigieren der von den Verfassenden geschriebenen Texte sowie Einarbeiten von Änderungen nach deren Vorgaben & Schreiben der Texte, Gliederung, Forschungsfrage und Teilfragen, Inhalte, alle Entscheidungen, Prüfung und Freigabe der Texte \\
+\end{longtable}
+\endgroup
+
+\section*{Nachweis der Einzelbeiträge}
+
+Die Tabelle nennt je Teil der Arbeit, wer ihn im Schwerpunkt verfasst oder umgesetzt und wer ihn ergänzt hat.
+
+\begingroup
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\setlength{\LTcapwidth}{\textwidth}
+\begin{longtable}{@{}L{3.6cm}L{5.5cm}L{5.5cm}@{}}
+	\toprule
+	\textbf{Teil} & \textbf{\AutorEins} & \textbf{\AutorZwei} \\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{Teil} & \textbf{\AutorEins} & \textbf{\AutorZwei} \\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	Projektstart & gemeinsam: erste Struktur und erstes Grundgerüst & gemeinsam: erste Struktur und erstes Grundgerüst \\
+	API-Contract & gemeinsam & gemeinsam \\
+	Backend & Schwerpunkt & Mitarbeit \\
+	Frontend & Mitarbeit & Schwerpunkt \\
+	Arbeitsregeln, Skills und Agents & Schwerpunkt & Ergänzungen \\
+	Kapitel 1 bis 5 & Verfasser & Ergänzungen \\
+	Kapitel 6 bis 8 & Ergänzungen & Verfasser \\
+	Heuristische Evaluation & erste Begutachtung & zweite Begutachtung \\
+	Usability-Test & Moderation oder Protokoll im Wechsel & Testmaterial, Auswertung im Nachlauf, Moderation oder Protokoll im Wechsel \\
+\end{longtable}
+\endgroup

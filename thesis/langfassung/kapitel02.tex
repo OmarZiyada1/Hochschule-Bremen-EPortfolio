@@ -1,0 +1,190 @@
+% ---------------------------------------------------------------------------
+% Kapitel 2: Anforderungsanalyse
+% Wortgleich uebernommen aus der Confluence-Seite
+% "Kapitel 2: Anforderungsanalyse (Entwurf)" (Space BEH, Seiten-ID 34701325),
+% Stand 04.10.2026. Am Text wurde nichts geaendert.
+% Abschnitt 2.6 Zusammenfassung steht auf der Confluence-Seite noch nicht.
+% ---------------------------------------------------------------------------
+
+\chapter{Anforderungsanalyse}
+\label{kap:anforderungsanalyse}
+
+Die Anforderungen an das Portal stützen sich auf vier Quellen von ungleicher Beweiskraft; 22 der 60 Anforderungen sind dagegen Festlegungen aus dem Zuschnitt des Vorhabens und tragen keinen externen Beleg. Die Forschungsliteratur trägt den theoretisch begründeten Teil, daneben stehen die heuristische Analyse der Referenzplattform, der fachliche Austausch mit der Fakultät und die erhobene Ordnungsstruktur der Hochschule. Jede Anforderung wird deshalb mit ihrer Herkunft geführt. Diese Angabe entscheidet darüber, ob eine später erfüllte Anforderung eine Aussage über die Forschungsliteratur zulässt oder allein über den Anwendungsfall Hochschule Bremen; damit trägt die Herkunftsspalte die erste Teilfrage, die Abschnitt 8.1 beantwortet.
+
+\section{Stakeholder und Zielgruppen}
+\label{sec:stakeholder}
+
+Die Fakultät verantwortet die Außendarstellung, ohne selbst Projekte einzustellen; den gestalterischen Rahmen gibt das Erscheinungsbild der Hochschule vor. Die Verwaltung setzt die formalen Rahmenbedingungen, die Prüfenden dieser Arbeit bewerten Methodik und Umsetzung. Solche Beteiligten prägen Anforderungen, treten im System aber nicht auf. Von ihnen zu trennen sind die vier Akteurgruppen, die das Portal bedienen: Studierende, Redaktion, Administration und externe Nutzende. Zu den externen Nutzenden zählen dabei nicht nur Arbeitgebende und die fachlich interessierte Öffentlichkeit, sondern auch Studierende späterer Jahrgänge, solange sie nicht angemeldet sind.
+
+Die letzte dieser Gruppen ist die Hauptzielgruppe und zugleich die einzige ohne Konto. Beides zusammen erzeugt ein Missverständnis, das eine Begriffsklärung verlangt. Eine Rolle ist an ein Konto gebunden; für eine Person ohne Konto gibt es nichts, woran eine Rolle hängen könnte. Der öffentliche Zugang ist deshalb eine Sichtbarkeitsebene, die aus dem Zustand „nicht angemeldet“ folgt, und keine vierte Rolle. Über das Gewicht dieser Gruppe sagt ihre Abwesenheit aus dem Rollenmodell nichts: Der Ausschnitt, den sie sieht, hat von allen die größte Reichweite.
+
+Die drei kontogebundenen Gruppen stehen nicht nebeneinander, sondern sind ineinander enthalten. Studierende legen eigene Projekte an, bearbeiten und reichen sie ein, ziehen sie bei Bedarf zurück und pflegen die eigene Profilseite. Die Redaktion darf all das ebenso und prüft darüber hinaus die ihr zugewiesenen Einreichungen. Die Administration darf wiederum, was die Redaktion darf, und verwaltet zusätzlich Konten, Stammdaten und die Auswahl der Startseite. Der Grund für diese Schachtelung liegt in der Registrierung. Eine Person hat genau ein Konto, weil ihre Hochschuladresse eindeutig ist; wer zur Redaktion oder zur Administration hochgestuft wird, verlöre sonst mit der Hochstufung das eigene Portfolio.
+
+\abbildung{abb-2-1-akteure.png}{0.85}{abb:akteurgruppen}%
+{Die vier Akteurgruppen, ihre Schachtelung und die Grenze der Anmeldung}%
+{Die vier Akteurgruppen, ihre Schachtelung und die Grenze der Anmeldung (eigene Darstellung)}
+
+Abbildung 2.1 zeichnet diese Ordnung nach. Der äußere Rahmen umfasst alle vier Gruppen, denn was veröffentlicht ist, sieht jede von ihnen. Innerhalb der Anmeldung liegen die drei kontogebundenen Ebenen ineinander, und jede nennt allein, was sie zur inneren hinzufügt. Darunter steht eine Ausnahme, die sich der Schachtelung entzieht: Die eigene Arbeit gibt niemand frei. Diese Sperre hängt an der Beteiligung am Projekt und nicht an der Rolle, weshalb ihr auch die Administration unterliegt.
+
+Die Ordnungsstruktur, in die ein Projekt eingehängt wird, stammt aus der Hochschule selbst. Erhoben wurden die fünf Fakultäten mit ihren 75 Studiengängen (Hochschule Bremen, 2026a, 2026b, 2026c, 2026d, 2026e) und, soweit veröffentlicht, deren Modullisten von den dort verlinkten Seiten der einzelnen Studiengänge. Fakultäten und Studiengänge bilden Achsen, nach denen später gefiltert wird; die Module ordnen das einzelne Projekt zusätzlich ein, ohne selbst Filterachse zu sein.
+
+Zwischen den Gruppen bestehen Interessengegensätze, die sich nicht auflösen, sondern nur ausgestalten lassen. Studierende möchten eigene Arbeiten rasch sichtbar machen, während die Hochschule für Veröffentlichtes einsteht und deshalb eine Prüfung verlangt; das Portal beantwortet den Gegensatz mit einem mehrstufigen Zustandsmodell anstelle einer Direktveröffentlichung. Studierende brauchen eine Oberfläche, die ohne Einarbeitung bedienbar ist, die Administration dagegen einen Funktionsumfang, der dieselbe Oberfläche überfrachten würde; die Benutzerführung trennt deshalb nach Aufgabenbereichen. Externe Nutzende schließlich möchten möglichst viel sehen, während Studierende die Kontrolle über eigene Inhalte behalten. Aus diesem letzten Gegensatz folgt die scharfe Trennung zwischen veröffentlichten und internen Zuständen eines Projekts.
+
+\section{Methodisches Vorgehen}
+\label{sec:methodisches-vorgehen}
+
+Die Anforderungen wurden nicht gesammelt, sondern hergeleitet: Methodisch handelt es sich um eine quellengestützte Ableitung mit Rückverfolgbarkeit, in der jede Anforderung eine Kennung und eine Herkunft erhält. Vier Quellen tragen den belegten Teil, und ihre Reihenfolge bildet zugleich ihre Beweiskraft ab. Am Anfang steht die Forschungsliteratur. Lorenzo und Ittelson (2005) unterscheiden studentische, lehrbezogene und institutionelle Portfolios; die vorliegende Arbeit ordnet das Vorhaben als institutionelles Portal ein, das studentische Arbeiten nach außen zeigt. Sie fasst es zudem als Präsentationsportfolio (Abschnitt 3.1), woraus mit der Abgrenzung aus Abschnitt 1.2 der Ausschluss prozessbegleitender Bestandteile folgt. Das Komponentenmodell von Mahasneh (2020) liefert den inhaltlichen Zuschnitt; nach ihrem Bezugspunkt geordnet, was die Quelle selbst nicht tut, ergeben seine Komponenten eine personenbezogene und eine leistungsbezogene Ebene (Abschnitt 3.1). Davis (1989) und die Übertragung auf E-Portfolio-Systeme durch Shroff et al. (2011) begründen, warum Gebrauchstauglichkeit unter den Qualitätsanforderungen vorn steht. Was die Quellen im Einzelnen enthalten, führt Kapitel 3 aus.
+
+Die zweite Quelle ist eine eigene Vorarbeit und keine Literatur: die heuristische Analyse der Referenzplattform der Hochschule für Gestaltung Schwäbisch Gmünd. Das Verfahren geht auf Nielsen und Molich (1990) zurück, das Kriterienraster ist die kanonische Liste der zehn Heuristiken (Nielsen, 2024). Begutachtet wurden fünf Klassen von Seiten, von der Startseite über Studiengangsübersichten und Projektdetailseiten bis zu Schlagwort- und Personenansichten.
+
+Für die Übersetzung der Befunde in Anforderungen wurde jedes untersuchte Merkmal einer von drei Klassen zugeordnet: unverändert übernehmen, gezielt verbessern, eigenständig konzipieren. Diese Sortierung beantwortet je Merkmal die Frage, ob überhaupt eine Vorlage vorliegt. Das einheitliche Aufbauschema der Projektseiten und die Erschließung über Studiengang und Person gehören zur ersten Klasse und werden übernommen. Zur zweiten gehört die Auffindbarkeit, die über die Vorlage hinausgehen muss, weil dort jede Suche fehlt und sich die Filter nicht verbinden lassen; dazu zählt auch das Semester, das dort nur als Angabe am Projekt erscheint und hier zur eigenen Filtergruppe wird (FA-12). Einreichung, Prüfung und Verwaltung gehören zur dritten, denn zugänglich war ausschließlich die Sicht ohne Anmeldung, und was hinter einer Anmeldung liegt, konnte nicht als Vorlage dienen.
+
+Die dritte Quelle ist eine Rücksprache mit der Fakultät 4 im Mai 2026, in der Zielgruppe und Anforderungen des Portals besprochen wurden (J. Egharevba, persönliche Mitteilung, Mai 2026); aus ihr stammt die Einschätzung, dass der überwiegende Teil der Zielgruppe außerhalb der Hochschule liegt. Sie deckt sich mit der Einordnung als institutionelles Portfolio (Abschnitte 1.3 und 3.1). Die vierte Quelle ist die erhobene Struktur aus Fakultäten, Studiengängen und Modulen (Abschnitt 2.1). In der Herkunftsspalte der beiden folgenden Kataloge erscheinen die drei letzten Quellen als „Referenzanalyse“, „Fakultät“ und „Modulhandbücher“. Literatur steht dort als Zitat: neben der E-Portfolio-Literatur die Heuristiken (Nielsen, 1994b, 2024), der Fragebogen samt Vergleichswert (Brooke, 1996; Lewis \& Sauro, 2018) und die Richtlinien des W3C (2023) als Norm. Für die erste Teilfrage zählen allein die Anforderungen mit der Herkunft Lorenzo und Ittelson (2005) oder Mahasneh (2020). Die Angabe „Kontext“ steht für Festlegungen, die aus dem Zuschnitt des Vorhabens selbst folgen und deshalb keinen externen Beleg tragen.
+
+Was dieses Vorgehen nicht leistet, gehört an dieselbe Stelle wie das, was es leistet. Vor der Entwicklung wurde keine Befragung künftiger Nutzender durchgeführt; die einzige Vorarbeit am Gegenstand ist die heuristische Inspektion eines fremden Systems durch zwei Begutachtende, was unter den drei bis fünf Personen bleibt, die Nielsen und Molich (1990) empfehlen. Die Anforderungen sind damit begründet, aber nicht empirisch geprüft. Ihre Prüfung ist Gegenstand der Kapitel 6 und 7; für das laute Denken bildet Nielsen (1994b) die methodische Referenz, für die heuristische Evaluation Nielsen und Molich (1990). Eine förmliche Priorisierung nach Wichtigkeit fehlt ebenfalls. Der Bearbeitungszeitraum von neun Wochen hat den Umfang faktisch begrenzt, ohne dass eine solche Reihung vorlag.
+
+\section{Funktionale Anforderungen}
+\label{sec:funktionale-anforderungen}
+
+Die Funktionen ordnen sich nach dem Zugang und nicht nach der Rolle. Eine Basisschicht regelt Zugang und Sichtbarkeit, darüber liegen der Bereich ohne Anmeldung und die drei kontogebundenen Aufgabenbereiche. Tabelle 2.1 führt die funktionalen Anforderungen (FA) mit 36 Kennungen in Blöcken je Bereich. FA-01 bis FA-06 gelten rollenübergreifend, FA-10 bis FA-18 betreffen den Bereich ohne Anmeldung, FA-20 bis FA-30 die Studierenden, FA-31 bis FA-37 die Redaktion und FA-40 bis FA-44 die Administration; FA-30 ist die einzige Kennung jenseits der Zehnergrenze ihres Blocks. Freie Nummern innerhalb eines Blocks sind Reserve für spätere Ergänzungen. Die Blöcke benennen, wer eine Fähigkeit zuerst braucht, und nicht, wer sie allein hat.
+
+Der Zugang beruht auf zwei getrennten E-Mail-Adressen (FA-01). Eine private Adresse dient dauerhaft als Kennung, eine Hochschuladresse belegt einmalig die Zugehörigkeit. Diese Trennung folgt aus dem Zweck eines Präsentationsportfolios, als das die vorliegende Arbeit das Portal einordnet (Abschnitt 3.1). Ein E-Portfolio repräsentiert nach Lorenzo und Ittelson (2005) eine Person; es soll auch nach der Exmatrikulation vorzeigbar bleiben, etwa bei einer Bewerbung, während Hochschulkonten mit ihr auslaufen. Unabhängig davon folgt die Rolle aus der Endung der bestätigten Hochschuladresse (FA-02), denn sie ist das einzige Merkmal der Registrierung, das sich maschinell prüfen lässt; eine Selbstauskunft öffnete jeder Person die Rechte der Redaktion. Die anerkannten Endungen sind ohne Programmänderung anpassbar.
+
+Für die Hauptzielgruppe entscheidet sich der Wert des Portals an der Auffindbarkeit, und genau dort lag der einzige Negativbefund der Referenzanalyse. Die eigene Anforderung geht deshalb über die Vorlage hinaus: verbindbare Filtergruppen mit Mehrfachauswahl (FA-12), ein Suchfeld über ausgewählte Felder, das den Einstieg ohne Kenntnis der Systematik erlaubt (FA-14), und ein sichtbarer Auswahlzustand, der sich einzeln zurücknehmen und als Adresse weitergeben lässt (FA-15). Neben dem Weg über das Projekt steht ein zweiter über die Person. Ordnet man die Komponenten von Mahasneh (2020) nach ihrem Bezugspunkt, steht die Biografie als einzige personenbezogene Komponente den leistungsbezogenen Arbeiten gegenüber (Abschnitt 3.1). Daraus folgt die Profilseite (FA-16), die den Studiengang aus der Ordnung der Hochschule ergänzt und auf der die veröffentlichten Projekte, an denen die Person beteiligt ist, ohne manuelles Zutun zusammenlaufen (FA-29). Für externe Nutzende entsteht damit ein Gesamteindruck statt einer Reihe isolierter Fundstücke.
+
+Der Arbeitsplatz der Studierenden ist der blockbasierte Editor (FA-20), und der Einreichungsweg folgt fünf Zuständen, deren Ausgestaltung Abschnitt 4.4 übernimmt. Zwei Festlegungen sind Anforderungen und keine Entwurfsdetails und stehen deshalb schon hier: Eine eingereichte Arbeit lässt sich bis zur redaktionellen Entscheidung zurückziehen (FA-24), und ein Projekt lässt sich als Gruppenarbeit führen, in der Mitwirkende den Inhalt gleichberechtigt bearbeiten (FA-30).
+
+Der redaktionelle Bereich trennt zwei Entscheidungen, die häufig zusammenfallen, aber nicht dasselbe sind. Die Genehmigung stellt fest, dass ein Inhalt geprüft ist (FA-32); die Veröffentlichung entscheidet, dass er jetzt öffentlich wird (FA-33). Die Trennung erlaubt es, geprüfte Arbeiten gebündelt zum Semesterbeginn freizuschalten. Die Rückgabe zur Überarbeitung trägt eine Begründung (FA-34), und die redaktionelle Kommunikation läuft über drei Kommentararten: eine Antwort, eine für Studierende unsichtbare interne Notiz und eine Änderungsaufforderung mit nachverfolgbarem Erledigungsstand (FA-36). Eine öffentliche Kommentarfunktion ist nicht vorgesehen, weil sie eine Moderation verlangte, die das Portal nicht leistet. Für die Freigabe gilt ein Vier-Augen-Prinzip, das an der Beteiligung am Projekt hängt und nicht an der Rolle (FA-35).
+
+Die Administration verwaltet Konten (FA-40), Stammdaten (FA-43) und die kuratierte Auswahl der Startseite, deren Änderungen ein unveränderliches Protokoll festhält (FA-44). Ihr Zugriff auf fremde Projektinhalte soll lesend sein (FA-42): Sie sieht jedes Projekt in jedem Zustand (FA-41), damit sie bei Rückfragen auskunftsfähig bleibt, und greift allein über die regulären Zustandsentscheidungen ein. Wie weit der gebaute Stand dieser Anforderung folgt, prüft Abschnitt 7.3. Ein stiller Eingriff in einen fremden Text wäre in einem System, das Autorschaft ausweist, ein Widerspruch in sich.
+
+\begingroup
+\small
+\setlength{\tabcolsep}{4pt}
+\setlength{\LTcapwidth}{\textwidth}
+\begin{longtable}{@{}L{1.5cm}L{9.2cm}L{3.8cm}@{}}
+	\caption[Funktionale Anforderungen mit Kennung und Herkunft]{Funktionale Anforderungen mit Kennung und Herkunft (eigene Darstellung)}
+	\label{tab:fa}\\
+	\toprule
+	\textbf{ID} & \textbf{Anforderung} & \textbf{Herkunft} \\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{ID} & \textbf{Anforderung} & \textbf{Herkunft} \\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	FA-01 & Selbstregistrierung mit privater Kennung und bestätigter Hochschuladresse & Lorenzo und Ittelson (2005) \\
+	FA-02 & Rollenzuteilung aus der bestätigten Hochschuladresse, Endungen konfigurierbar & Kontext \\
+	FA-03 & Anmeldung, Passwortzurücksetzung, erzwungener Wechsel eines Initialpassworts & Kontext \\
+	FA-04 & Zugriffssteuerung serverseitig, auf Rollen- und auf Ressourcenebene & Kontext \\
+	FA-05 & Reaktion angemeldeter Personen auf ein veröffentlichtes Projekt, höchstens eine je Person & Referenzanalyse \\
+	FA-06 & Rückkanal für Rückfragen und Meldungen, auch ohne Anmeldung & Kontext \\
+	FA-10 & Veröffentlichte Projekte ohne Anmeldung lesen & Lorenzo und Ittelson (2005) \\
+	FA-11 & Projektdetailansicht mit allen Bausteinen und den beschreibenden Angaben & Mahasneh (2020) \\
+	FA-12 & Verbindbare Filtergruppen mit Mehrfachauswahl: Fakultät, Studiengang, Abschluss, Semester, Projekttyp, Kategorie & Referenzanalyse \\
+	FA-14 & Suchfeld über Titel, Kurzbeschreibung, Personennamen und Schlagworte & Referenzanalyse \\
+	FA-15 & Auswahlzustand sichtbar, einzeln und gesammelt rücknehmbar, als Adresse teilbar & Referenzanalyse \\
+	FA-16 & Profilseite einer Person ohne Anmeldung, mit Biografie und Studiengang & Mahasneh (2020); Studiengang: Modulhandbücher \\
+	FA-17 & Kuratierte Auswahl veröffentlichter Projekte auf der Startseite & Fakultät \\
+	FA-18 & Übersicht der Studiengänge und Module als Einordnungskontext & Modulhandbücher \\
+	FA-20 & Blockbasierter Editor mit Bausteinen für Text und multimediale Inhalte & Mahasneh (2020) \\
+	FA-21 & Projekt als Entwurf anlegen, zwischenspeichern, bearbeiten und löschen & Kontext \\
+	FA-22 & Beschreibende Angaben pflegen und die zuständige Redaktion wählen & Kontext \\
+	FA-23 & Projekt zur redaktionellen Prüfung einreichen & Lorenzo und Ittelson (2005) \\
+	FA-24 & Eingereichte Arbeit bis zur redaktionellen Entscheidung zurückziehen & Kontext \\
+	FA-25 & Eigene Projekte mit ihrem jeweiligen Zustand überblicken & Nielsen (2024) \\
+	FA-26 & Änderungsaufforderungen lesen, als erledigt kennzeichnen, erneut einreichen & Kontext \\
+	FA-28 & Profilseite mit Biografie, Kontaktangaben und Bild pflegen & Mahasneh (2020) \\
+	FA-29 & Veröffentlichte Projekte, an denen die Person beteiligt ist, erscheinen ohne Zutun auf der Profilseite & Mahasneh (2020) \\
+	FA-30 & Gruppenarbeit: Mitwirkende aufnehmen, ihre Funktion benennen, gemeinsam bearbeiten & Fakultät \\
+	FA-31 & Arbeitsliste der zugewiesenen Einreichungen im Redaktionsbereich & Fakultät \\
+	FA-32 & Projekt genehmigen & Lorenzo und Ittelson (2005) \\
+	FA-33 & Genehmigte Arbeit in einem zweiten Schritt veröffentlichen & Fakultät \\
+	FA-34 & Projekt mit Begründung zur Überarbeitung zurückgeben & Kontext \\
+	FA-35 & Keine Freigabe der eigenen Arbeit, unabhängig von der Rolle & Fakultät \\
+	FA-36 & Drei Kommentararten: Antwort, interne Notiz, Änderungsaufforderung mit Erledigungsstand & Kontext \\
+	FA-37 & Veröffentlichtes Projekt für die Auswahl der Startseite vorschlagen & Fakultät \\
+	FA-40 & Konten anlegen, Rollen ändern, deaktivieren, Passwörter zurücksetzen & Kontext \\
+	FA-41 & Zustandsunabhängige Gesamtübersicht aller Projekte & Kontext \\
+	FA-42 & Lesender Zugriff auf fremde Inhalte, Eingriff nur über Zustandsentscheidungen & Kontext \\
+	FA-43 & Stammdaten pflegen: Kategorien, Fakultäten, Studiengänge, Module, Semester & Modulhandbücher \\
+	FA-44 & Auswahl der Startseite kuratieren, mit unveränderlichem Protokoll & Fakultät \\
+\end{longtable}
+\endgroup
+
+\section{Nicht-funktionale Anforderungen}
+\label{sec:nicht-funktionale-anforderungen}
+
+Qualitätsanforderungen beschreiben, wie gut das System seine Funktionen erbringt, und sie sind hier keine nachgelagerte Verfeinerung. Ein Portal, dessen Inhalte freiwillig eingestellt werden, füllt sich nur, wenn das Einstellen als lohnend und als mühelos wahrgenommen wird. Davis (1989) führt die Nutzung eines Systems auf genau diese beiden Wahrnehmungen zurück, und bei Shroff et al. (2011) ist der Pfad von der wahrgenommenen Benutzerfreundlichkeit zur wahrgenommenen Nützlichkeit mit 0,71 der stärkste abgesicherte Zusammenhang (Abschnitt 3.2). Gebrauchstauglichkeit ist deshalb eine Bedingung dafür, dass der Nutzen des Portals wahrgenommen wird.
+
+Die nicht-funktionalen Anforderungen (NFA) sind in Zehnerblöcken vergeben: 0x Gebrauchstauglichkeit, 1x Akzeptanz, 2x Barrierefreiheit, 3x Antwortzeiten und Tragfähigkeit, 4x Darstellung auf Geräten, 5x Corporate Design, 6x Sicherheit. Damit sie prüfbar bleiben, tragen sie, wo es möglich ist, eine messbare Schwelle, und für Gebrauchstauglichkeit und Akzeptanz ist das Instrument vorab benannt. NFA-01 bis NFA-05 werden im Nutzertest über lautes Denken und in der heuristischen Evaluation erhoben, mit den zehn Heuristiken als Prüfraster (Nielsen, 2024). NFA-06 misst der Summenwert der SUS (Brooke, 1996), für den ein Zielwert von 68 Punkten vorab gesetzt ist; dieser Wert liegt auf der Notenskala aus 241 Untersuchungen (Sauro \& Lewis, 2016, zitiert nach Lewis \& Sauro, 2018) in der Mitte der Note C. NFA-10 und NFA-11 erhebt der Fragebogen zu den beiden Konstrukten des TAM nach Davis (1989). Für die Barrierefreiheit gelten die Erfolgskriterien der Richtlinien des W3C (2023), deren einschlägige Auswahl Abschnitt 3.3 einzeln aufführt; geprüft werden sie über den automatisierten Prüflauf und die Inspektion, die Sicherheitsanforderungen über automatisierte Tests.
+
+Drei Anforderungen dieser Gruppe brauchen eine eigene Erläuterung. Der Schutz nicht veröffentlichter Inhalte (NFA-61) ist keine Vorsichtsmaßnahme, sondern die Bedingung dafür, dass Studierende überhaupt Unfertiges einstellen; ohne ihn verlagerte sich die Arbeit zurück auf das private Laufwerk, das Abschnitt 1.1 als Ausgangslage beschreibt. Die Durchsetzung der Rechte auf dem Server statt in der Oberfläche (NFA-60) ist die Bedingung dafür, dass die Rechtematrix eine Aussage über das System trifft und nicht nur über seine Ansicht. Der dunkle Farbmodus (NFA-26) folgt nicht aus den Richtlinien, sondern aus dem Anwendungskontext; die Kontrastschwellen gelten darin allerdings unverändert, weil ein dunkler Modus dieselben Erfolgskriterien erfüllen muss wie ein heller.
+
+Die Anforderungen an Antwortzeiten und Tragfähigkeit (NFA-30 bis NFA-32) tragen eine Einschränkung, die zu ihnen gehört: Sie sind für den Prototypbetrieb gesetzt und nicht für einen Produktivbetrieb mit echtem Inhaltsbestand. Ein Messverfahren liegt für sie nicht vor, weshalb sie sich von den übrigen Schwellen dieses Katalogs unterscheiden.
+
+\begingroup
+\small
+\setlength{\tabcolsep}{4pt}
+\setlength{\LTcapwidth}{\textwidth}
+\begin{longtable}{@{}L{1.7cm}L{9.0cm}L{3.8cm}@{}}
+	\caption[Nicht-funktionale Anforderungen mit Kennung und Herkunft]{Nicht-funktionale Anforderungen mit Kennung und Herkunft (eigene Darstellung)}
+	\label{tab:nfa}\\
+	\toprule
+	\textbf{ID} & \textbf{Anforderung} & \textbf{Herkunft} \\
+	\midrule
+	\endfirsthead
+	\toprule
+	\textbf{ID} & \textbf{Anforderung} & \textbf{Herkunft} \\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	NFA-01 & Erlernbarkeit: Der Editor ist ohne Schulung in wenigen Minuten bedienbar & Nielsen (1994b) \\
+	NFA-02 & Einheitliche Bedienmuster, Begriffe und visuelle Sprache über alle Bereiche & Nielsen (2024) \\
+	NFA-03 & Fehlervermeidung und Rückholbarkeit bei folgenreichen Aktionen & Nielsen (2024) \\
+	NFA-04 & Zustand eines Projekts und Rückmeldung auf Systemaktionen jederzeit erkennbar & Nielsen (2024) \\
+	NFA-05 & Wiedererkennen statt Erinnern, etwa bei den verfügbaren Bausteinen & Nielsen (2024) \\
+	NFA-06 & Zielwert von mindestens 68 Punkten im Fragebogen zur Gebrauchstauglichkeit & Brooke (1996), Lewis und Sauro (2018) \\
+	NFA-10 & Erkennbarer Nutzen: Eigene Arbeit wird für externe Zielgruppen sichtbar & Davis (1989) \\
+	NFA-11 & Geringer wahrgenommener Aufwand bei Erstellung und Einreichung & Shroff et al. (2011) \\
+	NFA-20 & Textkontrast von mindestens 4,5 zu 1, Bedienelemente mindestens 3 zu 1 & W3C (2023) \\
+	NFA-21 & Keine allein farbliche Codierung von Information & W3C (2023) \\
+	NFA-22 & Vollständige Tastaturbedienbarkeit mit sichtbarem Fokus & W3C (2023) \\
+	NFA-23 & Textvergrößerung und Umbruch ohne Verlust von Inhalt oder Funktion & W3C (2023) \\
+	NFA-24 & Mindestgröße interaktiver Ziele & W3C (2023) \\
+	NFA-25 & Semantische Auszeichnung für Hilfsmittel, besonders im Editor & W3C (2023) \\
+	NFA-26 & Dunkler Farbmodus mit denselben Kontrastschwellen wie der helle & Kontext \\
+	NFA-30 & Öffentliche Seiten laden bei durchschnittlicher Verbindung unter zwei Sekunden & Kontext \\
+	NFA-31 & Rückmeldung im Editor ohne spürbare Verzögerung & Kontext \\
+	NFA-32 & Tragfähigkeit bei einem Bestand von mehreren hundert Projekten & Kontext \\
+	NFA-40 & Nutzbarkeit auf Rechner, Tablet und Telefon & Kontext \\
+	NFA-41 & Korrekte Darstellung in aktuellen Browserversionen & Kontext \\
+	NFA-50 & Einhaltung der Farbvorgabe des Corporate Designs & Fakultät \\
+	NFA-60 & Rechte serverseitig durchgesetzt, nicht nur in der Oberfläche verborgen & Kontext \\
+	NFA-61 & Nicht veröffentlichte Inhalte und interne Notizen bleiben unzugänglich & Kontext \\
+	NFA-62 & Sichere Ablage der Passwörter, sensible Felder verlassen den Server nicht & Kontext \\
+\end{longtable}
+\endgroup
+
+\section{User Stories und Use Cases}
+\label{sec:user-stories}
+
+Ein Katalog sagt, was vorhanden sein muss, aber nicht, ob die Teile zusammenpassen. Die Anforderungen wurden deshalb zusätzlich als Abläufe formuliert, zunächst als 30 User Stories (US): knappe Szenarien, die je Akteurgruppe ein Ziel und den damit verbundenen Nutzen benennen und nach Gruppen in Blöcken nummeriert sind (US-01 bis US-42). Dazu kommen fünf mehrstufige Use Cases (UC), also Anwendungsfälle, drei für den redaktionellen Weg über mehrere Personen und Zustände (UC-01 bis UC-03) und zwei für den Weg der Hauptzielgruppe (UC-04, UC-05). Der vollständige Satz steht in Anhang A.
+
+\abbildung{abb-2-2-usecases.png}{0.9}{abb:anwendungsfaelle}%
+{Anwendungsfälle, ihre Akteurgruppen und deren Verallgemeinerung}%
+{Anwendungsfälle, ihre Akteurgruppen und deren Verallgemeinerung (eigene Darstellung)}
+
+Abbildung 2.2 ordnet die fünf Anwendungsfälle den Akteurgruppen zu und zeichnet je Gruppe allein ein, was sie zur allgemeineren hinzufügt; die Verallgemeinerungen tragen den Rest. Zwei Beobachtungen folgen daraus. Die gestrichelte Linie trennt den Bereich ohne Anmeldung von dem darunter: UC-04 und der lesende Teil von UC-05 sind ohne Konto erreichbar, während jeder Vorgang, der einen Inhalt verändert, ein Konto verlangt. Die Administration hängt an keinem eigenen Anwendungsfall: Konten- und Stammdatenpflege sind einstufig, und die Kuratierung der Startseite, die über den Vorschlag der Redaktion (FA-37) und die Entscheidung der Administration (FA-44) verläuft, ist nicht als eigener Anwendungsfall ausgeführt. Zum redaktionellen Ablauf trägt die Administration bei, dass sie eine redaktionelle Entscheidung übernehmen kann.
+
+Der erste Ablauf ist der redaktionelle Weg. Eine studierende Person legt ein Projekt an, wählt die zuständige Redaktion, füllt die Seite im Editor und speichert beliebig oft zwischen (UC-01). Nach der Einreichung erscheint das Projekt in der Arbeitsliste der zuständigen Redaktion. Diese genehmigt es und veröffentlicht es in einem zweiten Schritt, oder sie gibt es mit einer begründeten Änderungsaufforderung zurück (UC-02). Im zweiten Fall kennzeichnet die einreichende Seite die umgesetzten Punkte als erledigt und reicht erneut ein (UC-03), womit derselbe Weg noch einmal beginnt. Die Prüfung ist damit kein einmaliges Tor, sondern eine Schleife, und die Anforderungen an Rückmeldung und Nachverfolgbarkeit folgen daraus und nicht aus einer Gestaltungsvorliebe.
+
+Der zweite Ablauf ist der Weg der Hauptzielgruppe. Eine externe Person grenzt die Projektübersicht über mehrere Filtergruppen ein und öffnet ein Projekt (UC-04); von dort gelangt sie auf die Profilseite einer beteiligten Person und sieht deren weitere veröffentlichte Arbeiten (UC-05). Dieser Weg verbindet die beiden Zwecke des Portals: Das Projekt vertritt eine Leistung, die Profilseite vertritt eine Person, und die Hochschule tritt über beide nach außen auf. Kein Schritt verlangt eine Anmeldung, und daran misst sich später, ob das Portal seinen institutionellen Zweck erfüllt.
+
+\section{Zusammenfassung}
+\label{sec:zusammenfassung-anforderungen}
+
+\platzhalter{Abschnitt 2.6 steht auf der Confluence-Seite 34701325 noch nicht. Er beantwortet zusammen mit Abschnitt 3.5 die erste Teilfrage und fasst zusammen, welche der 60 Anforderungen sich auf die Forschungsliteratur stützen und welche aus dem Zuschnitt des Vorhabens folgen.}

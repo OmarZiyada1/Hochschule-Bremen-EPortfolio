@@ -1,0 +1,1623 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.3 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{apa/apasortcite//global/global/global}
+    \entry{brooke1996}{inbook}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=813064283275c281401d7a7483420c67}{%
+           family={Brooke},
+           familyi={B\bibinitperiod},
+           given={John},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \name{editor}{4}{}{%
+        {{hash=f4dd6dd0057b9630f3f5689c42ce3347}{%
+           family={Jordan},
+           familyi={J\bibinitperiod},
+           given={Patrick\bibnamedelima W.},
+           giveni={P\bibinitperiod\bibinitdelim W\bibinitperiod}}}%
+        {{hash=ac86fe4c53a0b662f004a5b8ffb38bdb}{%
+           family={Thomas},
+           familyi={T\bibinitperiod},
+           given={B.},
+           giveni={B\bibinitperiod}}}%
+        {{hash=d5d6227df47b81a791920b374329845f}{%
+           family={Weerdmeester},
+           familyi={W\bibinitperiod},
+           given={Bernard\bibnamedelima A.},
+           giveni={B\bibinitperiod\bibinitdelim A\bibinitperiod}}}%
+        {{hash=8b8a10905f0d3cfa60d8b1742260677d}{%
+           family={McClelland},
+           familyi={M\bibinitperiod},
+           given={Ian\bibnamedelima L.},
+           giveni={I\bibinitperiod\bibinitdelim L\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Taylor \& Francis}%
+      }
+      \strng{namehash}{813064283275c281401d7a7483420c67}
+      \strng{fullhash}{813064283275c281401d7a7483420c67}
+      \strng{fullhashraw}{813064283275c281401d7a7483420c67}
+      \strng{bibnamehash}{813064283275c281401d7a7483420c67}
+      \strng{authorbibnamehash}{813064283275c281401d7a7483420c67}
+      \strng{authornamehash}{813064283275c281401d7a7483420c67}
+      \strng{authorfullhash}{813064283275c281401d7a7483420c67}
+      \strng{authorfullhashraw}{813064283275c281401d7a7483420c67}
+      \strng{editorbibnamehash}{57dd9923b77fc22e3baa4765c3a768a9}
+      \strng{editornamehash}{161df31cfda2ca59b22c7e189ab9aca4}
+      \strng{editorfullhash}{57dd9923b77fc22e3baa4765c3a768a9}
+      \strng{editorfullhashraw}{57dd9923b77fc22e3baa4765c3a768a9}
+      \field{sortinit}{B}
+      \field{sortinithash}{d7095fff47cda75ca2589920aae98399}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Usability evaluation in industry}
+      \field{title}{{SUS}: A quick and dirty usability scale}
+      \field{year}{1996}
+      \field{dateera}{ce}
+      \true{nocite}
+      \field{pages}{189\bibrangedash 194}
+      \range{pages}{6}
+    \endentry
+    \entry{davis1989}{article}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=dcb59a9c9bf67cc1c74d13fb3a9f33a7}{%
+           family={Davis},
+           familyi={D\bibinitperiod},
+           given={Fred\bibnamedelima D.},
+           giveni={F\bibinitperiod\bibinitdelim D\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{dcb59a9c9bf67cc1c74d13fb3a9f33a7}
+      \strng{fullhash}{dcb59a9c9bf67cc1c74d13fb3a9f33a7}
+      \strng{fullhashraw}{dcb59a9c9bf67cc1c74d13fb3a9f33a7}
+      \strng{bibnamehash}{dcb59a9c9bf67cc1c74d13fb3a9f33a7}
+      \strng{authorbibnamehash}{dcb59a9c9bf67cc1c74d13fb3a9f33a7}
+      \strng{authornamehash}{dcb59a9c9bf67cc1c74d13fb3a9f33a7}
+      \strng{authorfullhash}{dcb59a9c9bf67cc1c74d13fb3a9f33a7}
+      \strng{authorfullhashraw}{dcb59a9c9bf67cc1c74d13fb3a9f33a7}
+      \field{sortinit}{D}
+      \field{sortinithash}{6f385f66841fb5e82009dc833c761848}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{MIS Quarterly}
+      \field{number}{3}
+      \field{title}{Perceived usefulness, perceived ease of use, and user acceptance of information technology}
+      \field{volume}{13}
+      \field{year}{1989}
+      \field{dateera}{ce}
+      \true{nocite}
+      \field{pages}{319\bibrangedash 340}
+      \range{pages}{22}
+      \verb{doi}
+      \verb 10.2307/249008
+      \endverb
+    \endentry
+    \entry{hsb2026a}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=14c138346aca99d40c6444d99a7d9477}{%
+           family={{Hochschule Bremen}},
+           familyi={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \strng{bibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorbibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authornamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \field{extraname}{1}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{extradate}{1}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Fakultät Architektur, Bau und Umwelt}
+      \field{urlday}{5}
+      \field{urlmonth}{9}
+      \field{urlyear}{2026}
+      \field{year}{2026}
+      \field{dateera}{ce}
+      \field{urldateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/architektur-bau-und-umwelt/
+      \endverb
+      \verb{url}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/architektur-bau-und-umwelt/
+      \endverb
+    \endentry
+    \entry{hsb2026b}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=14c138346aca99d40c6444d99a7d9477}{%
+           family={{Hochschule Bremen}},
+           familyi={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \strng{bibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorbibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authornamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \field{extraname}{2}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{extradate}{2}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Fakultät Elektrotechnik und Informatik}
+      \field{urlday}{4}
+      \field{urlmonth}{9}
+      \field{urlyear}{2026}
+      \field{year}{2026}
+      \field{dateera}{ce}
+      \field{urldateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/elektrotechnik-und-informatik/
+      \endverb
+      \verb{url}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/elektrotechnik-und-informatik/
+      \endverb
+    \endentry
+    \entry{hsb2026c}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=14c138346aca99d40c6444d99a7d9477}{%
+           family={{Hochschule Bremen}},
+           familyi={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \strng{bibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorbibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authornamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \field{extraname}{3}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{extradate}{3}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Fakultät Gesellschaftswissenschaften}
+      \field{urlday}{5}
+      \field{urlmonth}{9}
+      \field{urlyear}{2026}
+      \field{year}{2026}
+      \field{dateera}{ce}
+      \field{urldateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/gesellschaftswissenschaften/
+      \endverb
+      \verb{url}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/gesellschaftswissenschaften/
+      \endverb
+    \endentry
+    \entry{hsb2026d}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=14c138346aca99d40c6444d99a7d9477}{%
+           family={{Hochschule Bremen}},
+           familyi={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \strng{bibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorbibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authornamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \field{extraname}{4}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{extradate}{4}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Fakultät Natur und Technik}
+      \field{urlday}{5}
+      \field{urlmonth}{9}
+      \field{urlyear}{2026}
+      \field{year}{2026}
+      \field{dateera}{ce}
+      \field{urldateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/natur-und-technik/
+      \endverb
+      \verb{url}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/natur-und-technik/
+      \endverb
+    \endentry
+    \entry{hsb2026e}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=14c138346aca99d40c6444d99a7d9477}{%
+           family={{Hochschule Bremen}},
+           familyi={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \strng{bibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorbibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authornamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \field{extraname}{5}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{extradate}{5}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Fakultät Wirtschaftswissenschaften}
+      \field{urlday}{4}
+      \field{urlmonth}{9}
+      \field{urlyear}{2026}
+      \field{year}{2026}
+      \field{dateera}{ce}
+      \field{urldateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/wirtschaftswissenschaften/
+      \endverb
+      \verb{url}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/wirtschaftswissenschaften/
+      \endverb
+    \endentry
+    \entry{hfg}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=4eb4f3273aee62c319e0d6ec1409b721}{%
+           family={{Hochschule für Gestaltung Schwäbisch Gmünd}},
+           familyi={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{4eb4f3273aee62c319e0d6ec1409b721}
+      \strng{fullhash}{4eb4f3273aee62c319e0d6ec1409b721}
+      \strng{fullhashraw}{4eb4f3273aee62c319e0d6ec1409b721}
+      \strng{bibnamehash}{4eb4f3273aee62c319e0d6ec1409b721}
+      \strng{authorbibnamehash}{4eb4f3273aee62c319e0d6ec1409b721}
+      \strng{authornamehash}{4eb4f3273aee62c319e0d6ec1409b721}
+      \strng{authorfullhash}{4eb4f3273aee62c319e0d6ec1409b721}
+      \strng{authorfullhashraw}{4eb4f3273aee62c319e0d6ec1409b721}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{labeldatesource}{nodate}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Portfolio-Portal der Hochschule für Gestaltung Schwäbisch Gmünd}
+      \field{urlday}{5}
+      \field{urlmonth}{9}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://portfolio.hfg-gmuend.de/
+      \endverb
+      \verb{url}
+      \verb https://portfolio.hfg-gmuend.de/
+      \endverb
+    \endentry
+    \entry{lewissauro2018}{article}{}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=f106a761a58d4041d103c16ce4f11cf1}{%
+           family={Lewis},
+           familyi={L\bibinitperiod},
+           given={James\bibnamedelima R.},
+           giveni={J\bibinitperiod\bibinitdelim R\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=f24e1723133e0393dfd185716f640bed}{%
+           family={Sauro},
+           familyi={S\bibinitperiod},
+           given={Jeff},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{aa5a5c3e3802ee22e51a0aad4e0f9e34}
+      \strng{fullhash}{aa5a5c3e3802ee22e51a0aad4e0f9e34}
+      \strng{fullhashraw}{aa5a5c3e3802ee22e51a0aad4e0f9e34}
+      \strng{bibnamehash}{aa5a5c3e3802ee22e51a0aad4e0f9e34}
+      \strng{authorbibnamehash}{aa5a5c3e3802ee22e51a0aad4e0f9e34}
+      \strng{authornamehash}{aa5a5c3e3802ee22e51a0aad4e0f9e34}
+      \strng{authorfullhash}{aa5a5c3e3802ee22e51a0aad4e0f9e34}
+      \strng{authorfullhashraw}{aa5a5c3e3802ee22e51a0aad4e0f9e34}
+      \field{sortinit}{L}
+      \field{sortinithash}{7c47d417cecb1f4bd38d1825c427a61a}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Journal of Usability Studies}
+      \field{number}{3}
+      \field{title}{Item benchmarks for the {System Usability Scale}}
+      \field{volume}{13}
+      \field{year}{2018}
+      \field{dateera}{ce}
+      \true{nocite}
+      \field{pages}{158\bibrangedash 167}
+      \range{pages}{10}
+    \endentry
+    \entry{lorenzo2005}{report}{}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=663b9877c458980c8657f3a1f84bf98a}{%
+           family={Lorenzo},
+           familyi={L\bibinitperiod},
+           given={George},
+           giveni={G\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=cb5f59b61c70d2455585d15ec6b94c6a}{%
+           family={Ittelson},
+           familyi={I\bibinitperiod},
+           given={John},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{institution}{1}{%
+        {EDUCAUSE Learning Initiative}%
+      }
+      \strng{namehash}{b662fa4f8ea8df39cf04cbbbd60f1da1}
+      \strng{fullhash}{b662fa4f8ea8df39cf04cbbbd60f1da1}
+      \strng{fullhashraw}{b662fa4f8ea8df39cf04cbbbd60f1da1}
+      \strng{bibnamehash}{b662fa4f8ea8df39cf04cbbbd60f1da1}
+      \strng{authorbibnamehash}{b662fa4f8ea8df39cf04cbbbd60f1da1}
+      \strng{authornamehash}{b662fa4f8ea8df39cf04cbbbd60f1da1}
+      \strng{authorfullhash}{b662fa4f8ea8df39cf04cbbbd60f1da1}
+      \strng{authorfullhashraw}{b662fa4f8ea8df39cf04cbbbd60f1da1}
+      \field{sortinit}{L}
+      \field{sortinithash}{7c47d417cecb1f4bd38d1825c427a61a}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{number}{1}
+      \field{title}{An overview of e-portfolios}
+      \field{type}{ELI Paper}
+      \field{year}{2005}
+      \field{dateera}{ce}
+      \true{nocite}
+    \endentry
+    \entry{mahasneh2020}{article}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=173069a4d90471e3a746b48dfa409a0a}{%
+           family={Mahasneh},
+           familyi={M\bibinitperiod},
+           given={Omar\bibnamedelimb M.\bibnamedelimi K.},
+           giveni={O\bibinitperiod\bibinitdelim M\bibinitperiod\bibinitdelim K\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{173069a4d90471e3a746b48dfa409a0a}
+      \strng{fullhash}{173069a4d90471e3a746b48dfa409a0a}
+      \strng{fullhashraw}{173069a4d90471e3a746b48dfa409a0a}
+      \strng{bibnamehash}{173069a4d90471e3a746b48dfa409a0a}
+      \strng{authorbibnamehash}{173069a4d90471e3a746b48dfa409a0a}
+      \strng{authornamehash}{173069a4d90471e3a746b48dfa409a0a}
+      \strng{authorfullhash}{173069a4d90471e3a746b48dfa409a0a}
+      \strng{authorfullhashraw}{173069a4d90471e3a746b48dfa409a0a}
+      \field{sortinit}{M}
+      \field{sortinithash}{4625c616857f13d17ce56f7d4f97d451}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Journal of Education and e-Learning Research}
+      \field{number}{1}
+      \field{title}{A proposed model for the university students' e-portfolio}
+      \field{volume}{7}
+      \field{year}{2020}
+      \field{dateera}{ce}
+      \true{nocite}
+      \field{pages}{28\bibrangedash 33}
+      \range{pages}{6}
+      \verb{doi}
+      \verb 10.20448/journal.509.2020.71.28.33
+      \endverb
+    \endentry
+    \entry{mckenney2020}{thesis}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=e523df53404156ac34d44fdebabb47ed}{%
+           family={McKenney},
+           familyi={M\bibinitperiod},
+           given={C.\bibnamedelimi E.},
+           giveni={C\bibinitperiod\bibinitdelim E\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{institution}{1}{%
+        {Texas Tech University}%
+      }
+      \strng{namehash}{e523df53404156ac34d44fdebabb47ed}
+      \strng{fullhash}{e523df53404156ac34d44fdebabb47ed}
+      \strng{fullhashraw}{e523df53404156ac34d44fdebabb47ed}
+      \strng{bibnamehash}{e523df53404156ac34d44fdebabb47ed}
+      \strng{authorbibnamehash}{e523df53404156ac34d44fdebabb47ed}
+      \strng{authornamehash}{e523df53404156ac34d44fdebabb47ed}
+      \strng{authorfullhash}{e523df53404156ac34d44fdebabb47ed}
+      \strng{authorfullhashraw}{e523df53404156ac34d44fdebabb47ed}
+      \field{sortinit}{M}
+      \field{sortinithash}{4625c616857f13d17ce56f7d4f97d451}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Color in higher education branding: A content analysis of visual identity guidelines \& website design}
+      \field{type}{Masterarbeit}
+      \field{year}{2020}
+      \field{dateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://hdl.handle.net/2346/86682
+      \endverb
+      \verb{url}
+      \verb https://hdl.handle.net/2346/86682
+      \endverb
+    \endentry
+    \entry{nielsen1994a}{article}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=753054f71283d85f82cda8e35daf6bac}{%
+           family={Nielsen},
+           familyi={N\bibinitperiod},
+           given={Jakob},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {ACM}%
+      }
+      \strng{namehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \strng{bibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorbibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authornamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \field{extraname}{1}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{extradate}{1}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Proceedings of the SIGCHI Conference on Human Factors in Computing Systems}
+      \field{title}{Enhancing the explanatory power of usability heuristics}
+      \field{year}{1994}
+      \field{dateera}{ce}
+      \true{nocite}
+      \field{pages}{152\bibrangedash 158}
+      \range{pages}{7}
+      \verb{doi}
+      \verb 10.1145/191666.191729
+      \endverb
+    \endentry
+    \entry{nielsen1994b}{book}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=753054f71283d85f82cda8e35daf6bac}{%
+           family={Nielsen},
+           familyi={N\bibinitperiod},
+           given={Jakob},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Morgan Kaufmann}%
+      }
+      \strng{namehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \strng{bibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorbibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authornamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \field{extraname}{2}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{extradate}{2}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Usability engineering}
+      \field{year}{1994}
+      \field{dateera}{ce}
+      \true{nocite}
+    \endentry
+    \entry{nielsen1994c}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=753054f71283d85f82cda8e35daf6bac}{%
+           family={Nielsen},
+           familyi={N\bibinitperiod},
+           given={Jakob},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{organization}{1}{%
+        {Nielsen Norman Group}%
+      }
+      \strng{namehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \strng{bibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorbibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authornamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \field{extraname}{3}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{extradate}{3}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{day}{1}
+      \field{month}{11}
+      \field{title}{Severity ratings for usability problems}
+      \field{year}{1994}
+      \field{dateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://www.nngroup.com/articles/how-to-rate-the-severity-of-usability-problems/
+      \endverb
+      \verb{url}
+      \verb https://www.nngroup.com/articles/how-to-rate-the-severity-of-usability-problems/
+      \endverb
+    \endentry
+    \entry{nielsen2000}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=753054f71283d85f82cda8e35daf6bac}{%
+           family={Nielsen},
+           familyi={N\bibinitperiod},
+           given={Jakob},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{organization}{1}{%
+        {Nielsen Norman Group}%
+      }
+      \strng{namehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \strng{bibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorbibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authornamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \field{extraname}{4}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{day}{18}
+      \field{month}{3}
+      \field{title}{Why you only need to test with 5 users}
+      \field{year}{2000}
+      \field{dateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://www.nngroup.com/articles/why-you-only-need-to-test-with-5-users/
+      \endverb
+      \verb{url}
+      \verb https://www.nngroup.com/articles/why-you-only-need-to-test-with-5-users/
+      \endverb
+    \endentry
+    \entry{nielsen2024}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=753054f71283d85f82cda8e35daf6bac}{%
+           family={Nielsen},
+           familyi={N\bibinitperiod},
+           given={Jakob},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{organization}{1}{%
+        {Nielsen Norman Group}%
+      }
+      \strng{namehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \strng{bibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorbibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authornamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \field{extraname}{5}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{10 usability heuristics for user interface design}
+      \field{year}{2024}
+      \field{dateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://www.nngroup.com/articles/ten-usability-heuristics/
+      \endverb
+      \verb{url}
+      \verb https://www.nngroup.com/articles/ten-usability-heuristics/
+      \endverb
+    \endentry
+    \entry{nielsen1990}{article}{}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=753054f71283d85f82cda8e35daf6bac}{%
+           family={Nielsen},
+           familyi={N\bibinitperiod},
+           given={Jakob},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=5121fc884cb68ab1735048c6f4b01c00}{%
+           family={Molich},
+           familyi={M\bibinitperiod},
+           given={Rolf},
+           giveni={R\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {ACM}%
+      }
+      \strng{namehash}{93f25eae6b00f04b1c168be0f628288f}
+      \strng{fullhash}{93f25eae6b00f04b1c168be0f628288f}
+      \strng{fullhashraw}{93f25eae6b00f04b1c168be0f628288f}
+      \strng{bibnamehash}{93f25eae6b00f04b1c168be0f628288f}
+      \strng{authorbibnamehash}{93f25eae6b00f04b1c168be0f628288f}
+      \strng{authornamehash}{93f25eae6b00f04b1c168be0f628288f}
+      \strng{authorfullhash}{93f25eae6b00f04b1c168be0f628288f}
+      \strng{authorfullhashraw}{93f25eae6b00f04b1c168be0f628288f}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Proceedings of the SIGCHI Conference on Human Factors in Computing Systems}
+      \field{title}{Heuristic evaluation of user interfaces}
+      \field{year}{1990}
+      \field{dateera}{ce}
+      \true{nocite}
+      \field{pages}{249\bibrangedash 256}
+      \range{pages}{8}
+      \verb{doi}
+      \verb 10.1145/97243.97281
+      \endverb
+    \endentry
+    \entry{shroff2011}{article}{}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=80f1695aeab00df94c66bf57671e3f1c}{%
+           family={Shroff},
+           familyi={S\bibinitperiod},
+           given={Ronnie\bibnamedelima H.},
+           giveni={R\bibinitperiod\bibinitdelim H\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=9264166e5095a82ea2e60e4eba5150b8}{%
+           family={Deneen},
+           familyi={D\bibinitperiod},
+           given={Christopher\bibnamedelima C.},
+           giveni={C\bibinitperiod\bibinitdelim C\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=d97924bca36a63c1ebf96e8a5e7b7e27}{%
+           family={Ng},
+           familyi={N\bibinitperiod},
+           given={Eugenia\bibnamedelimb M.\bibnamedelimi W.},
+           giveni={E\bibinitperiod\bibinitdelim M\bibinitperiod\bibinitdelim W\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{15ef023e0d71226aba15c8f3d429b3f5}
+      \strng{fullhash}{5e48d65891dd1088f8b24b54255ee4e1}
+      \strng{fullhashraw}{5e48d65891dd1088f8b24b54255ee4e1}
+      \strng{bibnamehash}{5e48d65891dd1088f8b24b54255ee4e1}
+      \strng{authorbibnamehash}{5e48d65891dd1088f8b24b54255ee4e1}
+      \strng{authornamehash}{15ef023e0d71226aba15c8f3d429b3f5}
+      \strng{authorfullhash}{5e48d65891dd1088f8b24b54255ee4e1}
+      \strng{authorfullhashraw}{5e48d65891dd1088f8b24b54255ee4e1}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Australasian Journal of Educational Technology}
+      \field{number}{4}
+      \field{title}{Analysis of the technology acceptance model in examining students' behavioural intention to use an e-portfolio system}
+      \field{volume}{27}
+      \field{year}{2011}
+      \field{dateera}{ce}
+      \true{nocite}
+      \field{pages}{600\bibrangedash 618}
+      \range{pages}{19}
+      \verb{doi}
+      \verb 10.14742/ajet.940
+      \endverb
+    \endentry
+    \entry{w3c2023}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=bdea812935506778c291249971f80655}{%
+           family={{World Wide Web Consortium}},
+           familyi={W\bibinitperiod}}}%
+      }
+      \strng{namehash}{bdea812935506778c291249971f80655}
+      \strng{fullhash}{bdea812935506778c291249971f80655}
+      \strng{fullhashraw}{bdea812935506778c291249971f80655}
+      \strng{bibnamehash}{bdea812935506778c291249971f80655}
+      \strng{authorbibnamehash}{bdea812935506778c291249971f80655}
+      \strng{authornamehash}{bdea812935506778c291249971f80655}
+      \strng{authorfullhash}{bdea812935506778c291249971f80655}
+      \strng{authorfullhashraw}{bdea812935506778c291249971f80655}
+      \field{sortinit}{W}
+      \field{sortinithash}{4315d78024d0cea9b57a0c6f0e35ed0d}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Web Content Accessibility Guidelines ({WCAG}) 2.2}
+      \field{year}{2023}
+      \field{dateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://www.w3.org/TR/WCAG22/
+      \endverb
+      \verb{url}
+      \verb https://www.w3.org/TR/WCAG22/
+      \endverb
+    \endentry
+  \enddatalist
+  \datalist[entry]{apa/global//global/global/global}
+    \entry{brooke1996}{inbook}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=813064283275c281401d7a7483420c67}{%
+           family={Brooke},
+           familyi={B\bibinitperiod},
+           given={John},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \name{editor}{4}{}{%
+        {{hash=f4dd6dd0057b9630f3f5689c42ce3347}{%
+           family={Jordan},
+           familyi={J\bibinitperiod},
+           given={Patrick\bibnamedelima W.},
+           giveni={P\bibinitperiod\bibinitdelim W\bibinitperiod}}}%
+        {{hash=ac86fe4c53a0b662f004a5b8ffb38bdb}{%
+           family={Thomas},
+           familyi={T\bibinitperiod},
+           given={B.},
+           giveni={B\bibinitperiod}}}%
+        {{hash=d5d6227df47b81a791920b374329845f}{%
+           family={Weerdmeester},
+           familyi={W\bibinitperiod},
+           given={Bernard\bibnamedelima A.},
+           giveni={B\bibinitperiod\bibinitdelim A\bibinitperiod}}}%
+        {{hash=8b8a10905f0d3cfa60d8b1742260677d}{%
+           family={McClelland},
+           familyi={M\bibinitperiod},
+           given={Ian\bibnamedelima L.},
+           giveni={I\bibinitperiod\bibinitdelim L\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Taylor \& Francis}%
+      }
+      \strng{namehash}{813064283275c281401d7a7483420c67}
+      \strng{fullhash}{813064283275c281401d7a7483420c67}
+      \strng{fullhashraw}{813064283275c281401d7a7483420c67}
+      \strng{bibnamehash}{813064283275c281401d7a7483420c67}
+      \strng{authorbibnamehash}{813064283275c281401d7a7483420c67}
+      \strng{authornamehash}{813064283275c281401d7a7483420c67}
+      \strng{authorfullhash}{813064283275c281401d7a7483420c67}
+      \strng{authorfullhashraw}{813064283275c281401d7a7483420c67}
+      \strng{editorbibnamehash}{57dd9923b77fc22e3baa4765c3a768a9}
+      \strng{editornamehash}{161df31cfda2ca59b22c7e189ab9aca4}
+      \strng{editorfullhash}{57dd9923b77fc22e3baa4765c3a768a9}
+      \strng{editorfullhashraw}{57dd9923b77fc22e3baa4765c3a768a9}
+      \field{sortinit}{B}
+      \field{sortinithash}{d7095fff47cda75ca2589920aae98399}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Usability evaluation in industry}
+      \field{title}{{SUS}: A quick and dirty usability scale}
+      \field{year}{1996}
+      \field{dateera}{ce}
+      \true{nocite}
+      \field{pages}{189\bibrangedash 194}
+      \range{pages}{6}
+    \endentry
+    \entry{davis1989}{article}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=dcb59a9c9bf67cc1c74d13fb3a9f33a7}{%
+           family={Davis},
+           familyi={D\bibinitperiod},
+           given={Fred\bibnamedelima D.},
+           giveni={F\bibinitperiod\bibinitdelim D\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{dcb59a9c9bf67cc1c74d13fb3a9f33a7}
+      \strng{fullhash}{dcb59a9c9bf67cc1c74d13fb3a9f33a7}
+      \strng{fullhashraw}{dcb59a9c9bf67cc1c74d13fb3a9f33a7}
+      \strng{bibnamehash}{dcb59a9c9bf67cc1c74d13fb3a9f33a7}
+      \strng{authorbibnamehash}{dcb59a9c9bf67cc1c74d13fb3a9f33a7}
+      \strng{authornamehash}{dcb59a9c9bf67cc1c74d13fb3a9f33a7}
+      \strng{authorfullhash}{dcb59a9c9bf67cc1c74d13fb3a9f33a7}
+      \strng{authorfullhashraw}{dcb59a9c9bf67cc1c74d13fb3a9f33a7}
+      \field{sortinit}{D}
+      \field{sortinithash}{6f385f66841fb5e82009dc833c761848}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{MIS Quarterly}
+      \field{number}{3}
+      \field{title}{Perceived usefulness, perceived ease of use, and user acceptance of information technology}
+      \field{volume}{13}
+      \field{year}{1989}
+      \field{dateera}{ce}
+      \true{nocite}
+      \field{pages}{319\bibrangedash 340}
+      \range{pages}{22}
+      \verb{doi}
+      \verb 10.2307/249008
+      \endverb
+    \endentry
+    \entry{hsb2026a}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=14c138346aca99d40c6444d99a7d9477}{%
+           family={{Hochschule Bremen}},
+           familyi={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \strng{bibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorbibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authornamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \field{extraname}{1}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{extradate}{1}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Fakultät Architektur, Bau und Umwelt}
+      \field{urlday}{5}
+      \field{urlmonth}{9}
+      \field{urlyear}{2026}
+      \field{year}{2026}
+      \field{dateera}{ce}
+      \field{urldateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/architektur-bau-und-umwelt/
+      \endverb
+      \verb{url}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/architektur-bau-und-umwelt/
+      \endverb
+    \endentry
+    \entry{hsb2026b}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=14c138346aca99d40c6444d99a7d9477}{%
+           family={{Hochschule Bremen}},
+           familyi={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \strng{bibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorbibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authornamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \field{extraname}{2}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{extradate}{2}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Fakultät Elektrotechnik und Informatik}
+      \field{urlday}{4}
+      \field{urlmonth}{9}
+      \field{urlyear}{2026}
+      \field{year}{2026}
+      \field{dateera}{ce}
+      \field{urldateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/elektrotechnik-und-informatik/
+      \endverb
+      \verb{url}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/elektrotechnik-und-informatik/
+      \endverb
+    \endentry
+    \entry{hsb2026c}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=14c138346aca99d40c6444d99a7d9477}{%
+           family={{Hochschule Bremen}},
+           familyi={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \strng{bibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorbibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authornamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \field{extraname}{3}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{extradate}{3}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Fakultät Gesellschaftswissenschaften}
+      \field{urlday}{5}
+      \field{urlmonth}{9}
+      \field{urlyear}{2026}
+      \field{year}{2026}
+      \field{dateera}{ce}
+      \field{urldateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/gesellschaftswissenschaften/
+      \endverb
+      \verb{url}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/gesellschaftswissenschaften/
+      \endverb
+    \endentry
+    \entry{hsb2026d}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=14c138346aca99d40c6444d99a7d9477}{%
+           family={{Hochschule Bremen}},
+           familyi={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \strng{bibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorbibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authornamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \field{extraname}{4}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{extradate}{4}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Fakultät Natur und Technik}
+      \field{urlday}{5}
+      \field{urlmonth}{9}
+      \field{urlyear}{2026}
+      \field{year}{2026}
+      \field{dateera}{ce}
+      \field{urldateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/natur-und-technik/
+      \endverb
+      \verb{url}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/natur-und-technik/
+      \endverb
+    \endentry
+    \entry{hsb2026e}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=14c138346aca99d40c6444d99a7d9477}{%
+           family={{Hochschule Bremen}},
+           familyi={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{fullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \strng{bibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorbibnamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authornamehash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhash}{14c138346aca99d40c6444d99a7d9477}
+      \strng{authorfullhashraw}{14c138346aca99d40c6444d99a7d9477}
+      \field{extraname}{5}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{extradate}{5}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Fakultät Wirtschaftswissenschaften}
+      \field{urlday}{4}
+      \field{urlmonth}{9}
+      \field{urlyear}{2026}
+      \field{year}{2026}
+      \field{dateera}{ce}
+      \field{urldateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/wirtschaftswissenschaften/
+      \endverb
+      \verb{url}
+      \verb https://www.hs-bremen.de/die-hsb/fakultaeten/wirtschaftswissenschaften/
+      \endverb
+    \endentry
+    \entry{hfg}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=4eb4f3273aee62c319e0d6ec1409b721}{%
+           family={{Hochschule für Gestaltung Schwäbisch Gmünd}},
+           familyi={H\bibinitperiod}}}%
+      }
+      \strng{namehash}{4eb4f3273aee62c319e0d6ec1409b721}
+      \strng{fullhash}{4eb4f3273aee62c319e0d6ec1409b721}
+      \strng{fullhashraw}{4eb4f3273aee62c319e0d6ec1409b721}
+      \strng{bibnamehash}{4eb4f3273aee62c319e0d6ec1409b721}
+      \strng{authorbibnamehash}{4eb4f3273aee62c319e0d6ec1409b721}
+      \strng{authornamehash}{4eb4f3273aee62c319e0d6ec1409b721}
+      \strng{authorfullhash}{4eb4f3273aee62c319e0d6ec1409b721}
+      \strng{authorfullhashraw}{4eb4f3273aee62c319e0d6ec1409b721}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{labeldatesource}{nodate}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Portfolio-Portal der Hochschule für Gestaltung Schwäbisch Gmünd}
+      \field{urlday}{5}
+      \field{urlmonth}{9}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://portfolio.hfg-gmuend.de/
+      \endverb
+      \verb{url}
+      \verb https://portfolio.hfg-gmuend.de/
+      \endverb
+    \endentry
+    \entry{lewissauro2018}{article}{}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=f106a761a58d4041d103c16ce4f11cf1}{%
+           family={Lewis},
+           familyi={L\bibinitperiod},
+           given={James\bibnamedelima R.},
+           giveni={J\bibinitperiod\bibinitdelim R\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=f24e1723133e0393dfd185716f640bed}{%
+           family={Sauro},
+           familyi={S\bibinitperiod},
+           given={Jeff},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{aa5a5c3e3802ee22e51a0aad4e0f9e34}
+      \strng{fullhash}{aa5a5c3e3802ee22e51a0aad4e0f9e34}
+      \strng{fullhashraw}{aa5a5c3e3802ee22e51a0aad4e0f9e34}
+      \strng{bibnamehash}{aa5a5c3e3802ee22e51a0aad4e0f9e34}
+      \strng{authorbibnamehash}{aa5a5c3e3802ee22e51a0aad4e0f9e34}
+      \strng{authornamehash}{aa5a5c3e3802ee22e51a0aad4e0f9e34}
+      \strng{authorfullhash}{aa5a5c3e3802ee22e51a0aad4e0f9e34}
+      \strng{authorfullhashraw}{aa5a5c3e3802ee22e51a0aad4e0f9e34}
+      \field{sortinit}{L}
+      \field{sortinithash}{7c47d417cecb1f4bd38d1825c427a61a}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Journal of Usability Studies}
+      \field{number}{3}
+      \field{title}{Item benchmarks for the {System Usability Scale}}
+      \field{volume}{13}
+      \field{year}{2018}
+      \field{dateera}{ce}
+      \true{nocite}
+      \field{pages}{158\bibrangedash 167}
+      \range{pages}{10}
+    \endentry
+    \entry{lorenzo2005}{report}{}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=663b9877c458980c8657f3a1f84bf98a}{%
+           family={Lorenzo},
+           familyi={L\bibinitperiod},
+           given={George},
+           giveni={G\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=cb5f59b61c70d2455585d15ec6b94c6a}{%
+           family={Ittelson},
+           familyi={I\bibinitperiod},
+           given={John},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{institution}{1}{%
+        {EDUCAUSE Learning Initiative}%
+      }
+      \strng{namehash}{b662fa4f8ea8df39cf04cbbbd60f1da1}
+      \strng{fullhash}{b662fa4f8ea8df39cf04cbbbd60f1da1}
+      \strng{fullhashraw}{b662fa4f8ea8df39cf04cbbbd60f1da1}
+      \strng{bibnamehash}{b662fa4f8ea8df39cf04cbbbd60f1da1}
+      \strng{authorbibnamehash}{b662fa4f8ea8df39cf04cbbbd60f1da1}
+      \strng{authornamehash}{b662fa4f8ea8df39cf04cbbbd60f1da1}
+      \strng{authorfullhash}{b662fa4f8ea8df39cf04cbbbd60f1da1}
+      \strng{authorfullhashraw}{b662fa4f8ea8df39cf04cbbbd60f1da1}
+      \field{sortinit}{L}
+      \field{sortinithash}{7c47d417cecb1f4bd38d1825c427a61a}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{number}{1}
+      \field{title}{An overview of e-portfolios}
+      \field{type}{ELI Paper}
+      \field{year}{2005}
+      \field{dateera}{ce}
+      \true{nocite}
+    \endentry
+    \entry{mahasneh2020}{article}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=173069a4d90471e3a746b48dfa409a0a}{%
+           family={Mahasneh},
+           familyi={M\bibinitperiod},
+           given={Omar\bibnamedelimb M.\bibnamedelimi K.},
+           giveni={O\bibinitperiod\bibinitdelim M\bibinitperiod\bibinitdelim K\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{173069a4d90471e3a746b48dfa409a0a}
+      \strng{fullhash}{173069a4d90471e3a746b48dfa409a0a}
+      \strng{fullhashraw}{173069a4d90471e3a746b48dfa409a0a}
+      \strng{bibnamehash}{173069a4d90471e3a746b48dfa409a0a}
+      \strng{authorbibnamehash}{173069a4d90471e3a746b48dfa409a0a}
+      \strng{authornamehash}{173069a4d90471e3a746b48dfa409a0a}
+      \strng{authorfullhash}{173069a4d90471e3a746b48dfa409a0a}
+      \strng{authorfullhashraw}{173069a4d90471e3a746b48dfa409a0a}
+      \field{sortinit}{M}
+      \field{sortinithash}{4625c616857f13d17ce56f7d4f97d451}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Journal of Education and e-Learning Research}
+      \field{number}{1}
+      \field{title}{A proposed model for the university students' e-portfolio}
+      \field{volume}{7}
+      \field{year}{2020}
+      \field{dateera}{ce}
+      \true{nocite}
+      \field{pages}{28\bibrangedash 33}
+      \range{pages}{6}
+      \verb{doi}
+      \verb 10.20448/journal.509.2020.71.28.33
+      \endverb
+    \endentry
+    \entry{mckenney2020}{thesis}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=e523df53404156ac34d44fdebabb47ed}{%
+           family={McKenney},
+           familyi={M\bibinitperiod},
+           given={C.\bibnamedelimi E.},
+           giveni={C\bibinitperiod\bibinitdelim E\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{institution}{1}{%
+        {Texas Tech University}%
+      }
+      \strng{namehash}{e523df53404156ac34d44fdebabb47ed}
+      \strng{fullhash}{e523df53404156ac34d44fdebabb47ed}
+      \strng{fullhashraw}{e523df53404156ac34d44fdebabb47ed}
+      \strng{bibnamehash}{e523df53404156ac34d44fdebabb47ed}
+      \strng{authorbibnamehash}{e523df53404156ac34d44fdebabb47ed}
+      \strng{authornamehash}{e523df53404156ac34d44fdebabb47ed}
+      \strng{authorfullhash}{e523df53404156ac34d44fdebabb47ed}
+      \strng{authorfullhashraw}{e523df53404156ac34d44fdebabb47ed}
+      \field{sortinit}{M}
+      \field{sortinithash}{4625c616857f13d17ce56f7d4f97d451}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Color in higher education branding: A content analysis of visual identity guidelines \& website design}
+      \field{type}{Masterarbeit}
+      \field{year}{2020}
+      \field{dateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://hdl.handle.net/2346/86682
+      \endverb
+      \verb{url}
+      \verb https://hdl.handle.net/2346/86682
+      \endverb
+    \endentry
+    \entry{nielsen1994a}{article}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=753054f71283d85f82cda8e35daf6bac}{%
+           family={Nielsen},
+           familyi={N\bibinitperiod},
+           given={Jakob},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {ACM}%
+      }
+      \strng{namehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \strng{bibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorbibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authornamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \field{extraname}{1}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{extradate}{1}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Proceedings of the SIGCHI Conference on Human Factors in Computing Systems}
+      \field{title}{Enhancing the explanatory power of usability heuristics}
+      \field{year}{1994}
+      \field{dateera}{ce}
+      \true{nocite}
+      \field{pages}{152\bibrangedash 158}
+      \range{pages}{7}
+      \verb{doi}
+      \verb 10.1145/191666.191729
+      \endverb
+    \endentry
+    \entry{nielsen1994b}{book}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=753054f71283d85f82cda8e35daf6bac}{%
+           family={Nielsen},
+           familyi={N\bibinitperiod},
+           given={Jakob},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Morgan Kaufmann}%
+      }
+      \strng{namehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \strng{bibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorbibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authornamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \field{extraname}{2}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{extradate}{2}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Usability engineering}
+      \field{year}{1994}
+      \field{dateera}{ce}
+      \true{nocite}
+    \endentry
+    \entry{nielsen1994c}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=753054f71283d85f82cda8e35daf6bac}{%
+           family={Nielsen},
+           familyi={N\bibinitperiod},
+           given={Jakob},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{organization}{1}{%
+        {Nielsen Norman Group}%
+      }
+      \strng{namehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \strng{bibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorbibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authornamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \field{extraname}{3}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{extradate}{3}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{day}{1}
+      \field{month}{11}
+      \field{title}{Severity ratings for usability problems}
+      \field{year}{1994}
+      \field{dateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://www.nngroup.com/articles/how-to-rate-the-severity-of-usability-problems/
+      \endverb
+      \verb{url}
+      \verb https://www.nngroup.com/articles/how-to-rate-the-severity-of-usability-problems/
+      \endverb
+    \endentry
+    \entry{nielsen2000}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=753054f71283d85f82cda8e35daf6bac}{%
+           family={Nielsen},
+           familyi={N\bibinitperiod},
+           given={Jakob},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{organization}{1}{%
+        {Nielsen Norman Group}%
+      }
+      \strng{namehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \strng{bibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorbibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authornamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \field{extraname}{4}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{day}{18}
+      \field{month}{3}
+      \field{title}{Why you only need to test with 5 users}
+      \field{year}{2000}
+      \field{dateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://www.nngroup.com/articles/why-you-only-need-to-test-with-5-users/
+      \endverb
+      \verb{url}
+      \verb https://www.nngroup.com/articles/why-you-only-need-to-test-with-5-users/
+      \endverb
+    \endentry
+    \entry{nielsen2024}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=753054f71283d85f82cda8e35daf6bac}{%
+           family={Nielsen},
+           familyi={N\bibinitperiod},
+           given={Jakob},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{organization}{1}{%
+        {Nielsen Norman Group}%
+      }
+      \strng{namehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{fullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \strng{bibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorbibnamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authornamehash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhash}{753054f71283d85f82cda8e35daf6bac}
+      \strng{authorfullhashraw}{753054f71283d85f82cda8e35daf6bac}
+      \field{extraname}{5}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{10 usability heuristics for user interface design}
+      \field{year}{2024}
+      \field{dateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://www.nngroup.com/articles/ten-usability-heuristics/
+      \endverb
+      \verb{url}
+      \verb https://www.nngroup.com/articles/ten-usability-heuristics/
+      \endverb
+    \endentry
+    \entry{nielsen1990}{article}{}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=753054f71283d85f82cda8e35daf6bac}{%
+           family={Nielsen},
+           familyi={N\bibinitperiod},
+           given={Jakob},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=5121fc884cb68ab1735048c6f4b01c00}{%
+           family={Molich},
+           familyi={M\bibinitperiod},
+           given={Rolf},
+           giveni={R\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {ACM}%
+      }
+      \strng{namehash}{93f25eae6b00f04b1c168be0f628288f}
+      \strng{fullhash}{93f25eae6b00f04b1c168be0f628288f}
+      \strng{fullhashraw}{93f25eae6b00f04b1c168be0f628288f}
+      \strng{bibnamehash}{93f25eae6b00f04b1c168be0f628288f}
+      \strng{authorbibnamehash}{93f25eae6b00f04b1c168be0f628288f}
+      \strng{authornamehash}{93f25eae6b00f04b1c168be0f628288f}
+      \strng{authorfullhash}{93f25eae6b00f04b1c168be0f628288f}
+      \strng{authorfullhashraw}{93f25eae6b00f04b1c168be0f628288f}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Proceedings of the SIGCHI Conference on Human Factors in Computing Systems}
+      \field{title}{Heuristic evaluation of user interfaces}
+      \field{year}{1990}
+      \field{dateera}{ce}
+      \true{nocite}
+      \field{pages}{249\bibrangedash 256}
+      \range{pages}{8}
+      \verb{doi}
+      \verb 10.1145/97243.97281
+      \endverb
+    \endentry
+    \entry{shroff2011}{article}{}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=80f1695aeab00df94c66bf57671e3f1c}{%
+           family={Shroff},
+           familyi={S\bibinitperiod},
+           given={Ronnie\bibnamedelima H.},
+           giveni={R\bibinitperiod\bibinitdelim H\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=9264166e5095a82ea2e60e4eba5150b8}{%
+           family={Deneen},
+           familyi={D\bibinitperiod},
+           given={Christopher\bibnamedelima C.},
+           giveni={C\bibinitperiod\bibinitdelim C\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=d97924bca36a63c1ebf96e8a5e7b7e27}{%
+           family={Ng},
+           familyi={N\bibinitperiod},
+           given={Eugenia\bibnamedelimb M.\bibnamedelimi W.},
+           giveni={E\bibinitperiod\bibinitdelim M\bibinitperiod\bibinitdelim W\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{15ef023e0d71226aba15c8f3d429b3f5}
+      \strng{fullhash}{5e48d65891dd1088f8b24b54255ee4e1}
+      \strng{fullhashraw}{5e48d65891dd1088f8b24b54255ee4e1}
+      \strng{bibnamehash}{5e48d65891dd1088f8b24b54255ee4e1}
+      \strng{authorbibnamehash}{5e48d65891dd1088f8b24b54255ee4e1}
+      \strng{authornamehash}{15ef023e0d71226aba15c8f3d429b3f5}
+      \strng{authorfullhash}{5e48d65891dd1088f8b24b54255ee4e1}
+      \strng{authorfullhashraw}{5e48d65891dd1088f8b24b54255ee4e1}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Australasian Journal of Educational Technology}
+      \field{number}{4}
+      \field{title}{Analysis of the technology acceptance model in examining students' behavioural intention to use an e-portfolio system}
+      \field{volume}{27}
+      \field{year}{2011}
+      \field{dateera}{ce}
+      \true{nocite}
+      \field{pages}{600\bibrangedash 618}
+      \range{pages}{19}
+      \verb{doi}
+      \verb 10.14742/ajet.940
+      \endverb
+    \endentry
+    \entry{w3c2023}{online}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=bdea812935506778c291249971f80655}{%
+           family={{World Wide Web Consortium}},
+           familyi={W\bibinitperiod}}}%
+      }
+      \strng{namehash}{bdea812935506778c291249971f80655}
+      \strng{fullhash}{bdea812935506778c291249971f80655}
+      \strng{fullhashraw}{bdea812935506778c291249971f80655}
+      \strng{bibnamehash}{bdea812935506778c291249971f80655}
+      \strng{authorbibnamehash}{bdea812935506778c291249971f80655}
+      \strng{authornamehash}{bdea812935506778c291249971f80655}
+      \strng{authorfullhash}{bdea812935506778c291249971f80655}
+      \strng{authorfullhashraw}{bdea812935506778c291249971f80655}
+      \field{sortinit}{W}
+      \field{sortinithash}{4315d78024d0cea9b57a0c6f0e35ed0d}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Web Content Accessibility Guidelines ({WCAG}) 2.2}
+      \field{year}{2023}
+      \field{dateera}{ce}
+      \true{nocite}
+      \verb{urlraw}
+      \verb https://www.w3.org/TR/WCAG22/
+      \endverb
+      \verb{url}
+      \verb https://www.w3.org/TR/WCAG22/
+      \endverb
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+

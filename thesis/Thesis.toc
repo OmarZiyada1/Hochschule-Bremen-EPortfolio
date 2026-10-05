@@ -1,7 +1,66 @@
 \babel@toc {ngerman}{}\relax 
+\contentsline {chapter}{\nonumberline Eigenständigkeitserklärung}{i}{chapter*.1}%
+\contentsline {chapter}{\nonumberline Zusammenfassung}{iii}{chapter*.2}%
+\contentsline {chapter}{\nonumberline Abbildungsverzeichnis}{vii}{chapter*.4}%
+\contentsline {chapter}{\nonumberline Tabellenverzeichnis}{viii}{chapter*.5}%
+\contentsline {chapter}{\nonumberline Abkürzungsverzeichnis}{ix}{chapter*.6}%
 \contentsline {chapter}{\numberline {1}Einleitung}{1}{chapter.1}%
 \contentsline {section}{\numberline {1.1}Problemfeld}{1}{section.1.1}%
 \contentsline {section}{\numberline {1.2}Ziele der Arbeit}{2}{section.1.2}%
 \contentsline {section}{\numberline {1.3}Lösungsansatz}{4}{section.1.3}%
-\contentsline {section}{\numberline {1.4}Aufbau der Arbeit}{6}{section.1.4}%
+\contentsline {section}{\numberline {1.4}Aufbau der Arbeit}{5}{section.1.4}%
+\contentsline {chapter}{\numberline {2}Anforderungsanalyse}{7}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Stakeholder und Zielgruppen}{7}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Methodisches Vorgehen}{8}{section.2.2}%
+\contentsline {section}{\numberline {2.3}Funktionale Anforderungen}{9}{section.2.3}%
+\contentsline {section}{\numberline {2.4}Nicht-funktionale Anforderungen}{11}{section.2.4}%
+\contentsline {section}{\numberline {2.5}User Stories und Use Cases}{12}{section.2.5}%
+\contentsline {chapter}{\numberline {3}Grundlagen und verwandte Arbeiten}{14}{chapter.3}%
+\contentsline {section}{\numberline {3.1}E-Portfolio: Begriffe und Kategorien}{14}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Technologieakzeptanzmodell (TAM)}{15}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Usability und Gestaltungsprinzipien}{16}{section.3.3}%
+\contentsline {section}{\numberline {3.4}Verwandte Arbeiten und Referenzplattformen}{18}{section.3.4}%
+\contentsline {chapter}{\numberline {4}Konzeption}{20}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Systemarchitektur}{20}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Benutzerrollen und Rechtemodell}{20}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Blockbasiertes Inhaltsmodell}{21}{section.4.3}%
+\contentsline {section}{\numberline {4.4}Workflow- und Statussystem}{23}{section.4.4}%
+\contentsline {section}{\numberline {4.5}Design des User Interfaces (Figma-Prototyp)}{24}{section.4.5}%
+\contentsline {section}{\numberline {4.6}Datenbankmodell}{25}{section.4.6}%
+\contentsline {chapter}{\numberline {5}Realisierung}{28}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Wahl der Realisierungsplattform}{28}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Ausgewählte Realisierungsaspekte}{29}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}Der Baustein in der Datenbank}{29}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}Autosave, Versionsfeld und Bearbeitungssperre}{29}{subsection.5.2.2}%
+\contentsline {subsection}{\numberline {5.2.3}Der Editor als zweite Hälfte des Inhaltsmodells}{29}{subsection.5.2.3}%
+\contentsline {subsection}{\numberline {5.2.4}Der Workflow als serverseitige Schranke}{30}{subsection.5.2.4}%
+\contentsline {subsection}{\numberline {5.2.5}Vom Designsystem zur Tokenschicht}{31}{subsection.5.2.5}%
+\contentsline {section}{\numberline {5.3}Qualitätssicherung}{31}{section.5.3}%
+\contentsline {chapter}{\numberline {6}Test}{33}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Testkonzept und Methodik}{33}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Testdesign (Teilnehmende, Aufgaben, Ablauf)}{34}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Durchführung des Usability-Tests}{35}{section.6.3}%
+\contentsline {chapter}{\numberline {7}Evaluation}{39}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Bewertungsrahmen auf Basis der Forschungsliteratur}{39}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Bewertung der Testergebnisse}{40}{section.7.2}%
+\contentsline {subsection}{\numberline {7.2.1}Erfolgsquoten und Auffindbarkeit}{40}{subsection.7.2.1}%
+\contentsline {subsection}{\numberline {7.2.2}Benutzerfreundlichkeit}{41}{subsection.7.2.2}%
+\contentsline {subsection}{\numberline {7.2.3}Vergleich mit der Referenzplattform}{42}{subsection.7.2.3}%
+\contentsline {subsection}{\numberline {7.2.4}Antwort auf die zweite Teilfrage}{43}{subsection.7.2.4}%
+\contentsline {section}{\numberline {7.3}Überprüfung funktionaler Anforderungen}{43}{section.7.3}%
+\contentsline {section}{\numberline {7.4}Überprüfung nicht-funktionaler Anforderungen}{44}{section.7.4}%
+\contentsline {chapter}{\numberline {8}Zusammenfassung und Ausblick}{46}{chapter.8}%
+\contentsline {section}{\numberline {8.1}Zusammenfassung}{46}{section.8.1}%
+\contentsline {subsection}{\numberline {8.1.1}Antwort auf die erste Teilfrage}{46}{subsection.8.1.1}%
+\contentsline {subsection}{\numberline {8.1.2}Antwort auf die zweite Teilfrage}{47}{subsection.8.1.2}%
+\contentsline {subsection}{\numberline {8.1.3}Antwort auf die dritte Teilfrage}{47}{subsection.8.1.3}%
+\contentsline {subsection}{\numberline {8.1.4}Antwort auf die Forschungsfrage}{47}{subsection.8.1.4}%
+\contentsline {subsection}{\numberline {8.1.5}Grenzen der Arbeit}{48}{subsection.8.1.5}%
+\contentsline {section}{\numberline {8.2}Ausblick}{48}{section.8.2}%
+\contentsline {chapter}{\nonumberline Literaturverzeichnis}{50}{chapter*.27}%
+\def \@chapapp {\appendixname }
+\contentsline {chapter}{\numberline {A}User Stories und Use Cases}{52}{appendix.A}%
+\contentsline {chapter}{\numberline {B}Problemliste}{58}{appendix.B}%
+\contentsline {chapter}{\numberline {C}Kennwerte des TAM-Bogens je Block}{61}{appendix.C}%
+\contentsline {chapter}{\numberline {D}Testunterlagen}{62}{appendix.D}%
 \providecommand \tocbasic@end@toc@file {}\tocbasic@end@toc@file 
