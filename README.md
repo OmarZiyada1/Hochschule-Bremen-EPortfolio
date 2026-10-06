@@ -1,7 +1,7 @@
 # E-Portfolio-Portal der Hochschule Bremen (FK4)
 
-Praktischer Teil einer Bachelorthesis an der Hochschule Bremen, Fakultät 4.
-Das System soll Studierenden erlauben, Projektarbeiten als E-Portfolio zu
+Praktischer Teil einer Bachelorthesis an der Hochschule Bremen, Fakultät 4,
+von Omar Ziyada und Mohamad Alaskari. Das System soll Studierenden erlauben, Projektarbeiten als E-Portfolio zu
 veröffentlichen; Redakteur:innen geben Beiträge frei, eine Top-10-Liste hebt
 ausgewählte Projekte hervor. Umgesetzt wird ein Spring-Boot-Backend mit
 PostgreSQL und ein React-Frontend. Das Backend deckt den API-Contract
@@ -32,6 +32,8 @@ Alle Versionen aus `backend/pom.xml` bzw. `frontend/package.json`.
 - `compose.base.yml`: gemeinsame Grundlage; daneben `compose.dev.yml`, `compose.artifact.yml` und `compose.prod.yml`, je eine Betriebsart
 - `.github/workflows/deploy.yml`: testet jeden Pull Request und rollt einen
   Merge nach `main` von selbst auf den Server aus (KAN-101)
+- `deploy/` und `Caddyfile`: Ausrollskript, Serverprüfung und Reverse-Proxy
+  des Produktivservers
 - `eportfolio.ps1`: Menü für Starten, Bauen, Logs, Tests, Saatdaten und Aufräumen
 - `stammdaten-seeder.sh` und `stammdaten-seeder-entfernen.sh`: die fünf
   Fakultäten, 75 Studiengänge und ihre Module, erhoben aus der
@@ -50,8 +52,10 @@ Alle Versionen aus `backend/pom.xml` bzw. `frontend/package.json`.
   Newman ausführbar
 - `Testmaterial/`: Bögen und Aufgabenkarten der Usability-Testwoche samt
   ihrem Generator; gehört zur empirischen Erhebung, nicht zur Anwendung
-- `thesis/`: Textteil der Bachelorarbeit
-- `.claude/`: Projektregeln, Skills und Agents für die Arbeit mit Claude Code
+- `thesis/`: Textteil der Bachelorarbeit (LaTeX, mit fertigem `Thesis.pdf`)
+- `CLAUDE.md` und `.claude/`: Projektregeln, Skills und Agents für die
+  Arbeit mit Claude Code (siehe KI-Angabe in der Eigenständigkeitserklärung)
+- `NOTICE.md`: Namensnennung für verwendete Werke Dritter
 
 ## Schnellstart
 
@@ -210,10 +214,10 @@ Konfiguration: Mail-Adapter=smtp, Absender=...
 
 ## Ausrollen
 
-`main` ist der Produktivstand, `dev` der Entwicklungsstand. Ein Merge nach
-`main` rollt sich selbst aus: die Action testet, baut beide Images, schiebt sie
-nach GHCR, und der Server zieht sie und startet neu. **Ein fehlgeschlagener
-Test oder Build erreicht den Server nie.** Auf `dev` laufen nur die Tests.
+`main` ist der Produktivstand. Ein Merge nach `main` rollt sich selbst aus:
+die Action testet, baut beide Images, schiebt sie nach GHCR, und der Server
+zieht sie und startet neu. **Ein fehlgeschlagener Test oder Build erreicht den
+Server nie.** Auf Pull Requests laufen nur die Tests.
 
 Auf dem Server ist im Normalbetrieb nichts mehr zu tun, auch kein `git pull`:
 die Ausrollung (`deploy/ausrollen.sh`, seit KAN-106) zieht den Checkout auf
@@ -228,6 +232,9 @@ Einrichtung, Secrets, Rollback und die Fehlerbilder der Action stehen in
 [docs/SETUP.md](docs/SETUP.md), Abschnitt 10.
 
 ## Links
+
+Jira und Confluence sind nur mit Zugang zum Atlassian-Bereich des Projekts
+erreichbar.
 
 - Jira-Board: <https://hsb-portfolio.atlassian.net/browse/KAN>
 - Confluence, API-Contract (Seiten-ID 36732929): <https://hsb-portfolio.atlassian.net/wiki/pages/viewpage.action?pageId=36732929>
