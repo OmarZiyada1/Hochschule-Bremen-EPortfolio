@@ -18,31 +18,40 @@
 
 Hiermit versichern wir, \AutorEins{} (Matrikelnummer \MatrikelEins) und \AutorZwei{} (Matrikelnummer \MatrikelZwei), dass wir die vorliegende Bachelorarbeit mit dem Titel „\ThesisTitel“ selbstständig verfasst und keine anderen als die angegebenen Quellen und Hilfsmittel benutzt haben. Alle Stellen, die wörtlich oder sinngemäß aus veröffentlichten oder unveröffentlichten Schriften entnommen sind, haben wir als solche kenntlich gemacht. Die eingesetzten KI-gestützten Hilfsmittel sind mit Art und Umfang ihres Einsatzes im folgenden Abschnitt angegeben; für den Inhalt der Arbeit übernehmen wir die Verantwortung. Die Arbeit hat in gleicher oder ähnlicher Form noch keiner anderen Prüfungsbehörde vorgelegen. Die als Einzelleistung zu bewertenden Beiträge sind im Nachweis der Einzelbeiträge gekennzeichnet.
 
+% Ort und Datum stehen gedruckt und brauchen keine Linie; unterschrieben
+% wird allein auf der Linie ueber dem Namen. Liegt in thesis/unterschriften/
+% eine eingescannte Unterschrift, steht sie auf der Linie; der Ordner ist
+% per .gitignore vom Repository ausgenommen.
+\newcommand{\unterschrift}[1]{%
+	\IfFileExists{#1}{%
+		\makebox[\linewidth][c]{\includegraphics[height=1.7cm,width=0.9\linewidth,keepaspectratio]{#1}}\\[-0.75cm]%
+	}{}%
+	\rule{\linewidth}{0.4pt}}
 \vspace{1.5cm}
 
 \noindent
-\begin{minipage}[t]{0.45\textwidth}
-	\rule{\linewidth}{0.4pt}\\
+\begin{minipage}[b]{0.45\textwidth}
 	\AbgabeOrt, \AbgabeDatum
 \end{minipage}
 \hfill
-\begin{minipage}[t]{0.45\textwidth}
-	\rule{\linewidth}{0.4pt}\\
+\begin{minipage}[b]{0.45\textwidth}
+	\unterschrift{unterschriften/unterschrift-omar.png}\\
 	\AutorEins
 \end{minipage}
 
 \vspace{1.5cm}
 
 \noindent
-\begin{minipage}[t]{0.45\textwidth}
-	\rule{\linewidth}{0.4pt}\\
+\begin{minipage}[b]{0.45\textwidth}
 	\AbgabeOrt, \AbgabeDatum
 \end{minipage}
 \hfill
-\begin{minipage}[t]{0.45\textwidth}
-	\rule{\linewidth}{0.4pt}\\
+\begin{minipage}[b]{0.45\textwidth}
+	\unterschrift{unterschriften/unterschrift-mohamad.png}\\
 	\AutorZwei
 \end{minipage}
+
+\vspace{1cm}
 
 \section*{Angabe der KI-gestützten Hilfsmittel}
 
@@ -90,6 +99,10 @@ Die Tabelle nennt je Teil der Arbeit, wer ihn im Schwerpunkt verfasst oder umges
 	\bottomrule
 	\endfoot
 	Projektstart & gemeinsam: erste Struktur und erstes Grundgerüst & gemeinsam: erste Struktur und erstes Grundgerüst \\
+	Recherche: Literaturauswertung und heuristische Analyse der Referenzplattform & Ergänzungen & Schwerpunkt \\
+	Anforderungsanalyse: Anforderungen, User Stories, Use Cases & Schwerpunkt & Ergänzungen \\
+	Konzeption: Architektur, Rechtemodell, Inhaltsmodell, Workflow, Datenmodell & gemeinsam & gemeinsam \\
+	Design: Skizzen und Wireframes, Figma-Prototyp, Designsystem & gemeinsam & gemeinsam \\
 	API-Contract & gemeinsam & gemeinsam \\
 	Backend & Schwerpunkt & Mitarbeit \\
 	Frontend & Mitarbeit & Schwerpunkt \\
