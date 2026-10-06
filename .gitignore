@@ -19,12 +19,14 @@ var/
 .idea/
 *.iml
 
-# Arbeitskopien der Confluence-Kapitelseiten (Skill thesis-schreiben).
-# Werden per contract.py neu gezogen, gehoeren nicht in die Historie.
+# Lokale Arbeitskopien der Confluence-Kapitelseiten.
 .thesis-cache/
 
-# Bytecode der Skill-Werkzeuge (contract.py, thesis.py).
+# Bytecode der Python-Werkzeuge (z. B. contract.py).
 __pycache__/
+
+# Sperrdateien von Word und Excel, solange ein Dokument geoeffnet ist.
+~$*
 
 # Ausgefuellte Karten B1 der Usability-Testwoche (make_docs.py --passwort).
 # Sie tragen das Testpasswort im Klartext, werden je Sitzung gedruckt und

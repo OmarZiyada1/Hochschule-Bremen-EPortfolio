@@ -94,6 +94,10 @@ footskip=1.2cm
 \usepackage{csquotes}
 \usepackage{enumitem}
 \usepackage{xcolor}
+\usepackage{colortbl}                 % graue Zeilenlinien in mehrzeiligen Tabellen
+% Feine graue Linie zwischen zwei Zeilen, fuer Tabellen, deren Zellen ueber
+% mehrere Zeilen laufen; Kopf- und Schlusslinie bleiben schwarz
+\newcommand{\zeilenlinie}{\arrayrulecolor{gray!45}\midrule[0.3pt]\arrayrulecolor{black}}
 \usepackage{caption}
 \captionsetup{font=small, labelfont=bf, justification=raggedright, singlelinecheck=false}
 

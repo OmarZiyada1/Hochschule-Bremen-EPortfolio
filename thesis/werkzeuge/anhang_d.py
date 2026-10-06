@@ -3,7 +3,7 @@
 Aufruf aus dem Wurzelverzeichnis des Repositorys:
     py thesis/werkzeuge/anhang_d.py Testmaterial/_generator thesis/anhang/anhang_d.tex [anhang-d.md]
 Das optionale dritte Argument schreibt zusaetzlich das Markdown fuer die
-Confluence-Anhangsseite (thesis.py storage).
+Confluence-Anhangsseite.
 
 Wortlaut wie auf den gedruckten Karten und Boegen: Szenario mit den
 eingesetzten Seed-Werten (werte.KARTE), Startzustand (werte.START),
@@ -201,7 +201,7 @@ w("")
 ZIEL.write_text("\n".join(aus), encoding="utf-8", newline="\n")
 print("geschrieben", ZIEL)
 
-# --- Markdown fuer die Confluence-Anhangsseite (thesis.py storage) ----------
+# --- Markdown fuer die Confluence-Anhangsseite ----------------------------
 if len(sys.argv) > 3:
 	def md(s):
 		return txt(s).replace("|", "/")

@@ -327,12 +327,6 @@ derselben Nachricht, und dann exakt dieser eine Befehl.
 - `.claude/skills/frontend-shadcn`: shadcn/ui auf Base UI, also Primitiven per
   CLI statt von Hand, `components.json`, Tokenbrücke und was an einer
   generierten Datei geändert werden darf.
-- `.claude/skills/thesis-schreiben`: Rezept für die Kapitel der
-  Bachelorarbeit, die direkt in den Confluence-Kapitelseiten entstehen:
-  Gliederung des unterschriebenen Exposés, Schreibregeln gegen KI-Muster,
-  Zitierweise APA 7, Umfangskorridore, Vorgaben des Zweitprüfers, samt
-  Werkzeug `thesis.py`
-  (`lint`, `umfang`, `korridore`, `storage`, `attach`).
 - `.claude/agents/backend-modul-builder`: setzt ein Modul-Ticket komplett um.
 - `.claude/agents/frontend-modul-builder`: setzt ein Frontend-Ticket komplett um.
 - `.claude/agents/contract-pruefer`: read-only Abgleich gegen den Contract;
